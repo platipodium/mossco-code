@@ -1,0 +1,16 @@
+Main directory of MOSSCO
+
+Contains information about authors, funding, and ....
+
+Contains directories for source code, documentation, and examples
+
+To make the documentation, type
+> make doc
+
+To make the MOSSCO libraries, type 
+> make
+
+To make some examples, type
+
+> make examples
+
