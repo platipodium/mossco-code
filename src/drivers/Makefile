@@ -19,7 +19,7 @@ MOSSCOBINDIR=$(MOSSCODIR)/bin
 FABMLIBDIR=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABMMODDIR=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 
-INCDIRS   += -I$(FABMDIR)/include -I$(FABMMODDIR)
+INCDIRS   += -I$(FABMDIR)/include -I$(FABMMODDIR) -I$(MOSSCOMODDIR)
 LINKDIRS  += -L$(FABMLIBDIR)
 
 CPPFLAGS   = $(DEFINES) $(INCDIRS)
@@ -41,7 +41,11 @@ all: libsediment
 libsediment: libsediment.a
 
 libsediment.a: libfabm fabm_sediment_driver.o
-	ar cruvs $@ fabm_sediment_driver.o
+	$(AR) cruvs $@ fabm_sediment_driver.o
+	mkdir -p $(MOSSCOLIBDIR)
+	mv $@ $(MOSSCOLIBDIR)
+	mkdir -p $(MOSSCOMODDIR)
+	mv fabm_sediment_driver.mod $(MOSSCOMODDIR)
 
 libfabm:
 	( export FABMHOST=$(FABMHOST) ; $(MAKE) -C $(FABMDIR)/src/ )
