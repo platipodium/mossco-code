@@ -1,12 +1,12 @@
 EXTRA_DIST=README
 SUBDIRS=compartments mediators
 
-.PHONY: default compartments mediators
+.PHONY: default components mediators
 
-default: compartments mediators
+default: components mediators
 
 compartments:
-	$(MAKE) -C compartments
+	$(MAKE) -C components
 
 mediators:
 	$(MAKE) -C mediators
