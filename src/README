@@ -1,2 +1,6 @@
 This directory contains subdirectories for the source code
-of the MOSSCO libraries, divided into compartments and mediators (couplers)
+of the MOSSCO libraries, divided into 
+
+- ESMF compartments 
+- ESMF  mediators (couplers)
+- wrappers/drivers for external models
