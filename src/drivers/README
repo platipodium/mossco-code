@@ -1,0 +1,4 @@
+This directory contains wrapper code / drivers for external models
+
+1) fabm_sediment_driver, a 3D generic driver which can be called from an ESMF component or standalone to
+   call a fabm in the sediment

@@ -1,0 +1,298 @@
+module fabm_sediment_driver
+
+use fabm
+
+implicit none
+private
+
+integer, parameter :: rk=selected_real_kind(12)
+
+type :: fabm_sed_grid
+   real(rk),dimension(:,:,:),allocatable :: zi,dz,zc,dzc
+   integer  :: knum,inum,jnum
+   real(rk) :: dzmin
+end type fabm_sed_grid
+
+type :: type_sed
+   type(fabm_sed_grid)          :: grid
+   type(type_model)             :: model
+   integer                      :: nvar  ! number of state variables
+   real(rk),dimension(:,:,:,:),pointer :: conc  ! pointer to state variable concentrations
+   real(rk)                     :: bioturbation,diffusivity
+end type type_sed
+
+real(rk),dimension(:,:,:),allocatable :: porosity,temp
+real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
+real(rk),dimension(:,:,:),allocatable,target :: temp3d
+real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
+real(rk),dimension(:,:),allocatable     :: zeros2d
+
+#define _GRID_ sed%grid
+#define _INUM_ _GRID_%inum
+#define _JNUM_ _GRID_%jnum
+#define _KNUM_ _GRID_%knum
+
+public :: init_fabm_sed,init_sed_grid,fabm_sed_get_rhs,finalize_fabm_sed,type_sed,fabm_sed_grid
+
+contains
+
+subroutine init_sed_grid(grid)
+implicit none
+type(fabm_sed_grid),intent(inout) :: grid
+real(rk)  :: grid_fac=10
+integer :: i,j,k
+
+grid%inum = 1
+grid%jnum = 1
+! total depth = 18cm
+grid_fac = 0.18_rk/((grid%knum+1)/2.0_rk * grid%dzmin) - 1.0_rk ! the last layer is 10x thicker than the first layer
+
+! create grid
+allocate(grid%dz( grid%inum,grid%jnum,grid%knum))
+allocate(grid%zc( grid%inum,grid%jnum,grid%knum))
+allocate(grid%zi( grid%inum,grid%jnum,1:grid%knum+1))
+allocate(grid%dzc(grid%inum,grid%jnum,grid%knum-1))
+
+grid%zi(:,:,1) = 0_rk
+do k=1,grid%knum
+   do j=1,grid%jnum
+      do i=1,grid%inum
+         grid%dz(i,j,k) = (1.0_rk + (grid_fac-1.0_rk)*(k-1)/(grid%knum-1)) * grid%dzmin
+         grid%zc(i,j,k) = grid%zi(i,j,k) + 0.5_rk*grid%dz(i,j,k)
+         grid%zi(i,j,k+1) = grid%zi(i,j,k)+grid%dz(i,j,k)
+      end do
+   end do
+end do
+
+grid%dzc = grid%zc(:,:,2:grid%knum) - grid%zc(:,:,1:grid%knum-1)
+
+end subroutine init_sed_grid
+
+
+subroutine init_fabm_sed(sed)
+implicit none
+
+type(type_sed),intent(inout) :: sed
+integer :: i,j,k
+integer :: nml_unit=128
+real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
+namelist /sed_nml/ diffusivity,bioturbation,porosity_max,porosity_fac
+
+! read parameters
+diffusivity   = 0.9 ! cm2/d
+bioturbation  = 0.9 ! cm2/d
+porosity_max  = 0.7
+porosity_fac  = 0.9 ! per m
+
+read(33,nml=sed_nml)
+
+sed%bioturbation = bioturbation
+sed%diffusivity  = diffusivity
+
+if (.not.(allocated(sed%grid%dz))) call init_sed_grid(sed%grid)
+
+! set porosity
+allocate(porosity(_INUM_,_JNUM_,_KNUM_))
+allocate(temp(_INUM_,_JNUM_,_KNUM_))
+do k=1,_KNUM_
+   porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
+end do
+
+temp = 5_rk
+
+! build model tree
+sed%model = fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
+
+! set fabm domain
+call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
+
+! allocate state variables
+sed%nvar = size(sed%model%info%state_variables)
+
+allocate(diff(_INUM_,_JNUM_,_KNUM_))
+allocate(transport(_INUM_,_JNUM_,_KNUM_,sed%nvar))
+transport=0.0_rk
+allocate(zeros2dv(_INUM_,_JNUM_,sed%nvar))
+zeros2dv=0.0_rk
+allocate(zeros3dv(_INUM_,_JNUM_,_KNUM_,sed%nvar))
+zeros3dv=0.0_rk
+allocate(ones3d(_INUM_,_JNUM_,_KNUM_))
+ones3d=1.0_rk
+allocate(zeros2d(_INUM_,_JNUM_))
+zeros2d=0.0_rk
+allocate(temp3d(_INUM_,_JNUM_,_KNUM_))
+temp3d=-999.0_rk
+
+diff = diffusivity
+
+end subroutine init_fabm_sed
+
+
+subroutine fabm_sed_get_rhs(sed,bdys,fluxes,rhs)
+use fabm
+use fabm_types
+implicit none
+
+type(type_sed)       ,intent(inout)          :: sed
+real(rk)             ,intent(inout)          :: fluxes(1:_INUM_,1:_JNUM_,1:sed%nvar)
+real(rk)             ,intent(in)             :: bdys(1:_INUM_,1:_JNUM_,1:sed%nvar+1)
+real(rk),intent(out)                         :: rhs(1:_INUM_,1:_JNUM_,1:_KNUM_,1:sed%nvar)
+real(rk),dimension(1:_INUM_,1:_JNUM_,1:_KNUM_)   :: conc_insitu
+real(rk),dimension(1:_INUM_,1:_JNUM_,1:_KNUM_+1) :: intFLux
+
+integer :: n,i,j,k,bcup=1,bcdown=3
+
+do k=1,_KNUM_
+   temp3d(:,:,k) = bdys(:,:,1)
+end do
+
+!   link state variables
+do n=1,size(sed%model%info%state_variables)
+   call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
+end do
+
+!   link environment forcing
+call fabm_link_bulk_data(sed%model,varname_temp,temp3d)
+! not necessary: call fabm_link_bulk_data(sed%model,varname_porosity,porosity)
+
+! calculate diffusivities (temperature)
+do n=1,size(sed%model%info%state_variables)
+   if (sed%model%info%state_variables(n)%particulate) then
+      bcup = 1
+      diff = (sed%bioturbation + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
+      conc_insitu = sed%conc(:,:,:,n)/(porosity-ones3d)
+      call diff3d(sed%grid,conc_insitu,bdys(:,:,n+1), zeros2d, fluxes(:,:,n), zeros2d, &
+              bcup, bcdown, diff, porosity-ones3d, porosity-ones3d, intFlux, transport(:,:,:,n))
+   else
+      bcup = 2
+      diff = (sed%diffusivity + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
+      conc_insitu = sed%conc(:,:,:,n)/porosity
+      call diff3d(sed%grid,conc_insitu,bdys(:,:,n+1), zeros2d, fluxes(:,:,n), zeros2d, &
+              bcup, bcdown, diff, porosity, porosity, intFlux, transport(:,:,:,n))
+      ! set fluxes for output
+      fluxes(:,:,n) = intFlux(:,:,1)
+   end if
+end do
+
+rhs=0.0_rk
+do k=1,_KNUM_
+   do j=1,_JNUM_
+      do i=1,_INUM_
+         call fabm_do(sed%model,i,j,k,rhs(i,j,k,:))
+      end do
+   end do
+end do
+
+! return fabm-rhs + diff-tendencies
+rhs = rhs + transport
+
+end subroutine fabm_sed_get_rhs
+
+
+
+
+subroutine finalize_fabm_sed()
+
+deallocate(zeros2dv)
+deallocate(zeros3dv)
+deallocate(zeros2d)
+deallocate(ones3d)
+deallocate(transport)
+deallocate(diff)
+
+end subroutine finalize_fabm_sed
+
+
+
+
+subroutine diff3d (grid, C, Cup, Cdown, fluxup, fluxdown,        &
+                       BcUp, BcDown, D, VF, A, Flux, dC)
+
+implicit none
+type(fabm_sed_grid), intent(in)        :: grid
+real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: C, D
+
+! Boundary concentrations (used if Bc..=2,4), fluxes (used if Bc= 1) 
+! and convection coeff (used if Bc=4)
+real(rk), dimension(grid%inum,grid%jnum), intent(in)   :: Cup, Cdown, fluxup, fluxdown
+
+! volume fraction, surface Area
+real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: VF, A
+
+! boundary concitions (1= flux, 2=conc, 3 = 0-grad, 4=convect)
+integer, intent(in) :: BcUp, BcDown   
+
+! output: fluxes and rate of change
+real(rk), dimension(grid%inum,grid%jnum,grid%knum+1), intent(out) :: Flux
+real(rk), dimension(grid%inum,grid%jnum,grid%knum),intent(out) :: dC
+
+! locals 
+integer  :: i,j,k
+real(rk),dimension(grid%inum,grid%jnum)   :: AVF,restflux
+real(rk),dimension(grid%inum,grid%jnum,grid%knum) :: flux_cap
+
+! -------------------------------------------------------------------------------
+
+!flux_cap=0.0_rk
+!do j=1,grid%jnum
+!do i=1,grid%inum
+!flux_cap(i,j,1:4)=(/ 0.5,0.3,0.13,0.07 /)
+!end do
+!end do
+
+! Flux - first internal cells
+! positive flux is directed downward
+do j=1,grid%jnum
+   do i=1,grid%inum
+      do k = 2,grid%knum
+         Flux(i,j,k) = -VF(i,j,k)*D(i,j,k) * (C(i,j,k)-C(i,j,k-1)) /grid%dzc(i,j,k-1)
+      end do
+
+! Then the outer cells 
+! upstream boundary
+      IF (BcUp .EQ. 1) THEN
+        Flux(i,j,1) = fluxup(i,j)
+
+      ELSE IF (BcUp .EQ. 2) THEN
+        Flux(i,j,1) = -VF(i,j,1)*D(i,j,1) * (C(i,j,1)-Cup(i,j)) /grid%dz(i,j,1)
+
+      ELSE IF (BcUp .EQ. 3) THEN
+        Flux(i,j,1) = 0.0_rk
+
+      ELSE IF (BcUp .EQ. 4) THEN
+        Flux(i,j,1) = fluxup(i,j) 
+        k = 2
+        restflux(i,j) = Flux(i,j,1) - flux_cap(i,j,1)*Flux(i,j,1)
+        do while ((restflux(i,j) .gt. 0) .and. (k .le. grid%knum))
+           Flux(i,j,k) = Flux(i,j,k) + restflux(i,j)
+           restflux(i,j) = restflux(i,j) - flux_cap(i,j,k)*Flux(i,j,1)
+           k = k + 1
+        end do
+        if (k .gt. grid%knum) then 
+           Flux(i,j,grid%knum) = Flux(i,j,grid%knum) + restflux(i,j)
+        endif 
+      ENDIF
+       
+! downstream boundary
+      IF (BcDown .EQ. 1) THEN
+        Flux(i,j,grid%knum+1) = fluxdown(i,j)
+
+      ELSE IF (BcDown .EQ. 2) THEN
+        Flux(i,j,grid%knum+1) = -VF(i,j,grid%knum)*D(i,j,grid%knum) * (Cdown(i,j)-C(i,j,grid%knum)) / grid%dz(i,j,grid%knum)
+
+      ELSE IF (BcDown .EQ. 3) THEN
+        Flux(i,j,grid%knum+1) =0.0_rk
+
+      ELSE
+      ENDIF
+
+      DO k = 1,grid%knum
+        dC(i,j,k) = (Flux(i,j,k) - Flux(i,j,k+1))/grid%dz(i,j,k)
+      ENDDO
+   end do
+end do
+
+end subroutine diff3D
+
+
+end module fabm_sediment_driver
