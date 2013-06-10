@@ -8,7 +8,6 @@ ifndef FORTRAN_COMPILER
 $(error FORTRAN_COMPILER needs to be defined)
 endif
 
-FABMHOST=esmf# TODO change to mossco once ready  
 MOSSCODIR=`pwd`/..
 MOSSCOLIBDIR=$(MOSSCODIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 MOSSCOMODDIR=$(MOSSCODIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
@@ -23,7 +22,7 @@ INCDIRS   += -I$(FABMDIR)/include -I$(FABMMODDIR) -I$(MOSSCOMODDIR)
 LINKDIRS  += -L$(FABMLIBDIR)
 
 CPPFLAGS   = $(DEFINES) $(INCDIRS)
-FFLAGS     = $(DEFINES) $(INCDIRS) 
+FFLAGS     = $(DEFINES) $(INCDIRS) -J$(MOSSCOMODDIR)
 F90FLAGS   = $(FFLAGS)
 LDFLAGS   += $(FFLAGS) $(LINKDIRS)
 LIBS      += -lfabm_prod
@@ -44,8 +43,8 @@ libsediment.a: libfabm fabm_sediment_driver.o
 	$(AR) cruvs $@ fabm_sediment_driver.o
 	mkdir -p $(MOSSCOLIBDIR)
 	mv $@ $(MOSSCOLIBDIR)
-	mkdir -p $(MOSSCOMODDIR)
-	mv fabm_sediment_driver.mod $(MOSSCOMODDIR)
+	#mkdir -p $(MOSSCOMODDIR)
+  	#mv fabm_sediment_driver.mod $(MOSSCOMODDIR)
 
 libfabm:
 	( export FABMHOST=$(FABMHOST) ; $(MAKE) -C $(FABMDIR)/src/ )

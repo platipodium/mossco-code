@@ -8,7 +8,7 @@ ifndef FORTRAN_COMPILER
 $(error FORTRAN_COMPILER needs to be defined)
 endif
 
-FABMHOST=esmf# TODO change to mossco once ready  
+FABMHOST=mossco
 MOSSCODIR=`pwd`/..
 MOSSCOLIBDIR=$(MOSSCODIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 MOSSCOMODDIR=$(MOSSCODIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
@@ -16,12 +16,9 @@ MOSSCOBINDIR=$(MOSSCODIR)/bin
 
 # TODO: test for existence of lib/bin dirs and create them
 
-
 include $(ESMFMKFILE)
 F90=$(ESMF_F90COMPILER)
 FC=$(F90)
-FORTRAN_COMPILER=ESMF
-
 
 FABMLIBDIR=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABMMODDIR=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
