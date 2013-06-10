@@ -9,6 +9,8 @@ default: doc
 
 doc:
 	$(DOXYGEN) $(DOXYGEN_CONFIG)
+	make -C latex
+	cp latex/refman.pdf mossco_documentation.pdf
 
 clean:
 	rm -rf latex
