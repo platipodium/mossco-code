@@ -1,3 +1,14 @@
+!> @file fabm_sediment_driver.F90
+!! @brief FABM sediment driver
+!!
+!! The driver contains the sediment driver module
+!! @author Richard Hofmeister
+
+!> The FABM sediment driver module provides infrastructure for the
+!! MOSSCO sediment component.
+!! The driver provides tendencies for state variables as sum of
+!! local rates (through FABM) and vertical diffusion.
+
 module fabm_sediment_driver
 
 use fabm
@@ -5,19 +16,19 @@ use fabm
 implicit none
 private
 
-integer, parameter :: rk=selected_real_kind(12)
+integer, parameter :: rk=selected_real_kind(12) !< real kind
 
-type :: fabm_sed_grid
+type :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk),dimension(:,:,:),allocatable :: zi,dz,zc,dzc
    integer  :: knum,inum,jnum
    real(rk) :: dzmin
 end type fabm_sed_grid
 
-type :: type_sed
+type :: type_sed !< sediment module data type
    type(fabm_sed_grid)          :: grid
    type(type_model)             :: model
-   integer                      :: nvar  ! number of state variables
-   real(rk),dimension(:,:,:,:),pointer :: conc  ! pointer to state variable concentrations
+   integer                      :: nvar  !< number of state variables
+   real(rk),dimension(:,:,:,:),pointer :: conc  !< pointer to state variable concentrations
    real(rk)                     :: bioturbation,diffusivity
 end type type_sed
 
@@ -35,6 +46,11 @@ real(rk),dimension(:,:),allocatable     :: zeros2d
 public :: init_fabm_sed,init_sed_grid,fabm_sed_get_rhs,finalize_fabm_sed,type_sed,fabm_sed_grid
 
 contains
+
+!> Initialise sediment grid
+!!
+!! Allocate memory, create a grid and fill the sed_grid_type. The number of
+!! layers is set outside in beforehand by the sediment component.
 
 subroutine init_sed_grid(grid)
 implicit none
@@ -68,6 +84,12 @@ grid%dzc = grid%zc(:,:,2:grid%knum) - grid%zc(:,:,1:grid%knum-1)
 
 end subroutine init_sed_grid
 
+
+!> Initialise FABM sediment driver
+!!
+!! Assumes to have a grid, either created by e.g. init_sed_grid. Parameters are
+!! read from namelist sed_nml, FABM is initialised and necessary arrays are
+!! allocated. Porosity is set here.
 
 subroutine init_fabm_sed(sed)
 implicit none
@@ -127,6 +149,14 @@ diff = diffusivity
 
 end subroutine init_fabm_sed
 
+!> get right-hand sides
+!!
+!! The right-hand sides for integration are provided for the state variables.
+!! The local tendencies are provided through FABM, the local changes due to
+!! diffusion are calculated in diff3d. Boundary conditions handled through the diffusion
+!! routine, where particulate properties use a flux boundary condition and
+!! dissolved properties use a concentration boundary condition. Diffusivities
+!! are calculated here depending on temperature (first index in bdys vector)
 
 subroutine fabm_sed_get_rhs(sed,bdys,fluxes,rhs)
 use fabm
@@ -189,7 +219,9 @@ rhs = rhs + transport
 end subroutine fabm_sed_get_rhs
 
 
-
+!> finalize the FABM sediment driver
+!!
+!! deallocate all the arrays
 
 subroutine finalize_fabm_sed()
 
@@ -203,7 +235,9 @@ deallocate(diff)
 end subroutine finalize_fabm_sed
 
 
-
+!> vertical diffusion in a 3d sediment grid
+!!
+!! Vertical diffusion in a porous sediment grid.
 
 subroutine diff3d (grid, C, Cup, Cdown, fluxup, fluxdown,        &
                        BcUp, BcDown, D, VF, A, Flux, dC)
