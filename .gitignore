@@ -1,0 +1,8 @@
+bin/
+lib/
+modules/
+*.o
+*.a
+*.mod
+*.swp
+doc/latex
