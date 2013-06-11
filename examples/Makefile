@@ -1,5 +1,6 @@
 EXTRA_DIST=README
+SUBDIRS=esmf_component omexdia_p
 
-.PHONY: default
+include ../src/Rules.make
 
 default: 
