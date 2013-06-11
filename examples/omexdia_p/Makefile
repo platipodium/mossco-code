@@ -1,6 +1,6 @@
 include ../../src/Rules.make
 
-LIBS += -lsediment
+LIBS := -lsediment $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
@@ -24,8 +24,9 @@ $(MOSSCO_LIBRARY_PATH)/libsediment.a:
 	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCODIR)/src/drivers/fabm_sediment_driver.o
 	ranlib $(MOSSCO_LIBRARY_PATH)/libsediment.a 
 
-exec: fabmdriver
-	$(FC) $(F90FLAGS) $(LDFLAGS) -o omexdia_p_test main.F90 
+exec: fabmdriver main.F90
+	$(F90) $(F90FLAGS) -c -o omexdia_p_test.o main.F90 
+	$(F90) -o omexdia_p_test omexdia_p_test.o $(LDFLAGS)
 
 info:
-	echo MOSSCODIR=$(MOSSCODIR)
+	@echo MOSSCODIR=$(MOSSCODIR)
