@@ -1,5 +1,7 @@
 # Makefile rules applying to the entire MOSSCO src and examples directories
 
+SHELL=/bin/sh
+
 # 1. Importing all FABM-related environment variables and checking that the environment is sane
 ifndef FABMDIR
 $(error FABMDIR needs to be defined)
@@ -19,20 +21,62 @@ FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_LIBRARY_FILE=$(FABM_LIBRARY_PATH)/libfabm_prod.a
 export FABM_F2003=true
 
+# ESMF stuff, only if ESMFMKFILE is declared
+ifndef ESMFMKFILE
+$(warning Compiling without ESMF support)
+else
+include $(ESMFMKFILE)
+endif
+
 # MOSSCO declarations
-export MOSSCODIR=$(PWD)/..
+
+ifndef MOSSCODIR
+export MOSSCODIR=$(HOME)/opt/src/mossco-code
+endif
+
+ifeq ($(wildcard $(MOSSCODIR)),) 
+$(error MOSSCODIR needs to be defined in src/Rules.make)
+endif
+
 MOSSCO_MODULE_PATH=$(MOSSCODIR)/src/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 MOSSCO_LIBRARY_PATH=$(MOSSCODIR)/src/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 
+#if [ -a $(MOSSCO_LIBRARY_PATH)] ; then : else mkdir -p  $(MOSSCO_LIBRARY_PATH); fi
+#ifeq ($(wildcard $(MOSSCO_LIBRARY_PATH)),) 
+#	mkdir -p $(MOSSCO_LIBRARY_PATH)
+#endif
+
 # Putting it together
-INCLUDES = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/mossco -I$(MOSSCO_MODULE_PATH)
+INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/mossco
+INCLUDES += $(ESMF_F90COMPILEPATHS)
+INCLUDES += -I$(MOSSCO_MODULE_PATH)
 ifeq (FORTRAN_COMPILER,GFORTRAN)
 INCLUDES += -J$(MOSSCO_MODULE_PATH)
 endif
 
-LIBRARY_PATHS = -L$(FABM_LIBRARY_PATH) -L$(MOSSCO_LIBRARY_PATH)
+LIBRARY_PATHS  = -L$(FABM_LIBRARY_PATH) 
+LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90ESMFLINKRPATHS) 
+LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
 LIBS = -lfabm_prod
+LIBS += $(ESMF_F90LINKLIBS)
+
+CPPFLAGS = $(DEFINES) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS)
+LDFLAGS = $(ESMF_F90LINKOPTS)
 
 # Make targets
 .PHONY: default all clean doc
 
+
+
+# Common rules
+#ifeq  ($(can_do_F90),true)
+%.o: %.F90
+	@ echo "Compiling $<"
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+#else
+#%.f90: %.F90
+#	$(CPP) $(CPPFLAGS) $< -o $@
+	#$(F90_to_f90)
+#%.o: %.f90
+	#$(F90) $(F90FLAGS) $(EXTRA_FFLAGS) -c $< -o $@
+#endif

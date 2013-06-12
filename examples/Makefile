@@ -3,4 +3,16 @@ SUBDIRS=esmf_component omexdia_p
 
 include ../src/Rules.make
 
-default: 
+.PHONY: subdirs (SUBDIRS)
+
+default: all
+
+all: subdirs
+
+subdirs: $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
+
+
+
