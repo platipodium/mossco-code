@@ -7,7 +7,7 @@ default: src
 all: doc examples
 
 clean:
-	$(foreach dir,$(SUBDIRS), make -C $(dir) clean)
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 
 all: subdirs
 

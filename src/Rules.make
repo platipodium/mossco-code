@@ -78,6 +78,9 @@ default: all
 clean:
 	@rm -f *.o
 
+veryclean: clean
+	@rm -f *.swp
+
 info:
 	@echo SHELL = $(SHELL)
 	@echo MAKE = $(MAKE)

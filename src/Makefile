@@ -13,7 +13,7 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 clean:
-	$(foreach dir,$(SUBDIRS),make -C $(dir) clean)
+	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 
 check:
 	@echo The check target is not implemented, yet
