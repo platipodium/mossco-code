@@ -73,13 +73,18 @@ LDFLAGS = $(ESMF_F90LINKOPTS)
 # Make targets
 .PHONY: default all clean doc info
 
-default: all
+default: prefix all
 
 clean:
 	@rm -f *.o
 
 veryclean: clean
 	@rm -f *.swp
+
+prefix:
+	@mkdir -p $(MOSSCO_LIBRARY_PATH)
+	@mkdir -p $(MOSSCO_MODULE_PATH)
+	@mkdir -p $(MOSSCO_BIN_PATH)
 
 info:
 	@echo SHELL = $(SHELL)
@@ -91,6 +96,7 @@ info:
 	@echo MOSSCODIR = $(MOSSCODIR)
 	@echo MOSSCO_LIBRARY_PATH = $(MOSSCO_LIBRARY_PATH)
 	@echo MOSSCO_MODULE_PATH = $(MOSSCO_MODULE_PATH)
+	@echo MOSSCO_BIN_PATH = $(MOSSCO_BIN_PATH)
 	@echo INCDIRS = $(INCDIRS)
 	@echo F90FLAGS = $(F90FLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
