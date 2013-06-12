@@ -4,10 +4,12 @@ SUBDIRS = doc src examples
 .PHONY: default doc src examples all clean subdirs $(SUBDIRS)
 
 default: src
-all: doc examples
+all:  examples doc
+examples: src
 
 clean:
-	for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
+	@rm -rf modules lib bin
 
 all: subdirs
 

@@ -14,5 +14,8 @@ subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	$(MAKE) -C $@
 
+clean: extraclean
 
+extraclean:
+	@for dir in $(SUBDIRS) ; do make -C $$dir clean; done
 

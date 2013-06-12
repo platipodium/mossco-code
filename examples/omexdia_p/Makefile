@@ -5,9 +5,7 @@ LIBS := -lsediment $(LIBS)
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: sedimentlib fabmdriver exec
-
-default: all
+.PHONY: libsediment fabmdriver exec
 
 all: exec
 
@@ -16,13 +14,13 @@ fabmlib: $(FABM_LIBRARY_FILE)
 $(FABM_LIBRARY_FILE):
 	( export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR)/src/ )
 
-fabmdriver: fabmlib $(MOSSCO_LIBRARY_PATH)/libsediment.a
+fabmdriver: fabmlib libsediment
 
-$(MOSSCO_LIBRARY_PATH)/libsediment.a: 
-	( export FABMHOST=mossco ; $(MAKE) -C $(MOSSCODIR)/src/drivers)
-	mkdir -p $(MOSSCO_LIBRARY_PATH)
+libsediment: prefix $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod $(MOSSCODIR)/src/drivers/fabm_sediment_driver.o
 	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCODIR)/src/drivers/fabm_sediment_driver.o
-	ranlib $(MOSSCO_LIBRARY_PATH)/libsediment.a 
+
+$(MOSSCODIR)/src/drivers/fabm_sediment_driver.o: 
+	$(MAKE) -C $(MOSSCODIR)/src/drivers)
 
 exec: fabmdriver main.F90
 	$(F90) $(F90FLAGS) -c -o omexdia_p_test.o main.F90 
