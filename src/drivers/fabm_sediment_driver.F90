@@ -8,6 +8,7 @@
 !! MOSSCO sediment component.
 !! The driver provides tendencies for state variables as sum of
 !! local rates (through FABM) and vertical diffusion.
+#include "fabm_driver.h"
 
 module fabm_sediment_driver
 
@@ -95,7 +96,7 @@ subroutine init_fabm_sed(sed)
 implicit none
 
 type(type_sed),intent(inout) :: sed
-integer :: i,j,k
+integer :: i,j,k,n
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
 namelist /sed_nml/ diffusivity,bioturbation,porosity_max,porosity_fac

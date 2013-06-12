@@ -269,7 +269,9 @@ case default
 
    do i=1,sedi%nvar
       do ci=1,_KNUM_
-         c_pointer(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*1_rk/3_rk*(0.5_rk*rhs(1,1,ci,i)+rhs1(1,1,ci,i)+rhs2(1,1,ci,i)+0.5_rk*rhs3(1,1,ci,i))
+         c_pointer(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*1_rk/3_rk &
+          *(0.5_rk*rhs(1,1,ci,i)+rhs1(1,1,ci,i)+rhs2(1,1,ci,i) &
+          +0.5_rk*rhs3(1,1,ci,i))
       end do
    end do
    sedi%conc => c_pointer
