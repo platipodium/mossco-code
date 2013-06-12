@@ -11,8 +11,10 @@ libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: libfabm fabm_sediment_driver.o
 	$(AR) cruvs $@ fabm_sediment_driver.o
 
-libfabm:
-	( export FABMHOST=$(FABMHOST) ; $(MAKE) -C $(FABMDIR)/src/ )
+libfabm: $(FABM_LIBRARY_FILE)
+
+$(FABM_LIBRARY_FILE):
+	$(MAKE) -C $(FABMDIR)/src
 
 clean: extraclean
 extraclean:
