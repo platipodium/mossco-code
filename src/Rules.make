@@ -71,9 +71,27 @@ CPPFLAGS = $(DEFINES) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS)
 LDFLAGS = $(ESMF_F90LINKOPTS)
 
 # Make targets
-.PHONY: default all clean doc
+.PHONY: default all clean doc info
 
+default: all
 
+clean:
+	@rm -f *.o
+
+info:
+	@echo SHELL = $(SHELL)
+	@echo MAKE = $(MAKE)
+	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
+	@echo F90 = $(F90)
+	@echo FABMHOST = $(FABMHOST)
+	@echo FABMDIR = $(FABMDIR)
+	@echo MOSSCODIR = $(MOSSCODIR)
+	@echo MOSSCO_LIBRARY_PATH = $(MOSSCO_LIBRARY_PATH)
+	@echo MOSSCO_MODULE_PATH = $(MOSSCO_MODULE_PATH)
+	@echo INCDIRS = $(INCDIRS)
+	@echo F90FLAGS = $(F90FLAGS)
+	@echo LDFLAGS = $(LDFLAGS)
+	@echo LINKDIRS = $(LINKDIRS)
 
 # Common rules
 #ifeq  ($(can_do_F90),true)

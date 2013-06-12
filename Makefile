@@ -8,7 +8,6 @@ all: doc examples
 
 clean:
 	$(foreach dir,$(SUBDIRS), make -C $(dir) clean)
-	rm -rf modules lib
 
 all: subdirs
 
@@ -17,11 +16,8 @@ subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	$(MAKE) -C $@
 
-examples: 
-	@echo Please change to examples directory and make your individual examples.
-
 check: 
 	make -C src check
 
-update: pull
-pull: git pull 
+update:
+	git pull 

@@ -1,15 +1,19 @@
+include Rules.make
+
 EXTRA_DIST=README
-SUBDIRS=compartments mediators drivers
+SUBDIRS=components mediators drivers
 
-.PHONY: default components mediators drivers
+.PHONY: subdirs $(SUBDIRS)
 
-default: components mediators drivers
+default: all
+all: subdirs
 
-compartments:
-	$(MAKE) -C components
+subdirs: $(SUBDIRS)
+$(SUBDIRS):
+	$(MAKE) -C $@
 
-mediators:
-	$(MAKE) -C mediators
+clean:
+	$(foreach dir,$(SUBDIRS),make -C $(dir) clean)
 
-drivers:
-	$(MAKE) -C drivers
+check:
+	@echo The check target is not implemented, yet
