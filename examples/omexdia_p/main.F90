@@ -36,18 +36,14 @@ funit=2
 
 write(0,*) '  Initialise grid with',sed%grid%knum,'vertical layers'
 call init_sed_grid(sed%grid)
+write(0,*) '    allocate arrays'
+allocate(conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
+conc=0.0_rk
+sed%conc => conc
 write(0,*) '  Initialise sediment module'
 call init_fabm_sed(sed)
 close(33)
 
-write(0,*) '    allocate arrays'
-allocate(conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
-conc=0.0_rk
-do n=1,sed%nvar
-   conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value
-   call fabm_link_bulk_state_data(sed%model,n,conc(_LOCATION_DIMENSIONS_,n))
-end do
-sed%conc => conc
 
 allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
 bdys(1,1,1:9) = 0.0_rk
