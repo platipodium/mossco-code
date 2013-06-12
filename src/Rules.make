@@ -1,8 +1,9 @@
 # Makefile rules applying to the entire MOSSCO src and examples directories
 
-SHELL=/bin/sh
-
 # 1. Importing all FABM-related environment variables and checking that the environment is sane
+#    At the moment, we require that FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
+#    the fabm library is installed in the production version (libfabm_prod)
+# 
 ifndef FABMDIR
 $(error FABMDIR needs to be defined)
 endif
@@ -12,7 +13,7 @@ $(error FABMHOST needs to be defined as FABMHOST=mossco)
 endif
 
 ifndef FORTRAN_COMPILER
-$(error FORTRAN_COMPILER needs to be set to the FABM compatible $(FABMDIR) compiler.FORTRAN_COMPILER file)
+$(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers)
 endif
 
 FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
@@ -21,24 +22,27 @@ FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_LIBRARY_FILE=$(FABM_LIBRARY_PATH)/libfabm_prod.a
 export FABM_F2003=true
 
-# ESMF stuff, only if ESMFMKFILE is declared
+# 2. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
+#    the components and mediators to be built if ESMF is not found in your system
+#
 ifndef ESMFMKFILE
 $(warning Compiling without ESMF support)
 else
 include $(ESMFMKFILE)
 endif
 
-# MOSSCO declarations
-
+# 3. MOSSCO declarations. The MOSSCODIR and the build prefix are set, as well as the bin/mod/lib paths relative
+#    to the PREFIX
+#
 ifndef MOSSCODIR
 export MOSSCODIR=$(HOME)/opt/src/mossco-code
 endif
 
 ifeq ($(wildcard $(MOSSCODIR)),) 
-$(error MOSSCODIR needs to be defined in src/Rules.make)
+$(error the directory MOSSCODIRi=$(MOSSCODIR) does not exist)
 endif
 
-ifdef PREFIX)
+ifdef PREFIX
 MOSSCOPREFIX=$(PREFIX)
 else
 MOSSCOPREFIX=$(MOSSCODIR)
@@ -48,13 +52,21 @@ MOSSCO_MODULE_PATH=$(MOSSCOPREFIX)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 MOSSCO_LIBRARY_PATH=$(MOSSCOPREFIX)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 MOSSCO_BIN_PATH=$(MOSSCOPREFIX)/bin
 
-#if [ -a $(MOSSCO_LIBRARY_PATH)] ; then : else mkdir -p  $(MOSSCO_LIBRARY_PATH); fi
-#ifeq ($(wildcard $(MOSSCO_LIBRARY_PATH)),) 
-#	mkdir -p $(MOSSCO_LIBRARY_PATH)
-#endif
+# 4. Putting everything together.  This section could need some cleanup, but does work fornow
+#
+ifndef F90
+F90=ESMF_F90COMPILER
+endif
 
-# Putting it together
-INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/mossco
+ifndef F90
+F90=FC
+endif
+
+ifndef F90
+F90=$(shell grep 'FC=' $(FABMDIR)/compilers/compilers.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+endif
+
+INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
 INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
 #ifeq (FORTRAN_COMPILER,GFORTRAN)

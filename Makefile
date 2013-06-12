@@ -1,7 +1,9 @@
 EXTRA_DIST = README ACKNOWLEDGEMENTS AUTHORS .gitignore
 SUBDIRS = doc src examples
 
-.PHONY: default doc src examples all clean subdirs $(SUBDIRS)
+export MOSSCODIR=$(CURDIR)
+
+.PHONY: default doc src info examples all clean subdirs $(SUBDIRS)
 
 default: src
 all:  examples doc
@@ -23,3 +25,6 @@ check:
 
 update:
 	git pull 
+
+info:
+	make -C src info
