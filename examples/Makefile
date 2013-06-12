@@ -1,7 +1,11 @@
-EXTRA_DIST=README
-SUBDIRS=esmf_sediment omexdia_p
-
 include ../src/Rules.make
+
+EXTRA_DIST=README
+
+SUBDIRS=omexdia_p
+ifdef ESMFMKFILE
+SUBDIRS += esmf_sediment
+endif
 
 .PHONY: subdirs $(SUBDIRS)
 
