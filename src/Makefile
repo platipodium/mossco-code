@@ -2,10 +2,7 @@ include Rules.make
 
 EXTRA_DIST=README Rules.make
 
-SUBDIRS=drivers
-ifdef EMSFMKFILE
-SUBDIRS += components mediators
-endif
+SUBDIRS=components mediators drivers
 
 .PHONY: subdirs $(SUBDIRS)
 
