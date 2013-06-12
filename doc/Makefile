@@ -1,4 +1,4 @@
-DOXYGEN = doxygen
+DOXYGEN ?= doxygen
 DOXYGEN_CONFIG = doxygen.conf
 
 EXTRA_DIST=README $(DOXYGEN_CONFIG) doxygen.css doxygen.png
@@ -9,9 +9,11 @@ default: doc
 
 doc:
 	$(DOXYGEN) $(DOXYGEN_CONFIG)
-	make -C latex
-	cp latex/refman.pdf mossco_documentation.pdf
+	$(MAKE) -C latex
+	@cp latex/refman.pdf mossco_documentation.pdf
 
 clean:
-	rm -rf latex
+	@rm -rf latex
+	@rm -f mossco_documentation.pdf
+	
 
