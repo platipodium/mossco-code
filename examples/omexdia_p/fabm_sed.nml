@@ -5,13 +5,13 @@
 !                     a comma-separated list of one or model model names
 !-------------------------------------------------------------------------------
 &fabm_nml
-   models = 'examples_omexdia_p'
+   models = 'hzg_omexdia_p'
 /
 
 
 !-------------------------------------------------------------------------------
 ! Basic par values for benthic biogeochemical model
-&examples_omexdia_p
+&hzg_omexdia_p
 rFast           = 0.01
 rSlow           = 0.00001
 NCrFdet         = 0.2 

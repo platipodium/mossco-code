@@ -1,15 +1,27 @@
-EXTRA_DIST=README ACKNOWLEDGEMENTS AUTHORS
+EXTRA_DIST = README ACKNOWLEDGEMENTS AUTHORS .gitignore
+SUBDIRS = doc src examples
 
-.PHONY: default doc src examples
+.PHONY: default doc src examples all clean subdirs $(SUBDIRS)
 
 default: src
-all: doc src examples
+all: doc examples
 
-doc:
-	$(MAKE) -C doc
+clean:
+	$(foreach dir,$(SUBDIRS), make -C $(dir) clean)
+	rm -rf modules lib
 
-examples:
-	$(MAKE) -C examples
+all: subdirs
 
-src: 
-	$(MAKE) -C src
+subdirs: $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
+
+examples: 
+	@echo Please change to examples directory and make your individual examples.
+
+check: 
+	make -C src check
+
+update: pull
+pull: git pull 
