@@ -28,5 +28,7 @@ exec: fabmdriver main.F90
 	$(F90) $(F90FLAGS) -c -o omexdia_p_test.o main.F90 
 	$(F90) -o omexdia_p_test omexdia_p_test.o $(LDFLAGS)
 
-info:
-	@echo MOSSCODIR=$(MOSSCODIR)
+clean: extraclean
+
+extraclean: 
+	@rm -f output.dat omexdia_p_test
