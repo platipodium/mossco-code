@@ -35,11 +35,13 @@ endif
 #    to the PREFIX
 #
 ifndef MOSSCODIR
-export MOSSCODIR=$(HOME)/opt/src/mossco-code
+MOSSCODIR=$(subst FABM,MOSSCO,$(FABMDIR))
+export MOSSCODIR:=$(subst fabm,mossco,$(MOSSCODIR))
+$(warning MOSSCODIR=$(MOSSCODIR) automatically determined from FABMDIR)
 endif
 
 ifeq ($(wildcard $(MOSSCODIR)),) 
-$(error the directory MOSSCODIRi=$(MOSSCODIR) does not exist)
+$(error the directory MOSSCODIR=$(MOSSCODIR) does not exist)
 endif
 
 ifdef PREFIX

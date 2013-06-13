@@ -1,0 +1,22 @@
+!--------------
+! run_nml
+!
+! numyears - number of years (y)
+! dt - timestep (s)
+! output - number of timesteps (#)
+! numlayers - number of sediment layers (#)
+!--------------
+&run_nml
+  numyears=20
+  dt=60.
+  output=43200
+  numlayers=24
+  dzmin=0.003
+/
+
+&sed_nml
+  diffusivity   = 0.9
+  bioturbation  = 0.9
+  porosity_max  = 0.7
+  porosity_fac  = 0.9
+/
