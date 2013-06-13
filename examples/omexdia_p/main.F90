@@ -37,13 +37,18 @@ funit=2
 write(0,*) '  Initialise grid with',sed%grid%knum,'vertical layers'
 call init_sed_grid(sed%grid)
 
-! link array conc to fabm_sediment_driver
-sed%conc => conc
 
 write(0,*) '  Initialise sediment module'
 call init_fabm_sed(sed)
 close(33)
 
+! allocate concentration array
+allocate(conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
+! link array conc to fabm_sediment_driver
+sed%conc => conc
+! initialise values
+conc = 0.0_rk
+call init_fabm_sed_concentrations(sed)
 
 allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
 bdys(1,1,1:9) = 0.0_rk
@@ -79,16 +84,16 @@ do t=1,tnum
        write(0,*) ' elapsed ',t*dt/86400,' days'
        write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
        do k=1,_KNUM_ 
-          write(funit,*) t*dt,sed%grid%zc(1,1,k),sed%conc(1,1,k,:)
+          write(funit,*) t*dt,sed%grid%zc(1,1,k),conc(1,1,k,:)
        end do
    end if
 end do
 
 !finalize
 call finalize_fabm_sed()
-deallocate(conc)
-deallocate(bdys)
-deallocate(fluxes)
+if (allocated(conc)) deallocate(conc)
+if (allocated(bdys)) deallocate(bdys)
+if (allocated(fluxes)) deallocate(fluxes)
 
 end program fabmsed1d
 

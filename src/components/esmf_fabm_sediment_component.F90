@@ -80,16 +80,21 @@ module esmf_fabm_sediment_component
     call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
     call init_sed_grid(sed%grid)
 
-    !! Link conc to fabm_sediment_driver
-    sed%conc => conc
-    
     call ESMF_LogWrite('Initialise sediment module',ESMF_LOGMSG_INFO)
     call init_fabm_sed(sed)
     close(33)
 
-    !! Allocate all arrays bdys, fluxes TODO: add these
+    !! Allocate all arrays conc, bdys, fluxes TODO: add these
     !! arrays to ESMF fields
     call ESMF_LogWrite('Allocate arrays',ESMF_LOGMSG_INFO)
+    
+    allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
+    ! link conc to fabm_sediment_driver
+    sed%conc => conc
+    ! initialise values
+    conc = 0.0_rk
+    call init_fabm_sed_concentrations(sed)
+
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
     bdys(1,1,1:9) = 0.0_rk
     bdys(1,1,1) = 10._rk   ! degC temperature

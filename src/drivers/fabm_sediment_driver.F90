@@ -45,6 +45,7 @@ real(rk),dimension(:,:),allocatable     :: zeros2d
 #define _KNUM_ _GRID_%knum
 
 public :: init_fabm_sed,init_sed_grid,fabm_sed_get_rhs,finalize_fabm_sed,type_sed,fabm_sed_grid
+public :: init_fabm_sed_concentrations
 
 contains
 
@@ -148,16 +149,21 @@ temp3d=-999.0_rk
 
 diff = diffusivity
 
-! allocate concentration array
-allocate(sed%conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
-sed%conc = 0.0_rk
+end subroutine init_fabm_sed
+
+!> initialised sediment concentrations from namelist
+subroutine init_fabm_sed_concentrations(sed)
+implicit none
+
+type(type_sed), intent(inout)      :: sed
+integer                            :: n
 
 do n=1,sed%nvar
    sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value
-   call fabm_link_bulk_state_data(sed%model,n,sed%conc(_LOCATION_DIMENSIONS_,n))
+   call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
 end do
+end subroutine init_fabm_sed_concentrations
 
-end subroutine init_fabm_sed
 
 !> get right-hand sides
 !!
