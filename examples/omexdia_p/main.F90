@@ -36,10 +36,10 @@ funit=2
 
 write(0,*) '  Initialise grid with',sed%grid%knum,'vertical layers'
 call init_sed_grid(sed%grid)
-write(0,*) '    allocate arrays'
-allocate(conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
-conc=0.0_rk
+
+! link array conc to fabm_sediment_driver
 sed%conc => conc
+
 write(0,*) '  Initialise sediment module'
 call init_fabm_sed(sed)
 close(33)

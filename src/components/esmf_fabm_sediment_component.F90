@@ -79,22 +79,17 @@ module esmf_fabm_sediment_component
     write(string,'(A,I3,A)') 'Initialise grid with ',sed%grid%knum,' vertical layers'
     call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
     call init_sed_grid(sed%grid)
+
+    !! Link conc to fabm_sediment_driver
+    sed%conc => conc
     
     call ESMF_LogWrite('Initialise sediment module',ESMF_LOGMSG_INFO)
     call init_fabm_sed(sed)
     close(33)
 
-    !! Allocate all arrays conc (and link to fabm), bdys, TODO: add these
+    !! Allocate all arrays bdys, fluxes TODO: add these
     !! arrays to ESMF fields
     call ESMF_LogWrite('Allocate arrays',ESMF_LOGMSG_INFO)
-    allocate(conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
-    conc=0.0_rk
-    do n=1,sed%nvar
-      conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value
-      call fabm_link_bulk_state_data(sed%model,n,conc(_LOCATION_DIMENSIONS_,n))
-    end do
-    sed%conc => conc
-
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
     bdys(1,1,1:9) = 0.0_rk
     bdys(1,1,1) = 10._rk   ! degC temperature

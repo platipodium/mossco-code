@@ -148,12 +148,14 @@ temp3d=-999.0_rk
 
 diff = diffusivity
 
+! allocate concentration array
+allocate(sed%conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
+sed%conc = 0.0_rk
 
 do n=1,sed%nvar
    sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(_LOCATION_DIMENSIONS_,n))
 end do
-
 
 end subroutine init_fabm_sed
 
