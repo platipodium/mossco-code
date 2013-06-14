@@ -4,6 +4,9 @@
 #define _JNUM_ _GRID_%jnum
 #define _KNUM_ _GRID_%knum
 
+#define _RK4_ 1
+#define _ADAPTIVE_EULER_ 2
+
 program fabmsed1d
 
 use fabm_sediment_driver
@@ -13,11 +16,12 @@ implicit none
 integer,parameter :: rk = selected_real_kind(12)
 real(rk)       :: dt,dzmin
 integer        :: tnum,t,funit,output,k,n,numyears,numlayers
+integer        :: ode_method
 type(type_sed) :: sed
 real(rk),dimension(:,:,:,:),allocatable,target :: conc
 real(rk),dimension(:,:,:), allocatable         :: bdys,fluxes
 
-namelist/run_nml/ numyears,dt,output,numlayers,dzmin
+namelist/run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
 
 ! initialise
 dt=60._rk !s
@@ -25,6 +29,7 @@ numyears=1
 output=86400/int(dt)
 numlayers=10
 dzmin=0.005
+ode_method=_RK4_
 
 open(33,file='run.nml',action='read',status='old')
 read(33,nml=run_nml)
@@ -70,7 +75,7 @@ write(funit,*) 'time(s) ','depth(m) ','conc(n) '
 
 !integrate
 do t=1,tnum
-   call ode_solver(sed,bdys,fluxes,dt,0,fabm_sed_get_rhs)
+   call ode_solver(sed,bdys,fluxes,dt,ode_method,fabm_sed_get_rhs)
 ! reset concentrations to mininum_value
    do n=1,sed%nvar
       do k=1,sed%grid%knum
@@ -128,48 +133,46 @@ real(rk),dimension(1:1,1:1,1:_KNUM_,1:sed%nvar) :: rhs,rhs1,rhs2,rhs3
 real(rk),target :: c1(1:1,1:1,1:_KNUM_,1:sed%nvar)
 real(rk),dimension(:,:,:,:),pointer :: c_pointer
 integer  :: i,ci
+real(rk) :: dt_red,dt_int,relative_change
 
-!write(0,*) ' entered ode_solver'
 
 select case (method)
-case default
+case(_ADAPTIVE_EULER_)
+   dt_int = 0.0_rk
+   dt_red = dt
+   do while (dt_int .lt. dt)
+      c_pointer => sed%conc
+      call get_rhs(sed,bdys,fluxes,rhs)
+      c1 = sed%conc + dt_red*rhs
+
+      relative_change = minval((c1-c_pointer)/c_pointer)
+      if (relative_change < -0.9_rk) then ! 90% tolerance in reduction 
+         dt_red = dt_red/4
+      else
+         c_pointer = c1
+         sed%conc => c_pointer
+         dt_int = dt_int + dt_red
+      end if
+   end do
+
+case(_RK4_)
    ! Runge-Kutta-4th_order
    first=.true.
    c_pointer => sed%conc
    call get_rhs(sed,bdys,fluxes,rhs)
    first=.false.
-
-   do i=1,sed%nvar
-      do ci=1,_KNUM_
-         c1(1,1,ci,i)=sed%conc(1,1,ci,i)+dt*rhs(1,1,ci,i)
-      end do
-   end do
+   c1 = sed%conc + dt*rhs
 
    sed%conc => c1
    call get_rhs(sed,bdys,fluxes,rhs1)
-
-   do i=1,sed%nvar
-      do ci=1,_KNUM_
-         c1(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*rhs1(1,1,ci,i)
-      end do
-   end do
+   c1 = c_pointer + dt*rhs1
 
    call get_rhs(sed,bdys,fluxes,rhs2)
-
-   do i=1,sed%nvar
-      do ci=1,_KNUM_
-         c1(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*rhs2(1,1,ci,i)
-      end do
-   end do
+   c1 = c_pointer + dt*rhs2
 
    call get_rhs(sed,bdys,fluxes,rhs3)
+   c_pointer = c_pointer + dt*1_rk/3_rk*(0.5_rk*rhs + rhs1 + rhs2 + 0.5_rk*rhs3)
 
-   do i=1,sed%nvar
-      do ci=1,_KNUM_
-         c_pointer(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*1_rk/3_rk*(0.5_rk*rhs(1,1,ci,i) &
-                            +rhs1(1,1,ci,i)+rhs2(1,1,ci,i)+0.5_rk*rhs3(1,1,ci,i))
-      end do
-   end do
    sed%conc => c_pointer
    nullify(c_pointer)
 end select

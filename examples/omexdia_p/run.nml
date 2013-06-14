@@ -5,13 +5,15 @@
 ! dt - timestep (s)
 ! output - number of timesteps (#)
 ! numlayers - number of sediment layers (#)
+! ode_method - 1: Runge-Kutta 4th order, 2: Adaptive Euler-Forward
 !--------------
 &run_nml
-  numyears=20
-  dt=60.
-  output=43200
+  numyears=10
+  dt=3600.
+  output=720
   numlayers=24
   dzmin=0.003
+  ode_method=2
 /
 
 &sed_nml
