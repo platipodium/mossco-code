@@ -77,9 +77,11 @@ INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 INCLUDES += -J$(MOSSCO_MODULE_PATH)
+EXTRA_CPP=
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
 INCLUDES += -module $(MOSSCO_MODULE_PATH)
+EXTRA_CPP=
 endif
 endif
 
@@ -125,14 +127,14 @@ info:
 	@echo LINKDIRS = $(LINKDIRS)
 
 # Common rules
-#ifeq  ($(can_do_F90),true)
+#ifndef EXTRA_CPP
 %.o: %.F90
-	@ echo "Compiling $<"
+	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 #else
 #%.f90: %.F90
 #	$(CPP) $(CPPFLAGS) $< -o $@
-	#$(F90_to_f90)
+#	$(F90_to_f90)
 #%.o: %.f90
-	#$(F90) $(F90FLAGS) $(EXTRA_FFLAGS) -c $< -o $@
+#	$(F90) $(F90FLAGS) $(EXTRA_FFLAGS) -c $< -o $@
 #endif
