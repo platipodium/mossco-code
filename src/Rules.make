@@ -1,5 +1,11 @@
 # Makefile rules applying to the entire MOSSCO src and examples directories
 
+# 0. Checking that we're using GNU make 
+#    Of course, this command already requires gmake, so a better solution is required here
+ifeq ($(shell make --version | grep -c GNU),0)
+$(error GNU make is required)
+endif 
+
 # 1. Importing all FABM-related environment variables and checking that the environment is sane
 #    At the moment, we require that FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
@@ -77,7 +83,6 @@ $(warning F90 automatically determined from FABM environment: F90=$(F90))
 endif
 endif
 endif
-export F90
 
 INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
 INCLUDES += $(ESMF_F90COMPILEPATHS)
@@ -109,7 +114,7 @@ default: prefix all
 clean:
 	@rm -f *.o
 
-veryclean: clean
+distclean: clean
 	@rm -f *.swp
 
 prefix:
