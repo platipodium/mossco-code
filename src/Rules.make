@@ -9,18 +9,26 @@ $(error FABMDIR needs to be defined)
 endif
 
 ifndef FABMHOST
-$(error FABMHOST needs to be defined as FABMHOST=mossco)
+$(warning FABMHOST set to FABMHOST=mossco)
 endif
 
 ifndef FORTRAN_COMPILER
 $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers)
 endif
 
+ifndef FABM_F2003
+$(error Before compiling FABM, set FABM_F2003=true to enable the sediment module)
+endif
+
+ifeq ($(FABM_F2003),true)
+else
+$(error Please recompile FABM with FABM_F2003=true)
+endif
+
 FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_INCLUDE_PATH=$(FABMDIR)/include
 FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_LIBRARY_FILE=$(FABM_LIBRARY_PATH)/libfabm_prod.a
-export FABM_F2003=true
 
 # 2. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
