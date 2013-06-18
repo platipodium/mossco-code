@@ -13,6 +13,8 @@ clean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 	@rm -rf modules lib bin
 
+distclean: clean
+
 all: subdirs
 
 subdirs: $(SUBDIRS)
@@ -28,3 +30,7 @@ update:
 
 info:
 	make -C src info
+
+run: examples
+	(cd examples/omexdia_p && ./omexdia_p_test)
+	(cd examples/esmf_sediment && ./esmf_sediment_test)

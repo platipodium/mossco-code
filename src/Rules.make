@@ -43,9 +43,8 @@ endif
 #    to the PREFIX
 #
 ifndef MOSSCODIR
-MOSSCODIR=$(subst FABM,MOSSCO,$(FABMDIR))
-export MOSSCODIR:=$(subst fabm,mossco,$(MOSSCODIR))
-$(warning MOSSCODIR=$(MOSSCODIR) automatically determined from FABMDIR)
+MOSSCODIR=$(subst /src$,,$(PWD))
+$(warning MOSSCODIR=$(MOSSCODIR) automatically set to working directory)
 endif
 
 ifeq ($(wildcard $(MOSSCODIR)),) 
@@ -58,8 +57,8 @@ else
 MOSSCOPREFIX=$(MOSSCODIR)
 endif
 
-MOSSCO_MODULE_PATH=$(MOSSCOPREFIX)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
-MOSSCO_LIBRARY_PATH=$(MOSSCOPREFIX)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
+MOSSCO_MODULE_PATH=$(MOSSCOPREFIX)/modules/$(FORTRAN_COMPILER)
+MOSSCO_LIBRARY_PATH=$(MOSSCOPREFIX)/lib/$(FORTRAN_COMPILER)
 MOSSCO_BIN_PATH=$(MOSSCOPREFIX)/bin
 
 # 4. Putting everything together.  This section could need some cleanup, but does work fornow
