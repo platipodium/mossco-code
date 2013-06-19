@@ -1,0 +1,83 @@
+/**
+@mainpage The Modular System for Shelf and Coastal Seas
+
+@section project-goals Project goals
+
+The overarching goal of the project ``Modular System for Shelves and Coasts'' (MOSSCO) is to bring together the distributed capacities in coastal ocean modelling in Germany and to build a common infrastructure for the national and international coastal research community.
+
+@image latex MOSSCO-schema_400px.png "Schematic overview of the MOSSCO system" width=.5\hsize
+
+MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the ``Forschungsagenda Nord- und Ostsee''. It should integrate physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure will support synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance to coastal policies. 
+
+@section obtaining-code How to obtain the code
+
+This manual documents the source code developed in the MOSSCO project.  
+
+The web site interface could look like this (depending on your browser)
+
+@image latex sf_git_screenshot.png "Screenshot of using sourceforge" width=0.5\hsize
+
+The code is available from the sourceforge site via @c git.
+@verbatim
+git clone git://git.code.sf.net/p/mossco/code mossco-code
+@endverbatim
+
+We refer to the created directory @c mossco-code as @c MOSSCODIR.  You can freely choose this directory, and you should make this an environment variable.
+
+@section installing Installing MOSSCO
+
+MOSSCO has some necessary and some optional prerequisites.  Please make sure you meet these prerequisites before you try to compile MOSSCO.
+
+## MOSSCO prerequisites ## 
+
+- GNU Make
+- Fortran Compiler (Intel and GNU Fortran tested) with support for the FORTRAN 2003 standard
+- FABM
+- ESMF (optional)
+
+##  Installing FABM ##
+- obtain a recent version of FABM from https://sourceforge.net/projects/fabm/
+- check out the mossco branch of FABM: @code git checkout mossco @endcode
+- set the appropriate @c FABMHOST, @c FABMDIR, and @c FORTRAN_COMPILER environment variables
+- you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
+
+## Installing ESMF ##
+(Instructions follow)
+
+## Building MOSSCO ##
+
+To create the MOSSCO libraries, currently libsediment.a and libsolver.a, simply issue
+@c make in your @c MOSSCODIR.  This will automaticall build the @c src target and provide the 
+libraries in @c $MOSSCODIR/lib/$FORTRAN_COMPILER
+
+To create the documentation (the file you're reading right now), issue 
+@code
+make doc
+@endcode
+
+To create the examples and test your installation, issue
+@code
+make examples
+@endcode
+
+Then change to the examples subdirectories and run the testcases.  
+
+## Reporting errors ##
+
+@section status MOSSCO status
+
+The MOSSCO system was successfully tested on the following machines and environments.  Please
+report successful testing on your machine (e.g., in the project wiki), and issue a new tag, if you are
+a developer.
+
+OS | Compiler | Config | Machine | Status | Specification
+--|--|--|--|--|--
+Linux | gfortran/mpich | FABM/ESMF | ksez8002 | complete | Linux 3.8.0-19 Ubuntu SMP x86_64 / GNU Fortran (Ubuntu/Linaro 4.7.3-1ubuntu1) 4.7.3
+Linux | ifort | FABM | grpsrv05 | compiles | Linux 2.6.16.60 lustre.1.8.0.1-smp x86_64 / ifort (IFORT) 11.1 20100414
+Darwin | gfortran/mpich | FABM/ESMF | possum | compiles | Darwin 12.4.0 X86_64 / GNU Fortran (MacPorts gcc47 4.7.3_0+mpich-3.0.4)
+MacOSX 10.6.8 | gfortran/mpich | FABM/ESMF | macchi | complete | gfortran 4.7.2
+GNU/Linux | gfortran | FABM | phy-203 (IOW) | complete | Linux version 3.8.0-25-generic / gcc version 4.7.3
+SUSE/Linux | ifort | FABM | bicegate (HLRN) | complete | Linux version 2.6.16.60-0.87.1-smp / ifort Version 12.1.1.256
+
+
+*/

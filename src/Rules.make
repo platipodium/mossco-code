@@ -15,7 +15,7 @@ $(error FABMDIR needs to be defined)
 endif
 
 ifndef FABMHOST
-FABMHOST=mossco
+export FABMHOST=mossco
 $(warning FABMHOST set to FABMHOST=mossco)
 endif
 
@@ -50,7 +50,7 @@ endif
 #    to the PREFIX
 #
 ifndef MOSSCODIR
-MOSSCODIR=$(subst /src$,,$(PWD))
+export MOSSCODIR=$(subst /src$,,$(PWD))
 $(warning MOSSCODIR=$(MOSSCODIR) automatically set to working directory)
 endif
 
@@ -63,10 +63,11 @@ MOSSCOPREFIX=$(PREFIX)
 else
 MOSSCOPREFIX=$(MOSSCODIR)
 endif
+export MOSSCOPREFIX
 
-MOSSCO_MODULE_PATH=$(MOSSCOPREFIX)/modules/$(FORTRAN_COMPILER)
-MOSSCO_LIBRARY_PATH=$(MOSSCOPREFIX)/lib/$(FORTRAN_COMPILER)
-MOSSCO_BIN_PATH=$(MOSSCOPREFIX)/bin
+export MOSSCO_MODULE_PATH=$(MOSSCOPREFIX)/modules/$(FORTRAN_COMPILER)
+export MOSSCO_LIBRARY_PATH=$(MOSSCOPREFIX)/lib/$(FORTRAN_COMPILER)
+export MOSSCO_BIN_PATH=$(MOSSCOPREFIX)/bin
 
 # 4. Putting everything together.  This section could need some cleanup, but does work fornow
 #
@@ -84,6 +85,7 @@ $(warning F90 automatically determined from FABM environment: F90=$(F90))
 endif
 endif
 endif
+export F90
 
 INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
 INCLUDES += $(ESMF_F90COMPILEPATHS)
@@ -101,11 +103,15 @@ endif
 LIBRARY_PATHS  = -L$(FABM_LIBRARY_PATH) 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90ESMFLINKRPATHS) 
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
+export LIBRARY_PATHS
+
 LIBS = -lfabm_prod
 LIBS += $(ESMF_F90LINKLIBS)
+export LIBS
 
-CPPFLAGS = $(DEFINES) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS)
-LDFLAGS = $(ESMF_F90LINKOPTS)
+export CPPFLAGS = $(DEFINES) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS)
+
+export LDFLAGS = $(ESMF_F90LINKOPTS)
 
 # Make targets
 .PHONY: default all clean doc info
