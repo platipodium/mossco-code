@@ -9,9 +9,14 @@ EXTRA_DIST=README
 all: libsediment
 
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
+libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
 	$(AR) cruvs $@ esmf_fabm_sediment_component.o
+
+$(MOSSCO_module_path)/solver_library.mod:
+	make -C $(MOSSCODIR)/examples/omexdia_p solver_library.o
+
 
 clean: extraclean
 extraclean:
