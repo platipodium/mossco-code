@@ -1,2 +1,4 @@
 esmf_sediment_example
 PET*
+PET*.*
+output.dat
