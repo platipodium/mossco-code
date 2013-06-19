@@ -1,0 +1,18 @@
+/**
+@mainpage The Modular System for Shelf and Coastal Seas
+
+@section project-goals Project goals
+
+The overarching goal of the project ``Modular System for Shelves and Coasts'' (MOSSCO) is to bring together the distributed capacities in coastal ocean modelling in Germany and to build a common infrastructure for the national and international coastal research community.
+
+MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the ``Forschungsagenda Nord- und Ostsee''. It should integrate physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure will support synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance to coastal policies. 
+
+@section obtaining-code How to obtain the code
+
+This manual documents the source code developed in the MOSSCO project.  The code is available from the sourceforge site via git:
+
+git clone git://git.code.sf.net/p/mossco/code mossco-code
+
+@image sf_git_screenshot.png
+
+*/
