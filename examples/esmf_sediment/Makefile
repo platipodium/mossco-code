@@ -1,6 +1,6 @@
 include ../../src/Rules.make
 
-LIBS := -lesmf -lsediment $(LIBS)
+LIBS := -lesmf -lsediment -lsolver $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 

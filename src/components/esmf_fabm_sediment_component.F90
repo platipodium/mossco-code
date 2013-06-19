@@ -5,12 +5,16 @@
 #define _JNUM_ _GRID_%jnum
 #define _KNUM_ _GRID_%knum
 
+#define _RK4_ 1
+#define _ADAPTIVE_EULER_ 2
+
 module esmf_fabm_sediment_component
 
   use esmf
   use fabm
   use fabm_types  ! for realkind
   use fabm_sediment_driver
+  use solver_library!, only : ode_solver
 
   implicit none
 
@@ -19,7 +23,7 @@ module esmf_fabm_sediment_component
   real(rk)  :: dzmin,dt
   integer   :: t,tnum,funit,output,k,n,numyears,numlayers
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
-  real(rk),dimension(:,:,:),allocatable        :: bdys,fluxes
+  real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
  
   type(type_sed),save :: sed
   type(ESMF_Alarm),save :: outputAlarm
@@ -51,12 +55,27 @@ module esmf_fabm_sediment_component
 
     type(ESMF_TimeInterval) :: timeInterval,alarmInterval
     type(ESMF_Time)         :: startTime
-    character(len=ESMF_MAXSTR) :: string
+    character(len=ESMF_MAXSTR) :: string,filename
+    type(ESMF_Config)     :: config
+    type(ESMF_FieldBundle) :: fieldbundle(3)
+    type(ESMF_Field), allocatable, dimension(:) :: fieldlist
+    type(ESMF_Array)     :: array
+    integer              :: fieldcount,i
+    type(ESMF_DistGrid)  :: distgrid
+    type(ESMF_Grid)      :: grid
+    type(ESMF_ArraySpec) :: arrayspec
 
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
+    real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
+  
     !! read namelist input for control of time, this should not be done like this,
     !! but handled outside the component.  Maybe later introduce a local clock 
     open(33,file='run.nml',action='read',status='old')
     read(33,nml=run_nml)
+
+    !config = ESMF_ConfigCreate(rc=rc) 
+    !call ESMF_ConfigDestroy(config, rc=rc)
 
     !! Set the time step end stop time
     call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
@@ -84,8 +103,7 @@ module esmf_fabm_sediment_component
     call init_fabm_sed(sed)
     close(33)
 
-    !! Allocate all arrays conc, bdys, fluxes TODO: add these
-    !! arrays to ESMF fields
+    !! Allocate all arrays conc, bdys, fluxes 
     call ESMF_LogWrite('Allocate arrays',ESMF_LOGMSG_INFO)
     
     allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
@@ -111,9 +129,72 @@ module esmf_fabm_sediment_component
     fluxes(1,1,3) = 0.08/86400.0_rk !pdet
 
     !! define an output unit for tsv output, TODO: add netcdf output for this
+    !! netcdf output currently not working (see commented code below)
     funit=2
     open(funit,file='output.dat')
     write(funit,*) 'time(s) ','depth(m) ','conc(n) '
+
+    call ESMF_GridCompGet(gridComp,grid=grid,rc=rc)
+    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+
+    !! Define the 2D boundary condition fields and collect them in a FieldBundle
+    fieldcount=sed%nvar+1
+    allocate(fieldlist(fieldcount))
+    ptr_f2 =>   bdys(:,:,1)
+    fieldlist(1) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Temperature",rc=rc)
+    ptr_f2 =>   bdys(:,:,5)
+    fieldlist(5) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Phosphate",rc=rc)
+    ptr_f2 =>   bdys(:,:,6)
+    fieldlist(6) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Nitrate",rc=rc)
+    ptr_f2 =>   bdys(:,:,7)
+    fieldlist(7) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Ammonia",rc=rc)
+    ptr_f2 =>   bdys(:,:,8)
+    fieldlist(8) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Oxygen",rc=rc)
+    ptr_f2 =>   bdys(:,:,9)
+    fieldlist(9) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="odu",rc=rc)
+    fieldbundle(1) = ESMF_FieldBundleCreate(name="Boundary conditions",rc=rc)
+    call ESMF_FieldBundleAdd(fieldbundle(1),fieldlist((/1,5,6,7,8,9/)),rc=rc)
+    deallocate(fieldlist)
+
+    !! Define the 2D flux condition fields and collect them in a FieldBundle
+    fieldcount=sed%nvar
+    allocate(fieldlist(fieldcount))
+    ptr_f2 =>   fluxes(:,:,1)
+    fieldlist(1) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="fdet",rc=rc)
+    ptr_f2 =>   fluxes(:,:,2)
+    fieldlist(2) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="sdet",rc=rc)
+    ptr_f2 =>   bdys(:,:,3)
+    fieldlist(3) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="pdet",rc=rc)
+    fieldbundle(2) = ESMF_FieldBundleCreate(name="Flux conditions",rc=rc)
+    call ESMF_FieldBundleAdd(fieldbundle(2),fieldlist((/1,2,3/)),rc=rc)
+    deallocate(fieldlist)
+
+    !! Define the 3d concentrations and collect them in FieldBundle
+    fieldcount=sed%nvar
+    allocate(fieldlist(fieldcount))
+    do i=1,fieldcount
+      ptr_f3 =>  conc(:,:,:,i)
+      write(string,'(A,I0.3)') 'Var',i
+      fieldlist(i) = ESMF_FieldCreate(grid,ptr_f3,staggerloc &
+                   = ESMF_STAGGERLOC_CENTER, name=trim(string),rc=rc)
+    enddo
+    fieldbundle(3) = ESMF_FieldBundleCreate(name="Concentrations",rc=rc)
+    call ESMF_FieldBundleAdd(fieldbundle(3),fieldlist,rc=rc)
+    !call ESMF_FieldWrite(fieldlist(1),"initialization_state.nc",iofmt=ESMF_IOFMT_NETCDF,rc=rc)
+    !call ESMF_FieldBundleWrite(fieldbundle(1),"initialization_state.nc",singleFile=.true.,iofmt=ESMF_IOFMT_NETCDF,rc=rc)
+    if (rc  /= ESMF_SUCCESS ) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    deallocate(fieldlist)
+
+    call ESMF_StateAdd(exportState,fieldbundle,rc=rc)
 
   end subroutine Initialize
 
@@ -128,8 +209,8 @@ module esmf_fabm_sediment_component
     type(ESMF_TimeInterval) :: timeInterval
     type(ESMF_Grid)   :: grid
     type(ESMF_FieldBundle) :: fieldBundle
-    type(ESMF_Field), allocatable, dimension(:) :: fieldList
-    integer           :: fieldCount
+    type(ESMF_Field), allocatable, dimension(:) :: fieldlist
+    integer           :: fieldcount,ode_method
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: name,string
     
@@ -148,17 +229,16 @@ module esmf_fabm_sediment_component
     !call ESMF_StatePrint(importState,options="long",nestedFlag=.true.,rc=rc)
     call ESMF_StateGet(importState,"FABM field bundle",fieldBundle,rc=rc)
     !call ESMF_FieldBundlePrint(fieldBundle,rc=rc)
-    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=rc)
-    allocate(fieldList(fieldCount))
-    call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=rc)
-    call ESMF_FieldGet(fieldList(1),name=name,rc=rc)
+    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldcount,rc=rc)
+    allocate(fieldlist(fieldcount))
+    call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldlist,rc=rc)
+    call ESMF_FieldGet(fieldlist(1),name=name,rc=rc)
   
     !! Get integration time step from parent clock
     call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
     call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
-
-!integrate TODO: enable this function !!! TODO: enable this function !!!
-   call ode_solver(sed,bdys,fluxes,dt,0,fabm_sed_get_rhs)
+   ode_method=_ADAPTIVE_EULER_
+   call ode_solver(sed,bdys,fluxes,dt,ode_method,fabm_sed_get_rhs)
 
  ! reset concentrations to mininum_value
      do n=1,sed%nvar
@@ -183,7 +263,7 @@ module esmf_fabm_sediment_component
       end do
     endif
  
-    deallocate(fieldList)
+    deallocate(fieldlist)
 
   end subroutine Run
 
@@ -204,7 +284,7 @@ module esmf_fabm_sediment_component
   end subroutine Finalize
 
 
-subroutine ode_solver(sedi,bdys,fluxes,dt,method,get_rhs)
+subroutine ode_solver_old(sedi,bdys,fluxes,dt,method,get_rhs)
 use fabm_sediment_driver, only : type_sed
 implicit none
 
@@ -279,7 +359,7 @@ case default
 end select
 
 return
-end subroutine ode_solver
+end subroutine ode_solver_old
 
 
 end module esmf_fabm_sediment_component

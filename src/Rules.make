@@ -15,6 +15,7 @@ $(error FABMDIR needs to be defined)
 endif
 
 ifndef FABMHOST
+FABMHOST=mossco
 $(warning FABMHOST set to FABMHOST=mossco)
 endif
 
