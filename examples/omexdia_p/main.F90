@@ -21,6 +21,7 @@ integer        :: ode_method
 type(type_sed) :: sed
 real(rk),dimension(:,:,:,:),allocatable,target :: conc
 real(rk),dimension(:,:,:), allocatable         :: bdys,fluxes
+real(rk),dimension(:,:,:),pointer              :: diag
 
 namelist/run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
 
@@ -72,7 +73,14 @@ fluxes(1,1,2) = 5.0_rk/86400.0_rk !sdet
 fluxes(1,1,3) = 0.08/86400.0_rk !pdet
 
 open(funit,file='output.dat')
-write(funit,*) 'time(s) ','depth(m) ','conc(n) '
+write(funit,fmt='(A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) '
+do n=1,sed%nvar
+   write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%state_variables(n)%name)
+end do
+do n=1,size(sed%model%info%diagnostic_variables)
+   write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%diagnostic_variables(n)%name)
+end do
+write(funit,*)
 
 !integrate
 do t=1,tnum
@@ -89,8 +97,16 @@ do t=1,tnum
    if (mod(t,output) .eq. 0) then
        write(0,*) ' elapsed ',t*dt/86400,' days'
        write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
-       do k=1,_KNUM_ 
-          write(funit,*) t*dt,sed%grid%zc(1,1,k),conc(1,1,k,:)
+       do k=1,_KNUM_
+          write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3)',advance='no') t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k)
+          do n=1,sed%nvar
+             write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
+          end do
+          do n=1,size(sed%model%info%diagnostic_variables)
+             diag => fabm_sed_diagnostic_variables(sed,n)
+             write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
+          end do
+          write(funit,*)
        end do
    end if
 end do

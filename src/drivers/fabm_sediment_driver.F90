@@ -45,7 +45,7 @@ real(rk),dimension(:,:),allocatable     :: zeros2d
 #define _KNUM_ _GRID_%knum
 
 public :: init_fabm_sed,init_sed_grid,fabm_sed_get_rhs,finalize_fabm_sed,type_sed,fabm_sed_grid
-public :: init_fabm_sed_concentrations
+public :: init_fabm_sed_concentrations,fabm_sed_diagnostic_variables
 
 contains
 
@@ -163,6 +163,23 @@ do n=1,sed%nvar
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
 end do
 end subroutine init_fabm_sed_concentrations
+
+
+!> fabm_sed_diagnostic_variables
+!!
+!! The function returns a pointer to the 3d diagnostic variables.
+!! So far, only bulk diagnostic variables are supported. The function is a
+!! wrapper of the related FABM function.
+
+function fabm_sed_diagnostic_variables(sed,n) result(diag)
+implicit none
+
+type(type_sed),intent(in)          :: sed
+integer,intent(in)                 :: n
+real(rk),dimension(:,:,:),pointer  :: diag
+
+diag => fabm_get_bulk_diagnostic_data(sed%model,n)
+end function
 
 
 !> get right-hand sides
