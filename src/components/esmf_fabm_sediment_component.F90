@@ -19,7 +19,7 @@ module esmf_fabm_sediment_component
   real(rk)  :: dzmin,dt
   integer   :: t,tnum,funit,output,k,n,numyears,numlayers
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
-  real(rk),dimension(:,:,:),allocatable        :: bdys,fluxes
+  real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
  
   type(type_sed),save :: sed
   type(ESMF_Alarm),save :: outputAlarm
@@ -51,12 +51,27 @@ module esmf_fabm_sediment_component
 
     type(ESMF_TimeInterval) :: timeInterval,alarmInterval
     type(ESMF_Time)         :: startTime
-    character(len=ESMF_MAXSTR) :: string
+    character(len=ESMF_MAXSTR) :: string,filename
+    type(ESMF_Config)     :: config
+    type(ESMF_FieldBundle) :: fieldbundle(3)
+    type(ESMF_Field), allocatable, dimension(:) :: fieldlist
+    type(ESMF_Array)     :: array
+    integer              :: fieldcount
+    type(ESMF_DistGrid)  :: distgrid
+    type(ESMF_Grid)      :: grid
+    type(ESMF_ArraySpec) :: arrayspec
 
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
+    real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
+  
     !! read namelist input for control of time, this should not be done like this,
     !! but handled outside the component.  Maybe later introduce a local clock 
     open(33,file='run.nml',action='read',status='old')
     read(33,nml=run_nml)
+
+    !config = ESMF_ConfigCreate(rc=rc) 
+    !call ESMF_ConfigDestroy(config, rc=rc)
 
     !! Set the time step end stop time
     call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
@@ -115,6 +130,52 @@ module esmf_fabm_sediment_component
     open(funit,file='output.dat')
     write(funit,*) 'time(s) ','depth(m) ','conc(n) '
 
+    call ESMF_GridCompGet(gridComp,grid=grid,rc=rc)
+    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+
+    !! Define the 2D boundary condition fields and collect them in a FieldBundle
+    fieldcount=sed%nvar+1
+    allocate(fieldlist(fieldcount))
+    ptr_f2 =>   bdys(:,:,1)
+    fieldlist(1) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Temperature",rc=rc)
+    ptr_f2 =>   bdys(:,:,5)
+    fieldlist(5) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Phosphate",rc=rc)
+    ptr_f2 =>   bdys(:,:,6)
+    fieldlist(6) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Nitrate",rc=rc)
+    ptr_f2 =>   bdys(:,:,7)
+    fieldlist(7) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Ammonia",rc=rc)
+    ptr_f2 =>   bdys(:,:,8)
+    fieldlist(8) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="Oxygen",rc=rc)
+    ptr_f2 =>   bdys(:,:,9)
+    fieldlist(9) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="odu",rc=rc)
+    fieldbundle(1) = ESMF_FieldBundleCreate(name="Boundary conditions",rc=rc)
+    call ESMF_FieldBundleAdd(fieldbundle(1),fieldlist((/1,5,6,7,8,9/)),rc=rc)
+    deallocate(fieldlist)
+
+    !! Define the 2D flux condition fields and collect them in a FieldBundle
+    fieldcount=sed%nvar
+    allocate(fieldlist(fieldcount))
+    ptr_f2 =>   fluxes(:,:,1)
+    fieldlist(1) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="fdet",rc=rc)
+    ptr_f2 =>   fluxes(:,:,2)
+    fieldlist(2) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="sdet",rc=rc)
+    ptr_f2 =>   bdys(:,:,3)
+    fieldlist(3) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
+                 = ESMF_STAGGERLOC_CENTER, name="pdet",rc=rc)
+    fieldbundle(2) = ESMF_FieldBundleCreate(name="Flux conditions",rc=rc)
+    call ESMF_FieldBundleAdd(fieldbundle(2),fieldlist((/1,2,3/)),rc=rc)
+    deallocate(fieldlist)
+
+    call ESMF_StateAdd(exportState,fieldbundle,rc=rc)
+
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -128,8 +189,8 @@ module esmf_fabm_sediment_component
     type(ESMF_TimeInterval) :: timeInterval
     type(ESMF_Grid)   :: grid
     type(ESMF_FieldBundle) :: fieldBundle
-    type(ESMF_Field), allocatable, dimension(:) :: fieldList
-    integer           :: fieldCount
+    type(ESMF_Field), allocatable, dimension(:) :: fieldlist
+    integer           :: fieldcount
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: name,string
     
@@ -148,10 +209,10 @@ module esmf_fabm_sediment_component
     !call ESMF_StatePrint(importState,options="long",nestedFlag=.true.,rc=rc)
     call ESMF_StateGet(importState,"FABM field bundle",fieldBundle,rc=rc)
     !call ESMF_FieldBundlePrint(fieldBundle,rc=rc)
-    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=rc)
-    allocate(fieldList(fieldCount))
-    call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=rc)
-    call ESMF_FieldGet(fieldList(1),name=name,rc=rc)
+    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldcount,rc=rc)
+    allocate(fieldlist(fieldcount))
+    call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldlist,rc=rc)
+    call ESMF_FieldGet(fieldlist(1),name=name,rc=rc)
   
     !! Get integration time step from parent clock
     call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
@@ -183,7 +244,7 @@ module esmf_fabm_sediment_component
       end do
     endif
  
-    deallocate(fieldList)
+    deallocate(fieldlist)
 
   end subroutine Run
 
