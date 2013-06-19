@@ -1,3 +1,12 @@
+!> @file esmf_fabm_sediment_component.F90
+!! @brief ESMF/FABM sediment driver component
+!!
+!! The ESMF component contains the sediment driver module
+!! @author Carsten Lemmen
+!! @author Richard Hofmeister
+
+!> The ESMF/FABM sediment driver component module provides infrastructure for the
+!! MOSSCO sediment component.
 #include <cppdefs.h>
 #include "fabm_driver.h"
 #define _GRID_ sed%grid
@@ -34,6 +43,9 @@ module esmf_fabm_sediment_component
   
   contains
 
+  !> Provide an ESMF compliant SetServices routine, which defines
+  !! the entry points for Init/Run/Finalize
+
   subroutine empty_SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
@@ -45,6 +57,10 @@ module esmf_fabm_sediment_component
 
   end subroutine empty_SetServices
 
+  !> Initialize the component
+  !!
+  !! Allocate memory for boundaries and fluxes, create ESMF fields
+  !! and export them
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
@@ -282,84 +298,5 @@ module esmf_fabm_sediment_component
     call ESMF_AlarmDestroy(outputAlarm,rc=rc)
 
   end subroutine Finalize
-
-
-subroutine ode_solver_old(sedi,bdys,fluxes,dt,method,get_rhs)
-use fabm_sediment_driver, only : type_sed
-implicit none
-
-integer            ,intent(in)   :: method
-real(rk)           ,intent(in)   :: dt
-type(type_sed)     ,intent(inout):: sedi
-real(rk)           ,intent(in)   :: bdys(1:_INUM_,1:_JNUM_,1:sedi%nvar+1)
-real(rk)           ,intent(inout):: fluxes(1:_INUM_,1:_JNUM_,1:sedi%nvar)
-
-
-interface
-   subroutine get_rhs(sed,bdys,fluxes,rhs)
-   use fabm_sediment_driver, only: type_sed
-      integer, parameter                   :: rk=selected_real_kind(12)
-      type(type_sed), intent(inout)        :: sed
-      real(rk), intent(in)                 :: bdys(1:_INUM_,1:_JNUM_,1:sed%nvar+1)
-      real(rk), intent(inout)              :: fluxes(1:_INUM_,1:_JNUM_,1:sed%nvar)
-      real(rk), intent(out)                :: rhs(1:_INUM_,1:_JNUM_,1:_KNUM_,1:sed%nvar)
-   end
-end interface
-
-logical  :: first
-real(rk),dimension(1:1,1:1,1:_KNUM_,1:sedi%nvar) :: rhs,rhs1,rhs2,rhs3
-real(rk),target :: c1(1:1,1:1,1:_KNUM_,1:sedi%nvar)
-real(rk),dimension(:,:,:,:),pointer :: c_pointer
-integer  :: i,ci
-
-!write(0,*) ' entered ode_solver'
-
-select case (method)
-case default
-   ! Runge-Kutta-4th_order
-   first=.true.
-   c_pointer => sedi%conc
-   call get_rhs(sedi,bdys,fluxes,rhs)
-   first=.false.
-
-   do i=1,sedi%nvar
-      do ci=1,_KNUM_
-         c1(1,1,ci,i)=sedi%conc(1,1,ci,i)+dt*rhs(1,1,ci,i)
-      end do
-   end do
-
-   sedi%conc => c1
-   call get_rhs(sedi,bdys,fluxes,rhs1)
-
-   do i=1,sedi%nvar
-      do ci=1,_KNUM_
-         c1(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*rhs1(1,1,ci,i)
-      end do
-   end do
-
-   call get_rhs(sedi,bdys,fluxes,rhs2)
-
-   do i=1,sedi%nvar
-      do ci=1,_KNUM_
-         c1(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*rhs2(1,1,ci,i)
-      end do
-   end do
-
-   call get_rhs(sedi,bdys,fluxes,rhs3)
-
-   do i=1,sedi%nvar
-      do ci=1,_KNUM_
-         c_pointer(1,1,ci,i)=c_pointer(1,1,ci,i)+dt*1_rk/3_rk &
-          *(0.5_rk*rhs(1,1,ci,i)+rhs1(1,1,ci,i)+rhs2(1,1,ci,i) &
-          +0.5_rk*rhs3(1,1,ci,i))
-      end do
-   end do
-   sedi%conc => c_pointer
-   nullify(c_pointer)
-end select
-
-return
-end subroutine ode_solver_old
-
 
 end module esmf_fabm_sediment_component
