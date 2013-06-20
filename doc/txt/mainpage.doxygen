@@ -18,9 +18,10 @@ The web site interface could look like this (depending on your browser)
 @image latex sf_git_screenshot.png "Screenshot of using sourceforge" width=0.5\hsize
 
 The code is available from the sourceforge site via @c git.
-@verbatim
+
+~~~~
 git clone git://git.code.sf.net/p/mossco/code mossco-code
-@endverbatim
+~~~~
 
 We refer to the created directory @c mossco-code as @c MOSSCODIR.  You can freely choose this directory, and you should make this an environment variable.
 
@@ -28,56 +29,68 @@ We refer to the created directory @c mossco-code as @c MOSSCODIR.  You can freel
 
 MOSSCO has some necessary and some optional prerequisites.  Please make sure you meet these prerequisites before you try to compile MOSSCO.
 
-## MOSSCO prerequisites ## 
+@subsection prerequisites MOSSCO prerequisites
+
 
 - GNU Make
 - Fortran Compiler (Intel and GNU Fortran tested) with support for the FORTRAN 2003 standard
 - FABM
 - ESMF (optional)
 
-##  Installing FABM ##
+@subsection installing-fabm Installing FABM
+
 - obtain a recent version of FABM from https://sourceforge.net/projects/fabm/
 - check out the mossco branch of FABM: @code git checkout mossco @endcode
-- set the appropriate @c FABMHOST, @c FABMDIR, and @c FORTRAN_COMPILER environment variables
+- set the appropriate @c $FABMHOST, @c $FABMDIR, and @c $FORTRAN_COMPILER environment variables
 - you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
 
-## Installing ESMF ##
+@subsection installing-esmf Installing ESMF
 (Instructions follow)
 
-## Building MOSSCO ##
+@subsection building Building MOSSCO
 
 To create the MOSSCO libraries, currently libsediment.a and libsolver.a, simply issue
-@c make in your @c MOSSCODIR.  This will automaticall build the @c src target and provide the 
+@c make in your @c $MOSSCODIR.  This will automaticall build the @c src target and provide the 
 libraries in @c $MOSSCODIR/lib/$FORTRAN_COMPILER
 
 To create the documentation (the file you're reading right now), issue 
-@code
+
+~~~~
 make doc
-@endcode
+~~~~
 
 To create the examples and test your installation, issue
-@code
+
+~~~~
 make examples
-@endcode
+~~~~
 
 Then change to the examples subdirectories and run the testcases.  
 
-## Reporting errors ##
+@section reporting Reporting errors
+
+Bugs as well as annoyances and feature requests are collected in a bug tracker located at http://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.  
+
+Do report any issue that you observe, even if this later turns out to be a problem related to your local computing environment and not to the MOSSCO code itself.  We encourage to document any problem that you encountered during the installation of MOSSCO: someone else might have the same issue and could profit from your experience.
 
 @section status MOSSCO status
 
-The MOSSCO system was successfully tested on the following machines and environments.  Please
-report successful testing on your machine (e.g., in the project wiki), and issue a new tag, if you are
-a developer.
+The MOSSCO system was successfully tested on the following machines and environments.  Please report successful testing on your machine (e.g., in the project wiki), and issue a new tag, if you area developer.
 
-OS | Compiler | Config | Machine | Status | Specification
---|--|--|--|--|--
-Linux | gfortran/mpich | FABM/ESMF | ksez8002 | complete | Linux 3.8.0-19 Ubuntu SMP x86_64 / GNU Fortran (Ubuntu/Linaro 4.7.3-1ubuntu1) 4.7.3
-Linux | ifort | FABM | grpsrv05 | compiles | Linux 2.6.16.60 lustre.1.8.0.1-smp x86_64 / ifort (IFORT) 11.1 20100414
-Darwin | gfortran/mpich | FABM/ESMF | possum | compiles | Darwin 12.4.0 X86_64 / GNU Fortran (MacPorts gcc47 4.7.3_0+mpich-3.0.4)
-MacOSX 10.6.8 | gfortran/mpich | FABM/ESMF | macchi | complete | gfortran 4.7.2
-GNU/Linux | gfortran | FABM | phy-203 (IOW) | complete | Linux version 3.8.0-25-generic / gcc version 4.7.3
-SUSE/Linux | ifort | FABM | bicegate (HLRN) | complete | Linux version 2.6.16.60-0.87.1-smp / ifort Version 12.1.1.256
+# Successful compilation and execution of examples
 
+Operating System | Compiler | Configuration | Machine | Status
+--|--|--|--|--
+Ubuntu Linux 3.8.0 x86-64 | gfortran-4.7.3/mpich | FABM/ESMF | ksez8002 (cl)| complete
+OSX 10.6.8 | gfortran-4.7.2/mpich | FABM/ESMF | macchi (rh)| complete
+Linux 3.8.0| gfortran-4.7.3 | FABM | phy-203 (IOW, kk)| complete
+SUSE Linux 2.6.16 | ifort-12.1 | FABM | bicegate (HLRN, kk) | complete
+
+# Successful compilation but runtime errors 
+
+Operating System | Compiler | Configuration | Machine | Status
+--|--|--|--|--
+Suse Linux 2.6.16 x86-64 | ifort-11.1 | FABM | grpsrv05 (cl)| compiles
+OSX 10.8.4 x86-64| gfortran-4.8.1/mpich | FABM | possum (cl) | compiles
 
 */
