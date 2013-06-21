@@ -24,7 +24,7 @@ $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/c
 endif
 
 ifndef FABM_F2003
-$(error Before compiling FABM, set FABM_F2003=true to enable the sediment module)
+$(error Before compiling FABM, set FABM_F2003 (to some arbitrary value) to enable the sediment module, make distclean in $$FABMDIR/src)
 endif
 
 ifeq ($(FABM_F2003),true)
@@ -72,11 +72,11 @@ export MOSSCO_BIN_PATH=$(MOSSCOPREFIX)/bin
 # 4. Putting everything together.  This section could need some cleanup, but does work fornow
 #
 ifndef F90
-ifdef ESMF_F90COMPILER)
+ifdef ESMF_F90COMPILER
 F90=$(ESMF_F90COMPILER)
 $(warning F90 automatically determined from ESMF_F90COMPILER variable: F90=$(F90))
 else
-ifdef FCA
+ifdef FC
 F90=$(FC)
 $(warning F90 automatically determined from FC variable: F90=$(F90))
 else
