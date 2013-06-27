@@ -220,7 +220,7 @@ call fabm_link_bulk_data(sed%model,varname_temp,temp3d)
 
 ! calculate diffusivities (temperature)
 do n=1,size(sed%model%info%state_variables)
-   if (sed%model%info%state_variables(n)%particulate) then
+   if (sed%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = 1
       diff = (sed%bioturbation + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
       conc_insitu = sed%conc(:,:,:,n)/(porosity-ones3d)
