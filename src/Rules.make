@@ -71,6 +71,10 @@ export MOSSCO_BIN_PATH=$(MOSSCOPREFIX)/bin
 
 # 4. Putting everything together.  This section could need some cleanup, but does work fornow
 #
+
+# determine the compiler used by FABM
+FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+
 ifndef F90
 ifdef ESMF_F90COMPILER
 F90=$(ESMF_F90COMPILER)
@@ -85,6 +89,11 @@ $(warning F90 automatically determined from FABM environment: F90=$(F90))
 endif
 endif
 endif
+
+ifneq ($(F90),$(FABM_F90COMPILER))
+$(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
+endif
+
 export F90
 
 INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
