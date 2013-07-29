@@ -12,7 +12,8 @@ all: exec
 fabmlib: $(FABM_LIBRARY_FILE)
 
 $(FABM_LIBRARY_FILE):
-	( export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR)/src/ )
+	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR) )
+	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR)/src )
 
 fabmdriver: fabmlib libsediment libsolver
 

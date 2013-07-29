@@ -14,6 +14,7 @@ $(MOSSCO_LIBRARY_PATH)/libsediment.a: libfabm fabm_sediment_driver.o
 libfabm: $(FABM_LIBRARY_FILE)
 
 $(FABM_LIBRARY_FILE):
+	$(MAKE) -C $(FABMDIR)
 	$(MAKE) -C $(FABMDIR)/src
 
 clean: extraclean
