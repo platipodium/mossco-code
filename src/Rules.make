@@ -24,7 +24,7 @@ $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/c
 endif
 
 ifndef FABM_F2003
-$(error Before compiling FABM, set FABM_F2003 (to some arbitrary value) to enable the sediment module, make distclean in $$FABMDIR/src)
+$(error Before compiling FABM, set FABM_F2003=true to enable the sediment module, make distclean in $$FABMDIR/src)
 endif
 
 ifeq ($(FABM_F2003),true)
@@ -80,13 +80,8 @@ ifdef ESMF_F90COMPILER
 F90=$(ESMF_F90COMPILER)
 $(warning F90 automatically determined from ESMF_F90COMPILER variable: F90=$(F90))
 else
-ifdef FC
-F90=$(FC)
-$(warning F90 automatically determined from FC variable: F90=$(F90))
-else
 F90=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
 $(warning F90 automatically determined from FABM environment: F90=$(F90))
-endif
 endif
 endif
 
