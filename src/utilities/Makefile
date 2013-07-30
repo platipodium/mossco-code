@@ -8,7 +8,7 @@ EXTRA_DIST=README
 
 all: libsolver
 
-libsolver: prefix $(MOSSCO_MODULE_PATH)/solver_library.mod solver_library.o libsediment
+libsolver: libsediment $(MOSSCO_MODULE_PATH)/solver_library.mod solver_library.o
 	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsolver.a solver_library.o
 	@echo "Created solver library  $(MOSSCO_LIBRARY_PATH)/libsolver.a" 
 
