@@ -1,16 +1,23 @@
-Main directory of MOSSCO
+This is the main directory of MOSSCO, also called $MOSSCODIR
 
-Contains information about authors, funding, and ....
+[put here information about authors, funding, and ....]
 
-Contains directories for source code, documentation, and examples
+This main directory contains three subdirectories for source code, documentation, and examples
 
 To make the documentation, type
+
 > make doc
 
-To make the MOSSCO libraries, type 
+to generate a pdf file in $MOSSCODIR/doc/mossco_documentation.pdf and a html version at $MOSSCODIR/doc/html/index.html
+
+To make the MOSSCO libraries, i.e. drivers, components, and utilities, you need to have a copy of the Framework for Aquatic Biogeochemistry Models (FABM) at the location specified in the $FABMDIR environment variable, and you need to set the variable $FORTRAN_COMPILER to GFORTRAN or IFORT (consult the FABM documentation for more options).  Then, simply type
+
 > make
 
 To make some examples, type
 
 > make examples
+
+Should you encounter errors or annoyances (such that this just does not work out of the box, please consult the documentation, and visit the bugs database at https://sourceforge.net/p/mossco/tickets)
+
 

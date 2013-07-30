@@ -2,6 +2,8 @@ include ../Rules.make
 
 EXTRA_DIST=README
 
+.PHONY: libsolver libsediment
+
 # Make targets
 
 all: libsolver
