@@ -1,3 +1,6 @@
+ifndef MOSSCODIR
+export MOSSCODIR=$(PWD)/../..
+endif
 include ../../src/Rules.make
 
 LIBS := -lsediment -lsolver $(LIBS)
