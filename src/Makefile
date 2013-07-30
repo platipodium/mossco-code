@@ -2,7 +2,8 @@ include Rules.make
 
 EXTRA_DIST=README Rules.make
 
-SUBDIRS=drivers
+SUBDIRS=utilities drivers
+
 ifdef ESMFMKFILE
 SUBDIRS += components mediators
 endif

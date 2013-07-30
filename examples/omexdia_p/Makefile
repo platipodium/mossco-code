@@ -21,17 +21,11 @@ libsediment: prefix $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod $(MOSSCODIR)/
 	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCODIR)/src/drivers/fabm_sediment_driver.o
 	@echo "Created sediment library  $(MOSSCO_LIBRARY_PATH)/libsediment.a" 
 
-libsolver: prefix $(MOSSCO_MODULE_PATH)/solver_library.mod solver_library.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsolver.a solver_library.o
-	@echo "Created solver library  $(MOSSCO_LIBRARY_PATH)/libsolver.a" 
-
-$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.o
-
-solver_library.o: solver_library.F90
-	$(F90) $(F90FLAGS) -c $< -o $@
-
 $(MOSSCODIR)/src/drivers/fabm_sediment_driver.o $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod: 
 	$(MAKE) -C $(MOSSCODIR)/src/drivers
+
+libsolver:
+	$(MAKE) -C $(MOSSCODIR)/src/utilities
 
 exec: fabmdriver main.F90
 	$(F90) $(F90FLAGS) -c -o omexdia_p_test.o main.F90 
