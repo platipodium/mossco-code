@@ -11,13 +11,11 @@ MOSSCO will build a framework for a modular data and model system, an infrastruc
 
 @section obtaining-code How to obtain the code
 
-This manual documents the source code developed in the MOSSCO project.  
-
 The web site interface could look like this (depending on your browser)
 
 @image latex sf_git_screenshot.png "Screenshot of using sourceforge" width=0.5\hsize
 
-The code is available from the sourceforge site via @c git.
+The code is available from the sourceforge site via @c git for read-only access.  If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
 
 ~~~~
 git clone git://git.code.sf.net/p/mossco/code mossco-code
@@ -31,17 +29,19 @@ MOSSCO has some necessary and some optional prerequisites.  Please make sure you
 
 @subsection prerequisites MOSSCO prerequisites
 
-
 - GNU Make
-- Fortran Compiler (Intel and GNU Fortran tested) with support for the FORTRAN 2003 standard
+- Fortran Compiler (Intel >= 12.0 and GNU Fortran >= 4.7.2 tested) with support for the FORTRAN 2003 standard
 - FABM
 - ESMF (optional)
 
 @subsection installing-fabm Installing FABM
 
-- obtain a recent version of FABM from https://sourceforge.net/projects/fabm/
+Decide on a directory where to install FABM, and set the environment variable $FABMDIR to point to this directory
+
+- download the git repository of FABM: @code git clone git://git.code.sf.net/p/fabm/code $FABMDIR @endcode
+- change into the new directory @code cd $FABMDIR @endcode
 - check out the mossco branch of FABM: @code git checkout mossco @endcode
-- set the appropriate @c $FABMHOST, @c $FABMDIR, and @c $FORTRAN_COMPILER environment variables
+- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN (see the FABM documentation for more options)
 - you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
 
 @subsection installing-esmf Installing ESMF
@@ -67,9 +67,17 @@ make examples
 
 Then change to the examples subdirectories and run the testcases.  
 
+To clean everything and start anew, type
+
+~~~~
+make distclean
+~~~~
+
+Beware that this does not clean your installation of FABM, for which you would need make distclean in @c $FABMDIR and @c $FABMDIR/src.
+
 @section reporting Reporting errors
 
-Bugs as well as annoyances and feature requests are collected in a bug tracker located at http://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.  
+Bugs as well as annoyances and feature requests are collected in a bug tracker located at https://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.  
 
 Do report any issue that you observe, even if this later turns out to be a problem related to your local computing environment and not to the MOSSCO code itself.  We encourage to document any problem that you encountered during the installation of MOSSCO: someone else might have the same issue and could profit from your experience.
 
