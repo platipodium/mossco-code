@@ -6,3 +6,4 @@ modules/
 *.mod
 *.swp
 doc/latex
+doc/html
