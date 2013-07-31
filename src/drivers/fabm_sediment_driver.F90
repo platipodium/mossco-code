@@ -26,7 +26,7 @@ type :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk) :: dzmin
 end type fabm_sed_grid
 
-type,extends(rhs_driver) :: type_sed !< sediment module data type
+type,extends(rhs_driver) :: type_sed !< sediment driver class (extends rhs_driver)
    type(fabm_sed_grid)          :: grid
    type(type_model)             :: model
    real(rk)                     :: bioturbation,diffusivity

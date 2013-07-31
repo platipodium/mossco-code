@@ -1,3 +1,15 @@
+!> @file solver_library.F90
+!! brief MOSSCO 3d solver library
+!!
+!! The solver library contains the multi-method ode-solver
+!! and the base class for model drivers
+!! @author Richard Hofmeister
+
+!> The MOSSCO 3d solver library provides a solver for
+!! cell-wise time integration of ODEs. The model drivers
+!! are expected to provide a vector with the right-hand sides
+!! (tendencies). Each driver has to inherit the base driver class
+!! called rhs_driver in this module.
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 
@@ -6,9 +18,9 @@ module solver_library
 implicit none
 private
 
-integer,parameter :: rk=selected_real_kind(12)
+integer,parameter :: rk=selected_real_kind(12) !< real kind
 
-type rhs_driver
+type rhs_driver !< base driver class
    integer :: inum,jnum,knum
    integer :: nvar
    real(selected_real_kind(12)),dimension(:,:,:,:),pointer :: conc
@@ -20,12 +32,29 @@ public :: ode_solver,rhs_driver
 
 contains
 
+!> base function for get_rhs()
+!!
+!! each driver instance inherits by default a get_rhs subroutine,
+!! which returns zeros for the tendencies
+
 subroutine base_get_rhs(rhsd,rhs)
    integer, parameter                   :: rk=selected_real_kind(12)
    class(rhs_driver), intent(inout)     :: rhsd
    real(rk), intent(out)                :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
    rhs = 0.0d0
 end subroutine base_get_rhs
+
+!> solver for ODEs
+!!
+!! The solver provides different methods for temporal
+!! integration of state variable tendencies. Each driver class
+!! contains the array dimensions, a pointer to a concentration array (conc)
+!! and the procedure get_rhs in order to get new tendencies (rhs) based on the
+!! concentration array.
+!!
+!! Implemented methods are:
+!! 1 - Runge-Kutta 4th-order
+!! 2 - Adaptive Euler
 
 subroutine ode_solver(driver,dt,method)
 implicit none
