@@ -20,7 +20,7 @@ integer        :: tnum,t,funit,output,k,n,numyears,numlayers
 integer        :: ode_method
 type(type_sed) :: sed
 real(rk),dimension(:,:,:,:),allocatable,target :: conc
-real(rk),dimension(:,:,:), allocatable         :: bdys,fluxes
+real(rk),dimension(:,:,:), allocatable,target  :: bdys,fluxes
 real(rk),dimension(:,:,:),pointer              :: diag
 
 namelist/run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
@@ -84,7 +84,9 @@ write(funit,*)
 
 !integrate
 do t=1,tnum
-   call ode_solver(sed,bdys,fluxes,dt,ode_method,fabm_sed_get_rhs)
+   sed%bdys   => bdys
+   sed%fluxes => fluxes
+   call ode_solver(sed,dt,ode_method)
 ! reset concentrations to mininum_value
    do n=1,sed%nvar
       do k=1,sed%grid%knum

@@ -254,7 +254,9 @@ module esmf_fabm_sediment_component
     call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
     call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
    ode_method=_ADAPTIVE_EULER_
-   call ode_solver(sed,bdys,fluxes,dt,ode_method,fabm_sed_get_rhs)
+   sed%bdys   => bdys
+   sed%fluxes => fluxes
+   call ode_solver(sed,dt,ode_method)
 
  ! reset concentrations to mininum_value
      do n=1,sed%nvar

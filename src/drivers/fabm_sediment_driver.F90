@@ -13,6 +13,7 @@
 module fabm_sediment_driver
 
 use fabm
+use solver_library, only: rhs_driver
 
 implicit none
 private
@@ -25,12 +26,13 @@ type :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk) :: dzmin
 end type fabm_sed_grid
 
-type :: type_sed !< sediment module data type
+type,extends(rhs_driver) :: type_sed !< sediment module data type
    type(fabm_sed_grid)          :: grid
    type(type_model)             :: model
-   integer                      :: nvar  !< number of state variables
-   real(rk),dimension(:,:,:,:),pointer :: conc  !< pointer to state variable concentrations
    real(rk)                     :: bioturbation,diffusivity
+   real(rk),dimension(:,:,:),pointer    :: fluxes,bdys
+contains
+   procedure :: get_rhs
 end type type_sed
 
 real(rk),dimension(:,:,:),allocatable :: porosity,temp
@@ -44,7 +46,7 @@ real(rk),dimension(:,:),allocatable     :: zeros2d
 #define _JNUM_ _GRID_%jnum
 #define _KNUM_ _GRID_%knum
 
-public :: init_fabm_sed,init_sed_grid,fabm_sed_get_rhs,finalize_fabm_sed,type_sed,fabm_sed_grid
+public :: init_fabm_sed,init_sed_grid,finalize_fabm_sed,type_sed,fabm_sed_grid
 public :: init_fabm_sed_concentrations,fabm_sed_diagnostic_variables
 
 contains
@@ -96,7 +98,7 @@ end subroutine init_sed_grid
 subroutine init_fabm_sed(sed)
 implicit none
 
-type(type_sed),intent(inout) :: sed
+class(type_sed),intent(inout) :: sed
 integer :: i,j,k,n
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
@@ -114,6 +116,9 @@ sed%bioturbation = bioturbation
 sed%diffusivity  = diffusivity
 
 if (.not.(allocated(sed%grid%dz))) call init_sed_grid(sed%grid)
+sed%inum = sed%grid%inum
+sed%jnum = sed%grid%jnum
+sed%knum = sed%grid%knum
 
 ! set porosity
 allocate(porosity(_INUM_,_JNUM_,_KNUM_))
@@ -191,57 +196,55 @@ end function
 !! dissolved properties use a concentration boundary condition. Diffusivities
 !! are calculated here depending on temperature (first index in bdys vector)
 
-subroutine fabm_sed_get_rhs(sed,bdys,fluxes,rhs)
+subroutine get_rhs(rhsd,rhs)
 use fabm
 use fabm_types
 implicit none
 
-type(type_sed)       ,intent(inout)          :: sed
-real(rk)             ,intent(inout)          :: fluxes(1:_INUM_,1:_JNUM_,1:sed%nvar)
-real(rk)             ,intent(in)             :: bdys(1:_INUM_,1:_JNUM_,1:sed%nvar+1)
-real(rk),intent(out)                         :: rhs(1:_INUM_,1:_JNUM_,1:_KNUM_,1:sed%nvar)
-real(rk),dimension(1:_INUM_,1:_JNUM_,1:_KNUM_)   :: conc_insitu
-real(rk),dimension(1:_INUM_,1:_JNUM_,1:_KNUM_+1) :: intFLux
+class(type_sed)      ,intent(inout)          :: rhsd
+real(rk),intent(out)                         :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
+real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu
+real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum+1) :: intFLux
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
-do k=1,_KNUM_
-   temp3d(:,:,k) = bdys(:,:,1)
+do k=1,rhsd%knum
+   temp3d(:,:,k) = rhsd%bdys(:,:,1)
 end do
 
 !   link state variables
-do n=1,size(sed%model%info%state_variables)
-   call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
+do n=1,size(rhsd%model%info%state_variables)
+   call fabm_link_bulk_state_data(rhsd%model,n,rhsd%conc(:,:,:,n))
 end do
 
 !   link environment forcing
-call fabm_link_bulk_data(sed%model,varname_temp,temp3d)
-! not necessary: call fabm_link_bulk_data(sed%model,varname_porosity,porosity)
+call fabm_link_bulk_data(rhsd%model,varname_temp,temp3d)
+! not necessary: call fabm_link_bulk_data(rhsd%model,varname_porosity,porosity)
 
 ! calculate diffusivities (temperature)
-do n=1,size(sed%model%info%state_variables)
-   if (sed%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
+do n=1,size(rhsd%model%info%state_variables)
+   if (rhsd%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = 1
-      diff = (sed%bioturbation + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
-      conc_insitu = sed%conc(:,:,:,n)/(porosity-ones3d)
-      call diff3d(sed%grid,conc_insitu,bdys(:,:,n+1), zeros2d, fluxes(:,:,n), zeros2d, &
+      diff = (rhsd%bioturbation + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
+      conc_insitu = rhsd%conc(:,:,:,n)/(porosity-ones3d)
+      call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
               bcup, bcdown, diff, porosity-ones3d, porosity-ones3d, intFlux, transport(:,:,:,n))
    else
       bcup = 2
-      diff = (sed%diffusivity + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
-      conc_insitu = sed%conc(:,:,:,n)/porosity
-      call diff3d(sed%grid,conc_insitu,bdys(:,:,n+1), zeros2d, fluxes(:,:,n), zeros2d, &
+      diff = (rhsd%diffusivity + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
+      conc_insitu = rhsd%conc(:,:,:,n)/porosity
+      call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
               bcup, bcdown, diff, porosity, porosity, intFlux, transport(:,:,:,n))
       ! set fluxes for output
-      fluxes(:,:,n) = intFlux(:,:,1)
+      rhsd%fluxes(:,:,n) = intFlux(:,:,1)
    end if
 end do
 
 rhs=0.0_rk
-do k=1,_KNUM_
-   do j=1,_JNUM_
-      do i=1,_INUM_
-         call fabm_do(sed%model,i,j,k,rhs(i,j,k,:))
+do k=1,rhsd%knum
+   do j=1,rhsd%jnum
+      do i=1,rhsd%inum
+         call fabm_do(rhsd%model,i,j,k,rhs(i,j,k,:))
       end do
    end do
 end do
@@ -249,7 +252,7 @@ end do
 ! return fabm-rhs + diff-tendencies
 rhs = rhs + transport
 
-end subroutine fabm_sed_get_rhs
+end subroutine get_rhs
 
 
 !> finalize the FABM sediment driver
