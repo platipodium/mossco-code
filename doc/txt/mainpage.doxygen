@@ -44,8 +44,29 @@ Decide on a directory where to install FABM, and set the environment variable $F
 - set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN (see the FABM documentation for more options)
 - you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
 
+An example environment for FABM could look like this:
+Environment variable | value
+---|---
+FABMDIR | $HOME/opt/src/fabm-code
+FABM_F2003 | true
+FORTRAN_COMPILER | GFORTRAN
+
 @subsection installing-esmf Installing ESMF
 (Instructions follow)
+
+An example environment for ESMF could look like this:
+Environment variable | value
+---|---
+ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
+ESMF_DIR | $HOME/opt/src/esmf
+ESMF_COMM | mpich2
+ESMF_NETCDF | split
+ESMF_NETCDF_INCLUDE | $HOME/opt/include
+ESMF_NETCDF_LIBPATH | /opt/gcc47/netcdf4/all_libs
+ESMF_LAPACK | netlib
+ESMF_PIO | internal
+
+See the ESMF manual for a complete list of ESMF environment variables and their relevance.
 
 @subsection building Building MOSSCO
 
