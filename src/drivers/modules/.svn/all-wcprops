@@ -1,0 +1,35 @@
+K 25
+svn:wc:ra_dav:version-url
+V 102
+/repos/openearthtools/!svn/ver/7697/trunk/programs/SandMudBedModule/03_Fortran/example/example/modules
+END
+bedcomposition_module.f90
+K 25
+svn:wc:ra_dav:version-url
+V 128
+/repos/openearthtools/!svn/ver/7697/trunk/programs/SandMudBedModule/03_Fortran/example/example/modules/bedcomposition_module.f90
+END
+message_module.f90
+K 25
+svn:wc:ra_dav:version-url
+V 121
+/repos/openearthtools/!svn/ver/7697/trunk/programs/SandMudBedModule/03_Fortran/example/example/modules/message_module.f90
+END
+precision.f90
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/repos/openearthtools/!svn/ver/7697/trunk/programs/SandMudBedModule/03_Fortran/example/example/modules/precision.f90
+END
+string_module.f90
+K 25
+svn:wc:ra_dav:version-url
+V 120
+/repos/openearthtools/!svn/ver/7697/trunk/programs/SandMudBedModule/03_Fortran/example/example/modules/string_module.f90
+END
+precision_basics.f90
+K 25
+svn:wc:ra_dav:version-url
+V 123
+/repos/openearthtools/!svn/ver/7697/trunk/programs/SandMudBedModule/03_Fortran/example/example/modules/precision_basics.f90
+END
