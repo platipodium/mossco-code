@@ -1,12 +1,32 @@
 module erosed_driver
+use param_module
+implicit none
+save
+
+    real(fp)                                      :: alf1          ! calibration coefficient van Rijn (1984) [-]
+    real(fp)                                      :: betam         ! power factor for adaptation of critical bottom shear stress [-]
+    real(fp)                                      :: rksc          ! reference level van Rijn (1984) [m]
+    real(fp),    allocatable, dimension(:)        :: pmcrit        ! critical mud fraction [-]
+!    real(fp),    allocatable, dimension(:,:)      :: bfluff0       ! burial coefficient 1 [kg/m2/s]
+ !   real(fp),    allocatable, dimension(:,:)      :: bfluff1       ! burial coefficient 2 [1/s]
+  !  real(fp),     dimension(:,:), pointer       :: bfluff0       ! burial coefficient 1 [kg/m2/s]
+  !  real(fp),     dimension(:,:), pointer       :: bfluff1       ! burial coefficient 2 [1/s]
+    real(fp),    allocatable, dimension(:,:)      :: depeff        ! deposition efficiency [-]
+    real(fp),    allocatable, dimension(:,:)      :: depfac        ! deposition factor (flufflayer=2) [-]
+    real(fp),    allocatable, dimension(:,:)      :: eropar        ! erosion parameter for mud [kg/m2/s]
+    real(fp),    allocatable, dimension(:,:)      :: parfluff0     ! erosion parameter 1 [s/m]
+    real(fp),    allocatable, dimension(:,:)      :: parfluff1     ! erosion parameter 2 [ms/kg]
+    real(fp),    allocatable, dimension(:,:)      :: tcrdep        ! critical bed shear stress for mud sedimentation [N/m2]
+    real(fp),    allocatable, dimension(:,:)      :: tcrero        ! critical bed shear stress for mud erosion [N/m2]
+    real(fp),   allocatable, dimension(:,:)       :: tcrfluff      ! critical bed shear stress for fluff layer erosion [N/m2]
 
 contains
 
 
-subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
-                & ws        , umod      , h     , chezy , taub          , &
-                & nfrac     , rhosol    , sedd50, sedd90, sedtyp        , &
-                & sink      , sinkf     , sour  , sourf , messages, flufflyr , mfluff   )
+subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
+                & ws        , umod    , h        , chezy  , taub          , &
+                & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
+                & sink      , sinkf   , sour     , sourf                         )
 !----- GPL ---------------------------------------------------------------------
 !
 !  Copyright (C)  Stichting Deltares, 2012.
@@ -41,14 +61,14 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
 !
 !!--declarations----------------------------------------------------------------
 
-    use precision
-    use bedcomposition_module
-    use message_module
-    use initsed_module
+    !use param_module
+   ! use bedcomposition_module, only: bedcomp_data
+   ! use message_module
+    use param_module
     !
     implicit none
     !
-    include 'sedparams.inc'
+    !include 'sedparams.inc'
     !
 !    integer                         , pointer :: flufflyr                       ! switch for fluff layer concept
 
@@ -56,7 +76,7 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
 !    real(fp)    , dimension(:,:)    , pointer :: bfluff1                        ! burial coefficient 2 [1/s]
     real(fp)    , dimension(:,:)    , pointer :: mfluff                         ! composition of fluff layer: mass of mud fractions [kg/m2]
     !
-    type(bedcomp_data)                          , intent(in)   :: morlyr        ! bed composition data
+!    type(bedcomp_data)                          , intent(in)   :: morlyr        ! bed composition data
     ! new argument
     integer                                     , intent(in)   :: flufflyr                       ! switch for fluff layer concept
     ! new argument
@@ -64,8 +84,8 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
     integer                                     , intent(in)   :: nmlb          ! first cell number
     integer                                     , intent(in)   :: nmub          ! last cell number
     integer     , dimension(nfrac)              , intent(in)   :: sedtyp        ! sediment type
-    real(fp)                                    , intent(in)   :: dt            ! time step [s]
-    real(fp)                                    , intent(in)   :: morfac        ! morphological accelaration factor
+!    real(fp)                                    , intent(in)   :: dt            ! time step [s]
+!    real(fp)                                    , intent(in)   :: morfac        ! morphological accelaration factor
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: chezy         ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: h             ! water depth [m]
     real(fp)    , dimension(nfrac)              , intent(in)   :: rhosol        ! specific sediment density [kg/m3]
@@ -78,12 +98,15 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(out)  :: sinkf         ! sediment sink flux fluff layer [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(out)  :: sour          ! sediment source flux [kg/m2/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(out)  :: sourf         ! sediment source flux fluff layer [kg/m2/s]
-    type(message_stack)                                        :: messages      ! message stack
+    real(fp)    , dimension(nfrac,nmlb:nmub)    , intent (in)  :: frac          ! sediment (mass) fraction [-]
+    real(fp)    , dimension(nmlb:nmub)          , intent (in)  :: mudfrac       ! mud fraction [-]
+
+    !type(message_stack)                                        :: messages      ! message stack
 !
 ! Local variables
 !
-    character(message_len)                      :: message      ! message
-    logical                                     :: anymud
+!    character(message_len)                      :: message      ! message
+!    logical                                     :: anymud
     integer                                     :: istat
     integer                                     :: l            ! sediment counter
     integer                                     :: nm           ! cell counter
@@ -95,16 +118,16 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
     real(fp)                                    :: sbot
     real(fp)                                    :: smfac        ! correction factor for critical bottom shear stress
     real(fp)                                    :: ssus
-    real(fp)    , dimension(nmlb:nmub)          :: mudcnt
-    real(fp)    , dimension(nmlb:nmub)          :: mudfrac      ! mud fraction [-]
+!    real(fp)    , dimension(nmlb:nmub)          :: mudcnt
+
 !    real(fp)    , dimension(nmlb:nmub)          :: pmcrit       ! critical mud fraction [-]
-    real(fp)    , dimension(nmlb:nmub)          :: seddep
+!    real(fp)    , dimension(nmlb:nmub)          :: seddep
     real(fp)    , dimension(nfrac          )    :: E            ! erosion velocity [m/s]
 !    real(fp)    , dimension(nfrac,nmlb:nmub)    :: depeff       ! deposition efficiency [-]
 !    real(fp)    , dimension(nfrac,nmlb:nmub)    :: depfac       ! deposition factor (flufflayer=2) [-]
 !    real(fp)    , dimension(nfrac,nmlb:nmub)    :: eropar       ! erosion parameter for mud [kg/m2/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: fixfac       ! reduction factor in case of limited sediment availability [-]
-    real(fp)    , dimension(nfrac,nmlb:nmub)    :: frac         ! sediment (mass) fraction [-]
+!    real(fp)    , dimension(nfrac,nmlb:nmub),   :: frac         ! sediment (mass) fraction [-]
 !    real(fp)    , dimension(nfrac,nmlb:nmub)    :: parfluff0    ! erosion parameter 1 [s/m]
 !    real(fp)    , dimension(nfrac,nmlb:nmub)    :: parfluff1    ! erosion parameter 2 [ms/kg]
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: rsedeq       ! equilibrium concentration [kg/m3]
@@ -119,8 +142,7 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
     !
     !   User defined parameters
     !
- !***********************************************************
- ! new newnewnewnewnew
+
   !  message = 'initializing fluff layer'
   !  if (istat == 0) istat = bedcomp_getpointer_integer(morlyr, 'Flufflyr' , flufflyr)
   !  if (flufflyr>0 .and. istat == 0) istat = bedcomp_getpointer_realfp (morlyr, 'mfluff'   , mfluff)
@@ -134,19 +156,20 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
   !               & alf1,    betam,  rksc,   pmcrit, bfluff0, bfluff1, &
   !               & depeff,  depfac, eropar, parfluff0,  parfluff1, &
   !               & tcrdep,  tcrero, tcrfluff)
-    !*******************************************************************
+
     !
     !
-    mudcnt      = 0.0_fp
-    anymud      = .true.
+    !mudcnt      = 0.0_fp
+    !anymud      = .true.
     !
     !   Determine fractions of all sediments in the top layer and compute the mud fraction.
     !
-    call getfrac(morlyr, frac, anymud, mudcnt, mudfrac, nmlb, nmub)
+  !  call getfrac(morlyr, frac, anymud, mudcnt, mudfrac, nmlb, nmub)
+
     !
     !   Determine thickness of sediment
     !
-    call getsedthick(morlyr, seddep)
+   ! call getsedthick(morlyr, seddep)
     !
     !   Initialization
     !
@@ -235,11 +258,11 @@ subroutine erosed(morlyr    , nmlb      , nmub  , dt    , morfac        , &
     !
     ! Add implicit part of source term to sink
     !
-    do l = 1, nfrac
-        do nm = nmlb, nmub
-            sink(l,nm) = sink(l,nm)
-        enddo
-    enddo
+   ! do l = 1, nfrac
+   !     do nm = nmlb, nmub
+   !         sink(l,nm) = sink(l,nm)
+   !     enddo
+   ! enddo
     !
     !
 end subroutine erosed
@@ -282,11 +305,11 @@ subroutine eromud(ws       , fixfac    , taub      , frac      , fracf     , &
 !              the Partheniades-Krone formulations.
 !
 !!--declarations----------------------------------------------------------------
-    use precision
+    use param_module
     !
     implicit none
     !
-    include 'sedparams.inc'
+    !include 'sedparams.inc'
     !
     integer                                     , intent(in)   :: flufflyr      ! switch for fluff layer concept
     real(fp)                                    , intent(in)   :: eropar        ! erosion parameter for mud [kg/m2/s]
@@ -391,7 +414,7 @@ subroutine erosand(umod     , chezy    , ws    , rsedeq    , &
 !!--pseudo code and references--------------------------------------------------
 ! NONE
 !!--declarations----------------------------------------------------------------
-    use precision
+    use param_module
     !
     implicit none
     !
@@ -510,11 +533,11 @@ subroutine sand_mud(nfrac, E, frac, mudfrac, sedtyp, pmcrit)
 !!--pseudo code and references--------------------------------------------------
 ! NONE
 !!--declarations----------------------------------------------------------------
-    use precision
+    use param_module
     !
     implicit none
     !
-    include 'sedparams.inc'
+    !include 'sedparams.inc'
     !
     integer                                     , intent(in)    :: nfrac    ! number of sediment fractions
     integer     , dimension(nfrac)              , intent(in)    :: sedtyp   ! sediment type
@@ -525,7 +548,7 @@ subroutine sand_mud(nfrac, E, frac, mudfrac, sedtyp, pmcrit)
 !
 ! Local variables
 !
-    integer                         :: istat        ! error flag
+!    integer                         :: istat        ! error flag
     integer                         :: l            ! sediment counter
     real(fp)                        :: Es_avg       ! average erosion velocity for sand fractions [m/s]
     real(fp)                        :: Em_avg       ! average erosion velocity for mud fractions [m/s]
@@ -536,8 +559,11 @@ subroutine sand_mud(nfrac, E, frac, mudfrac, sedtyp, pmcrit)
     !
     ! No sand mud interaction if there is no mud, only mud or pmcrit<0
     if (pmcrit<0.0_fp) return
-    if (comparereal(mudfrac,0.0_fp)==0) return
-    if (comparereal(mudfrac,1.0_fp)==0) return
+!    if (comparereal(mudfrac,0.0_fp)==0) return
+!    if (comparereal(mudfrac,1.0_fp)==0) return
+     if (abs (mudfrac) < epsilon (mudfrac) ) return
+     if (abs (mudfrac/1.0_fp-1.0_fp) < epsilon (mudfrac) ) return
+
     !
     Es_avg = 0.0_fp
     Em_avg = 0.0_fp
@@ -632,7 +658,7 @@ function shld(dstar     )
 !!--pseudo code and references--------------------------------------------------
 ! NONE
 !!--declarations----------------------------------------------------------------
-    use precision
+    use param_module
     implicit none
 !
 ! Global variables
@@ -696,7 +722,7 @@ subroutine vanRijn84(utot      ,d50       ,d90       ,h         ,ws       , &
 !!--pseudo code and references--------------------------------------------------
 ! NONE
 !!--declarations----------------------------------------------------------------
-    use precision
+    use param_module
     implicit none
 !
 ! Global variables
@@ -791,5 +817,139 @@ subroutine vanRijn84(utot      ,d50       ,d90       ,h         ,ws       , &
     endif
 end subroutine vanRijn84
 
+subroutine initerosed( nmlb,   nmub,   nfrac)
 
+!----- GPL ---------------------------------------------------------------------
+!
+!  Copyright (C)  Stichting Deltares, 2012.
+!
+!  This program is free software: you can redistribute it and/or modify
+!  it under the terms of the GNU General Public License as published by
+!  the Free Software Foundation version 3.
+!
+!  This program is distributed in the hope that it will be useful,
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  GNU General Public License for more details.
+!
+!  You should have received a copy of the GNU General Public License
+!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+!
+!  contact: delft3d.support@deltares.nl
+!  Stichting Deltares
+!  P.O. Box 177
+!  2600 MH Delft, The Netherlands
+!
+!  All indications and logos of, and references to, "Delft3D" and "Deltares"
+!  are registered trademarks of Stichting Deltares, and remain the property of
+!  Stichting Deltares. All rights reserved.
+!
+!-------------------------------------------------------------------------------
+!  $Id: initsed.f90 7697 2012-11-16 14:10:17Z boer_aj $
+!  $HeadURL: https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example/source/initsed.f90 $
+!!--description-----------------------------------------------------------------
+!
+!    Function: Settings of morphological parameters
+!
+!!--declarations----------------------------------------------------------------
+
+  !!use param_module
+    !
+    implicit none
+    !
+!
+! Global variables
+!
+
+    integer                                     , intent(in)   :: nfrac         ! number of sediment fractions
+    integer                                     , intent(in)   :: nmlb          ! first cell number
+    integer                                     , intent(in)   :: nmub          ! first cell number
+
+
+!
+
+    allocate (   pmcrit (nmlb:nmub)             )
+
+    allocate (   depeff  (nfrac,nmlb:nmub)      )        ! deposition efficiency [-]
+    allocate (   depfac  (nfrac,nmlb:nmub)      )        ! deposition factor (flufflayer=2) [-]
+    allocate (   eropar  (nfrac,nmlb:nmub)      )        ! erosion parameter for mud [kg/m2/s]
+    allocate (   parfluff0  (nfrac,nmlb:nmub)   )        ! erosion parameter 1 [s/m]
+    allocate (   parfluff1  (nfrac,nmlb:nmub)   )        ! erosion parameter 2 [ms/kg]
+    allocate (   tcrdep  (nfrac,nmlb:nmub)      )        ! critical bed shear stress for mud sedimentation [N/m2]
+    allocate (   tcrero  (nfrac,nmlb:nmub)      )        ! critical bed shear stress for mud erosion [N/m2]
+    allocate (   tcrfluff  (nfrac,nmlb:nmub)    )        ! critical bed shear stress for fluff layer erosion [N/m2]
+
+!! executable statements ------------------
+!
+    ! ================================================================================
+    !   USER INPUT => HN. TODO: Include these parameters in namelist
+    ! ================================================================================
+    !
+    !   Parameters sediment
+    !
+    eropar      = 1.0e-2_fp     ! erosion parameter for mud [kg/m2/s]
+    tcrdep      = 1000.0_fp     ! critical bed shear stress for mud sedimentation [N/m2]
+    tcrero      = 1.0_fp        ! critical bed shear stress for mud erosion [N/m2]
+    !
+    !   Parameters fluff layer
+    !
+    depeff      = 0.95_fp       ! deposition efficiency [-]
+    depfac      = 0.2_fp        ! deposition factor (flufflayer=2) [-]
+    parfluff0   = 2.0e-1_fp     ! erosion parameter 1 [s/m]
+    parfluff1   = 1.0_fp        ! erosion parameter 2 [ms/kg]
+    tcrfluff    = 0.05_fp       ! critical bed shear stress for fluff layer erosion [N/m2]
+
+    !   Parameters sand-mud interaction
+    !
+    betam       =  1.0_fp       ! power factor for adaptation of critical bottom shear stress [-]
+    pmcrit      =  0.6_fp       ! critical mud fraction [-]
+    !
+    !   Parameters sediment transport formulation
+    !
+    alf1        = 2.0_fp        ! calibration coefficient [-]
+    rksc        = 0.1_fp        ! reference level [m]
+    !
+    ! ================================================================================
+
+end subroutine initerosed
+
+
+subroutine getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
+
+use param_module
+
+
+implicit none
+
+!include 'sedparams.inc'
+
+    integer                                                         , intent(in)  :: nmlb
+    integer                                                         , intent(in)  :: nmub
+    integer                                                         , intent(in)  :: nfrac
+    logical                                                         , intent(in)  :: anymud
+    real(fp), dimension(nmlb:nmub, nfrac)                           , intent(out) :: frac
+    real(fp), dimension(nmlb:nmub)                                  , intent(out) :: mudfrac
+    integer , dimension(nfrac)                                                    :: sedtyp
+    integer                                                                       :: i,j
+
+
+ if (anymud) then
+  do j = 1,nfrac
+    do i = nmlb, nmub
+      frac (i,j) = 0.5_fp
+    enddo
+  enddo
+       !
+       ! Add simulated mud fractions.
+       !
+       mudfrac = 0.0
+       do i = 1, nfrac
+          if (sedtyp(i) == SEDTYP_COHESIVE) then
+             do j = nmlb, nmub
+                mudfrac(j) = mudfrac(j) + frac(j,i)
+             enddo
+          endif
+       enddo
+endif
+end subroutine getfrac_dummy
 end module erosed_driver
