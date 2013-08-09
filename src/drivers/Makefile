@@ -1,4 +1,8 @@
-include ../Rules.make
+ifndef MOSSCODIR
+MOSSCODIR=$(subst /src/drivers$,,$(PWD))
+endif
+
+include $(MOSSCODIR)/src/Rules.make
 
 EXTRA_DIST=README
 

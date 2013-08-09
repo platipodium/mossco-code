@@ -1,4 +1,9 @@
-include ../Rules.make
+ifndef MOSSCODIR
+MOSSCODIR=$(subst /src/components$,,$(PWD))
+endif
+
+include $(MOSSCODIR)/src/Rules.make
+
 
 EXTRA_DIST=README
 
