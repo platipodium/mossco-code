@@ -51,7 +51,6 @@ endif
 #
 ifndef MOSSCODIR
 export MOSSCODIR=$(subst /src$,,$(PWD))
-$(warning MOSSCODIR=$(MOSSCODIR) automatically set to working directory)
 endif
 
 ifeq ($(wildcard $(MOSSCODIR)),) 

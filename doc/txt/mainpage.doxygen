@@ -106,16 +106,18 @@ Do report any issue that you observe, even if this later turns out to be a probl
 
 The MOSSCO system was successfully tested on the following machines and environments.  Please report successful testing on your machine (e.g., in the project wiki), and issue a new tag, if you area developer.
 
-# Successful compilation and execution of examples
+# Successful compilation and execution of examples #
 
 Operating System | Compiler | Configuration | Machine | Status
 --|--|--|--|--
 Ubuntu Linux 3.8.0 x86-64 | gfortran-4.7.3/mpich | FABM/ESMF | ksez8002 (cl)| complete
 OSX 10.6.8 | gfortran-4.7.2/mpich | FABM/ESMF | macchi (rh)| complete
-Linux 3.8.0| gfortran-4.7.3 | FABM | phy-203 (IOW, kk)| complete
+Ubuntu Linux 3.8.0| gfortran-4.7.3/mpich2 | FABM/ESMF | phy-203 (IOW, kk)| complete
 SUSE Linux 2.6.16 | ifort-12.1 | FABM | bicegate (HLRN, kk) | complete
+SUSE Linux 3.0 | ifort-12.1.5 | FABM | ICE-X (BAW) | complete
+Debian Linux 7.1 | gfortran 4.7.2/mpich2-1.4 | FABM/ESMF | grpsrv09 (hk) | complete
 
-# Successful compilation but runtime errors 
+# Successful compilation but runtime errors #
 
 Operating System | Compiler | Configuration | Machine | Status
 --|--|--|--|--
