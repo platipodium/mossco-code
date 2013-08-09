@@ -1,10 +1,19 @@
-include ../src/Rules.make
+ifndef MOSSCODIR
+MOSSCODIR=$(subst /examples$,,$(PWD))
+endif
+
+include $(MOSSCODIR)/src/Rules.make
 
 EXTRA_DIST=README
 
 SUBDIRS=omexdia_p
+
 ifdef ESMFMKFILE
 SUBDIRS +=esmf_sediment
+endif
+
+ifdef GOTMDIR
+SUBDIRS +=esmf_gotm
 endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS)

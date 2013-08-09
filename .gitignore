@@ -7,3 +7,5 @@ modules/
 *.swp
 doc/latex
 doc/html
+examples/esmf_gotm/esmf_gotm_example
+examples/*/PET*.*

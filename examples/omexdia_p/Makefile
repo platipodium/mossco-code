@@ -1,7 +1,8 @@
 ifndef MOSSCODIR
-export MOSSCODIR=$(PWD)/../..
+MOSSCODIR=$(subst /examples/omexdia_p$,,$(PWD))
 endif
-include ../../src/Rules.make
+
+include $(MOSSCODIR)/src/Rules.make
 
 LIBS := -lsediment -lsolver $(LIBS)
 
