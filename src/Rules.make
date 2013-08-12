@@ -20,7 +20,9 @@ $(warning FABMHOST set to FABMHOST=mossco)
 endif
 
 ifndef FORTRAN_COMPILER
-$(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers)
+FABM_AVAILABLE_COMPILERS=$(shell ls -1 $(FABMDIR)/compilers/compiler.* | cut -d'.' -f2)
+FABM_AVAILABLE_COMPILERS:=$(patsubst %compiler.,,$(FABM_AVAILABLE_COMPILERS))
+$(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers: $(FABM_AVAILABLE_COMPILERS))
 endif
 
 ifeq ($(FABM_F2003),true)
