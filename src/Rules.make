@@ -23,27 +23,41 @@ ifndef FORTRAN_COMPILER
 $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers)
 endif
 
-ifndef FABM_F2003
-$(error Before compiling FABM, set FABM_F2003=true to enable the sediment module, make distclean in $$FABMDIR/src)
-endif
-
 ifeq ($(FABM_F2003),true)
 else
 $(error Please recompile FABM with FABM_F2003=true)
 endif
+
+ifndef FABM_F2003
+export FABM_F2003=true
+$(warning FABM_F2003 automatically set to FABM_F2003=$(FABM_F2003))
+endif
+
 
 FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_INCLUDE_PATH=$(FABMDIR)/include
 FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_LIBRARY_FILE=$(FABM_LIBRARY_PATH)/libfabm_prod.a
 
+ifdef $GOTMDIR
+ifndef $(_FABM_) 
+export _FABM_=true
+$(warning _FABM_ automatically set to _FABM_=$(_FABM_) for GOTM)
+endif
+endif
+
+
 # 2. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
 #
 ifndef ESMFMKFILE
+ifndef $(MOSSCO_ESMF)
 $(warning Compiling without ESMF support)
+export MOSSCO_ESMF=false
+endif
 else
 include $(ESMFMKFILE)
+export MOSSCO_ESMF=true
 endif
 
 # 3. MOSSCO declarations. The MOSSCODIR and the build prefix are set, as well as the bin/mod/lib paths relative
@@ -85,8 +99,11 @@ endif
 endif
 
 ifneq ($(F90),$(FABM_F90COMPILER))
+ifndef $(MOSSCO_COMPILER)
 $(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
 endif
+endif
+export MOSSCO_COMPILER=$(F90)
 
 export F90
 

@@ -10,7 +10,7 @@
 module esmf_gotm_component
 
   use esmf
-  use time
+  use time !> @todo: remove GOTM's time dependency
   use gotm
 
   implicit none
@@ -47,7 +47,7 @@ module esmf_gotm_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    call ESMF_LogWrite('Initialise GOTM',ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite('Initialize GOTM',ESMF_LOGMSG_INFO)
     call init_gotm()
 
   end subroutine Initialize
