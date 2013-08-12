@@ -34,7 +34,7 @@ program example
 !!--declarations----------------------------------------------------------------
 
     use erosed_driver
-    use param_module
+
 
     !
     implicit none
@@ -230,7 +230,7 @@ program example
     !
     !   Determine fractions of all sediments in the top layer and compute the mud fraction.
 
-     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
+        call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
     !
         !
         r0 = r1
