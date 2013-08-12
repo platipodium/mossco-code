@@ -34,3 +34,4 @@ info:
 run: examples
 	(cd examples/omexdia_p && ./omexdia_p_test)
 	(cd examples/esmf_sediment && ./esmf_sediment_test)
+	(cd examples/esmf_gotm && ./esmf_gotm_example)

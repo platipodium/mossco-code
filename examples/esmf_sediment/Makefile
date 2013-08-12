@@ -1,4 +1,8 @@
-include ../../src/Rules.make
+ifndef MOSSCODIR
+MOSSCODIR=$(subst /examples/esmf_sediment$,,$(PWD))
+endif
+
+include $(MOSSCODIR)/src/Rules.make
 
 LIBS := -lesmf -lsediment -lsolver $(LIBS)
 
