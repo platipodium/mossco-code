@@ -1,17 +1,51 @@
 module erosed_driver
 
+! This program is a wrapper for the following Deltares-routines.
+! The program computes the sediment entrainment and erosion rates for given
+! fractions of cohesive and noncohesive sediment.
+
+
+!This Module needs the following subroutines form delft-example programs:
+!eromud.f90
+!erosand.f90
+!sand_mud.f90
+!vanRijn84.f90
+!-------------------------------------------------------------------------------
+!  $Id: eromud.f90 7697 2012-11-16 14:10:17Z boer_aj $
+!  $HeadURL: https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example/source/     $
+!!--description-----------------------------------------------------------------
+
+!and also following Modules form delft-example programs:
+!precision.f90
+!precision_basics.f90
+!-------------------------------------------------------------------------------
+!  $Id: precision.f90 7697 2012-11-16 14:10:17Z boer_aj $
+!  $HeadURL: https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example/modules/  $
+!!--description-----------------------------------------------------------------
+
+! and finally the following include file:
+!sedparams.inc
+
+!-------------------------------------------------------------------------------
+!  $Id: sedparams.inc 7697 2012-11-16 14:10:17Z boer_aj $
+!  $HeadURL: https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example/include/sedparams.inc $$
+!-------------------------------------------------------------------------------
+
+
+
+use precision
 
 implicit none
 ! global parameters
-integer, parameter :: sp=kind(1.0e00)
-integer, parameter :: hp=kind(1.0d00)
+!integer, parameter :: sp=kind(1.0e00)
+!integer, parameter :: hp=kind(1.0d00)
 !
 ! double precision integers:
 !
 
-integer, parameter :: fp=hp
+!integer, parameter :: fp=hp
 
-
+! These Parameters are defined in sedparam.inc seperately for delft-routine
 integer, parameter :: SEDTYP_NONCOHESIVE_TOTALLOAD = 0
 integer, parameter :: SEDTYP_NONCOHESIVE_SUSPENDED = 1
 integer, parameter :: SEDTYP_COHESIVE              = 2
