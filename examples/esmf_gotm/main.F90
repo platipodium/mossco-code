@@ -32,14 +32,14 @@ program main
    call ESMF_TimeGet(time1,timeStringISOFrac=timestring)
    call ESMF_LogWrite("Program starts at wall clock "//timestring, ESMF_LOGMSG_INFO)
   
-! Create and initialize a clock, with 60 second timestep, and 1 d running time
-   call ESMF_TimeIntervalSet(timeStep, s=60, rc=localrc)
+! Create and initialize a clock, with 3600 second timestep, and 1 yr running time
+   call ESMF_TimeIntervalSet(timeStep, s=3600, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_TimeSet(startTime, yy=2004, mm=9, dd=25, rc=localrc)
+   call ESMF_TimeSet(startTime, yy=1998, mm=1, dd=1, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_TimeSet(stopTime, yy=2004, mm=9, dd=26, rc=localrc)
+   call ESMF_TimeSet(stopTime, yy=1999, mm=1, dd=1, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
    clock = ESMF_ClockCreate(timeStep, startTime, stopTime=stopTime, & 
@@ -81,8 +81,8 @@ program main
    call ESMF_TimeGet(time2,timeStringISOFrac=timestring)
    call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds) 
 
-   call ESMF_LogWrite('ESMF/FABM finished on '//timestring,ESMF_LOGMSG_INFO)   
-   !call ESMF_LogWrite('ESMF/FABM finished on '//timestring//' using '//seconds//' seconds',ESMF_LOGMSG_INFO)   
+   call ESMF_LogWrite('ESMF/GOTM finished on '//timestring,ESMF_LOGMSG_INFO)   
+   !call ESMF_LogWrite('ESMF/GOTM finished on '//timestring//' using '//seconds//' seconds',ESMF_LOGMSG_INFO)   
 
    call ESMF_Finalize(rc=localrc,endflag=ESMF_END_NORMAL)
    
