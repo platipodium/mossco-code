@@ -19,7 +19,7 @@ $(FABM_LIBRARY_FILE):
 	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR) )
 	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR)/src )
 
-fabmdriver: fabmlib libsediment libsolver
+fabmdriver: fabmlib libsolver libsediment
 
 libsediment: prefix $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod $(MOSSCODIR)/src/drivers/fabm_sediment_driver.o
 	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCODIR)/src/drivers/fabm_sediment_driver.o
