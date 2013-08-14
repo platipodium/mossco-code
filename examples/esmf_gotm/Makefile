@@ -1,5 +1,5 @@
 ifndef MOSSCODIR
-MOSSCODIR=$(subst /examples/esmf_gotm$,,$(PWD))
+export MOSSCODIR=$(subst /examples/esmf_gotm$,,$(PWD))
 endif
 
 include $(MOSSCODIR)/src/Rules.make

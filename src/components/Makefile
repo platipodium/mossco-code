@@ -1,5 +1,5 @@
 ifndef MOSSCODIR
-MOSSCODIR=$(subst /src/components$,,$(PWD))
+export MOSSCODIR=$(subst /src/components$,,$(PWD))
 endif
 
 include $(MOSSCODIR)/src/Rules.make

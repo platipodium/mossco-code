@@ -1,5 +1,5 @@
 ifndef MOSSCODIR
-MOSSCODIR=$(subst /src/drivers$,,$(PWD))
+export MOSSCODIR=$(subst /src/drivers$,,$(PWD))
 endif
 
 include $(MOSSCODIR)/src/Rules.make
