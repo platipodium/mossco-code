@@ -7,8 +7,9 @@ include $(MOSSCODIR)/src/Rules.make
 EXTRA_DIST=README
 
 LIBS := -lesmf -lgotm $(LIBS)
+NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lgotm_fabm_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(FABMDIR)/lib/gotm/GFORTRAN/libfabm_prod.a -lnetcdff -lnetcdf_c++ -lnetcdf 
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lgotm_fabm_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(FABMDIR)/lib/gotm/GFORTRAN/libfabm_prod.a $(NC_LIBS) 
 
 .PHONY: all exec libgotm
 
