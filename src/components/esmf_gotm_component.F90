@@ -16,11 +16,14 @@ module esmf_gotm_component
   use time, only: gotm_time_timefmt => timefmt
   use time, only: gotm_time_init_time => init_time
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
+  use output, only: gotm_output_nsave => nsave
 
   implicit none
 
   private
- 
+
+  type(ESMF_Alarm),save :: outputAlarm
+
   public :: empty_SetServices
   
   contains
@@ -69,9 +72,18 @@ module esmf_gotm_component
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
     gotm_time_start=timestring(1:10)//" "//timestring(12:19)
 
-    call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
-    call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
-    gotm_time_timestep = dt
+    !! also from namelist, the output timesteop is read and
+    !! used to create an alarm
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_output_nsave*gotm_time_timestep,rc=rc)
+    outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
+
+    !! get parent clock
+    !call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
+    !call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
+    !gotm_time_timestep = dt
+    !! use GOTM clock
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+    call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
 
     call ESMF_ClockGet(parentClock,stopTime=clockTime)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
@@ -93,7 +105,7 @@ module esmf_gotm_component
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt 
 
-    ! get local clock with GOTM timesteop, get glboal clock with coupling timestep, set n to global/local, call GOTM, advance local clock n steps., 
+    ! get local clock with GOTM timesteop, get global clock with coupling timestep, set n to global/local, call GOTM, advance local clock n steps., 
     call ESMF_TimeSet(clockTime)
     call ESMF_ClockGet(parentClock,currTime=clockTime)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
@@ -110,9 +122,19 @@ module esmf_gotm_component
     ! call ESMF_GET_TIMESTEP_N
     gotm_time_min_n = 1
     gotm_time_max_n = gotm_time_min_n  + 0
-    write (*,*) timestring,gotm_time_min_n,gotm_time_max_n,gotm_time_timestep,gotm_time_start,gotm_time_stop
+    !write (*,*) timestring,gotm_time_min_n,gotm_time_max_n,gotm_time_timestep,gotm_time_start,gotm_time_stop
     !call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n) !> @todo is this needed for consistency? I don't get the right coordinate
 !> variable time output with or without this statement
+
+    !! Check if the output alarm is ringing, if so, quiet it and 
+    !! set gotm_output_nsave = 1
+    if (ESMF_AlarmIsRinging(outputAlarm)) then
+      call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
+      gotm_output_nsave=1
+    else
+      gotm_output_nsave=2
+    endif
+
     call gotm_time_loop()
 
   end subroutine Run
