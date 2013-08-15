@@ -22,6 +22,7 @@ module esmf_gotm_component
 
   private
 
+  !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
 
   public :: empty_SetServices
@@ -30,7 +31,6 @@ module esmf_gotm_component
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
-
   subroutine empty_SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
@@ -59,35 +59,47 @@ module esmf_gotm_component
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt 
 
-    call ESMF_LogWrite('Initialize GOTM',ESMF_LOGMSG_INFO)
+    logical :: input_from_namelist = .true.  !> @todo later to be replaced by switch passed from parent component
+
+    call ESMF_LogWrite('Initialize GOTM component',ESMF_LOGMSG_INFO)
     call init_gotm()
 
     ! Manipulate the time parameters from the gotm namelist
-    ! dt    ! float time steop for integration in seconds, mapped to timestep
-    ! start  ! string date in yyyy-mm-dd hh:mm:ss format for start date, mapped to jul1,secs1
-    ! stop   ! string date in yyyy-mm-dd hh:mm:ss format for end date, mapped to jul2,secs2
-   
+    ! dt    ! float time steop for integration in seconds
+    ! start  ! string date in yyyy-mm-dd hh:mm:ss format for start date
+    ! stop   ! string date in yyyy-mm-dd hh:mm:ss format for end date
+  
     call ESMF_TimeSet(clockTime)
-    call ESMF_ClockGet(parentClock,startTime=clockTime)
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    gotm_time_start=timestring(1:10)//" "//timestring(12:19)
+    if (input_from_namelist) then !> get parent clock and overwrite namelist parameters
+      call ESMF_ClockGet(parentClock,startTime=clockTime)
+      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+      gotm_time_start=timestring(1:10)//" "//timestring(12:19)
 
-    !! also from namelist, the output timesteop is read and
-    !! used to create an alarm
+      call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
+      call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+     
+      call ESMF_ClockGet(parentClock,stopTime=clockTime)
+      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+      gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
+    else !> overwrite the parent clock's settings with the namelist parameters
+      call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+      call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
+
+      timestring=gotm_time_start(1:10)//"T"//gotm_time_start(12:19)
+      !call ESMF_TimeSet(clockTime,timeStringISOFrac=timestring)
+      call timestring2ESMF_Time(timestring,clockTime)
+      call ESMF_ClockSet(parentClock,startTime=clockTime)
+      
+      timestring=gotm_time_stop(1:10)//"T"//gotm_time_stop(12:19)
+      !call ESMF_TimeSet(clockTime,timeStringISOFrac=timestring)
+      call timestring2ESMF_Time(timestring,clockTime)
+      call ESMF_ClockSet(parentClock,stopTime=clockTime)
+    endif
+  
+    !! The output timestep is used to create an alarm
+    !> @todo implement this also driven by the parent clock
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_output_nsave*gotm_time_timestep,rc=rc)
     outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
-
-    !! get parent clock
-    !call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
-    !call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
-    !gotm_time_timestep = dt
-    !! use GOTM clock
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-    call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
-
-    call ESMF_ClockGet(parentClock,stopTime=clockTime)
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
 
     gotm_time_timefmt = 2 
     call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n)
@@ -148,5 +160,23 @@ module esmf_gotm_component
     call clean_up()
 
   end subroutine Finalize
+
+  !> Actually, this sho9uld be an extension of ESMF_TimeSet 
+  subroutine timeString2ESMF_Time(timestring,time)
+    character(len=*), intent(in) :: timestring
+    type(ESMF_Time), intent(out) :: time
+
+    integer :: yy,mm,dd,h,m,s
+
+    read(timestring(1:4),'(i4)') yy
+    read(timestring(6:7),'(i2)') mm
+    read(timestring(9:10),'(i2)') dd
+    read(timestring(12:13),'(i2)') h
+    read(timestring(15:16),'(i2)') m
+    read(timestring(18:19),'(i2)') s
+
+    call ESMF_TimeSet(time,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s)
+
+  end subroutine timeString2ESMF_Time
 
 end module esmf_gotm_component
