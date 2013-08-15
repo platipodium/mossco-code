@@ -33,6 +33,7 @@ MOSSCO has some necessary and some optional prerequisites.  Please make sure you
 - Fortran Compiler (Intel >= 12.0 and GNU Fortran >= 4.7.2 tested) with support for the FORTRAN 2003 standard
 - FABM
 - ESMF (optional)
+- GOTM (optional)
 
 @subsection installing-fabm Installing FABM
 
@@ -49,6 +50,26 @@ Environment variable | value
 ---|---
 FABMDIR | $HOME/opt/src/fabm-code
 FABM_F2003 | true
+FORTRAN_COMPILER | GFORTRAN
+
+@subsection installing-gotm Installing GOTM
+
+Careful: the GOTM install is not required to demonstrate the MOSSCO system.  Code and instructions are to be considered experimental!
+
+Decide on a directory where to install GOTM, and set the environment variable $GOTMDIR to point to this directory
+
+- download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/gotm-code $GOTMDIR @endcode
+- change into the new directory @code cd $GOTMDIR @endcode
+- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN
+- you need to precompile gotm to work with MOSSCO
+
+An example environment for GOTM could look like this:
+Environment variable | value
+---|---
+FABMDIR | $HOME/opt/src/fabm-code
+GOTMDIR | $HOME/opt/src/gotm-code
+FABM_F2003 | true
+FABM | true
 FORTRAN_COMPILER | GFORTRAN
 
 @subsection installing-esmf Installing ESMF
@@ -86,7 +107,7 @@ To create the examples and test your installation, issue
 make examples
 ~~~~
 
-Then change to the examples subdirectories and run the testcases.  
+Then change to the examples subdirectories and run the testcases (see below)
 
 To clean everything and start anew, type
 
@@ -110,7 +131,7 @@ The MOSSCO system was successfully tested on the following machines and environm
 
 Operating System | Compiler | Configuration | Machine | Status
 --|--|--|--|--
-Ubuntu Linux 3.8.0 x86-64 | gfortran-4.7.3/mpich | FABM/ESMF | ksez8002 (cl)| complete
+Ubuntu Linux 3.8.0 x86-64 | gfortran-4.7.3/mpich | FABM/ESMF/GOTM | ksez8002 (cl)| complete
 OSX 10.6.8 | gfortran-4.7.2/mpich | FABM/ESMF | macchi (rh)| complete
 Ubuntu Linux 3.8.0| gfortran-4.7.3/mpich2 | FABM/ESMF | phy-203 (IOW, kk)| complete
 SUSE Linux 2.6.16 | ifort-12.1 | FABM | bicegate (HLRN, kk) | complete
@@ -123,5 +144,48 @@ Operating System | Compiler | Configuration | Machine | Status
 --|--|--|--|--
 Suse Linux 2.6.16 x86-64 | ifort-11.1 | FABM | grpsrv05 (cl)| compiles
 OSX 10.8.4 x86-64| gfortran-4.8.1/mpich | FABM | possum (cl) | compiles
+
+@section testcases Running the testcases
+
+There are currently three examples that you can run
+- a FABM standalone sediment driver (in examples/omexdia_p)
+- a FABM/ESMF sediment component (in examples/esmf_sediment)
+- a GOTM/ESMF test case driver (in examples/esmf_gotm)
+
+
+@subsection testcases-fabm The FABM standalone sediment driver
+
+All configuration files are contained in the example.  Run
+
+~~~~
+(cd $MOSSCODIR/examples/omexdia_p ; ./omexdia_p_test)
+~~~~
+
+@subsection testcases-esmf-sediment The ESMF/FABM sediment driver
+
+All configuration files are contained in the example.  Run
+
+~~~~
+(cd $MOSSCODIR/examples/esmf_sediment ; ./esmf_sediment_example)
+~~~~
+
+@subsection testcases-gotm The GOTM testcase driver
+
+You need to download the GOTM test cases first to a directory of your choice.  Let's assume your GOTM
+test cases should be installed in the directory $GOTMCASEDIR, then run
+
+~~~~
+git clone git://git.code.sf.net/p/gotm/gotm-cases $GOTMCASEDIR
+~~~~
+  
+To run the northern North Sea annual testcase, issue the following
+
+~~~~
+(cd $GOTMCASEDIR/nns_annual ; $MOSSCODIR/examples/esmf_gotm/esmf_gotm_example)
+~~~~
+
+
+
+
 
 */
