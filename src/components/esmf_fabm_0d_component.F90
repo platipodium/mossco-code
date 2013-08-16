@@ -109,17 +109,17 @@ module esmf_fabm_0d_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19) :: timestring
-    type(ESMF_Time)   :: wallTime, clockTime
-    type(ESMF_TimeInterval) :: timeInterval
-    real(ESMF_KIND_R8)      :: dt
+    character(len=19)    :: timestring
+    character(len=255)   ::logstring
+    type(ESMF_Time)      :: clockTime
     integer(ESMF_KIND_I8)   :: n
 
     ! get global clock , set n to global/local, call 0d, advance local clock n steps., 
     call ESMF_TimeSet(clockTime)
     call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    call ESMF_LogWrite("0d run at "//timestring//")", ESMF_LOGMSG_INFO)
+    write (logstring,'(A,I6,A,A)') "0d run(",n,") at ",timestring
+    call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
 
     ! use AdvanceCount from parent clock
     gotm_time_min_n = n

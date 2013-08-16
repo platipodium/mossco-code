@@ -32,7 +32,8 @@ program main
    call ESMF_TimeGet(time1,timeStringISOFrac=timestring)
    call ESMF_LogWrite("Program starts at wall clock "//timestring, ESMF_LOGMSG_INFO)
   
-! Create and initialize a clock, with 3600 second timestep, and 1 yr running time
+! Create and initialize a clock, with 60 second timestep, and 1 month running time
+! This can be overwritten by the run.nml namelist parameters
    call ESMF_TimeIntervalSet(timeStep, s=60, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 

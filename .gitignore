@@ -5,7 +5,9 @@ modules/
 *.a
 *.mod
 *.swp
+**/PET*.*
 doc/latex
 doc/html
 examples/esmf_gotm/esmf_gotm_example
-examples/*/PET*.*
+examples/esmf_fabm0d/esmf_fabm0d
+examples/esmf_fabm0d/output.dat
