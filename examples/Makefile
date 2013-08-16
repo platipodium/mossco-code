@@ -14,6 +14,7 @@ endif
 
 ifdef GOTMDIR
 SUBDIRS +=esmf_gotm
+SUBDIRS +=esmf_fabm0d
 endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS)
