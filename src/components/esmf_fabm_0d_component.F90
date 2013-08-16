@@ -3,6 +3,7 @@
 !!
 !! The ESMF component contains the 0d driver module
 !! @author Richard Hofmeister
+!! @author Carsten Lemmen
 
 !> The ESMF/FABM 0d driver component module provides infrastructure for the
 !! MOSSCO 0d pelagic component.
@@ -58,10 +59,9 @@ module esmf_fabm_0d_component
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
-    integer            :: nsave,ode_method,namlst=234
+    integer            :: ode_method,namlst=234
     character(len=80)  :: title
-    character          :: c1,c2,c3,c4
-    integer            :: yy,mm,dd,hh,minu,ss
+    logical            :: input_from_namelist = .true.
 
     namelist /model_setup/ title,start,stop,dt,ode_method
 
@@ -73,19 +73,33 @@ module esmf_fabm_0d_component
     call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
     call init_0d()
 
-    ! set parent clock like in model_setup namelist
-    read(start,'(i4,a1,i2,a1,i2,1x,i2,a1,i2,a1,i2)')  &
-                          yy,c1,mm,c2,dd,hh,c3,minu,c4,ss 
-    call ESMF_TimeSet(clockTime,YY=yy,MM=mm,DD=dd,H=hh,M=minu,S=ss)
-    call ESMF_ClockSet(parentClock,startTime=clockTime)
+    call ESMF_TimeSet(clockTime)
+    if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
+      call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
+      call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+      call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
 
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-    call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
+      timestring=gotm_time_start(1:10)//"T"//gotm_time_start(12:19)
+      call timestring2ESMF_Time(timestring,clockTime)
+      call ESMF_ClockSet(parentClock,startTime=clockTime)
+      
+      timestring=gotm_time_stop(1:10)//"T"//gotm_time_stop(12:19)
+      call timestring2ESMF_Time(timestring,clockTime)
+      call ESMF_ClockSet(parentClock,stopTime=clockTime)
+    else !> get parent clock and overwrite namelist parameters
+      call ESMF_LogWrite('Set GOTM input from ESMF parent',ESMF_LOGMSG_INFO)
+      call ESMF_ClockGet(parentClock,startTime=clockTime)
+      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+      gotm_time_start=timestring(1:10)//" "//timestring(12:19)
 
-    read(stop,'(i4,a1,i2,a1,i2,1x,i2,a1,i2,a1,i2)')  &
-                          yy,c1,mm,c2,dd,hh,c3,minu,c4,ss
-    call ESMF_TimeSet(clockTime,YY=yy,MM=mm,DD=dd,H=hh,M=minu,S=ss)
-    call ESMF_ClockSet(parentClock,stopTime=clockTime)
+      call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
+      call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+     
+      call ESMF_ClockGet(parentClock,stopTime=clockTime)
+      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+      gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
+      
+    endif
     
   end subroutine Initialize
 
@@ -124,5 +138,24 @@ module esmf_fabm_0d_component
     call finalize_0d()
 
   end subroutine Finalize
+  
+    !> Actually, this sho9uld be an extension of ESMF_TimeSet 
+  subroutine timeString2ESMF_Time(timestring,time)
+    character(len=*), intent(in) :: timestring
+    type(ESMF_Time), intent(out) :: time
+
+    integer :: yy,mm,dd,h,m,s
+
+    read(timestring(1:4),'(i4)') yy
+    read(timestring(6:7),'(i2)') mm
+    read(timestring(9:10),'(i2)') dd
+    read(timestring(12:13),'(i2)') h
+    read(timestring(15:16),'(i2)') m
+    read(timestring(18:19),'(i2)') s
+
+    call ESMF_TimeSet(time,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s)
+
+  end subroutine timeString2ESMF_Time
+
 
 end module esmf_fabm_0d_component
