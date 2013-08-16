@@ -71,17 +71,7 @@ module esmf_gotm_component
   
     call ESMF_TimeSet(clockTime)
     if (input_from_namelist) then !> get parent clock and overwrite namelist parameters
-      call ESMF_ClockGet(parentClock,startTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_start=timestring(1:10)//" "//timestring(12:19)
-
-      call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
-      call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-     
-      call ESMF_ClockGet(parentClock,stopTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
-    else !> overwrite the parent clock's settings with the namelist parameters
+      call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
       call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
       call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
 
@@ -94,6 +84,19 @@ module esmf_gotm_component
       !call ESMF_TimeSet(clockTime,timeStringISOFrac=timestring)
       call timestring2ESMF_Time(timestring,clockTime)
       call ESMF_ClockSet(parentClock,stopTime=clockTime)
+    else !> overwrite the parent clock's settings with the namelist parameters
+      call ESMF_LogWrite('Set GOTM input from ESMF parent',ESMF_LOGMSG_INFO)
+      call ESMF_ClockGet(parentClock,startTime=clockTime)
+      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+      gotm_time_start=timestring(1:10)//" "//timestring(12:19)
+
+      call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
+      call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+     
+      call ESMF_ClockGet(parentClock,stopTime=clockTime)
+      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+      gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
+      
     endif
   
     !! The output timestep is used to create an alarm

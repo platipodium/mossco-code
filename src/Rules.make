@@ -1,12 +1,12 @@
 # Makefile rules applying to the entire MOSSCO src and examples directories
 
-# 0. Checking that we're using GNU make 
+# 1. Checking that we're using GNU make 
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
 $(error GNU make is required)
 endif 
 
-# 1. Importing all FABM-related environment variables and checking that the environment is sane
+# 2. Importing all FABM-related environment variables and checking that the environment is sane
 #    At the moment, we require that FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
 # 
@@ -35,21 +35,28 @@ export FABM_F2003=true
 $(warning FABM_F2003 automatically set to FABM_F2003=$(FABM_F2003))
 endif
 
-
 FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_INCLUDE_PATH=$(FABMDIR)/include
 FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
-FABM_LIBRARY_FILE=$(FABM_LIBRARY_PATH)/libfabm_prod.a
+FABM_LIBRARY_FILE=$(shell ls $(FABM_LIBRARY_PATH) )
+
+# 3. (optional) Importing all GOTM-related environment variables and checking that the environment is sane
+# At the moment, we require that GOTMDIR, FABM, and FORTRAN_COMPILER are set and that
+# the gotm library is installed in the production version (libgotm_prod)
 
 ifdef $GOTMDIR
-ifndef $(_FABM_) 
-export _FABM_=true
-$(warning _FABM_ automatically set to _FABM_=$(_FABM_) for GOTM)
+ifndef $(FABM) 
+export FABM=true
+$(warning FABM automatically set to FABM=$(FABM) for GOTM in $(GOTMDIR))
 endif
 endif
 
+GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
+GOTM_INCLUDE_PATH=$(GOTMDIR)/include
+GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
+GOTM_LIBRARY_FILE=$(shell ls $(GOTM_LIBRARY_PATH) )
 
-# 2. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
+# 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
 #
 ifndef ESMFMKFILE
@@ -106,12 +113,13 @@ $(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
 endif
 endif
 export MOSSCO_COMPILER=$(F90)
-
 export F90
 
 INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
 INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
+INCLUDES += -I$(GOTM_MODULE_PATH)
+
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 INCLUDES += -J$(MOSSCO_MODULE_PATH)
 EXTRA_CPP=

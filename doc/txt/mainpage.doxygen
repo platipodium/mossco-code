@@ -185,6 +185,16 @@ To run the northern North Sea annual testcase, issue the following
 ~~~~
 
 
+@subsection testcases-fabm0d The FABM 0d driver
+
+Prerequisites are both FABM and GOTM.  To make the FABM library with the 0d driver,
+issue 
+
+~~~~
+make -C $FABMDIR/src 0d
+~~~~
+  
+(There are no instructions here on how to use this example yet)
 
 
 
