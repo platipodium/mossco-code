@@ -34,6 +34,7 @@ MOSSCO has some necessary and some optional prerequisites.  Please make sure you
 - FABM
 - ESMF (optional)
 - GOTM (optional)
+- doxygen (to create the documentation)
 
 @subsection installing-fabm Installing FABM
 
@@ -73,7 +74,11 @@ FABM | true
 FORTRAN_COMPILER | GFORTRAN
 
 @subsection installing-esmf Installing ESMF
-(Instructions follow)
+
+Decide on a directory where to put the ESMF source, and set the environment variable $ESMF_DIR to point to this directory.
+
+- download the git repository of esmf: 
+- checkout the 6_2_0 tagged version: @code git checkout ESMF_6_2_0 @endcode
 
 An example environment for ESMF could look like this:
 Environment variable | value
@@ -100,6 +105,8 @@ To create the documentation (the file you're reading right now), issue
 ~~~~
 make doc
 ~~~~
+
+(don't worry too much about the warning messages that occur with outdated doxygen version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have doxygen installed, you can alternatively download a fairly recent pdf of the documentation at https://sourceforge.net/projects/mossco/files/Reference%20Manual/. 
 
 To create the examples and test your installation, issue
 
