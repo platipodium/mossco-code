@@ -67,29 +67,31 @@ endif
 else
 include $(ESMFMKFILE)
 export MOSSCO_ESMF=true
+export MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
+
 endif
 
-# 3. MOSSCO declarations. The MOSSCODIR and the build prefix are set, as well as the bin/mod/lib paths relative
+# 3. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
 #
-ifndef MOSSCODIR
-export MOSSCODIR=$(subst /src$,,$(PWD))
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /src$,,$(PWD))
 endif
 
-ifeq ($(wildcard $(MOSSCODIR)),) 
-$(error the directory MOSSCODIR=$(MOSSCODIR) does not exist)
+ifeq ($(wildcard $(MOSSCO_DIR)),) 
+$(error the directory MOSSCO_DIR=$(MOSSCO_DIR) does not exist)
 endif
 
 ifdef PREFIX
-MOSSCOPREFIX=$(PREFIX)
+MOSSCO_PREFIX=$(PREFIX)
 else
-MOSSCOPREFIX=$(MOSSCODIR)
+MOSSCO_PREFIX=$(MOSSCO_DIR)
 endif
 export MOSSCOPREFIX
 
-export MOSSCO_MODULE_PATH=$(MOSSCOPREFIX)/modules/$(FORTRAN_COMPILER)
-export MOSSCO_LIBRARY_PATH=$(MOSSCOPREFIX)/lib/$(FORTRAN_COMPILER)
-export MOSSCO_BIN_PATH=$(MOSSCOPREFIX)/bin
+export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
+export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
+export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 
 # 4. Putting everything together.  This section could need some cleanup, but does work fornow
 #

@@ -1,8 +1,8 @@
-ifndef MOSSCODIR
-export MOSSCODIR=$(subst /src/mediators$,,$(PWD))
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /src/mediators$,,$(PWD))
 endif
 
-include $(MOSSCODIR)/src/Rules.make
+include $(MOSSCO_DIR)/src/Rules.make
 
 
 EXTRA_DIST=README

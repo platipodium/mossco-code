@@ -1,8 +1,8 @@
-ifndef MOSSCODIR
-export MOSSCODIR=$(subst /examples/esmf_gotm$,,$(PWD))
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /examples/esmf_gotm$,,$(PWD))
 endif
 
-include $(MOSSCODIR)/src/Rules.make
+include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
@@ -15,17 +15,17 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lgotm_prod -lairs
 
 all: exec
 
-libgotm: prefix $(MOSSCO_MODULE_PATH)/esmf_gotm_component.mod $(MOSSCODIR)/src/components/esmf_gotm_component.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libgotm.a $(MOSSCODIR)/src/components/esmf_gotm_component.o
+libgotm: prefix $(MOSSCO_MODULE_PATH)/esmf_gotm_component.mod $(MOSSCO_DIR)/src/components/esmf_gotm_component.o
+	ar cruvs $(MOSSCO_LIBRARY_PATH)/libgotm.a $(MOSSCO_DIR)/src/components/esmf_gotm_component.o
 	@echo "Created gotm library  $(MOSSCO_LIBRARY_PATH)/libgotm.a" 
 
 exec: main.o libgotm
 	$(F90) $(F90FLAGS) -o esmf_gotm_example esmf_toplevel_component.o main.o $(LDFLAGS)
 	@echo "Created example binary esmf_example_test in  $(PWD)" 
-	@echo "Please change to $(MOSSCODIR)/examples/esmf_gotm to run the example." > $(MOSSCO_BIN_PATH)/esmf_gotm.txt
+	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_gotm to run the example." > $(MOSSCO_BIN_PATH)/esmf_gotm.txt
 
-$(MOSSCO_MODULE_PATH)/esmf_gotm_component.mod: $(MOSSCODIR)/src/components/esmf_gotm_component.F90
-	$(MAKE) -C $(MOSSCODIR)/src/components
+$(MOSSCO_MODULE_PATH)/esmf_gotm_component.mod: $(MOSSCO_DIR)/src/components/esmf_gotm_component.F90
+	$(MAKE) -C $(MOSSCO_DIR)/src/components
 
 main.o: esmf_toplevel_component.o
 esmf_toplevel_component.o: esmf_toplevel_component.F90

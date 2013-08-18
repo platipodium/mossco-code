@@ -1,7 +1,7 @@
 EXTRA_DIST = README ACKNOWLEDGEMENTS AUTHORS .gitignore
 SUBDIRS = doc src examples
 
-export MOSSCODIR=$(CURDIR)
+export MOSSCO_DIR=$(CURDIR)
 
 .PHONY: default doc src info examples all clean subdirs $(SUBDIRS)
 

@@ -1,8 +1,8 @@
-ifndef MOSSCODIR
-export MOSSCODIR=$(subst /examples/esmf_fabm0d$,,$(PWD))
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /examples/esmf_fabm0d$,,$(PWD))
 endif
 
-include $(MOSSCODIR)/src/Rules.make
+include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
@@ -15,8 +15,8 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lfabm0d $(FABMDIR)/src/drivers/0d/fabm0d.o 
 
 all: exec
 
-libfabm0d: prefix $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod $(MOSSCODIR)/src/components/esmf_fabm_0d_component.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libfabm0d.a $(MOSSCODIR)/src/components/esmf_fabm_0d_component.o
+libfabm0d: prefix $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.o
+	ar cruvs $(MOSSCO_LIBRARY_PATH)/libfabm0d.a $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.o
 	@echo "Created fabm0d library  $(MOSSCO_LIBRARY_PATH)/libfabm0d.a" 
 
 exec: main.o libfabm0d
@@ -24,8 +24,8 @@ exec: main.o libfabm0d
 	@echo "Created example binary esmf_fabm0d in  $(PWD)" 
 	@echo "Please change to $(FABMDIR)/testcases/0d to run the example." > $(MOSSCO_BIN_PATH)/esmf_fabm0d.txt
 
-$(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod: $(MOSSCODIR)/src/components/esmf_fabm_0d_component.F90
-	$(MAKE) -C $(MOSSCODIR)/src/components
+$(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod: $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.F90
+	$(MAKE) -C $(MOSSCO_DIR)/src/components
 
 main.o: esmf_toplevel_component.o
 esmf_toplevel_component.o: esmf_toplevel_component.F90

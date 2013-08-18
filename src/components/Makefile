@@ -1,8 +1,8 @@
-ifndef MOSSCODIR
-export MOSSCODIR=$(subst /src/components$,,$(PWD))
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /src/components$,,$(PWD))
 endif
 
-include $(MOSSCODIR)/src/Rules.make
+include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
@@ -50,7 +50,7 @@ esmf_fabm_0d_component.o: esmf_fabm_0d_component.F90
 	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/0d/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
 $(MOSSCO_module_path)/solver_library.mod:
-	make -C $(MOSSCODIR)/src/utilities libsolver
+	make -C $(MOSSCO_DIR)/src/utilities libsolver
 
 clean: extraclean
 extraclean:
