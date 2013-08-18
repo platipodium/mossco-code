@@ -7,21 +7,27 @@ The overarching goal of the project ``Modular System for Shelves and Coasts'' (M
 
 @image latex MOSSCO-schema_400px.png "Schematic overview of the MOSSCO system" width=.5\hsize
 
-MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the ``Forschungsagenda Nord- und Ostsee''. It should integrate physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure will support synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance to coastal policies. 
+MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the ``Forschungsagenda Nord- und Ostsee''. It should integrate physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure will support synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance with coastal policies. 
 
 @section obtaining-code How to obtain the code
 
-The web site interface could look like this (depending on your browser)
+While the public web site with documentation on the MOSSCO project is hosted at [http://www.mossco.de], the software, blog, and bug tracker is hosted on [http://www.sf.net/p/mossco].  To obtain the code, change to the ``Git'' tab, or follow this link [http://www.sf.net/p/mossco/code]. The web site interface could look as follows (depending on your browser)
 
 @image latex sf_git_screenshot.png "Screenshot of using sourceforge" width=0.5\hsize
 
-The code is available from the sourceforge site via @c git for read-only access.  If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
+The code is available via @c git for read-only access. Choose a local directory @c $MOSSCODIR, where you would like the mossco code to reside;  you should make this an environment variable.
+
+~~~~sh
+git clone git://git.code.sf.net/p/mossco/code $MOSSCODIR
+~~~~
+
+or, alternatively using the http protocol 
 
 ~~~~
-git clone git://git.code.sf.net/p/mossco/code mossco-code
+git clone http://git.code.sf.net/p/mossco/code $MOSSCODIR
 ~~~~
 
-We refer to the created directory @c mossco-code as @c MOSSCODIR.  You can freely choose this directory, and you should make this an environment variable.
+If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
 
 @section installing Installing MOSSCO
 
@@ -34,7 +40,7 @@ MOSSCO has some necessary and some optional prerequisites.  Please make sure you
 - FABM
 - ESMF (optional)
 - GOTM (optional)
-- doxygen (to create the documentation)
+- doxygen (to create the documentation, best with version >= 1.8)
 
 @subsection installing-fabm Installing FABM
 
@@ -62,6 +68,7 @@ Decide on a directory where to install GOTM, and set the environment variable $G
 - download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/gotm-code $GOTMDIR @endcode
 - change into the new directory @code cd $GOTMDIR @endcode
 - set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN
+- while not in the offical GOTM, add and checkout the mossco branch (can be obtained from the developers)
 - you need to precompile gotm to work with MOSSCO
 
 An example environment for GOTM could look like this:
@@ -75,15 +82,16 @@ FORTRAN_COMPILER | GFORTRAN
 
 @subsection installing-esmf Installing ESMF
 
-Decide on a directory where to put the ESMF source, and set the environment variable $ESMF_DIR to point to this directory.
+Decide on a directory where to put the ESMF source, and set the environment variable @c $ESMF_DIR to point to this directory.
 
-- download the git repository of esmf: 
+- download the git repository of esmf: @code git clone git://git.code.sf.net/p/esmf/esmf $ESMF_DIR @endcode
+- change to this directory : @code cd $ESMF_DIR @endcode
 - checkout the 6_2_0 tagged version: @code git checkout ESMF_6_2_0 @endcode
+- set ESMF's environment variables
 
 An example environment for ESMF could look like this:
 Environment variable | value
 ---|---
-ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
 ESMF_DIR | $HOME/opt/src/esmf
 ESMF_COMM | mpich2
 ESMF_NETCDF | split
@@ -94,6 +102,14 @@ ESMF_PIO | internal
 
 See the ESMF manual for a complete list of ESMF environment variables and their relevance.
 
+- build ESMF (no need to install it) by issuing @c make
+- for MOSSCO to work, you need to define the environment variable @c $ESMFMKFKILE, e.g.
+
+Environment variable | value
+---|---
+ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
+
+
 @subsection building Building MOSSCO
 
 To create the MOSSCO libraries, currently libsediment.a and libsolver.a, simply issue
@@ -102,7 +118,7 @@ libraries in @c $MOSSCODIR/lib/$FORTRAN_COMPILER
 
 To create the documentation (the file you're reading right now), issue 
 
-~~~~
+~~~~sh
 make doc
 ~~~~
 
@@ -110,7 +126,7 @@ make doc
 
 To create the examples and test your installation, issue
 
-~~~~
+~~~~sh
 make examples
 ~~~~
 
@@ -145,19 +161,13 @@ SUSE Linux 2.6.16 | ifort-12.1 | FABM | bicegate (HLRN, kk) | complete
 SUSE Linux 3.0 | ifort-12.1.5 | FABM | ICE-X (BAW) | complete
 Debian Linux 7.1 | gfortran 4.7.2/mpich2-1.4 | FABM/ESMF | grpsrv09 (hk) | complete
 
-# Successful compilation but runtime errors #
-
-Operating System | Compiler | Configuration | Machine | Status
---|--|--|--|--
-Suse Linux 2.6.16 x86-64 | ifort-11.1 | FABM | grpsrv05 (cl)| compiles
-OSX 10.8.4 x86-64| gfortran-4.8.1/mpich | FABM | possum (cl) | compiles
-
 @section testcases Running the testcases
 
 There are currently three examples that you can run
 - a FABM standalone sediment driver (in examples/omexdia_p)
 - a FABM/ESMF sediment component (in examples/esmf_sediment)
 - a GOTM/ESMF test case driver (in examples/esmf_gotm)
+- an empty ESMF test case driver (in examples/esmf_empty)
 
 
 @subsection testcases-fabm The FABM standalone sediment driver
@@ -201,8 +211,13 @@ issue
 make -C $FABMDIR/src 0d
 ~~~~
   
-(There are no instructions here on how to use this example yet)
+Then go to $MOSSCODIR/examples/esmf_fabm0d and run the example:
 
+~~~~
+(cd $MOSSCODIR/examples/esmf_fabm0d ; ./esmf_fabm0d)
+~~~~
+
+All configuration files are contained in the example.
 
 
 */
