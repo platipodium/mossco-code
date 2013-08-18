@@ -7,12 +7,12 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 EXTERNAL_LIBRARY_TARGETS =
-ifdef $(GOTMDIR)
+ifdef GOTMDIR
 EXTERNAL_LIBARY_TARGETS += external_libgotm
 endif
-ifdef $(FABMDIR)
+ifdef FABMDIR
 EXTERNAL_LIBARY_TARGETS += external_libfabm_mossco
-ifdef $(GOTMDIR)
+ifdef GOTMDIR
 EXTERNAL_LIBARY_TARGETS += external_libfabm_0d
 endif
 endif
@@ -63,5 +63,5 @@ extraclean:
 # External libraries
 libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
-	$(MAKE) -C $GOTMDIR/src
+	$(MAKE) -C $(GOTMDIR)/src
 

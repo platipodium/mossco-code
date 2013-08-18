@@ -44,8 +44,8 @@ FABM_LIBRARY_FILE=$(shell ls $(FABM_LIBRARY_PATH) )
 # At the moment, we require that GOTMDIR, FABM, and FORTRAN_COMPILER are set and that
 # the gotm library is installed in the production version (libgotm_prod)
 
-ifdef $GOTMDIR
-ifndef $(FABM) 
+ifdef GOTMDIR
+ifndef FABM 
 export FABM=true
 $(warning FABM automatically set to FABM=$(FABM) for GOTM in $(GOTMDIR))
 endif
@@ -60,23 +60,39 @@ GOTM_LIBRARY_FILE=$(shell ls $(GOTM_LIBRARY_PATH) )
 #    the components and mediators to be built if ESMF is not found in your system
 #
 ifndef ESMFMKFILE
-ifndef $(MOSSCO_ESMF)
-$(warning Compiling without ESMF support)
+ifndef MOSSCO_ESMF
+$(error Compiling without ESMF support. Comment this line 64 Rules.make if you want to proceed)
 export MOSSCO_ESMF=false
 endif
 else
 include $(ESMFMKFILE)
 export MOSSCO_ESMF=true
 export MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
-
+export MOSSCO_NETCDF_INCLUDE=$(ESMF_NETCDF_INCLUDE)
+export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
+ifeq ($(ESMF_NETCDF),split)
+ifneq ($(origin MOSSCO_NETCDF_LIBS), environment)
+MOSSCO_NETCDF_LIBS = -lnetcdff -lnetcdf_c++ -lnetcdf
+endif
+else
+ifneq ($(origin MOSSCO_NETCDF_LIBS), environment)
+MOSSCO_NETCDF_LIBS = -lnetcdf_c++ -lnetcdf
+endif
+endif
+export MOSSCO_NETCDF_LIBS
 endif
 
 # 3. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /src$,,$(PWD))
+ifdef MOSSCODIR
+MOSSCO_DIR=$(MOSSCODIR)
+else
+MOSSCO_DIR=$(subst /src$,,$(PWD))
 endif
+endif
+export MOSSCO_DIR
 
 ifeq ($(wildcard $(MOSSCO_DIR)),) 
 $(error the directory MOSSCO_DIR=$(MOSSCO_DIR) does not exist)
@@ -110,7 +126,7 @@ endif
 endif
 
 ifneq ($(F90),$(FABM_F90COMPILER))
-ifndef $(MOSSCO_COMPILER)
+ifndef MOSSCO_COMPILER
 $(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
 endif
 endif
@@ -121,6 +137,7 @@ INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/driver
 INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(GOTM_MODULE_PATH)
+INCLUDES += -I$(MOSSCO_NETCDF_INCLUDE)
 
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 INCLUDES += -J$(MOSSCO_MODULE_PATH)
@@ -135,10 +152,12 @@ endif
 LIBRARY_PATHS  = -L$(FABM_LIBRARY_PATH) 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
+LIBRARY_PATHS += -L$(MOSSCO_NETCDF_LIBPATH)
 export LIBRARY_PATHS
 
 LIBS = -lfabm_prod
 LIBS += $(ESMF_F90LINKLIBS)
+LIBS += $(MOSSCO_NETCDF_LIBS)
 export LIBS
 
 export CPPFLAGS = $(DEFINES) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS)
@@ -168,14 +187,11 @@ info:
 	@echo F90 = $(F90)
 	@echo FABMHOST = $(FABMHOST)
 	@echo FABMDIR = $(FABMDIR)
-	@echo MOSSCODIR = $(MOSSCODIR)
-	@echo MOSSCO_LIBRARY_PATH = $(MOSSCO_LIBRARY_PATH)
-	@echo MOSSCO_MODULE_PATH = $(MOSSCO_MODULE_PATH)
-	@echo MOSSCO_BIN_PATH = $(MOSSCO_BIN_PATH)
 	@echo INCDIRS = $(INCDIRS)
 	@echo F90FLAGS = $(F90FLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
 	@echo LINKDIRS = $(LINKDIRS)
+	@env | grep MOSSCO_ | sort 
 
 # Common rules
 #ifndef EXTRA_CPP
