@@ -15,16 +15,16 @@ While the public web site with documentation on the MOSSCO project is hosted at 
 
 @image latex sf_git_screenshot.png "Screenshot of using sourceforge" width=0.5\hsize
 
-The code is available via @c git for read-only access. Choose a local directory @c $MOSSCODIR, where you would like the mossco code to reside;  you should make this an environment variable.
+The code is available via @c git for read-only access. Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable.
 
 ~~~~sh
-git clone git://git.code.sf.net/p/mossco/code $MOSSCODIR
+git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 ~~~~
 
 or, alternatively using the http protocol 
 
 ~~~~
-git clone http://git.code.sf.net/p/mossco/code $MOSSCODIR
+git clone http://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 ~~~~
 
 If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
@@ -113,8 +113,8 @@ ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.m
 @subsection building Building MOSSCO
 
 To create the MOSSCO libraries, currently libsediment.a and libsolver.a, simply issue
-@c make in your @c $MOSSCODIR.  This will automaticall build the @c src target and provide the 
-libraries in @c $MOSSCODIR/lib/$FORTRAN_COMPILER
+@c make in your @c $MOSSCO_DIR.  This will automaticall build the @c src target and provide the 
+libraries in @c $MOSSCO_DIR/lib/$FORTRAN_COMPILER
 
 To create the documentation (the file you're reading right now), issue 
 
@@ -175,7 +175,7 @@ There are currently three examples that you can run
 All configuration files are contained in the example.  Run
 
 ~~~~
-(cd $MOSSCODIR/examples/omexdia_p ; ./omexdia_p_test)
+(cd $MOSSCO_DIR/examples/omexdia_p ; ./omexdia_p_test)
 ~~~~
 
 @subsection testcases-esmf-sediment The ESMF/FABM sediment driver
@@ -183,7 +183,7 @@ All configuration files are contained in the example.  Run
 All configuration files are contained in the example.  Run
 
 ~~~~
-(cd $MOSSCODIR/examples/esmf_sediment ; ./esmf_sediment_example)
+(cd $MOSSCO_DIR/examples/esmf_sediment ; ./esmf_sediment_example)
 ~~~~
 
 @subsection testcases-gotm The GOTM testcase driver
@@ -198,7 +198,7 @@ git clone git://git.code.sf.net/p/gotm/gotm-cases $GOTMCASEDIR
 To run the northern North Sea annual testcase, issue the following
 
 ~~~~
-(cd $GOTMCASEDIR/nns_annual ; $MOSSCODIR/examples/esmf_gotm/esmf_gotm_example)
+(cd $GOTMCASEDIR/nns_annual ; $MOSSCO_DIR/examples/esmf_gotm/esmf_gotm_example)
 ~~~~
 
 
@@ -211,10 +211,10 @@ issue
 make -C $FABMDIR/src 0d
 ~~~~
   
-Then go to $MOSSCODIR/examples/esmf_fabm0d and run the example:
+Then go to $MOSSCO_DIR/examples/esmf_fabm0d and run the example:
 
 ~~~~
-(cd $MOSSCODIR/examples/esmf_fabm0d ; ./esmf_fabm0d)
+(cd $MOSSCO_DIR/examples/esmf_fabm0d ; ./esmf_fabm0d)
 ~~~~
 
 All configuration files are contained in the example.
