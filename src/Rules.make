@@ -69,18 +69,7 @@ else
 include $(ESMFMKFILE)
 export MOSSCO_ESMF=true
 export MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
-export MOSSCO_NETCDF_INCLUDE=$(ESMF_NETCDF_INCLUDE)
 export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
-ifeq ($(ESMF_NETCDF),split)
-ifneq ($(origin MOSSCO_NETCDF_LIBS), environment)
-MOSSCO_NETCDF_LIBS = -lnetcdff -lnetcdf_c++ -lnetcdf
-endif
-else
-ifneq ($(origin MOSSCO_NETCDF_LIBS), environment)
-MOSSCO_NETCDF_LIBS = -lnetcdf_c++ -lnetcdf
-endif
-endif
-export MOSSCO_NETCDF_LIBS
 endif
 
 
@@ -144,7 +133,6 @@ INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/driver
 INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(GOTM_MODULE_PATH)
-INCLUDES += -I$(MOSSCO_NETCDF_INCLUDE)
 
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 INCLUDES += -J$(MOSSCO_MODULE_PATH)
