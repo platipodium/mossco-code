@@ -6,10 +6,11 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
+DELFT_SRCS=$(DELFT_DIR)/modules/precision_basics.f90 $(DELFT_DIR)/modules/precision.f90 $(wildcard $(DELFT_DIR)/source/*.f90)
 
-DELFT_OBJECTS=$(DELFT_DIR)/modules/precision_basics.o $(DELFT_DIR)/modules/precision.o $(DELFT_DIR)/source/eromud.o $(DELFT_DIR)/source/erosand.o $(DELFT_DIR)/source/sand_mud.o $(DELFT_DIR)/source/shld.o $(DELFT_DIR)/source/vanRijn84.o
+DELFT_OBJS    = $(DELFT_SRCS:.f90=.o) 
 
-.PHONY: libsediment libfabm
+.PHONY: libsediment libfabm liberosed libdelft
 
 # Make targets
 
@@ -21,36 +22,35 @@ endif
 
 all: $(ALL_TARGETS)
 
+
+# FABM/sediment section
+
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
-
-$(MOSSCO_LIBRARY_PATH)/libsediment.a: libfabm fabm_sediment_driver.o
-	$(AR) cruvs $@ fabm_sediment_driver.o
-
-liberosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: libdelft delft_erosed_driver.o
-	$(AR) cruvs $@ delft_erosed_driver.o
-
 libfabm: $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 
-#libdelft: $(DELFT_OBJECTS)
-#	$(AR) cruvs $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a $(DELFT_OBJECTS) 
-
-libdelft:
-	$(F90) $(CPPFLAGS) -I$(DELFT_DIR)/source -I$(DELFT_DIR)/modules $(F90FLAGS) -c $(DELFT_DIR)/modules/precision_basics.f90 -o $(DELFT_DIR)/modules/precision_basics.o
-	$(F90) $(CPPFLAGS) -I$(DELFT_DIR)/source -I$(DELFT_DIR)/modules $(F90FLAGS) -c $(DELFT_DIR)/modules/precision.f90 -o $(DELFT_DIR)/modules/precision.o
-	$(F90) $(CPPFLAGS) -I$(DELFT_DIR)/source -I$(DELFT_DIR)/modules $(F90FLAGS) -c $(DELFT_DIR)/source/eromud.f90 -o $(DELFT_DIR)/source/eromud.o
-	$(F90) $(CPPFLAGS) -I$(DELFT_DIR)/source -I$(DELFT_DIR)/modules $(F90FLAGS) -c $(DELFT_DIR)/source/erosand.f90 -o $(DELFT_DIR)/source/erosand.o
-	$(F90) $(CPPFLAGS) -I$(DELFT_DIR)/source -I$(DELFT_DIR)/modules $(F90FLAGS) -c $(DELFT_DIR)/source/sand_mud.f90 -o $(DELFT_DIR)/source/sand_mud.o
-	$(F90) $(CPPFLAGS) -I$(DELFT_DIR)/source -I$(DELFT_DIR)/modules $(F90FLAGS) -c $(DELFT_DIR)/source/shld.f90 -o $(DELFT_DIR)/source/shld.o
-	$(F90) $(CPPFLAGS) -I$(DELFT_DIR)/source -I$(DELFT_DIR)/modules $(F90FLAGS) -c $(DELFT_DIR)/source/vanRijn84.f90 -o $(DELFT_DIR)/source/vanRijn84.o
-	$(AR) cruvs $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a $(DELFT_OBJECTS) 
-
+$(MOSSCO_LIBRARY_PATH)/libsediment.a: libfabm fabm_sediment_driver.o
+	$(AR) crus $@ fabm_sediment_driver.o
 
 $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE):
 	@echo Recreating the FABM library $(FABM_LIBRARY_FILE)
 	$(MAKE) -C $(FABMDIR)
 	$(MAKE) -C $(FABMDIR)/src
+
+# Delft section
+libdelft:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a
+liberosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: libdelft delft_erosed_driver.o
+	$(AR) crus $@ delft_erosed_driver.o
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_delft.a: $(DELFT_OBJS)
+	$(AR) crus $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a $(DELFT_OBJS) 
+
+# Generic section
+
+%.o: %.f90
+	@echo "Compiling $<"
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 clean: extraclean
 extraclean:
