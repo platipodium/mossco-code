@@ -40,6 +40,7 @@ FABM_INCLUDE_PATH=$(FABMDIR)/include
 FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_LIBRARY_FILE=$(shell ls $(FABM_LIBRARY_PATH) )
 
+
 # 3. (optional) Importing all GOTM-related environment variables and checking that the environment is sane
 # At the moment, we require that GOTMDIR, FABM, and FORTRAN_COMPILER are set and that
 # the gotm library is installed in the production version (libgotm_prod)
@@ -80,6 +81,12 @@ MOSSCO_NETCDF_LIBS = -lnetcdf_c++ -lnetcdf
 endif
 endif
 export MOSSCO_NETCDF_LIBS
+endif
+
+
+# 5. DELFT
+ifndef DELFT_DIR
+export DELFT_DIR=$HOME/devel/delft3d
 endif
 
 # 3. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative

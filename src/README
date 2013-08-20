@@ -4,3 +4,5 @@ of the MOSSCO libraries, divided into
 - ESMF compartments 
 - ESMF  mediators (couplers)
 - wrappers/drivers for external models
+
+In addition, there is a script subdirectory with utility scripts
