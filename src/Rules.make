@@ -68,8 +68,13 @@ endif
 else
 include $(ESMFMKFILE)
 export MOSSCO_ESMF=true
-export MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
+ifdef ESMF_DIR
+MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
+else
+MOSSCO_OS=$(shell uname -s)
+endif
 export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
+export MOSSCO_OS
 endif
 
 
