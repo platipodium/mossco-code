@@ -10,7 +10,7 @@ DELFT_OBJECTS=$(DELFT_DIR)/modules/precision_basics.o $(DELFT_DIR)/modules/preci
 
 # Make targets
 
-all: libsediment
+all: libsediment libdelft
 
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 
@@ -19,7 +19,7 @@ $(MOSSCO_LIBRARY_PATH)/libsediment.a: libfabm fabm_sediment_driver.o
 
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: libdelft delft_erosed_driver.f90
+$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: libdelft delft_erosed_driver.o
 	$(AR) cruvs $@ delft_erosed_driver.o
 
 libfabm: $(FABM_LIBRARY_FILE)
