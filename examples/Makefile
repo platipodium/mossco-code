@@ -17,6 +17,10 @@ SUBDIRS +=esmf_gotm
 SUBDIRS +=esmf_fabm0d
 endif
 
+ifdef DELFT_DIR
+SUBDIRS +=erosed
+endif
+
 .PHONY: all clean extraclean subdirs $(SUBDIRS)
 
 default: all
