@@ -130,15 +130,19 @@ module esmf_fabm_sediment_component
     call init_fabm_sed_concentrations(sed)
 
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
-    bdys(1,1,1:9) = 0.0_rk
-    bdys(1,1,1) = 10._rk   ! degC temperature
-    bdys(1,1,5) = 1.0_rk   ! mmolP/m**3 po4
-    bdys(1,1,6) = 10.0_rk  ! mmolN/m**3 no3
-    bdys(1,1,7) = 0.0_rk   ! mmolN/m**3 nh3
-    bdys(1,1,8) = 250.0_rk ! mmolO2/m**3 oxy
-    bdys(1,1,9) = 0.0_rk   ! odu
+    bdys(1:_INUM_,1:_JNUM_,1:9) = 0.0_rk
+    bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
+    bdys(1:_INUM_,1:_JNUM_,5) = 1.0_rk   ! mmolP/m**3 po4
+    bdys(1:_INUM_,1:_JNUM_,6) = 10.0_rk  ! mmolN/m**3 no3
+    bdys(1:_INUM_,1:_JNUM_,7) = 0.0_rk   ! mmolN/m**3 nh3
+    bdys(1:_INUM_,1:_JNUM_,8) = 250.0_rk ! mmolO2/m**3 oxy
+    bdys(1:_INUM_,1:_JNUM_,9) = 0.0_rk   ! odu
 
+   ! water_temperature as 3d field
+    
     allocate(fluxes(_INUM_,_JNUM_,sed%nvar))
+
+    !fluxes: get from import State
     fluxes(1,1,1:8) = 0.0_rk
     fluxes(1,1,1) = 5.0_rk/86400.0_rk !fdet
     fluxes(1,1,2) = 5.0_rk/86400.0_rk !sdet
