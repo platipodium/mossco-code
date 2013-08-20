@@ -12,3 +12,5 @@ examples/esmf_gotm/esmf_gotm_example
 examples/esmf_fabm0d/esmf_fabm0d
 examples/esmf_fabm0d/output.dat
 examples/esmf_empty/esmf_empty
+examples/erosed/erosed_test
+examples/erosed/delft_sediment_test.out

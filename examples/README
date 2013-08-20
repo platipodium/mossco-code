@@ -1,4 +1,6 @@
 This directory contains source code for examples of using the MOSSCO library
 - an esmf component for the sediment: esmf_sediment
 - an esmf component for GOTM: esmf_gotm
+- an esmf empty component: esmf_empty
 - a standalone fabm/omexdia sediment driver: omexdia_p
+- a standalone erosed sediment driver: erosed
