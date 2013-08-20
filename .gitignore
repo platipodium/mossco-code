@@ -1,11 +1,13 @@
-bin/*.txt
+bin/
 lib/
 modules/
 *.o
+*.so
+*.a
 *.a
 *.mod
 *.swp
-**/PET*.*
+**/PET*.log
 doc/latex
 doc/html
 examples/esmf_gotm/esmf_gotm_example
