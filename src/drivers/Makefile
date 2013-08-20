@@ -10,7 +10,13 @@ DELFT_OBJECTS=$(DELFT_DIR)/modules/precision_basics.o $(DELFT_DIR)/modules/preci
 
 # Make targets
 
-all: libsediment libdelft
+ALL_TARGETS=libsediment
+
+ifdef DELFT_DIR
+ALL_TARGETS +=liberosed
+endif
+
+all: $(ALL_TARGETS)
 
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 
