@@ -215,8 +215,10 @@ program example
         open (unit = 707, file = 'delft_sediment_test.out', status = 'NEW', action = 'WRITE')
     end if
 
-    write (707, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') 'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
-    write (*, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') 'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
+    write (707, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
+        'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
+    write (*, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
+        'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
     ! ================================
     !   TIME LOOP
     ! ================================

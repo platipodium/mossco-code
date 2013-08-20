@@ -619,10 +619,15 @@ subroutine run_eromud (eromud_arguments)
 implicit none
 class (mud_argument) ::eromud_arguments
 
-call eromud(eromud_arguments%ws      , eromud_arguments%fixfac  , eromud_arguments%taub      , eromud_arguments%frac     , eromud_arguments%fracf  , &
-           & eromud_arguments%tcrdep  , eromud_arguments%tcrero  , eromud_arguments%eropar  , eromud_arguments%flufflyr       , eromud_arguments%mfltot , &
-           & eromud_arguments%tcrfluff, eromud_arguments%depeff  , eromud_arguments%depfac  , eromud_arguments%parfluff0, eromud_arguments%parfluff1 , &
-           & eromud_arguments%sink    , eromud_arguments%sour    , eromud_arguments%sinkf   , eromud_arguments%sourf              )
+call eromud(eromud_arguments%ws      , eromud_arguments%fixfac  , eromud_arguments%taub, &
+            eromud_arguments%frac     , eromud_arguments%fracf  , &
+            eromud_arguments%tcrdep  , eromud_arguments%tcrero , &
+            eromud_arguments%eropar  , eromud_arguments%flufflyr , &
+            eromud_arguments%mfltot  , eromud_arguments%tcrfluff , &
+            eromud_arguments%depeff  , eromud_arguments%depfac   , &
+            eromud_arguments%parfluff0, eromud_arguments%parfluff1 , &
+            eromud_arguments%sink    , eromud_arguments%sour    , &
+            eromud_arguments%sinkf   , eromud_arguments%sourf)
 
 !write (*,*) ' in run_eromud eromud_arguments%sink  ', eromud_arguments%sink
 !write (*,*) ' in run_eromud eromud_arguments%sour  ', eromud_arguments%sour
@@ -662,7 +667,8 @@ implicit none
 class (sand_argument) :: erosand_arguments
 integer :: istat
 
-allocate (erosand_arguments%chezy,erosand_arguments%umod,erosand_arguments%ws,erosand_arguments%rsedeq,erosand_arguments%sour,erosand_arguments%sink, stat = istat)
+allocate (erosand_arguments%chezy,erosand_arguments%umod,erosand_arguments%ws, &
+  erosand_arguments%rsedeq,erosand_arguments%sour,erosand_arguments%sink, stat = istat)
 if (istat/=0) then
 write (*,*) ' error in pointer allocation  in allocate_sandargu '
 stop
@@ -681,7 +687,8 @@ implicit none
 
 class (sand_argument) :: erosand_arguments
 
-deallocate (erosand_arguments%chezy,erosand_arguments%umod,erosand_arguments%ws,erosand_arguments%rsedeq,erosand_arguments%sour,erosand_arguments%sink)
+deallocate (erosand_arguments%chezy,erosand_arguments%umod,erosand_arguments%ws, &
+    erosand_arguments%rsedeq,erosand_arguments%sour,erosand_arguments%sink)
 
 End subroutine deallocate_sandargu
 
@@ -711,8 +718,9 @@ subroutine run_erosand (erosand_arguments)
 implicit none
 class (sand_argument) :: erosand_arguments
 
-             call erosand(erosand_arguments%umod    ,erosand_arguments%chezy     ,erosand_arguments%ws ,erosand_arguments%rsedeq,  &
-                           & erosand_arguments%sour ,erosand_arguments%sink      )
+             call erosand(erosand_arguments%umod    ,erosand_arguments%chezy, &
+                          erosand_arguments%ws ,erosand_arguments%rsedeq,  &
+                          erosand_arguments%sour ,erosand_arguments%sink      )
 
 end subroutine run_erosand
 
@@ -740,9 +748,11 @@ subroutine allocate_vanrijnargu (vanrijn84_arguments)
 implicit none
 class ( vanrijn_argument) :: vanrijn84_arguments
 
-allocate ( vanrijn84_arguments%umod  ,vanrijn84_arguments%sedd50,vanrijn84_arguments%sedd90,vanrijn84_arguments%h,vanrijn84_arguments%ws   , &
-                             & vanrijn84_arguments%rhosol,vanrijn84_arguments%alf1      ,vanrijn84_arguments%rksc      , &
-                             & vanrijn84_arguments%sbot      ,vanrijn84_arguments%ssus      ,vanrijn84_arguments%smfac     )
+allocate ( vanrijn84_arguments%umod  ,vanrijn84_arguments%sedd50, &
+           vanrijn84_arguments%sedd90,vanrijn84_arguments%h,vanrijn84_arguments%ws, &
+           vanrijn84_arguments%rhosol,vanrijn84_arguments%alf1, &
+           vanrijn84_arguments%rksc, vanrijn84_arguments%sbot, &
+           vanrijn84_arguments%ssus      ,vanrijn84_arguments%smfac     )
 
 
 end subroutine allocate_vanrijnargu
@@ -751,9 +761,10 @@ subroutine deallocate_vanrijnargu (vanrijn84_arguments)
 implicit none
 class ( vanrijn_argument) :: vanrijn84_arguments
 
-deallocate ( vanrijn84_arguments%umod  ,vanrijn84_arguments%sedd50,vanrijn84_arguments%sedd90,vanrijn84_arguments%h,vanrijn84_arguments%ws   , &
-                             & vanrijn84_arguments%rhosol,vanrijn84_arguments%alf1      ,vanrijn84_arguments%rksc      , &
-                             & vanrijn84_arguments%sbot      ,vanrijn84_arguments%ssus      ,vanrijn84_arguments%smfac     )
+deallocate ( vanrijn84_arguments%umod  ,vanrijn84_arguments%sedd50, &
+             vanrijn84_arguments%sedd90,vanrijn84_arguments%h,vanrijn84_arguments%ws, &
+             vanrijn84_arguments%rhosol,vanrijn84_arguments%alf1,vanrijn84_arguments%rksc, &
+             vanrijn84_arguments%sbot, vanrijn84_arguments%ssus, vanrijn84_arguments%smfac)
 
 end subroutine deallocate_vanrijnargu
 
@@ -788,10 +799,10 @@ subroutine run_vanrijn (vanrijn84_arguments)
 implicit none
 class ( vanrijn_argument) :: vanrijn84_arguments
 
-call vanRijn84 ( vanrijn84_arguments%umod  ,vanrijn84_arguments%sedd50,vanrijn84_arguments%sedd90,vanrijn84_arguments%h,vanrijn84_arguments%ws   , &
-                             & vanrijn84_arguments%rhosol,vanrijn84_arguments%alf1      ,vanrijn84_arguments%rksc      , &
-                             & vanrijn84_arguments%sbot      ,vanrijn84_arguments%ssus      ,vanrijn84_arguments%smfac )
-
+call vanRijn84 ( vanrijn84_arguments%umod  ,vanrijn84_arguments%sedd50, &
+                 vanrijn84_arguments%sedd90,vanrijn84_arguments%h,vanrijn84_arguments%ws, &
+                 vanrijn84_arguments%rhosol,vanrijn84_arguments%alf1,vanrijn84_arguments%rksc, &
+                 vanrijn84_arguments%sbot,vanrijn84_arguments%ssus,vanrijn84_arguments%smfac )
 
 end subroutine run_vanrijn
 
@@ -858,7 +869,8 @@ subroutine run_sandmud(sandmud_arguments)
 implicit none
 class (sandmud_argument)   :: sandmud_arguments
 
-call sand_mud(sandmud_arguments%nfrac, sandmud_arguments%E, sandmud_arguments%frac, sandmud_arguments%mudfrac, sandmud_arguments%sedtyp, sandmud_arguments%pmcrit)
+call sand_mud(sandmud_arguments%nfrac, sandmud_arguments%E, sandmud_arguments%frac, &
+              sandmud_arguments%mudfrac, sandmud_arguments%sedtyp, sandmud_arguments%pmcrit)
 
 end subroutine run_sandmud
 
