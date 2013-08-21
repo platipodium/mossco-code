@@ -76,6 +76,7 @@ module esmf_toplevel_component
     integer, intent(out)  :: rc
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
+    write(0,*) '   time loop'
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
@@ -86,6 +87,7 @@ module esmf_toplevel_component
 
     enddo 
 
+    write(0,*) '------------------------------------------------------------------------'
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
  
   end subroutine Run

@@ -15,8 +15,9 @@ module esmf_gotm_component
   use time, only: gotm_time_start => start, gotm_time_stop => stop
   use time, only: gotm_time_timefmt => timefmt
   use time, only: gotm_time_init_time => init_time
+  use time, only: timestepkind,update_time
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
-  use output, only: gotm_output_nsave => nsave
+  use output, only: prepare_output,do_output,gotm_output_nsave => nsave
 
   implicit none
 
@@ -24,6 +25,16 @@ module esmf_gotm_component
 
   !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
+
+#define GOTM_REALTYPE real(kind=selected_real_kind(13))
+#define _ZERO_ 0.0d0
+#define _ONE_  1.0d0
+
+  !> local variables for the setup control
+  character(len=80)         :: title
+  integer                   :: nlev
+  GOTM_REALTYPE             :: cnpar
+  integer                   :: buoy_method
 
   public :: empty_SetServices
   
@@ -57,12 +68,19 @@ module esmf_gotm_component
     character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
-    real(ESMF_KIND_R8) :: dt 
+    real(ESMF_KIND_R8) :: dt
+    
+    namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
 
     logical :: input_from_namelist = .true.  !> @todo later to be replaced by switch passed from parent component
 
     call ESMF_LogWrite('Initialize GOTM component',ESMF_LOGMSG_INFO)
     call init_gotm()
+
+    ! read model_setup namelist
+    open(921,file='gotmrun.nml',status='old',action='read')
+    read(921,nml=model_setup)
+    close(921)
 
     ! Manipulate the time parameters from the gotm namelist
     ! dt    ! float time steop for integration in seconds
@@ -96,16 +114,17 @@ module esmf_gotm_component
       call ESMF_ClockGet(parentClock,stopTime=clockTime)
       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
       gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
-      
+
+      gotm_time_timefmt = 2 
+      call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n)      
     endif
   
     !! The output timestep is used to create an alarm
     !> @todo implement this also driven by the parent clock
+    call ESMF_ClockGet(parentClock,startTime=clockTime) 
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_output_nsave*gotm_time_timestep,rc=rc)
     outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
 
-    gotm_time_timefmt = 2 
-    call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n)
     
   end subroutine Initialize
 
@@ -115,42 +134,28 @@ module esmf_gotm_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19) :: timestring
-    type(ESMF_Time)   :: wallTime, clockTime
+    character(len=19)       :: timestring
+    type(ESMF_Time)         :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
-    real(ESMF_KIND_R8) :: dt 
+    integer(ESMF_KIND_I8)   :: n
 
     ! get local clock with GOTM timesteop, get global clock with coupling timestep, set n to global/local, call GOTM, advance local clock n steps., 
     call ESMF_TimeSet(clockTime)
-    call ESMF_ClockGet(parentClock,currTime=clockTime)
+    call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
     call ESMF_LogWrite("GOTM run at "//timestring//")", ESMF_LOGMSG_INFO)
-    gotm_time_start=timestring(1:10)//" "//timestring(12:19)
 
-    call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
-    call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
-
-    clockTime = clockTime + timeInterval
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
-
-    ! call ESMF_GET_TIMESTEP_N
-    gotm_time_min_n = 1
-    gotm_time_max_n = gotm_time_min_n  + 0
-    !write (*,*) timestring,gotm_time_min_n,gotm_time_max_n,gotm_time_timestep,gotm_time_start,gotm_time_stop
-    !call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n) !> @todo is this needed for consistency? I don't get the right coordinate
-!> variable time output with or without this statement
+    call update_time(n)
+    call gotm_time_step()
 
     !! Check if the output alarm is ringing, if so, quiet it and 
-    !! set gotm_output_nsave = 1
+    !! call do_output from GOTM
     if (ESMF_AlarmIsRinging(outputAlarm)) then
       call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-      gotm_output_nsave=1
-    else
-      gotm_output_nsave=2
+      call prepare_output(n)
+      call do_output(n,nlev)
     endif
-
-    call gotm_time_loop()
+    
 
   end subroutine Run
 
@@ -182,7 +187,7 @@ module esmf_gotm_component
 
   end subroutine timeString2ESMF_Time
 
-  subroutine gotm_time_step(nlev,buoy_method,cnpar)
+  subroutine gotm_time_step()
 
   use time, only: julianday,secondsofday,timestep,timestepkind
   use meanflow
@@ -195,14 +200,8 @@ module esmf_gotm_component
   use turbulence
   use kpp
 
-  integer(kind=timestepkind):: n
-  integer, intent(in)       :: nlev,buoy_method
-#define REALTYPE real(kind=selected_real_kind(13))
-#define _ZERO_ 0.0d0
-#define _ONE_  1.0d0
-  REALTYPE, intent(in)      :: cnpar
-  REALTYPE                  :: tFlux,btFlux,sFlux,bsFlux
-  REALTYPE                  :: tRad(0:nlev),bRad(0:nlev)
+  GOTM_REALTYPE             :: tFlux,btFlux,sFlux,bsFlux
+  GOTM_REALTYPE             :: tRad(0:nlev),bRad(0:nlev)
 
 
 !     all observations/data
