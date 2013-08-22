@@ -78,10 +78,10 @@ export MOSSCO_OS
 endif
 
 
-# 5. DELFT
-ifndef DELFT_DIR
-export DELFT_DIR=$HOME/devel/delft3d
-endif
+## 5. DELFT
+#ifndef DELFT_DIR
+#export DELFT_DIR=$(HOME)/devel/delft3d
+#endif
 
 # 3. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
