@@ -6,7 +6,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS=
+TARGETS=libocean
 
 ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsolver libsediment
@@ -21,13 +21,14 @@ endif
 # add checks for libfabm and libsediment
 
 
-all: libsediment libsolver libfabm0d libgotm
+all: $(TARGETS)
 
 libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
 libfabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
+libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
 
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
 	$(AR) cruvs $@ esmf_fabm_sediment_component.o
@@ -37,6 +38,9 @@ $(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external  esmf_gotm_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libfabm0d.a: esmf_fabm_0d_component.o
 	$(AR) cruvs $@ esmf_fabm_0d_component.o
+
+$(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
+	$(AR) cruvs $@ remtc_ocean.o
 
 esmf_gotm_component.o: esmf_gotm_component.F90
 	@echo "Compiling $<"
