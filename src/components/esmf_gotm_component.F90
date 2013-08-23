@@ -148,8 +148,8 @@ module esmf_gotm_component
     call update_time(n)
     call gotm_time_step()
 
-    !! Check if the output alarm is ringing, if so, quiet it and 
-    !! call do_output from GOTM
+    !> Check if the output alarm is ringing, if so, quiet it and 
+    !> call do_output from GOTM
     if (ESMF_AlarmIsRinging(outputAlarm)) then
       call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
       call prepare_output(n)

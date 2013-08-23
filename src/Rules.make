@@ -10,10 +10,13 @@ endif
 #    At the moment, we require that FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
 # 
+MOSSCO_FABM=false
+
 ifndef FABMDIR
 $(error FABMDIR needs to be defined)
 endif
 
+#!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
 ifndef FABMHOST
 export FABMHOST=mossco
 $(warning FABMHOST set to FABMHOST=mossco)
@@ -39,13 +42,19 @@ FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_INCLUDE_PATH=$(FABMDIR)/include
 FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_LIBRARY_FILE=$(shell ls $(FABM_LIBRARY_PATH) )
+MOSSCO_FABM=true
 
+export MOSSCO_FABM
 
 # 3. (optional) Importing all GOTM-related environment variables and checking that the environment is sane
 # At the moment, we require that GOTMDIR, FABM, and FORTRAN_COMPILER are set and that
 # the gotm library is installed in the production version (libgotm_prod)
 
+MOSSCO_GOTM=false
 ifdef GOTMDIR
+ifeq ("x$(GOTMDIR)",x) 
+$(error the GOTMDIR variable is empty)
+endif
 ifeq ($(wildcard $(GOTMDIR)),) 
 $(error the directory GOTMDIR=$(GOTMDIR) does not exist)
 endif
@@ -59,14 +68,16 @@ GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
 GOTM_INCLUDE_PATH=$(GOTMDIR)/include
 GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
 GOTM_LIBRARY_FILE=$(shell ls $(GOTM_LIBRARY_PATH) )
+MOSSCO_GOTM=true
 endif
+export MOSSCO_GOTM
 
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
 #
 ifndef ESMFMKFILE
 ifndef MOSSCO_ESMF
-$(error Compiling without ESMF support. Comment this line 64 Rules.make if you want to proceed)
+$(error Compiling without ESMF support. Comment this line 80 in Rules.make if you want to proceed)
 export MOSSCO_ESMF=false
 endif
 else
@@ -77,17 +88,23 @@ MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
 else
 MOSSCO_OS=$(shell uname -s)
 endif
+ifneq ("x$(ESMF_NETCDF)","x")
 export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
+endif
 export MOSSCO_OS
 endif
 
-
 ## 5. DELFT
-#ifndef DELFT_DIR
-#export DELFT_DIR=$(HOME)/devel/delft3d
-#endif
+MOSSCO_DELFT=false
+ifdef DELFT_DIR
+ifneq ("x$(DELFT_DIR)",x)
+ifneq ($(wildcard $(DELFT_DIR)),) 
+MOSSCO_DELFT=true
+endif
+endif
+endif
 
-# 3. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
+# 6. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
 #
 ifndef MOSSCO_DIR
@@ -108,7 +125,7 @@ MOSSCO_PREFIX=$(PREFIX)
 else
 MOSSCO_PREFIX=$(MOSSCO_DIR)
 endif
-export MOSSCOPREFIX
+export MOSSCO_PREFIX
 
 export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
 export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
@@ -138,20 +155,26 @@ endif
 export MOSSCO_COMPILER=$(F90)
 export F90
 
+ifeq ($(MOSSCO_FABM),true)
 INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
+endif
 INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
+ifeq ($(MOSSCO_GOTM),true)
 INCLUDES += -I$(GOTM_MODULE_PATH)
+endif
 
+#!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
-INCLUDES += -J$(MOSSCO_MODULE_PATH)
+F90FLAGS = -J$(MOSSCO_MODULE_PATH)
 EXTRA_CPP=
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
-INCLUDES += -module $(MOSSCO_MODULE_PATH)
+F90FLAGS = -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP=
 endif
 endif
+export F90FLAGS
 
 LIBRARY_PATHS  = -L$(FABM_LIBRARY_PATH) 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
@@ -166,17 +189,17 @@ LIBS += $(ESMF_F90LINKLIBS)
 LIBS += $(MOSSCO_NETCDF_LIBS)
 export LIBS
 
-export CPPFLAGS = $(DEFINES) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS)
+export CPPFLAGS = $(DEFINES) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 
 export LDFLAGS = $(ESMF_F90LINKOPTS)
 
 # Make targets
-.PHONY: default all clean doc info
+.PHONY: default all clean doc info prefix
 
 default: prefix all
 
 clean:
-	@rm -f *.o
+	@rm -f *.o *.mod
 
 distclean: clean
 	@rm -f *.swp
@@ -202,15 +225,19 @@ info:
 
 # Common rules
 #ifndef EXTRA_CPP
+
 %.o: %.F90
 	@echo "Compiling $<"
-	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@	
 %.o: %.f90
+	@echo "Compiling $<"
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+%.mod: %.f90
 	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 #%.o: %.f90
 #	@echo "Compiling $<"
-#	$(F90) $(CPPFLAGS) -c $< -o $@
+#	$(F90) $(CPPFLAGS)  -c $< -o $@
 #else
 #%.f90: %.F90
 #	$(CPP) $(CPPFLAGS) $< -o $@

@@ -6,24 +6,22 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-EXTERNAL_LIBRARY_TARGETS =
-ifdef GOTMDIR
-EXTERNAL_LIBARY_TARGETS += external_libgotm
-endif
-ifdef FABMDIR
-EXTERNAL_LIBARY_TARGETS += external_libfabm_mossco
-ifdef GOTMDIR
-EXTERNAL_LIBARY_TARGETS += external_libfabm_0d
-endif
-endif
+TARGETS=
 
+ifeq ($(MOSSCO_FABM),true)
+TARGETS +=  libsolver libsediment
+
+ifeq ($(MOSSCO_GOTM),true)
+TARGETS += libgotm libfabm0d
+endif
+endif
 
 #--------------------------------------
 # Make targets
 # add checks for libfabm and libsediment
 
 
-all: libsediment libsolver libsediment libfabm0d libgotm
+all: libsediment libsolver libfabm0d libgotm
 
 libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
