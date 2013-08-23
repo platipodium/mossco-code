@@ -39,18 +39,24 @@ module esmf_toplevel_component
     type(ESMF_Field)      :: temperatureField
     type(ESMF_FieldBundle) :: fieldBundle
     integer               :: petCount, localPet
+    real(ESMF_KIND_R8),dimension(:,:),allocatable :: farray
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet)
 
     ! Create a grid and a field (still to clarify how to access the array
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), maxIndex=(/10,20,15/), &
-      regDecomp=(/2,2,1/), name="fabmGrid", rc=rc)
-    temperatureField = ESMF_FieldCreate(grid,typekind=ESMF_TYPEKIND_R8, &
-      indexflag=ESMF_INDEX_DELOCAL, staggerloc=ESMF_STAGGERLOC_CENTER, name = "temperature", rc=rc)
-    fieldBundle = ESMF_FieldBundleCreate(name="FABM field bundle", rc=rc)
-    call ESMF_FieldBundleAdd(fieldBundle, (/temperatureField/),rc=rc)
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=(/10,20/), &
+      regDecomp=(/2,2/), name="fabmGrid", rc=rc)
 
+    allocate(farray(1:1,1:1))
+    farray=10.0d0
+
+    temperatureField = ESMF_FieldCreate(grid,farray,&
+      indexflag=ESMF_INDEX_DELOCAL, staggerloc=ESMF_STAGGERLOC_CENTER, name = "water_temperature", rc=rc)
+    !temperatureField = ESMF_FieldCreate(grid,typekind=ESMF_TYPEKIND_R8, &
+    !  indexflag=ESMF_INDEX_DELOCAL, staggerloc=ESMF_STAGGERLOC_CENTER, name = "water_temperature", rc=rc)
+    !fieldBundle = ESMF_FieldBundleCreate(name="FABM field bundle", rc=rc)
+    !call ESMF_FieldBundleAdd(fieldBundle, (/temperatureField/),rc=rc)
 
     ! Create component, call setservices, and create states
     fabmComp = ESMF_GridCompCreate(name="fabmComp", grid=grid, rc=rc)
@@ -59,9 +65,11 @@ module esmf_toplevel_component
     fabmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmImp")
     fabmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmExp")
 
-    call ESMF_StateAdd(fabmImp, (/fieldBundle/), rc=rc)
-    call ESMF_StateAdd(fabmExp, (/fieldBundle/), rc=rc)
-
+    !call ESMF_StateAdd(fabmImp, (/fieldBundle/), rc=rc)
+    !call ESMF_StateAdd(fabmExp, (/fieldBundle/), rc=rc)
+  
+    call ESMF_StateAdd(fabmImp, (/temperatureField/), rc=rc)
+    call ESMF_StateAdd(fabmExp, (/temperatureField/), rc=rc)
     call ESMF_GridCompInitialize(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 

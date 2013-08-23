@@ -33,6 +33,7 @@ module esmf_fabm_sediment_component
   integer   :: t,tnum,funit,output,k,n,numyears,numlayers
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
+  real(rk),dimension(:,:),pointer   :: fptr2d
  
   type(type_sed),save :: sed
   type(ESMF_Alarm),save :: outputAlarm
@@ -75,8 +76,9 @@ module esmf_fabm_sediment_component
     type(ESMF_Config)     :: config
     type(ESMF_FieldBundle) :: fieldbundle(3)
     type(ESMF_Field), allocatable, dimension(:) :: fieldlist
+    type(ESMF_Field)     :: field
     type(ESMF_Array)     :: array
-    integer              :: fieldcount,i
+    integer              :: i
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
@@ -84,6 +86,7 @@ module esmf_fabm_sediment_component
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
+    integer(ESMF_KIND_I4) :: itemcount,fieldcount
   
     !! read namelist input for control of time, this should not be done like this,
     !! but handled outside the component.  Maybe later introduce a local clock 
@@ -129,9 +132,21 @@ module esmf_fabm_sediment_component
     conc = 0.0_rk
     call init_fabm_sed_concentrations(sed)
 
+    !> Allocate boundary conditions and initialize with zero
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
     bdys(1:_INUM_,1:_JNUM_,1:9) = 0.0_rk
+     
+    call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
+    if (itemcount==0) then
+      write(*,*) "No temperature information found, using default value 10 deg_C"
+      bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
+    else 
+      call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
+      !call ESMF_FieldGet(field,farrayPtr=fptr2d,rc=rc) !> @todo SEGFAULT
+      !bdys(:,:,1) = fptr2d   ! degC temperature
+    endif
     bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
+
     bdys(1:_INUM_,1:_JNUM_,5) = 1.0_rk   ! mmolP/m**3 po4
     bdys(1:_INUM_,1:_JNUM_,6) = 10.0_rk  ! mmolN/m**3 no3
     bdys(1:_INUM_,1:_JNUM_,7) = 0.0_rk   ! mmolN/m**3 nh3
