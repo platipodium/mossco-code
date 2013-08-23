@@ -46,16 +46,20 @@ FABM_LIBRARY_FILE=$(shell ls $(FABM_LIBRARY_PATH) )
 # the gotm library is installed in the production version (libgotm_prod)
 
 ifdef GOTMDIR
+ifeq ($(wildcard $(GOTMDIR)),) 
+$(error the directory GOTMDIR=$(GOTMDIR) does not exist)
+endif
+
 ifndef FABM 
 export FABM=true
 $(warning FABM automatically set to FABM=$(FABM) for GOTM in $(GOTMDIR))
-endif
 endif
 
 GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
 GOTM_INCLUDE_PATH=$(GOTMDIR)/include
 GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
 GOTM_LIBRARY_FILE=$(shell ls $(GOTM_LIBRARY_PATH) )
+endif
 
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
