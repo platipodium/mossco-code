@@ -6,7 +6,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-DELFT_FOREIGN_SOURCES=$(DELFT_DIR)/modules/precision_basics.f90 $(DELFT_DIR)/modules/precision.f90 $(wildcard $(DELFT_DIR)/source/*.f90) $(DELFT_DIR)/source/sedparams.inc
+DELFT_FOREIGN_SOURCES=$(DELFT_DIR)/modules/precision_basics.f90 $(DELFT_DIR)/modules/precision.f90 $(wildcard $(DELFT_DIR)/source/*.f90) $(DELFT_DIR)/include/sedparams.inc
 
 DELFT_OBJS    = $(DELFT_LOCAL_SOURCES:.f90=.o) 
 
