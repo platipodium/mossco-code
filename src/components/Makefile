@@ -34,7 +34,7 @@ libfabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
 	$(AR) cruvs $@ esmf_fabm_sediment_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libgotm.a: esmf_gotm_component.o libgotm_external
+$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external  esmf_gotm_component.o 
 	$(AR) cruvs $@ esmf_gotm_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libfabm0d.a: esmf_fabm_0d_component.o
