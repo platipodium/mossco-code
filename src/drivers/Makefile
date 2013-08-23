@@ -48,9 +48,6 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a: $(DELFT_OBJS)
 
 # Generic section
 
-%.o: %.f90
-	@echo "Compiling $<"
-	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 clean: extraclean
 extraclean:

@@ -203,7 +203,10 @@ info:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 %.o: %.f90
 	@echo "Compiling $<"
-	$(F90) $(CPPFLAGS) -c $< -o $@
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+#%.o: %.f90
+#	@echo "Compiling $<"
+#	$(F90) $(CPPFLAGS) -c $< -o $@
 #else
 #%.f90: %.F90
 #	$(CPP) $(CPPFLAGS) $< -o $@
