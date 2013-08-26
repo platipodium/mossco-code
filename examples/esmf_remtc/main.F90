@@ -39,7 +39,7 @@ program main
    call ESMF_TimeSet(startTime, yy=2004, mm=9, dd=25, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_TimeSet(stopTime, yy=2004, mm=9, dd=26, rc=localrc)
+   call ESMF_TimeSet(stopTime, yy=2004, mm=9, dd=28, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
    clock = ESMF_ClockCreate(timeStep, startTime, stopTime=stopTime, & 

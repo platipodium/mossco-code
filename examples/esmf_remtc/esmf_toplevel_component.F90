@@ -1,12 +1,17 @@
 module esmf_toplevel_component
 
   use esmf
+  use remtc_ocean, only: ocean_SetServices => remtc_ocean_SetServices
 
   implicit none
 
   private
 
   public SetServices
+
+  type(ESMF_GridComp)        :: oceanComp
+  character(len=ESMF_MAXSTR) :: oceanCompName 
+  type(ESMF_State)            :: oceanImportState, oceanExportState
 
   contains
 
@@ -29,21 +34,16 @@ module esmf_toplevel_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    type(ESMF_Grid)       :: grid
-    type(ESMF_Field)      :: temperatureField
-    type(ESMF_FieldBundle) :: fieldBundle
     integer               :: petCount, localPet
-
+    
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet)
-
-    ! Create a grid and a field (still to clarify how to access the array
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), maxIndex=(/10,20,15/), &
-      regDecomp=(/2,2,1/), name="fabmGrid", rc=rc)
-    temperatureField = ESMF_FieldCreate(grid,typekind=ESMF_TYPEKIND_R8, &
-      indexflag=ESMF_INDEX_DELOCAL, staggerloc=ESMF_STAGGERLOC_CENTER, name = "temperature", rc=rc)
-    fieldBundle = ESMF_FieldBundleCreate(name="FABM field bundle", rc=rc)
-    call ESMF_FieldBundleAdd(fieldBundle, (/temperatureField/),rc=rc)
+    
+    oceanCompName = "ESMF Remtc Ocean component"
+    oceanComp     = ESMF_GridCompCreate(name=oceanCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
+    call ESMF_GridCompSetServices(oceancomp, ocean_SetServices, rc=rc)
+    oceanImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="Ocean Import")
+    oceanExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="Ocean Export")
+    call ESMF_GridCompInitialize(oceanComp,importState=oceanImportState,exportState=oceanExportState,clock=parentClock,rc=rc)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
 
@@ -56,14 +56,23 @@ module esmf_toplevel_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
+    integer  :: myrank
+    type(ESMF_Time)             :: localtime
+    character (len=ESMF_MAXSTR) :: timestring,message
+
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
+    call ESMF_GridCompGet(gridComp, localPet=myrank, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
-
       call ESMF_ClockAdvance(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-    enddo 
+      call ESMF_ClockGet(parentClock, currtime=localtime, rc=rc)
+      call ESMF_TimeGet(localtime, timeString=timestring, rc=rc)
+      message = "Toplevel ticking at "//trim(timestring)
+      call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+      call ESMF_GridCompRun(oceanComp,importState=oceanImportState,&
+        exportState=oceanExportState,clock=parentclock, rc=rc)
+   enddo 
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
  
@@ -77,7 +86,10 @@ module esmf_toplevel_component
     integer, intent(out)  :: rc
 
     call ESMF_LogWrite("Toplevel component finalizing",ESMF_LOGMSG_INFO)
-
+    call ESMF_GridCompFinalize(oceanComp,importState=oceanImportState,exportState=oceanExportState, &
+                            clock=parentclock, rc=rc)
+    call ESMF_GridCompDestroy(oceanComp,rc=rc)
+  
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
    
     rc=ESMF_SUCCESS
