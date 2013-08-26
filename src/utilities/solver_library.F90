@@ -20,7 +20,7 @@ private
 
 integer,parameter :: rk=selected_real_kind(12) !< real kind
 
-type rhs_driver !< base driver class
+type, public :: rhs_driver !< base driver class
    integer :: inum,jnum,knum
    integer :: nvar
    real(selected_real_kind(12)),dimension(:,:,:,:),pointer :: conc
@@ -28,7 +28,7 @@ contains
    procedure :: get_rhs => base_get_rhs
 end type
 
-public :: ode_solver,rhs_driver
+public :: ode_solver
 
 contains
 

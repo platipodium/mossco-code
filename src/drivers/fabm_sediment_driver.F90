@@ -18,15 +18,15 @@ use solver_library, only: rhs_driver
 implicit none
 private
 
-integer, parameter :: rk=selected_real_kind(12) !< real kind
+integer, public, parameter :: rk=selected_real_kind(12) !< real kind
 
-type :: fabm_sed_grid !< sediment grid type (part of type_sed)
+type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk),dimension(:,:,:),allocatable :: zi,dz,zc,dzc
    integer  :: knum,inum,jnum
    real(rk) :: dzmin
 end type fabm_sed_grid
 
-type,extends(rhs_driver) :: type_sed !< sediment driver class (extends rhs_driver)
+type,extends(rhs_driver), public :: type_sed !< sediment driver class (extends rhs_driver)
    type(fabm_sed_grid)          :: grid
    type(type_model)             :: model
    real(rk)                     :: bioturbation,diffusivity
@@ -46,7 +46,7 @@ real(rk),dimension(:,:),allocatable     :: zeros2d
 #define _JNUM_ _GRID_%jnum
 #define _KNUM_ _GRID_%knum
 
-public :: init_fabm_sed,init_sed_grid,finalize_fabm_sed,type_sed,fabm_sed_grid
+public :: init_fabm_sed,init_sed_grid,finalize_fabm_sed
 public :: init_fabm_sed_concentrations,fabm_sed_diagnostic_variables
 
 contains
