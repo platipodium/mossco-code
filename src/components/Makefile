@@ -6,7 +6,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS=libocean
+TARGETS=libocean libatmosphere
 
 ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsolver libsediment
@@ -29,6 +29,7 @@ libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
 libfabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
+libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
 	$(AR) cruvs $@ esmf_fabm_sediment_component.o
@@ -41,6 +42,9 @@ $(MOSSCO_LIBRARY_PATH)/libfabm0d.a: esmf_fabm_0d_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
 	$(AR) cruvs $@ remtc_ocean.o
+
+$(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
+	$(AR) cruvs $@ remtc_atmosphere.o
 
 esmf_gotm_component.o: esmf_gotm_component.F90
 	@echo "Compiling $<"
@@ -58,6 +62,8 @@ clean: extraclean
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/esmf_fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod
