@@ -52,6 +52,7 @@ esmf_gotm_component.o: esmf_gotm_component.F90
 
 esmf_fabm_0d_component.o: esmf_fabm_0d_component.F90
 	@echo "Compiling $<"
+	make -C $(FABMDIR)/src/drivers/0d 0d
 	make -C $(FABMDIR)/src/drivers/0d fabm0d.o
 	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/0d/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
