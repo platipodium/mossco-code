@@ -21,7 +21,6 @@ module esmf_fabm_sediment_component
 
   use esmf
   use fabm
-  use fabm_types  ! for realkind
   use fabm_sediment_driver
   use solver_library!, only : ode_solver
 

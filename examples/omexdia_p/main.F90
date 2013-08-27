@@ -14,7 +14,6 @@ use solver_library
 
 implicit none
 
-integer,parameter :: rk = selected_real_kind(12)
 real(rk)       :: dt,dzmin
 integer        :: tnum,t,funit,output,k,n,numyears,numlayers
 integer        :: ode_method
