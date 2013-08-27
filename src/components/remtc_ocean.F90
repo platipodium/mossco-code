@@ -42,8 +42,8 @@ module remtc_ocean
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
     integer                     :: lbnd(2), ubnd(2)
-    integer                     :: myrank
-    real(ESMF_KIND_R8), pointer :: coordX(:), coordY(:)
+    integer                     :: myrank,i,j
+    real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
  
     integer(ESMF_KIND_I4),allocatable :: deBlockList(:,:,:)
     
@@ -66,35 +66,51 @@ module remtc_ocean
                                    indexflag=ESMF_INDEX_GLOBAL,          &
                                    rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    grid = ESMF_GridCreate(filename="ocean_grid.nc",fileformat=ESMF_FILEFORMAT_GRIDSPEC, &
-                             regDecomp=(/2,2/),isSphere=.false., rc=rc,coordNames=(/"grid_center_lon","grid_center_lat"/))
-    
-    call ESMF_GridGetCoord(grid, localDE=0, coordDim=1, &
-                           farrayPtr=coordX, computationalLBound=lbnd, &
-                           computationalUBound=ubnd, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridGetCoord(grid, localDE=0, coordDim=2, &
-                           farrayPtr=coordY, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-! Setup 2D array specification
+
+    !> Create the grid and coordinates
+    !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
+    !> to 50 .. 55 deg North
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/40, 50/), &
+      regDecomp=(/2,2/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      name="ocean grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+    call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
+    do i=lbnd(1),ubnd(1) 
+      coordX(i) = 0 + 0.1 * i + 0.05
+    enddo
+    call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
+    do i=lbnd(1),ubnd(1) 
+      coordY(i) = 50 + 0.1 * i + 0.05
+    enddo
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+
+    !> Create a water temperature field with a 2D array specification, fill the temperature
+    !> field with some values, add the field to the ocean's import and export states
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-! Create temperature field and have it create the array internally
-    temperatureField = ESMF_FieldCreate(grid, arrayspec, name="water_temperature_at_surface", rc=rc)
+    temperatureField = ESMF_FieldCreate(grid, arrayspec, name="water_temperature_at_surface", &
+      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    !call ESMF_FieldGet(temperatureField, farrayPtr=air_temperature_at_surface, rc=rc)
+    call ESMF_FieldGet(temperatureField, farrayPtr=water_temperature_at_surface,totalLBound=lbnd,&
+      totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    ! Create ocean variables
-    allocate(water_temperature_at_surface(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
-    call ESMF_LogWrite("Remtc Ocean component initialized.",ESMF_LOGMSG_INFO)
-
+    do i=lbnd(1),ubnd(1) 
+      do j=lbnd(2),ubnd(2)
+        water_temperature_at_surface =  20 + 0.1*(i+j)
+      enddo
+    enddo
     call ESMF_StateAdd(importState,(/temperatureField/),rc=rc)
-    call ESMF_FieldWrite(temperatureField, file="air_temperature_at_surface.nc", timeslice=1, rc=rc)
+    call ESMF_StateAdd(exportState,(/temperatureField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+    call ESMF_LogWrite("Remtc Ocean component initialized.",ESMF_LOGMSG_INFO)
   end subroutine Initialize
     
  
