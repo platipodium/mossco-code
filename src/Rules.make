@@ -1,4 +1,13 @@
-# Makefile rules applying to the entire MOSSCO src and examples directories
+# This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
+# 
+# Copyright (C) 2013 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+#
+
 
 # 1. Checking that we're using GNU make 
 #    Of course, this command already requires gmake, so a better solution is required here
@@ -163,6 +172,7 @@ INCLUDES += -I$(MOSSCO_MODULE_PATH)
 ifeq ($(MOSSCO_GOTM),true)
 INCLUDES += -I$(GOTM_MODULE_PATH)
 endif
+
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
