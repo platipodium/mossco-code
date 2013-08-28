@@ -30,6 +30,7 @@ module esmf_fabm_sediment_component
  
   real(rk)  :: dzmin,dt
   integer   :: t,tnum,funit,output,k,n,numyears,numlayers
+  integer   :: ode_method=_ADAPTIVE_EULER_
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
   real(rk),dimension(:,:),pointer   :: fptr2d
@@ -37,7 +38,7 @@ module esmf_fabm_sediment_component
   type(type_sed),save :: sed
   type(ESMF_Alarm),save :: outputAlarm
 
-  namelist /run_nml/ numyears,dt,output,numlayers,dzmin
+  namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
  
   public :: empty_SetServices
   
@@ -271,7 +272,6 @@ module esmf_fabm_sediment_component
     !! Get integration time step from parent clock
     call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
     call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
-   ode_method=_ADAPTIVE_EULER_
    sed%bdys   => bdys
    sed%fluxes => fluxes
    call ode_solver(sed,dt,ode_method)
