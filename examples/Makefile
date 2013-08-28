@@ -28,6 +28,7 @@ ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += esmf_sediment
 ifeq ($(MOSSCO_GOTM),true)
 SUBDIRS += esmf_gotm esmf_fabm0d
+SUBDIRS += fabmsed_fabm0d
 endif
 endif
 endif

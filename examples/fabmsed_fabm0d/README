@@ -1,0 +1,2 @@
+This directory contains an example application of running two ESMF component
+of FABM with different fabm libraries (0d and mossco)
