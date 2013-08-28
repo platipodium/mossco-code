@@ -7,7 +7,8 @@ modules/
 *.a
 *.mod
 *.swp
-**/PET*.log
+*.log
+PET?.*
 doc/latex
 doc/html
 examples/esmf_gotm/esmf_gotm_example
@@ -16,3 +17,11 @@ examples/esmf_fabm0d/output.dat
 examples/esmf_empty/esmf_empty
 examples/erosed/erosed_test
 examples/erosed/delft_sediment_test.out
+src/drivers/eromud.f90
+src/drivers/erosand.f90
+src/drivers/precision.f90
+src/drivers/precision_basics.f90
+src/drivers/sand_mud.f90
+src/drivers/sedparams.inc
+src/drivers/shld.f90
+src/drivers/vanRijn84.f90

@@ -1,7 +1,8 @@
 # This Makefile is part of MOSSCO
 # 
-# Copyright (C) 2013 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-#                Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
+# Copyright (C) 2013             Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#                            Richard Hofmeister, Helmholtz-Zentrum Geesthacht  
+#                     Knut Klingbeil, Institut für Ostseeforschung Warnemünde  
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
@@ -62,7 +63,7 @@ esmf_gotm_component.o: esmf_gotm_component.F90
 
 esmf_fabm_0d_component.o: esmf_fabm_0d_component.F90
 	@echo "Compiling $<"
-	make -C $(FABMDIR)/src/drivers/0d 0d
+	make -C $(FABMDIR)/src 0d
 	make -C $(FABMDIR)/src/drivers/0d fabm0d.o
 	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/0d/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
