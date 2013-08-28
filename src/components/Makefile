@@ -83,5 +83,6 @@ extraclean:
 # External libraries
 libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
+	$(MAKE) -C $(FABMDIR)/src gotm
 	$(MAKE) -C $(GOTMDIR)/src
 
