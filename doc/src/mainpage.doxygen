@@ -18,7 +18,7 @@ While the public web site with documentation on the MOSSCO project is hosted at 
 @endlatexonly
 
 
-The code is available via @c git for read-only access. Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable.
+The code is available via @c git for read-only access. Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable. If you don't have @c git, you can download and install a suitable version from [git-scm.com](http://git-scm.com "The GIT SCM website").
 
 ~~~~sh
 git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
@@ -26,7 +26,7 @@ git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 
 or, alternatively using the http protocol 
 
-~~~~
+~~~~sh
 git clone http://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 ~~~~
 
@@ -59,6 +59,11 @@ NetCDF | 3.6
 Message Passing Interface | OpenMPI or MPICH >= 3.0.4 
 GOTM | most recent
 
+Other versions of the necessary and optional required programs may also work, but have not been tested.  You may also try to go ahead with an existing lower version of any of the required software packages, report possible errors, and argue why you would like us to support your version.  No argument, however, about the Fortran 2003 standard!
+
+@subsubsection order-prereqs Order of installation
+
+
 Please make sure to install NetCDF and MPI with the same compiler that you use for FABM and ESMF. Because of the dependencies of the software packages, use the following compile order
 1. Choose a FORTRAN compiler
 2. Compile MPI for this specific compiler
@@ -67,6 +72,8 @@ Please make sure to install NetCDF and MPI with the same compiler that you use f
 5. Compile FABM with matching NetCDF
 6. Compile GOTM with matching NetCDF and FABM
 
+You may opt to compile ESMF after FABM and GOTM.  Currently, MOSSCO will not build without FABM, and it will build only one small example without ESMF. For initial testing, it is fine to go without GOTM.
+
 @subsubsection doc-prereqs Documentation prerequisites
 
 Program | Minimum version and alternatives
@@ -74,45 +81,9 @@ Program | Minimum version and alternatives
 Doxygen | >= 1.8
 Latex | with pdf latex support
 
-Other versions may also work, but have not been tested.  You may also try to go ahead with an existing lower version of a required software package, report possible errors, and argue why you would like us to support your version.
+@subsection installing-netcdf Installing MPI and NetCDF
 
-@subsection installing-fabm Installing FABM
-
-Decide on a directory where to install FABM, and set the environment variable $FABMDIR to point to this directory
-
-- download the git repository of FABM: @code git clone git://git.code.sf.net/p/fabm/code $FABMDIR @endcode
-- change into the new directory @code cd $FABMDIR @endcode
-- check out the mossco branch of FABM: @code git checkout mossco @endcode
-- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN (see the FABM documentation for more options)
-- you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
-
-An example environment for FABM could look like this:
-Environment variable | value
----|---
-FABMDIR | $HOME/opt/src/fabm-code
-FABM_F2003 | true
-FORTRAN_COMPILER | GFORTRAN
-
-@subsection installing-gotm Installing GOTM
-
-Careful: the GOTM install is not required to demonstrate the MOSSCO system.  Code and instructions are to be considered experimental!
-
-Decide on a directory where to install GOTM, and set the environment variable $GOTMDIR to point to this directory
-
-- download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/gotm-code $GOTMDIR @endcode
-- change into the new directory @code cd $GOTMDIR @endcode
-- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN
-- while not in the offical GOTM, add and checkout the mossco branch (can be obtained from the developers)
-- you need to precompile gotm to work with MOSSCO
-
-An example environment for GOTM could look like this:
-Environment variable | value
----|---
-FABMDIR | $HOME/opt/src/fabm-code
-GOTMDIR | $HOME/opt/src/gotm-code
-FABM_F2003 | true
-FABM | true
-FORTRAN_COMPILER | GFORTRAN
+Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not, it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...) to install these programs.  Make sure that both MPI and NetCDF are compiled with the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO subsequently. Quite likely, this is not the case on your system (unless you're using a very recent operating system), so please check carefully.  We experienced a lot of difficulties and bugs with outdated compilers, and mismatches between the compiler (and respective libraries) used for the different requirements for MOSSCO. 
 
 @subsection installing-esmf Installing ESMF
 
@@ -121,7 +92,7 @@ Decide on a directory where to put the ESMF source, and set the environment vari
 - download the git repository of esmf: @code git clone git://git.code.sf.net/p/esmf/esmf $ESMF_DIR @endcode
 - change to this directory : @code cd $ESMF_DIR @endcode
 - checkout the 6_2_0 tagged version: @code git checkout ESMF_6_2_0 @endcode
-- set ESMF's environment variables
+- set ESMF's environment variables (these can be a lot, see below)
 
 An example environment for ESMF could look like this:
 Environment variable | value
@@ -144,9 +115,44 @@ Environment variable | value
 ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
 
 
+@subsection installing-fabm Installing FABM
+
+Decide on a directory where to install FABM, and set the environment variable $FABMDIR to point to this directory
+
+- download the git repository of FABM: @code git clone git://git.code.sf.net/p/fabm/code $FABMDIR @endcode
+- change into the new directory @code cd $FABMDIR @endcode
+- check out the mossco branch of FABM: @code git checkout mossco @endcode
+- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN (see the FABM documentation for more options)
+- you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
+
+An example environment for FABM could look like this:
+Environment variable | value
+---|---
+FABMDIR | $HOME/opt/src/fabm-code
+FABM_F2003 | true
+FORTRAN_COMPILER | GFORTRAN
+
+@subsection installing-gotm Installing GOTM
+
+Decide on a directory where to install GOTM, and set the environment variable $GOTMDIR to point to this directory
+
+- download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/gotm-code $GOTMDIR @endcode
+- change into the new directory @code cd $GOTMDIR @endcode
+- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN
+- you need to precompile gotm to work with MOSSCO
+
+An example environment for GOTM could look like this:
+Environment variable | value
+---|---
+FABMDIR | $HOME/opt/src/fabm-code
+GOTMDIR | $HOME/opt/src/gotm-code
+FABM_F2003 | true
+FABM | true
+FORTRAN_COMPILER | GFORTRAN
+
 @subsection building Building MOSSCO
 
-To create the MOSSCO libraries, currently libsediment.a and libsolver.a, simply issue
+To create the MOSSCO libraries,  simply issue
 @c make in your @c $MOSSCO_DIR.  This will automaticall build the @c src target and provide the 
 libraries in @c $MOSSCO_DIR/lib/$FORTRAN_COMPILER
 
@@ -156,7 +162,7 @@ To create the documentation (the file you're reading right now), issue
 make doc
 ~~~~
 
-(don't worry too much about the warning messages that occur with outdated doxygen version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have doxygen installed, you can alternatively download a fairly recent pdf of the documentation at https://sourceforge.net/projects/mossco/files/Reference%20Manual/. 
+(don't worry too much about the warning messages that occur with outdated doxygen version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have doxygen installed, you can alternatively consult the fairly recent online documentation at [www.mossco.de/doc](http://www.mossco.de/doc "Mossco Online Documentation"), or download a - probably outdated -  pdf of the documentation from [sf.net/projects/mossco/files/Reference%20Manual/](https://sourceforge.net/projects/mossco/files/Reference%20Manual/). 
 
 To create the examples and test your installation, issue
 
@@ -164,7 +170,7 @@ To create the examples and test your installation, issue
 make examples
 ~~~~
 
-Then change to the examples subdirectories and run the testcases (see below)
+Then change to the examples subdirectories and run the testcases (see later sections below)
 
 To clean everything and start anew, type
 
@@ -172,13 +178,15 @@ To clean everything and start anew, type
 make distclean
 ~~~~
 
-Beware that this does not clean your installation of FABM, for which you would need make distclean in @c $FABMDIR and @c $FABMDIR/src.
+Beware that this does not clean your installation of FABM, for which you would need make distclean in @c $FABMDIR and @c $FABMDIR/src (the same goes for GOTM, respectively).
 
 @section reporting Reporting errors
 
 Bugs as well as annoyances and feature requests are collected in a bug tracker located at https://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.  
 
 Do report any issue that you observe, even if this later turns out to be a problem related to your local computing environment and not to the MOSSCO code itself.  We encourage to document any problem that you encountered during the installation of MOSSCO: someone else might have the same issue and could profit from your experience.
+
+You are also welcome to fix errors yourself, commit them in your local repository, and upload the patch to the bug tracker.  If you would like to get involved more, you are welcome to join our team.  Please contact us via the sourceforge project web site.
 
 @section status MOSSCO status
 
@@ -197,12 +205,14 @@ Debian Linux 7.1 | gfortran 4.7.2/mpich2-1.4 | FABM/ESMF | grpsrv09 (hk) | compl
 
 @section testcases Running the testcases
 
-There are currently three examples that you can run
+There are several examples that you can run, amongst them
 - a FABM standalone sediment driver (in examples/omexdia_p)
 - a FABM/ESMF sediment component (in examples/esmf_sediment)
 - a GOTM/ESMF test case driver (in examples/esmf_gotm)
 - an empty ESMF test case driver (in examples/esmf_empty)
-
+- an erosed test case (non-functional)
+- a coupled A/O test case (non-functional yet)
+- a FABM0D / FABM sediment combined test case (non-functional yet)
 
 @subsection testcases-fabm The FABM standalone sediment driver
 
