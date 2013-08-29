@@ -12,7 +12,7 @@ DOXYGEN_CONFIG = doxygen.conf
 
 EXTRA_DIST=README $(DOXYGEN_CONFIG) doxygen.css doxygen.png
 
-.PHONY: default doc
+.PHONY: default doc www
 
 default: doc 
 
@@ -25,4 +25,10 @@ clean:
 	@rm -rf latex
 	@rm -f mossco_documentation.pdf
 	
+www: src/mainpage.doxygen latex/refman.pdf
+ifdef MOSSCO_SF_USER
+	rsync -e ssh -alpr html/* $(MOSSCO_SF_USER)@web.sourceforge.net:/home/project-web/mossco/htdocs/doc/
+else
+	@echo "Please set the environment variable MOSSCO_SF_USER to your sourceforge user name."
+endif
 

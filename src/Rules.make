@@ -86,7 +86,7 @@ export MOSSCO_GOTM
 #
 ifndef ESMFMKFILE
 ifndef MOSSCO_ESMF
-$(error Compiling without ESMF support. Comment this line 80 in Rules.make if you want to proceed)
+$(error Compiling without ESMF support. Comment this line 90 in Rules.make if you want to proceed)
 export MOSSCO_ESMF=false
 endif
 else
@@ -140,7 +140,7 @@ export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
 export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
 export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 
-# 4. Putting everything together.  This section could need some cleanup, but does work fornow
+# 4. Putting everything together.  This section could need some cleanup, but does work for now
 #
 
 # determine the compiler used by FABM

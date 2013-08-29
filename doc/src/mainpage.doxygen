@@ -3,17 +3,20 @@
 
 @section project-goals Project goals
 
-The overarching goal of the project ``Modular System for Shelves and Coasts'' (MOSSCO) is to bring together the distributed capacities in coastal ocean modelling in Germany and to build a common infrastructure for the national and international coastal research community.
+The overarching goal of the project Modular System for Shelves and Coasts (MOSSCO, [www.mossco.de](http://www.mossco.de/ "Modular System for Shelves and Coasts")) is to bring together the distributed capacities in coastal ocean modelling in Germany and to build a common infrastructure for the national and international coastal research community.
 
-@image latex MOSSCO-schema_400px.png "Schematic overview of the MOSSCO system" width=.5\hsize
+@image latex MOSSCO-schema_400px.png "Schematic overview of the MOSSCO system" width=.6\hsize
 
-MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the ``Forschungsagenda Nord- und Ostsee''. It should integrate physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure will support synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance with coastal policies. 
+MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the Forschungsagenda Nord- und Ostsee within framework of the Research Agenda for Sustainable Development (FONA, [www.fona.de](http://www.fona.de/ "Forschung für Nachhaltige Entwicklung")). MOSSCO integrates physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure supports synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance with coastal policies. 
 
 @section obtaining-code How to obtain the code
 
-While the public web site with documentation on the MOSSCO project is hosted at [http://www.mossco.de], the software, blog, and bug tracker is hosted on [http://www.sf.net/p/mossco].  To obtain the code, change to the ``Git'' tab, or follow this link [http://www.sf.net/p/mossco/code]. The web site interface could look as follows (depending on your browser)
+While the public web site with documentation on the MOSSCO project is hosted at [www.mossco.de](http://www.mossco.de), the software, blog, and bug tracker is hosted on [sf.net/p/mossco](http://www.sf.net/p/mossco).  To obtain the code, change to the "Git" tab at that site, or follow this link [sf.net/p/mossco/code](http://www.sf.net/p/mossco/code).
 
-@image latex sf_git_screenshot.png "Screenshot of using sourceforge" width=0.5\hsize
+@latexonly The web site interface could look as follows (depending on your browser)
+{\begin{center}\includegraphics[width=.7\hsize]{sf_git_screenshot.png}\\ {Screenshot of using sourceforge}\end{center}
+@endlatexonly
+
 
 The code is available via @c git for read-only access. Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable.
 
@@ -219,5 +222,12 @@ Then go to $MOSSCO_DIR/examples/esmf_fabm0d and run the example:
 
 All configuration files are contained in the example.
 
+@section references References
+
+- K. W. Wirtz et al. (2012): Modular System for Shelves and Coasts (MOSSCO), Proposal for a project in response to the BMBF call Küstenmeerforschung in Nord- und Ostsee in the framework of Forschung für nachhaltige Entwicklungen (FONA).  Available online http://www.mossco.de/Leitantrag_MOSSCO.pdf.
+
+- B. von Bodungen et al. (2011): Küstenforschungsagenda für Nord- und Ostsee Im Rahmen des BMBF-Programms „Forschungen für nachhaltige Entwicklungen,   Projektträger Jülich (PTJ). Available online http://www.ptj.de/lw_resource/datapool/_items/item_3404/kstenforschung02122011_internet.pdf
+
+- B. von Bodungen et al. (2007): Küstenmeere im Wandel: Forschungsbedarf der deutschen Küsten- und Randmeerforschung, Konsortium Deutsche Meeresforschung (KDM). Available online http://www.deutsche-meeresforschung.de/docs/KDM_Kuestenschrift_3.pdf (English translation at http://www.deutsche-meeresforschung.de/docs/KDM_Coastal_Seas_Memorandum.pdf)
 
 */
