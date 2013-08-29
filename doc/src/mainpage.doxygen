@@ -32,18 +32,49 @@ git clone http://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 
 If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
 
+If you do not have @c git, you may also download a zipped version of the source code from the "Files" section at [sf.net/projects/mossco/files](https://sourceforge.net/projects/mossco/files/). Note, however, that these snapshots may be somewhat outdated at the time of your download.  Download the file to the directory where $MOSSCO_DIR points to, then unzip it.
+
 @section installing Installing MOSSCO
 
 MOSSCO has some necessary and some optional prerequisites.  Please make sure you meet these prerequisites before you try to compile MOSSCO.
 
 @subsection prerequisites MOSSCO prerequisites
 
-- GNU Make
-- Fortran Compiler (Intel >= 12.0 and GNU Fortran >= 4.7.2 tested) with support for the FORTRAN 2003 standard
-- FABM
-- ESMF (optional)
-- GOTM (optional)
-- doxygen (to create the documentation, best with version >= 1.8)
+@subsubsection necessary-prereqs Necessary prerequisites
+
+Program | Minimum version and alternatives
+--------|----------
+GNU Make | 3.0
+Fortran 2003 Compiler | e.g. GNU  >= 4.7.2, Intel >= 12.0
+FABM | most recent
+ESMF | 5.2 or 6.2
+
+For help on installing FABM and ESMF, see the next sections below.  Please make sure to use the same compiler for FABM, ESMF, and MOSSCO.  
+
+@subsubsection optional-prereqs Optional prerequisites
+
+Program | Minimum version and alternatives
+-------|-----------
+NetCDF | 3.6
+Message Passing Interface | OpenMPI or MPICH >= 3.0.4 
+GOTM | most recent
+
+Please make sure to install NetCDF and MPI with the same compiler that you use for FABM and ESMF. Because of the dependencies of the software packages, use the following compile order
+1. Choose a FORTRAN compiler
+2. Compile MPI for this specific compiler
+3. Compile NetCDF libraries with this specific compiler and MPI support
+4. Compile ESMF with matching NetCDF and MPI library settings
+5. Compile FABM with matching NetCDF
+6. Compile GOTM with matching NetCDF and FABM
+
+@subsubsection doc-prereqs Documentation prerequisites
+
+Program | Minimum version and alternatives
+-------|-----------
+Doxygen | >= 1.8
+Latex | with pdf latex support
+
+Other versions may also work, but have not been tested.  You may also try to go ahead with an existing lower version of a required software package, report possible errors, and argue why you would like us to support your version.
 
 @subsection installing-fabm Installing FABM
 
