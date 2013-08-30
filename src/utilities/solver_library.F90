@@ -21,6 +21,7 @@
 
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
+#define _RK4_38_ 3
 
 module solver_library
 
@@ -64,6 +65,7 @@ end subroutine base_get_rhs
 !! Implemented methods are:
 !! 1 - Runge-Kutta 4th-order
 !! 2 - Adaptive Euler
+!! 3 - Runge-Kutta 4th-order using 3/8 rule
 
 subroutine ode_solver(driver,dt,method)
 implicit none
@@ -80,6 +82,7 @@ real(rk),target :: c1(1:1,1:1,1:driver%knum,1:driver%nvar)
 real(rk),dimension(:,:,:,:),pointer :: c_pointer
 integer  :: i,ci
 real(rk) :: dt_red,dt_int,relative_change
+real(rk),parameter :: third=1.0_rk/3.0_rk
 
 
 select case (method)
@@ -104,17 +107,15 @@ case(_ADAPTIVE_EULER_)
 
 case(_RK4_)
    ! Runge-Kutta-4th_order
-   first=.true.
    c_pointer => driver%conc
    rhs => rhs0
    call driver%get_rhs(rhs)
-   first=.false.
-   c1 = driver%conc + dt*rhs
+   c1 = c_pointer + 0.5_rk*dt*rhs
 
    driver%conc => c1
    rhs => rhs1
    call driver%get_rhs(rhs)
-   c1 = c_pointer + dt*rhs
+   c1 = c_pointer + 0.5_rk*dt*rhs
 
    rhs => rhs2
    call driver%get_rhs(rhs)
@@ -122,7 +123,29 @@ case(_RK4_)
 
    rhs => rhs3
    call driver%get_rhs(rhs)
-   c_pointer = c_pointer + dt*1_rk/3_rk*(0.5_rk*rhs0 + rhs1 + rhs2 + 0.5_rk*rhs3)
+   c_pointer = c_pointer + dt*third*(0.5_rk*rhs0 + rhs1 + rhs2 + 0.5_rk*rhs3)
+
+   driver%conc => c_pointer
+   nullify(c_pointer)
+case(_RK4_38_)
+   ! Runge-Kutta-4th_order using 3/8-rule from Kutta (1901)
+   c_pointer => driver%conc
+   rhs => rhs0
+   call driver%get_rhs(rhs)
+   c1 = c_pointer + third*dt*rhs0
+
+   driver%conc => c1
+   rhs => rhs1
+   call driver%get_rhs(rhs)
+   c1 = c_pointer + dt*(rhs1 - third*rhs0)
+
+   rhs => rhs2
+   call driver%get_rhs(rhs)
+   c1 = c_pointer + dt* (rhs0 - rhs1 + rhs2)
+
+   rhs => rhs3
+   call driver%get_rhs(rhs)
+   c_pointer = c_pointer + dt*1_rk/8_rk*(rhs0 + 3*rhs1 + 3*rhs2 + rhs3)
 
    driver%conc => c_pointer
    nullify(c_pointer)
