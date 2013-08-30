@@ -40,8 +40,11 @@ contains
 subroutine base_get_rhs(rhsd,rhs)
    integer, parameter                   :: rk=selected_real_kind(13)
    class(rhs_driver), intent(inout)     :: rhsd
-   real(rk), intent(out)                :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
-   rhs = 0.0d0
+   !real(rk), intent(out)                :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
+   real(rk), intent(out),dimension(:,:,:,:),pointer :: rhs
+   !real(rk), intent(out),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar),target :: rhs_target
+   !rhs_target = 0.0d0
+   nullify(rhs)
 end subroutine base_get_rhs
 
 !> solver for ODEs
@@ -65,7 +68,8 @@ real(rk)           ,intent(in)   :: dt
 class(rhs_driver)  ,intent(inout):: driver
 
 logical  :: first
-real(rk),dimension(1:1,1:1,1:driver%knum,1:driver%nvar) :: rhs,rhs1,rhs2,rhs3
+real(rk),dimension(:,:,:,:),pointer :: rhs
+real(rk),dimension(1:1,1:1,1:driver%knum,1:driver%nvar),target :: rhs0,rhs1,rhs2,rhs3
 real(rk),target :: c1(1:1,1:1,1:driver%knum,1:driver%nvar)
 real(rk),dimension(:,:,:,:),pointer :: c_pointer
 integer  :: i,ci
@@ -74,6 +78,7 @@ real(rk) :: dt_red,dt_int,relative_change
 
 select case (method)
 case(_ADAPTIVE_EULER_)
+   rhs => rhs0
    dt_int = 0.0_rk
    dt_red = dt
    do while (dt_int .lt. dt)
@@ -95,18 +100,22 @@ case(_RK4_)
    ! Runge-Kutta-4th_order
    first=.true.
    c_pointer => driver%conc
+   rhs => rhs0
    call driver%get_rhs(rhs)
    first=.false.
    c1 = driver%conc + dt*rhs
 
    driver%conc => c1
-   call driver%get_rhs(rhs1)
-   c1 = c_pointer + dt*rhs1
+   rhs => rhs1
+   call driver%get_rhs(rhs)
+   c1 = c_pointer + dt*rhs
 
-   call driver%get_rhs(rhs2)
-   c1 = c_pointer + dt*rhs2
+   rhs => rhs2
+   call driver%get_rhs(rhs)
+   c1 = c_pointer + dt*rhs
 
-   call driver%get_rhs(rhs3)
+   rhs => rhs3
+   call driver%get_rhs(rhs)
    c_pointer = c_pointer + dt*1_rk/3_rk*(0.5_rk*rhs + rhs1 + rhs2 + 0.5_rk*rhs3)
 
    driver%conc => c_pointer
