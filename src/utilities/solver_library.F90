@@ -49,10 +49,7 @@ contains
 subroutine base_get_rhs(rhsd,rhs)
    integer, parameter                   :: rk=selected_real_kind(13)
    class(rhs_driver), intent(inout)     :: rhsd
-   !real(rk), intent(out)                :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
    real(rk), intent(out),dimension(:,:,:,:),pointer :: rhs
-   !real(rk), intent(out),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar),target :: rhs_target
-   !rhs_target = 0.0d0
    nullify(rhs)
 end subroutine base_get_rhs
 
@@ -125,7 +122,7 @@ case(_RK4_)
 
    rhs => rhs3
    call driver%get_rhs(rhs)
-   c_pointer = c_pointer + dt*1_rk/3_rk*(0.5_rk*rhs + rhs1 + rhs2 + 0.5_rk*rhs3)
+   c_pointer = c_pointer + dt*1_rk/3_rk*(0.5_rk*rhs0 + rhs1 + rhs2 + 0.5_rk*rhs3)
 
    driver%conc => c_pointer
    nullify(c_pointer)
