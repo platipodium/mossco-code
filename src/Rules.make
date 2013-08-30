@@ -186,13 +186,15 @@ endif
 endif
 export F90FLAGS
 
-HAVE_LD_FORCE_LOAD=$(shell ld -v 2>&1 | grep -q)
-ifeq ($(HAVE_LD_FORCE_LOAD),0)
+ifndef HAVE_LD_FORCE_LOAD
+HAVE_LD_FORCE_LOAD=$(shell ld -v 2>&1 | grep -c LLVM)
+ifeq ($(HAVE_LD_FORCE_LOAD),1)
 HAVE_LD_FORCE_LOAD=true
 else
 HAVE_LD_FORCE_LOAD=false
 endif
-export HAVE_LD_FORCE_LOAD 
+export HAVE_LD_FORCE_LOAD
+endif 
 
 LIBRARY_PATHS  = -L$(FABM_LIBRARY_PATH) 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
