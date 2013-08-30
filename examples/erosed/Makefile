@@ -8,7 +8,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/omexdia_p$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/erosed$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
