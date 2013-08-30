@@ -49,7 +49,7 @@ contains
 subroutine base_get_rhs(rhsd,rhs)
    integer, parameter                   :: rk=selected_real_kind(13)
    class(rhs_driver), intent(inout)     :: rhsd
-   real(rk), intent(out),dimension(:,:,:,:),pointer :: rhs
+   real(rk), intent(inout),dimension(:,:,:,:),pointer :: rhs
    nullify(rhs)
 end subroutine base_get_rhs
 

@@ -203,11 +203,10 @@ implicit none
 
 class(type_sed)      ,intent(inout)          :: rhsd
 !real(rk),intent(out)                         :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
-real(rk),intent(out),dimension(:,:,:,:),pointer :: rhs
+real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum+1) :: intFLux
-real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar),target :: rhs_target
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
@@ -243,8 +242,7 @@ do n=1,size(rhsd%model%info%state_variables)
    end if
 end do
 
-rhs_target=0.0_rk
-rhs => rhs_target
+rhs=0.0_rk
 do k=1,rhsd%knum
    do j=1,rhsd%jnum
       do i=1,rhsd%inum
