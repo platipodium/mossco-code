@@ -3,7 +3,8 @@ module esmf_toplevel_component
   use esmf
 
   ! Registration routines for fabm0d
-  use esmf_fabm_0d_component, only : empty_SetServices
+  use esmf_fabm_0d_component, only : fabm0d_SetServices => empty_SetServices
+  use esmf_fabm_sediment_component, only : fabmsed_SetServices => empty_SetServices
 
   implicit none
 
@@ -11,8 +12,8 @@ module esmf_toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save  :: fabm0dComp
-  type(ESMF_State),save     :: fabm0dExp, fabm0dImp
+  type(ESMF_GridComp),save  :: fabm0dComp,fabmsedComp
+  type(ESMF_State),save     :: fabm0dExp, fabm0dImp,fabmsedExp,fabmsedImp
 
   contains
 
@@ -52,9 +53,9 @@ module esmf_toplevel_component
     call ESMF_FieldBundleAdd(fieldBundle, (/temperatureField/),rc=rc)
 
 
-    ! Create component, call setservices, and create states
+    ! Create FABM0D component, call setservices, and create states
     fabm0dComp = ESMF_GridCompCreate(name="fabm0dComp", grid=grid, rc=rc)
-    call ESMF_GridCompSetServices(fabm0dComp,empty_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(fabm0dComp,fabm0d_SetServices, rc=rc)
     
     fabm0dImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabm0dImp")
     fabm0dExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabm0dExp")
