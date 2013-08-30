@@ -18,12 +18,12 @@ module solver_library
 implicit none
 private
 
-integer,parameter :: rk=selected_real_kind(12) !< real kind
+integer,parameter :: rk=selected_real_kind(13) !< real kind
 
 type, public :: rhs_driver !< base driver class
    integer :: inum,jnum,knum
    integer :: nvar
-   real(selected_real_kind(12)),dimension(:,:,:,:),pointer :: conc
+   real(selected_real_kind(13)),dimension(:,:,:,:),pointer :: conc
 contains
    procedure :: get_rhs => base_get_rhs
 end type
@@ -38,7 +38,7 @@ contains
 !! which returns zeros for the tendencies
 
 subroutine base_get_rhs(rhsd,rhs)
-   integer, parameter                   :: rk=selected_real_kind(12)
+   integer, parameter                   :: rk=selected_real_kind(13)
    class(rhs_driver), intent(inout)     :: rhsd
    real(rk), intent(out)                :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
    rhs = 0.0d0
@@ -60,7 +60,7 @@ subroutine ode_solver(driver,dt,method)
 implicit none
 
 integer            ,intent(in)   :: method
-integer,parameter :: rk = selected_real_kind(12)
+integer,parameter :: rk = selected_real_kind(13)
 real(rk)           ,intent(in)   :: dt
 class(rhs_driver)  ,intent(inout):: driver
 
