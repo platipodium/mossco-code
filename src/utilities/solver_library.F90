@@ -1,15 +1,24 @@
-!> @file solver_library.F90
-!! brief MOSSCO 3d solver library
-!!
-!! The solver library contains the multi-method ode-solver
-!! and the base class for model drivers
+!> @brief Implementation of a generic 3D solver library 
+!! @file solver_library.F90, this file is part of MOSSCO.
+!! 
 !! @author Richard Hofmeister
-
-!> The MOSSCO 3d solver library provides a solver for
+!! @author Carsten Lemmen
+!! @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+!
+!> @description The solver library contains the multi-method ode-solver
+!! and the base class for model drivers
+!!
+!! The MOSSCO 3d solver library provides a solver for
 !! cell-wise time integration of ODEs. The model drivers
 !! are expected to provide a vector with the right-hand sides
 !! (tendencies). Each driver has to inherit the base driver class
 !! called rhs_driver in this module.
+
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 

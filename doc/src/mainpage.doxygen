@@ -14,7 +14,7 @@ MOSSCO will build a framework for a modular data and model system, an infrastruc
 While the public web site with documentation on the MOSSCO project is hosted at [www.mossco.de](http://www.mossco.de), the software, blog, and bug tracker is hosted on [sf.net/p/mossco](http://www.sf.net/p/mossco).  To obtain the code, change to the "Git" tab at that site, or follow this link [sf.net/p/mossco/code](http://www.sf.net/p/mossco/code).
 
 @latexonly The web site interface could look as follows (depending on your browser)
-{\begin{center}\includegraphics[width=.7\hsize]{sf_git_screenshot.png}\\ {Screenshot of using sourceforge}\end{center}
+{\begin{center}\includegraphics[width=.7\hsize]{../img/sf_git_screenshot.png}\\ {Screenshot of using sourceforge}\end{center}
 @endlatexonly
 
 
