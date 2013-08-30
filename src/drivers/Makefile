@@ -16,9 +16,15 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-DELFT_FOREIGN_SOURCES=$(DELFT_DIR)/modules/precision_basics.f90 $(DELFT_DIR)/modules/precision.f90 $(wildcard $(DELFT_DIR)/source/*.f90) $(DELFT_DIR)/include/sedparams.inc
+DELFT_FOREIGN_SOURCES=$(DELFT_DIR)/modules/precision_basics.f90 $(DELFT_DIR)/modules/precision.f90 \
+ $(DELFT_DIR)/source/erosand.f90 \
+ $(DELFT_DIR)/source/eromud.f90 \
+ $(DELFT_DIR)/source/vanRijn84.f90 \
+ $(DELFT_DIR)/source/shld.f90 \
+ $(DELFT_DIR)/source/sand_mud.f90 \
+ $(DELFT_DIR)/include/sedparams.inc
 
-DELFT_OBJS    = $(DELFT_LOCAL_SOURCES:.f90=.o) 
+DELFT_OBJS    = precision_basics.o precision.o erosand.o eromud.o vanRijn84.o shld.o sand_mud.o 
 
 .PHONY: libsediment libfabm liberosed libdelft localsources
 
@@ -62,8 +68,8 @@ localsources: $(DELFT_FOREIGN_SOURCES)
 libdelft:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: libdelft delft_erosed_driver.o
-	$(AR) crus $@ delft_erosed_driver.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: libdelft delft_erosed_driver.o $(DELFT_OBJS)
+	$(AR) crus $@ delft_erosed_driver.o $(DELFT_OBJS)
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a: $(DELFT_OBJS)
 	$(AR) crus $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a $(DELFT_OBJS) 
