@@ -16,9 +16,9 @@ module esmf_fabm_0d_component
   use time, only: gotm_time_start => start, gotm_time_stop => stop
   use time, only: gotm_time_timefmt => timefmt
   use time, only: gotm_time_init_time => init_time
-  use fabm_0d, only: init_0d => init_run
-  use fabm_0d, only: time_loop_0d => time_loop
-  use fabm_0d, only: finalize_0d => clean_up
+  use mossco_fabm0d, only: init_0d => init_run
+  use mossco_fabm0d, only: time_loop_0d => time_loop
+  use mossco_fabm0d, only: finalize_0d => clean_up
 
   implicit none
 

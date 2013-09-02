@@ -33,7 +33,7 @@ DELFT_OBJS    = precision_basics.o precision.o erosand.o eromud.o vanRijn84.o sh
 ALL_TARGETS =
 
 ifeq ($(MOSSCO_FABM),true)
-ALL_TARGETS=libsediment
+ALL_TARGETS=libsediment libmossco_fabm0d
 endif
 
 ifeq ($(MOSSCO_DELFT),true)
@@ -46,10 +46,14 @@ all: $(ALL_TARGETS)
 # FABM/sediment section
 
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
+libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 libfabm: $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: libsolver libfabm fabm_sediment_driver.o
 	$(AR) crus $@ fabm_sediment_driver.o
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: libsolver libfabm fabm_0d_driver.o
+	        $(AR) crus $@ fabm_0d_driver.o
 
 $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE):
 	@echo Recreating the FABM library $(FABM_LIBRARY_FILE)
@@ -81,4 +85,6 @@ clean: extraclean
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
+	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_driver.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/delft_erosed_driver.mod

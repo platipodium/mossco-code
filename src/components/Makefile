@@ -67,9 +67,7 @@ esmf_gotm_component.o: esmf_gotm_component.F90
 
 esmf_fabm_0d_component.o: esmf_fabm_0d_component.F90
 	@echo "Compiling $<"
-	make -C $(FABMDIR)/src 0d
-	make -C $(FABMDIR)/src/drivers/0d fabm0d.o
-	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/0d/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
+	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
 $(MOSSCO_module_path)/solver_library.mod:
 	make -C $(MOSSCO_DIR)/src/utilities libsolver

@@ -19,11 +19,11 @@ EXTRA_DIST=README
 LIBS := -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lfabm0d $(FABMDIR)/src/drivers/0d/fabm0d.o -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod 
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod 
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
-LDFLAGS += $(FABMDIR)/lib/0d/GFORTRAN/libfabm_prod.a 
+LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a 
 
 .PHONY: all exec libfabm0d
 
@@ -43,9 +43,6 @@ $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod: $(MOSSCO_DIR)/src/components/e
 
 main.o: esmf_toplevel_component.o
 esmf_toplevel_component.o: esmf_toplevel_component.F90
-
-$(FABMDIR)/src/drivers/0d/fabm0d.o:
-	$(MAKE) -C $(FABMDIR)/src/drivers/0d  fabm0d.o
 
 clean: extraclean
 
