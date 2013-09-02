@@ -17,7 +17,11 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS=libocean libatmosphere
+
+TARGETS=
+ifeq ($(MOSSCO_ESMF),true)
+TARGETS += libocean libatmosphere
+endif
 
 ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsolver libsediment

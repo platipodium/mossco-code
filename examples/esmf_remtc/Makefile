@@ -7,13 +7,14 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
+
 ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/esmf_remtc$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf -locean -latmosphere $(LIBS)
+LIBS := -lesmf -locean -latmosphere -laocoupler $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec
@@ -27,7 +28,11 @@ exec: main.o esmf_toplevel_component.o libocean libatmosphere
 
 libocean: $(MOSSCO_LIBRARY_PATH)/libocean.a
 libatmosphere: $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
+libaocoupler: $(MOSSCO_LIBRARY_PATH)/libaocoupler.a
 
+$(MOSSCO_LIBRARY_PATH)/libaocoupler.a:
+	$(MAKE) -C $(MOSSCO_DIR)/src/mediators libaocoupler
+	
 $(MOSSCO_LIBRARY_PATH)/libatmosphere.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libatmosphere
 	
