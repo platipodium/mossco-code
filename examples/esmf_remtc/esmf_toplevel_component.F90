@@ -1,7 +1,7 @@
 module esmf_toplevel_component
 
   use esmf
-  use remtc_ocean, only: ocean_SetServices => remtc_ocean_SetServices
+  use remtc_ocean, only: ocean_SetServices => SetServices
   use remtc_atmosphere, only: atmosphere_SetServices => remtc_atmosphere_SetServices
   use remtc_atmosphere_ocean_coupler, only: aocpl_SetServices => SetServices
 
@@ -11,17 +11,16 @@ module esmf_toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp)         :: atmosphereComp
+  type(ESMF_GridComp),save    :: atmosphereComp
   character(len=ESMF_MAXSTR)  :: atmosphereCompName 
   type(ESMF_State)            :: atmosphereImportState, atmosphereExportState
 
-  type(ESMF_GridComp)         :: oceanComp
+  type(ESMF_GridComp),save    :: oceanComp
   character(len=ESMF_MAXSTR)  :: oceanCompName 
   type(ESMF_State)            :: oceanImportState, oceanExportState
 
-  type(ESMF_CplComp)          :: aocplComp
+  type(ESMF_CplComp),save     :: aocplComp
   character(len=ESMF_MAXSTR)  :: aocplCompName 
-  type(ESMF_State)            :: aocplImportState, aocplExportState
 
   contains
 
@@ -67,9 +66,7 @@ module esmf_toplevel_component
     aocplCompName = "ESMF Remtc Atmosphere-Ocean coupler component"
     aocplComp     = ESMF_CplCompCreate(name=aocplCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
     call ESMF_CplCompSetServices(aocplcomp, aocpl_SetServices, rc=rc)
-    aocplImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="A/O coupler import")
-    aocplExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="A/O coupler export")
-    call ESMF_CplCompInitialize(aocplComp,importState=aocplImportState,exportState=aocplExportState,&
+    call ESMF_CplCompInitialize(aocplComp,importState=atmosphereExportState,exportState=oceanImportState,&
       clock=parentClock,rc=rc)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
@@ -99,8 +96,15 @@ module esmf_toplevel_component
       call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
       call ESMF_GridCompRun(atmosphereComp,importState=atmosphereImportState,&
         exportState=atmosphereExportState,clock=parentclock, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_CplComprun(aocplComp,importState=atmosphereExportState,& 
+        exportState=oceanImportState,clock=parentclock,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
       call ESMF_GridCompRun(oceanComp,importState=atmosphereExportState,&
         exportState=oceanExportState,clock=parentclock, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    enddo 
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
