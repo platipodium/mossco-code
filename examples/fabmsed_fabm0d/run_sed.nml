@@ -1,0 +1,24 @@
+!--------------
+! run_nml
+!
+! numyears - number of years (y)
+! dt - timestep (s)
+! output - number of timesteps (#)
+! numlayers - number of sediment layers (#)
+! ode_method - 1: Runge-Kutta 4th order, 2: Adaptive Euler-Forward
+!--------------
+&run_nml
+  numyears=10
+  dt=3600.
+  output=720
+  numlayers=24
+  dzmin=0.003
+  ode_method=2
+/
+
+&sed_nml
+  diffusivity   = 0.9
+  bioturbation  = 0.9
+  porosity_max  = 0.7
+  porosity_fac  = 0.9
+/

@@ -52,6 +52,17 @@ module esmf_toplevel_component
     fieldBundle = ESMF_FieldBundleCreate(name="FABM field bundle", rc=rc)
     call ESMF_FieldBundleAdd(fieldBundle, (/temperatureField/),rc=rc)
 
+   ! Create FABMSED component, call setservices, and create states
+    fabmsedComp = ESMF_GridCompCreate(name="fabmsedComp", grid=grid, rc=rc)
+    call ESMF_GridCompSetServices(fabmsedComp,fabmsed_SetServices, rc=rc)
+    
+    fabmsedImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmsedImp")
+    fabmsedExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmsedExp")
+
+    call ESMF_StateAdd(fabmsedImp, (/fieldBundle/), rc=rc)
+    call ESMF_StateAdd(fabmsedExp, (/fieldBundle/), rc=rc)
+
+    call ESMF_GridCompInitialize(fabmsedComp, importState=fabmsedImp, exportState=fabmsedExp, clock=parentClock, rc=rc)
 
     ! Create FABM0D component, call setservices, and create states
     fabm0dComp = ESMF_GridCompCreate(name="fabm0dComp", grid=grid, rc=rc)
@@ -83,7 +94,8 @@ module esmf_toplevel_component
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
-      call ESMF_GridCompRun(fabm0dComp, importState=fabm0dImp, exportState=fabm0dExp, clock=parentClock, rc=rc)
+     ! call ESMF_GridCompRun(fabm0dComp, importState=fabm0dImp, exportState=fabm0dExp, clock=parentClock, rc=rc)
+      !call ESMF_GridCompRun(fabmsedComp, importState=fabmsedImp, exportState=fabmsedExp, clock=parentClock, rc=rc)
 
     enddo 
 

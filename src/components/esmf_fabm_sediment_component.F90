@@ -90,7 +90,7 @@ module esmf_fabm_sediment_component
   
     !! read namelist input for control of time, this should not be done like this,
     !! but handled outside the component.  Maybe later introduce a local clock 
-    open(33,file='run.nml',action='read',status='old')
+    open(33,file='run_sed.nml',action='read',status='old')
     read(33,nml=run_nml)
 
     !config = ESMF_ConfigCreate(rc=rc) 
