@@ -78,35 +78,41 @@ module remtc_ocean
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
     call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
       computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     do i=lbnd(1),ubnd(1) 
       coordX(i) = 0 + 0.1 * i + 0.05
     enddo
     call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
       computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     do i=lbnd(1),ubnd(1) 
       coordY(i) = 50 + 0.1 * i + 0.05
-    enddo
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  
+    enddo  
 
     !> Create a water temperature field with a 2D array specification, fill the temperature
     !> field with some values, add the field to the ocean's import and export states
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     temperatureField = ESMF_FieldCreate(grid, arrayspec, name="water_temperature_at_surface", &
       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_FieldGet(temperatureField, farrayPtr=water_temperature_at_surface,totalLBound=lbnd,&
       totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     do i=lbnd(1),ubnd(1) 
       do j=lbnd(2),ubnd(2)
         water_temperature_at_surface =  20 + 0.1*(i+j)
       enddo
     enddo
     call ESMF_StateAdd(importState,(/temperatureField/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_StateAdd(exportState,(/temperatureField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -147,7 +153,8 @@ module remtc_ocean
 ! Get import state and extract arrays
     call ESMF_StateGet(importState, "air_temperature_at_surface", temperatureField, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(temperatureField, farrayPtr=air_temperature_at_surface, rc=rc)
+    
+    call ESMF_FieldGet(temperatureField, farrayPtr=air_temperature_at_surface, localDE=0, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Do something
