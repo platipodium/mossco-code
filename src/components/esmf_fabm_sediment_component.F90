@@ -105,7 +105,7 @@ module esmf_fabm_sediment_component
    
     !! also from namelist, the output timesteop is read and
     !! used to create an alarm
-    call ESMF_TimeIntervalSet(alarmInterval,s=output,rc=rc)
+    call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
     outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=startTime,ringInterval=alarmInterval,rc=rc)
 
     !! The grid specification should also go to outside this routine, and update the grid of

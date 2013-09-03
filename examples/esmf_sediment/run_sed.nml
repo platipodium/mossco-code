@@ -7,11 +7,12 @@
 ! numlayers - number of sediment layers (#)
 !--------------
 &run_nml
-  numyears=20
-  dt=60.
-  output=43200
+  numyears=10
+  dt=3600.
+  output=720
   numlayers=24
   dzmin=0.003
+  ode_method=2
 /
 
 &sed_nml
