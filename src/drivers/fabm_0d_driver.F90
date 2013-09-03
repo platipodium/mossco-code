@@ -73,11 +73,11 @@
    end type type_fabm0d
 
    type,public :: export_state_type
-       character(len=256) :: standard_name
-       integer            :: fabm_id
-       logical            :: particulate
-       real(rk),pointer   :: conc
-       real(rk),pointer   :: ws
+       character(len=256) :: standard_name=''
+       integer            :: fabm_id=-1
+       logical            :: particulate=.false.
+       real(rk),dimension(:,:,:),pointer   :: conc
+       real(rk),dimension(:,:,:),pointer   :: ws
    end type
    
    type(type_fabm0d),public        :: zerod

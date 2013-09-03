@@ -26,11 +26,12 @@ module esmf_fabm_0d_component
 
   private
 
-  real(ESMF_KIND_R8), pointer :: water_temperature(:)
+  real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
   type(ESMF_Field)            :: water_temperature_field
   type(ESMF_Field)            :: din_field
   type(ESMF_Field)            :: pon_field
   type(ESMF_Field)            :: pon_ws_field
+  integer                     :: ubnd(3),lbnd(3)
   type(export_state_type)     :: din,pon
   logical                     :: forcing_from_coupler=.false.
 
@@ -65,6 +66,10 @@ module esmf_fabm_0d_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    type(ESMF_Grid)      :: grid
+    type(ESMF_ArraySpec) :: arrayspec
+    real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord 
+
     character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
@@ -85,14 +90,42 @@ module esmf_fabm_0d_component
     call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
     call init_0d(forcing_from_coupler=forcing_from_coupler)
 
-    ! get export_states information
+    !> get export_states information
     call get_export_state_from_variable_name(din,din_variable)
     call get_export_state_from_variable_name(pon,pon_variable)
 
-    !call ESMF_FieldCreate(...)
-    !call ESMF_FieldCreate(...)
-    !call ESMF_FieldCreate(...)
+    !> create grid
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
+             regDecomp=(/1,1,1/))
+    call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      farrayPtr=LonCoord, rc=rc)
+    LonCoord = 0.0 ! longitude
+    call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      farrayPtr=LatCoord, rc=rc)
+    LatCoord = 0.0 ! latitude
+    call ESMF_GridGetCoord(grid,coordDim=3,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      farrayPtr=DepthCoord, rc=rc)
+    DepthCoord = 0.0 ! depth
+    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
 
+    !> create export fields
+    din_field = ESMF_FieldCreate(grid, arrayspec, name="dissolved_inorganic_nitrogen_in_water", &
+      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    call ESMF_FieldGet(din_field, farrayPtr=din%conc, localDE=0,rc=rc)
+    call update_export_state(din) !> set pointer on concentration array
+    pon_field = ESMF_FieldCreate(grid, arrayspec, name="particulare_organic_nitrogen_in_water", &
+      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    call ESMF_FieldGet(pon_field, farrayPtr=pon%conc, localDE=0,rc=rc)
+    pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", &
+      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    call ESMF_FieldGet(pon_ws_field, farrayPtr=pon%ws, localDE=0,rc=rc)
+    call update_export_state(pon) !> set pointers on concentration and ws arrays
+
+    !> set export state
+    call ESMF_StateAdd(exportState,(/din_field,pon_field,pon_ws_field/),rc=rc)
+
+    !> set clock for 0d component
     call ESMF_TimeSet(clockTime)
     if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
       call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
@@ -145,7 +178,7 @@ module esmf_fabm_0d_component
     if (forcing_from_coupler) then
       call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
       call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
-      zerod%temp = water_temperature(1)
+      zerod%temp = water_temperature(1,1,1)
     end if
 
     ! use AdvanceCount from parent clock
@@ -171,7 +204,7 @@ module esmf_fabm_0d_component
 
   end subroutine Finalize
   
-    !> Actually, this sho9uld be an extension of ESMF_TimeSet 
+    !> Actually, this should be an extension of ESMF_TimeSet 
   subroutine timeString2ESMF_Time(timestring,time)
     character(len=*), intent(in) :: timestring
     type(ESMF_Time), intent(out) :: time
