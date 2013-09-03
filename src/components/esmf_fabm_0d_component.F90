@@ -71,7 +71,7 @@ module esmf_fabm_0d_component
     close(namlst)
 
     call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
-    call init_0d()
+    call init_0d(forcing_from_coupler=.false.)
 
     call ESMF_TimeSet(clockTime)
     if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters

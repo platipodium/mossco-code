@@ -53,11 +53,13 @@
    logical  :: add_environment
    logical  :: add_conserved_quantities
    logical  :: add_diagnostic_variables
+   logical  :: temp_from_file
 
    ! Environment
-   real(rk),target :: temp,salt,par,current_depth,dens,wind_sf,taub,decimal_yearday
-   real(rk),dimension(1:1,1:1,1:1),target :: tempa,salta,para,densa,current_deptha
-   real(rk),dimension(1:1,1:1),target     :: wind_sfa,tauba,par_sfa
+   real(rk),target         :: temp,salt,par,current_depth,dens,wind_sf,taub
+   real(rk),target, public :: decimal_yearday
+   real(rk),dimension(1:1,1:1,1:1),target, public :: tempa,salta,para,densa,current_deptha
+   real(rk),dimension(1:1,1:1),target,public      :: wind_sfa,tauba,par_sfa
    real(rk)        :: par_sf,par_bt,par_ct,column_depth
 
    real(rk),allocatable      :: totals(:,:,:,:)
@@ -92,7 +94,7 @@
 ! !IROUTINE: Initialise the model
 !
 ! !INTERFACE:
-   subroutine init_run()
+   subroutine init_run(forcing_from_coupler)
 !
 ! !DESCRIPTION:
 !  This internal routine triggers the initialization of the model.
@@ -106,6 +108,7 @@
 !EOP
 !
 ! !LOCAL VARIABLES:
+   logical, intent(in), optional :: forcing_from_coupler
    character(len=PATH_MAX)   :: env_file,output_file
    integer                   :: i
    real(rk)                  :: depth
@@ -121,6 +124,13 @@
 !BOC
    LEVEL1 'init_run'
    STDERR LINE
+
+   ! evaluate forcing from coupler:
+   if (present(forcing_from_coupler)) then
+       temp_from_file=.not.(forcing_from_coupler)
+   else
+       temp_from_file=.true.
+   endif
 
    ! Open the namelist file.
    LEVEL2 'reading model setup namelists..'
@@ -250,7 +260,7 @@
    LEVEL3 trim(env_file)
    call init_input()
    call register_input_0d(env_file,1,par_sf)
-   call register_input_0d(env_file,2,temp)
+   if (temp_from_file) call register_input_0d(env_file,2,temp)
    call register_input_0d(env_file,3,salt)
 
    ! Build FABM model tree.
@@ -467,7 +477,13 @@ end subroutine get_rhs
          par_ct = par_sf
          par_bt = par_sf
       end if
-      tempa=temp
+
+      if (temp_from_file) then
+          tempa=temp
+      else
+          ! get tempa from inportState
+      end if
+      
       salta=salt
       call update_depth(CENTER)
 
