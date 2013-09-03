@@ -23,6 +23,7 @@
 !
 ! !PUBLIC MEMBER FUNCTIONS:
    public init_run, time_loop, clean_up
+   public get_export_state_from_variable_name, update_export_state
 
 !
 ! !DEFINED PARAMETERS:
@@ -70,8 +71,16 @@
    contains
        procedure :: get_rhs
    end type type_fabm0d
+
+   type,public :: export_state_type
+       character(len=256) :: standard_name
+       integer            :: fabm_id
+       logical            :: particulate
+       real(rk),pointer   :: conc
+       real(rk),pointer   :: ws
+   end type
    
-   type(type_fabm0d)        :: zerod
+   type(type_fabm0d),public        :: zerod
 
    interface
       function short_wave_radiation(jul,secs,dlon,dlat,cloud,bio_albedo) result(swr)
@@ -557,6 +566,24 @@ end subroutine get_rhs
 
    end subroutine clean_up
 !EOC
+
+   subroutine get_export_state_from_variable_name(export_state,varname)
+   type(export_state_type), intent(inout) :: export_state
+   character(len=256), intent(in)         :: varname
+
+   export_state%fabm_id=-1
+   nullify(export_state%conc)
+   nullify(export_state%ws)
+
+   end subroutine get_export_state_from_variable_name
+
+
+   subroutine update_export_state(export_state)
+   type(export_state_type), intent(inout) :: export_state
+
+   nullify(export_state%conc)
+
+   end subroutine update_export_state
 
 !-----------------------------------------------------------------------
 

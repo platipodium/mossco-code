@@ -19,10 +19,20 @@ module esmf_fabm_0d_component
   use mossco_fabm0d, only: init_0d => init_run
   use mossco_fabm0d, only: time_loop_0d => time_loop
   use mossco_fabm0d, only: finalize_0d => clean_up
+  use mossco_fabm0d, only: zerod, export_state_type
+  use mossco_fabm0d, only: get_export_state_from_variable_name, update_export_state
 
   implicit none
 
   private
+
+  real(ESMF_KIND_R8), pointer :: water_temperature(:)
+  type(ESMF_Field)            :: water_temperature_field
+  type(ESMF_Field)            :: din_field
+  type(ESMF_Field)            :: pon_field
+  type(ESMF_Field)            :: pon_ws_field
+  type(export_state_type)     :: din,pon
+  logical                     :: forcing_from_coupler=.false.
 
   public :: empty_SetServices
   
@@ -62,8 +72,10 @@ module esmf_fabm_0d_component
     integer            :: ode_method,namlst=234
     character(len=80)  :: title
     logical            :: input_from_namelist = .true.
+    character(len=256) :: din_variable='',pon_variable=''
 
-    namelist /model_setup/ title,start,stop,dt,ode_method
+    namelist /model_setup/ title,start,stop,dt,ode_method, &
+                           din_variable, pon_variable, forcing_from_coupler
 
     ! read 0d namelist
     open(namlst,file='run.nml',status='old',action='read')
@@ -71,7 +83,15 @@ module esmf_fabm_0d_component
     close(namlst)
 
     call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
-    call init_0d(forcing_from_coupler=.false.)
+    call init_0d(forcing_from_coupler=forcing_from_coupler)
+
+    ! get export_states information
+    call get_export_state_from_variable_name(din,din_variable)
+    call get_export_state_from_variable_name(pon,pon_variable)
+
+    !call ESMF_FieldCreate(...)
+    !call ESMF_FieldCreate(...)
+    !call ESMF_FieldCreate(...)
 
     call ESMF_TimeSet(clockTime)
     if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
@@ -121,11 +141,23 @@ module esmf_fabm_0d_component
     write (logstring,'(A,I6,A,A)') "0d run(",n,") at ",timestring
     call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
 
+    ! get import state
+    if (forcing_from_coupler) then
+      call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
+      call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
+      zerod%temp = water_temperature(1)
+    end if
+
     ! use AdvanceCount from parent clock
     gotm_time_min_n = n
     gotm_time_max_n = gotm_time_min_n
    
     call time_loop_0d()
+
+    ! set export states
+    call update_export_state(din)
+    call update_export_state(pon)
+    !   now, pon and din point to their concentrations and sinking velocities
 
   end subroutine Run
 
