@@ -15,10 +15,10 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS := -lesmf -lsediment -lsolver $(LIBS)
+LIBS := -lsediment -lfabm0d -lmossco_fabm0d -lsolver -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lfabm0d $(FABMDIR)/src/drivers/0d/fabm0d.o -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod $(FABMDIR)/lib/0d/GFORTRAN/libfabm_prod.a 
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod 
 
 .PHONY: all exec libfabm0d libsediment
 

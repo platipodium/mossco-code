@@ -94,8 +94,8 @@ module esmf_toplevel_component
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
-     ! call ESMF_GridCompRun(fabm0dComp, importState=fabm0dImp, exportState=fabm0dExp, clock=parentClock, rc=rc)
-      !call ESMF_GridCompRun(fabmsedComp, importState=fabmsedImp, exportState=fabmsedExp, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(fabm0dComp, importState=fabm0dImp, exportState=fabm0dExp, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(fabmsedComp, importState=fabmsedImp, exportState=fabmsedExp, clock=parentClock, rc=rc)
 
     enddo 
 
