@@ -1,12 +1,27 @@
-!> This component describes a very simple 2D ocean.  It was coded from an example AO coupling
-!> @author Hartmut Kapitza
-!> @author Carsten Lemmen
+!> @brief Implementation of a simple ESMF ocean component
+!
+!> This module implements a flat 2D ocean, that heats with forcing at the surface
+!> The ocean component imports a "air_temperature_at_surface"
+!> The ocean exports "water_temperature_at_surface"
+!
+!  This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @author Hartmut Kapitza, Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 
 module remtc_ocean
 
   use esmf
 
   implicit none
+  
+  private
 
   real(ESMF_KIND_R8), pointer :: water_temperature_at_surface(:,:)
   real(ESMF_KIND_R8), pointer :: air_temperature_at_surface(:,:)
@@ -144,6 +159,8 @@ module remtc_ocean
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
     character (len=ESMF_MAXSTR) :: message
+    integer(ESMF_KIND_I8)       :: advancecount
+    integer(ESMF_KIND_I4)       :: printcount
      
     ib = lbound(water_temperature_at_surface,1)
     ie = ubound(water_temperature_at_surface,1)
@@ -152,7 +169,7 @@ module remtc_ocean
 
     call ESMF_GridCompGet(gridComp, localPet=myrank, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(parentClock, currtime=localtime, rc=rc)
+    call ESMF_ClockGet(parentClock, currtime=localtime, advanceCount=advancecount, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(localtime, timeString=timestring, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -168,15 +185,13 @@ module remtc_ocean
 
 ! Do something
     water_temperature_at_surface = water_temperature_at_surface *0.009d0 + air_temperature_at_surface * 0.001d0
- 
-! Get export state and point to changed array
-   call ESMF_StateGet(exportState,"water_temperature_at_surface",water_temperature_at_surface_Field,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   !call ESMF_FieldSet(water_temperature_at_surface_Field, farrayPtr=water_temperature_at_surface,rc=rc)
+
+!> @todo do we need to communicate the update of water_temp back to export state? Why do we need to get air temp from 
+!> import state anyhow? 
 
 ! Output to netCDF files
-    !print_count = print_count + 1
-    !call ESMF_FieldWrite(water_temperature_at_surface_Field, file="air_temperature_at_surface.nc", timeslice=print_count, rc=rc)
+    printcount=int(advancecount,ESMF_KIND_I4)
+    !call ESMF_FieldWrite(water_temperature_at_surface_Field, file="water_temperature_at_surface.nc", timeslice=printcount, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Run

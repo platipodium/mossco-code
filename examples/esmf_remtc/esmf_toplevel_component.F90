@@ -102,7 +102,7 @@ module esmf_toplevel_component
         exportState=oceanImportState,clock=parentclock,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-      call ESMF_GridCompRun(oceanComp,importState=atmosphereExportState,&
+      call ESMF_GridCompRun(oceanComp,importState=oceanImportState,&
         exportState=oceanExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    enddo 
