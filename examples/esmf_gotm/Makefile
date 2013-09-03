@@ -25,8 +25,8 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lgotm_prod -lairs
 
 all: exec
 
-libgotm: prefix $(MOSSCO_MODULE_PATH)/esmf_gotm_component.mod $(MOSSCO_DIR)/src/components/esmf_gotm_component.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libgotm.a $(MOSSCO_DIR)/src/components/esmf_gotm_component.o
+libgotm: prefix $(MOSSCO_MODULE_PATH)/gotm_component.mod $(MOSSCO_DIR)/src/components/gotm_component.o
+	ar cruvs $(MOSSCO_LIBRARY_PATH)/libgotm.a $(MOSSCO_DIR)/src/components/gotm_component.o
 	@echo "Created gotm library  $(MOSSCO_LIBRARY_PATH)/libgotm.a" 
 
 exec: main.o libgotm
@@ -34,7 +34,7 @@ exec: main.o libgotm
 	@echo "Created example binary esmf_example_test in  $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_gotm to run the example." > $(MOSSCO_BIN_PATH)/esmf_gotm.txt
 
-$(MOSSCO_MODULE_PATH)/esmf_gotm_component.mod: $(MOSSCO_DIR)/src/components/esmf_gotm_component.F90
+$(MOSSCO_MODULE_PATH)/gotm_component.mod: $(MOSSCO_DIR)/src/components/gotm_component.F90
 	$(MAKE) -C $(MOSSCO_DIR)/src/components
 
 main.o: esmf_toplevel_component.o
@@ -43,5 +43,5 @@ esmf_toplevel_component.o: esmf_toplevel_component.F90
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_gotm_example
+	@rm -f esmf_gotm
 	@rm -f PET*.*

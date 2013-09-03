@@ -3,7 +3,7 @@ module esmf_toplevel_component
   use esmf
 
   ! Registration routines for gotm
-  use gotm_component, only : gotm_SetServices
+  use gotm_component, only : gotm_SetServices => SetServices
 
   implicit none
 
