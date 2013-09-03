@@ -1,17 +1,8 @@
 #include "fabm_driver.h"
-!-----------------------------------------------------------------------
-!BOP
-!
-! !MODULE: 0D independent driver for the Framework for Aquatic Biogeochemical Models (FABM)
-!
 
-! !INTERFACE:
+!> 0D independent driver for the Framework for Aquatic Biogeochemical Models (FABM)
    module mossco_fabm0d
-!
-! !DESCRIPTION:
-! TODO
-!
-! !USES:
+
    use time
    use input
    use fabm
@@ -20,30 +11,28 @@
 
    implicit none
    private
-!
-! !PUBLIC MEMBER FUNCTIONS:
+
    public init_run, time_loop, clean_up
    public get_export_state_from_variable_name, update_export_state
 
-!
-! !DEFINED PARAMETERS:
    integer, parameter        :: namlst=10, out_unit = 12, bio_unit=22
    integer, parameter        :: READ_SUCCESS=1
    integer, parameter        :: END_OF_FILE=-1
    integer, parameter        :: READ_ERROR=-2
    integer, parameter        :: CENTER=0,SURFACE=1,BOTTOM=2
    character, parameter      :: separator = char(9)
-!
-! !REVISION HISTORY:
-!  Original author(s): Jorn Bruggeman
-!
-!  private data members initialised via namelists
+
+!@author: Jorn Bruggeman
+!@author: Richard Hofmeister
+
+!>  private data members initialised via namelists
    character(len=80)         :: title
    real(rk)                  :: dt
-!  station description
+!>  station description
    real(rk)                  :: latitude,longitude
+   character(len=256)        :: din_variable,pon_variable
 
-   ! Bio model info
+   !> Bio model info
    integer  :: ode_method
    integer(timestepkind)::nsave
    integer  :: swr_method
@@ -56,7 +45,7 @@
    logical  :: add_diagnostic_variables
    logical  :: temp_from_file
 
-   ! Environment
+   !> Environment
    real(rk),target         :: temp,salt,par,current_depth,dens,wind_sf,taub   
    real(rk)                :: par_sf,par_bt,par_ct,column_depth
 
@@ -92,45 +81,33 @@
          real(rk)                            :: swr
       end function short_wave_radiation
    end interface
-!EOP
-!-----------------------------------------------------------------------
 
    contains
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: Initialise the model
-!
-! !INTERFACE:
+!> Initialise the model
    subroutine init_run(forcing_from_coupler)
 !
-! !DESCRIPTION:
-!  This internal routine triggers the initialization of the model.
-!  The first section reads the namelists of {\tt run.nml} with
-!  the user specifications. Then, one by one each of the modules are
-!  initialised.
-!
-! !REVISION HISTORY:
-!  Original author(s): Jorn Bruggeman
-!
-!EOP
-!
-! !LOCAL VARIABLES:
+!> DESCRIPTION:
+!!  This internal routine triggers the initialization of the model.
+!!  The first section reads the namelists of {\tt run.nml} with
+!!  the user specifications. Then, one by one each of the modules are
+!!  initialised.
+
+!@author: Jorn Bruggemann
+!@author: Richard Hofmeister
+
    logical, intent(in), optional :: forcing_from_coupler
    character(len=PATH_MAX)   :: env_file,output_file
    integer                   :: i
    real(rk)                  :: depth
 
-   namelist /model_setup/ title,start,stop,dt,ode_method
+   namelist /model_setup/ title,start,stop,dt,ode_method,din_variable,pon_variable
    namelist /environment/ env_file,swr_method, &
                           latitude,longitude,cloud,par_fraction, &
                           depth,par_background_extinction,apply_self_shading
    namelist /output/      output_file,nsave,add_environment, &
                           add_diagnostic_variables, add_conserved_quantities
-!
-!-----------------------------------------------------------------------
-!BOC
+
    LEVEL1 'init_run'
    STDERR LINE
 
@@ -429,29 +406,14 @@ rhs=0.0_rk
 
 end subroutine get_rhs
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: Manage global time--stepping \label{timeLoop}
-!
-! !INTERFACE:
+!> This internal routine is the heart of the code. It contains
+!! the main time-loop inside of which all routines required
+!! during the time step are called.
    subroutine time_loop()
-!
-! !DESCRIPTION:
-! This internal routine is the heart of the code. It contains
-! the main time-loop inside of which all routines required
-! during the time step are called.
-!
-! !REVISION HISTORY:
-!  Original author(s): Jorn Bruggeman
-!
-! !LOCAL VARIABLES:
+
    integer                   :: i
    integer(timestepkind)     :: n
    real(rk)                  :: extinction,bio_albedo
-!EOP
-!-----------------------------------------------------------------------
-!BOC
 
    do n=MinN,MaxN
 
@@ -540,48 +502,47 @@ end subroutine get_rhs
 
    return
    end subroutine time_loop
-!EOC
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: The run is over --- now clean up.
-!
-! !INTERFACE:
+
    subroutine clean_up()
-!
-! !DESCRIPTION:
-! Close all open files.
-!
-! !REVISION HISTORY:
-!  Original author(s): Jorn Bruggeman
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-   LEVEL1 'clean_up'
 
+   LEVEL1 'clean_up'
    call close_input()
    close(out_unit)
-
+   
    end subroutine clean_up
-!EOC
+
 
    subroutine get_export_state_from_variable_name(export_state,varname)
    type(export_state_type), intent(inout) :: export_state
    character(len=256), intent(in)         :: varname
+   real(rk),allocatable :: wstmp(:,:,:,:)
+   integer  :: n
 
    export_state%fabm_id=-1
-   nullify(export_state%conc)
-   nullify(export_state%ws)
+   do n=1,size(zerod%model%info%state_variables)
+     if (trim(zerod%model%info%state_variables(n)%name).eq.trim(varname)) &
+         export_state%fabm_id=n
+   end do
+   export_state%conc => zerod%conc(:,:,:,export_state%fabm_id)
+   allocate(export_state%ws(1,1,1))
+   allocate(wstmp(1,1,1,zerod%nvar))
+   call fabm_get_vertical_movement(zerod%model,1,1,1,wstmp(1,1,1,:))
+   export_state%ws = wstmp(1,1,1,export_state%fabm_id)
+   deallocate(wstmp)
 
    end subroutine get_export_state_from_variable_name
 
 
    subroutine update_export_state(export_state)
    type(export_state_type), intent(inout) :: export_state
+   real(rk),allocatable :: wstmp(:,:,:,:)
 
-   nullify(export_state%conc)
+   export_state%conc => zerod%conc(:,:,:,export_state%fabm_id)
+   allocate(wstmp(1,1,1,zerod%nvar))
+   call fabm_get_vertical_movement(zerod%model,1,1,1,wstmp(1,1,1,:))
+   export_state%ws = wstmp(1,1,1,export_state%fabm_id)
+   deallocate(wstmp)
 
    end subroutine update_export_state
 

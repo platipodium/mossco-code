@@ -94,6 +94,9 @@ module esmf_fabm_0d_component
     call get_export_state_from_variable_name(din,din_variable)
     call get_export_state_from_variable_name(pon,pon_variable)
 
+    write(0,*) 'din id:',din%fabm_id
+    write(0,*) 'pon id:',pon%fabm_id
+
     !> create grid
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
              regDecomp=(/1,1,1/))
@@ -108,6 +111,7 @@ module esmf_fabm_0d_component
       farrayPtr=DepthCoord, rc=rc)
     DepthCoord = 0.0 ! depth
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    write(0,*) 'created grid'
 
     !> create export fields
     din_field = ESMF_FieldCreate(grid, arrayspec, name="dissolved_inorganic_nitrogen_in_water", &
@@ -190,7 +194,6 @@ module esmf_fabm_0d_component
     ! set export states
     call update_export_state(din)
     call update_export_state(pon)
-    !   now, pon and din point to their concentrations and sinking velocities
 
   end subroutine Run
 
