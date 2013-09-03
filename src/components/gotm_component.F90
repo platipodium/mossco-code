@@ -31,9 +31,9 @@ module gotm_component
 
   private
   
-  real(ESMF_KIND_R8), pointer :: grid_height(:)
+  real(ESMF_KIND_R8), pointer :: grid_height(:,:,:)
   type(ESMF_Field)            :: grid_height_Field
-  real(ESMF_KIND_R8), pointer :: water_temperature(:)
+  real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
   type(ESMF_Field)            :: water_temperature_Field
 
   !> Declare an alarm to ring when output to file is requested
@@ -44,11 +44,12 @@ module gotm_component
 #define _ONE_  1.0d0
 
   !> local variables for the setup control
-  character(len=80)         :: title
+  character(len=80)         :: title,name
   integer                   :: nlev
-  GOTM_REALTYPE             :: cnpar
-  integer                   :: buoy_method
-
+  GOTM_REALTYPE             :: cnpar,latitude,longitude,depth
+  GOTM_REALTYPE             :: T0,S0,p0,dtr0,dsr0
+  integer                   :: buoy_method,eq_state_mode,eq_state_method
+    
   public :: SetServices
   
   contains
@@ -82,15 +83,17 @@ module gotm_component
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
-    integer                     :: lbnd(2), ubnd(2)
-    integer                     :: myrank,i,j
+    integer                     :: lbnd(3), ubnd(3)
+    integer                     :: myrank,i,j,k
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
       
     namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
-
+    namelist /station/ name,latitude,longitude,depth
+    namelist /eqstate/ eq_state_mode,eq_state_method,T0,S0,p0,dtr0,dsr0
+ 
     logical :: input_from_namelist = .true.  !> @todo later to be replaced by switch passed from parent component
 
     call ESMF_LogWrite("GOTM ocean component initializing.",ESMF_LOGMSG_INFO)
@@ -99,6 +102,7 @@ module gotm_component
     ! read model_setup namelist
     open(921,file='gotmrun.nml',status='old',action='read')
     read(921,nml=model_setup)
+    read(921,nml=station)
     close(921)
 
     ! Manipulate the time parameters from the gotm namelist
@@ -159,16 +163,16 @@ module gotm_component
       computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     do i=lbnd(1),ubnd(1) 
-      coordX(i) = 0 + 0.1 * i + 0.05
+      coordX(i) = longitude
     enddo
     call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
       computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     do i=lbnd(1),ubnd(1) 
-      coordY(i) = 50 + 0.1 * i + 0.05
+      coordY(i) = latitude
     enddo  
 
-   !> Create a water temperature field with a 1D array specification, fill the temperature
+    !> Create a water temperature field with a 3D array specification, fill the temperature
     !> field with some values, add the field to the ocean's export state
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -183,11 +187,36 @@ module gotm_component
 
     do i=lbnd(1),ubnd(1) 
       do j=lbnd(2),ubnd(2)
-        water_temperature =  20 + 0.1*(i+j)
+        do k=lbnd(2),ubnd(2)
+          water_temperature(i,j,k) = T0
+        enddo
       enddo
     enddo
 
     call ESMF_StateAdd(exportState,(/water_temperature_Field/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+ 
+    !> Create a grid_height field with a 3D array specification, fill the 
+    !> field with equidistant values, and add to ocean export state
+
+    grid_height_Field = ESMF_FieldCreate(grid, arrayspec, name="grid_height", &
+      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_FieldGet(grid_height_Field, farrayPtr=grid_height,totalLBound=lbnd,&
+      totalUBound=ubnd,localDE=0,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    do i=lbnd(1),ubnd(1) 
+      do j=lbnd(2),ubnd(2)
+        do k=lbnd(2),ubnd(2)
+          grid_height(i,j,k) = depth/nlev
+        enddo
+      enddo
+    enddo
+
+    call ESMF_StateAdd(exportState,(/grid_height_Field/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
@@ -195,6 +224,10 @@ module gotm_component
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
+
+    use meanflow, only : gotm_temperature => T
+    use meanflow, only : gotm_depth => depth 
+
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
@@ -203,7 +236,7 @@ module gotm_component
     character(len=19)       :: timestring
     type(ESMF_Time)         :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8)   :: n
+    integer(ESMF_KIND_I8)   :: n,k
 
     ! get local clock with GOTM timesteop, get global clock with coupling timestep, set n to global/local, call GOTM, advance local clock n steps., 
     call ESMF_TimeSet(clockTime)
@@ -213,6 +246,11 @@ module gotm_component
 
     call update_time(n)
     call gotm_time_step()
+    
+    do k=1,nlev
+      water_temperature(:,:,k) = gotm_temperature(k)
+      grid_height(:,:,k) = gotm_depth(k)
+    enddo
 
     !> Check if the output alarm is ringing, if so, quiet it and 
     !> call do_output from GOTM

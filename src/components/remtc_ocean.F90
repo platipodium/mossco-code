@@ -209,6 +209,8 @@ module remtc_ocean
 
     call ESMF_FieldDestroy(water_temperature_at_surface_Field, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_FieldDestroy(air_temperature_at_surface_Field, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_LogWrite("Remtc Ocean component finalized", ESMF_LOGMSG_INFO)
 
