@@ -56,17 +56,17 @@
    logical  :: temp_from_file
 
    ! Environment
-   real(rk),target         :: temp,salt,par,current_depth,dens,wind_sf,taub
-   real(rk),target, public :: decimal_yearday
-   real(rk),dimension(1:1,1:1,1:1),target, public :: tempa,salta,para,densa,current_deptha
-   real(rk),dimension(1:1,1:1),target,public      :: wind_sfa,tauba,par_sfa
-   real(rk)        :: par_sf,par_bt,par_ct,column_depth
+   real(rk),target         :: temp,salt,par,current_depth,dens,wind_sf,taub   
+   real(rk)                :: par_sf,par_bt,par_ct,column_depth
 
    real(rk),allocatable      :: totals(:,:,:,:)
    character(len=128)        :: cbuf
 
    type,extends(rhs_driver), public :: type_fabm0d !< sediment driver class (extends rhs_driver)
        type(type_model),pointer       :: model
+       real(rk),dimension(1:1,1:1,1:1) :: temp,salt,par,dens,current_depth
+       real(rk),dimension(1:1,1:1)     :: wind_sf,taub,par_sf
+       real(rk)                        :: decimal_yearday
    contains
        procedure :: get_rhs
    end type type_fabm0d
@@ -145,7 +145,7 @@
    par_sf = 0.0_rk
    par_bt = 0.0_rk
    par_ct = 0.0_rk
-   decimal_yearday = 0.0_rk
+   zerod%decimal_yearday = 0.0_rk
    taub  = 0.0_rk
 
    ! Read all namelists
@@ -294,15 +294,15 @@
    end do
 
    ! Link environmental data to FABM
-   call fabm_link_bulk_data(zerod%model,varname_temp,   tempa)
-   call fabm_link_bulk_data(zerod%model,varname_salt,   salta)
-   call fabm_link_bulk_data(zerod%model,varname_par,    para)
-   call fabm_link_bulk_data(zerod%model,varname_pres,   current_deptha)
-   call fabm_link_bulk_data(zerod%model,varname_dens,   densa)
-   call fabm_link_horizontal_data(zerod%model,varname_wind_sf,wind_sfa)
-   call fabm_link_horizontal_data(zerod%model,varname_par_sf, par_sfa)
-   call fabm_link_horizontal_data(zerod%model,varname_taub, tauba)
-   call fabm_link_scalar_data(zerod%model,varname_yearday, decimal_yearday)
+   call fabm_link_bulk_data(zerod%model,varname_temp,   zerod%temp)
+   call fabm_link_bulk_data(zerod%model,varname_salt,   zerod%salt)
+   call fabm_link_bulk_data(zerod%model,varname_par,    zerod%par)
+   call fabm_link_bulk_data(zerod%model,varname_pres,   zerod%current_depth)
+   call fabm_link_bulk_data(zerod%model,varname_dens,   zerod%dens)
+   call fabm_link_horizontal_data(zerod%model,varname_wind_sf,zerod%wind_sf)
+   call fabm_link_horizontal_data(zerod%model,varname_par_sf, zerod%par_sf)
+   call fabm_link_horizontal_data(zerod%model,varname_taub, zerod%taub)
+   call fabm_link_scalar_data(zerod%model,varname_yearday, zerod%decimal_yearday)
 
    ! Open the output file.
    open(out_unit,file=output_file,action='write', &
@@ -378,13 +378,13 @@
       select case (location)
          case (SURFACE)
             current_depth = 0.0_rk
-            para = par_sf
+            zerod%par = par_sf
          case (BOTTOM)
             current_depth = column_depth            
-            para = par_bt
+            zerod%par = par_bt
          case (CENTER)
             current_depth = 0.5_rk*column_depth
-            para = par_ct
+            zerod%par = par_ct
       end select
    end subroutine update_depth
 
@@ -449,7 +449,7 @@ end subroutine get_rhs
       ! Update time
       call update_time(n)
 
-      decimal_yearday = yearday-1 + dble(secondsofday)/86400.
+      zerod%decimal_yearday = yearday-1 + dble(secondsofday)/86400.
 
       ! Update environment
       call do_input(julianday,secondsofday)
@@ -479,12 +479,12 @@ end subroutine get_rhs
       end if
 
       if (temp_from_file) then
-          tempa=temp
+          zerod%temp=temp
       else
           ! get tempa from inportState
       end if
       
-      salta=salt
+      zerod%salt=salt
       call update_depth(CENTER)
 
       ! Integrate one time step
@@ -503,9 +503,9 @@ end subroutine get_rhs
          call write_time_string(julianday,secondsofday,timestr)
          write (out_unit,FMT='(A)',ADVANCE='NO') timestr
          if (add_environment) then
-            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,par
-            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,temp
-            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,salt
+            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%par(1,1,1)
+            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%temp(1,1,1)
+            write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%salt(1,1,1)
          end if
          do i=1,(size(zerod%model%info%state_variables)+size(zerod%model%info%state_variables_ben))
             write (out_unit,FMT='(A,E15.8E3)',ADVANCE='NO') separator,zerod%conc(1,1,1,i)
