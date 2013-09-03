@@ -49,8 +49,8 @@ libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
 	$(AR) cruvs $@ esmf_fabm_sediment_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external  esmf_gotm_component.o 
-	$(AR) cruvs $@ esmf_gotm_component.o
+$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o 
+	$(AR) cruvs $@ gotm_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libfabm0d.a: esmf_fabm_0d_component.o
 	$(AR) cruvs $@ esmf_fabm_0d_component.o
@@ -60,10 +60,6 @@ $(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
 
 $(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
 	$(AR) cruvs $@ remtc_atmosphere.o
-
-esmf_gotm_component.o: esmf_gotm_component.F90
-	@echo "Compiling $<"
-	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
 esmf_fabm_0d_component.o: esmf_fabm_0d_component.F90
 	@echo "Compiling $<"

@@ -3,7 +3,7 @@ module esmf_toplevel_component
   use esmf
 
   ! Registration routines for gotm
-  use esmf_gotm_component, only : empty_SetServices
+  use gotm_component, only : gotm_SetServices
 
   implicit none
 
@@ -54,7 +54,7 @@ module esmf_toplevel_component
 
     ! Create component, call setservices, and create states
     gotmComp = ESMF_GridCompCreate(name="gotmComp", grid=grid, rc=rc)
-    call ESMF_GridCompSetServices(gotmComp,empty_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gotmComp,gotm_SetServices, rc=rc)
     
     gotmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="gotmImp")
     gotmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="gotmExp")

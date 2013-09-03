@@ -1,13 +1,21 @@
-!> @file esmf_gotm_component.F90
-!! @brief ESMF/GOTM driver component
-!!
-!! The ESMF component contains the gotm driver module
-!! @author Carsten Lemmen
+!> @brief Implementation of a GOTM wrapper as ESMF component
+!
+!> This module serves as a wrapper for the General Ocean Turbulence Model
+!> (GOTM). This model describes a 1D water column.
+!> @import 
+!> @export water_temperature, grid_height
+!
+!  This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 
-!> The ESMF/GOTM driver component module provides infrastructure for the
-!! MOSSCO GOTM component.
-
-module esmf_gotm_component
+module gotm_component
 
   use esmf
   use time, only: gotm_time_min_n => MinN, gotm_time_max_n => MaxN
@@ -22,6 +30,11 @@ module esmf_gotm_component
   implicit none
 
   private
+  
+  real(ESMF_KIND_R8), pointer :: grid_height(:)
+  type(ESMF_Field)            :: grid_heightField
+  real(ESMF_KIND_R8), pointer :: water_temperature(:)
+  type(ESMF_Field)            :: water_temperatureField
 
   !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -36,13 +49,13 @@ module esmf_gotm_component
   GOTM_REALTYPE             :: cnpar
   integer                   :: buoy_method
 
-  public :: empty_SetServices
+  public :: SetServices
   
   contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
-  subroutine empty_SetServices(gridcomp, rc)
+  subroutine SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
@@ -51,7 +64,7 @@ module esmf_gotm_component
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
-  end subroutine empty_SetServices
+  end subroutine SetServices
 
   !> Initialize the component
   !!
@@ -269,4 +282,4 @@ module esmf_gotm_component
 
   end subroutine gotm_time_step
 
-end module esmf_gotm_component
+end module gotm_component
