@@ -32,6 +32,7 @@ module esmf_fabm_sediment_component
   integer   :: t,tnum,funit,output,k,n,numyears,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
+  real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
   real(rk),dimension(:,:),pointer   :: fptr2d
  
@@ -106,7 +107,7 @@ module esmf_fabm_sediment_component
     !! also from namelist, the output timesteop is read and
     !! used to create an alarm
     call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
-    outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=startTime,ringInterval=alarmInterval,rc=rc)
+    outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=startTime+alarmInterval,ringInterval=alarmInterval,rc=rc)
 
     !! The grid specification should also go to outside this routine, and update the grid of
     !! this component, numlayers and dzmin are read from nml
@@ -167,7 +168,14 @@ module esmf_fabm_sediment_component
     !! netcdf output currently not working (see commented code below)
     funit=2
     open(funit,file='output.dat')
-    write(funit,*) 'time(s) ','depth(m) ','conc(n) '
+    write(funit,fmt='(A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) '
+    do n=1,sed%nvar
+      write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%state_variables(n)%name)
+    end do
+    do n=1,size(sed%model%info%diagnostic_variables)
+      write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%diagnostic_variables(n)%name)
+    end do
+    write(funit,*)
 
     call ESMF_GridCompGet(gridComp,grid=grid,rc=rc)
     call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
@@ -294,8 +302,16 @@ module esmf_fabm_sediment_component
       write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
       write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
-      do k=1,_KNUM_ 
-        write(funit,*) t*dt,sed%grid%zc(1,1,k),sed%conc(1,1,k,:)
+      do k=1,_KNUM_
+          write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3)',advance='no') t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k)
+          do n=1,sed%nvar
+             write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
+          end do
+          do n=1,size(sed%model%info%diagnostic_variables)
+             diag => fabm_sed_diagnostic_variables(sed,n)
+             write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
+          end do
+          write(funit,*)
       end do
     endif
  
@@ -310,6 +326,7 @@ module esmf_fabm_sediment_component
     integer, intent(out) :: rc
 
     close(funit)
+
     call finalize_fabm_sed()
     deallocate(conc)
     deallocate(bdys)
