@@ -1,6 +1,10 @@
 #include "fabm_driver.h"
+!> @file fabm_0d_driver.F90
+!> @brief 0D independent driver for the Framework for Aquatic Biogeochemical Models (FABM)
+!!
+!! @author Jorn Bruggeman
+!! @author Richard Hofmeister
 
-!> 0D independent driver for the Framework for Aquatic Biogeochemical Models (FABM)
    module mossco_fabm0d
 
    use time
@@ -21,9 +25,6 @@
    integer, parameter        :: READ_ERROR=-2
    integer, parameter        :: CENTER=0,SURFACE=1,BOTTOM=2
    character, parameter      :: separator = char(9)
-
-!@author: Jorn Bruggeman
-!@author: Richard Hofmeister
 
 !>  private data members initialised via namelists
    character(len=80)         :: title
@@ -86,15 +87,11 @@
 
 !> Initialise the model
    subroutine init_run(forcing_from_coupler)
-!
-!> DESCRIPTION:
-!!  This internal routine triggers the initialization of the model.
+
+!>  This internal routine triggers the initialization of the model.
 !!  The first section reads the namelists of {\tt run.nml} with
 !!  the user specifications. Then, one by one each of the modules are
 !!  initialised.
-
-!@author: Jorn Bruggemann
-!@author: Richard Hofmeister
 
    logical, intent(in), optional :: forcing_from_coupler
    character(len=PATH_MAX)   :: env_file,output_file
@@ -545,8 +542,6 @@ end subroutine get_rhs
    deallocate(wstmp)
 
    end subroutine update_export_state
-
-!-----------------------------------------------------------------------
 
    end module mossco_fabm0d
 
