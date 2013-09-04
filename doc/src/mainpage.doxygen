@@ -136,7 +136,7 @@ FORTRAN_COMPILER | GFORTRAN
 
 Decide on a directory where to install GOTM, and set the environment variable $GOTMDIR to point to this directory
 
-- download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/gotm-code $GOTMDIR @endcode
+- download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/code $GOTMDIR @endcode
 - change into the new directory @code cd $GOTMDIR @endcode
 - set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN
 - you need to precompile gotm to work with MOSSCO
