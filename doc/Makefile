@@ -27,7 +27,8 @@ clean:
 	
 www: src/mainpage.doxygen latex/refman.pdf
 ifdef MOSSCO_SF_USER
-	rsync -e ssh -alpr html/* $(MOSSCO_SF_USER)@web.sourceforge.net:/home/project-web/mossco/htdocs/doc/
+	@rsync -e ssh -rt html/* $(MOSSCO_SF_USER)@web.sourceforge.net:/home/project-web/mossco/htdocs/doc/
+	@rsync -e ssh -rt mossco_documentation.pdf $(MOSSCO_SF_USER)@frs.sf.net:/home/pfs/p/mossco/Reference_Manual/
 else
 	@echo "Please set the environment variable MOSSCO_SF_USER to your sourceforge user name."
 endif
