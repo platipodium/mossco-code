@@ -513,7 +513,7 @@ end subroutine get_rhs
    subroutine get_export_state_from_variable_name(export_state,varname)
    type(export_state_type), intent(inout) :: export_state
    character(len=256), intent(in)         :: varname
-   real(rk),allocatable :: wstmp(:,:,:,:)
+   real(rk),allocatable,save :: wstmp(:,:,:,:)
    integer  :: n
 
    export_state%fabm_id=-1
@@ -535,7 +535,7 @@ end subroutine get_rhs
    type(export_state_type), intent(inout) :: export_state
    real(rk),allocatable :: wstmp(:,:,:,:)
 
-   export_state%conc = zerod%conc(:,:,:,export_state%fabm_id)
+   export_state%conc => zerod%conc(:,:,:,export_state%fabm_id)
    allocate(wstmp(1,1,1,zerod%nvar))
    call fabm_get_vertical_movement(zerod%model,1,1,1,wstmp(1,1,1,:))
    export_state%ws = wstmp(1,1,1,export_state%fabm_id)

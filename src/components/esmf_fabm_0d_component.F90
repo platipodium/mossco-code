@@ -66,11 +66,8 @@ module esmf_fabm_0d_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    type(ESMF_Grid)      :: grid
     type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_ArraySpec) :: arrayspec
-    type(ESMF_Array)     :: array
-    real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord 
+    type(ESMF_Array)     :: ponarray,wsarray,dinarray
 
     character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
@@ -99,17 +96,20 @@ module esmf_fabm_0d_component
     !> create grid
     distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/),name="FABM0d grid")
 
     !> create export fields
-    array = ESMF_ArrayCreate(distgrid,farray=din%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    din_field = ESMF_FieldCreate(grid, array, name="dissolved_inorganic_nitrogen_in_water", rc=rc)
-    array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
-    array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", rc=rc)
+    dinarray = ESMF_ArrayCreate(distgrid=distgrid,farray=din%conc, &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="dissolved_inorganic_nitrogen_in_water", rc=rc)
+
+    ponarray = ESMF_ArrayCreate(distgrid,farray=pon%conc, &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="particulare_organic_nitrogen_in_water", rc=rc)
+    wsarray = ESMF_ArrayCreate(distgrid,farray=pon%ws, &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="pon_sinking_velocity_in_water", rc=rc)
     !> set export state
-    call ESMF_StateAdd(exportState,(/din_field,pon_field,pon_ws_field/),rc=rc)
+    call ESMF_StateAddReplace(exportState,(/dinarray,ponarray,wsarray/),rc=rc)
 
     !> set clock for 0d component
     call ESMF_TimeSet(clockTime)
