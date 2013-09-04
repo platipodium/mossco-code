@@ -67,7 +67,9 @@ module esmf_fabm_0d_component
     integer, intent(out) :: rc
 
     type(ESMF_Grid)      :: grid
+    type(ESMF_DistGrid)  :: distgrid
     type(ESMF_ArraySpec) :: arrayspec
+    type(ESMF_Array)     :: array
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord 
 
     character(len=19) :: timestring
@@ -94,38 +96,18 @@ module esmf_fabm_0d_component
     call get_export_state_from_variable_name(din,din_variable)
     call get_export_state_from_variable_name(pon,pon_variable)
 
-    write(0,*) 'din id:',din%fabm_id
-    write(0,*) 'pon id:',pon%fabm_id
-
     !> create grid
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-             regDecomp=(/1,1,1/),name="FABM0d grid")
-    call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-      farrayPtr=LonCoord, rc=rc)
-    LonCoord = 0.0 ! longitude
-    call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-      farrayPtr=LatCoord, rc=rc)
-    LatCoord = 0.0 ! latitude
-    call ESMF_GridGetCoord(grid,coordDim=3,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-      farrayPtr=DepthCoord, rc=rc)
-    DepthCoord = 0.0 ! depth
-    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    write(0,*) 'created grid'
+    distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
+                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/),name="FABM0d grid")
 
     !> create export fields
-    din_field = ESMF_FieldCreate(grid, arrayspec, name="dissolved_inorganic_nitrogen_in_water", &
-      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    call ESMF_FieldGet(din_field, farrayPtr=din%conc, localDE=0,rc=rc)
-    call update_export_state(din) !> set pointer on concentration array
-    pon_field = ESMF_FieldCreate(grid, arrayspec, name="particulare_organic_nitrogen_in_water", &
-      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    call ESMF_FieldGet(pon_field, farrayPtr=pon%conc, localDE=0,rc=rc)
-    pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", &
-      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    call ESMF_FieldGet(pon_ws_field, farrayPtr=pon%ws, localDE=0,rc=rc)
-    call update_export_state(pon) !> set pointers on concentration and ws arrays
-
+    array = ESMF_ArrayCreate(distgrid,farray=din%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    din_field = ESMF_FieldCreate(grid, array, name="dissolved_inorganic_nitrogen_in_water", rc=rc)
+    array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
+    array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", rc=rc)
     !> set export state
     call ESMF_StateAdd(exportState,(/din_field,pon_field,pon_ws_field/),rc=rc)
 
