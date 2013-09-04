@@ -99,7 +99,7 @@ module esmf_fabm_0d_component
 
     !> create grid
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-             regDecomp=(/1,1,1/))
+             regDecomp=(/1,1,1/),name="FABM0d grid")
     call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
       farrayPtr=LonCoord, rc=rc)
