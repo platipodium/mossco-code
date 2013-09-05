@@ -17,10 +17,12 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-
 TARGETS=
 ifeq ($(MOSSCO_ESMF),true)
 TARGETS += libocean libatmosphere
+ifeq ($(MOSSCO_DELFT),true)
+TARGETS += liberosed
+endif
 endif
 
 ifeq ($(MOSSCO_FABM),true)
@@ -31,20 +33,25 @@ TARGETS += libgotm libfabm0d
 endif
 endif
 
+.PHONY: $(TARGETS)
+
 #--------------------------------------
 # Make targets
 # add checks for libfabm and libsediment
-
 
 all: $(TARGETS)
 
 libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
+liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a
 libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
 libfabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
 libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
+
+$(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
+	$(AR) cruvs $@ erosed_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
 	$(AR) cruvs $@ esmf_fabm_sediment_component.o
@@ -74,6 +81,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/esmf_fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod
@@ -83,4 +91,3 @@ libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
 	$(MAKE) -C $(FABMDIR)/src gotm
 	$(MAKE) -C $(GOTMDIR)/src
-

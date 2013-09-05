@@ -2,29 +2,76 @@
 module erosed_component
 
   use esmf
-  use mossco_erosed, only:
+  use mossco_erosed, only : initerosed
+  use precision, only : fp
 
   implicit none
+! These Parameters are defined in sedparam.inc seperately for delft-routine
+integer, parameter :: SEDTYP_NONCOHESIVE_TOTALLOAD = 0
+integer, parameter :: SEDTYP_NONCOHESIVE_SUSPENDED = 1
+integer, parameter :: SEDTYP_COHESIVE              = 2
+
+
+  public :: SetServices
 
   private
 
   real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
   type(ESMF_Field)            :: water_temperature_field
-  type(ESMF_Field)            :: din_field
-  type(ESMF_Field)            :: pon_field
-  type(ESMF_Field)            :: pon_ws_field
   integer                     :: ubnd(3),lbnd(3)
-  type(export_state_type)     :: din,pon
-  logical                     :: forcing_from_coupler=.false.
 
-  public :: empty_SetServices
+
+   integer                                    :: nmlb           ! first cell number
+   integer                                    :: nmub           ! last cell number
+   integer                                    :: flufflyr       ! switch for fluff layer concept
+   integer                                    :: iunderlyr      ! Underlayer mechanism
+   integer                                    :: nfrac          ! number of sediment fractions
+   real(fp)    , dimension(:,:)    , pointer :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
+   real(fp)    , dimension(:,:)    , pointer :: frac
+    !
+    ! Local variables
+    !
+    integer                                     :: i            ! diffusion layer counter
+    integer                                     :: l            ! sediment counter
+    integer                                     :: nm           ! cell counter
+    integer                                     :: nstep        ! cell counter
+   ! integer                                     :: istat        ! error flag
+    integer     , dimension(:)  , allocatable   :: sedtyp       ! sediment type [-]
+    real(fp)                                    :: dt           ! time step [s]
+    real(fp)                                    :: g            ! gravitational acceleration [m/s2]
+    real(fp)                                    :: morfac       ! morphological scale factor [-]
+    real(fp)                                    :: rhow         ! density of water [kg/m3]
+    real(fp)                                    :: tend         ! end time of computation [s]
+    real(fp)                                    :: tstart       ! start time of computation [s]
+    real(fp)    , dimension(:)  , allocatable   :: cdryb        ! dry bed density [kg/m3]
+    real(fp)    , dimension(:)  , allocatable   :: chezy        ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
+    real(fp)    , dimension(:)  , allocatable   :: h0           ! water depth old time level [m]
+    real(fp)    , dimension(:)  , allocatable   :: h1           ! water depth new time level [m]
+    real(fp)    , dimension(:)  , allocatable   :: rhosol       ! specific sediment density [kg/m3]
+    real(fp)    , dimension(:)  , allocatable   :: sedd50       ! 50% diameter sediment fraction [m]
+    real(fp)    , dimension(:)  , allocatable   :: sedd90       ! 90% diameter sediment fraction [m]
+    real(fp)    , dimension(:)  , allocatable   :: taub         ! bottom shear stress [N/m2]
+    real(fp)    , dimension(:)  , allocatable   :: umod         ! depth averaged flow magnitude [m/s]
+    real(fp)    , dimension(:,:), allocatable   :: mass         ! change in sediment composition of top layer, [kg/m2]
+    real(fp)    , dimension(:,:), allocatable   :: massfluff    ! change in sediment composition of fluff layer [kg/m2]
+    real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
+    real(fp)    , dimension(:,:), allocatable   :: r1           ! concentration new time level[kg/m3]
+    real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
+    real(fp)    , dimension(:,:), allocatable   :: sink         ! sediment sink flux [m/s]
+    real(fp)    , dimension(:,:), allocatable   :: sinkf        ! sediment sink flux fluff layer [m/s]
+    real(fp)    , dimension(:,:), allocatable   :: sour         ! sediment source flux [kg/m2/s]
+    real(fp)    , dimension(:,:), allocatable   :: sourf        ! sediment source flux fluff layer [kg/m2/s]
+    real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
+    real(fp)    , dimension(:)  , allocatable   :: mudfrac
+    logical                                     ::lexist, anymud
+
+
   
-  contains
+contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
-
-  subroutine empty_SetServices(gridcomp, rc)
+  subroutine SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
@@ -33,20 +80,20 @@ module erosed_component
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
-  end subroutine empty_SetServices
+  end subroutine SetServices
 
   !> Initialize the component
   !!
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    use time, only: start,stop
+ 
     implicit none
 
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
+    type(ESMF_GridComp) :: gridComp
+    type(ESMF_State)    :: importState, exportState
+    type(ESMF_Clock)    :: parentClock
+    integer, intent(out)     :: rc
 
     type(ESMF_Grid)      :: grid
     type(ESMF_DistGrid)  :: distgrid
@@ -58,42 +105,141 @@ module erosed_component
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
-    integer            :: ode_method,namlst=234
     character(len=80)  :: title
-    logical            :: input_from_namelist = .true.
     character(len=256) :: din_variable='',pon_variable=''
 
-    namelist /model_setup/ title,start,stop,dt,ode_method, &
-                           din_variable, pon_variable, forcing_from_coupler
-
     ! read 0d namelist
-    open(namlst,file='run.nml',status='old',action='read')
-    read(namlst,nml=model_setup)
-    close(namlst)
 
-    call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
-    call init_0d(forcing_from_coupler=forcing_from_coupler)
+    call ESMF_LogWrite('Initializing Delft erosed component',ESMF_LOGMSG_INFO)
+ 
+    g       = 9.81_fp   ! gravitational acceleration [m/s2]
+    rhow    = 1000.0_fp ! density of water [kg/m3]
+    !
+    !
+    ! ================================================================================
+    !   USER INPUT  H.N.=> ToDo: namelist
+    ! ================================================================================
+    !
+    nmlb    = 1                 ! first cell number
+    nmub    = 1                 ! last cell number
+    tstart  = 0.0               ! start time of computation [s]
+    tend    = 50000.0            ! end time of computation [s]
+    dt      = 100.0             ! time step [s]
+    morfac  = 1.0               ! morphological scale factor [-]
+    nstep  = (tend-tstart)/dt;  ! number of time steps
+    !
+    ! -----------------------------------------------------------
+    !
+    nfrac       = 2             ! number of sediment fractions
+    iunderlyr   = 2             ! Underlayer mechanism (default = 1)
+    flufflyr    = 1             ! switch for fluff layer concept
+                                !  0: no fluff layer (default)
+                                !  1: all mud to fluff layer, burial to bed layers
+                                !  2: part mud to fluff layer, other part to bed layers (no burial)
 
-    !> get export_states information
-    call get_export_state_from_variable_name(din,din_variable)
-    call get_export_state_from_variable_name(pon,pon_variable)
+
+
+   call initerosed( nmlb, nmub, nfrac)
+
+  allocate (cdryb     (nfrac))
+    allocate (rhosol    (nfrac))
+    allocate (sedd50    (nfrac))
+    allocate (sedd90    (nfrac))
+    allocate (sedtyp    (nfrac))
+    !
+    allocate (chezy     (nmlb:nmub))
+    allocate (h0        (nmlb:nmub))
+    allocate (h1        (nmlb:nmub))
+    allocate (umod      (nmlb:nmub))
+    allocate (taub      (nmlb:nmub))
+    allocate (r0        (nfrac,nmlb:nmub))
+    allocate (r1        (nfrac,nmlb:nmub))
+    allocate (rn        (nfrac,nmlb:nmub))
+    allocate (ws        (nfrac,nmlb:nmub))
+    !
+    allocate (mass      (nfrac,nmlb:nmub))
+    allocate (massfluff (nfrac,nmlb:nmub))
+    allocate (sink      (nfrac,nmlb:nmub))
+    allocate (sinkf     (nfrac,nmlb:nmub))
+    allocate (sour      (nfrac,nmlb:nmub))
+    allocate (sourf     (nfrac,nmlb:nmub))
+
+    allocate (frac(nfrac,nmlb:nmub))
+    allocate (mfluff(nfrac,nmlb:nmub))
+    allocate (mudfrac (nmlb:nmub))
+
+
+    !
+    ! ================================================================================
+    !   USER INPUT
+    ! ================================================================================
+    !
+    !   Sediment properties (see also 'sedparams.inc')
+    !
+    sedtyp(1)   = SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+    sedtyp(2)   = SEDTYP_COHESIVE               ! cohesive sediment (mud)
+    cdryb       = 1650.0_fp                     ! dry bed density [kg/m3]
+    rhosol      = 2650.0_fp                     ! specific density [kg/m3]
+    sedd50      = 0.0001_fp                     ! 50% diameter sediment fraction [m]
+    sedd90      = 0.0002_fp                     ! 90% diameter sediment fraction [m]
+
+    frac = 0.5_fp
+    !
+    !   Initial bed composition
+    !
+    if (iunderlyr==2) then
+        if (flufflyr>0) then
+            mfluff  = 0.0_fp        ! composition of fluff layer: mass of mud fractions [kg/m2]
+        endif
+    endif
+    !
+    !   Initial flow conditions
+    !
+    chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
+    h1      = 3.0_fp        ! water depth [m]
+    umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
+    ws      = 0.001_fp      ! Settling velocity [m/s]
+    r1(1,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+    r1(2,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+    anymud      = .true.
+
+    do nm = nmlb, nmub
+        taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
+    enddo
+
+    ! Open file for producing output
+    inquire (file ='delft_sediment_test.out', exist = lexist)
+
+    if (lexist) then
+        write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
+        open (unit = 707, file = 'delft_sediment_test.out', status = 'REPLACE', action = 'WRITE')
+    else
+        open (unit = 707, file = 'delft_sediment_test.out', status = 'NEW', action = 'WRITE')
+    end if
+
+    write (707, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
+        'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
+    write (*, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
+        'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
+  
 
     !> create grid
     distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/),name="FABM0d grid")
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/),name="Erosed grid")
 
     !> create export fields
-    array = ESMF_ArrayCreate(distgrid,farray=din%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    din_field = ESMF_FieldCreate(grid, array, name="dissolved_inorganic_nitrogen_in_water", rc=rc)
-    array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
-    array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", rc=rc)
+    !array = ESMF_ArrayCreate(distgrid,farray=din%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    !din_field = ESMF_FieldCreate(grid, array, name="dissolved_inorganic_nitrogen_in_water", rc=rc)
+    !array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    !pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
+    !array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    !pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", rc=rc)
     !> set export state
-    call ESMF_StateAdd(exportState,(/din_field,pon_field,pon_ws_field/),rc=rc)
+    !call ESMF_StateAdd(exportState,(/din_field,pon_field,pon_ws_field/),rc=rc)
 
     !> set clock for 0d component
+#if 0
     call ESMF_TimeSet(clockTime)
     if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
       call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
@@ -121,6 +267,8 @@ module erosed_component
       gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
       
     endif
+#endif
+    call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
     
   end subroutine Initialize
 
@@ -139,9 +287,9 @@ module erosed_component
     call ESMF_TimeSet(clockTime)
     call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    write (logstring,'(A,I6,A,A)') "0d run(",n,") at ",timestring
+    write (logstring,'(A,I6,A,A)') "Erosed run(",n,") at ",timestring
     call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
-
+#if 0
     ! get import state
     if (forcing_from_coupler) then
       call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
@@ -154,10 +302,7 @@ module erosed_component
     gotm_time_max_n = gotm_time_min_n
    
     call time_loop_0d()
-
-    ! set export states
-    call update_export_state(din)
-    call update_export_state(pon)
+#endif
 
   end subroutine Run
 
@@ -167,27 +312,8 @@ module erosed_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    call finalize_0d()
+    !call finalize_0d()
 
   end subroutine Finalize
   
-    !> Actually, this should be an extension of ESMF_TimeSet 
-  subroutine timeString2ESMF_Time(timestring,time)
-    character(len=*), intent(in) :: timestring
-    type(ESMF_Time), intent(out) :: time
-
-    integer :: yy,mm,dd,h,m,s
-
-    read(timestring(1:4),'(i4)') yy
-    read(timestring(6:7),'(i2)') mm
-    read(timestring(9:10),'(i2)') dd
-    read(timestring(12:13),'(i2)') h
-    read(timestring(15:16),'(i2)') m
-    read(timestring(18:19),'(i2)') s
-
-    call ESMF_TimeSet(time,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s)
-
-  end subroutine timeString2ESMF_Time
-
-
 end module erosed_component
