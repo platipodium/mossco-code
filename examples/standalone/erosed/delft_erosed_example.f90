@@ -33,8 +33,7 @@ program example
 ! NONE
 !!--declarations----------------------------------------------------------------
 
-    use erosed_driver
-
+    use mossco_erosed
 
     !
     implicit none
@@ -324,8 +323,9 @@ program example
     deallocate (mfluff, frac)
     deallocate (sedtyp)
     deallocate (mudfrac)
-    deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
-                 & tcrdep,  tcrero, tcrfluff)
+    ! @todo uncomment next line
+    !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
+    !             & tcrdep,  tcrero, tcrfluff)
 
 end program example
 

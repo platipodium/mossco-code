@@ -49,7 +49,7 @@ run: examples
 archive:
 	@git archive --format=tar.gz --prefix=mossco-$(MOSSCO_DATE)/ HEAD > $(MOSSCO_DIR)/../mossco-$(MOSSCO_DATE).tar.gz
 ifdef MOSSCO_SF_USER
-	@rsync -e ssh -t $(MOSSCO_DIR)/../mossco-$(MOSSCO_DATE).tar.gz $(MOSSCO_SF_USER)@frs.sf.net:/home/pfs/p/mossco/Snapshots/
+	rsync -e ssh -t $(MOSSCO_DIR)/../mossco-$(MOSSCO_DATE).tar.gz $(MOSSCO_SF_USER)@frs.sf.net:/home/pfs/p/mossco/Snapshots/
 else
 	@echo "Please set the environment variable MOSSCO_SF_USER to your sourceforge user name."
 endif

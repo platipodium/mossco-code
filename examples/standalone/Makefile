@@ -8,7 +8,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/standalone$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -17,22 +17,12 @@ EXTRA_DIST=README
 
 # Determine examples to build
 SUBDIRS = 
-ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += esmf_remtc
 ifeq ($(MOSSCO_FABM),true)
-SUBDIRS += omexdia_p
-ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += esmf_sediment ocean_sediment
-ifeq ($(MOSSCO_GOTM),true)
-SUBDIRS += esmf_gotm esmf_fabm0d
-SUBDIRS += fabmsed_fabm0d
+#SUBDIRS += omexdia_p
 endif
-endif
-endif
-else
-ifeq ($(MOSSCO_FABM),true)
-SUBDIRS += omexdia_p
-endif
+
+ifeq ($(MOSSCO_DELFT),true)
+SUBDIRS += erosed
 endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS)
