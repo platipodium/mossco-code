@@ -1,17 +1,28 @@
-module erosed_driver
+!> @brief Implementation of a simplified erosed driver
+!
+!> This module implements the computation of sediment flux.
+!! The program computes the sediment entrainment and erosion rates for given
+!! fractions of cohesive and noncohesive sediment.
 
-! This program is a wrapper for the following Deltares-routines.
-! The program computes the sediment entrainment and erosion rates for given
-! fractions of cohesive and noncohesive sediment.
+!
+!  This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2012 Stichting Deltares 
+!>                          2013 Bundesanstalt für Wasserbau
+!> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau 
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 
+module mossco_erosed
 
 !This Module needs the following subroutines form delft-example programs:
 !eromud.f90
 !erosand.f90
 !sand_mud.f90
 !vanRijn84.f90
-!-------------------------------------------------------------------------------
-!  $Id: eromud.f90 7697 2012-11-16 14:10:17Z boer_aj $
 !  $HeadURL: https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example/source/     $
 !!--description-----------------------------------------------------------------
 
@@ -32,10 +43,10 @@ module erosed_driver
 !-------------------------------------------------------------------------------
 
 
-
 use precision
 
 implicit none
+
 ! global parameters
 !integer, parameter :: sp=kind(1.0e00)
 !integer, parameter :: hp=kind(1.0d00)
@@ -884,8 +895,4 @@ E = sandmud_arguments%E
 
 end subroutine get_erosion_velocity
 
-!*******END **********   Sandmud_argument Methods Block  *****END ***
-!*******************************************************************
-
-
-end module erosed_driver
+end module mossco_erosed
