@@ -2,23 +2,28 @@
 module erosed_component
 
   use esmf
-  use mossco_erosed, only : initerosed, erosed
+  use mossco_erosed, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
 
   implicit none
-! These Parameters are defined in sedparam.inc seperately for delft-routine
-integer, parameter :: SEDTYP_NONCOHESIVE_TOTALLOAD = 0
-integer, parameter :: SEDTYP_NONCOHESIVE_SUSPENDED = 1
-integer, parameter :: SEDTYP_COHESIVE              = 2
-
 
   public :: SetServices
 
   private
 
-  real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
-  type(ESMF_Field)            :: water_temperature_field
-  integer                     :: ubnd(3),lbnd(3)
+  ! These Parameters are defined in sedparam.inc seperately for delft-routine
+  integer, parameter :: SEDTYP_NONCOHESIVE_TOTALLOAD = 0
+  integer, parameter :: SEDTYP_NONCOHESIVE_SUSPENDED = 1
+  integer, parameter :: SEDTYP_COHESIVE              = 2
+
+  !! @todo hn: read CF documnetation for correct name of this
+  !size_classes_of_upward_flux_of_pim_at_bottom 
+ 
+  ! Dimensions (x,y,depth layer, fraction index) 
+  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
+  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
+  type(ESMF_Field)            :: upward_flux_Field, downward_flux_Field
+  integer                     :: ubnd(4),lbnd(4)
 
 
    integer                                    :: nmlb           ! first cell number
@@ -34,15 +39,11 @@ integer, parameter :: SEDTYP_COHESIVE              = 2
     integer                                     :: i            ! diffusion layer counter
     integer                                     :: l            ! sediment counter
     integer                                     :: nm           ! cell counter
-    integer                                     :: nstep        ! cell counter
    ! integer                                     :: istat        ! error flag
     integer     , dimension(:)  , allocatable   :: sedtyp       ! sediment type [-]
-    real(fp)                                    :: dt           ! time step [s]
     real(fp)                                    :: g            ! gravitational acceleration [m/s2]
     real(fp)                                    :: morfac       ! morphological scale factor [-]
     real(fp)                                    :: rhow         ! density of water [kg/m3]
-    real(fp)                                    :: tend         ! end time of computation [s]
-    real(fp)                                    :: tstart       ! start time of computation [s]
     real(fp)    , dimension(:)  , allocatable   :: cdryb        ! dry bed density [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: chezy        ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
     real(fp)    , dimension(:)  , allocatable   :: h0           ! water depth old time level [m]
@@ -107,26 +108,20 @@ contains
     real(ESMF_KIND_R8) :: dt
     character(len=80)  :: title
     character(len=256) :: din_variable='',pon_variable=''
-
-    ! read 0d namelist
+    integer(ESMF_KIND_I8) :: nlev
 
     call ESMF_LogWrite('Initializing Delft erosed component',ESMF_LOGMSG_INFO)
- 
+
+
+
     g       = 9.81_fp   ! gravitational acceleration [m/s2]
     rhow    = 1000.0_fp ! density of water [kg/m3]
     !
-    !
-    ! ================================================================================
-    !   USER INPUT  H.N.=> ToDo: namelist
-    ! ================================================================================
+    !! @todo   USER INPUT  H.N.=> ToDo: namelist
     !
     nmlb    = 1                 ! first cell number
     nmub    = 1                 ! last cell number
-    tstart  = 0.0               ! start time of computation [s]
-    tend    = 50000.0            ! end time of computation [s]
-    dt      = 100.0             ! time step [s]
     morfac  = 1.0               ! morphological scale factor [-]
-    nstep  = (tend-tstart)/dt;  ! number of time steps
     !
     ! -----------------------------------------------------------
     !
@@ -136,12 +131,12 @@ contains
                                 !  0: no fluff layer (default)
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
+    nlev=nmub-nmlb+1
 
 
+    call initerosed( nmlb, nmub, nfrac)
 
-   call initerosed( nmlb, nmub, nfrac)
-
-  allocate (cdryb     (nfrac))
+    allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
     allocate (sedd50    (nfrac))
     allocate (sedd90    (nfrac))
@@ -169,7 +164,6 @@ contains
     allocate (mudfrac (nmlb:nmub))
 
 
-    !
     ! ================================================================================
     !   USER INPUT
     ! ================================================================================
@@ -224,50 +218,20 @@ contains
   
 
     !> create grid
-    distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
+    distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,nmlb,1/), maxIndex=(/1,1,nmub,nfrac/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/),name="Erosed grid")
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,nmlb,1/),maxIndex=(/1,1,nmub,nfrac/),name="Erosed grid")
 
     !> create export fields
-    !array = ESMF_ArrayCreate(distgrid,farray=din%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    !din_field = ESMF_FieldCreate(grid, array, name="dissolved_inorganic_nitrogen_in_water", rc=rc)
+    array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_upward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    upward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_upward_flux_of_pim_at_bottom", rc=rc)
     !array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     !pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
     !array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     !pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", rc=rc)
     !> set export state
-    !call ESMF_StateAdd(exportState,(/din_field,pon_field,pon_ws_field/),rc=rc)
+    call ESMF_StateAdd(exportState,(/upward_flux_field/),rc=rc)
 
-    !> set clock for 0d component
-#if 0
-    call ESMF_TimeSet(clockTime)
-    if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
-      call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
-      call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-      call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
-
-      timestring=gotm_time_start(1:10)//"T"//gotm_time_start(12:19)
-      call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(parentClock,startTime=clockTime)
-      
-      timestring=gotm_time_stop(1:10)//"T"//gotm_time_stop(12:19)
-      call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(parentClock,stopTime=clockTime)
-    else !> get parent clock and overwrite namelist parameters
-      call ESMF_LogWrite('Set GOTM input from ESMF parent',ESMF_LOGMSG_INFO)
-      call ESMF_ClockGet(parentClock,startTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_start=timestring(1:10)//" "//timestring(12:19)
-
-      call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
-      call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-     
-      call ESMF_ClockGet(parentClock,stopTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
-      
-    endif
-#endif
     call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
     
   end subroutine Initialize
@@ -283,15 +247,19 @@ contains
     type(ESMF_Time)          :: clockTime
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
-    real(ESMF_KIND_R8)       :: runtimestepcount
+    real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
-    ! get global clock , set n to global/local, call 0d, advance local clock n steps., 
+    ! Get global clock properties
     call ESMF_TimeSet(clockTime)
     call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=advancecount,&
       runTimeStepCount=runtimestepcount,timeStep=timestep,rc=rc)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
     write (logstring,'(A,I6,A,A)') "Erosed run(",advancecount,") at ",timestring
     call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
+
+    call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=rc)
+
+
 #if 0
     ! get import state
     if (forcing_from_coupler) then
