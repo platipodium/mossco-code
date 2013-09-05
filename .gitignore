@@ -15,7 +15,9 @@ examples/esmf_gotm/esmf_gotm_example
 examples/esmf_fabm0d/esmf_fabm0d
 examples/esmf_fabm0d/output.dat
 examples/esmf_empty/esmf_empty
+examples/esmf_erosed/esmf_erosed
 examples/esmf_remtc/esmf_remtc
+examples/fabmsed_fabm0d/fabmsed_fabm0d
 examples/erosed/erosed_test
 examples/erosed/delft_sediment_test.out
 src/drivers/eromud.f90
@@ -26,3 +28,5 @@ src/drivers/sand_mud.f90
 src/drivers/sedparams.inc
 src/drivers/shld.f90
 src/drivers/vanRijn84.f90
+examples/standalone/erosed/delft_sediment_test.out
+examples/standalone/erosed/erosed_test

@@ -14,8 +14,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-#LIBS := -lmossco_delft -lmossco_erosed $(LIBS)
-LIBS := -lerosed $(LIBS)
+LIBS := -lerosed -lmossco_delft -lmossco_erosed -lesmf $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 

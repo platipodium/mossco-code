@@ -2,7 +2,7 @@
 module erosed_component
 
   use esmf
-  use mossco_erosed, only : initerosed
+  use mossco_erosed, only : initerosed, erosed
   use precision, only : fp
 
   implicit none
