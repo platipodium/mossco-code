@@ -19,6 +19,9 @@ EXTRA_DIST=README
 SUBDIRS = 
 ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += esmf_remtc
+ifeq ($(MOSSCO_DELFT),true)
+SUBDIRS += esmf_erosed
+endif
 ifeq ($(MOSSCO_FABM),true)
 SUBDIRS += omexdia_p
 ifeq ($(MOSSCO_ESMF),true)
