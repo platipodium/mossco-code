@@ -278,16 +278,19 @@ contains
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)    :: timestring
-    character(len=255)   ::logstring
-    type(ESMF_Time)      :: clockTime
-    integer(ESMF_KIND_I8)   :: n
+    character(len=19)        :: timestring
+    character(len=255)       :: logstring
+    type(ESMF_Time)          :: clockTime
+    type(ESMF_TimeInterval)  :: timestep
+    integer(ESMF_KIND_I8)    :: advancecount
+    real(ESMF_KIND_R8)       :: runtimestepcount
 
     ! get global clock , set n to global/local, call 0d, advance local clock n steps., 
     call ESMF_TimeSet(clockTime)
-    call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
+    call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=advancecount,&
+      runTimeStepCount=runtimestepcount,timeStep=timestep,rc=rc)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    write (logstring,'(A,I6,A,A)') "Erosed run(",n,") at ",timestring
+    write (logstring,'(A,I6,A,A)') "Erosed run(",advancecount,") at ",timestring
     call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
 #if 0
     ! get import state
@@ -297,12 +300,60 @@ contains
       zerod%temp = water_temperature(1,1,1)
     end if
 
-    ! use AdvanceCount from parent clock
-    gotm_time_min_n = n
-    gotm_time_max_n = gotm_time_min_n
-   
-    call time_loop_0d()
 #endif
+
+    call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
+
+    r0 = r1
+    h0 = h1
+
+    !   Computing erosion fluxes
+    call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
+                & ws        , umod    , h0        , chezy  , taub          , &
+                & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
+                & sink      , sinkf   , sour     , sourf                         )
+
+    !   Compute flow
+    ! HN. @ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
+    h1      = h0
+    umod    = abs(1.0_fp*sin(2*3.14*advancecount/runtimestepcount))
+
+    ! Loop over all depths
+    do nm = nmlb, nmub
+      taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm))
+    enddo
+
+    !   Updating sediment concentration in water column
+    do l = 1, nfrac
+            do nm = nmlb, nmub
+                rn(l,nm) = r0(l,nm) ! explicit
+!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
+
+             write (707, '(I4,4x,I4,4x,I5,4(4x,F8.4))' ) advancecount, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
+             write (*,  '(I4,4x,I4,4x,I5,4(4x,F8.4))' )  advancecount, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
+            enddo
+    enddo
+        !
+        !   Compute change in sediment composition of top layer and fluff layer
+        !
+    mass       = 0.0_fp    ! change in sediment composition of top layer, [kg/m2]
+    massfluff  = 0.0_fp    ! change in sediment composition of fluff layer [kg/m2]
+        !
+    do l = 1, nfrac
+            do nm = nmlb, nmub
+                !
+                ! Update dbodsd value at nm
+                !
+                mass(l, nm) = mass(l, nm) + dt*morfac*( sink(l,nm)*rn(l,nm) - sour(l,nm) )
+                !
+                ! Update dfluff value at nm
+                !
+                if (flufflyr>0) then
+                    massfluff(l, nm) = massfluff(l, nm) + dt*( sinkf(l,nm)*rn(l,nm) - sourf(l,nm) )
+                endif
+            enddo
+    enddo
+        !
 
   end subroutine Run
 
@@ -312,8 +363,37 @@ contains
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    !call finalize_0d()
+    close (707)
 
+    deallocate (cdryb)
+
+    deallocate (rhosol)
+    deallocate (sedd50)
+    deallocate (sedd90)
+    !
+    deallocate (chezy)
+    deallocate (h0)
+    deallocate (h1)
+    deallocate (umod)
+    deallocate (taub)
+    deallocate (r0)
+    deallocate (r1)
+    deallocate (rn)
+    deallocate (ws)
+    !
+    deallocate (mass)
+    deallocate (massfluff)
+    deallocate (sink)
+    deallocate (sinkf)
+    deallocate (sour)
+    deallocate (sourf)
+    !
+    deallocate (mfluff, frac)
+    deallocate (sedtyp)
+    deallocate (mudfrac)
+    !! @todo uncomment next line
+    !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
+    !             & tcrdep,  tcrero, tcrfluff)
   end subroutine Finalize
   
 end module erosed_component
