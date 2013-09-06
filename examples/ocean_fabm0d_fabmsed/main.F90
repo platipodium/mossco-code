@@ -1,7 +1,7 @@
 program main
    
    use esmf 
-   use esmf_toplevel_component, only: SetServices
+   use toplevel_component, only: SetServices
 
    implicit none
 

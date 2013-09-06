@@ -8,7 +8,7 @@
 !> The ESMF/FABM 0d driver component module provides infrastructure for the
 !! MOSSCO 0d pelagic component.
 
-module esmf_fabm_0d_component
+module fabm_0d_component
 
   use esmf
   use time, only: gotm_time_min_n => MinN, gotm_time_max_n => MaxN
@@ -35,14 +35,14 @@ module esmf_fabm_0d_component
   type(export_state_type)     :: din,pon
   logical                     :: forcing_from_coupler=.false.
 
-  public :: empty_SetServices
+  public :: SetServices
   
   contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
 
-  subroutine empty_SetServices(gridcomp, rc)
+  subroutine SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
@@ -51,7 +51,7 @@ module esmf_fabm_0d_component
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
-  end subroutine empty_SetServices
+  end subroutine SetServices
 
   !> Initialize the component
   !!
@@ -208,4 +208,4 @@ module esmf_fabm_0d_component
   end subroutine timeString2ESMF_Time
 
 
-end module esmf_fabm_0d_component
+end module fabm_0d_component

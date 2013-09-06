@@ -1,10 +1,10 @@
-module esmf_toplevel_component
+module toplevel_component
 
   use esmf
   use remtc_ocean, only: ocean_SetServices => SetServices
   use ocean_sediment_coupler, only: oscpl_SetServices => SetServices
   use esmf_fabm_sediment_component, only: sediment_SetServices => empty_SetServices
-  use esmf_fabm_0d_component, only: fabm0d_SetServices => SetServices
+  use fabm_0d_component, only: fabm0d_SetServices => SetServices
 
   implicit none
   
@@ -137,4 +137,4 @@ module esmf_toplevel_component
 
   end subroutine Finalize
 
-end module esmf_toplevel_component
+end module toplevel_component

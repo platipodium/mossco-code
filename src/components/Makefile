@@ -59,8 +59,8 @@ $(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
 $(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o 
 	$(AR) cruvs $@ gotm_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libfabm0d.a: esmf_fabm_0d_component.o
-	$(AR) cruvs $@ esmf_fabm_0d_component.o
+$(MOSSCO_LIBRARY_PATH)/libfabm0d.a: fabm_0d_component.o
+	$(AR) cruvs $@ fabm_0d_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
 	$(AR) cruvs $@ remtc_ocean.o
@@ -68,7 +68,7 @@ $(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
 $(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
 	$(AR) cruvs $@ remtc_atmosphere.o
 
-esmf_fabm_0d_component.o: esmf_fabm_0d_component.F90
+fabm_0d_component.o: fabm_0d_component.F90
 	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
@@ -84,7 +84,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/esmf_fabm_sediment_component.mod
-	@rm -f $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod
+	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod
 
 # External libraries
 libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a

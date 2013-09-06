@@ -29,8 +29,8 @@ LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a
 
 all: exec
 
-libfabm0d: prefix $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libfabm0d.a $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.o
+libfabm0d: prefix $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod $(MOSSCO_DIR)/src/components/fabm_0d_component.o
+	ar cruvs $(MOSSCO_LIBRARY_PATH)/libfabm0d.a $(MOSSCO_DIR)/src/components/fabm_0d_component.o
 	@echo "Created fabm0d library  $(MOSSCO_LIBRARY_PATH)/libfabm0d.a" 
 
 exec: main.o libfabm0d
