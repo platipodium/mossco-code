@@ -2,7 +2,7 @@
 module erosed_component
 
   use esmf
-  use mossco_erosed, only : initerosed, erosed, getfrac_dummy
+  use mossco_erosed, only : initerosed, erosed, getfrac_dummy 
   use precision, only : fp
 
   implicit none
@@ -60,7 +60,7 @@ module erosed_component
     real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
     real(fp)    , dimension(:,:), allocatable   :: sink         ! sediment sink flux [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sinkf        ! sediment sink flux fluff layer [m/s]
-    real(fp)    , dimension(:,:), allocatable   :: sour         ! sediment source flux [kg/m2/s]
+    real(fp)    , dimension(:,:), allocatable, target   :: sour         ! sediment source flux [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: sourf        ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
@@ -223,6 +223,9 @@ contains
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,nmlb,1/),maxIndex=(/1,1,nmub,nfrac/),name="Erosed grid")
 
     !> create export fields
+
+  !! @todo uncomment next line (or similar implementationw
+   !size_classes_of_upward_flux_of_pim_at_bottom(1,1,nmlb:nmub,1:nfrac) => sour(:,:)
     array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_upward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     upward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_upward_flux_of_pim_at_bottom", rc=rc)
     !array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
