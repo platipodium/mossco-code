@@ -1,3 +1,17 @@
+!> @brief Toplevel component for a 3-way coupled system
+!
+!> This module 3-way coupled system between ocean, sediment, and 0d biogeochemistry
+!
+!  This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
+
 module toplevel_component
 
   use esmf
@@ -56,6 +70,15 @@ module toplevel_component
     call ESMF_GridCompInitialize(sedimentComp,importState=sedimentImportState,exportState=sedimentExportState,&
       clock=parentClock,rc=rc)
 
+    fabm0dComp     = ESMF_GridCompCreate(name="ESMF/FABM 0d component", &          
+                         contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
+    call ESMF_GridCompSetServices(fabm0dComp, fabm0d_SetServices, rc=rc)
+    fabm0dImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabm0d Import")
+    fabm0dExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabm0d Export")
+    call ESMF_GridCompInitialize(fabm0dComp,importState=fabm0dImportState,exportState=fabm0dExportState,&
+      clock=parentClock,rc=rc)
+
+
     oceanComp     = ESMF_GridCompCreate(name="ESMF Ocean component", contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
     call ESMF_GridCompSetServices(oceanComp, ocean_SetServices, rc=rc)
     oceanImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="Ocean Import")
@@ -104,6 +127,11 @@ module toplevel_component
       call ESMF_GridCompRun(oceanComp,importState=oceanImportState,&
         exportState=oceanExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_GridCompRun(fabm0dComp,importState=fabm0dImportState,&
+        exportState=fabm0dExportState,clock=parentclock, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
    enddo 
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
@@ -121,9 +149,14 @@ module toplevel_component
     call ESMF_GridCompFinalize(sedimentComp,importState=sedimentImportState,exportState=sedimentExportState, &
                             clock=parentclock, rc=rc)
     call ESMF_GridCompDestroy(sedimentComp,rc=rc)
+    
     call ESMF_GridCompFinalize(oceanComp,importState=oceanImportState,exportState=oceanExportState, &
                             clock=parentclock, rc=rc)
     call ESMF_GridCompDestroy(oceanComp,rc=rc)
+  
+    call ESMF_GridCompFinalize(fabm0dComp,importState=fabm0dImportState,exportState=fabm0dExportState, &
+                            clock=parentclock, rc=rc)
+    call ESMF_GridCompDestroy(fabm0dComp,rc=rc)
   
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
    

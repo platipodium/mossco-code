@@ -1,12 +1,18 @@
-!> @file esmf_fabm_sediment_component.F90
-!! @brief ESMF/FABM sediment driver component
-!!
-!! The ESMF component contains the sediment driver module
-!! @author Carsten Lemmen
-!! @author Richard Hofmeister
-
+!> @brief ESMF/FABM sediment driver component
+!
 !> The ESMF/FABM sediment driver component module provides infrastructure for the
 !! MOSSCO sediment component.
+!
+!  This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 #include <cppdefs.h>
 #include "fabm_driver.h"
 #define _GRID_ sed%grid
@@ -89,7 +95,8 @@ module esmf_fabm_sediment_component
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
     integer(ESMF_KIND_I4) :: itemcount,fieldcount
   
-    !! read namelist input for control of time, this should not be done like this,
+    call ESMF_LogWrite('Initializing FABM sediment module',ESMF_LOGMSG_INFO)
+     !! read namelist input for control of time, this should not be done like this,
     !! but handled outside the component.  Maybe later introduce a local clock 
     open(33,file='run_sed.nml',action='read',status='old')
     read(33,nml=run_nml)
@@ -119,7 +126,6 @@ module esmf_fabm_sediment_component
     call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
     call init_sed_grid(sed%grid)
 
-    call ESMF_LogWrite('Initialise sediment module',ESMF_LOGMSG_INFO)
     call init_fabm_sed(sed)
     close(33)
 
@@ -139,7 +145,9 @@ module esmf_fabm_sediment_component
      
     call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
     if (itemcount==0) then
-      write(*,*) "No temperature information found, using default value 10 deg_C"
+      write(string,'(A)') "No temperature information found, using default value 10 deg_C"
+      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+      write(*,*)string
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
     else 
       call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
@@ -238,6 +246,7 @@ module esmf_fabm_sediment_component
     deallocate(fieldlist)
 
     call ESMF_StateAdd(exportState,fieldbundle,rc=rc)
+    call ESMF_LogWrite('Initialized FABM sediment module',ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 
