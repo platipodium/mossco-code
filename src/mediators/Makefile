@@ -40,7 +40,7 @@ $(MOSSCO_LIBRARY_PATH)/libaocoupler.a: remtc_atmos_ocean_coupler.o
 	$(AR) cruvs $@ remtc_atmos_ocean_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a: ocean_sediment_coupler.o
-	$(AR) cruvs $@ remtc_atmos_ocean_coupler.o
+	$(AR) cruvs $@ ocean_sediment_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a: vertical_mean_coupler.o
 	$(AR) cruvs $@ vertical_mean_coupler.o

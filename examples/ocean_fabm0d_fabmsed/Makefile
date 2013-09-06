@@ -22,7 +22,7 @@ LDFLAGS += -Wl,-force_load
 endif
 LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a 
 
-.PLDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec libocean libsediment liboceansedimentcoupler
 
