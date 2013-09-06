@@ -4,12 +4,17 @@ module esmf_toplevel_component
   use remtc_ocean, only: ocean_SetServices => SetServices
   use ocean_sediment_coupler, only: oscpl_SetServices => SetServices
   use esmf_fabm_sediment_component, only: sediment_SetServices => empty_SetServices
+  use esmf_fabm_0d_component, only: fabm0d_SetServices => SetServices
 
   implicit none
   
   private
 
   public SetServices
+
+  type(ESMF_GridComp),save    :: fabm0dComp
+  character(len=ESMF_MAXSTR)  :: fabm0dCompName 
+  type(ESMF_State)            :: fabm0dImportState, fabm0dExportState
 
   type(ESMF_GridComp),save    :: sedimentComp
   character(len=ESMF_MAXSTR)  :: sedimentCompName 
