@@ -134,7 +134,6 @@ module fabm_sediment_component
 
     call init_fabm_sed(sed)
     close(33)
-
     !! Allocate all arrays conc, bdys, fluxes 
    allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
     ! link conc to fabm_sediment_driver
