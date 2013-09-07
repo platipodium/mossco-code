@@ -27,8 +27,9 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 .PHONY: all exec libocean libsediment liboceansedimentcoupler
 
 all: exec
+exec: ocean_fabm0d_fabmsed
 
-exec: main.o toplevel_component.o libocean libsediment liboceansedimentcoupler libfabm0d
+ocean_fabm0d_fabmsed: main.o toplevel_component.o libocean libsediment liboceansedimentcoupler libfabm0d
 	$(F90) $(F90FLAGS) -o ocean_fabm0d_fabmsed  toplevel_component.o main.o $(LDFLAGS)
 	@echo "Created example binary ocean_fabm0d_fabmsed in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d_fabmsed/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d_fabmsed.txt
