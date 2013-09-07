@@ -242,7 +242,9 @@ module gotm_component
     call ESMF_TimeSet(clockTime)
     call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+#ifdef DEBUG
     call ESMF_LogWrite("GOTM run at "//timestring//")", ESMF_LOGMSG_INFO)
+#endif
 
     call update_time(n)
     call gotm_time_step()
