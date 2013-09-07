@@ -211,7 +211,9 @@ export LIBS
 
 export CPPFLAGS = $(DEFINES) $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 
-export LDFLAGS = $(ESMF_F90LINKOPTS)
+LDFLAGS += $(ESMF_F90LINKOPTS)
+LDFLAGS += $(LIBRARY_PATHS)
+export LDFLAGS
 
 # Make targets
 .PHONY: default all clean doc info prefix
@@ -241,6 +243,7 @@ info:
 	@echo F90FLAGS = $(F90FLAGS)
 	@echo CPPFLAGS = $(CPPFLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
+	@echo LIBS = $(LIBS)
 	@echo LINKDIRS = $(LINKDIRS)
 	@env | grep MOSSCO_ | sort 
 

@@ -13,15 +13,14 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LIBS := -lesmf $(LIBS)
 
 .PHONY: all exec
 
 all: exec
 
 exec: main.o toplevel_component.o
-	$(F90) $(F90FLAGS) -o esmf_empty toplevel_component.o main.o $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o esmf_empty toplevel_component.o main.o $(LDFLAGS) $(LIBS)
 	@echo "Created example binary esmf_empty in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_empty/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_empty.txt
 	
