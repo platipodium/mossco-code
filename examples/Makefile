@@ -16,7 +16,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 # Determine examples to build
-SUBDIRS = 
+SUBDIRS = standalone
 ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += esmf_remtc
 ifeq ($(MOSSCO_DELFT),true)

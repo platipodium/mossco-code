@@ -3,7 +3,7 @@ module esmf_toplevel_component
   use esmf
 
   ! Registration routines for fabm
-  use esmf_fabm_sediment_component, only : SetServices
+  use fabm_sediment_component, only : fabm_SetServices => SetServices
 
   implicit none
 
@@ -60,7 +60,7 @@ module esmf_toplevel_component
 
     ! Create component, call setservices, and create states
     fabmComp = ESMF_GridCompCreate(name="fabmComp", grid=grid, rc=rc)
-    call ESMF_GridCompSetServices(fabmComp,SetServices, rc=rc)
+    call ESMF_GridCompSetServices(fabmComp,fabm_SetServices, rc=rc)
     
     fabmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmImp")
     fabmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmExp")

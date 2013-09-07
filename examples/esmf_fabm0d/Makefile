@@ -34,15 +34,15 @@ libfabm0d: prefix $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod $(MOSSCO_DIR)/src/
 	@echo "Created fabm0d library  $(MOSSCO_LIBRARY_PATH)/libfabm0d.a" 
 
 exec: main.o libfabm0d
-	$(F90) $(F90FLAGS) -o esmf_fabm0d esmf_toplevel_component.o main.o $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o esmf_fabm0d toplevel_component.o main.o $(LDFLAGS)
 	@echo "Created example binary esmf_fabm0d in  $(PWD)" 
 	@echo "Please change to $(FABMDIR)/testcases/0d to run the example." > $(MOSSCO_BIN_PATH)/esmf_fabm0d.txt
 
 $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod: $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.F90
 	$(MAKE) -C $(MOSSCO_DIR)/src/components
 
-main.o: esmf_toplevel_component.o
-esmf_toplevel_component.o: esmf_toplevel_component.F90
+main.o: toplevel_component.o
+toplevel_component.o: toplevel_component.F90
 
 clean: extraclean
 

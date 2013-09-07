@@ -24,27 +24,27 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -lin
 
 all: exec
 
-exec: main.o libsediment libfabm0d esmf_toplevel_component.o
-	$(F90) $(F90FLAGS) -o fabmsed_fabm0d esmf_toplevel_component.o main.o $(LDFLAGS)
+exec: main.o libsediment libfabm0d toplevel_component.o
+	$(F90) $(F90FLAGS) -o fabmsed_fabm0d toplevel_component.o main.o $(LDFLAGS)
 	@echo "Created example binary fabmsed_fabm0d in  $(PWD)" 
 
-libsediment: prefix $(MOSSCO_MODULE_PATH)/esmf_fabm_sediment_component.mod $(MOSSCO_DIR)/src/components/esmf_fabm_sediment_component.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCO_DIR)/src/components/esmf_fabm_sediment_component.o
+libsediment: prefix $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod $(MOSSCO_DIR)/src/components/fabm_sediment_component.o
+	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCO_DIR)/src/components/fabm_sediment_component.o
 	@echo "Created sediment library  $(MOSSCO_LIBRARY_PATH)/libsediment.a" 
 
-libfabm0d: prefix $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libfabm0d.a $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.o
+libfabm0d: prefix $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod $(MOSSCO_DIR)/src/components/fabm_0d_component.o
+	ar cruvs $(MOSSCO_LIBRARY_PATH)/libfabm0d.a $(MOSSCO_DIR)/src/components/fabm_0d_component.o
 	@echo "Created fabm0d library  $(MOSSCO_LIBRARY_PATH)/libfabm0d.a" 
 
 
-$(MOSSCO_MODULE_PATH)/esmf_fabm0d_component.mod: $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.F90
+$(MOSSCO_MODULE_PATH)/fabm0d_component.mod: $(MOSSCO_DIR)/src/components/fabm_0d_component.F90
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libfabm0d
 
-main.o: esmf_toplevel_component.o
-esmf_toplevel_component.o: esmf_toplevel_component.F90   $(MOSSCO_MODULE_PATH)/esmf_fabm_sediment_component.mod  $(MOSSCO_MODULE_PATH)/esmf_fabm0d_component.mod
+main.o: toplevel_component.o
+toplevel_component.o: toplevel_component.F90   $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod  $(MOSSCO_MODULE_PATH)/fabm0d_component.mod
 
 
-$(MOSSCO_MODULE_PATH)/esmf_fabm_sediment_component.mod:
+$(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libsediment
 
 clean: extraclean

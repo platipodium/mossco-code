@@ -20,13 +20,13 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 all: exec
 
-exec: main.o esmf_toplevel_component.o
-	$(F90) $(F90FLAGS) -o esmf_empty esmf_toplevel_component.o main.o $(LDFLAGS)
+exec: main.o toplevel_component.o
+	$(F90) $(F90FLAGS) -o esmf_empty toplevel_component.o main.o $(LDFLAGS)
 	@echo "Created example binary esmf_empty in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_empty/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_empty.txt
 	
-main.o: esmf_toplevel_component.o
-esmf_toplevel_component.o: esmf_toplevel_component.F90
+main.o: toplevel_component.o
+toplevel_component.o: toplevel_component.F90
 
 clean: extraclean
 
