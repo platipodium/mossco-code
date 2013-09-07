@@ -3,7 +3,7 @@ module esmf_toplevel_component
   use esmf
 
   ! Registration routines for fabm0d
-  use esmf_fabm_0d_component, only : empty_SetServices
+  use fabm_0d_component, only : SetServices
 
   implicit none
 
@@ -54,7 +54,7 @@ module esmf_toplevel_component
 
     ! Create component, call setservices, and create states
     fabm0dComp = ESMF_GridCompCreate(name="fabm0dComp", grid=grid, rc=rc)
-    call ESMF_GridCompSetServices(fabm0dComp,empty_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(fabm0dComp,SetServices, rc=rc)
     
     fabm0dImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabm0dImp")
     fabm0dExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabm0dExp")

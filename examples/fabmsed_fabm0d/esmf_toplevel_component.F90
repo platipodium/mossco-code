@@ -3,8 +3,8 @@ module esmf_toplevel_component
   use esmf
 
   ! Registration routines for fabm0d
-  use esmf_fabm_0d_component, only : fabm0d_SetServices => empty_SetServices
-  use esmf_fabm_sediment_component, only : fabmsed_SetServices => empty_SetServices
+  use fabm_0d_component, only : fabm0d_SetServices => SetServices
+  use fabm_sediment_component, only : fabmsed_SetServices => SetServices
 
   implicit none
 

@@ -249,7 +249,8 @@ module gotm_component
     
     do k=1,nlev
       water_temperature(:,:,k) = gotm_temperature(k)
-      grid_height(:,:,k) = gotm_depth(k)
+     !!@todo uncomment next line
+      !grid_height(:,:,k) = gotm_depth(k)
     enddo
 
     !> Check if the output alarm is ringing, if so, quiet it and 

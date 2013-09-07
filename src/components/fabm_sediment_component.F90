@@ -47,14 +47,14 @@ module fabm_sediment_component
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
  
-  public :: empty_SetServices
+  public :: SetServices
   
   contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
 
-  subroutine empty_SetServices(gridcomp, rc)
+  subroutine SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
@@ -63,7 +63,7 @@ module fabm_sediment_component
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
-  end subroutine empty_SetServices
+  end subroutine SetServices
 
   !> Initialize the component
   !!
