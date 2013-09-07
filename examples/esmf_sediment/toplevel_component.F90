@@ -42,10 +42,9 @@ module esmf_toplevel_component
     real(ESMF_KIND_R8),dimension(:,:),allocatable :: farray
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet)
 
     ! Create component, call setservices, and create states
-    fabmComp = ESMF_GridCompCreate(name="fabmComp", grid=grid, rc=rc)
+    fabmComp = ESMF_GridCompCreate(name="fabmComp", rc=rc)
     call ESMF_GridCompSetServices(fabmComp,fabm_SetServices, rc=rc)
     
     fabmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmImp")
@@ -71,7 +70,7 @@ module esmf_toplevel_component
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
-      call ESMF_GridCompRun(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
+      !call ESMF_GridCompRun(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
 
     enddo 
 

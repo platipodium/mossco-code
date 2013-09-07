@@ -130,7 +130,7 @@ module fabm_sediment_component
     write(string,'(A,I3,A)') 'Initialise grid with ',sed%grid%knum,' vertical layers'
     call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
     call init_sed_grid(sed%grid)
-    call init_fabm_sed(sed)
+!   call init_fabm_sed(sed)
     close(33)
     !! Allocate all arrays conc, bdys, fluxes 
     allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar)) 
