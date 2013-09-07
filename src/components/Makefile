@@ -53,8 +53,8 @@ libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
 	$(AR) cruvs $@ erosed_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libsediment.a: esmf_fabm_sediment_component.o
-	$(AR) cruvs $@ esmf_fabm_sediment_component.o
+$(MOSSCO_LIBRARY_PATH)/libsediment.a: fabm_sediment_component.o
+	$(AR) cruvs $@ fabm_sediment_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o 
 	$(AR) cruvs $@ gotm_component.o
@@ -83,7 +83,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
-	@rm -f $(MOSSCO_MODULE_PATH)/esmf_fabm_sediment_component.mod
+	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod
 
 # External libraries

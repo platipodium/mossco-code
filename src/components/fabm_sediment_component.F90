@@ -23,7 +23,7 @@
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 
-module esmf_fabm_sediment_component
+module fabm_sediment_component
 
   use esmf
   use fabm
@@ -79,21 +79,26 @@ module esmf_fabm_sediment_component
 
     type(ESMF_TimeInterval) :: timeInterval,alarmInterval
     type(ESMF_Time)         :: startTime
-    character(len=ESMF_MAXSTR) :: string,filename
+    character(len=ESMF_MAXSTR) :: string,fileName
     type(ESMF_Config)     :: config
-    type(ESMF_FieldBundle) :: fieldbundle(3)
-    type(ESMF_Field), allocatable, dimension(:) :: fieldlist
+    type(ESMF_FieldBundle) :: fieldBundle(3)
+    type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Field)     :: field
     type(ESMF_Array)     :: array
     integer              :: i
-    type(ESMF_DistGrid)  :: distgrid
+    type(ESMF_DistGrid)  :: distGrid
     type(ESMF_Grid)      :: grid
-    type(ESMF_ArraySpec) :: arrayspec
+    type(ESMF_ArraySpec) :: arraySpec
 
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
     integer(ESMF_KIND_I4) :: itemcount,fieldcount
+
+    type(ESMF_Array) :: temperatureArray,phosphateArray
+    type(ESMF_Array) :: nitrateArray,ammoniaArray,oxygenarray,oduArray
+    type(ESMF_Array) :: fdetArray,sdetArray,pdetArray
+    type(ESMF_Array),dimension(:), allocatable :: concArrays
   
     call ESMF_LogWrite('Initializing FABM sediment module',ESMF_LOGMSG_INFO)
      !! read namelist input for control of time, this should not be done like this,
@@ -115,6 +120,7 @@ module esmf_fabm_sediment_component
     !! used to create an alarm
     call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
     outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=startTime+alarmInterval,ringInterval=alarmInterval,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! The grid specification should also go to outside this routine, and update the grid of
     !! this component, numlayers and dzmin are read from nml
@@ -130,9 +136,7 @@ module esmf_fabm_sediment_component
     close(33)
 
     !! Allocate all arrays conc, bdys, fluxes 
-    call ESMF_LogWrite('Allocate arrays',ESMF_LOGMSG_INFO)
-    
-    allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
+   allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
     ! link conc to fabm_sediment_driver
     sed%conc => conc
     ! initialise values
@@ -185,67 +189,58 @@ module esmf_fabm_sediment_component
     end do
     write(funit,*)
 
-    call ESMF_GridCompGet(gridComp,grid=grid,rc=rc)
-    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+    distGrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,sed%grid%knum/), &
+                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !! Define the 2D boundary condition fields and collect them in a FieldBundle
-    fieldcount=sed%nvar+1
-    allocate(fieldlist(fieldcount))
-    ptr_f2 =>   bdys(:,:,1)
-    fieldlist(1) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="Temperature",rc=rc)
-    ptr_f2 =>   bdys(:,:,5)
-    fieldlist(5) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="Phosphate",rc=rc)
-    ptr_f2 =>   bdys(:,:,6)
-    fieldlist(6) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="Nitrate",rc=rc)
-    ptr_f2 =>   bdys(:,:,7)
-    fieldlist(7) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="Ammonia",rc=rc)
-    ptr_f2 =>   bdys(:,:,8)
-    fieldlist(8) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="Oxygen",rc=rc)
-    ptr_f2 =>   bdys(:,:,9)
-    fieldlist(9) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="odu",rc=rc)
-    fieldbundle(1) = ESMF_FieldBundleCreate(name="Boundary conditions",rc=rc)
-    call ESMF_FieldBundleAdd(fieldbundle(1),fieldlist((/1,5,6,7,8,9/)),rc=rc)
-    deallocate(fieldlist)
+    ! Create ESMF arrays for boundary conditions
+    temperatureArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,1), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="water_temperature", rc=rc)
+    phosphateArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,5), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="dissolved_inorganic_phosphate_in_water", rc=rc)
+    nitrateArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,6), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="dissolved_inorganic_nitrate_in_water", rc=rc)
+    ammoniaArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,7), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="dissolved_inorganic_ammonia_in_water", rc=rc)
+    oxygenArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,8), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="dissolved_oxygen_in_water", rc=rc)
+    oduArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,9), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="oxygen_demand", rc=rc)
 
-    !! Define the 2D flux condition fields and collect them in a FieldBundle
-    fieldcount=sed%nvar
-    allocate(fieldlist(fieldcount))
-    ptr_f2 =>   fluxes(:,:,1)
-    fieldlist(1) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="fdet",rc=rc)
-    ptr_f2 =>   fluxes(:,:,2)
-    fieldlist(2) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="sdet",rc=rc)
-    ptr_f2 =>   bdys(:,:,3)
-    fieldlist(3) = ESMF_FieldCreate(grid,ptr_f2,staggerloc &
-                 = ESMF_STAGGERLOC_CENTER, name="pdet",rc=rc)
-    fieldbundle(2) = ESMF_FieldBundleCreate(name="Flux conditions",rc=rc)
-    call ESMF_FieldBundleAdd(fieldbundle(2),fieldlist((/1,2,3/)),rc=rc)
-    deallocate(fieldlist)
+    !> set export state
+    call ESMF_StateAddReplace(exportState,(/temperatureArray,phosphateArray,&
+      nitrateArray,ammoniaArray,oxygenarray,oduArray/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !! Define the 3d concentrations and collect them in FieldBundle
-    fieldcount=sed%nvar
-    allocate(fieldlist(fieldcount))
-    do i=1,fieldcount
-      ptr_f3 =>  conc(:,:,:,i)
+    ! Create ESMF arrays for fluxes
+    fdetArray = ESMF_ArrayCreate(distgrid=distgrid,farray=fluxes(:,:,1), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="fdet", rc=rc)
+    sdetArray = ESMF_ArrayCreate(distgrid=distgrid,farray=fluxes(:,:,2), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="sdet", rc=rc)
+    pdetArray = ESMF_ArrayCreate(distgrid=distgrid,farray=fluxes(:,:,3), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name="pdet", rc=rc)
+ 
+    call ESMF_StateAddReplace(exportState,(/fdetArray,sdetArray,pdetArray/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    ! Create ESMF arrays for concentrations
+    do i=1,sed%nvar
       write(string,'(A,I0.3)') 'Var',i
-      fieldlist(i) = ESMF_FieldCreate(grid,ptr_f3,staggerloc &
-                   = ESMF_STAGGERLOC_CENTER, name=trim(string),rc=rc)
+      concArrays(i) = ESMF_ArrayCreate(distgrid=distgrid,farray=conc(:,:,:,i), &
+        indexflag=ESMF_INDEX_GLOBAL, name=string, rc=rc)
     enddo
-    fieldbundle(3) = ESMF_FieldBundleCreate(name="Concentrations",rc=rc)
-    call ESMF_FieldBundleAdd(fieldbundle(3),fieldlist,rc=rc)
-    !call ESMF_FieldWrite(fieldlist(1),"initialization_state.nc",iofmt=ESMF_IOFMT_NETCDF,rc=rc)
-    !call ESMF_FieldBundleWrite(fieldbundle(1),"initialization_state.nc",singleFile=.true.,iofmt=ESMF_IOFMT_NETCDF,rc=rc)
-    if (rc  /= ESMF_SUCCESS ) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    deallocate(fieldlist)
-
-    call ESMF_StateAdd(exportState,fieldbundle,rc=rc)
+    call ESMF_StateAddReplace(exportState,concArrays,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
     call ESMF_LogWrite('Initialized FABM sediment module',ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
@@ -345,4 +340,4 @@ module esmf_fabm_sediment_component
 
   end subroutine Finalize
 
-end module esmf_fabm_sediment_component
+end module fabm_sediment_component
