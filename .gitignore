@@ -8,6 +8,7 @@ modules/
 *.mod
 *.swp
 *.log
+*swr.png
 PET?.*
 doc/latex
 doc/html

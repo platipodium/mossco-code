@@ -22,11 +22,13 @@ EXTRA_DIST=README
 
 all: libsolver
 
-libsolver: prefix $(MOSSCO_MODULE_PATH)/solver_library.mod solver_library.o
+libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a
+
+$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
+
+$(MOSSCO_LIBRARY_PATH)/libsolver.a: solver_library.o
 	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsolver.a solver_library.o
 	@echo "Created solver library  $(MOSSCO_LIBRARY_PATH)/libsolver.a" 
-
-$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.o
 
 clean: extraclean
 extraclean:

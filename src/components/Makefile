@@ -33,7 +33,7 @@ TARGETS += libgotm libfabm0d
 endif
 endif
 
-.PHONY: $(TARGETS)
+.PHONY: $(TARGETS) libgotm_external
 
 #--------------------------------------
 # Make targets
@@ -56,7 +56,7 @@ $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: fabm_sediment_component.o
 	$(AR) cruvs $@ fabm_sediment_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o 
+$(MOSSCO_LIBRARY_PATH)/libgotm.a: gotm_component.o libgotm_external
 	$(AR) cruvs $@ gotm_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libfabm0d.a: fabm_0d_component.o
@@ -88,6 +88,7 @@ extraclean:
 
 # External libraries
 libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
+
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
 	$(MAKE) -C $(FABMDIR)/src gotm
 	$(MAKE) -C $(GOTMDIR)/src

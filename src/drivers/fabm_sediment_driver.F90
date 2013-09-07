@@ -260,15 +260,14 @@ end subroutine get_rhs
 !> finalize the FABM sediment driver
 !!
 !! deallocate all the arrays
-
 subroutine finalize_fabm_sed()
 
-deallocate(zeros2dv)
-deallocate(zeros3dv)
-deallocate(zeros2d)
-deallocate(ones3d)
-deallocate(transport)
-deallocate(diff)
+  if (allocated(zeros2dv)) deallocate(zeros2dv)
+  if (allocated(zeros3dv)) deallocate(zeros3dv)
+  if (allocated(zeros2d))  deallocate(zeros2d)
+  if (allocated(ones3d))    deallocate(ones3d)
+  if (allocated(transport)) deallocate(transport)
+  if (allocated(diff))      deallocate(diff)
 
 end subroutine finalize_fabm_sed
 

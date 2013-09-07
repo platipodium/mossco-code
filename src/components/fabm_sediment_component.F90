@@ -121,27 +121,24 @@ module fabm_sediment_component
     call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
     outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=startTime+alarmInterval,ringInterval=alarmInterval,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+ 
     !! The grid specification should also go to outside this routine, and update the grid of
     !! this component, numlayers and dzmin are read from nml
     sed%grid%knum=numlayers
     sed%grid%dzmin=dzmin
-
     !! Write log entries
     write(string,'(A,I3,A)') 'Initialise grid with ',sed%grid%knum,' vertical layers'
     call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
     call init_sed_grid(sed%grid)
-
     call init_fabm_sed(sed)
     close(33)
     !! Allocate all arrays conc, bdys, fluxes 
-   allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
+    allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar)) 
     ! link conc to fabm_sediment_driver
     sed%conc => conc
     ! initialise values
     conc = 0.0_rk
     call init_fabm_sed_concentrations(sed)
-
     !> Allocate boundary conditions and initialize with zero
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
     bdys(1:_INUM_,1:_JNUM_,1:9) = 0.0_rk
@@ -154,6 +151,8 @@ module fabm_sediment_component
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
     else 
       call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
+      write(string,'(A)') "Water temperature information found"
+      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
       !call ESMF_FieldGet(field,farrayPtr=fptr2d,rc=rc) !> @todo SEGFAULT
       !bdys(:,:,1) = fptr2d   ! degC temperature
     endif
@@ -318,7 +317,7 @@ module fabm_sediment_component
       end do
     endif
  
-    deallocate(fieldlist)
+    if (allocated(fieldList)) deallocate(fieldlist)
 
   end subroutine Run
 
@@ -331,9 +330,9 @@ module fabm_sediment_component
     close(funit)
 
     call finalize_fabm_sed()
-    deallocate(conc)
-    deallocate(bdys)
-    deallocate(fluxes)
+    if (allocated(conc)) deallocate(conc)
+    if (allocated(bdys)) deallocate(bdys)
+    if (allocated(fluxes)) deallocate(fluxes)
 
     call ESMF_AlarmDestroy(outputAlarm,rc=rc)
 
