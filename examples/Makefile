@@ -23,7 +23,6 @@ ifeq ($(MOSSCO_DELFT),true)
 SUBDIRS += esmf_erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
-SUBDIRS += omexdia_p
 ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += esmf_sediment
 ifeq ($(MOSSCO_GOTM),true)
@@ -32,10 +31,6 @@ SUBDIRS += fabmsed_fabm0d
 SUBDIRS += ocean_fabm0d_fabmsed
 endif
 endif
-endif
-else
-ifeq ($(MOSSCO_FABM),true)
-SUBDIRS += omexdia_p
 endif
 endif
 

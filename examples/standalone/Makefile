@@ -18,7 +18,7 @@ EXTRA_DIST=README
 # Determine examples to build
 SUBDIRS = 
 ifeq ($(MOSSCO_FABM),true)
-#SUBDIRS += omexdia_p
+SUBDIRS += omexdia_p
 endif
 
 ifeq ($(MOSSCO_DELFT),true)
