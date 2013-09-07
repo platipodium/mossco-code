@@ -268,10 +268,10 @@ module fabm_sediment_component
     call ESMF_TimeSyncToRealTime(wallTime)
     call ESMF_TimeGet(wallTime,timeStringISOFrac=timestring2)
   
- 
-    call ESMF_LogWrite("Empty run at "//timestring1 &
+#ifdef DEBUG 
+    call ESMF_LogWrite("FABM-Sediment run at "//timestring1 &
       //" ("//timestring2//")", ESMF_LOGMSG_INFO)
-
+#endif
 
     !call ESMF_StatePrint(importState,options="long",nestedFlag=.true.,rc=rc)
     call ESMF_StateGet(importState,"FABM field bundle",fieldBundle,rc=rc)

@@ -157,8 +157,10 @@ module fabm_0d_component
     call ESMF_TimeSet(clockTime)
     call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+#ifdef DEBUG
     write (logstring,'(A,I6,A,A)') "0d run(",n,") at ",timestring
     call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
+#endif
 
     ! get import state
     if (forcing_from_coupler) then
