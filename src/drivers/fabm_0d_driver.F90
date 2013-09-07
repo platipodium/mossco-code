@@ -17,7 +17,7 @@
    private
 
    public init_run, time_loop, clean_up
-   public get_export_state_from_variable_name, update_export_state
+   public get_export_state_from_variable_name, update_export_states
 
    integer, parameter        :: namlst=10, out_unit = 12, bio_unit=22
    integer, parameter        :: READ_SUCCESS=1
@@ -53,7 +53,7 @@
    real(rk),allocatable      :: totals(:,:,:,:)
    character(len=128)        :: cbuf
 
-   type,extends(rhs_driver), public :: type_fabm0d !< sediment driver class (extends rhs_driver)
+   type,extends(rhs_driver), public :: type_fabm0d !< FABM0d driver class (extends rhs_driver)
        type(type_model),pointer       :: model
        real(rk),dimension(1:1,1:1,1:1) :: temp,salt,par,dens,current_depth
        real(rk),dimension(1:1,1:1)     :: wind_sf,taub,par_sf
@@ -62,7 +62,7 @@
        procedure :: get_rhs
    end type type_fabm0d
 
-   type,public :: export_state_type
+   type,public :: export_state_type !< FABM0d driver type for export states
        character(len=256) :: standard_name=''
        integer            :: fabm_id=-1
        logical            :: particulate=.false.
@@ -75,7 +75,7 @@
    interface
       function short_wave_radiation(jul,secs,dlon,dlat,cloud,bio_albedo) result(swr)
          import
-         integer, intent(in)                 :: jul,secs
+          integer, intent(in)                 :: jul,secs
          real(rk), intent(in)                :: dlon,dlat
          real(rk), intent(in)                :: cloud
          real(rk), intent(in)                :: bio_albedo
@@ -510,6 +510,8 @@ end subroutine get_rhs
    end subroutine clean_up
 
 
+!> Initializes a FABM0d export state by FABM variable name
+
    subroutine get_export_state_from_variable_name(export_state,varname)
    type(export_state_type), intent(inout) :: export_state
    character(len=256), intent(in)         :: varname
@@ -531,17 +533,24 @@ end subroutine get_rhs
    end subroutine get_export_state_from_variable_name
 
 
-   subroutine update_export_state(export_state)
-   type(export_state_type), intent(inout) :: export_state
-   real(rk),allocatable :: wstmp(:,:,:,:)
+!> update FABM0d export states pointers and sinking velocities using a list of export states
 
-   export_state%conc => zerod%conc(:,:,:,export_state%fabm_id)
+   subroutine update_export_states(export_states)
+   type(export_state_type), target :: export_states(:)
+   real(rk),allocatable :: wstmp(:,:,:,:)
+   type(export_state_type),pointer :: export_state
+   integer :: n
+
    allocate(wstmp(1,1,1,zerod%nvar))
    call fabm_get_vertical_movement(zerod%model,1,1,1,wstmp(1,1,1,:))
-   export_state%ws = wstmp(1,1,1,export_state%fabm_id)
+   do n=1,size(export_states)
+     export_state => export_states(n)
+     export_state%conc => zerod%conc(:,:,:,export_state%fabm_id)
+     export_state%ws = wstmp(1,1,1,export_state%fabm_id)
+   end do
    deallocate(wstmp)
 
-   end subroutine update_export_state
+   end subroutine update_export_states
 
    end module mossco_fabm0d
 
