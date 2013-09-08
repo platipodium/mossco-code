@@ -22,6 +22,9 @@ examples/esmf_remtc/esmf_remtc
 examples/fabmsed_fabm0d/fabmsed_fabm0d
 examples/ocean_fabm0d_fabmsed/ocean_fabm0d_fabmsed
 examples/ocean_fabm0d_fabmsed/output.dat
+examples/ocean_fabm0d_fabmsed/output_0d.dat
+examples/ocean_fabm0d/ocean_fabm0d
+examples/ocean_fabm0d/output_0d.dat
 examples/erosed/erosed_test
 examples/erosed/delft_sediment_test.out
 src/drivers/eromud.f90
