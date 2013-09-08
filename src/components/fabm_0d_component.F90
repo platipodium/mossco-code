@@ -20,7 +20,7 @@ module fabm_0d_component
   use mossco_fabm0d, only: time_loop_0d => time_loop
   use mossco_fabm0d, only: finalize_0d => clean_up
   use mossco_fabm0d, only: zerod, export_state_type
-  use mossco_fabm0d, only: get_export_state_from_variable_name, update_export_states
+  use mossco_fabm0d, only: get_export_state_from_variable_name, update_export_state
 
   implicit none
 
@@ -176,7 +176,8 @@ module fabm_0d_component
     call time_loop_0d()
 
     ! set export states
-    call update_export_states( (/din,pon/) )
+    call update_export_state(din) 
+    call update_export_state(pon)
 
   end subroutine Run
 

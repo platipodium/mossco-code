@@ -2,7 +2,7 @@
 !
 !> This module implements a flat 2D ocean, that heats with forcing at the surface
 !> The ocean component imports a "air_temperature_at_surface"
-!> The ocean exports "water_temperature_at_surface"
+!> The ocean exports "water_temperature"
 !
 !  This computer program is part of MOSSCO. 
 !> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
@@ -23,9 +23,9 @@ module remtc_ocean
   
   private
 
-  real(ESMF_KIND_R8), pointer :: water_temperature_at_surface(:,:)
+  real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
   real(ESMF_KIND_R8), pointer :: air_temperature_at_surface(:,:)
-  type(ESMF_Field)            :: water_temperature_at_surface_Field
+  type(ESMF_Field)            :: water_temperature_Field
   type(ESMF_Field)            :: air_temperature_at_surface_Field
 
   public SetServices
@@ -57,8 +57,8 @@ module remtc_ocean
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
-    integer                     :: lbnd(2), ubnd(2)
-    integer                     :: myrank,i,j
+    integer                     :: lbnd(3), ubnd(3)
+    integer                     :: myrank,i,j,k
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
  
     integer(ESMF_KIND_I4),allocatable :: deBlockList(:,:,:)
@@ -111,24 +111,26 @@ module remtc_ocean
 
     !> Create a water temperature field with a 2D array specification, fill the temperature
     !> field with some values, add the field to the ocean's export state
-    call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    water_temperature_at_surface_Field = ESMF_FieldCreate(grid, arrayspec, name="water_temperature_at_surface", &
+    water_temperature_Field = ESMF_FieldCreate(grid, arrayspec, name="water_temperature", &
       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_FieldGet(water_temperature_at_surface_Field, farrayPtr=water_temperature_at_surface,totalLBound=lbnd,&
+    call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature,totalLBound=lbnd,&
       totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     do i=lbnd(1),ubnd(1) 
       do j=lbnd(2),ubnd(2)
-        water_temperature_at_surface =  20 + 0.1*(i+j)
+        do k=lbnd(3),ubnd(3)
+          water_temperature =  20 + 0.1*(i+j)
+        enddo
       enddo
     enddo
 
-    call ESMF_StateAdd(exportState,(/water_temperature_at_surface_Field/),rc=rc)
+    call ESMF_StateAdd(exportState,(/water_temperature_Field/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Create an air surface temperature field with a 2D array specification, add the field
@@ -155,17 +157,16 @@ module remtc_ocean
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer                     :: myrank, ib, ie, jb, je
+    integer(ESMF_KIND_I8)       :: ku,kl,k 
+    integer(ESMF_KIND_I4)       :: myrank
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
     character (len=ESMF_MAXSTR) :: message
     integer(ESMF_KIND_I8)       :: advancecount
     integer(ESMF_KIND_I4)       :: printcount
      
-    ib = lbound(water_temperature_at_surface,1)
-    ie = ubound(water_temperature_at_surface,1)
-    jb = lbound(water_temperature_at_surface,2)
-    je = ubound(water_temperature_at_surface,2)
+    kl = lbound(water_temperature,3)
+    ku = ubound(water_temperature,3)
 
     call ESMF_GridCompGet(gridComp, localPet=myrank, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -184,14 +185,16 @@ module remtc_ocean
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Do something
-    water_temperature_at_surface = water_temperature_at_surface *0.009d0 + air_temperature_at_surface * 0.001d0
+    do k=kl,ku
+      water_temperature(:,:,k) = water_temperature(:,:,k) *0.009d0 + air_temperature_at_surface * 0.001d0
+    enddo
 
 !> @todo do we need to communicate the update of water_temp back to export state? Why do we need to get air temp from 
 !> import state anyhow? 
 
 ! Output to netCDF files
     printcount=int(advancecount,ESMF_KIND_I4)
-    !call ESMF_FieldWrite(water_temperature_at_surface_Field, file="water_temperature_at_surface.nc", timeslice=printcount, rc=rc)
+    !call ESMF_FieldWrite(water_temperature_Field, file="water_temperature.nc", timeslice=printcount, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Run
@@ -207,10 +210,15 @@ module remtc_ocean
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    call ESMF_FieldDestroy(water_temperature_at_surface_Field, rc=rc)
+    call ESMF_FieldDestroy(water_temperature_Field, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldDestroy(air_temperature_at_surface_Field, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !if (allocated(water_temperature)) deallocate(water_temperature)
+    !if (allocated(air_temperature_at_surface)) deallocate(air_temperature_at_surface)
+    nullify(water_temperature)
+    nullify(air_temperature_at_surface)
 
     call ESMF_LogWrite("Remtc Ocean component finalized", ESMF_LOGMSG_INFO)
 
