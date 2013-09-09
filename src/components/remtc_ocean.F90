@@ -125,19 +125,17 @@ module remtc_ocean
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Do the same for air temperature input
-    allocate(air_temperature(40,50,1))
-    air_temperature_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=air_temperature, &
-      indexflag=ESMF_INDEX_GLOBAL, name="air_temperature", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    air_temperature_Field = ESMF_FieldCreate(grid=grid, array=air_temperature_Array,&
-       name="air_temperature", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !allocate(air_temperature(40,50,1))
+    !air_temperature_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=air_temperature, &
+    !  indexflag=ESMF_INDEX_GLOBAL, name="air_temperature", rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !air_temperature_Field = ESMF_FieldCreate(grid=grid, array=air_temperature_Array,&
+    !   name="air_temperature", rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
      
 
-    call ESMF_StateAddReplace(importState,(/air_temperature_Field/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-
+    !call ESMF_StateAddReplace(importState,(/air_temperature_Field/),rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_LogWrite("Remtc Ocean component initialized.",ESMF_LOGMSG_INFO)
   end subroutine Initialize
@@ -176,16 +174,18 @@ module remtc_ocean
 
 ! Get import state and extract arrays
     call ESMF_StateGet(importState, "air_temperature", air_temperature_Field, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (rc == ESMF_SUCCESS) then
+      call ESMF_FieldGet(air_temperature_Field, farrayPtr=air_temperature_ptr, localDE=0, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      water_temperature = water_temperature * 0.009d0 + air_temperature_ptr * 0.001d0
+    elseif (rc == ESMF_RC_NOT_FOUND) then
+      call ESMF_LogWrite("Import field not found, no local changes applied",ESMF_LOGMSG_INFO)
+    else
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    rc = ESMF_SUCCESS
     
-    call ESMF_FieldGet(air_temperature_Field, farrayPtr=air_temperature_ptr, localDE=0, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-! Do something
-    water_temperature = water_temperature * 0.009d0 + air_temperature_ptr * 0.001d0
-
 !> @todo do we need to communicate the update of water_temp back to export state?
-!> import state anyhow? 
 
 ! Output to netCDF files
     printcount=int(advancecount,ESMF_KIND_I4)
