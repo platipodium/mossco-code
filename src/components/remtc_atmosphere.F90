@@ -1,5 +1,5 @@
 !> This component describes a very simple 2D atmosphere as a boundary condition.  A simple field
-!> "air_temperature_at_surface" is provided.  It was coded from an example AO coupling
+!> "air_temperature" is provided.  It was coded from an example AO coupling
 !> @author Hartmut Kapitza
 !> @author Carsten Lemmen
 
@@ -9,7 +9,7 @@ module remtc_atmosphere
 
   implicit none
 
-  real(ESMF_KIND_R8), pointer :: air_temperature_at_surface(:,:)
+  real(ESMF_KIND_R8), pointer :: air_temperature(:,:,:)
   type(ESMF_Field)            :: temperatureField
 
   public remtc_atmosphere_SetServices
@@ -41,8 +41,8 @@ module remtc_atmosphere
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
-    integer                     :: lbnd(2), ubnd(2)
-    integer                     :: myrank,i,j
+    integer                     :: lbnd(3), ubnd(3)
+    integer                     :: myrank,i,j,k
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
  
     call ESMF_LogWrite("Remtc Atmosphere component initializing ...",ESMF_LOGMSG_INFO)
@@ -50,8 +50,8 @@ module remtc_atmosphere
     !> Create the grid and coordinates
     !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
     !> to 50 .. 55 deg North
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/40, 50/), &
-      regDecomp=(/2,2/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/40, 50,1/), &
+      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="atmosphere grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -76,18 +76,20 @@ module remtc_atmosphere
   
     !> Create a air temperature field with a 2D array specification, fill the temperature
     !> field with some values, add the field to the atmosphere's import and export states
-    call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    temperatureField = ESMF_FieldCreate(grid, arrayspec, name="air_temperature_at_surface", &
+    temperatureField = ESMF_FieldCreate(grid, arrayspec, name="air_temperature", &
       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
  
-    call ESMF_FieldGet(temperatureField, farrayPtr=air_temperature_at_surface,totalLBound=lbnd,&
+    call ESMF_FieldGet(temperatureField, farrayPtr=air_temperature,totalLBound=lbnd,&
       totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    do i=lbnd(1),ubnd(1) 
+    do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
-        air_temperature_at_surface =  15.0D0
+        do i=lbnd(1),ubnd(1) 
+          air_temperature(i,j,k) =  15.0D0
+        enddo
       enddo
     enddo
     call ESMF_StateAdd(exportState,(/temperatureField/),rc=rc)

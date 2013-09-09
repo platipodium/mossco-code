@@ -43,16 +43,17 @@ module remtc_atmosphere_ocean_coupler
 
     ! Search for the fields with standard name surface_temperature in import
     ! and export states 
-    call ESMF_StateGet(importState, "air_temperature_at_surface", srcfield, rc=rc)
+    call ESMF_StateGet(importState, "air_temperature", srcfield, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_StateGet(exportState, "air_temperature_at_surface", dstfield, rc=rc)
+    call ESMF_StateGet(exportState, "air_temperature", dstfield, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! These are fields on different Grids - call RegridStore to set
     ! up the Regrid structure
-    call ESMF_FieldRegridStore(srcField=srcfield, dstField=dstfield,&
-      routeHandle=routehandle,regridmethod=ESMF_REGRIDMETHOD_BILINEAR,rc=rc)
+    !call ESMF_FieldRegridStore(srcField=srcfield, dstField=dstfield,&
+    !  routeHandle=routehandle,regridmethod=ESMF_REGRIDMETHOD_BILINEAR,rc=rc)
+ !ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument - - can't currently regrid a grid that contains a DE of width less than 2
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_LogWrite("AO coupler initializing", ESMF_LOGMSG_INFO)
@@ -86,13 +87,13 @@ module remtc_atmosphere_ocean_coupler
     print *, "Proc ",myrank," time=",trim(timestring)
 
 ! Get fields from import and export states
-    call ESMF_StateGet(importState, "air_temperature_at_surface", srcfield, rc=rc)
+    call ESMF_StateGet(importState, "air_temperature", srcfield, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_StateGet(exportState, "air_temperature_at_surface", dstfield, rc=rc)
+    call ESMF_StateGet(exportState, "air_temperature", dstfield, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Call stored regrid operation
-    call ESMF_FieldRegrid(srcfield, dstfield, routehandle, rc=rc)
+    !call ESMF_FieldRegrid(srcfield, dstfield, routehandle, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Run
