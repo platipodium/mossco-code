@@ -16,14 +16,14 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lesmf -locean $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod 
+LIBS := -lesmf -locean $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver -lgotm -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod  -loutput_prod -lgotm_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lgotm_fabm_prod
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
 LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec libocean libsediment liboceansedimentcoupler
+.PHONY: all exec libocean libsediment liboceansedimentcoupler libgotm
 
 all: exec
 exec: ocean_fabm0d
@@ -35,7 +35,11 @@ ocean_fabm0d: main.o toplevel_component.o libocean libfabm0d
 
 libocean: $(MOSSCO_LIBRARY_PATH)/libocean.a
 libfabm0d: $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
+libgotm: $(MOSSCO_LIBRARY_PATH)/libgotm.a
 
+$(MOSSCO_LIBRARY_PATH)/libgotm.a:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components libgotm
+	
 $(MOSSCO_LIBRARY_PATH)/libfabm0d.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libfabm0d
 	

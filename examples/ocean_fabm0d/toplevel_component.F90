@@ -15,7 +15,8 @@
 module toplevel_component
 
   use esmf
-  use remtc_ocean, only: ocean_SetServices => SetServices
+  !use remtc_ocean, only: ocean_SetServices => SetServices
+  use gotm_component, only: ocean_SetServices => SetServices
   use fabm_0d_component, only: fabm0d_SetServices => SetServices
 
   implicit none
