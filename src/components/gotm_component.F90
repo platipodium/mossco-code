@@ -31,12 +31,16 @@ module gotm_component
 
   private
   
-  real(ESMF_KIND_R8), pointer :: grid_height(:,:,:)
+  real(ESMF_KIND_R8), allocatable :: grid_height(:,:,:)
+  real(ESMF_KIND_R8), pointer :: grid_height_ptr(:,:,:)
   type(ESMF_Field)            :: grid_height_Field
-  real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
+  type(ESMF_Array)            :: grid_height_Array
+  real(ESMF_KIND_R8), allocatable :: water_temperature(:,:,:)
+  real(ESMF_KIND_R8), pointer :: water_temperature_ptr(:,:,:)
   type(ESMF_Field)            :: water_temperature_Field
+  type(ESMF_Array)            :: water_temperature_Array
 
-  !> Declare an alarm to ring when output to file is requested
+   !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
 
 #define GOTM_REALTYPE real(kind=selected_real_kind(13))
@@ -83,7 +87,7 @@ module gotm_component
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
-    integer                     :: lbnd(3), ubnd(3)
+    integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
     type(ESMF_DistGrid)  :: distgrid
@@ -151,7 +155,7 @@ module gotm_component
     !> Create the grid and coordinates
     !> This example grid is a 1 x 1 x nlev grid 
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,nlev/), &
-      regDecomp=(/1,1,nlev/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="ocean grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -172,52 +176,56 @@ module gotm_component
       coordY(i) = latitude
     enddo  
 
+
     !> Create a water temperature field with a 3D array specification, fill the temperature
-    !> field with some values, add the field to the ocean's export state
-    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    !> field with T0, add the field to the ocean's export state
+    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+      totalCount=farray_shape,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    allocate(water_temperature(1,1,nlev))
+    water_temperature_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=water_temperature, &
+      indexflag=ESMF_INDEX_GLOBAL, name="water_temperature", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    water_temperature_Field = ESMF_FieldCreate(grid=grid, array=water_temperature_Array,&
+       name="water_temperature", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    water_temperature_Field = ESMF_FieldCreate(grid, arrayspec, name="water_temperature", &
-      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature,totalLBound=lbnd,&
+    call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature_ptr,totalLBound=lbnd,&
       totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    do i=lbnd(1),ubnd(1) 
-      do j=lbnd(2),ubnd(2)
-        do k=lbnd(2),ubnd(2)
-          water_temperature(i,j,k) = T0
-        enddo
-      enddo
-    enddo
+    water_temperature_ptr = T0
 
-    call ESMF_StateAdd(exportState,(/water_temperature_Field/),rc=rc)
+    call ESMF_StateAddReplace(exportState,(/water_temperature_Field/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
  
     !> Create a grid_height field with a 3D array specification, fill the 
     !> field with equidistant values, and add to ocean export state
-
-    grid_height_Field = ESMF_FieldCreate(grid, arrayspec, name="grid_height", &
-      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    
+    allocate(grid_height(1,1,nlev))
+    grid_height_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=grid_height, &
+      indexflag=ESMF_INDEX_GLOBAL, name="grid_height", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    grid_height_Field = ESMF_FieldCreate(grid=grid, array=grid_height_Array,&
+       name="grid_height", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_FieldGet(grid_height_Field, farrayPtr=grid_height,totalLBound=lbnd,&
+    call ESMF_FieldGet(grid_height_Field, farrayPtr=grid_height_ptr,totalLBound=lbnd,&
       totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    do i=lbnd(1),ubnd(1) 
+    call ESMF_StateAddReplace(exportState,(/grid_height_Field/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
-        do k=lbnd(2),ubnd(2)
-          grid_height(i,j,k) = depth/nlev
+        do i=lbnd(1),ubnd(1) 
+          grid_height_ptr(i,j,k) = depth/nlev
         enddo
       enddo
     enddo
-
-    call ESMF_StateAdd(exportState,(/grid_height_Field/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
@@ -250,7 +258,7 @@ module gotm_component
     call gotm_time_step()
     
     do k=1,nlev
-      water_temperature(:,:,k) = gotm_temperature(k)
+      water_temperature_ptr(:,:,k) = gotm_temperature(k)
      !!@todo uncomment next line
       !grid_height(:,:,k) = gotm_depth(k)
     enddo
