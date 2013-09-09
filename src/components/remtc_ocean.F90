@@ -116,7 +116,7 @@ module remtc_ocean
     do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
         do i=lbnd(1),ubnd(1) 
-          water_temperature_ptr =  20 + 0.1*(i+j)
+          water_temperature_ptr =  20.0 !+ 0.1*(i+j)
         enddo
       enddo
     enddo

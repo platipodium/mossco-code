@@ -167,7 +167,9 @@ module fabm_0d_component
       call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
       call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
       zerod%temp = water_temperature(1,1,1)
+      call ESMF_LogWrite("Obtained water temperature from import state",ESMF_LOGMSG_INFO)
     end if
+    write(*,'(F5.2)') zerod%temp
 
     ! use AdvanceCount from parent clock
     gotm_time_min_n = n
