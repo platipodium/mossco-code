@@ -154,7 +154,6 @@
    par_background_extinction = 0.0_rk
    apply_self_shading = .true.
    read(namlst,nml=environment,err=92)
-   if (.not.(par_from_file)) swr_method=1
 
    ! Read output namelist
    output_file = ''
