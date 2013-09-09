@@ -90,8 +90,8 @@ module fabm_0d_component
     call init_0d(forcing_from_coupler=forcing_from_coupler)
 
     !> get export_states information
-    call get_export_state_from_variable_name(din,din_variable)
-    call get_export_state_from_variable_name(pon,pon_variable)
+    din = get_export_state_from_variable_name(din_variable)
+    pon = get_export_state_from_variable_name(pon_variable)
 
     !> create grid
     distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &

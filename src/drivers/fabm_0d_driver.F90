@@ -509,29 +509,48 @@ end subroutine get_rhs
    
    end subroutine clean_up
 
+!> Initializes a FABM0d export state by FABM state_variable id
+
+   function get_export_state_by_id(fabm_id) result(export_state)
+   type(export_state_type) :: export_state
+   integer, intent(in)     :: fabm_id
+   integer                 :: n
+
+   export_state%fabm_id=fabm_id
+   export_state%conc => zerod%conc(:,:,:,export_state%fabm_id)
+   allocate(export_state%ws(1,1,1))
+   export_state%ws = 0.0d0
+   export_state%standard_name = zerod%model%info%state_variables(fabm_id)%long_name
+
+   end function get_export_state_by_id
 
 !> Initializes a FABM0d export state by FABM variable name
 
-   subroutine get_export_state_from_variable_name(export_state,varname)
-   type(export_state_type), intent(inout) :: export_state
-   character(len=256), intent(in)         :: varname
-   real(rk),allocatable,save :: wstmp(:,:,:,:)
-   integer  :: n
+   function get_export_state_from_variable_name(varname) result(export_state)
+   type(export_state_type)        :: export_state
+   character(len=256), intent(in) :: varname
+   integer                        :: n,fabm_id
 
-   export_state%fabm_id=-1
+   fabm_id=-1
    do n=1,size(zerod%model%info%state_variables)
      if (trim(zerod%model%info%state_variables(n)%name).eq.trim(varname)) &
-         export_state%fabm_id=n
+         fabm_id=n
    end do
-   export_state%conc => zerod%conc(:,:,:,export_state%fabm_id)
-   allocate(export_state%ws(1,1,1))
-   allocate(wstmp(1,1,1,zerod%nvar))
-   call fabm_get_vertical_movement(zerod%model,1,1,1,wstmp(1,1,1,:))
-   export_state%ws = wstmp(1,1,1,export_state%fabm_id)
-   deallocate(wstmp)
+   export_state= get_export_state_by_id(fabm_id)
 
-   end subroutine get_export_state_from_variable_name
+   end function get_export_state_from_variable_name
 
+!> create a list of export states from FABM state_variables
+   function get_all_export_states() result(export_states)
+   type(export_state_type),allocatable,dimension(:) :: export_states
+   integer  :: n,fabm_id
+
+   allocate(export_states(zerod%nvar))
+   do fabm_id=1,size(zerod%model%info%state_variables)
+       export_states(fabm_id) = get_export_state_by_id(fabm_id)
+   end do
+
+   end function get_all_export_states
 
 !> update FABM0d export states pointers and sinking velocities using a list of export states
 
