@@ -44,7 +44,7 @@
    logical  :: add_environment
    logical  :: add_conserved_quantities
    logical  :: add_diagnostic_variables
-   logical  :: temp_from_file
+   logical  :: temp_from_file,par_from_file,salt_from_file
 
    !> Environment
    real(rk),target         :: temp,salt,par,current_depth,dens,wind_sf,taub   
@@ -111,8 +111,12 @@
    ! evaluate forcing from coupler:
    if (present(forcing_from_coupler)) then
        temp_from_file=.not.(forcing_from_coupler)
+       par_from_file=.not.(forcing_from_coupler)
+       salt_from_file=.not.(forcing_from_coupler)
    else
        temp_from_file=.true.
+       par_from_file=.true.
+       salt_from_file=.true.
    endif
 
    ! Open the namelist file.
@@ -150,6 +154,7 @@
    par_background_extinction = 0.0_rk
    apply_self_shading = .true.
    read(namlst,nml=environment,err=92)
+   if (.not.(par_from_file)) swr_method=1
 
    ! Read output namelist
    output_file = ''
@@ -242,9 +247,9 @@
    LEVEL2 'Reading local environment data from:'
    LEVEL3 trim(env_file)
    call init_input()
-   call register_input_0d(env_file,1,par_sf)
+   if (par_from_file)  call register_input_0d(env_file,1,par_sf)
    if (temp_from_file) call register_input_0d(env_file,2,temp)
-   call register_input_0d(env_file,3,salt)
+   if (salt_from_file) call register_input_0d(env_file,3,salt)
 
    ! Build FABM model tree.
    zerod%model => fabm_create_model_from_file(namlst)
@@ -452,7 +457,11 @@ end subroutine get_rhs
           ! get tempa from inportState
       end if
       
-      zerod%salt=salt
+      if (salt_from_file) then
+          zerod%salt=salt
+      else
+          ! get salt from importState
+      endif
       call update_depth(CENTER)
 
       ! Integrate one time step
