@@ -23,10 +23,12 @@ module remtc_ocean
   
   private
 
-  real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
-  real(ESMF_KIND_R8), pointer :: air_temperature_at_surface(:,:)
+  real(ESMF_KIND_R8), allocatable :: water_temperature(:,:,:)
+  real(ESMF_KIND_R8), pointer :: water_temperature_ptr(:,:,:)
+  real(ESMF_KIND_R8), pointer :: air_temperature_at_surface_ptr(:,:)
   type(ESMF_Field)            :: water_temperature_Field
-  type(ESMF_Field)            :: air_temperature_at_surface_Field
+  type(ESMF_Array)            :: water_temperature_Array
+  !type(ESMF_Field)            :: air_temperature_at_surface_Field
 
   public SetServices
  
@@ -57,42 +59,28 @@ module remtc_ocean
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
-    integer                     :: lbnd(3), ubnd(3)
+    integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
  
     integer(ESMF_KIND_I4),allocatable :: deBlockList(:,:,:)
-    
     call ESMF_LogWrite("Remtc Ocean component initializing ...",ESMF_LOGMSG_INFO)
  
-    !> Create a distribution for compute elements
-    allocate( deBlockList(2,2,4) )
-    deBlockList(:,1,1) = (/ 1, 1/) ! minindex 1st de-block
-    deBlockList(:,2,1) = (/15,20/) ! maxindex
-    deBlockList(:,1,2) = (/16, 1/) ! minindex 2nd de-block
-    deBlockList(:,2,2) = (/40,12/) ! maxindex
-    deBlockList(:,1,3) = (/ 1,21/) ! minindex 3rd de-block
-    deBlockList(:,2,3) = (/15,40/) ! maxindex
-    deBlockList(:,1,4) = (/16,13/) ! minindex 4th de-block
-    deBlockList(:,2,4) = (/40,40/) ! maxindex
-
-    distgrid = ESMF_DistGridCreate(minIndex=(/1,1/),                     &
-                                   maxIndex=(/40,40/),                   &
-                                   deBlockList=deBlockList,              &
-                                   indexflag=ESMF_INDEX_GLOBAL,          &
-                                   rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-
     !> Create the grid and coordinates
     !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
     !> to 50 .. 55 deg North
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/40, 50/), &
-      regDecomp=(/2,2/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+    !distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/40,50,1/), &
+    !                                indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/40, 50,1/), &
+      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="ocean grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
+
+    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -111,35 +99,40 @@ module remtc_ocean
 
     !> Create a water temperature field with a 2D array specification, fill the temperature
     !> field with some values, add the field to the ocean's export state
-    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+      totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    water_temperature_Field = ESMF_FieldCreate(grid, arrayspec, name="water_temperature", &
-      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    allocate(water_temperature(40,50,1))
+    water_temperature_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=water_temperature, &
+      indexflag=ESMF_INDEX_GLOBAL, name="water_temperature", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature,totalLBound=lbnd,&
+    water_temperature_Field = ESMF_FieldCreate(grid=grid, array=water_temperature_Array,&
+       name="water_temperature", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+     
+    call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature_ptr,totalLBound=lbnd,&
       totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    do i=lbnd(1),ubnd(1) 
+    do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
-        do k=lbnd(3),ubnd(3)
-          water_temperature =  20 + 0.1*(i+j)
+        do i=lbnd(1),ubnd(1) 
+          water_temperature_ptr =  20 + 0.1*(i+j)
         enddo
       enddo
     enddo
 
-    call ESMF_StateAdd(exportState,(/water_temperature_Field/),rc=rc)
+    call ESMF_StateAddReplace(exportState,(/water_temperature_Field/),rc=rc)
+
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Create an air surface temperature field with a 2D array specification, add the field
     !> to the ocean's import state
-    air_temperature_at_surface_Field = ESMF_FieldCreate(grid, arrayspec, name="air_temperature_at_surface", &
-      staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    !air_temperature_at_surface_Field = ESMF_FieldCreate(grid, arrayspec, name="air_temperature_at_surface", &
+    !  staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_StateAdd(importState,(/air_temperature_at_surface_Field/),rc=rc)
+    !call ESMF_StateAdd(importState,(/air_temperature_at_surface_Field/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_LogWrite("Remtc Ocean component initialized.",ESMF_LOGMSG_INFO)
@@ -178,15 +171,15 @@ module remtc_ocean
     call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
 
 ! Get import state and extract arrays
-    call ESMF_StateGet(importState, "air_temperature_at_surface", air_temperature_at_surface_Field, rc=rc)
+    !call ESMF_StateGet(importState, "air_temperature_at_surface", air_temperature_at_surface_Field, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    call ESMF_FieldGet(air_temperature_at_surface_Field, farrayPtr=air_temperature_at_surface, localDE=0, rc=rc)
+   ! call ESMF_FieldGet(air_temperature_at_surface_Field, farrayPtr=air_temperature_at_surface, localDE=0, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Do something
     do k=kl,ku
-      water_temperature(:,:,k) = water_temperature(:,:,k) *0.009d0 + air_temperature_at_surface * 0.001d0
+   !   water_temperature(:,:,k) = water_temperature(:,:,k) *0.009d0 + air_temperature_at_surface * 0.001d0
     enddo
 
 !> @todo do we need to communicate the update of water_temp back to export state? Why do we need to get air temp from 
@@ -210,15 +203,17 @@ module remtc_ocean
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    call ESMF_ArrayDestroy(water_temperature_Array, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldDestroy(water_temperature_Field, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldDestroy(air_temperature_at_surface_Field, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !call ESMF_FieldDestroy(air_temperature_at_surface_Field, rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !if (allocated(water_temperature)) deallocate(water_temperature)
+    if (allocated(water_temperature)) deallocate(water_temperature)
     !if (allocated(air_temperature_at_surface)) deallocate(air_temperature_at_surface)
-    nullify(water_temperature)
-    nullify(air_temperature_at_surface)
+    nullify(water_temperature_ptr)
+    !nullify(air_temperature_at_surface)
 
     call ESMF_LogWrite("Remtc Ocean component finalized", ESMF_LOGMSG_INFO)
 
