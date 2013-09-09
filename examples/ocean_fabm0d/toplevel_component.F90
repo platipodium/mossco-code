@@ -111,6 +111,8 @@ module toplevel_component
         exportState=oceanExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+      !call ESMF_StatePrint(oceanImportState,rc=rc)
+
       call ESMF_GridCompRun(fabm0dComp,importState=oceanExportState,&
       !call ESMF_GridCompRun(fabm0dComp,importState=fabm0dImportState,&
         exportState=fabm0dExportState,clock=parentclock, rc=rc)

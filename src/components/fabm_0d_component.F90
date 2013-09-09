@@ -163,13 +163,20 @@ module fabm_0d_component
 #endif
 
     ! get import state
-    if (forcing_from_coupler) then
+    !if (forcing_from_coupler) then
+    if (.true.) then
       call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
       zerod%temp = water_temperature(1,1,1)
-      call ESMF_LogWrite("Obtained water temperature from import state",ESMF_LOGMSG_INFO)
+!!#ifdef DEBUG
+#if 1
+    write (logstring,'(A,F6.3,A)') "Obtained water-temp = ",zerod%temp," from import state"
+    call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
+#endif
     end if
-    write(*,'(F5.2)') zerod%temp
 
     ! use AdvanceCount from parent clock
     gotm_time_min_n = n
