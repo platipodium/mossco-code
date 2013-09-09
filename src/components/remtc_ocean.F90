@@ -23,10 +23,21 @@ module remtc_ocean
   
   private
 
+  real(ESMF_KIND_R8), allocatable :: photosynthetically_available_radiation(:,:,:)
+  real(ESMF_KIND_R8), pointer :: photosynthetically_available_radiation_ptr(:,:,:)
+  type(ESMF_Field)            :: photosynthetically_available_radiation_Field
+  type(ESMF_Array)            :: photosynthetically_available_radiation_Array
+
+  real(ESMF_KIND_R8), allocatable :: salinity(:,:,:)
+  real(ESMF_KIND_R8), pointer :: salinity_ptr(:,:,:)
+  type(ESMF_Field)            :: salinity_Field
+  type(ESMF_Array)            :: salinity_Array
+
   real(ESMF_KIND_R8), allocatable :: water_temperature(:,:,:)
   real(ESMF_KIND_R8), pointer :: water_temperature_ptr(:,:,:)
   type(ESMF_Field)            :: water_temperature_Field
   type(ESMF_Array)            :: water_temperature_Array
+
   type(ESMF_Field)            :: air_temperature_Field
   type(ESMF_Array)            :: air_temperature_Array
   real(ESMF_KIND_R8), allocatable :: air_temperature(:,:,:)
@@ -96,21 +107,56 @@ module remtc_ocean
       coordY(i) = 50 + 0.1 * i + 0.05
     enddo  
 
-    !> Create a water temperature field with a 2D array specification, fill the temperature
+    !> Create a salinity field with a 2D array specification, fill the temperature
     !> field with some values, add the field to the ocean's export state
     call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    allocate(salinity(40,50,1))
+    salinity_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=salinity, &
+      indexflag=ESMF_INDEX_GLOBAL, name="salinity", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    salinity_Field = ESMF_FieldCreate(grid=grid, array=salinity_Array,&
+       name="salinity", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_FieldGet(salinity_Field, farrayPtr=salinity_ptr,totalLBound=lbnd,&
+      totalUBound=ubnd,localDE=0,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    do k=lbnd(3),ubnd(3)
+      do j=lbnd(2),ubnd(2)
+        do i=lbnd(1),ubnd(1) 
+          salinity =  30.0 !+ 0.1*(i+j)
+        enddo
+      enddo
+    enddo
+
+    !> Create a photosynthetically_available_radiation field with a 2D array specification, fill the temperature
+    !> field with some values, add the field to the ocean's export state
+    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+      totalCount=farray_shape,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    allocate(photosynthetically_available_radiation(40,50,1))
+    photosynthetically_available_radiation_Array = ESMF_ArrayCreate(distgrid=distgrid,&
+      farray=photosynthetically_available_radiation, &
+      indexflag=ESMF_INDEX_GLOBAL, name="photosynthetically_available_radiation", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    photosynthetically_available_radiation_Field = ESMF_FieldCreate(grid=grid, &
+      array=photosynthetically_available_radiation_Array,&
+      name="photosynthetically_available_radiation", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    photosynthetically_available_radiation =  100.0 !+ 0.1*(i+j)
+
+    !> Create a water temperature field with a 2D array specification, fill the temperature
+    !> field with some values, add the field to the ocean's export state
     allocate(water_temperature(40,50,1))
     water_temperature_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=water_temperature, &
       indexflag=ESMF_INDEX_GLOBAL, name="water_temperature", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     water_temperature_Field = ESMF_FieldCreate(grid=grid, array=water_temperature_Array,&
        name="water_temperature", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-     
-    call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature_ptr,totalLBound=lbnd,&
-      totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     do k=lbnd(3),ubnd(3)
@@ -185,7 +231,7 @@ module remtc_ocean
     endif
     rc = ESMF_SUCCESS
     
-!> @todo do we need to communicate the update of water_temp back to export state?
+!> @todo do we need to communicate the update of water_temp back to export state?, No , we do not
 
 ! Output to netCDF files
     printcount=int(advancecount,ESMF_KIND_I4)
