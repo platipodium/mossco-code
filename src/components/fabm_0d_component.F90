@@ -76,7 +76,7 @@ module fabm_0d_component
     integer            :: ode_method,namlst=234
     character(len=80)  :: title
     logical            :: input_from_namelist = .true.
-    character(len=256) :: din_variable='',pon_variable=''
+    character(len=256) :: din_variable='gotm_npzd_nut',pon_variable='gotm_npzd_det'
 
     namelist /model_setup/ title,start,stop,dt,ode_method, &
                            din_variable, pon_variable, forcing_from_coupler

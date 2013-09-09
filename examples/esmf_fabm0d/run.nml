@@ -1,11 +1,9 @@
 &model_setup
 title='ESMF/FABM/GOTM 0d Testcase'
-start="2002-01-01 00:00:00"
-stop="2002-02-01 00:00:00"
-dt=60
+start="2011-01-01 00:00:00"
+stop="2013-01-01 00:00:00"
+dt=600
 ode_method=3
-din_variable='gotm_npzd_nut'
-pon_variable='gotm_npzd_det'
 /
 
 !-------------------------------------------------------------------
@@ -16,20 +14,20 @@ pon_variable='gotm_npzd_det'
 
 &environment
 env_file='env.dat'
-swr_method=1
+swr_method=0
 latitude=54.0
 longitude=9.0
-cloud=0.0
+cloud=0.5
 par_fraction=1.0
 depth=10.
-par_background_extinction=0.05
+par_background_extinction=0.5
 apply_self_shading=.false.
 /
 
 &output
-output_file='output.dat'
-nsave=60
+output_file='output_0d.dat'
+nsave=72
 add_environment=.true.
 add_conserved_quantities=.false.
-add_diagnostic_variables=.true.
+add_diagnostic_variables=.false.
 /

@@ -37,10 +37,10 @@ program main
    call ESMF_TimeIntervalSet(timeStep, s=60, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_TimeSet(startTime, yy=2002, mm=1, dd=1, rc=localrc)
+   call ESMF_TimeSet(startTime, yy=2011, mm=1, dd=1, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_TimeSet(stopTime, yy=2002, mm=2, dd=1, rc=localrc)
+   call ESMF_TimeSet(stopTime, yy=2013, mm=1, dd=1, rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
    clock = ESMF_ClockCreate(timeStep, startTime, stopTime=stopTime, & 
