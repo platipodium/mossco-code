@@ -44,8 +44,14 @@ $(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod: $(MOSSCO_DIR)/src/components/e
 main.o: toplevel_component.o
 toplevel_component.o: toplevel_component.F90
 
+fabm0d:
+	( unset LIBS; export FABMHOST=0d ; $(MAKE) -C $(FABMDIR)/src/ )
+	( unset LIBS; export FABMHOST=0d ; $(MAKE) -C $(FABMDIR)/src/drivers/0d fabm0d )
+	mv $(FABMDIR)/src/drivers/0d/fabm0d .
+
 clean: extraclean
 
 extraclean: 
 	@rm -f esmf_fabm0d
+	@rm -f fabm0d
 	@rm -f PET*.*
