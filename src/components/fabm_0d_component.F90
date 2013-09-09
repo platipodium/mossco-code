@@ -79,11 +79,13 @@ module fabm_0d_component
     character(len=256) :: din_variable='gotm_npzd_nut',pon_variable='gotm_npzd_det'
 
     namelist /model_setup/ title,start,stop,dt,ode_method, &
-                           din_variable, pon_variable, forcing_from_coupler
+                           din_variable, pon_variable
+    namelist /mossco_fabm0d/ forcing_from_coupler
 
     ! read 0d namelist
     open(namlst,file='run.nml',status='old',action='read')
     read(namlst,nml=model_setup)
+    read(namlst,nml=mossco_fabm0d)
     close(namlst)
 
     call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
@@ -163,8 +165,7 @@ module fabm_0d_component
 #endif
 
     ! get import state
-    !if (forcing_from_coupler) then
-    if (.true.) then
+    if (forcing_from_coupler) then
       call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
@@ -219,3 +220,4 @@ module fabm_0d_component
 
 
 end module fabm_0d_component
+
