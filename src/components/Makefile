@@ -33,7 +33,7 @@ TARGETS += libgotm libfabm0d
 endif
 endif
 
-.PHONY: $(TARGETS) libgotm_external
+.PHONY: $(TARGETS) libgotm_external fabmversion
 
 #--------------------------------------
 # Make targets
@@ -41,12 +41,12 @@ endif
 
 all: $(TARGETS)
 
-libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
-libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
+libfabm_mossco:  prefix fabmversion $(MOSSCO_LIBRARY_PATH)/libsediment.a
+libsediment: prefix fabmversion $(MOSSCO_LIBRARY_PATH)/libsediment.a
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a
 libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
-libfabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
+libfabm0d: prefix fabmversion $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
 libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 
@@ -88,6 +88,9 @@ extraclean:
 
 # External libraries
 libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
+
+fabmversion: $(FABMDIR)/include/version.h
+	make -C $(FABMDIR)
 
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
 	$(MAKE) -C $(FABMDIR)/src gotm
