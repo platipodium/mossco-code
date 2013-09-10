@@ -70,6 +70,7 @@ $(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
 
 fabm_0d_component.o: fabm_0d_component.F90
 	@echo "Compiling $<"
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d
 	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
 $(MOSSCO_module_path)/solver_library.mod:

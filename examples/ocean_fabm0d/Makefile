@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lesmf -locean $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver -lgotm -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod  -loutput_prod -lgotm_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lgotm_fabm_prod
+LIBS := -lesmf -locean -lfabm0d -lmossco_fabm0d -lsolver -lgotm -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod  -loutput_prod -lgotm_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lgotm_fabm_prod $(LIBS)
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
@@ -28,7 +28,7 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 all: exec
 exec: ocean_fabm0d
 
-ocean_fabm0d: main.o toplevel_component.o libocean libfabm0d
+ocean_fabm0d: main.o toplevel_component.o libocean libfabm0d libgotm
 	$(F90) $(F90FLAGS) -o ocean_fabm0d  toplevel_component.o main.o $(LDFLAGS)
 	@echo "Created example binary ocean_fabm0d in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d.txt
@@ -47,7 +47,7 @@ $(MOSSCO_LIBRARY_PATH)/libocean.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libocean
 	
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libfabm0d 
+toplevel_component.o: toplevel_component.F90 libocean libgotm libfabm0d 
 
 clean: extraclean
 
