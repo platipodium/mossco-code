@@ -131,7 +131,6 @@ module remtc_ocean
         enddo
       enddo
     enddo
-
     !> Create a photosynthetically_available_radiation field with a 2D array specification, fill the temperature
     !> field with some values, add the field to the ocean's export state
     call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
@@ -162,7 +161,7 @@ module remtc_ocean
     do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
         do i=lbnd(1),ubnd(1) 
-          water_temperature_ptr =  20.0 !+ 0.1*(i+j)
+          water_temperature =  20.0 !+ 0.1*(i+j)
         enddo
       enddo
     enddo
