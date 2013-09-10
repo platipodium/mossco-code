@@ -16,6 +16,11 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
+ifneq ($(MOSSCO_GOTM),true)
+$(error You need GOTM to compile this example)
+endif
+
+
 LIBS := -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
