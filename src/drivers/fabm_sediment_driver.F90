@@ -28,7 +28,7 @@ end type fabm_sed_grid
 
 type,extends(rhs_driver), public :: type_sed !< sediment driver class (extends rhs_driver)
    type(fabm_sed_grid)          :: grid
-   type(type_model)             :: model
+   type(type_model),pointer     :: model
    real(rk)                     :: bioturbation,diffusivity
    real(rk),dimension(:,:,:),pointer    :: fluxes,bdys
 contains
@@ -130,7 +130,7 @@ end do
 temp = 5_rk
 
 ! build model tree
-sed%model = fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
+sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
 
 ! set fabm domain
 call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
