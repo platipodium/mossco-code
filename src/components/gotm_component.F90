@@ -32,7 +32,9 @@ module gotm_component
   private
   
   real(ESMF_KIND_R8), allocatable :: grid_height(:,:,:)
-  real(ESMF_KIND_R8), pointer :: grid_height_ptr(:,:,:)
+  real(ESMF_KIND_R8),dimension(:,:,:),pointer :: grid_height_ptr
+  real(ESMF_KIND_R8),dimension(:,:,:),pointer :: salinity_ptr
+  real(ESMF_KIND_R8),dimension(:,:,:),pointer :: radiation_ptr
   type(ESMF_Field)            :: grid_height_Field
   type(ESMF_Array)            :: grid_height_Array
   real(ESMF_KIND_R8), allocatable :: water_temperature(:,:,:)
@@ -234,7 +236,9 @@ module gotm_component
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     use meanflow, only : gotm_temperature => T
-    use meanflow, only : gotm_depth => depth 
+    use meanflow, only : gotm_salinity => S
+    use meanflow, only : gotm_heights => h 
+    use meanflow, only : gotm_radiation => rad
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -258,10 +262,12 @@ module gotm_component
     call gotm_time_step()
     
     do k=1,nlev
+      grid_height_ptr(:,:,k)=gotm_heights(k)
       water_temperature_ptr(:,:,k) = gotm_temperature(k)
-     !!@todo uncomment next line
-      !grid_height(:,:,k) = gotm_depth(k)
-    enddo
+!      salinity_ptr(:,:,k) = gotm_salinity(k)
+!      radiation_ptr(:,:,k) = gotm_radiation(k)
+    end do
+    
 
     !> Check if the output alarm is ringing, if so, quiet it and 
     !> call do_output from GOTM
