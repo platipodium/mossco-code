@@ -166,7 +166,8 @@ module remtc_ocean
       enddo
     enddo
 
-    call ESMF_StateAddReplace(exportState,(/water_temperature_Field/),rc=rc)
+    call ESMF_StateAddReplace(exportState,(/water_temperature_Field,salinity_Field, &
+       photosynthetically_available_radiation_Field/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Do the same for air temperature input

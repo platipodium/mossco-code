@@ -431,6 +431,8 @@ end subroutine get_rhs
          ! Calculate photosynthetically active radiation from geographic location, time, cloud cover.
          call fabm_get_albedo(zerod%model,1,1,1,bio_albedo)
          par_sf = short_wave_radiation(julianday,secondsofday,longitude,latitude,cloud,bio_albedo)
+      else
+         if (.not.(par_from_file)) par_sf = zerod%par(1,1,1)
       end if
 
       ! Multiply by fraction of short-wave radiation that is photosynthetically active.

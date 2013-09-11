@@ -26,8 +26,8 @@ module fabm_0d_component
 
   private
 
-  real(ESMF_KIND_R8), pointer :: water_temperature(:,:,:)
-  type(ESMF_Field)            :: water_temperature_field
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: water_temperature,salinity,radiation
+  type(ESMF_Field)            :: import_field
   type(ESMF_Field)            :: din_field
   type(ESMF_Field)            :: pon_field
   type(ESMF_Field)            :: pon_ws_field
@@ -80,7 +80,7 @@ module fabm_0d_component
 
     namelist /model_setup/ title,start,stop,dt,ode_method, &
                            din_variable, pon_variable
-    namelist /mossco_fabm0d/ forcing_from_coupler
+    namelist /mossco_fabm0d/ forcing_from_coupler,din_variable,pon_variable
 
     ! read 0d namelist
     open(namlst,file='run.nml',status='old',action='read')
@@ -166,14 +166,36 @@ module fabm_0d_component
 
     ! get import state
     if (forcing_from_coupler) then
-      call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
+      call ESMF_StateGet(importState, "water_temperature", import_field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
+      call ESMF_FieldGet(import_field, farrayPtr=water_temperature, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
       zerod%temp = water_temperature(1,1,1)
-!!#ifdef DEBUG
-#if 1
+
+      call ESMF_StateGet(importState, "salinity", import_field, rc=rc)
+      if(rc /= ESMF_SUCCESS) then
+          call ESMF_LogWrite("Salinity field not found, &
+              set to default value of 30.",ESMF_LOGMSG_INFO)
+          zerod%salt = 30.
+      else
+          call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          zerod%salt = salinity(1,1,1)
+      end if
+
+      call ESMF_StateGet(importState, "photosynthetically_available_radiation", &
+        import_field, rc=rc)
+      if(rc /= ESMF_SUCCESS) then
+          call ESMF_LogWrite("PAR field not found, &
+              set to default value of 100.",ESMF_LOGMSG_INFO)
+          zerod%par = 100.
+      else
+          call ESMF_FieldGet(import_field, farrayPtr=radiation, rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          zerod%par  = radiation(1,1,1)
+      end if
+      
+#ifdef DEBUG
     write (logstring,'(A,F6.3,A)') "Obtained water-temp = ",zerod%temp," from import state"
     call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
 #endif
@@ -220,4 +242,5 @@ module fabm_0d_component
 
 
 end module fabm_0d_component
+
 
