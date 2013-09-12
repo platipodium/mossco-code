@@ -198,26 +198,28 @@ module gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     allocate(salinity_ptr(1,1,nlev))
+    salinity_ptr=20.0
     salinity_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=salinity_ptr, &
       indexflag=ESMF_INDEX_GLOBAL, name="salinity", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     salinity_Field = ESMF_FieldCreate(grid=grid, array=salinity_Array,&
        name="salinity", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    salinity_ptr = 30.
 
     allocate(radiation_ptr(1,1,nlev))
+    radiation_ptr=0.
     radiation_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=radiation_ptr, &
       indexflag=ESMF_INDEX_GLOBAL, name="photosynthetically available radiation", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     radiation_Field = ESMF_FieldCreate(grid=grid, array=radiation_Array,&
        name="photosynthetically available radiation", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    radiation_ptr=0.
 
     water_temperature_ptr = T0
 
-    call ESMF_StateAddReplace(exportState,(/water_temperature_Field/),rc=rc)
+    call ESMF_StateAddReplace(exportState,(/water_temperature_Field, &
+                                           salinity_Field, &
+                                           radiation_Field/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
  
@@ -278,12 +280,12 @@ module gotm_component
 
     call update_time(n)
     call gotm_time_step()
-    
+ 
     do k=1,nlev
       grid_height_ptr(:,:,k)=gotm_heights(k)
       water_temperature_ptr(:,:,k) = gotm_temperature(k)
-!      salinity_ptr(:,:,k) = gotm_salinity(k)
-!      radiation_ptr(:,:,k) = gotm_radiation(k)
+      salinity_ptr(:,:,k) = gotm_salinity(k)
+      radiation_ptr(:,:,k) = gotm_radiation(k)
     end do
     
 
