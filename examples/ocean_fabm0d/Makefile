@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lesmf -locean -lfabm0d -lmossco_fabm0d -lsolver -lgotm -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod  -loutput_prod -lgotm_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lgotm_fabm_prod $(LIBS)
+LIBS := -lesmf -locean -lfabm0d -lmossco_fabm0d -lsolver -lgotm -L$(GOTMDIR)/lib/GFORTRAN -lgotm_prod -lairsea_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lgotm_fabm_prod -lutil_prod -linput_prod -loutput_prod $(LIBS)
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
