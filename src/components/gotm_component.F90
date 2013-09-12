@@ -209,10 +209,10 @@ module gotm_component
     allocate(radiation_ptr(1,1,nlev))
     radiation_ptr=0.
     radiation_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=radiation_ptr, &
-      indexflag=ESMF_INDEX_GLOBAL, name="photosynthetically available radiation", rc=rc)
+      indexflag=ESMF_INDEX_GLOBAL, name="photosynthetically_available_radiation", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     radiation_Field = ESMF_FieldCreate(grid=grid, array=radiation_Array,&
-       name="photosynthetically available radiation", rc=rc)
+       name="photosynthetically_available_radiation", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     water_temperature_ptr = T0
