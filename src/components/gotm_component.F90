@@ -39,8 +39,8 @@ module gotm_component
   type(ESMF_Array)            :: grid_height_Array
   real(ESMF_KIND_R8), allocatable :: water_temperature(:,:,:)
   real(ESMF_KIND_R8), pointer :: water_temperature_ptr(:,:,:)
-  type(ESMF_Field)            :: water_temperature_Field
-  type(ESMF_Array)            :: water_temperature_Array
+  type(ESMF_Field)            :: water_temperature_Field,salinity_Field,radiation_Field
+  type(ESMF_Array)            :: water_temperature_Array,salinity_Array,radiation_Array
 
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -196,6 +196,24 @@ module gotm_component
     call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature_ptr,totalLBound=lbnd,&
       totalUBound=ubnd,localDE=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    allocate(salinity_ptr(1,1,nlev))
+    salinity_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=salinity_ptr, &
+      indexflag=ESMF_INDEX_GLOBAL, name="salinity", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    salinity_Field = ESMF_FieldCreate(grid=grid, array=salinity_Array,&
+       name="salinity", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    salinity_ptr = 30.
+
+    allocate(radiation_ptr(1,1,nlev))
+    radiation_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=radiation_ptr, &
+      indexflag=ESMF_INDEX_GLOBAL, name="photosynthetically available radiation", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    radiation_Field = ESMF_FieldCreate(grid=grid, array=radiation_Array,&
+       name="photosynthetically available radiation", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    radiation_ptr=0.
 
     water_temperature_ptr = T0
 
