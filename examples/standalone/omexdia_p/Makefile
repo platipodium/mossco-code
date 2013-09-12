@@ -18,14 +18,15 @@ LIBS := -lsediment -lsolver $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+FABMLIBTARGET=$(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 
 .PHONY: libsediment fabmdriver exec
 
 all: exec
 
-fabmlib: $(FABM_LIBRARY_FILE)
+fabmlib: $(FABMLIBTARGET)
 
-$(FABM_LIBRARY_FILE):
+$(FABMLIBTARGET):
 	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR) )
 	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR)/src )
 
