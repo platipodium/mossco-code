@@ -100,7 +100,7 @@ module gotm_component
     namelist /station/ name,latitude,longitude,depth
     namelist /eqstate/ eq_state_mode,eq_state_method,T0,S0,p0,dtr0,dsr0
  
-    logical :: input_from_namelist = .true.  !> @todo later to be replaced by switch passed from parent component
+    logical :: input_from_namelist = .false.  !> @todo later to be replaced by switch passed from parent component
 
     call ESMF_LogWrite("GOTM ocean component initializing.",ESMF_LOGMSG_INFO)
     call init_gotm()
