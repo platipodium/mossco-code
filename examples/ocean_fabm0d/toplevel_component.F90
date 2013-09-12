@@ -101,8 +101,10 @@ module toplevel_component
       call ESMF_ClockAdvance(parentClock, rc=rc)
       call ESMF_ClockGet(parentClock, currtime=localtime, rc=rc)
       call ESMF_TimeGet(localTime, timeString=timeString, rc=rc)
+#ifdef DEBUG
       message = "Toplevel ticking at "//trim(timeString)
       call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+#endif
 
     !  call ESMF_CplComprun(oscplComp,importState=sedimentExportState,& 
     !    exportState=oceanImportState,clock=parentclock,rc=rc)
