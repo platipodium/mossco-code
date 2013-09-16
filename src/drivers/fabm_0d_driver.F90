@@ -437,6 +437,7 @@ end subroutine get_rhs
 
       ! Multiply by fraction of short-wave radiation that is photosynthetically active.
       par_sf = par_fraction*par_sf
+      zerod%par_sf = par_sf
 
       ! Apply light attentuation with depth, unless local light is provided in the input file.
       if (swr_method/=2) then
