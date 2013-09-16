@@ -145,7 +145,7 @@ case(_RK4_38_)
 
    rhs => rhs3
    call driver%get_rhs(rhs)
-   c_pointer = c_pointer + dt*1_rk/8_rk*(rhs0 + 3*rhs1 + 3*rhs2 + rhs3)
+   c_pointer = c_pointer + dt*1.0_rk/8.0_rk*(rhs0 + 3.0_rk*rhs1 + 3.0_rk*rhs2 + rhs3)
 
    driver%conc => c_pointer
    nullify(c_pointer)
