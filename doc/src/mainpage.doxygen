@@ -121,7 +121,6 @@ Decide on a directory where to install FABM, and set the environment variable $F
 
 - download the git repository of FABM: @code git clone git://git.code.sf.net/p/fabm/code $FABMDIR @endcode
 - change into the new directory @code cd $FABMDIR @endcode
-- check out the mossco branch of FABM: @code git checkout mossco @endcode
 - set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN (see the FABM documentation for more options)
 - you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
 
