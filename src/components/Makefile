@@ -56,7 +56,7 @@ $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: fabm_sediment_component.o
 	$(AR) cruvs $@ fabm_sediment_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libgotm.a: gotm_component.o libgotm_external
+$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o
 	$(AR) cruvs $@ gotm_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libfabm0d.a: fabm_0d_component.o
