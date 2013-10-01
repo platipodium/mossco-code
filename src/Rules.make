@@ -157,8 +157,11 @@ endif
 endif
 
 ifneq ($(F90),$(FABM_F90COMPILER))
+MPICH_F90COMPILER=$(shell $(F90) -compile_info 2> /dev/null | cut -d' ' -f1)
+ifneq ($(MPICH_F90COMPILER),$(FABM_F90COMPILER))
 ifndef MOSSCO_COMPILER
 $(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
+endif
 endif
 endif
 export MOSSCO_COMPILER=$(F90)
