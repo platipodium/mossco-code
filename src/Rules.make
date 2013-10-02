@@ -149,11 +149,11 @@ FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
 
 ifndef F90
 ifdef ESMF_F90COMPILER
-F90=$(ESMF_F90COMPILER)
+export F90=$(ESMF_F90COMPILER)
 F90_VERSION:=$(shell $(F90) --version | head -1)
 $(warning F90 automatically determined from ESMF_F90COMPILER variable: F90=$(F90))
 else
-F90=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+export F90=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
 F90_VERSION:=$(shell $(F90) --version | head -1)
 $(warning F90 automatically determined from FABM environment: F90=$(F90))
 endif
@@ -161,7 +161,7 @@ endif
 
 ifneq ($(F90_VERSION),$(FABM_F90COMPILER_VERSION))
 MPICH_F90COMPILER=$(shell $(F90) -compile_info 2> /dev/null | cut -d' ' -f1)
-MPICH_F90COMPILER_VERSION:=$(shell $(MPICH_F90COMPILER) --version | head -1)
+#MPICH_F90COMPILER_VERSION:=$(shell $(MPICH_F90COMPILER) --version | head -1)
 ifneq ($(MPICH_F90COMPILER_VERSION),$(FABM_F90COMPILER_VERSION))
 ifndef MOSSCO_COMPILER
 $(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
