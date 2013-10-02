@@ -166,20 +166,26 @@ module fabm_sediment_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! put concentration array into export state
-    do i=1,sed%nvar
+    ! it might be enough to do this once in initialize(?)
+    do n=1,sed%nvar
       array = ESMF_ArrayCreate(distgrid=distgrid_3d,farray=conc(:,:,:,i), &
                    indexflag=ESMF_INDEX_GLOBAL, &
-                   name=trim(sed%model%info%state_variables(i)%long_name), rc=rc)
+                   name=trim(sed%model%info%state_variables(n)%long_name), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_StateGet(exportState, &
-        trim(sed%model%info%state_variables(i)%long_name),array,rc=rc)
-      !call ESMF_ArrayPrint(array,rc=rc)
+    end do
+    do n=1,size(sed%model%info%diagnostic_variables)
+      diag => fabm_sed_diagnostic_variables(sed,n)
+      array = ESMF_ArrayCreate(distgrid=distgrid_3d,farrayPtr=diag, &
+                   name=trim(sed%model%info%diagnostic_variables(n)%long_name), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    end do 
+
+      call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end do
+    !call ESMF_StatePrint(exportState)
 
     call ESMF_LogWrite('Initialized FABM sediment module',ESMF_LOGMSG_INFO)
 
