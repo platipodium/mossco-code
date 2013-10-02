@@ -185,6 +185,16 @@ module fabm_sediment_component
       call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
+    do n=1,sed%nvar
+      write(string,*) trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux'
+      array = ESMF_ArrayCreate(distgrid=distgrid_2d,farray=bdys(:,:,n+1), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name=trim(string), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end do
     !call ESMF_StatePrint(exportState)
 
     call ESMF_LogWrite('Initialized FABM sediment module',ESMF_LOGMSG_INFO)
