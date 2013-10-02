@@ -18,6 +18,9 @@
 #define _INUM_ _GRID_%inum
 #define _JNUM_ _GRID_%jnum
 #define _KNUM_ _GRID_%knum
+#define _IRANGE_ 1:_INUM_
+#define _JRANGE_ 1:_JNUM_
+#define _KRANGE_ 1:_KNUM_
 
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
@@ -85,7 +88,7 @@ module fabm_sediment_component
     type(ESMF_Field)     :: field
     type(ESMF_Array)     :: array
     integer              :: i
-    type(ESMF_DistGrid)  :: distGrid
+    type(ESMF_DistGrid)  :: distGrid,surfdistGrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arraySpec
 
@@ -114,22 +117,24 @@ module fabm_sediment_component
     call ESMF_TimeIntervalSet(timeInterval,yy=numyears,rc=rc)
     call ESMF_ClockGet(parentClock,startTime=startTime)
     call ESMF_ClockSet(parentClock,stopTime=startTime + timeInterval,rc=rc)
-   
+
     !! also from namelist, the output timesteop is read and
     !! used to create an alarm
     call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
     outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=startTime+alarmInterval,ringInterval=alarmInterval,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
- 
+
     !! The grid specification should also go to outside this routine, and update the grid of
     !! this component, numlayers and dzmin are read from nml
+    sed%grid%inum=1
+    sed%grid%jnum=1
     sed%grid%knum=numlayers
     sed%grid%dzmin=dzmin
     !! Write log entries
     write(string,'(A,I3,A)') 'Initialise grid with ',sed%grid%knum,' vertical layers'
     call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
     call init_sed_grid(sed%grid)
-!   call init_fabm_sed(sed)
+    call init_fabm_sed(sed)
     close(33)
     !! Allocate all arrays conc, bdys, fluxes 
     allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar)) 
@@ -141,7 +146,7 @@ module fabm_sediment_component
     !> Allocate boundary conditions and initialize with zero
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
     bdys(1:_INUM_,1:_JNUM_,1:9) = 0.0_rk
-     
+
     call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
     if (itemcount==0) then
       write(string,'(A)') "No temperature information found, using default value 10 deg_C"
@@ -155,8 +160,9 @@ module fabm_sediment_component
       !call ESMF_FieldGet(field,farrayPtr=fptr2d,rc=rc) !> @todo SEGFAULT
       !bdys(:,:,1) = fptr2d   ! degC temperature
     endif
-    bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
 
+    ! get these values from import state, the sediment component should not
+    ! contain these example values for the omexdia_p_test
     bdys(1:_INUM_,1:_JNUM_,5) = 1.0_rk   ! mmolP/m**3 po4
     bdys(1:_INUM_,1:_JNUM_,6) = 10.0_rk  ! mmolN/m**3 no3
     bdys(1:_INUM_,1:_JNUM_,7) = 0.0_rk   ! mmolN/m**3 nh3
@@ -168,10 +174,10 @@ module fabm_sediment_component
     allocate(fluxes(_INUM_,_JNUM_,sed%nvar))
 
     !fluxes: get from import State
-    fluxes(1,1,1:8) = 0.0_rk
-    fluxes(1,1,1) = 5.0_rk/86400.0_rk !fdet
-    fluxes(1,1,2) = 5.0_rk/86400.0_rk !sdet
-    fluxes(1,1,3) = 0.08/86400.0_rk !pdet
+    fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
+    fluxes(_IRANGE_,_JRANGE_,1) = 5.0_rk/86400.0_rk !fdet
+    fluxes(_IRANGE_,_JRANGE_,2) = 5.0_rk/86400.0_rk !sdet
+    fluxes(_IRANGE_,_JRANGE_,3) = 0.08/86400.0_rk !pdet
 
     !! define an output unit for tsv output, TODO: add netcdf output for this
     !! netcdf output currently not working (see commented code below)
@@ -188,27 +194,31 @@ module fabm_sediment_component
 
     distGrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,sed%grid%knum/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    surfdistGrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
+                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! Create ESMF arrays for boundary conditions
-    temperatureArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,1), &
+    temperatureArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,1), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="water_temperature", rc=rc)
-    phosphateArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,5), &
+    ! rih: all this has to go and a generic name-based procedure has to get/set
+    ! boundary conditions
+    phosphateArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,5), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="dissolved_inorganic_phosphate_in_water", rc=rc)
-    nitrateArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,6), &
+    nitrateArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,6), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="dissolved_inorganic_nitrate_in_water", rc=rc)
-    ammoniaArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,7), &
+    ammoniaArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,7), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="dissolved_inorganic_ammonia_in_water", rc=rc)
-    oxygenArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,8), &
+    oxygenArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,8), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="dissolved_oxygen_in_water", rc=rc)
-    oduArray = ESMF_ArrayCreate(distgrid=distgrid,farray=bdys(:,:,9), &
+    oduArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,9), &
                    indexflag=ESMF_INDEX_GLOBAL, &
-                   name="oxygen_demand", rc=rc)
+                   name="oxygen_demand_units_in_water", rc=rc)
 
     !> set export state
     call ESMF_StateAddReplace(exportState,(/temperatureArray,phosphateArray,&
@@ -216,19 +226,21 @@ module fabm_sediment_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! Create ESMF arrays for fluxes
-    fdetArray = ESMF_ArrayCreate(distgrid=distgrid,farray=fluxes(:,:,1), &
+    fdetArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=fluxes(:,:,1), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="fdet", rc=rc)
-    sdetArray = ESMF_ArrayCreate(distgrid=distgrid,farray=fluxes(:,:,2), &
+    sdetArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=fluxes(:,:,2), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="sdet", rc=rc)
-    pdetArray = ESMF_ArrayCreate(distgrid=distgrid,farray=fluxes(:,:,3), &
+    pdetArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=fluxes(:,:,3), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="pdet", rc=rc)
  
     call ESMF_StateAddReplace(exportState,(/fdetArray,sdetArray,pdetArray/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    ! rih: remove until here
 
+#if 0
     ! Create ESMF arrays for concentrations
     do i=1,sed%nvar
       write(string,'(A,I0.3)') 'Var',i
@@ -237,7 +249,8 @@ module fabm_sediment_component
     enddo
     call ESMF_StateAddReplace(exportState,concArrays,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+#endif
+
     call ESMF_LogWrite('Initialized FABM sediment module',ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
@@ -270,6 +283,7 @@ module fabm_sediment_component
       //" ("//timestring2//")", ESMF_LOGMSG_INFO)
 #endif
 
+#if 0
     !call ESMF_StatePrint(importState,options="long",nestedFlag=.true.,rc=rc)
     call ESMF_StateGet(importState,"FABM field bundle",fieldBundle,rc=rc)
     !call ESMF_FieldBundlePrint(fieldBundle,rc=rc)
@@ -277,7 +291,8 @@ module fabm_sediment_component
     allocate(fieldlist(fieldcount))
     call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldlist,rc=rc)
     call ESMF_FieldGet(fieldlist(1),name=name,rc=rc)
-  
+#endif
+
     !! Get integration time step from parent clock
     call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
     call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
@@ -289,7 +304,7 @@ module fabm_sediment_component
      do n=1,sed%nvar
        do k=1,sed%grid%knum
          if (sed%conc(1,1,k,n) .lt. sed%model%info%state_variables(n)%minimum) then
-            sed%conc(1,1,k,n) = sed%model%info%state_variables(n)%minimum
+            sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%info%state_variables(n)%minimum
          end if
        end do
      end do
