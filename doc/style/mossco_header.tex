@@ -1,4 +1,4 @@
-\documentclass[smallheadings=true]{scrbook}
+\documentclass[headings=small]{scrbook}
 \usepackage[a4paper,margin=2cm]{geometry}
 \usepackage{makeidx}
 \usepackage{natbib}
@@ -29,6 +29,7 @@
 \usepackage{pspicture}
 \fi
 \usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
 \usepackage{mathptmx}
 \usepackage[scaled=.90]{helvet}
 \usepackage{courier}
@@ -40,7 +41,7 @@
 \usepackage{microtype}
 \makeindex
 \setcounter{tocdepth}{3}
-\renewcommand{\footrulewidth}{0.8pt}
+%\renewcommand{\footrulewidth}{0.8pt}
 \renewcommand{\familydefault}{\sfdefault}
 \hfuzz=15pt
 \setlength{\emergencystretch}{15pt}
@@ -64,10 +65,10 @@
 \begin{titlepage}
 \maketitle
 \end{titlepage}
-\clearemptydoublepage
+\cleardoublepage
 \pagenumbering{roman}
 \tableofcontents
-\clearemptydoublepage
+\cleardoublepage
 \pagenumbering{arabic}
 \hypersetup{pageanchor=true,citecolor=blue}
 
