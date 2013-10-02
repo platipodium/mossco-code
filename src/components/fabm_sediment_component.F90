@@ -88,7 +88,7 @@ module fabm_sediment_component
     type(ESMF_Field)     :: field
     type(ESMF_Array)     :: array
     integer              :: i
-    type(ESMF_DistGrid)  :: distGrid,surfdistGrid
+    type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arraySpec
 
@@ -96,11 +96,6 @@ module fabm_sediment_component
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
     integer(ESMF_KIND_I4) :: itemcount,fieldcount
-
-    type(ESMF_Array) :: temperatureArray,phosphateArray
-    type(ESMF_Array) :: nitrateArray,ammoniaArray,oxygenarray,oduArray
-    type(ESMF_Array) :: fdetArray,sdetArray,pdetArray
-    type(ESMF_Array),dimension(:), allocatable :: concArrays
   
     call ESMF_LogWrite('Initializing FABM sediment module',ESMF_LOGMSG_INFO)
      !! read namelist input for control of time, this should not be done like this,
@@ -146,38 +141,10 @@ module fabm_sediment_component
     !> Allocate boundary conditions and initialize with zero
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
     bdys(1:_INUM_,1:_JNUM_,1:9) = 0.0_rk
-
-    call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
-    if (itemcount==0) then
-      write(string,'(A)') "No temperature information found, using default value 10 deg_C"
-      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
-      write(*,*)string
-      bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
-    else 
-      call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
-      write(string,'(A)') "Water temperature information found"
-      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
-      !call ESMF_FieldGet(field,farrayPtr=fptr2d,rc=rc) !> @todo SEGFAULT
-      !bdys(:,:,1) = fptr2d   ! degC temperature
-    endif
-
-    ! get these values from import state, the sediment component should not
-    ! contain these example values for the omexdia_p_test
-    bdys(1:_INUM_,1:_JNUM_,5) = 1.0_rk   ! mmolP/m**3 po4
-    bdys(1:_INUM_,1:_JNUM_,6) = 10.0_rk  ! mmolN/m**3 no3
-    bdys(1:_INUM_,1:_JNUM_,7) = 0.0_rk   ! mmolN/m**3 nh3
-    bdys(1:_INUM_,1:_JNUM_,8) = 250.0_rk ! mmolO2/m**3 oxy
-    bdys(1:_INUM_,1:_JNUM_,9) = 0.0_rk   ! odu
-
-   ! water_temperature as 3d field
-    
     allocate(fluxes(_INUM_,_JNUM_,sed%nvar))
-
-    !fluxes: get from import State
     fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
-    fluxes(_IRANGE_,_JRANGE_,1) = 5.0_rk/86400.0_rk !fdet
-    fluxes(_IRANGE_,_JRANGE_,2) = 5.0_rk/86400.0_rk !sdet
-    fluxes(_IRANGE_,_JRANGE_,3) = 0.08/86400.0_rk !pdet
+
+    call get_boundary_conditions(sed,importState,bdys,fluxes)
 
     !! define an output unit for tsv output, TODO: add netcdf output for this
     !! netcdf output currently not working (see commented code below)
@@ -192,64 +159,27 @@ module fabm_sediment_component
     end do
     write(funit,*)
 
-    distGrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,sed%grid%knum/), &
+    distGrid_3d =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,sed%grid%knum/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    surfdistGrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
+    distGrid_2d =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    ! Create ESMF arrays for boundary conditions
-    temperatureArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,1), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="water_temperature", rc=rc)
-    ! rih: all this has to go and a generic name-based procedure has to get/set
-    ! boundary conditions
-    phosphateArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,5), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="dissolved_inorganic_phosphate_in_water", rc=rc)
-    nitrateArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,6), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="dissolved_inorganic_nitrate_in_water", rc=rc)
-    ammoniaArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,7), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="dissolved_inorganic_ammonia_in_water", rc=rc)
-    oxygenArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,8), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="dissolved_oxygen_in_water", rc=rc)
-    oduArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=bdys(:,:,9), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="oxygen_demand_units_in_water", rc=rc)
-
-    !> set export state
-    call ESMF_StateAddReplace(exportState,(/temperatureArray,phosphateArray,&
-      nitrateArray,ammoniaArray,oxygenarray,oduArray/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    ! Create ESMF arrays for fluxes
-    fdetArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=fluxes(:,:,1), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="fdet", rc=rc)
-    sdetArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=fluxes(:,:,2), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="sdet", rc=rc)
-    pdetArray = ESMF_ArrayCreate(distgrid=surfdistgrid,farray=fluxes(:,:,3), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name="pdet", rc=rc)
- 
-    call ESMF_StateAddReplace(exportState,(/fdetArray,sdetArray,pdetArray/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ! rih: remove until here
-
-#if 0
-    ! Create ESMF arrays for concentrations
+    ! put concentration array into export state
     do i=1,sed%nvar
-      write(string,'(A,I0.3)') 'Var',i
-      concArrays(i) = ESMF_ArrayCreate(distgrid=distgrid,farray=conc(:,:,:,i), &
-        indexflag=ESMF_INDEX_GLOBAL, name=string, rc=rc)
-    enddo
-    call ESMF_StateAddReplace(exportState,concArrays,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-#endif
+      array = ESMF_ArrayCreate(distgrid=distgrid_3d,farray=conc(:,:,:,i), &
+                   indexflag=ESMF_INDEX_GLOBAL, &
+                   name=trim(sed%model%info%state_variables(i)%long_name), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateGet(exportState, &
+        trim(sed%model%info%state_variables(i)%long_name),array,rc=rc)
+      !call ESMF_ArrayPrint(array,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end do 
 
     call ESMF_LogWrite('Initialized FABM sediment module',ESMF_LOGMSG_INFO)
 
@@ -293,14 +223,16 @@ module fabm_sediment_component
     call ESMF_FieldGet(fieldlist(1),name=name,rc=rc)
 #endif
 
+    call get_boundary_conditions(sed,importState,bdys,fluxes)
+
     !! Get integration time step from parent clock
     call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
     call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
-   sed%bdys   => bdys
-   sed%fluxes => fluxes
-   call ode_solver(sed,dt,ode_method)
+    sed%bdys   => bdys
+    sed%fluxes => fluxes
+    call ode_solver(sed,dt,ode_method)
 
- ! reset concentrations to mininum_value
+   ! reset concentrations to mininum_value
      do n=1,sed%nvar
        do k=1,sed%grid%knum
          if (sed%conc(1,1,k,n) .lt. sed%model%info%state_variables(n)%minimum) then
@@ -309,6 +241,9 @@ module fabm_sediment_component
        end do
      end do
 
+     !@TODO write fluxes into export State
+
+    !@ TODO remove output and implement throughh ESMF in NetCDF:
     !! Check if the output alarm is ringing, if so, quiet it and 
     !! get the current advance count (formerly t) from parent clock
     if (ESMF_AlarmIsRinging(outputAlarm)) then
@@ -349,7 +284,52 @@ module fabm_sediment_component
     if (allocated(fluxes)) deallocate(fluxes)
 
     call ESMF_AlarmDestroy(outputAlarm,rc=rc)
+    !@TODO destroy all items in import and export state
 
   end subroutine Finalize
+
+  subroutine get_boundary_conditions(sed,importState,bdys,fluxes)
+    
+    real(rk),dimension(:,:,:),target :: bdys,fluxes
+    type(type_sed)      :: sed
+    type(ESMF_State)    :: importState
+    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
+    type(ESMF_Field)    :: Field
+    type(ESMF_Array)    :: array
+    integer             :: i,rc,itemcount
+    character(len=ESMF_MAXSTR) :: string
+
+    call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
+    if (itemcount==0) then
+      write(string,'(A)') "No temperature information found, using default value 10 deg_C"
+      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+      bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
+    else 
+      call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
+      write(string,'(A)') "Water temperature information found"
+      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+      !call ESMF_FieldGet(field,farrayPtr=fptr2d,rc=rc) !> @todo SEGFAULT
+      !bdys(:,:,1) = fptr2d   ! degC temperature
+    endif
+
+    do i=1,sed%nvar
+      call ESMF_StateGet(importState, &
+        trim(sed%model%info%state_variables(i)%long_name),array,rc=rc)
+      if(rc /= ESMF_SUCCESS) then
+        !call ESMF_LogWrite("variable not found",ESMF_LOGMSG_INFO)
+      else
+        if (sed%model%info%state_variables(n)%properties%get_logical( &
+            'particulate',default=.false.)) then
+          ptr_f2 => fluxes(_IRANGE_,_JRANGE_,i)
+        else
+          ptr_f2 => bdys(_IRANGE_,_JRANGE_,i+1)
+        end if
+          call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      endif
+    end do
+
+  end subroutine get_boundary_conditions
+
 
 end module fabm_sediment_component
