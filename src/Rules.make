@@ -140,25 +140,29 @@ export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
 export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
 export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 
-# 4. Putting everything together.  This section could need some cleanup, but does work for now
+# 7. Putting everything together.  This section could need some cleanup, but does work for now
 #
 
 # determine the compiler used by FABM
 FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
 
 ifndef F90
 ifdef ESMF_F90COMPILER
 F90=$(ESMF_F90COMPILER)
+F90_VERSION:=$(shell $(F90) --version | head -1)
 $(warning F90 automatically determined from ESMF_F90COMPILER variable: F90=$(F90))
 else
 F90=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+F90_VERSION:=$(shell $(F90) --version | head -1)
 $(warning F90 automatically determined from FABM environment: F90=$(F90))
 endif
 endif
 
-ifneq ($(F90),$(FABM_F90COMPILER))
+ifneq ($(F90_VERSION),$(FABM_F90COMPILER_VERSION))
 MPICH_F90COMPILER=$(shell $(F90) -compile_info 2> /dev/null | cut -d' ' -f1)
-ifneq ($(MPICH_F90COMPILER),$(FABM_F90COMPILER))
+MPICH_F90COMPILER_VERSION:=$(shell $(MPICH_F90COMPILER) --version | head -1)
+ifneq ($(MPICH_F90COMPILER_VERSION),$(FABM_F90COMPILER_VERSION))
 ifndef MOSSCO_COMPILER
 $(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
 endif
@@ -166,6 +170,9 @@ endif
 endif
 export MOSSCO_COMPILER=$(F90)
 export F90
+export F90_VERSION
+export FABM_F90COMPILER_VERSION
+export MPICH_F90COMPILER_VERSION
 
 ifeq ($(MOSSCO_FABM),true)
 INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
@@ -237,18 +244,16 @@ prefix:
 info:
 	@echo SHELL = $(SHELL)
 	@echo MAKE = $(MAKE)
-	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
-	@echo F90 = $(F90)
 	@echo HAVE_LD_FORCE_LOAD = $(HAVE_LD_FORCE_LOAD)
-	@echo FABMHOST = $(FABMHOST)
-	@echo FABMDIR = $(FABMDIR)
 	@echo INCDIRS = $(INCDIRS)
-	@echo F90FLAGS = $(F90FLAGS)
 	@echo CPPFLAGS = $(CPPFLAGS)
 	@echo LDFLAGS = $(LDFLAGS)
 	@echo LIBS = $(LIBS)
 	@echo LINKDIRS = $(LINKDIRS)
-	@env | grep MOSSCO_ | sort 
+	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
+	@env | grep ^F90 | sort 
+	@env | grep ^FABM | sort 
+	@env | grep ^MOSSCO_ | sort 
 
 # Common rules
 #ifndef EXTRA_CPP
