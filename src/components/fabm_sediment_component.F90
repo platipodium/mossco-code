@@ -13,7 +13,6 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
-#include <cppdefs.h>
 #include "fabm_driver.h"
 #define _GRID_ sed%grid
 #define _INUM_ _GRID_%inum
