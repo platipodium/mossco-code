@@ -178,13 +178,24 @@ module gotm_component
       coordY(i) = latitude
     enddo  
 
-
-    !> Create a water temperature field with a 3D array specification, fill the temperature
-    !> field with T0, add the field to the ocean's export state
+    ! Get information to generate the fields that store the pointers to variables
     call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
     call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+ !   do i=1,nvar
+ !     allocate(variable(1,1,nlev))
+ !     variable_Array(i) = ESMF_ArrayCreate(distgrid=distgrid,farray=variable, &
+ !     indexflag=ESMF_INDEX_GLOBAL, name=trim(variable_name(i)), rc=rc)
+ !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ !     variable_Field(i) = ESMF_FieldCreate(grid=grid, array=variable_Array(i),&
+ !     name=trim(variable_name(i)), rc=rc)
+ !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ !   enddo
+
+    !> Create a water temperature field with a 3D array specification, fill the temperature
+    !> field with T0, add the field to the ocean's export state
     allocate(water_temperature(1,1,nlev))
     water_temperature_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=water_temperature, &
       indexflag=ESMF_INDEX_GLOBAL, name="water_temperature", rc=rc)
