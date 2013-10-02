@@ -43,12 +43,12 @@ libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities
 
 exec: fabmdriver main.F90
-	$(F90) $(F90FLAGS) -c -o omexdia_p_test.o main.F90 
-	$(F90) -o omexdia_p_test omexdia_p_test.o $(LDFLAGS)
-	@echo "Created example binary omexdia_p_test in  $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/omexdia_p to run the example." > $(MOSSCO_BIN_PATH)/omexdia_p.txt
+	$(F90) $(F90FLAGS) -c -o omexdia_p.o main.F90 
+	$(F90) -o omexdia_p omexdia_p.o $(LDFLAGS)
+	@echo "Created example binary omexdia_p in  $(PWD)" 
+	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/omexdia_p to run the example." > $(MOSSCO_BIN_PATH)/omexdia_p.txt
 
 clean: extraclean
 
 extraclean: 
-	@rm -f output.dat omexdia_p_test
+	@rm -f output.dat omexdia_p

@@ -37,7 +37,7 @@ endif
 endif
 endif
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS)
+.PHONY: all clean extraclean subdirs $(SUBDIRS) test
 
 default: all
 
@@ -53,3 +53,6 @@ clean: extraclean
 extraclean:
 	@for dir in $(SUBDIRS) ; do make -C $$dir clean; done
 
+test:
+	$(MAKE) -C standalone test
+	@for dir in *_* ; do (cd $$dir; test -x ./$$dir && ./$$dir; ) ; done
