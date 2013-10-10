@@ -26,7 +26,7 @@ DELFT_FOREIGN_SOURCES=$(DELFT_DIR)/modules/precision_basics.f90 $(DELFT_DIR)/mod
 
 DELFT_OBJS    = precision_basics.o precision.o erosand.o eromud.o vanRijn84.o shld.o sand_mud.o 
 
-.PHONY: libsediment libfabm liberosed libdelft localsources
+.PHONY: libsediment liberosed libdelft localsources
 
 # Make targets
 
@@ -47,18 +47,12 @@ all: $(ALL_TARGETS)
 
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
-libfabm: $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 
-$(MOSSCO_LIBRARY_PATH)/libsediment.a: libsolver libfabm fabm_sediment_driver.o
+$(MOSSCO_LIBRARY_PATH)/libsediment.a: libsolver libfabm_external fabm_sediment_driver.o
 	$(AR) crus $@ fabm_sediment_driver.o
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: libsolver libfabm libgotm_external fabm_0d_driver.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: libsolver libfabm_external libgotm_external fabm_0d_driver.o
 	        $(AR) crus $@ fabm_0d_driver.o
-
-$(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE):
-	@echo Recreating the FABM library $(FABM_LIBRARY_FILE)
-	#$(MAKE) -C $(FABMDIR)
-	$(MAKE) -C $(FABMDIR)/src
 	
 libsolver: $(MOSSCO_LIBRARY_PATH)/libsolver.a
 

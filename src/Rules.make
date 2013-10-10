@@ -226,7 +226,7 @@ LDFLAGS += $(LIBRARY_PATHS)
 export LDFLAGS
 
 # Make targets
-.PHONY: default all clean doc info prefix libgotm_external
+.PHONY: default all clean doc info prefix libfabm_external libgotm_external
 
 default: prefix all
 
@@ -257,7 +257,12 @@ info:
 
 
 # External libraries
+libfabm_external: $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
+
+$(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE):
+	@echo Recreating the FABM library $(FABM_LIBRARY_FILE)
+	$(MAKE) -C $(FABMDIR)/src
 
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
 	$(MAKE) -C $(FABMDIR)/src gotm
