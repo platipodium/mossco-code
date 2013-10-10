@@ -78,6 +78,11 @@ fabm_sediment_component.o: fabm_sediment_component.F90
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libsediment
 	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
+erosed_component.o: erosed_component.F90
+	@echo "Compiling $<"
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers liberosed
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
 $(MOSSCO_module_path)/solver_library.mod:
 	make -C $(MOSSCO_DIR)/src/utilities libsolver
 
