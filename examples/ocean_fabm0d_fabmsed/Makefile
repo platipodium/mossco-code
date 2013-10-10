@@ -29,30 +29,19 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 all: exec
 exec: ocean_fabm0d_fabmsed
 
-ocean_fabm0d_fabmsed: main.o toplevel_component.o libocean libsediment liboceansedimentcoupler libfabm0d
-	$(F90) $(F90FLAGS) -o ocean_fabm0d_fabmsed  toplevel_component.o main.o $(LDFLAGS)
+ocean_fabm0d_fabmsed: toplevel_component.o main.o  
+	$(F90) $(F90FLAGS) -o ocean_fabm0d_fabmsed  $^ $(LDFLAGS)
 	@echo "Created example binary ocean_fabm0d_fabmsed in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d_fabmsed/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d_fabmsed.txt
 
-libocean: $(MOSSCO_LIBRARY_PATH)/libocean.a
-liboceansedimentcoupler: $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
-libsediment: $(MOSSCO_LIBRARY_PATH)/libsediment.a
-libfabm0d: $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
+libfabm0d libsediment libocean:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-$(MOSSCO_LIBRARY_PATH)/libsediment.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libsediment
-	
-$(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/mediators liboceansedimentcoupler
-	
-$(MOSSCO_LIBRARY_PATH)/libfabm0d.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libfabm0d
-	
-$(MOSSCO_LIBRARY_PATH)/libocean.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libocean
+liboceansedimentcoupler:
+	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 	
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libfabm0d libsediment
+toplevel_component.o: toplevel_component.F90 libfabm0d libsediment libocean liboceansedimentcoupler
 
 clean: extraclean
 
