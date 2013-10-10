@@ -28,26 +28,16 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 all: exec
 exec: ocean_fabm0d
 
-ocean_fabm0d: main.o toplevel_component.o libocean libfabm0d libgotm
-	$(F90) $(F90FLAGS) -o ocean_fabm0d  toplevel_component.o main.o $(LDFLAGS)
+ocean_fabm0d: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o ocean_fabm0d  $^ $(LDFLAGS)
 	@echo "Created example binary ocean_fabm0d in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d.txt
 
-libocean: $(MOSSCO_LIBRARY_PATH)/libocean.a
-libfabm0d: $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
-libgotm: $(MOSSCO_LIBRARY_PATH)/libgotm.a
+libfabm0d libgotm libocean:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-$(MOSSCO_LIBRARY_PATH)/libgotm.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libgotm
-	
-$(MOSSCO_LIBRARY_PATH)/libfabm0d.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libfabm0d
-	
-$(MOSSCO_LIBRARY_PATH)/libocean.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libocean
-	
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libocean libgotm libfabm0d 
+toplevel_component.o: toplevel_component.F90 libfabm0d libgotm libocean
 
 clean: extraclean
 
