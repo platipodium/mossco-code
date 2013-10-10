@@ -18,31 +18,18 @@ LIBS := -lsediment -lsolver $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
-FABMLIBTARGET=$(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 
-.PHONY: libsediment fabmdriver exec
+.PHONY: exec libsediment
 
 all: exec
 
-fabmlib: $(FABMLIBTARGET)
-
-$(FABMLIBTARGET):
-	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR) )
-	(export FABMHOST=mossco ; $(MAKE) -C $(FABMDIR)/src )
-
-fabmdriver: fabmlib libsolver libsediment
-
-libsediment: prefix $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod $(MOSSCO_DIR)/src/drivers/fabm_sediment_driver.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCO_DIR)/src/drivers/fabm_sediment_driver.o
-	@echo "Created sediment library  $(MOSSCO_LIBRARY_PATH)/libsediment.a" 
-
-$(MOSSCO_DIR)/src/drivers/fabm_sediment_driver.o $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod: 
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers
+libsediment:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 libsolver:
-	$(MAKE) -C $(MOSSCO_DIR)/src/utilities
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-exec: fabmdriver main.F90
+exec: main.F90 libsolver libsediment
 	$(F90) $(F90FLAGS) -c -o omexdia_p.o main.F90 
 	$(F90) -o omexdia_p omexdia_p.o $(LDFLAGS)
 	@echo "Created example binary omexdia_p in  $(PWD)" 
