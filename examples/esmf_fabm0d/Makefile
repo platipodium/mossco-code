@@ -34,20 +34,16 @@ LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a
 
 all: exec
 
-libfabm0d: prefix $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod $(MOSSCO_DIR)/src/components/fabm_0d_component.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libfabm0d.a $(MOSSCO_DIR)/src/components/fabm_0d_component.o
-	@echo "Created fabm0d library  $(MOSSCO_LIBRARY_PATH)/libfabm0d.a" 
+libfabm0d:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-exec: main.o libfabm0d
-	$(F90) $(F90FLAGS) -o esmf_fabm0d toplevel_component.o main.o $(LDFLAGS)
+exec: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o esmf_fabm0d $^ $(LDFLAGS)
 	@echo "Created example binary esmf_fabm0d in  $(PWD)" 
 	@echo "Please change to $(FABMDIR)/testcases/0d to run the example." > $(MOSSCO_BIN_PATH)/esmf_fabm0d.txt
 
-$(MOSSCO_MODULE_PATH)/esmf_fabm_0d_component.mod: $(MOSSCO_DIR)/src/components/esmf_fabm_0d_component.F90
-	$(MAKE) -C $(MOSSCO_DIR)/src/components
-
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90
+toplevel_component.o: toplevel_component.F90 libfabm0d
 
 fabm0d:
 	( unset LIBS; export FABMHOST=0d ; $(MAKE) -C $(FABMDIR)/src/ )

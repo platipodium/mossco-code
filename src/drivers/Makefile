@@ -52,12 +52,12 @@ libfabm: $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: libsolver libfabm fabm_sediment_driver.o
 	$(AR) crus $@ fabm_sediment_driver.o
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: libsolver libfabm fabm_0d_driver.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: libsolver libfabm libgotm_external fabm_0d_driver.o
 	        $(AR) crus $@ fabm_0d_driver.o
 
 $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE):
 	@echo Recreating the FABM library $(FABM_LIBRARY_FILE)
-	$(MAKE) -C $(FABMDIR)
+	#$(MAKE) -C $(FABMDIR)
 	$(MAKE) -C $(FABMDIR)/src
 	
 libsolver: $(MOSSCO_LIBRARY_PATH)/libsolver.a

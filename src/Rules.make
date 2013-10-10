@@ -226,7 +226,7 @@ LDFLAGS += $(LIBRARY_PATHS)
 export LDFLAGS
 
 # Make targets
-.PHONY: default all clean doc info prefix
+.PHONY: default all clean doc info prefix libgotm_external
 
 default: prefix all
 
@@ -254,6 +254,15 @@ info:
 	@env | grep ^F90 | sort 
 	@env | grep ^FABM | sort 
 	@env | grep ^MOSSCO_ | sort 
+
+
+# External libraries
+libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
+
+$(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
+	$(MAKE) -C $(FABMDIR)/src gotm
+	$(MAKE) -C $(GOTMDIR)/src
+
 
 # Common rules
 #ifndef EXTRA_CPP

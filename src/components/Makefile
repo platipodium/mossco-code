@@ -33,7 +33,7 @@ TARGETS += libgotm libfabm0d
 endif
 endif
 
-.PHONY: $(TARGETS) libgotm_external
+.PHONY: $(TARGETS)
 
 #--------------------------------------
 # Make targets
@@ -86,10 +86,3 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod
-
-# External libraries
-libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
-
-$(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
-	$(MAKE) -C $(FABMDIR)/src gotm
-	$(MAKE) -C $(GOTMDIR)/src
