@@ -21,26 +21,19 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 all: exec
 
-exec: main.o toplevel_component.o libocean libatmosphere
-	$(F90) $(F90FLAGS) -o esmf_remtc toplevel_component.o main.o $(LDFLAGS)
+exec: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o esmf_remtc $^ $(LDFLAGS)
 	@echo "Created example binary esmf_remtc in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_remtc/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_remtc.txt
 
-libocean: $(MOSSCO_LIBRARY_PATH)/libocean.a
-libatmosphere: $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
-libaocoupler: $(MOSSCO_LIBRARY_PATH)/libaocoupler.a
+libocean libatmosphere:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-$(MOSSCO_LIBRARY_PATH)/libaocoupler.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/mediators libaocoupler
-	
-$(MOSSCO_LIBRARY_PATH)/libatmosphere.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libatmosphere
-	
-$(MOSSCO_LIBRARY_PATH)/libocean.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libocean
-	
+libaocoupler:
+	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
+
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90
+toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
 
 clean: extraclean
 
