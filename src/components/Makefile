@@ -80,7 +80,7 @@ fabm_sediment_component.o: fabm_sediment_component.F90
 
 erosed_component.o: erosed_component.F90
 	@echo "Compiling $<"
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers liberosed
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_erosed
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 $(MOSSCO_module_path)/solver_library.mod:

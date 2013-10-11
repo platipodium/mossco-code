@@ -25,7 +25,7 @@ DELFT_OBJS= \
 	$(DELFT_DIR)/source/shld.o		\
 	$(DELFT_DIR)/source/sand_mud.o
 
-.PHONY: libsediment liberosed libdelft
+.PHONY: libsediment libmossco_erosed libdelft
 
 # Make targets
 
@@ -36,7 +36,7 @@ ALL_TARGETS=libsediment libmossco_fabm0d
 endif
 
 ifeq ($(MOSSCO_DELFT),true)
-ALL_TARGETS += localsources liberosed
+ALL_TARGETS += libmossco_erosed
 INCLUDES += -I$(DELFT_DIR)/include
 endif
 
@@ -60,7 +60,7 @@ $(MOSSCO_LIBRARY_PATH)/libsolver.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libsolver
 
 # Delft section
-liberosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
+libmossco_erosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: $(DELFT_OBJS) delft_erosed_driver.o 
 	$(AR) crus $@ $^
