@@ -25,7 +25,7 @@ DELFT_OBJS= \
 	$(DELFT_DIR)/source/shld.o		\
 	$(DELFT_DIR)/source/sand_mud.o
 
-.PHONY: libsediment libmossco_erosed libdelft
+.PHONY: libsediment libmossco_erosed
 
 # Make targets
 
