@@ -13,7 +13,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lmossco_delft -lmossco_erosed $(LIBS)
+LIBS := -lmossco_erosed $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)

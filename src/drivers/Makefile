@@ -16,17 +16,16 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-DELFT_FOREIGN_SOURCES=$(DELFT_DIR)/modules/precision_basics.f90 $(DELFT_DIR)/modules/precision.f90 \
- $(DELFT_DIR)/source/erosand.f90 \
- $(DELFT_DIR)/source/eromud.f90 \
- $(DELFT_DIR)/source/vanRijn84.f90 \
- $(DELFT_DIR)/source/shld.f90 \
- $(DELFT_DIR)/source/sand_mud.f90 \
- $(DELFT_DIR)/include/sedparams.inc
+DELFT_OBJS= \
+	$(DELFT_DIR)/modules/precision_basics.o	\
+	$(DELFT_DIR)/modules/precision.o	\
+	$(DELFT_DIR)/source/erosand.o		\
+	$(DELFT_DIR)/source/eromud.o		\
+	$(DELFT_DIR)/source/vanRijn84.o		\
+	$(DELFT_DIR)/source/shld.o		\
+	$(DELFT_DIR)/source/sand_mud.o
 
-DELFT_OBJS    = precision_basics.o precision.o erosand.o eromud.o vanRijn84.o shld.o sand_mud.o 
-
-.PHONY: libsediment liberosed libdelft localsources
+.PHONY: libsediment liberosed libdelft
 
 # Make targets
 
@@ -38,6 +37,7 @@ endif
 
 ifeq ($(MOSSCO_DELFT),true)
 ALL_TARGETS += localsources liberosed
+INCLUDES += -I$(DELFT_DIR)/include
 endif
 
 all: $(ALL_TARGETS)
@@ -60,17 +60,10 @@ $(MOSSCO_LIBRARY_PATH)/libsolver.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libsolver
 
 # Delft section
-localsources: $(DELFT_FOREIGN_SOURCES)
-	for F in $(DELFT_FOREIGN_SOURCES) ; do ln -sf $$F; done
-
-libdelft:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: libdelft delft_erosed_driver.o $(DELFT_OBJS)
-	$(AR) crus $@ delft_erosed_driver.o $(DELFT_OBJS)
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_delft.a: $(DELFT_OBJS)
-	$(AR) crus $(MOSSCO_LIBRARY_PATH)/libmossco_delft.a $(DELFT_OBJS) 
+$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: $(DELFT_OBJS) delft_erosed_driver.o 
+	$(AR) crus $@ $^
 
 # Generic section
 
