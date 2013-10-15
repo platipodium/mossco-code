@@ -22,8 +22,9 @@ endif
 MOSSCO_FABM=false
 
 ifndef MOSSCO_FABMDIR
-ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-export MOSSCO_FABMDIR=$(MOSSCO_DIR)/external/fabm-git
+external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
+ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+export MOSSCO_FABMDIR=$(external_FABMDIR)
 endif
 endif
 
