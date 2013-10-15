@@ -21,7 +21,7 @@ ifeq ($(MOSSCO_FABM),true)
 SUBDIRS += omexdia_p
 endif
 
-ifeq ($(MOSSCO_DELFT),true)
+ifeq ($(MOSSCO_EROSED),true)
 SUBDIRS += erosed
 endif
 

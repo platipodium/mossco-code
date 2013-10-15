@@ -129,15 +129,21 @@ endif
 export MOSSCO_OS
 endif
 
-## 5. DELFT
-MOSSCO_DELFT=false
-ifdef DELFT_DIR
-ifneq ("x$(DELFT_DIR)",x)
-ifneq ($(wildcard $(DELFT_DIR)),) 
-MOSSCO_DELFT=true
+## 5. EROSED
+MOSSCO_EROSED=false
+
+ifndef EROSED_DIR
+external_EROSED_DIR = $(MOSSCO_DIR)/external/erosed-svn
+ifneq ($(wildcard $(external_EROSED_DIR)),)
+export EROSED_DIR=$(external_EROSED_DIR)
 endif
 endif
+
+ifdef EROSED_DIR
+MOSSCO_EROSED=true
 endif
+
+export MOSSCO_EROSED
 
 # 6. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX

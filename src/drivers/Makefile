@@ -16,14 +16,14 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-DELFT_OBJS= \
-	$(DELFT_DIR)/modules/precision_basics.o	\
-	$(DELFT_DIR)/modules/precision.o	\
-	$(DELFT_DIR)/source/erosand.o		\
-	$(DELFT_DIR)/source/eromud.o		\
-	$(DELFT_DIR)/source/vanRijn84.o		\
-	$(DELFT_DIR)/source/shld.o		\
-	$(DELFT_DIR)/source/sand_mud.o
+EROSED_OBJS= \
+	$(EROSED_DIR)/modules/precision_basics.o	\
+	$(EROSED_DIR)/modules/precision.o	\
+	$(EROSED_DIR)/source/erosand.o		\
+	$(EROSED_DIR)/source/eromud.o		\
+	$(EROSED_DIR)/source/vanRijn84.o		\
+	$(EROSED_DIR)/source/shld.o		\
+	$(EROSED_DIR)/source/sand_mud.o
 
 .PHONY: libsediment libmossco_erosed
 
@@ -35,9 +35,9 @@ ifeq ($(MOSSCO_FABM),true)
 ALL_TARGETS=libsediment libmossco_fabm0d
 endif
 
-ifeq ($(MOSSCO_DELFT),true)
+ifeq ($(MOSSCO_EROSED),true)
 ALL_TARGETS += libmossco_erosed
-INCLUDES += -I$(DELFT_DIR)/include
+INCLUDES += -I$(EROSED_DIR)/include
 endif
 
 all: $(ALL_TARGETS)
@@ -59,10 +59,10 @@ libsolver: $(MOSSCO_LIBRARY_PATH)/libsolver.a
 $(MOSSCO_LIBRARY_PATH)/libsolver.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libsolver
 
-# Delft section
+# EROSED section
 libmossco_erosed: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: $(DELFT_OBJS) delft_erosed_driver.o 
+$(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a: $(EROSED_OBJS) delft_erosed_driver.o 
 	$(AR) crus $@ $^
 
 # Generic section

@@ -20,7 +20,7 @@ EXTRA_DIST=README
 TARGETS=
 ifeq ($(MOSSCO_ESMF),true)
 TARGETS += libocean libatmosphere
-ifeq ($(MOSSCO_DELFT),true)
+ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
 endif
 endif
