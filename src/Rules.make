@@ -73,13 +73,25 @@ endif
 # the gotm library is installed in the production version (libgotm_prod)
 
 MOSSCO_GOTM=false
+
+ifndef MOSSCO_GOTMDIR
+external_GOTMDIR = $(MOSSCO_DIR)/external/gotm-git
+ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
+export MOSSCO_GOTMDIR=$(external_GOTMDIR)
+endif
+endif
+
+ifdef MOSSCO_GOTMDIR
+export GOTMDIR=$(MOSSCO_GOTMDIR)
+endif
+
 ifdef GOTMDIR
-ifeq ("x$(GOTMDIR)",x) 
-$(error the GOTMDIR variable is empty)
+MOSSCO_GOTM=true
 endif
-ifeq ($(wildcard $(GOTMDIR)),) 
-$(error the directory GOTMDIR=$(GOTMDIR) does not exist)
-endif
+
+export MOSSCO_GOTM
+
+ifeq ($(MOSSCO_GOTM),true)
 
 ifndef FABM 
 export FABM=true
@@ -90,9 +102,9 @@ GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
 GOTM_INCLUDE_PATH=$(GOTMDIR)/include
 GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
 GOTM_LIBRARY_FILE=$(shell ls $(GOTM_LIBRARY_PATH) )
-MOSSCO_GOTM=true
+
 endif
-export MOSSCO_GOTM
+
 
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
@@ -280,10 +292,12 @@ ifdef MOSSCO_FABMDIR
 endif
 
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
+ifdef MOSSCO_GOTMDIR
 ifdef MOSSCO_FABMDIR
 	$(MAKE) -C $(FABMDIR)/src gotm
 endif
 	$(MAKE) -C $(GOTMDIR)/src
+endif
 
 
 # Common rules
