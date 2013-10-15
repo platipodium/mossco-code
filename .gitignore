@@ -37,4 +37,5 @@ src/drivers/sedparams.inc
 src/drivers/shld.f90
 src/drivers/vanRijn84.f90
 examples/standalone/erosed/delft_sediment_test.out
-examples/standalone/erosed/erosed_test
+examples/standalone/erosed/erosed
+examples/standalone/omexdia_p/omexdia_p
