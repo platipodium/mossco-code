@@ -16,14 +16,28 @@ $(error GNU make is required)
 endif 
 
 # 2. Importing all FABM-related environment variables and checking that the environment is sane
-#    At the moment, we require that FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
+#    At the moment, we require that MOSSCO_FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
 # 
 MOSSCO_FABM=false
 
-ifndef FABMDIR
-$(error FABMDIR needs to be defined)
+ifndef MOSSCO_FABMDIR
+ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
+export MOSSCO_FABMDIR=$(MOSSCO_DIR)/external/fabm-git
 endif
+endif
+
+ifdef MOSSCO_FABMDIR
+export FABMDIR=$(MOSSCO_FABMDIR)
+endif
+
+ifdef FABMDIR
+MOSSCO_FABM=true
+endif
+
+export MOSSCO_FABM
+
+ifeq ($(MOSSCO_FABM),true)
 
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
 ifndef FABMHOST
@@ -51,9 +65,8 @@ FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_INCLUDE_PATH=$(FABMDIR)/include
 FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_LIBRARY_FILE=$(shell ls $(FABM_LIBRARY_PATH) )
-MOSSCO_FABM=true
 
-export MOSSCO_FABM
+endif
 
 # 3. (optional) Importing all GOTM-related environment variables and checking that the environment is sane
 # At the moment, we require that GOTMDIR, FABM, and FORTRAN_COMPILER are set and that
@@ -261,11 +274,15 @@ libfabm_external: $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
 libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
 
 $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE):
+ifdef MOSSCO_FABMDIR
 	@echo Recreating the FABM library $(FABM_LIBRARY_FILE)
 	$(MAKE) -C $(FABMDIR)/src
+endif
 
 $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
+ifdef MOSSCO_FABMDIR
 	$(MAKE) -C $(FABMDIR)/src gotm
+endif
 	$(MAKE) -C $(GOTMDIR)/src
 
 
