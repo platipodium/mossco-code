@@ -55,6 +55,9 @@ module esmf_toplevel_component
     call ESMF_GridCompInitialize(atmosphereComp,importState=atmosphereImportState,exportState=atmosphereExportState,&
       clock=parentClock,rc=rc)
 
+    call ESMF_StateWrite(atmosphereImportState, "atmosphere_import_state.nc", rc=rc);
+    call ESMF_StateWrite(atmosphereExportState, "atmosphere_export_state.nc", rc=rc);
+
     oceanCompName = "ESMF Remtc Ocean component"
     oceanComp     = ESMF_GridCompCreate(name=oceanCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
     call ESMF_GridCompSetServices(oceancomp, ocean_SetServices, rc=rc)
@@ -62,6 +65,8 @@ module esmf_toplevel_component
     oceanExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="Ocean Export")
     call ESMF_GridCompInitialize(oceanComp,importState=oceanImportState,exportState=oceanExportState,&
       clock=parentClock,rc=rc)
+    call ESMF_StateWrite(oceanImportState, "ocean_import_state.nc", rc=rc);
+    call ESMF_StateWrite(oceanExportState, "ocean_export_state.nc", rc=rc);
 
     aocplCompName = "ESMF Remtc Atmosphere-Ocean coupler component"
     aocplComp     = ESMF_CplCompCreate(name=aocplCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
