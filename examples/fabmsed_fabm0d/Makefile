@@ -15,7 +15,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS := -lsediment -lfabm0d -lmossco_fabm0d -lsolver -lesmf $(LIBS)
+LIBS := -lfabm0d -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
@@ -36,9 +36,6 @@ libfabm0d libsediment:
 main.o: toplevel_component.o
 toplevel_component.o: toplevel_component.F90 libfabm0d libsediment
 
-
-$(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libsediment
 
 clean: extraclean
 

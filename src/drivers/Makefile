@@ -16,14 +16,14 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libsediment libmossco_erosed
+.PHONY: libmossco_sediment libmossco_erosed
 
 # Make targets
 
 ALL_TARGETS =
 
 ifeq ($(MOSSCO_FABM),true)
-ALL_TARGETS=libsediment libmossco_fabm0d
+ALL_TARGETS=libmossco_sediment libmossco_fabm0d
 endif
 
 ifeq ($(MOSSCO_EROSED),true)
@@ -36,10 +36,10 @@ all: $(ALL_TARGETS)
 
 # FABM/sediment section
 
-libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
+libmossco_sediment: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 
-$(MOSSCO_LIBRARY_PATH)/libsediment.a: libsolver libfabm_external fabm_sediment_driver.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a: libsolver libfabm_external fabm_sediment_driver.o
 	$(AR) crus $@ fabm_sediment_driver.o
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: libsolver libfabm_external libgotm_external fabm_0d_driver.o
@@ -69,7 +69,7 @@ libmossco_erosed: prefix						\
 
 clean: extraclean
 extraclean:
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_driver.mod

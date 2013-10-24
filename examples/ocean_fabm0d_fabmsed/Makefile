@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lsediment -lsolver -lesmf -locean -loceansedimentcoupler $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver
+LIBS := -lfabm0d -lsediment -locean -loceansedimentcoupler -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf  $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod

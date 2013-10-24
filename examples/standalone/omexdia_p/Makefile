@@ -14,20 +14,20 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lsediment -lsolver $(LIBS)
+LIBS := -lmossco_sediment -lsolver $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 
-.PHONY: exec libsediment
+.PHONY: exec libmossco_sediment
 
 all: exec
 
-libsediment:
+libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-exec: main.F90 libsediment
+exec: main.F90 libmossco_sediment
 	$(F90) $(F90FLAGS) -c -o omexdia_p.o main.F90 
 	$(F90) -o omexdia_p omexdia_p.o $(LDFLAGS)
 	@echo "Created example binary omexdia_p in  $(PWD)" 

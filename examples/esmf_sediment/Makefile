@@ -13,7 +13,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf -lsediment -lsolver $(LIBS)
+LIBS := -lsediment -lmossco_sediment -lsolver -lesmf $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod

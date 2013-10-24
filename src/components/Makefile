@@ -75,7 +75,7 @@ fabm_0d_component.o: fabm_0d_component.F90
 
 fabm_sediment_component.o: fabm_sediment_component.F90
 	@echo "Compiling $<"
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libsediment
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_sediment
 	$(F90) $(CPPFLAGS) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
 erosed_component.o: erosed_component.F90
