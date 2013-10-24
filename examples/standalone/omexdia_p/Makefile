@@ -26,10 +26,7 @@ all: exec
 libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsolver:
-	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
-
-exec: main.F90 libsolver libsediment
+exec: main.F90 libsediment
 	$(F90) $(F90FLAGS) -c -o omexdia_p.o main.F90 
 	$(F90) -o omexdia_p omexdia_p.o $(LDFLAGS)
 	@echo "Created example binary omexdia_p in  $(PWD)" 
