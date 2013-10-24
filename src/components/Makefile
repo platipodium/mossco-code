@@ -86,6 +86,12 @@ erosed_component.o: erosed_component.F90
 $(MOSSCO_module_path)/solver_library.mod:
 	make -C $(MOSSCO_DIR)/src/utilities libsolver
 
+# KK-TODO: this can be removed when gotm's timestep routine is used
+ifeq ($(MOSSCO_GOTM_FABM),true)
+gotm_component.o: gotm_component.F90
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -D_FABM_ -c $< -o $@
+endif
+
 clean: extraclean
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a

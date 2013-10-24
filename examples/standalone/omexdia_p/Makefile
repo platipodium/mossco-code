@@ -18,6 +18,7 @@ LIBS := -lsediment -lsolver $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 
 .PHONY: exec libsediment
 

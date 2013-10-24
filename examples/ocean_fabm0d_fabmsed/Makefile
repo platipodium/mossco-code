@@ -16,13 +16,13 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lsediment -lsolver -lesmf -locean -loceansedimentcoupler $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod 
+LIBS := -lsediment -lsolver -lesmf -locean -loceansedimentcoupler $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
-LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a 
-
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec libocean libsediment liboceansedimentcoupler
 

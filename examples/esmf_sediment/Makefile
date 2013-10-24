@@ -16,6 +16,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lesmf -lsediment -lsolver $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 
 .PHONY: all exec libsediment
 

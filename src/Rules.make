@@ -52,20 +52,9 @@ FABM_AVAILABLE_COMPILERS:=$(patsubst %compiler.,,$(FABM_AVAILABLE_COMPILERS))
 $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers: $(FABM_AVAILABLE_COMPILERS))
 endif
 
-ifeq ($(FABM_F2003),true)
-else
-$(error Please recompile FABM with FABM_F2003=true)
-endif
-
-ifndef FABM_F2003
-export FABM_F2003=true
-$(warning FABM_F2003 automatically set to FABM_F2003=$(FABM_F2003))
-endif
-
 FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
 FABM_INCLUDE_PATH=$(FABMDIR)/include
 FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
-FABM_LIBRARY_FILE=$(shell ls $(FABM_LIBRARY_PATH) )
 
 endif
 
@@ -94,15 +83,9 @@ export MOSSCO_GOTM
 
 ifeq ($(MOSSCO_GOTM),true)
 
-ifndef FABM 
-export FABM=true
-$(warning FABM automatically set to FABM=$(FABM) for GOTM in $(GOTMDIR))
-endif
-
 GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
 GOTM_INCLUDE_PATH=$(GOTMDIR)/include
 GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
-GOTM_LIBRARY_FILE=$(shell ls $(GOTM_LIBRARY_PATH) )
 
 endif
 
@@ -238,7 +221,6 @@ endif
 export HAVE_LD_FORCE_LOAD
 endif 
 
-LIBRARY_PATHS  = -L$(FABM_LIBRARY_PATH) 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
 ifneq ($(MOSSCO_NETCDF_LIBPATH),)
@@ -246,7 +228,6 @@ LIBRARY_PATHS += -L$(MOSSCO_NETCDF_LIBPATH)
 endif
 export LIBRARY_PATHS
 
-LIBS = -lfabm_prod
 LIBS += $(ESMF_F90LINKLIBS)
 LIBS += $(MOSSCO_NETCDF_LIBS)
 export LIBS
@@ -289,21 +270,26 @@ info:
 
 
 # External libraries
-libfabm_external: $(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE)
-libgotm_external: $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a
 
-$(FABM_LIBRARY_PATH)/$(FABM_LIBRARY_FILE):
+libfabm_external:
 ifdef MOSSCO_FABMDIR
-	@echo Recreating the FABM library $(FABM_LIBRARY_FILE)
-	$(MAKE) -C $(FABMDIR)/src
+	@echo Recreating the FABM library in $(FABM_LIBRARY_PATH)
+	(export FABM_F2003=true ; $(MAKE) -C $(FABMDIR)/src)
 endif
 
-$(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a:
+# KK-TODO: think about compiling gotm without updating its exe
+libgotm_external:
 ifdef MOSSCO_GOTMDIR
+ifeq ($(MOSSCO_GOTM_FABM),true)
 ifdef MOSSCO_FABMDIR
-	$(MAKE) -C $(FABMDIR)/src gotm
+	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
+	(export FABM_F2003=true ; $(MAKE) -C $(FABMDIR)/src gotm)
 endif
-	$(MAKE) -C $(GOTMDIR)/src
+	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
+	(export FABM=true ; export FABM_F2003=true ; $(MAKE) -C $(GOTMDIR)/src)
+else
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
+endif
 endif
 
 

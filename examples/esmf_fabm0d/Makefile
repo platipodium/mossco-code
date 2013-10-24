@@ -24,11 +24,12 @@ endif
 LIBS := -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod 
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
-LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a 
 
 .PHONY: all exec libfabm0d
 

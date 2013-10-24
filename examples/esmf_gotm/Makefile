@@ -13,14 +13,22 @@ export MOSSCO_DIR=$(subst /examples/esmf_gotm$,,$(PWD))
 endif
 
 export FABMHOST=gotm
+#export MOSSCO_GOTM_FABM=true
+
 include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS := -lesmf -lgotm $(LIBS)
+LIBS := -lgotm -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lgotm_fabm_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(FABMDIR)/lib/gotm/GFORTRAN/libfabm_prod.a $(NC_LIBS) 
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
+ifeq ($(MOSSCO_GOTM_FABM),true)
+LDFLAGS += -lgotm_fabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+endif
+LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
 .PHONY: all exec libgotm
 

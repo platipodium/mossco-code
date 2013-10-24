@@ -18,7 +18,9 @@ EXTRA_DIST=README
 LIBS := -lsediment -lfabm0d -lmossco_fabm0d -lsolver -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -L$(GOTMDIR)/lib/GFORTRAN -lairsea_prod -linput_prod -lutil_prod 
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod 
 
 .PHONY: all exec libfabm0d libsediment
 

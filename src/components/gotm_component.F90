@@ -346,9 +346,11 @@ module gotm_component
   use input
   use observations
   use airsea
+#ifdef _FABM_
   use gotm_fabm,only:set_env_gotm_fabm,do_gotm_fabm
   use gotm_fabm_input,only:init_gotm_fabm_input
   use gotm_fabm_output,only:do_gotm_fabm_output
+#endif
   use turbulence
   use kpp
 
@@ -396,7 +398,9 @@ module gotm_component
   call stratification(nlev,buoy_method,timestep,cnpar,nuh,gamh)
 
 !     FABM
+#ifdef _FABM_
   call do_gotm_fabm(nlev)
+#endif
 
 !    compute turbulent mixing
   select case (turb_method)

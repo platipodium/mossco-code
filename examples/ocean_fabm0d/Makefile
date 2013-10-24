@@ -13,15 +13,27 @@ ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/ocean_fabm0d$,,$(PWD))
 endif
 
+OCEAN=GOTM
+
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lesmf -locean -lfabm0d -lmossco_fabm0d -lsolver -lgotm -L$(GOTMDIR)/lib/GFORTRAN -lgotm_prod -lairsea_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lgotm_fabm_prod -lutil_prod -linput_prod -loutput_prod $(LIBS)
+ifeq ($(OCEAN),GOTM)
+LIBS := -lfabm0d -locean -lgotm -lmossco_fabm0d -lsolver -lesmf $(LIBS)
+else
+LIBS := -lfabm0d -locean -lmossco_fabm0d -lsolver -lesmf $(LIBS)
+endif
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+ifeq ($(OCEAN),GOTM)
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod -lairsea_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lutil_prod -linput_prod -loutput_prod
+else
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
+endif
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
-LDFLAGS += $(FABMDIR)/lib/mossco/GFORTRAN/libfabm_prod.a 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+
 
 .PHONY: all exec libocean libsediment liboceansedimentcoupler libgotm
 
@@ -37,7 +49,12 @@ libfabm0d libgotm libocean:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 main.o: toplevel_component.o
+ifeq ($(OCEAN),GOTM)
+CPPFLAGS += -D_GOTMOCEAN_
 toplevel_component.o: toplevel_component.F90 libfabm0d libgotm libocean
+else
+toplevel_component.o: toplevel_component.F90 libfabm0d libocean
+endif
 
 clean: extraclean
 
