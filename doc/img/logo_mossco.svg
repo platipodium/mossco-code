@@ -12,9 +12,12 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.48.2 r9819"
-   width="108.12833"
-   height="108.08303"
-   sodipodi:docname="logo_mossco_label.svg">
+   width="116.12833"
+   height="116.08303"
+   sodipodi:docname="logo_mossco.svg"
+   inkscape:export-filename="/Users/lemmen/devel/mossco/doc/img/logo_mossco_50px.png"
+   inkscape:export-xdpi="41.619999"
+   inkscape:export-ydpi="41.619999">
   <metadata
      id="metadata8">
     <rdf:RDF>
@@ -39,41 +42,41 @@
      inkscape:pageopacity="0"
      inkscape:pageshadow="2"
      inkscape:window-width="1264"
-     inkscape:window-height="916"
+     inkscape:window-height="756"
      id="namedview4"
      showgrid="false"
      inkscape:zoom="2.980144"
-     inkscape:cx="131.44907"
-     inkscape:cy="54.041517"
-     inkscape:window-x="1410"
-     inkscape:window-y="30"
+     inkscape:cx="135.44908"
+     inkscape:cy="58.041528"
+     inkscape:window-x="75"
+     inkscape:window-y="1"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1"
      showguides="true"
      inkscape:guide-bbox="true"
-     fit-margin-top="0"
-     fit-margin-left="0"
-     fit-margin-right="0"
-     fit-margin-bottom="0">
+     fit-margin-top="4"
+     fit-margin-left="4"
+     fit-margin-right="4"
+     fit-margin-bottom="4">
     <sodipodi:guide
        orientation="0,1"
-       position="17.432048,108.45955"
+       position="21.432056,112.45957"
        id="guide3035" />
     <sodipodi:guide
        orientation="0,1"
-       position="157.92095,66.188542"
+       position="161.92095,70.188554"
        id="guide3037" />
     <sodipodi:guide
        orientation="0,1"
-       position="-32.324877,-0.62162647"
+       position="-28.324869,3.3783845"
        id="guide3093" />
     <sodipodi:guide
        orientation="1,0"
-       position="112.41068,123.81953"
+       position="116.41068,127.81955"
        id="guide3095" />
     <sodipodi:guide
        orientation="1,0"
-       position="264.0812,125.4973"
+       position="268.0812,129.49732"
        id="guide3097" />
   </sodipodi:namedview>
   <g
@@ -81,7 +84,7 @@
      id="layer1"
      inkscape:label="Foreground"
      style="display:inline"
-     transform="translate(-106.58361,-106.53498)">
+     transform="translate(-102.58361,-102.53498)">
     <path
        inkscape:connector-curvature="0"
        id="path3074"
