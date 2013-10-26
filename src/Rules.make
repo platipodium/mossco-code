@@ -161,8 +161,10 @@ export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 #
 
 # determine the compiler used by FABM
+ifeq (${MOSSCO_FABM},true)
 FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
 FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
+endif
 
 ifndef F90
 ifdef ESMF_F90COMPILER
