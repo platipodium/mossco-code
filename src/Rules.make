@@ -30,10 +30,12 @@ endif
 
 ifdef MOSSCO_FABMDIR
 export FABMDIR=$(MOSSCO_FABMDIR)
-endif
-
+MOSSCO_FABM=true
+else
 ifdef FABMDIR
 MOSSCO_FABM=true
+$(warning Assuming you have a working FABM in ${FABMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_FABMDIR explicitly to enable the build system to take  care of the FABM build) 
+endif
 endif
 
 export MOSSCO_FABM
@@ -265,7 +267,12 @@ info:
 	@echo LINKDIRS = $(LINKDIRS)
 	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
 	@env | grep ^F90 | sort 
+ifeq ($(MOSSCO_FABM),true)
 	@env | grep ^FABM | sort 
+endif
+ifeq ($(MOSSCO_GOTM),true)
+	@env | grep ^GOTM | sort 
+endif
 	@env | grep ^MOSSCO_ | sort 
 
 
