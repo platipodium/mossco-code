@@ -31,3 +31,7 @@ add_environment=.true.
 add_conserved_quantities=.false.
 add_diagnostic_variables=.true.
 /
+
+$mossco_fabm0d
+forcing_from_coupler=.true.
+/
