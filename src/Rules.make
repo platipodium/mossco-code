@@ -75,6 +75,12 @@ endif
 
 ifdef MOSSCO_GOTMDIR
 export GOTMDIR=$(MOSSCO_GOTMDIR)
+MOSSCO_GOTM=true
+else
+ifdef GOTMDIR
+MOSSCO_GOTM=true
+$(warning Assuming you have a working GOTM in ${GOTMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GOTMDIR explicitly to enable the build system to take  care of the GOTM build) 
+endif
 endif
 
 ifdef GOTMDIR
