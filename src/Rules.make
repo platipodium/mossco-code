@@ -15,6 +15,10 @@ ifeq ($(shell make --version | grep -c GNU),0)
 $(error GNU make is required)
 endif 
 
+# More useful output from Make
+OLD_SHELL := $(SHELL)
+SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
+
 # 2. Importing all FABM-related environment variables and checking that the environment is sane
 #    At the moment, we require that MOSSCO_FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
@@ -286,10 +290,12 @@ endif
 
 # External libraries
 
-libfabm_external:
+libfabm_external: 
 ifdef MOSSCO_FABMDIR
+ifeq  ($(wildcard $(FABM_LIBRARY_PATH)/libfabm_prod.a),)
 	@echo Recreating the FABM library in $(FABM_LIBRARY_PATH)
 	(export FABM_F2003=true ; $(MAKE) -C $(FABMDIR)/src)
+endif
 endif
 
 # KK-TODO: think about compiling gotm without updating its exe
@@ -297,13 +303,20 @@ libgotm_external:
 ifdef MOSSCO_GOTMDIR
 ifeq ($(MOSSCO_GOTM_FABM),true)
 ifdef MOSSCO_FABMDIR
+ifeq  ($(wildcard $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)/libfabm_prod.a),)
 	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
 	(export FABM_F2003=true ; $(MAKE) -C $(FABMDIR)/src gotm)
 endif
+endif
+ifeq  ($(wildcard $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a),)
 	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
 	(export FABM=true ; export FABM_F2003=true ; $(MAKE) -C $(GOTMDIR)/src)
+endif
 else
+ifeq  ($(wildcard $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a),)
+	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
+endif
 endif
 endif
 
