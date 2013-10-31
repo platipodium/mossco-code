@@ -23,8 +23,8 @@ SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the Preamlbe section of this Rules.make in repeated calls.  In most circumstances,
 # Rules.make is executed at MAKELEVEL 1, unless directly called in $(MOSSCODIR)/src
-ifneq (,$(filter $(MAKELEVEL),0 1))
-
+#ifneq (,$(filter $(MAKELEVEL),0 1))
+ifeq (1,1)
 # 2. Importing all FABM-related environment variables and checking that the environment is sane
 #    At the moment, we require that MOSSCO_FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
@@ -227,6 +227,13 @@ else
 ifeq ($(FORTRAN_COMPILER),IFORT)
 F90FLAGS = -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP= -stand f03
+else
+ifeq ($(FORTRAN_COMPILER),PGF90)
+F90FLAGS = -module $(MOSSCO_MODULE_PATH)
+EXTRA_CPP=
+else
+$(error I don't know where to place modules with this compiler)
+endif
 endif
 endif
 export F90FLAGS
