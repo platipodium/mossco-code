@@ -9,6 +9,7 @@
 #
 
 
+ifeq ($(MAKELEVEL),1)
 # 1. Checking that we're using GNU make 
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
@@ -19,15 +20,10 @@ endif
 OLD_SHELL := $(SHELL)
 SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
 
-export COUNT ?= 0
-COUNT := $(shell expr $(COUNT) + 1)
-$(warning $(COUNT))
-
 # 2. Importing all FABM-related environment variables and checking that the environment is sane
 #    At the moment, we require that MOSSCO_FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
 # 
-ifeq ($(COUNT),1)
 MOSSCO_FABM=false
 
 ifndef MOSSCO_FABMDIR
@@ -43,9 +39,7 @@ MOSSCO_FABM=true
 else
 ifdef FABMDIR
 MOSSCO_FABM=true
-ifeq ($(COUNT),1)
 $(warning Assuming you have a working FABM in ${FABMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_FABMDIR explicitly to enable the build system to take  care of the FABM build) 
-endif
 endif
 endif
 
@@ -56,9 +50,7 @@ ifeq ($(MOSSCO_FABM),true)
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
 ifndef FABMHOST
 export FABMHOST=mossco
-ifeq ($(COUNT),1)
 $(warning FABMHOST set to FABMHOST=mossco)
-endif
 endif
 
 ifndef FORTRAN_COMPILER
@@ -92,9 +84,7 @@ MOSSCO_GOTM=true
 else
 ifdef GOTMDIR
 MOSSCO_GOTM=true
-ifeq ($(COUNT),1)
 $(warning Assuming you have a working GOTM in ${GOTMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GOTMDIR explicitly to enable the build system to take  care of the GOTM build) 
-endif
 endif
 endif
 
