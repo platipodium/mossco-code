@@ -9,7 +9,6 @@
 #
 
 
-ifeq ($(MAKELEVEL),1)
 # 1. Checking that we're using GNU make 
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
@@ -19,6 +18,12 @@ endif
 # More useful output from Make and count of iterations of Rules.make
 OLD_SHELL := $(SHELL)
 SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
+
+
+# Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
+# of the Preamlbe section of this Rules.make in repeated calls.  In most circumstances,
+# Rules.make is executed at MAKELEVEL 1, unless directly called in $(MOSSCODIR)/src
+ifneq (,$(filter $(MAKELEVEL),0 1))
 
 # 2. Importing all FABM-related environment variables and checking that the environment is sane
 #    At the moment, we require that MOSSCO_FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
