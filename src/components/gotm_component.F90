@@ -26,6 +26,9 @@ module gotm_component
   use time, only: timestepkind,update_time
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
   use output, only: prepare_output,do_output,gotm_output_nsave => nsave
+#ifdef _GOTM_MOSSCO_FABM_
+  use gotm_mossco_fabm
+#endif
 
   implicit none
 
@@ -104,6 +107,10 @@ module gotm_component
 
     call ESMF_LogWrite("GOTM ocean component initializing.",ESMF_LOGMSG_INFO)
     call init_gotm()
+
+#ifdef _GOTM_MOSSCO_FABM_
+    call init_gotm_mossco_fabm(nlev,'gotm_fabm.nml')
+#endif
 
     ! read model_setup namelist
     open(921,file='gotmrun.nml',status='old',action='read')
@@ -346,7 +353,7 @@ module gotm_component
   use input
   use observations
   use airsea
-#ifdef _FABM_
+#ifdef _GOTM_FABM_
   use gotm_fabm,only:set_env_gotm_fabm,do_gotm_fabm
   use gotm_fabm_input,only:init_gotm_fabm_input
   use gotm_fabm_output,only:do_gotm_fabm_output
@@ -398,8 +405,12 @@ module gotm_component
   call stratification(nlev,buoy_method,timestep,cnpar,nuh,gamh)
 
 !     FABM
-#ifdef _FABM_
+#ifdef _GOTM_FABM_
   call do_gotm_fabm(nlev)
+#else
+#ifdef _GOTM_MOSSCO_FABM_
+  call do_gotm_mossco_fabm(timestep)
+#endif
 #endif
 
 !    compute turbulent mixing

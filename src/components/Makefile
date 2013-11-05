@@ -29,7 +29,7 @@ ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsolver libsediment
 
 ifeq ($(MOSSCO_GOTM),true)
-TARGETS += libgotm libfabm0d
+TARGETS += libgotm libfabm0d libmossco_gotmfabm
 endif
 endif
 
@@ -49,6 +49,7 @@ libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
 libfabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
 libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
+libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 
 $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
 	$(AR) cruvs $@ erosed_component.o
