@@ -113,7 +113,7 @@ endif
 #
 ifndef ESMFMKFILE
 ifndef MOSSCO_ESMF
-$(error Compiling without ESMF support. Comment this line 90 in Rules.make if you want to proceed)
+$(error Compiling without ESMF support. Comment this line 116 in Rules.make if you want to proceed)
 export MOSSCO_ESMF=false
 endif
 else
