@@ -308,7 +308,7 @@ libfabm_external:
 ifdef MOSSCO_FABMDIR
 ifeq  ($(wildcard $(FABM_LIBRARY_PATH)/libfabm_prod.a),)
 	@echo Recreating the FABM library in $(FABM_LIBRARY_PATH)
-	(export FABM_F2003=true ; $(MAKE) -C $(FABMDIR)/src)
+	$(MAKE) -C $(FABMDIR)/src
 endif
 endif
 
@@ -319,7 +319,7 @@ ifeq ($(MOSSCO_GOTM_FABM),true)
 ifdef MOSSCO_FABMDIR
 ifeq  ($(wildcard $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)/libfabm_prod.a),)
 	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
-	(export FABM_F2003=true ; $(MAKE) -C $(FABMDIR)/src gotm)
+	$(MAKE) -C $(FABMDIR)/src gotm
 endif
 endif
 ifeq  ($(wildcard $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a),)
