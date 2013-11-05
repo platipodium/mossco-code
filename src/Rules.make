@@ -308,10 +308,8 @@ endif
 
 libfabm_external: 
 ifdef MOSSCO_FABMDIR
-ifeq  ($(wildcard $(FABM_LIBRARY_PATH)/libfabm_prod.a),)
 	@echo Recreating the FABM library in $(FABM_LIBRARY_PATH)
 	$(MAKE) -C $(FABMDIR)/src
-endif
 endif
 
 # KK-TODO: think about compiling gotm without updating its exe
@@ -319,20 +317,14 @@ libgotm_external:
 ifdef MOSSCO_GOTMDIR
 ifeq ($(MOSSCO_GOTM_FABM),true)
 ifdef MOSSCO_FABMDIR
-ifeq  ($(wildcard $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)/libfabm_prod.a),)
 	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
 	$(MAKE) -C $(FABMDIR)/src gotm
 endif
-endif
-ifeq  ($(wildcard $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a),)
 	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
 	(export FABM=true ; export FABM_F2003=true ; $(MAKE) -C $(GOTMDIR)/src)
-endif
 else
-ifeq  ($(wildcard $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a),)
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
-endif
 endif
 endif
 
