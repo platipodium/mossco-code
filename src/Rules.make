@@ -110,6 +110,41 @@ endif
 endif
 
 
+
+### GETM
+
+MOSSCO_GETM=false
+
+ifndef MOSSCO_GETMDIR
+external_GETMDIR = $(MOSSCO_DIR)/external/getm-git
+ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+export MOSSCO_GETMDIR=$(external_GETMDIR)
+endif
+endif
+
+ifdef MOSSCO_GETMDIR
+export GETMDIR=$(MOSSCO_GETMDIR)
+MOSSCO_GETM=true
+else
+ifdef GETMDIR
+MOSSCO_GETM=true
+$(warning Assuming you have a working GETM in ${GETMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GETMDIR explicitly to enable the build system to take  care of the GETM build) 
+endif
+endif
+
+ifdef GETMDIR
+MOSSCO_GETM=true
+endif
+
+export MOSSCO_GETM
+
+ifeq ($(MOSSCO_GETM),true)
+GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
+GETM_INCLUDE_PATH=$(GETMDIR)/include
+GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
+endif
+
+
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
 #
@@ -269,7 +304,7 @@ export LDFLAGS
 endif
 
 # Make targets
-.PHONY: default all clean doc info prefix libfabm_external libgotm_external
+.PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external
 
 default: prefix all
 
@@ -301,6 +336,9 @@ endif
 ifeq ($(MOSSCO_GOTM),true)
 	@env | grep ^GOTM | sort 
 endif
+ifeq ($(MOSSCO_GETM),true)
+	@env | grep ^GETM | sort 
+endif
 	@env | grep ^MOSSCO_ | sort 
 
 
@@ -325,6 +363,29 @@ endif
 else
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
+endif
+endif
+
+libgetm_external:
+ifdef MOSSCO_GETMDIR
+ifeq ($(MOSSCO_GETM_FABM),true)
+ifdef MOSSCO_FABMDIR
+	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
+	$(MAKE) -C $(FABMDIR)/src gotm
+endif
+ifdef MOSSCO_GOTMDIR
+	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
+	(export FABM=true ; export FABM_F2003=true ; $(MAKE) -C $(GOTMDIR)/src)
+endif
+	@echo Recreating the GETM library in $(GETM_LIBRARY_PATH)
+	(export FABM=true ; $(MAKE) -C $(GETMDIR)/src)
+else
+ifdef MOSSCO_GOTMDIR
+	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
+endif
+	@echo Recreating the GETM library without FABM in $(GETM_LIBRARY_PATH)
+	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)
 endif
 endif
 
