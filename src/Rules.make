@@ -366,9 +366,10 @@ else
 endif
 endif
 
-libgetm_external:
+libgetm_external: prefix
 ifdef MOSSCO_GETMDIR
-ifeq ($(MOSSCO_GETM_FABM),true)
+#ifeq ($(MOSSCO_GETM_FABM),true)
+ifeq ($(MOSSCO_FABM),true)
 ifdef MOSSCO_FABMDIR
 	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
 	$(MAKE) -C $(FABMDIR)/src gotm
@@ -388,6 +389,7 @@ endif
 	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)
 endif
 endif
+	$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
 
 # Common rules
