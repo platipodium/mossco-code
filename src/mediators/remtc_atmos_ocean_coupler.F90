@@ -44,11 +44,16 @@ module remtc_atmosphere_ocean_coupler
     ! Search for the fields with standard name surface_temperature in import
     ! and export states 
     call ESMF_StateGet(importState, "air_temperature", srcfield, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if(rc /= ESMF_SUCCESS) then
+      call ESMF_StatePrint(importState)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
 
     call ESMF_StateGet(exportState, "air_temperature", dstfield, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+    if(rc /= ESMF_SUCCESS) then
+      call ESMF_StatePrint(exportState) 
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
     ! These are fields on different Grids - call RegridStore to set
     ! up the Regrid structure
     !call ESMF_FieldRegridStore(srcField=srcfield, dstField=dstfield,&
@@ -56,7 +61,7 @@ module remtc_atmosphere_ocean_coupler
  !ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument - - can't currently regrid a grid that contains a DE of width less than 2
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_LogWrite("AO coupler initializing", ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("AO coupler initialized", ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 

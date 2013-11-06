@@ -7,7 +7,7 @@ infrastructure for the national and international coastal research community.
 The software MOSSCO implements this infrastructure in the form of a library of components and couplers,
 and of example coupled applications.  The components "wrap" external models used in coastal and
 shelf sciences, such as the Framework for Aquatic Biogeochemistry (FABM), the General Ocean Turbulence
-Model (GOTM), or the Delft3D erosion model.  These wrapped components are then coupled to each other 
+Model (GOTM), or the Delft3D erosion model (EROSED).  These wrapped components are then coupled to each other 
 in the Earth System Modeling Framework (ESMF). 
 
 MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -29,7 +29,7 @@ To make the documentation with full installation instructions, type
 
 to generate a pdf file in $MOSSCO_DIR/doc/mossco_documentation.pdf and a html version at $MOSSCO_DIR/doc/html/index.html
 There is also an online documentation at http://www.mossco.de/doc with detailed
-installation instructions.
+installation instructions, if your system is missing latex/doxygen for building the documentation yourself.
 
 ##################################################################
 To make the MOSSCO libraries, i.e. drivers, components, and utilities, you need to have
@@ -50,4 +50,3 @@ To make some examples, type
 Should you encounter errors or annoyances (such that this just does not work out of the box, 
 please consult the documentation, and visit the bugs database at https://sourceforge.net/p/mossco/tickets)
  
-

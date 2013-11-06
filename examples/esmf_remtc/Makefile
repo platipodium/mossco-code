@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lesmf -locean -latmosphere -laocoupler $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec
+.PHONY: all exec libocean libatmosphere libaocoupler
 
 all: exec
 
@@ -32,8 +32,9 @@ libocean libatmosphere:
 libaocoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
-main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
+main.o: toplevel_component.o 
+toplevel_component.o: toplevel_component.F90 mossco_variable_types.o libocean libatmosphere libaocoupler
+
 
 clean: extraclean
 
