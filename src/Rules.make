@@ -359,7 +359,7 @@ ifdef MOSSCO_FABMDIR
 	$(MAKE) -C $(FABMDIR)/src gotm
 endif
 	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
-	(export FABM=true ; export FABM_F2003=true ; $(MAKE) -C $(GOTMDIR)/src)
+	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src)
 else
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
@@ -375,7 +375,7 @@ ifdef MOSSCO_FABMDIR
 endif
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
-	(export FABM=true ; export FABM_F2003=true ; $(MAKE) -C $(GOTMDIR)/src)
+	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src)
 endif
 	@echo Recreating the GETM library in $(GETM_LIBRARY_PATH)
 	(export FABM=true ; $(MAKE) -C $(GETMDIR)/src)
