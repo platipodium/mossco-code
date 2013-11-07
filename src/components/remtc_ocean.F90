@@ -91,7 +91,7 @@ module remtc_ocean
     !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
     !> to 50 .. 55 deg North
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/40, 50,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      regDecomp=(/2,5,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="ocean grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -127,12 +127,8 @@ module remtc_ocean
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     do k=1,3
-      farrayPtr=>variables(:,:,:,k)
-
-      exportField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, &
-        staggerloc=ESMF_STAGGERLOC_CENTER,name=export_variables(k)%standard_name, rc=rc)
-      !exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
-      !  staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
@@ -151,7 +147,7 @@ module remtc_ocean
         enddo
       enddo
     enddo
-        
+		farrayPtr=variables(:,:,:,1)        
         
     !> Specify temperature information     
     call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, rc=rc) 
@@ -163,11 +159,13 @@ module remtc_ocean
         enddo
       enddo
     enddo
+		farrayPtr=variables(:,:,:,2)        
 
     !> Specify PAR      
     call ESMF_FieldGet(field=exportField(3), localDe=0, farrayPtr=farrayPtr, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    farrayPtr = 100.0 !+ 0.1*(i+j)
+    variables(:,:,:,3)=100.0
+		farrayPtr=variables(:,:,:,3)        
 
     !> For debugging and I/O testing purposes, write out all the export fields to netcdf
 #ifndef ESMF_MPIUNI 
@@ -184,15 +182,27 @@ module remtc_ocean
     !> Create import fields and add them to import state, allocate the space for these
     !> that will be filled later with data
     do k=1,size(importField)
-      farrayPtr=>variables(:,:,:,k+size(exportField))
-
-      importField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, &
-        staggerloc=ESMF_STAGGERLOC_CENTER,name=import_variables(k)%standard_name, rc=rc)
+      importField(k) = ESMF_FieldCreate(grid, arrayspec, name=import_variables(k)%standard_name, &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(importState,(/importField(k)/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
+  
+    !> Specify salinity information     
+    call ESMF_FieldGet(field=importField(1), localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+              
+    do k=lbnd(3),ubnd(3)
+      do j=lbnd(2),ubnd(2)
+        do i=lbnd(1),ubnd(1) 
+          variables(i,j,k,1) =  30.0 + 0.1*(i-j)
+        enddo
+      enddo
+    enddo
+		farrayPtr=variables(:,:,:,1+size(exportField))                
   
     call ESMF_LogWrite("Remtc Ocean component initialized.",ESMF_LOGMSG_INFO)
   end subroutine Initialize

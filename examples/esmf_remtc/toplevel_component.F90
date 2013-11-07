@@ -42,7 +42,10 @@ module esmf_toplevel_component
     type(ESMF_State)      :: exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
+    
     type(ESMF_VM)         :: vm
+    type(ESMF_Field)      :: field
+    real(ESMF_KIND_R8),pointer    :: farrayPtr(:,:,:)
 
     integer               :: petCount, localPet
     
@@ -58,9 +61,6 @@ module esmf_toplevel_component
     !call ESMF_StateReconcile(atmosphereImportState, vm=vm, attreconflag=ESMF_ATTRECONCILE_OFF, rc=rc)
     !call ESMF_StateReconcile(atmosphereExportState, vm=vm, attreconflag=ESMF_ATTRECONCILE_OFF, rc=rc)
 
-    call ESMF_StatePrint(atmosphereImportState, rc=rc)
-    call ESMF_StatePrint(atmosphereExportState, rc=rc)
-
     oceanCompName = "ESMF Remtc Ocean component"
     oceanComp     = ESMF_GridCompCreate(name=oceanCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
     call ESMF_GridCompSetServices(oceancomp, ocean_SetServices, rc=rc)
@@ -73,7 +73,7 @@ module esmf_toplevel_component
     !call ESMF_StateReconcile(oceanExportState, vm=vm, attreconflag=ESMF_ATTRECONCILE_OFF, rc=rc)
     call ESMF_StatePrint(oceanImportState, rc=rc)
     call ESMF_StatePrint(oceanExportState, rc=rc)
-
+    
     aocplCompName = "ESMF Remtc Atmosphere-Ocean coupler component"
     aocplComp     = ESMF_CplCompCreate(name=aocplCompName, contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
     call ESMF_CplCompSetServices(aocplcomp, aocpl_SetServices, rc=rc)
@@ -94,6 +94,9 @@ module esmf_toplevel_component
     integer  :: myrank
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring,message
+    type(ESMF_Field)      :: field
+    real(ESMF_KIND_R8),pointer    :: farrayPtr(:,:,:)
+    
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
     call ESMF_GridCompGet(gridComp, localPet=myrank, rc=rc)
@@ -116,6 +119,11 @@ module esmf_toplevel_component
       call ESMF_GridCompRun(oceanComp,importState=oceanImportState,&
         exportState=oceanExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+     ! call ESMF_StateGet(oceanExportState,"water_temperature",field,rc=rc)
+     ! call ESMF_FieldGet(field,farrayPtr=farrayPtr,localDE=0,rc=rc)
+     ! write(*,'(20F5.1 )') farrayPtr
+      
    enddo 
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)

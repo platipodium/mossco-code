@@ -107,8 +107,6 @@ module remtc_atmosphere
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   
     do k=1,size(export_variables)
-      farrayPtr=>variables(:,:,:,k)
-
       exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -117,7 +115,6 @@ module remtc_atmosphere
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
   
-
     !> Specify air temperature information     
     call ESMF_FieldGet(field=exportField(1), localDe=0, farrayPtr=farrayPtr, &
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
@@ -130,6 +127,7 @@ module remtc_atmosphere
         enddo
       enddo
     enddo
+		farrayPtr=variables(:,:,:,1)
 		
     call ESMF_LogWrite("Remtc Atmosphere component initialized.",ESMF_LOGMSG_INFO)
   end subroutine Initialize
