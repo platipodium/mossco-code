@@ -20,11 +20,17 @@ EXTRA_DIST=README
 
 # Make targets
 
-all: libsolver
+all: libsolver libtypes
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a
+libtypes:  prefix $(MOSSCO_LIBRARY_PATH)/libtypes.a
 
 $(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
+$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.F90
+
+$(MOSSCO_LIBRARY_PATH)/libtypes.a: mossco_variable_types.F90
+	ar cruvs $(MOSSCO_LIBRARY_PATH)/libtypes.a mossco_variable_types.F90
+	@echo "Created types library  $(MOSSCO_LIBRARY_PATH)/libtypes.a" 
 
 $(MOSSCO_LIBRARY_PATH)/libsolver.a: solver_library.o
 	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsolver.a solver_library.o
@@ -33,4 +39,6 @@ $(MOSSCO_LIBRARY_PATH)/libsolver.a: solver_library.o
 clean: extraclean
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsolver.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libtypes.a
 	@rm -f $(MOSSCO_MODULE_PATH)/solver_library.mod
+	@rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod

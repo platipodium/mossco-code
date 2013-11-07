@@ -33,7 +33,7 @@ libaocoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 main.o: toplevel_component.o 
-toplevel_component.o: toplevel_component.F90 mossco_variable_types.o libocean libatmosphere libaocoupler
+toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
 
 
 clean: extraclean
