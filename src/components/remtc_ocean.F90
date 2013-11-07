@@ -123,11 +123,16 @@ module remtc_ocean
     !> Create export fields and add them to export state, allocate the space for these
     !> that will be filled later with data
     allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),4))
+    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
     do k=1,3
       farrayPtr=>variables(:,:,:,k)
 
       exportField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, &
         staggerloc=ESMF_STAGGERLOC_CENTER,name=export_variables(k)%standard_name, rc=rc)
+      !exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
+      !  staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
@@ -138,7 +143,7 @@ module remtc_ocean
     call ESMF_FieldGet(field=exportField(1), localDe=0, farrayPtr=farrayPtr, &
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
+              
     do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
         do i=lbnd(1),ubnd(1) 
@@ -146,6 +151,7 @@ module remtc_ocean
         enddo
       enddo
     enddo
+        
         
     !> Specify temperature information     
     call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, rc=rc) 
@@ -254,10 +260,27 @@ module remtc_ocean
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    !call ESMF_FieldDestroy(water_temperature_Field, rc=rc)
-    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    integer                     :: lbnd(3), ubnd(3), k
+    real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
+    type(ESMF_Field)     :: field
 
-    if (allocated(variables)) deallocate(variables)
+	  do k=1,size(export_variables)
+      call ESMF_StateGet(exportState,export_variables(k)%standard_name, field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_FieldDestroy(field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+
+	  do k=1,size(import_variables)
+      call ESMF_StateGet(importState,import_variables(k)%standard_name, field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_FieldDestroy(field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+
+	  if (allocated(variables)) deallocate(variables)
  
     call ESMF_LogWrite("Remtc Ocean component finalized", ESMF_LOGMSG_INFO)
 
