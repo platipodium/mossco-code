@@ -2,14 +2,12 @@ module esmf_toplevel_component
 
   use esmf
   use remtc_ocean, only: ocean_SetServices => SetServices
-  use remtc_atmosphere, only: atmosphere_SetServices => remtc_atmosphere_SetServices
+  use remtc_atmosphere, only: atmosphere_SetServices => SetServices
   use remtc_atmosphere_ocean_coupler, only: aocpl_SetServices => SetServices
 
   implicit none
 
   private
-
-  public SetServices
 
   type(ESMF_GridComp),save    :: atmosphereComp
   character(len=ESMF_MAXSTR)  :: atmosphereCompName 
@@ -21,6 +19,8 @@ module esmf_toplevel_component
 
   type(ESMF_CplComp),save     :: aocplComp
   character(len=ESMF_MAXSTR)  :: aocplCompName 
+
+  public SetServices
 
   contains
 
