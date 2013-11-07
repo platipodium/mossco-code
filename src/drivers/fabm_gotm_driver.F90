@@ -1,4 +1,12 @@
 #include "fabm_driver.h"
+!taken from GOTM
+#define POINT           0
+#define Z_SHAPE         1
+#define T_SHAPE         2
+#define XY_SHAPE        3
+#define XYT_SHAPE       4
+#define XYZT_SHAPE      5
+
 !> @file fabm_gotm_driver.F90
 !> @brief MOSSCO's GOTM driver for the Framework for Aquatic Biogeochemical Models (FABM),
 !>        adopted from the GOTM model
@@ -17,6 +25,7 @@ implicit none
 private
 
 public init_gotm_mossco_fabm, do_gotm_mossco_fabm
+public init_gotm_mossco_fabm_output, do_gotm_mossco_fabm_output
 
 type,extends(rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends rhs_driver)
    type(type_model),pointer      :: model
@@ -582,5 +591,155 @@ type(type_gotm_fabm),public :: gotmfabm
       call fabm_initialize_bottom_state(gotmfabm%model,1,1,1)
 
    end subroutine init_gotm_mossco_fabm_state
+
+
+   subroutine init_gotm_mossco_fabm_output()
+!  Initialize the netcdf output by defining biogeochemical variables.
+!
+   use ncdfout, only: ncid,lon_dim,lat_dim,z_dim,time_dim,dim3d,dim4d
+   use ncdfout, only: define_mode,new_nc_variable,set_attributes
+   use netcdf
+!
+!  Original author(s): Jorn Bruggeman
+!
+   integer :: iret,n
+   character(len=64) :: name
+!
+!-----------------------------------------------------------------------
+!BOC
+   if (.not. fabm_calc) return
+
+         ! Put NetCDF library in define mode.
+         iret = define_mode(ncid,.true.)
+
+         dim4d(1) = lon_dim
+         dim4d(2) = lat_dim
+         dim4d(3) = z_dim
+         dim4d(4) = time_dim
+
+         dim3d(1) = lon_dim
+         dim3d(2) = lat_dim
+         dim3d(3) = time_dim
+
+         ! Add a NetCDF variable for each 4D (longitude,latitude,depth,time) biogeochemical state variable.
+         do n=1,size(gotmfabm%model%info%state_variables)
+            iret = new_nc_variable(ncid,trim(gotmfabm%model%info%state_variables(n)%name),NF90_REAL, &
+                                   dim4d,gotmfabm%model%info%state_variables(n)%externalid)
+            iret = set_attributes(ncid,gotmfabm%model%info%state_variables(n)%externalid,       &
+                                  units=trim(gotmfabm%model%info%state_variables(n)%units),    &
+                                  long_name=trim(gotmfabm%model%info%state_variables(n)%long_name), &
+                                  missing_value=gotmfabm%model%info%state_variables(n)%missing_value)
+         end do
+
+         ! Add a NetCDF variable for each 4D (longitude,latitude,depth,time) biogeochemical diagnostic variable.
+         do n=1,size(gotmfabm%model%info%diagnostic_variables)
+            iret = new_nc_variable(ncid,trim(gotmfabm%model%info%diagnostic_variables(n)%name),NF90_REAL, &
+                                   dim4d,gotmfabm%model%info%diagnostic_variables(n)%externalid)
+            iret = set_attributes(ncid,gotmfabm%model%info%diagnostic_variables(n)%externalid,    &
+                                  units=trim(gotmfabm%model%info%diagnostic_variables(n)%units),        &
+                                  long_name=trim(gotmfabm%model%info%diagnostic_variables(n)%long_name), &
+                                  missing_value=gotmfabm%model%info%diagnostic_variables(n)%missing_value)
+         end do
+
+         ! Add a NetCDF variable for each 3D (longitude,latitude,time) biogeochemical state variable.
+         do n=1,size(gotmfabm%model%info%state_variables_ben)
+            iret = new_nc_variable(ncid,trim(gotmfabm%model%info%state_variables_ben(n)%name),NF90_REAL, &
+                                   dim3d,gotmfabm%model%info%state_variables_ben(n)%externalid)
+            iret = set_attributes(ncid,gotmfabm%model%info%state_variables_ben(n)%externalid,    &
+                                  units=trim(gotmfabm%model%info%state_variables_ben(n)%units),        &
+                                  long_name=trim(gotmfabm%model%info%state_variables_ben(n)%long_name), &
+                                  missing_value=gotmfabm%model%info%state_variables_ben(n)%missing_value)
+         end do
+
+         ! Add a NetCDF variable for each 3D (longitude,latitude,time) biogeochemical diagnostic variable.
+         do n=1,size(gotmfabm%model%info%diagnostic_variables_hz)
+            iret = new_nc_variable(ncid, &
+                               trim(gotmfabm%model%info%diagnostic_variables_hz(n)%name),NF90_REAL, &
+                               dim3d,gotmfabm%model%info%diagnostic_variables_hz(n)%externalid)
+            iret = set_attributes(ncid,gotmfabm%model%info%diagnostic_variables_hz(n)%externalid,    &
+                               units=trim(gotmfabm%model%info%diagnostic_variables_hz(n)%units),        &
+                               long_name=trim(gotmfabm%model%info%diagnostic_variables_hz(n)%long_name), &
+                               missing_value=gotmfabm%model%info%diagnostic_variables_hz(n)%missing_value)
+         end do
+
+         ! Take NetCDF library out of define mode (ready for storing data).
+         iret = define_mode(ncid,.false.)
+
+   end subroutine init_gotm_mossco_fabm_output
+
+
+   subroutine do_gotm_mossco_fabm_output()
+!  Save properties of biogeochemical model, including state variable
+!  values, diagnostic variable values, and sums of conserved quantities.
+!
+   use output,  only: nsave
+   use ncdfout, only: ncid,set_no
+   use ncdfout, only: store_data
+   use netcdf
+!
+!  Original author(s): Jorn Bruggeman
+!
+   integer :: iret,nlev,n,start(4),edges(4)
+   
+   nlev = gotmfabm%knum
+   if (.not. fabm_calc) return
+         
+         ! ---------------------------
+         ! Depth-dependent variables
+         ! ---------------------------
+
+         start(1) = 1;      edges(1) = 1
+         start(2) = 1;      edges(2) = 1
+         start(3) = 1;      edges(3) = gotmfabm%knum
+         start(4) = set_no; edges(4) = 1
+
+         ! Store pelagic biogeochemical state variables.
+         do n=1,size(gotmfabm%model%info%state_variables)
+            iret = nf90_put_var(ncid,gotmfabm%model%info%state_variables(n)%externalid,cc(1,1,1:nlev,n),start,edges)
+         end do
+
+         ! Process and store diagnostic variables defined on the full domain.
+         do n=1,size(gotmfabm%model%info%diagnostic_variables)
+            ! Time-average diagnostic variable if needed.
+!            if (gotmfabm%model%info%diagnostic_variables(n)%time_treatment==time_treatment_averaged) &
+!               cc_diag(1,1,1:nlev,n) = cc_diag(1,1,1:nlev,n)/(nsave*dt)
+
+            ! Store diagnostic variable values.
+            iret = nf90_put_var(ncid,gotmfabm%model%info%diagnostic_variables(n)%externalid,cc_diag(1,1,1:nlev,n),start,edges)
+
+            ! Reset diagnostic variables to zero if they will be time-integrated (or time-averaged).
+            if (gotmfabm%model%info%diagnostic_variables(n)%time_treatment==time_treatment_averaged .or. &
+                gotmfabm%model%info%diagnostic_variables(n)%time_treatment==time_treatment_step_integrated) &
+               cc_diag(1,1,1:nlev,n) = _ZERO_
+         end do
+       
+
+         ! ---------------------------
+         ! Depth-independent variables
+         ! ---------------------------
+
+         ! Store benthic biogeochemical state variables.
+         do n=1,size(gotmfabm%model%info%state_variables_ben)
+            iret = store_data(ncid,gotmfabm%model%info%state_variables_ben(n)%externalid,XYT_SHAPE,1, &
+                            & scalar=cc(1,1,1,size(gotmfabm%model%info%state_variables)+n))
+         end do
+
+         ! Process and store diagnostic variables defined on horizontal slices of the domain.
+         do n=1,size(gotmfabm%model%info%diagnostic_variables_hz)
+            ! Time-average diagnostic variable if needed.
+!            if (gotmfabm%model%info%diagnostic_variables_hz(n)%time_treatment==time_treatment_averaged) &
+!               cc_diag_hz(1,1,n) = cc_diag_hz(1,1,n)/(nsave*dt)
+
+            ! Store diagnostic variable values.
+            iret = store_data(ncid,gotmfabm%model%info%diagnostic_variables_hz(n)%externalid,XYT_SHAPE,nlev,scalar=cc_diag_hz(1,1,n))
+
+            ! Reset diagnostic variables to zero if they will be time-integrated (or time-averaged).
+            if (gotmfabm%model%info%diagnostic_variables_hz(n)%time_treatment==time_treatment_averaged .or. &
+                gotmfabm%model%info%diagnostic_variables_hz(n)%time_treatment==time_treatment_step_integrated) &
+               cc_diag_hz(1,1,n) = _ZERO_
+         end do
+
+   end subroutine do_gotm_mossco_fabm_output
+
 
 end module

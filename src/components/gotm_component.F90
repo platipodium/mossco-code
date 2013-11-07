@@ -110,6 +110,7 @@ module gotm_component
 
 #ifdef _GOTM_MOSSCO_FABM_
     call init_gotm_mossco_fabm(nlev,'gotm_fabm.nml')
+    call init_gotm_mossco_fabm_output()
 #endif
 
     ! read model_setup namelist
@@ -313,6 +314,7 @@ module gotm_component
       call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
       call prepare_output(n)
       call do_output(n,nlev)
+      call do_gotm_mossco_fabm_output()
     endif
     
 
