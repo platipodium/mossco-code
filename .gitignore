@@ -15,12 +15,13 @@ doc/latex
 doc/html
 examples/esmf_gotm/esmf_gotm_example
 examples/esmf_fabm0d/esmf_fabm0d
-examples/esmf_fabm0d/output.dat
+examples/esmf_fabm0d/output_0d.dat
 examples/esmf_empty/esmf_empty
 examples/esmf_erosed/delft_sediment_test.out
 examples/esmf_erosed/esmf_erosed
 examples/esmf_remtc/esmf_remtc
 examples/fabmsed_fabm0d/fabmsed_fabm0d
+examples/fabmsed_fabm0d/output_0d.dat
 examples/ocean_fabm0d_fabmsed/ocean_fabm0d_fabmsed
 examples/ocean_fabm0d_fabmsed/output.dat
 examples/ocean_fabm0d_fabmsed/output_0d.dat

@@ -26,24 +26,22 @@ module gotm_component
   use time, only: timestepkind,update_time
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
   use output, only: prepare_output,do_output,gotm_output_nsave => nsave
+
+#undef _GOTM_MOSSCO_FABM_
+
 #ifdef _GOTM_MOSSCO_FABM_
   use gotm_mossco_fabm
 #endif
 
+  use mossco_variable_types
+  
   implicit none
 
   private
   
-  real(ESMF_KIND_R8), allocatable :: grid_height(:,:,:)
-  real(ESMF_KIND_R8),dimension(:,:,:),pointer :: grid_height_ptr
-  real(ESMF_KIND_R8),dimension(:,:,:),pointer :: salinity_ptr
-  real(ESMF_KIND_R8),dimension(:,:,:),pointer :: radiation_ptr
-  type(ESMF_Field)            :: grid_height_Field
-  type(ESMF_Array)            :: grid_height_Array
-  real(ESMF_KIND_R8), allocatable :: water_temperature(:,:,:)
-  real(ESMF_KIND_R8), pointer :: water_temperature_ptr(:,:,:)
-  type(ESMF_Field)            :: water_temperature_Field,salinity_Field,radiation_Field
-  type(ESMF_Array)            :: water_temperature_Array,salinity_Array,radiation_Array
+  real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
+  type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
+  type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: import_variables
 
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -94,10 +92,14 @@ module gotm_component
     real(ESMF_KIND_R8) :: dt
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
+    integer                     :: nimport,nexport
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
+    
+    type(ESMF_Field), dimension(:), allocatable  :: exportField, importField
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
       
     namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
     namelist /station/ name,latitude,longitude,depth
@@ -192,82 +194,54 @@ module gotm_component
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
- !   do i=1,nvar
- !     allocate(variable(1,1,nlev))
- !     variable_Array(i) = ESMF_ArrayCreate(distgrid=distgrid,farray=variable, &
- !     indexflag=ESMF_INDEX_GLOBAL, name=trim(variable_name(i)), rc=rc)
- !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
- !     variable_Field(i) = ESMF_FieldCreate(grid=grid, array=variable_Array(i),&
- !     name=trim(variable_name(i)), rc=rc)
- !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
- !   enddo
+    !> Create export fields and add them to export state, allocate the space for these
+    !> that will be filled later with data
+    nexport=4
+    allocate(export_variables(nexport))
+    export_variables(1)%standard_name="water_temperature"
+    export_variables(2)%standard_name="grid_height"
+    export_variables(3)%standard_name="salinity"
+    export_variables(4)%standard_name="radiation"
+    allocate(exportField(nexport))
 
-    !> Create a water temperature field with a 3D array specification, fill the temperature
-    !> field with T0, add the field to the ocean's export state
-    allocate(water_temperature(1,1,nlev))
-    water_temperature_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=water_temperature, &
-      indexflag=ESMF_INDEX_GLOBAL, name="water_temperature", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    water_temperature_Field = ESMF_FieldCreate(grid=grid, array=water_temperature_Array,&
-       name="water_temperature", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_FieldGet(water_temperature_Field, farrayPtr=water_temperature_ptr,totalLBound=lbnd,&
-      totalUBound=ubnd,localDE=0,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    allocate(salinity_ptr(1,1,nlev))
-    salinity_ptr=20.0
-    salinity_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=salinity_ptr, &
-      indexflag=ESMF_INDEX_GLOBAL, name="salinity", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    salinity_Field = ESMF_FieldCreate(grid=grid, array=salinity_Array,&
-       name="salinity", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    allocate(radiation_ptr(1,1,nlev))
-    radiation_ptr=0.
-    radiation_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=radiation_ptr, &
-      indexflag=ESMF_INDEX_GLOBAL, name="photosynthetically_available_radiation", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    radiation_Field = ESMF_FieldCreate(grid=grid, array=radiation_Array,&
-       name="photosynthetically_available_radiation", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    water_temperature_ptr = T0
-
-    call ESMF_StateAddReplace(exportState,(/water_temperature_Field, &
-                                           salinity_Field, &
-                                           radiation_Field/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
- 
-    !> Create a grid_height field with a 3D array specification, fill the 
-    !> field with equidistant values, and add to ocean export state
+    nimport=0
+    allocate(import_variables(nimport))
+    allocate(importField(nimport))
+    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport+nimport))
     
-    allocate(grid_height(1,1,nlev))
-    grid_height_Array = ESMF_ArrayCreate(distgrid=distgrid,farray=grid_height, &
-      indexflag=ESMF_INDEX_GLOBAL, name="grid_height", rc=rc)
+    
+    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    grid_height_Field = ESMF_FieldCreate(grid=grid, array=grid_height_Array,&
-       name="grid_height", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    do k=1,size(exportField)
+      exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_FieldGet(grid_height_Field, farrayPtr=grid_height_ptr,totalLBound=lbnd,&
-      totalUBound=ubnd,localDE=0,rc=rc)
+      call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+  
+    !> Specify water temperature information from T0 field
+    call ESMF_FieldGet(field=exportField(1), localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    variables(:,:,:,1) =  T0
+   	farrayPtr=variables(:,:,:,1)        
 
-    call ESMF_StateAddReplace(exportState,(/grid_height_Field/),rc=rc)
+    !> Specify a grid_height 
+    call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     do k=lbnd(3),ubnd(3)
       do j=lbnd(2),ubnd(2)
         do i=lbnd(1),ubnd(1) 
-          grid_height_ptr(i,j,k) = depth/nlev
+          variables(i,j,k,2) = depth/nlev
         enddo
       enddo
     enddo
-
+    farrayPtr=variables(:,:,:,2)        
+    
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
   end subroutine Initialize
@@ -301,12 +275,11 @@ module gotm_component
     call gotm_time_step()
  
     do k=1,nlev
-      grid_height_ptr(:,:,k)=gotm_heights(k)
-      water_temperature_ptr(:,:,k) = gotm_temperature(k)
-      salinity_ptr(:,:,k) = gotm_salinity(k)
-      radiation_ptr(:,:,k) = gotm_radiation(k)
+      variables(:,:,k,1) = gotm_temperature(k)
+      variables(:,:,k,2) = gotm_heights(k)
+      variables(:,:,k,3) = gotm_salinity(k)
+      variables(:,:,k,4) = gotm_radiation(k)
     end do
-    
 
     !> Check if the output alarm is ringing, if so, quiet it and 
     !> call do_output from GOTM
@@ -325,6 +298,28 @@ module gotm_component
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
+
+    integer                     :: lbnd(3), ubnd(3), k
+    real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
+    type(ESMF_Field)     :: field
+
+	  do k=1,size(export_variables)
+      call ESMF_StateGet(exportState,export_variables(k)%standard_name, field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_FieldDestroy(field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+
+	  do k=1,size(import_variables)
+      call ESMF_StateGet(importState,import_variables(k)%standard_name, field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_FieldDestroy(field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+
+	  if (allocated(variables)) deallocate(variables)
 
     call clean_up()
 

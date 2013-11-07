@@ -24,26 +24,7 @@ module remtc_ocean
   
   private
 
-  type(ESMF_Field)            :: air_temperature_Field
-  type(ESMF_Array)            :: air_temperature_Array
-  real(ESMF_KIND_R8), allocatable :: air_temperature(:,:,:)
-  real(ESMF_KIND_R8), pointer :: air_temperature_ptr(:,:,:)
-
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
-  
-  type(MOSSCO_VariableInfo), private, target :: par=MOSSCO_VariableInfo(&
-    "photosynthetically_available_radiation", &
-    "W m**-2","photosynthetically_available_radiation")
-  type(MOSSCO_VariableInfo), private, target :: temp=MOSSCO_VariableInfo(&
-    "water_temperature", &
-    "degree_C","water_temperature")
-  type(MOSSCO_VariableInfo), private, target :: salinity=MOSSCO_VariableInfo(&
-    "salinity", &
-    "PSU","salinity")
- type(MOSSCO_VariableInfo), private, target :: airtemp=MOSSCO_VariableInfo(&
-    "air_temperature", &
-    "degree_C","air_temperature")
-
   type(MOSSCO_VariableFArray3d), dimension(3) :: export_variables
   type(MOSSCO_VariableFArray3d), dimension(1) :: import_variables
 
