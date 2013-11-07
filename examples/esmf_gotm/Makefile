@@ -25,7 +25,7 @@ NC_LIBS += $(shell nf-config --flibs)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
 ifeq ($(MOSSCO_GOTM_FABM),true)
-LDFLAGS += -lgotm_fabm_prod
+LDFLAGS += -lmossco_gotmfabm -lsolver
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 endif
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 

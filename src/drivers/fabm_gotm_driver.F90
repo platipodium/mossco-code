@@ -412,7 +412,7 @@ type(type_gotm_fabm),public :: gotmfabm
    end do
 
    ! Repair state before calling FABM
-   call do_repair_state(gotmfabm%knum,'gotm_mossco_fabm::do_gotm_mossco_fabm, after advection/diffusion')
+   !call do_repair_state(gotmfabm%knum,'gotm_mossco_fabm::do_gotm_mossco_fabm, after advection/diffusion')
 
    do split=1,split_factor
       ! Update local light field (self-shading may have changed through changes in biological state variables)
@@ -434,7 +434,7 @@ type(type_gotm_fabm),public :: gotmfabm
       end do
 
       ! Repair state
-        call do_repair_state(gotmfabm%knum,'gotm_mossco_fabm::do_gotm_mossco_fabm, after time integration')
+      !  call do_repair_state(gotmfabm%knum,'gotm_mossco_fabm::do_gotm_mossco_fabm, after time integration')
 
       ! Time-integrate diagnostic variables defined on horizontal slices, where needed.
       do i=1,size(gotmfabm%model%info%diagnostic_variables_hz)
