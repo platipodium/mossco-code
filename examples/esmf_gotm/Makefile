@@ -12,9 +12,6 @@ ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/esmf_gotm$,,$(PWD))
 endif
 
-export FABMHOST=gotm
-#export MOSSCO_GOTM_FABM=true
-
 include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README

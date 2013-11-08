@@ -355,13 +355,6 @@ endif
 libgotm_external:
 ifdef MOSSCO_GOTMDIR
 ifeq ($(MOSSCO_GOTM_FABM),true)
-ifdef MOSSCO_FABMDIR
-	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
-	$(MAKE) -C $(FABMDIR)/src gotm
-endif
-	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
-	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src)
-else
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
 endif
