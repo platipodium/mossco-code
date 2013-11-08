@@ -26,6 +26,7 @@ private
 
 public init_gotm_mossco_fabm, do_gotm_mossco_fabm
 public init_gotm_mossco_fabm_output, do_gotm_mossco_fabm_output
+public set_env_gotm_fabm
 
 type,extends(rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends rhs_driver)
    type(type_model),pointer      :: model
@@ -67,8 +68,8 @@ type(type_gotm_fabm),public :: gotmfabm
    REALTYPE,pointer,dimension(:)                     :: nuh,h,w,z,rho
    REALTYPE,pointer,dimension(:)                     :: bioshade
    REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_)   :: currho,curtemp,cursalt
-   REALTYPE,pointer,dimension(_LOCATION_DIMENSIONS_) :: SRelaxTau,sProf,salt
-   REALTYPE,pointer _ATTR_LOCATION_DIMENSIONS_HZ_    :: precip,evap,bio_drag_scale,bio_albedo
+   REALTYPE,pointer,dimension(:) :: SRelaxTau,sProf,salt
+   REALTYPE,pointer              :: precip,evap,bio_drag_scale,bio_albedo
 
    REALTYPE,pointer :: I_0,A,g1,g2
    integer,pointer  :: yearday,secondsofday
@@ -309,6 +310,119 @@ type(type_gotm_fabm),public :: gotmfabm
 
    end subroutine init_var_gotm_mossco_fabm
 
+
+   subroutine set_env_gotm_fabm(latitude,longitude,dt_,w_adv_method_,w_adv_ctr_,temp,salt_,rho_,nuh_,h_,w_, &
+                                bioshade_,I_0_,cloud,taub,wnd,precip_,evap_,z_,A_,g1_,g2_, &
+                                yearday_,secondsofday_,SRelaxTau_,sProf_,bio_albedo_,bio_drag_scale_)
+!
+! !DESCRIPTION:
+! This routine is called once from GOTM to provide pointers to the arrays that describe
+! the physical environment relevant for biogeochemical processes (temprature, salinity, etc.)
+!
+! !INPUT PARAMETERS:
+   REALTYPE, intent(in),target,dimension(:,:) :: latitude,longitude
+   REALTYPE, intent(in) :: dt_
+   integer,  intent(in) :: w_adv_method_,w_adv_ctr_
+   REALTYPE, intent(in),target,dimension(:)                 :: temp,salt_,rho_,nuh_,h_,w_,bioshade_,z_
+   REALTYPE, target, dimension(1:1,1:1,1:gotmfabm%knum)     :: temp3d,salt3d,rho3d,nuh3d,h3d,w3d,bioshade3d,z3d
+   REALTYPE, intent(in),target                              :: I_0_,cloud,wnd,precip_,evap_,taub
+   REALTYPE, target, dimension(1:1,1:1)                     :: I_02d,cloud2d,wnd2d,precip2d,evap2d,taub2d
+   REALTYPE, intent(in),target :: A_,g1_,g2_
+   integer,  intent(in),target :: yearday_,secondsofday_
+   REALTYPE, intent(in),optional,target,dimension(:) :: SRelaxTau_,sProf_
+   REALTYPE, intent(in),optional,target              :: bio_albedo_,bio_drag_scale_
+!
+! !REVISION HISTORY:
+!  Original author(s): Jorn Bruggeman
+!
+!EOP
+!-----------------------------------------------------------------------!
+!BOC
+   if (.not. fabm_calc) return
+
+   temp3d(1,1,:)=temp
+   salt3d(1,1,:)=salt_
+   rho3d(1,1,:)=rho_
+   nuh3d(1,1,:)=nuh_
+   h3d(1,1,:)=h_(2:)
+   w3d(1,1,:)=w_
+   bioshade3d(1,1,:)=bioshade_
+   z3d(1,1,:)=z_
+   I_02d(1,1)=I_0_
+   cloud2d(1,1)=cloud
+   wnd2d(1,1)=wnd
+   precip2d(1,1)=precip_
+   evap2d(1,1)=evap_
+   taub2d(1,1)=taub
+
+   ! Provide pointers to arrays with environmental variables to FABM.
+   call fabm_link_bulk_data      (gotmfabm%model,temp_id,     temp3d)
+   call fabm_link_bulk_data      (gotmfabm%model,salt_id,     salt3d)
+   call fabm_link_bulk_data      (gotmfabm%model,rho_id,      rho3d)
+   call fabm_link_bulk_data      (gotmfabm%model,h_id,        h3d)
+   call fabm_link_horizontal_data(gotmfabm%model,lon_id,      longitude)
+   call fabm_link_horizontal_data(gotmfabm%model,lat_id,      latitude)
+   call fabm_link_horizontal_data(gotmfabm%model,windspeed_id,wnd2d)
+   call fabm_link_horizontal_data(gotmfabm%model,par_sf_id,   I_02d)
+   call fabm_link_horizontal_data(gotmfabm%model,cloud_id,    cloud2d)
+   call fabm_link_horizontal_data(gotmfabm%model,taub_id,     taub2d)
+
+   ! Save pointers to external dynamic variables that we need later (in do_gotm_fabm)
+   nuh      => nuh_        ! turbulent heat diffusivity [1d array] used to diffuse biogeochemical state variables
+   h        => h_          ! layer heights [1d array] needed for advection, diffusion
+   w        => w_          ! vertical medium velocity [1d array] needed for advection of biogeochemical state variables
+   bioshade => bioshade_   ! biogeochemical light attenuation coefficients [1d array], output of biogeochemistry, input for physics
+   z        => z_          ! depth [1d array], used to calculate local light intensity
+   precip   => precip_     ! precipitation [scalar] - used to calculate dilution due to increased water volume
+   evap     => evap_       ! evaporation [scalar] - used to calculate concentration due to decreased water volume
+   salt     => salt_       ! salinity [1d array] - used to calculate virtual freshening due to salinity relaxation
+   rho      => rho_        ! density [1d array] - used to calculate bottom stress from bottom friction velocity.
+
+   if (biodrag_feedback.and.present(bio_drag_scale_)) then
+      bio_drag_scale => bio_drag_scale_
+   else
+      nullify(bio_drag_scale)
+   end if
+   if (bioalbedo_feedback.and.present(bio_albedo_)) then
+      bio_albedo => bio_albedo_
+   else
+      nullify(bio_albedo)
+   end if
+
+   if (present(SRelaxTau_) .and. present(sProf_)) then
+      SRelaxTau => SRelaxTau_ ! salinity relaxation times  [1d array] - used to calculate virtual freshening due to salinity relaxation
+      sProf     => sProf_     ! salinity relaxation values [1d array] - used to calculate virtual freshening due to salinity relaxation
+   else
+      if (salinity_relaxation_to_freshwater_flux) &
+         stop 'gotm_fabm:set_env_gotm_fabm: salinity_relaxation_to_freshwater_flux is set, &
+              &but salinity relaxation arrays are not provided.'
+      nullify(SRelaxTau)
+      nullify(sProf)
+   end if
+
+   ! Copy scalars that will not change during simulation, and are needed in do_gotm_fabm)
+   w_adv_method = w_adv_method_
+   w_adv_ctr = w_adv_ctr_
+
+   I_0 => I_0_
+   A => A_
+   g1 => g1_
+   g2 => g2_
+
+   yearday => yearday_
+   secondsofday => secondsofday_
+
+   ! At this stage, FABM has been provided with arrays for all state variables, any variables
+   ! read in from file (gotm_fabm_input), and all variables exposed by GOTM. If FABM is still
+   ! lacking variable references, this should now trigger an error.
+   if (.not.fabm_ready) then
+      call fabm_check_ready(gotmfabm%model)
+      fabm_ready = .true.
+   end if
+
+   end subroutine set_env_gotm_fabm
+
+
    subroutine do_gotm_mossco_fabm(dt)
 !
 ! !DESCRIPTION:
@@ -360,7 +474,7 @@ type(type_gotm_fabm),public :: gotmfabm
    call fabm_get_surface_exchange(gotmfabm%model,1,1,gotmfabm%knum,sfl(1,1,:))
 
    ! Calculate dilution due to surface freshwater flux (m/s)
-   dilution = precip(1,1)+evap(1,1)
+   dilution = precip+evap
 
    ! If salinity is relaxed to observations, the change in column-integrated salintiy can converted into a
    ! a virtual freshwater flux. Optionally, this freshwater flux can be imposed at the surface on biogoeochemical
@@ -369,10 +483,10 @@ type(type_gotm_fabm),public :: gotmfabm
    virtual_dilution = _ZERO_
    if (salinity_relaxation_to_freshwater_flux) then
       ! NB unit of virtual_dilution is relative dilution across column, i.e., fraction/s
-      if (any(SRelaxTau(1,1,1:gotmfabm%knum)<1.e10) .and. any(salt>0.)) &
-         virtual_dilution = sum((salt(1,1,1:gotmfabm%knum)-sProf(1,1,1:gotmfabm%knum))/ &
-             SRelaxTau(1,1,1:gotmfabm%knum)*curh(1,1,1:gotmfabm%knum))/ &
-             sum(salt(1,1,1:gotmfabm%knum)*curh(1,1,1:gotmfabm%knum))
+      if (any(SRelaxTau(1:gotmfabm%knum)<1.e10) .and. any(salt>0.)) &
+         virtual_dilution = sum((salt(1:gotmfabm%knum)-sProf(1:gotmfabm%knum))/ &
+             SRelaxTau(1:gotmfabm%knum)*curh(1,1,1:gotmfabm%knum))/ &
+             sum(salt(1:gotmfabm%knum)*curh(1,1,1:gotmfabm%knum))
    end if
 
    ! Add surface flux due to evaporation/precipitation, unless the model explicitly says otherwise.
@@ -413,6 +527,7 @@ type(type_gotm_fabm),public :: gotmfabm
 
    ! Repair state before calling FABM
    !call do_repair_state(gotmfabm%knum,'gotm_mossco_fabm::do_gotm_mossco_fabm, after advection/diffusion')
+   dt_eff = dt/dble(split_factor)
 
    do split=1,split_factor
       ! Update local light field (self-shading may have changed through changes in biological state variables)
