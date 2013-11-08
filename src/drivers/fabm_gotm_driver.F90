@@ -1,5 +1,5 @@
 #include "fabm_driver.h"
-!taken from GOTM
+! defines taken from GOTM
 #define POINT           0
 #define Z_SHAPE         1
 #define T_SHAPE         2
@@ -25,7 +25,8 @@ implicit none
 private
 
 public init_gotm_mossco_fabm, do_gotm_mossco_fabm
-public init_gotm_mossco_fabm_output, do_gotm_mossco_fabm_output
+public init_gotm_mossco_fabm_output
+public do_gotm_mossco_fabm_output
 public set_env_gotm_fabm
 
 type,extends(rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends rhs_driver)
@@ -78,21 +79,14 @@ type(type_gotm_fabm),public :: gotmfabm
 
    contains
 
+   !> Initializes the GOTM-FABM driver module by reading settings from fabm.nml
    subroutine init_gotm_mossco_fabm(nlev,fname)
-!
-! !DESCRIPTION:
-! Initializes the GOTM-FABM driver module by reading settings from fabm.nml.
-!
-! !INPUT PARAMETERS:
+
    integer,          intent(in)        :: nlev
    character(len=*), intent(in)        :: fname
-!
-! !REVISION HISTORY:
-!  Original author(s): Jorn Bruggeman
-!
-!EOP
-!
-!  local variables
+
+   !  Original author(s): Jorn Bruggeman
+
    integer                   :: i,namlst=55
    namelist /gotm_fabm_nml/ fabm_calc,                                               &
                             cnpar,w_adv_discr,ode_method,split_factor,               &
@@ -192,22 +186,13 @@ type(type_gotm_fabm),public :: gotmfabm
 
    end subroutine init_gotm_mossco_fabm
 
+
+   !>This routine allocates memory for all FABM variables.
    subroutine init_var_gotm_mossco_fabm()
-!
-! !DESCRIPTION:
-! This routine allocates memory for all FABM variables.
-!
-!
-! !REVISION HISTORY:
-!  Original author(s): Jorn Bruggeman
-!
-!EOP
-!
-! !LOCAL VARIABLES:
+
+   !  Original author(s): Jorn Bruggeman
    integer                   :: i,rc
-!
-!-----------------------------------------------------------------------
-!BOC
+
    ! Allocate state variable array for pelagic and benthos combined and provide initial values.
    ! In terms of memory use, it is a waste to allocate storage for benthic variables across the entire
    ! column (the bottom layer should suffice). However, it is important that all values at a given point
@@ -310,16 +295,12 @@ type(type_gotm_fabm),public :: gotmfabm
 
    end subroutine init_var_gotm_mossco_fabm
 
-
+   !> This routine is called once from GOTM to provide pointers to the arrays that describe
+   !! the physical environment relevant for biogeochemical processes (temprature, salinity, etc.)
    subroutine set_env_gotm_fabm(latitude,longitude,dt_,w_adv_method_,w_adv_ctr_,temp,salt_,rho_,nuh_,h_,w_, &
                                 bioshade_,I_0_,cloud,taub,wnd,precip_,evap_,z_,A_,g1_,g2_, &
                                 yearday_,secondsofday_,SRelaxTau_,sProf_,bio_albedo_,bio_drag_scale_)
-!
-! !DESCRIPTION:
-! This routine is called once from GOTM to provide pointers to the arrays that describe
-! the physical environment relevant for biogeochemical processes (temprature, salinity, etc.)
-!
-! !INPUT PARAMETERS:
+
    REALTYPE, intent(in),target,dimension(:,:) :: latitude,longitude
    REALTYPE, intent(in) :: dt_
    integer,  intent(in) :: w_adv_method_,w_adv_ctr_
@@ -331,13 +312,9 @@ type(type_gotm_fabm),public :: gotmfabm
    integer,  intent(in),target :: yearday_,secondsofday_
    REALTYPE, intent(in),optional,target,dimension(:) :: SRelaxTau_,sProf_
    REALTYPE, intent(in),optional,target              :: bio_albedo_,bio_drag_scale_
-!
-! !REVISION HISTORY:
+
 !  Original author(s): Jorn Bruggeman
-!
-!EOP
-!-----------------------------------------------------------------------!
-!BOC
+
    if (.not. fabm_calc) return
 
    temp3d(1,1,:)=temp
@@ -423,31 +400,19 @@ type(type_gotm_fabm),public :: gotmfabm
    end subroutine set_env_gotm_fabm
 
 
+   !> do a timestep of FABM integration in MOSSCO's GOTM component
    subroutine do_gotm_mossco_fabm(dt)
-!
-! !DESCRIPTION:
-! TODO
-!
-! !USES:
+
    use util,only: flux,Neumann
-!
+
    real(rk), intent(in) :: dt
-!
-! !REVISION HISTORY:
-!  Original author(s): Jorn Bruggeman
-!
-!EOP
-!
-! !LOCAL VARIABLES:
+
    integer, parameter        :: adv_mode_0=0
    integer, parameter        :: adv_mode_1=1
    REALTYPE                  :: dilution,virtual_dilution,dt_eff
    integer                   :: i,j,k
    integer                   :: split,posconc
    integer(8)                :: clock_start,clock_end
-!
-!-----------------------------------------------------------------------
-!BOC
 
    if (.not. fabm_calc) return
 
@@ -582,6 +547,7 @@ type(type_gotm_fabm),public :: gotmfabm
    end subroutine do_gotm_mossco_fabm
 
 
+   !> provide right-hand sides for MOSSCO's solver library
    subroutine get_rhs(rhsd,rhs)
    use fabm
    use fabm_types
@@ -615,18 +581,8 @@ type(type_gotm_fabm),public :: gotmfabm
 
 
    subroutine clean_gotm_mossco_fabm
-!
-! !DESCRIPTION:
-!  Report timing results and deallocate memory.
-!
-! !REVISION HISTORY:
+
 !  Original author(s): Jorn Bruggeman
-!
-!EOP
-
-!-----------------------------------------------------------------------
-!BOC
-
 
    LEVEL1 'clean_gotm_mossco_fabm'
 
@@ -646,31 +602,19 @@ type(type_gotm_fabm),public :: gotmfabm
 
    end subroutine clean_gotm_mossco_fabm
 
-      subroutine light(nlev,bioshade_feedback)
-!
-! !DESCRIPTION:
-! Calculate photosynthetically active radiation (PAR) and short wave
-! radiation (SWR) over entire column, using surface short wave radiation,
-! and background and biotic extinction.
-!
-! !INPUT PARAMETERS:
+   !> Calculate photosynthetically active radiation (PAR) and short wave
+   !! radiation (SWR) over entire column, using surface short wave radiation,
+   !! and background and biotic extinction.
+   subroutine light(nlev,bioshade_feedback)
+
    integer, intent(in)                 :: nlev
    logical, intent(in)                 :: bioshade_feedback
-!
-! !REVISION HISTORY:
+
 !  Original author(s): Jorn Bruggeman
-!
-!EOP
-!
-! !LOCAL VARIABLES:
+
    integer :: i
    REALTYPE :: bioext,localext
-#ifdef _FABM_USE_1D_LOOP_
-   REALTYPE :: localexts(1:nlev)
-#endif
-!
-!-----------------------------------------------------------------------
-!BOC
+
    bioext = _ZERO_
 
    do i=nlev,1,-1
@@ -708,20 +652,19 @@ type(type_gotm_fabm),public :: gotmfabm
    end subroutine init_gotm_mossco_fabm_state
 
 
+
+   !> Initialize the netcdf output by defining biogeochemical variables.
    subroutine init_gotm_mossco_fabm_output()
-!  Initialize the netcdf output by defining biogeochemical variables.
-!
+
    use ncdfout, only: ncid,lon_dim,lat_dim,z_dim,time_dim,dim3d,dim4d
    use ncdfout, only: define_mode,new_nc_variable,set_attributes
    use netcdf
-!
+
 !  Original author(s): Jorn Bruggeman
-!
+
    integer :: iret,n
    character(len=64) :: name
-!
-!-----------------------------------------------------------------------
-!BOC
+
    if (.not. fabm_calc) return
 
          ! Put NetCDF library in define mode.
@@ -784,16 +727,16 @@ type(type_gotm_fabm),public :: gotmfabm
 
 
    subroutine do_gotm_mossco_fabm_output()
-!  Save properties of biogeochemical model, including state variable
-!  values, diagnostic variable values, and sums of conserved quantities.
-!
+!>  Save properties of biogeochemical model, including state variable
+!!  values, diagnostic variable values, and sums of conserved quantities.
+
    use output,  only: nsave
    use ncdfout, only: ncid,set_no
    use ncdfout, only: store_data
    use netcdf
-!
+
 !  Original author(s): Jorn Bruggeman
-!
+
    integer :: iret,nlev,n,start(4),edges(4)
    
    nlev = gotmfabm%knum
