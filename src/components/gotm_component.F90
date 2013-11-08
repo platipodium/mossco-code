@@ -27,10 +27,17 @@ module gotm_component
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
   use output, only: prepare_output,do_output,gotm_output_nsave => nsave
 
-#undef _GOTM_MOSSCO_FABM_
-
 #ifdef _GOTM_MOSSCO_FABM_
+  use turbulence,  only: nuh
+  use airsea,      only: wind=>w,tx,ty,I_0,cloud,heat,precip,evap
+  use airsea,      only: bio_albedo,bio_drag_scale
+  use meanflow,    only: s,t,rho,z,h,w,bioshade,taub
+  use observations,only: SRelaxTau,sProf
+  use observations
+  use time,        only: secondsofday,yearday
+
   use gotm_mossco_fabm
+  use gotm_mossco_fabm, only: do_gotm_mossco_fabm_output
 #endif
 
   use mossco_variable_types
@@ -110,16 +117,21 @@ module gotm_component
     call ESMF_LogWrite("GOTM ocean component initializing.",ESMF_LOGMSG_INFO)
     call init_gotm()
 
-#ifdef _GOTM_MOSSCO_FABM_
-    call init_gotm_mossco_fabm(nlev,'gotm_fabm.nml')
-    call init_gotm_mossco_fabm_output()
-#endif
-
     ! read model_setup namelist
     open(921,file='gotmrun.nml',status='old',action='read')
     read(921,nml=model_setup)
     read(921,nml=station)
     close(921)
+
+#ifdef _GOTM_MOSSCO_FABM_
+    call init_gotm_mossco_fabm(nlev,'gotm_fabm.nml')
+    call init_gotm_mossco_fabm_output()
+    call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr,t(1:nlev),s(1:nlev),rho(1:nlev), &
+                          nuh,h,w,bioshade(1:nlev),I_0,cloud,taub,wind,precip,evap,z(1:nlev), &
+                          A,g1,g2,yearday,secondsofday,SRelaxTau(1:nlev),sProf(1:nlev), &
+                          bio_albedo,bio_drag_scale)
+#endif
+
 
     ! Manipulate the time parameters from the gotm namelist
     ! dt    ! float time steop for integration in seconds
@@ -287,7 +299,9 @@ module gotm_component
       call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
       call prepare_output(n)
       call do_output(n,nlev)
+#ifdef _MOSSCO_GOTM_FABM_
       call do_gotm_mossco_fabm_output()
+#endif
     endif
     
 

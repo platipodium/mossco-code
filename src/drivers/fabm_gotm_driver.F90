@@ -39,7 +39,7 @@ type(type_gotm_fabm),public :: gotmfabm
 
 
 !  Arrays for state and diagnostic variables
-   REALTYPE,pointer,dimension(_LOCATION_DIMENSIONS_,:),public            :: cc
+   REALTYPE,allocatable,target,dimension(_LOCATION_DIMENSIONS_,:),public :: cc
    REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_,:),public        :: cc_diag
    REALTYPE,allocatable,dimension(:,:,:),                  public        :: cc_diag_hz
 
@@ -198,19 +198,19 @@ type(type_gotm_fabm),public :: gotmfabm
    ! column (the bottom layer should suffice). However, it is important that all values at a given point
    ! in time are integrated simultaneously in multi-step algorithms. This currently can only be arranged
    ! by storing benthic values together with the pelagic, in a fully depth-explicit array.
-   allocate(gotmfabm%conc(1,1,1:gotmfabm%knum,1:size(gotmfabm%model%info%state_variables) + &
+   allocate(cc(1,1,1:gotmfabm%knum,1:size(gotmfabm%model%info%state_variables) + &
        size(gotmfabm%model%info%state_variables_ben)),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (gotmfabm%conc)'
-   cc => gotmfabm%conc
+   gotmfabm%conc => cc
    gotmfabm%conc = _ZERO_
    do i=1,size(gotmfabm%model%info%state_variables)
       gotmfabm%conc(1,1,:,i) = gotmfabm%model%info%state_variables(i)%initial_value
-!      call fabm_link_bulk_state_data(gotmfabm%model,i,cc(1,1,1:,i))
+      call fabm_link_bulk_state_data(gotmfabm%model,i,cc(:,:,:,i))
    end do
    do i=1,size(gotmfabm%model%info%state_variables_ben)
       gotmfabm%conc(1,1,1,size(gotmfabm%model%info%state_variables)+i) = &
              gotmfabm%model%info%state_variables_ben(i)%initial_value
-!      call fabm_link_bottom_state_data(gotmfabm%model,i,cc(1,1,1,size(gotmfabm%model%info%state_variables)+i))
+      call fabm_link_bottom_state_data(gotmfabm%model,i,cc(:,:,1,size(gotmfabm%model%info%state_variables)+i))
    end do
 
    ! Allocate array for pelagic diagnostic variables; set all values to zero.
@@ -301,13 +301,14 @@ type(type_gotm_fabm),public :: gotmfabm
                                 bioshade_,I_0_,cloud,taub,wnd,precip_,evap_,z_,A_,g1_,g2_, &
                                 yearday_,secondsofday_,SRelaxTau_,sProf_,bio_albedo_,bio_drag_scale_)
 
-   REALTYPE, intent(in),target,dimension(:,:) :: latitude,longitude
+   REALTYPE, intent(in),target                              :: latitude,longitude
    REALTYPE, intent(in) :: dt_
    integer,  intent(in) :: w_adv_method_,w_adv_ctr_
    REALTYPE, intent(in),target,dimension(:)                 :: temp,salt_,rho_,nuh_,h_,w_,bioshade_,z_
    REALTYPE, target, dimension(1:1,1:1,1:gotmfabm%knum)     :: temp3d,salt3d,rho3d,nuh3d,h3d,w3d,bioshade3d,z3d
    REALTYPE, intent(in),target                              :: I_0_,cloud,wnd,precip_,evap_,taub
    REALTYPE, target, dimension(1:1,1:1)                     :: I_02d,cloud2d,wnd2d,precip2d,evap2d,taub2d
+   REALTYPE, target, dimension(1:1,1:1)                     :: latitude2d,longitude2d
    REALTYPE, intent(in),target :: A_,g1_,g2_
    integer,  intent(in),target :: yearday_,secondsofday_
    REALTYPE, intent(in),optional,target,dimension(:) :: SRelaxTau_,sProf_
@@ -331,14 +332,16 @@ type(type_gotm_fabm),public :: gotmfabm
    precip2d(1,1)=precip_
    evap2d(1,1)=evap_
    taub2d(1,1)=taub
+   latitude2d(1,1)=latitude
+   longitude2d(1,1)=longitude
 
    ! Provide pointers to arrays with environmental variables to FABM.
    call fabm_link_bulk_data      (gotmfabm%model,temp_id,     temp3d)
    call fabm_link_bulk_data      (gotmfabm%model,salt_id,     salt3d)
    call fabm_link_bulk_data      (gotmfabm%model,rho_id,      rho3d)
    call fabm_link_bulk_data      (gotmfabm%model,h_id,        h3d)
-   call fabm_link_horizontal_data(gotmfabm%model,lon_id,      longitude)
-   call fabm_link_horizontal_data(gotmfabm%model,lat_id,      latitude)
+   call fabm_link_horizontal_data(gotmfabm%model,lon_id,      longitude2d)
+   call fabm_link_horizontal_data(gotmfabm%model,lat_id,      latitude2d)
    call fabm_link_horizontal_data(gotmfabm%model,windspeed_id,wnd2d)
    call fabm_link_horizontal_data(gotmfabm%model,par_sf_id,   I_02d)
    call fabm_link_horizontal_data(gotmfabm%model,cloud_id,    cloud2d)
@@ -464,9 +467,7 @@ type(type_gotm_fabm),public :: gotmfabm
    end do
 
    ! Vertical advection and residual movement (sinking/floating)
-   call system_clock(clock_start)
    do i=1,size(gotmfabm%model%info%state_variables)
-      if (.not.cc_transport(i)) cycle
 
       ! Do advection step due to settling or rising
       call adv_center(gotmfabm%knum,dt,curh,curh,ws(1,1,:,i),flux, &
@@ -479,7 +480,6 @@ type(type_gotm_fabm),public :: gotmfabm
 
    ! Vertical diffusion
    do i=1,size(gotmfabm%model%info%state_variables)
-      if (.not.cc_transport(i)) cycle
 
       ! Determine whether the variable is positive-definite based on its lower allowed bound.
       posconc = 0
@@ -730,7 +730,6 @@ type(type_gotm_fabm),public :: gotmfabm
 !>  Save properties of biogeochemical model, including state variable
 !!  values, diagnostic variable values, and sums of conserved quantities.
 
-   use output,  only: nsave
    use ncdfout, only: ncid,set_no
    use ncdfout, only: store_data
    use netcdf
