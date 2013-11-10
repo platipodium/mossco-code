@@ -299,7 +299,7 @@ module gotm_component
       call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
       call prepare_output(n)
       call do_output(n,nlev)
-#ifdef _MOSSCO_GOTM_FABM_
+#ifdef _GOTM_MOSSCO_FABM_
       call do_gotm_mossco_fabm_output()
 #endif
     endif
