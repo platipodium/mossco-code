@@ -58,7 +58,7 @@ type(type_gotm_fabm),public :: gotmfabm
    REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_,:) :: ws
    REALTYPE,allocatable,dimension(:,:,:)                   :: sfl,bfl,total
    REALTYPE,allocatable _ATTR_DIMENSIONS_1_                :: local
-   REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_)   :: Qsour,Lsour,DefaultRelaxTau,curh,curnuh
+   REALTYPE,allocatable,dimension(:)                       :: Qsour,Lsour,DefaultRelaxTau,curh,curnuh
    logical,allocatable                                     :: cc_transport(:)
 
    ! Arrays for environmental variables not supplied externally.
@@ -66,11 +66,10 @@ type(type_gotm_fabm),public :: gotmfabm
 
    ! External variables
    integer  :: w_adv_ctr   ! Scheme for vertical advection (0 if not used)
-   REALTYPE,pointer,dimension(:)                     :: nuh,h,w,z,rho
-   REALTYPE,pointer,dimension(:)                     :: bioshade
-   REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_)   :: currho,curtemp,cursalt
-   REALTYPE,pointer,dimension(:) :: SRelaxTau,sProf,salt
-   REALTYPE,pointer              :: precip,evap,bio_drag_scale,bio_albedo
+   REALTYPE,pointer,dimension(:)    :: nuh,h,w,z,rho
+   REALTYPE,pointer,dimension(:)    :: bioshade
+   REALTYPE,pointer,dimension(:)    :: SRelaxTau,sProf,salt
+   REALTYPE,pointer                 :: precip,evap,bio_drag_scale,bio_albedo
 
    REALTYPE,pointer :: I_0,A,g1,g2
    integer,pointer  :: yearday,secondsofday
@@ -198,10 +197,10 @@ type(type_gotm_fabm),public :: gotmfabm
    ! column (the bottom layer should suffice). However, it is important that all values at a given point
    ! in time are integrated simultaneously in multi-step algorithms. This currently can only be arranged
    ! by storing benthic values together with the pelagic, in a fully depth-explicit array.
-   allocate(cc(1,1,1:gotmfabm%knum,1:size(gotmfabm%model%info%state_variables) + &
+   allocate(cc(1,1,0:gotmfabm%knum,1:size(gotmfabm%model%info%state_variables) + &
        size(gotmfabm%model%info%state_variables_ben)),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (gotmfabm%conc)'
-   gotmfabm%conc => cc
+   gotmfabm%conc => cc(:,:,1:gotmfabm%knum,:)
    gotmfabm%conc = _ZERO_
    do i=1,size(gotmfabm%model%info%state_variables)
       gotmfabm%conc(1,1,:,i) = gotmfabm%model%info%state_variables(i)%initial_value
@@ -273,23 +272,23 @@ type(type_gotm_fabm),public :: gotmfabm
    decimal_yearday = _ZERO_
    call fabm_link_scalar_data(gotmfabm%model,varname_yearday,decimal_yearday)
 
-   allocate(Qsour(1,1,1:gotmfabm%knum),stat=rc)
+   allocate(Qsour(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (Qsour)'
    Qsour    = _ZERO_
 
-   allocate(Lsour(1,1,1:gotmfabm%knum),stat=rc)
+   allocate(Lsour(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (Lsour)'
    Lsour    = _ZERO_
 
-   allocate(DefaultRelaxTau(1,1,1:gotmfabm%knum),stat=rc)
+   allocate(DefaultRelaxTau(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (DefaultRelaxTau)'
    DefaultRelaxTau = 1.d15
 
-   allocate(curh(1,1,1:gotmfabm%knum),stat=rc)
+   allocate(curh(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (curh)'
    curh = _ZERO_
 
-   allocate(curnuh(1,1,1:gotmfabm%knum),stat=rc)
+   allocate(curnuh(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (curnuh)'
    curnuh = _ZERO_
 
@@ -420,13 +419,13 @@ type(type_gotm_fabm),public :: gotmfabm
    if (.not. fabm_calc) return
 
    ! Set contiguous arrays with layer heights and diffusivity, needed in calls to adv_center and diff_center.
-   curh(1,1,:)   = h
-   curnuh(1,1,:) = nuh
+   curh   = h
+   curnuh = nuh
 
    ! Calculate local pressure from layer height and density
-   pres(1,1,gotmfabm%knum) = rho(gotmfabm%knum)*curh(1,1,gotmfabm%knum)*0.5d0
+   pres(1,1,gotmfabm%knum) = rho(gotmfabm%knum)*curh(gotmfabm%knum)*0.5d0
    do i=gotmfabm%knum-1,1,-1
-      pres(1,1,i) = pres(1,1,i+1) + (rho(i)*curh(1,1,i)+rho(i+1)*curh(1,1,i+1))*0.5d0
+      pres(1,1,i) = pres(1,1,i+1) + (rho(i)*curh(i)+rho(i+1)*curh(i+1))*0.5d0
    end do
    pres(1,1,1:gotmfabm%knum) = pres(1,1,1:gotmfabm%knum)*9.81d-4
 
@@ -453,8 +452,8 @@ type(type_gotm_fabm),public :: gotmfabm
       ! NB unit of virtual_dilution is relative dilution across column, i.e., fraction/s
       if (any(SRelaxTau(1:gotmfabm%knum)<1.e10) .and. any(salt>0.)) &
          virtual_dilution = sum((salt(1:gotmfabm%knum)-sProf(1:gotmfabm%knum))/ &
-             SRelaxTau(1:gotmfabm%knum)*curh(1,1,1:gotmfabm%knum))/ &
-             sum(salt(1:gotmfabm%knum)*curh(1,1,1:gotmfabm%knum))
+             SRelaxTau(1:gotmfabm%knum)*curh(1:gotmfabm%knum))/ &
+             sum(salt(1:gotmfabm%knum)*curh(1:gotmfabm%knum))
    end if
 
    ! Add surface flux due to evaporation/precipitation, unless the model explicitly says otherwise.
@@ -462,7 +461,7 @@ type(type_gotm_fabm),public :: gotmfabm
       if (.not. (gotmfabm%model%info%state_variables(i)%no_precipitation_dilution .or. no_precipitation_dilution)) then
          sfl(1,1,i) = sfl(1,1,i)-cc(1,1,gotmfabm%knum,i)*dilution
          if (virtual_dilution/=_ZERO_) sfl(1,1,i) = sfl(1,1,i) - &
-             sum(cc(1,1,1:gotmfabm%knum,i)*curh(1,1,1:gotmfabm%knum))*virtual_dilution
+             sum(cc(1,1,1:gotmfabm%knum,i)*curh(1:gotmfabm%knum))*virtual_dilution
       end if
    end do
 
@@ -471,11 +470,11 @@ type(type_gotm_fabm),public :: gotmfabm
 
       ! Do advection step due to settling or rising
       call adv_center(gotmfabm%knum,dt,curh,curh,ws(1,1,:,i),flux, &
-          flux,_ZERO_,_ZERO_,w_adv_discr,adv_mode_1,cc(1,1,:,i))
+          flux,_ZERO_,_ZERO_,w_adv_discr,adv_mode_1,cc(1,1,1:10,i))
 
       ! Do advection step due to vertical velocity
       if (w_adv_method/=0) call adv_center(gotmfabm%knum,dt,curh,curh,w,flux, &
-          flux,_ZERO_,_ZERO_,w_adv_ctr,adv_mode_0,cc(1,1,:,i))
+          flux,_ZERO_,_ZERO_,w_adv_ctr,adv_mode_0,cc(1,1,1:gotmfabm%knum,i))
    end do
 
    ! Vertical diffusion
@@ -621,7 +620,7 @@ type(type_gotm_fabm),public :: gotmfabm
       call fabm_get_light_extinction(gotmfabm%model,1,1,i,localext)
 
       ! Add the extinction of the first half of the grid box.
-      bioext = bioext+localext*0.5*curh(1,1,i)
+      bioext = bioext+localext*0.5*curh(i)
 
       ! Calculate photosynthetically active radiation (PAR), shortwave radiation, and PAR attenuation.
       par(1,1,i) = I_0*(_ONE_-A)*exp(z(i)/g2-bioext)
@@ -629,7 +628,7 @@ type(type_gotm_fabm),public :: gotmfabm
       k_par(1,1,i) = _ONE_/g2+localext
 
       ! Add the extinction of the second half of the grid box.
-      bioext = bioext+localext*0.5*curh(1,1,i)
+      bioext = bioext+localext*0.5*curh(i)
 
       if (bioshade_feedback) bioshade(i)=exp(-bioext)
    end do
