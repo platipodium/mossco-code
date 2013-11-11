@@ -16,8 +16,8 @@ $(error GNU make is required)
 endif 
 
 # More useful output from Make and count of iterations of Rules.make
-OLD_SHELL := $(SHELL)
-SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
+#OLD_SHELL := $(SHELL)
+#SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
 
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution

@@ -27,9 +27,6 @@ module remtc_atmosphere
   type(MOSSCO_VariableFArray3d), dimension(1) :: export_variables
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
 
-  real(ESMF_KIND_R8), pointer :: air_temperature(:,:,:)
-  type(ESMF_Field)            :: temperatureField
-
   public SetServices
  
   contains
@@ -70,8 +67,8 @@ module remtc_atmosphere
     !> Create the grid and coordinates
     !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
     !> to 50 .. 55 deg North
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/40, 50,1/), &
-      regDecomp=(/4,3,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/40, 50,10/), &
+      regDecomp=(/4,3,3/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="atmosphere grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
