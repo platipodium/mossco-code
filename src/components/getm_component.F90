@@ -366,7 +366,10 @@
 #ifndef NO_3D
       do_3d = (runtype .ge. 2 .and. mod(n,M) .eq. 0)
 #endif
+
+!     INPUT (for the time being)
       call do_input(n)
+
       if(runtype .le. 2) then
          call do_meteo(n)
 #ifndef NO_3D
@@ -415,6 +418,7 @@
 #endif
       call update_time(n)
 
+!     OUTPUT (for the time being)
 #ifndef NO_3D
       if(meanout .ge. 0) then
          call calc_mean_fields(n,meanout)
@@ -461,6 +465,7 @@
 ! !USES:
    use initialise ,only: runtype,dryrun
    use integration,only: MaxN
+   use output     ,only: meanout
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -487,6 +492,11 @@
 
 !  optional Finalize of child components
 !  Add whatever code here needed (deallocation,close files,flush results)
+#ifndef NO_3D
+   if (meanout .eq. 0) then
+      call calc_mean_fields(MaxN,MaxN)
+   end if
+#endif
    call clean_up(dryrun,runtype,MaxN)
 
    call ESMF_GridCompGet(getmCmp,clock=getmClock)
