@@ -33,6 +33,10 @@ TARGETS += libgotm libfabm0d libmossco_gotmfabm
 endif
 endif
 
+ifeq ($(MOSSCO_GETM),true)
+TARGETS += libgetm
+endif
+
 .PHONY: $(TARGETS)
 
 #--------------------------------------
@@ -40,6 +44,9 @@ endif
 # add checks for libfabm and libsediment
 
 all: $(TARGETS)
+
+libgetm: prefix libgetm_external \
+	$(MOSSCO_LIBRARY_PATH)/libgetm.a(getm_component.o)
 
 libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
@@ -69,6 +76,11 @@ $(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
 $(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
 	$(AR) cruvs $@ remtc_atmosphere.o
 
+# A really, really dirty hack for now...
+getm_component.o: getm_component.F90
+	@echo "Compiling $<"
+	$(F90) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
 fabm_0d_component.o: fabm_0d_component.F90
 	@echo "Compiling $<"
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d
@@ -97,6 +109,7 @@ clean: extraclean
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a

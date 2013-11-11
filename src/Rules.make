@@ -383,7 +383,7 @@ endif
 	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)
 endif
 endif
-	$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
+	#$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
 
 # Common rules
