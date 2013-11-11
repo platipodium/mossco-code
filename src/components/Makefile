@@ -77,6 +77,7 @@ $(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
 	$(AR) cruvs $@ remtc_atmosphere.o
 
 # A really, really dirty hack for now...
+# ...and automatic rm of .o also does not work because of this.
 getm_component.o: getm_component.F90
 	@echo "Compiling $<"
 	$(F90) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
@@ -107,6 +108,7 @@ endif
 
 clean: extraclean
 extraclean:
+	$(RM) getm_component.o
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
