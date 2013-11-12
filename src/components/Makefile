@@ -17,7 +17,9 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS=
+SUBDIRS=gotm
+
+TARGETS=SUBDIRS 
 ifeq ($(MOSSCO_ESMF),true)
 TARGETS += libocean libatmosphere
 ifeq ($(MOSSCO_EROSED),true)
@@ -29,7 +31,7 @@ ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsolver libsediment
 
 ifeq ($(MOSSCO_GOTM),true)
-TARGETS += libgotm libfabm0d libmossco_gotmfabm
+TARGETS += libfabm0d
 endif
 endif
 
@@ -110,7 +112,6 @@ clean: extraclean
 extraclean:
 	$(RM) getm_component.o
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
@@ -118,3 +119,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod
+
+subdirs: $(SUBDIRS)
+$(SUBDIRS):
+	$(MAKE) -C $@

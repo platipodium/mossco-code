@@ -37,7 +37,6 @@ module gotm_component
   use time,        only: secondsofday,yearday
 
   use gotm_mossco_fabm
-  use gotm_mossco_fabm, only: do_gotm_mossco_fabm_output
 #endif
 
   use mossco_variable_types
