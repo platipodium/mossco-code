@@ -32,7 +32,7 @@ git clone http://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 
 If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
 
-If you do not have @c git, you may also download a zipped version of the source code from the "Files" section at [sf.net/projects/mossco/files](https://sourceforge.net/projects/mossco/files/). Note, however, that these snapshots may be somewhat outdated at the time of your download.  Download the file to the directory where $MOSSCO_DIR points to, then unzip it.
+If you do not have @c git, you may also download a zipped version of the source code from the "Files" section at [sf.net/projects/mossco/files](https://sourceforge.net/projects/mossco/files/). Note, however, that these snapshots may be outdated at the time of your download.  Download the file to the directory where $MOSSCO_DIR points to, then unzip it.
 
 @section installing Installing MOSSCO
 
@@ -40,39 +40,41 @@ MOSSCO has some necessary and some optional prerequisites.  Please make sure you
 
 @subsection prerequisites MOSSCO prerequisites
 
-@subsubsection necessary-prereqs Necessary prerequisites
+@subsubsection necessary-system-prereqs Necessary system prerequisites
 
 Program | Minimum version and alternatives
 --------|----------
 GNU Make | 3.0
-Fortran 2003 Compiler | e.g. GNU  >= 4.7.2, Intel >= 12.0
-FABM | most recent
+Fortran 2003 Compiler | e.g. GNU  >= 4.7.2, Intel >= 12.0, PGI >= 13.2
 ESMF | 5.2 or 6.2
 
-For help on installing FABM and ESMF, see the next sections below.  Please make sure to use the same compiler for FABM, ESMF, and MOSSCO.  
 
-@subsubsection optional-prereqs Optional prerequisites
+@subsubsection optional-system-prereqs Optional system prerequisites
 
 Program | Minimum version and alternatives
 -------|-----------
 NetCDF | 3.6
 Message Passing Interface | OpenMPI or MPICH >= 3.0.4 
-GOTM | most recent
 
-Other versions of the necessary and optional required programs may also work, but have not been tested.  You may also try to go ahead with an existing lower version of any of the required software packages, report possible errors, and argue why you would like us to support your version.  No argument, however, about the Fortran 2003 standard!
+We recommend that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not been tested.  
 
-@subsubsection order-prereqs Order of installation
+You may also try to go ahead with an existing lower version of any of the required software packages, report possible errors, and argue why you would like us to support your version.  No argument, however, about the Fortran 2003 standard!
 
+For help and hints on installing ESMF, MPI, and NetCDF, see the appropriate sections below.  Please make sure to use the same compiler for all your software components. 
 
-Please make sure to install NetCDF and MPI with the same compiler that you use for FABM and ESMF. Because of the dependencies of the software packages, use the following compile order
 1. Choose a FORTRAN compiler
 2. Compile MPI for this specific compiler
 3. Compile NetCDF libraries with this specific compiler and MPI support
-4. Compile ESMF with matching NetCDF and MPI library settings
-5. Compile FABM with matching NetCDF
-6. Compile GOTM with matching NetCDF and FABM
+4. Compile ESMF with matching NetCDF and MPI library settings 
 
-You may opt to compile ESMF after FABM and GOTM.  Currently, MOSSCO will not build without FABM, and it will build only one small example without ESMF. For initial testing, it is fine to go without GOTM.
+@subsubsection optional-installations Optional external model installations
+
+Program | Minimum version and alternatives
+-------|-----------
+GOTM | most recent
+GETM | most recent
+FABM | most recent
+EROSED | most recent
 
 @subsubsection doc-prereqs Documentation prerequisites
 
@@ -81,9 +83,11 @@ Program | Minimum version and alternatives
 Doxygen | >= 1.8
 Latex | with pdf latex support
 
+There is a pre-built documentation available online at [mossco.de/doc](http://www.mossco.de/doc)
+
 @subsection installing-netcdf Installing MPI and NetCDF
 
-Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not, it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...) to install these programs.  Make sure that both MPI and NetCDF are compiled with the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO subsequently. Quite likely, this is not the case on your system (unless you're using a very recent operating system), so please check carefully.  We experienced a lot of difficulties and bugs with outdated compilers, and mismatches between the compiler (and respective libraries) used for the different requirements for MOSSCO. 
+Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not, it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...) to install these programs.  Make sure that both MPI and NetCDF are compiled with the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO subsequently. Quite likely, this is not the case on your system (unless you're using a very recent operating system), so please check carefully.  We experienced a lot of difficulties and bugs with outdated compilers, and mismatches between the compiler (and respective libraries) used for the different requirements for MOSSCO. You may also consult the bug data base [mossco.de/bugs](http://www.mossco.de/bugs) for solving these problems.
 
 @subsection installing-esmf Installing ESMF
 
@@ -121,15 +125,26 @@ Decide on a directory where to install FABM, and set the environment variable $F
 
 - download the git repository of FABM: @code git clone git://git.code.sf.net/p/fabm/code $FABMDIR @endcode
 - change into the new directory @code cd $FABMDIR @endcode
-- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN (see the FABM documentation for more options)
-- you do not need to (but you can) precompile fabm, this is also handled by the MOSSCO system
+- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT, GFORTRAN, or PGIF90 (see the FABM documentation for more options)
 
 An example environment for FABM could look like this:
 Environment variable | value
 ---|---
 FABMDIR | $HOME/opt/src/fabm-code
-FABM_F2003 | true
 FORTRAN_COMPILER | GFORTRAN
+
+In recent (from 9/2013) versions of FABM, the FABM_2003 macro is deprecated.  If you want MOSSCO to take care of the FABM compilation (and create object files in the FABM tree), please also set the environment variable MOSSCO_FABMDIR.
+
+Environment variable | value
+---|---
+MOSSCO_FABMDIR | $FABMDIR
+
+In this case, you do not need to precompile FABM.  If you decide to take care of FABM builds yourself, do not set MOSSCO_FABMDIR, but only FABMDIR. In that case, you may want to build the following targets:
+
+~~~~.sh
+(cd $FABMDIR/src ; make distclean 0d gotm mossco)
+~~~~
+
 
 @subsection installing-gotm Installing GOTM
 
@@ -137,17 +152,26 @@ Decide on a directory where to install GOTM, and set the environment variable $G
 
 - download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/code $GOTMDIR @endcode
 - change into the new directory @code cd $GOTMDIR @endcode
-- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT or GFORTRAN
-- you need to precompile gotm to work with MOSSCO
+- set a suitable @c $FORTRAN_COMPILER environment variable (see FABM section above)
 
 An example environment for GOTM could look like this:
 Environment variable | value
 ---|---
-FABMDIR | $HOME/opt/src/fabm-code
 GOTMDIR | $HOME/opt/src/gotm-code
-FABM_F2003 | true
-FABM | true
 FORTRAN_COMPILER | GFORTRAN
+
+If you want MOSSCO to take care of the GOTM compilation, please also set the environment variable MOSSCO_GOTMDIR to the value of GOTMDIR.
+
+Only if you decide to maintain GOTMDIR yourself (and not set MOSSCO_GOTMDIR), you have to build GOTM with FABM support yourself.  Add the following environment variables
+
+Environment variable | value
+---|---
+FABMDIR | $HOME/opt/src/fabm-code
+FABM | true
+
+~~~~.sh
+(cd $GOTMDIR/src ; make distclean all)
+~~~~
 
 @subsection building Building MOSSCO
 
@@ -177,8 +201,6 @@ To clean everything and start anew, type
 make distclean
 ~~~~
 
-Beware that this does not clean your installation of FABM, for which you would need make distclean in @c $FABMDIR and @c $FABMDIR/src (the same goes for GOTM, respectively).
-
 @section reporting Reporting errors
 
 Bugs as well as annoyances and feature requests are collected in a bug tracker located at https://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.  
@@ -197,20 +219,23 @@ Operating System | Compiler | Configuration | Machine | Status
 --|--|--|--|--
 Ubuntu Linux 3.8.0 x86-64 | gfortran-4.7.3/mpich | FABM/ESMF/GOTM | ksez8002 (cl)| complete
 OSX 10.6.8 | gfortran-4.7.2/mpich | FABM/ESMF | macchi (rh)| complete
+OSX 10.9.0 | gfortran-4.8.2/mpich | ESMF/FABM/GOTM | possum (cl)| complete
 Ubuntu Linux 3.8.0| gfortran-4.7.3/mpich2 | FABM/ESMF | phy-203 (IOW, kk)| complete
 SUSE Linux 2.6.16 | ifort-12.1 | FABM | bicegate (HLRN, kk) | complete
 SUSE Linux 3.0 | ifort-12.1.5 | FABM | ICE-X (BAW) | complete
 Debian Linux 7.1 | gfortran 4.7.2/mpich2-1.4 | FABM/ESMF | grpsrv09 (hk) | complete
 
+We are working on testing the pgfortran compiler on different systems.
+
 @section testcases Running the testcases
 
 There are several examples that you can run, amongst them
-- a FABM standalone sediment driver (in examples/omexdia_p)
+- a FABM standalone sediment driver (in examples/standalone/omexdia_p)
 - a FABM/ESMF sediment component (in examples/esmf_sediment)
 - a GOTM/ESMF test case driver (in examples/esmf_gotm)
 - an empty ESMF test case driver (in examples/esmf_empty)
-- an erosed test case (non-functional)
-- a coupled A/O test case (non-functional yet)
+- an erosed test case (in examples/standalone/erosed)
+- a coupled A/O test case (in examples/esmf_remtc)
 - a FABM0D / FABM sediment combined test case (non-functional yet)
 
 @subsection testcases-fabm The FABM standalone sediment driver
@@ -218,7 +243,7 @@ There are several examples that you can run, amongst them
 All configuration files are contained in the example.  Run
 
 ~~~~
-(cd $MOSSCO_DIR/examples/omexdia_p ; ./omexdia_p_test)
+(cd $MOSSCO_DIR/examples/standalone/omexdia_p ; ./omexdia_p_test)
 ~~~~
 
 @subsection testcases-esmf-sediment The ESMF/FABM sediment driver

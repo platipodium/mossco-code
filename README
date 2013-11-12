@@ -1,14 +1,10 @@
 This is the main directory of MOSSCO, also called $MOSSCO_DIR
 
-The overarching goal of the project "Modular System for Shelves and Coasts" (MOSSCO) is to bring
-together the distributed capacities in coastal ocean modelling in Germany and to build a common
-infrastructure for the national and international coastal research community. 
+Goal of the project "Modular System for Shelves and Coasts" (MOSSCO) is to bring
+together the distributed capacities in coastal ocean modelling in Germany and to 
+build a common infrastructure for the international coastal research community. 
 
-The software MOSSCO implements this infrastructure in the form of a library of components and couplers,
-and of example coupled applications.  The components "wrap" external models used in coastal and
-shelf sciences, such as the Framework for Aquatic Biogeochemistry (FABM), the General Ocean Turbulence
-Model (GOTM), or the Delft3D erosion model (EROSED).  These wrapped components are then coupled to each other 
-in the Earth System Modeling Framework (ESMF). 
+The software MOSSCO implements this infrastructure in the form of a library of components and couplers, and of example coupled applications.  The components "wrap" external models used in coastal and shelf sciences, such as the Framework for Aquatic Biogeochemistry (FABM), the General Ocean Turbulence Model (GOTM), or the Delft3D erosion model (EROSED).  These wrapped components are then coupled to each other in the Earth System Modeling Framework (ESMF). 
 
 MOSSCO is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
@@ -18,7 +14,7 @@ LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 ################################################################
 
 This main directory $MOSSCO_DIR contains three subdirectories
-./src for the library of wrappers, components, and couplers
+./src for the library of drivers, components, and couplers
 ./doc for documentation
 ./examples for example applications
 
@@ -27,17 +23,11 @@ To make the documentation with full installation instructions, type
 
 > make doc
 
-to generate a pdf file in $MOSSCO_DIR/doc/mossco_documentation.pdf and a html version at $MOSSCO_DIR/doc/html/index.html
-There is also an online documentation at http://www.mossco.de/doc with detailed
-installation instructions, if your system is missing latex/doxygen for building the documentation yourself.
+This generates a pdf file in $MOSSCO_DIR/doc/mossco_documentation.pdf and a html version at $MOSSCO_DIR/doc/html/index.html. There is also a pre-built online documentation at http://www.mossco.de/doc with detailed installation instructions, if your system is missing latex/doxygen for building the documentation yourself.
 
 ##################################################################
 To make the MOSSCO libraries, i.e. drivers, components, and utilities, you need to have
-- a copy of the Framework for Aquatic Biogeochemistry Models (FABM) at the location 
-  specified in the $FABMDIR environment variable, and with a variable $FORTRAN_COMPILER 
-  set to GFORTRAN or IFORT (consult the FABM documentation for more options). 
-- a compiled version of the Earth System Modeling Framework (ESMF), with known location of
-  the esmf.mk Makefile pointed to by the variable $ESMFMKFILE 
+a compiled version of the Earth System Modeling Framework (ESMF), with known location of the esmf.mk Makefile pointed to by the variable $ESMFMKFILE 
 
 Then, simply type
 
@@ -50,3 +40,7 @@ To make some examples, type
 Should you encounter errors or annoyances (such that this just does not work out of the box, 
 please consult the documentation, and visit the bugs database at https://sourceforge.net/p/mossco/tickets)
  
+####################################################################
+More components and examples are built when FABM, GOTM, GETM, or EROSED are installed 
+on your system.  Please consult the documentation for information on how to build
+MOSSCO with any of these external models.
