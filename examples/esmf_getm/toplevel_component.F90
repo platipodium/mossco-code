@@ -1,0 +1,131 @@
+module toplevel_component
+
+  use esmf
+  IMPLICIT NONE
+
+  private
+
+  public topCmp_SetServices
+
+  type(ESMF_GridComp) :: getmCmp
+
+  contains
+
+  subroutine topCmp_SetServices(topCmp,rc)
+
+    IMPLICIT NONE
+
+    type(ESMF_GridComp) :: topCmp
+    integer,intent(out) :: rc
+
+    call ESMF_GridCompSetEntryPoint(topCmp,ESMF_METHOD_INITIALIZE,     &
+                                    userRoutine=topCmp_init,rc=rc)
+    call ESMF_GridCompSetEntryPoint(topCmp,ESMF_METHOD_RUN,            &
+                                    userRoutine=topCmp_run,rc=rc)
+    call ESMF_GridCompSetEntryPoint(topCmp,ESMF_METHOD_FINALIZE,       &
+                                    userRoutine=topCmp_finalize,rc=rc)
+
+  end subroutine topCmp_SetServices
+
+  subroutine topCmp_init(topCmp,iState,eState,pClock,rc)
+
+    use getm_component, only : getmCmp_SetServices
+    IMPLICIT NONE
+
+    type(ESMF_GridComp) :: topCmp
+    type(ESMF_State)    :: iState,eState
+    type(ESMF_Clock)    :: pClock
+    integer,intent(out) :: rc
+
+    type(ESMF_Clock)        :: topClock,getmClock
+    type(ESMF_TimeInterval) :: runDuration
+    logical                 :: ClockIsPresent
+
+!   Create child components
+    getmCmp = ESMF_GridCompCreate(name="getmCmp")
+    call ESMF_GridCompSetServices(getmCmp,getmCmp_SetServices)
+    call ESMF_GridCompInitialize(getmCmp)
+
+!   Clock
+    call ESMF_GridCompGet(topCmp,clockIsPresent=ClockIsPresent)
+    if (.not. ClockIsPresent) then
+      call ESMF_GridCompGet(getmCmp,clock=getmClock)
+      topClock = ESMF_ClockCreate(getmClock)
+      call ESMF_ClockGet(topClock,runDuration=runDuration)
+      call ESMF_ClockSet(topClock,timeStep=runDuration)
+      call ESMF_GridCompSet(topCmp,clock=topClock)
+    end if
+
+    rc = ESMF_SUCCESS
+
+  end subroutine topCmp_init
+
+  subroutine topCmp_run(topCmp,iState,eState,pClock,rc)
+
+    IMPLICIT NONE
+    
+    type(ESMF_GridComp) :: topCmp
+    type(ESMF_State)    :: iState,eState
+    type(ESMF_Clock)    :: pClock
+    integer,intent(out) :: rc
+
+    type(ESMF_Clock)        :: topClock
+    type(ESMF_Time)         :: topTime,NextTime
+    type(ESMF_TimeInterval) :: topTimeStep
+    integer                 :: localrc
+
+    call ESMF_GridCompGet(topCmp,clock=topClock)
+    call ESMF_ClockGet(topClock,timeStep=topTimeStep,currtime=topTime)
+
+!   use pClock to do determine time of calling routine
+    call ESMF_ClockGetNextTime(pClock,NextTime,rc=localrc)
+    if (localrc .ne. ESMF_SUCCESS) then
+      call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
+                         line=__LINE__,file=__FILE__,method='topCmp_run()')
+      call ESMF_ClockGet(topClock,stopTime=NextTime)
+   end if
+
+   do while (topTime + 0.5d0*topTimeStep <= NextTime)
+
+      if (ESMF_ClockIsStopTime(topClock)) then
+         call ESMF_LogWrite('already exceeded stopTime',ESMF_LOGMSG_ERROR, &
+                            line=__LINE__,file=__FILE__,method='topCmp_run()')
+         call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      end if
+
+!     Run of child components
+      call ESMF_GridCompRun(getmCmp,clock=topClock)
+
+      call ESMF_ClockAdvance(topClock)
+      call ESMF_ClockGet(topClock,currtime=topTime)
+
+    end do
+ 
+  end subroutine topCmp_run
+
+  subroutine topCmp_finalize(topCmp,iState,eState,pClock,rc)
+
+    IMPLICIT NONE
+    
+    type(ESMF_GridComp) :: topCmp
+    type(ESMF_State)    :: iState,eState
+    type(ESMF_Clock)    :: pClock
+    integer,intent(out) :: rc
+
+    type(ESMF_Clock) :: topClock
+
+    call ESMF_GridCompGet(topCmp,clock=topClock)
+
+!   Finalize of child components
+    call ESMF_GridCompFinalize(getmCmp,clock=topClock)
+
+!   Destruction of child components
+    call ESMF_GridCompDestroy(getmCmp)
+
+    call ESMF_ClockDestroy(topClock)
+   
+    rc=ESMF_SUCCESS
+
+  end subroutine topCmp_finalize
+
+end module toplevel_component

@@ -143,6 +143,17 @@ ifeq ($(MOSSCO_GETM),true)
 GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
 GETM_INCLUDE_PATH=$(GETMDIR)/include
 GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
+GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
+GETM_LIBS = -lgetm_prod	-loutput_prod -lmeteo_prod
+ifneq ($(GETM_NO_3D),true)
+GETM_LIBS += -l3d_prod
+endif
+GETM_LIBS += -l2d_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
+ifeq ($(MOSSCO_GETM_FABM),true)
+GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
+GETM_LIBS += -lgotm_fabm_prod -lfabm_prod
+endif
+GETM_LIBS += -lturbulence_prod -lutil_prod
 endif
 
 
@@ -301,7 +312,7 @@ export CPPFLAGS = $(DEFINES) $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS)
 
 LDFLAGS += $(ESMF_F90LINKOPTS)
 LDFLAGS += $(LIBRARY_PATHS)
-export LDFLAGS
+#export LDFLAGS
 endif
 
 # Make targets
@@ -362,8 +373,7 @@ endif
 
 libgetm_external: prefix
 ifdef MOSSCO_GETMDIR
-#ifeq ($(MOSSCO_GETM_FABM),true)
-ifeq ($(MOSSCO_FABM),true)
+ifeq ($(MOSSCO_GETM_FABM),true)
 ifdef MOSSCO_FABMDIR
 	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
 	$(MAKE) -C $(FABMDIR)/src gotm

@@ -80,7 +80,7 @@ $(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
 # ...and automatic rm of .o also does not work because of this.
 getm_component.o: getm_component.F90
 	@echo "Compiling $<"
-	$(F90) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) -I$(GETM_INCLUDE_PATH) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm_0d_component.o: fabm_0d_component.F90
 	@echo "Compiling $<"

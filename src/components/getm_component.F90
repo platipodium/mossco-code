@@ -1,3 +1,4 @@
+#include "cppdefs.h"
 !-----------------------------------------------------------------------
 !BOP
 !
@@ -197,6 +198,10 @@
    write(debug,*) 'getmCmp_init() # ',Ncall
 #endif
 
+!  Optional creation of child components
+!  (Create, SetServices, Initialize)
+!  ...
+
 !  This is where the model specific setup code goes
 !  (allocation, open files, initial conditions).
    call date_and_time(datestr,timestr)
@@ -245,10 +250,6 @@
                                    name='getmClock')
       call ESMF_GridCompSet(getmCmp,clock=getmClock)
    end if
-
-!  Optional creation of child components
-!  (Create, SetServices, Initialize)
-!  ...
 
 !  If the initial Export state needs to be filled, do it here.
    !call ESMF_StateAdd(eState,field,rc)
@@ -329,6 +330,9 @@
    integer                 :: localrc
    integer                 :: n
    logical                 :: do_3d
+   integer                 :: progress=100
+   character(8)            :: d_
+   character(10)           :: t_
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -360,8 +364,15 @@
          call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
 
+!     optional Run of child components
+
 !     This is where the model specific computation goes.
       n = int(loop,kind=kind(MinN))+MinN
+
+      if (progress .gt. 0 .and. mod(n,progress) .eq. 0) then
+         call date_and_time(date=d_,time=t_)
+         LEVEL1 t_(1:2),':',t_(3:4),':',t_(5:10),' n=',n
+      end if
 
 #ifndef NO_3D
       do_3d = (runtype .ge. 2 .and. mod(n,M) .eq. 0)
@@ -434,7 +445,6 @@
 
    end do
 
-!  optional Run of child components
 !  Fill export state here using ESMF_StateAdd(), etc
 
    rc = ESMF_SUCCESS
@@ -490,6 +500,8 @@
    write(debug,*) 'getmCmp_finalize() # ',Ncall
 #endif
 
+   call ESMF_GridCompGet(getmCmp,clock=getmClock)
+
 !  optional Finalize of child components
 !  Add whatever code here needed (deallocation,close files,flush results)
 #ifndef NO_3D
@@ -499,7 +511,6 @@
 #endif
    call clean_up(dryrun,runtype,MaxN)
 
-   call ESMF_GridCompGet(getmCmp,clock=getmClock)
    call ESMF_ClockDestroy(getmClock)
 
    rc = ESMF_SUCCESS
