@@ -187,7 +187,7 @@ module fabm_sediment_component
     end do
     do n=1,sed%nvar
       write(string,*) trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux'
-      array = ESMF_ArrayCreate(distgrid=distgrid_2d,farray=bdys(:,:,n+1), &
+      array = ESMF_ArrayCreate(distgrid=distgrid_2d,farray=fluxes(:,:,n), &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name=trim(string), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

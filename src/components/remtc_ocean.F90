@@ -217,7 +217,7 @@ module remtc_ocean
     call ESMF_TimeGet(localtime, timeString=timestring, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     message = "Remtc ocean called at "//trim(timestring)
-    call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+    !call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
 
     !> Get import state and extract arrays
     call ESMF_StateGet(importState, "air_temperature", field, rc=rc)

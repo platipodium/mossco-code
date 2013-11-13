@@ -31,7 +31,7 @@ ifeq ($(MOSSCO_FABM),true)
 TARGETS +=  libsolver libsediment
 
 ifeq ($(MOSSCO_GOTM),true)
-TARGETS += libfabm0d
+TARGETS += libmossco_fabm0d
 endif
 endif
 
@@ -55,7 +55,7 @@ libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a
 libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
-libfabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
+libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
 libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
@@ -69,7 +69,7 @@ $(MOSSCO_LIBRARY_PATH)/libsediment.a: fabm_sediment_component.o
 $(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o
 	$(AR) cruvs $@ gotm_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libfabm0d.a: fabm_0d_component.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: fabm_0d_component.o
 	$(AR) cruvs $@ fabm_0d_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
@@ -116,7 +116,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libfabm0d.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod
 

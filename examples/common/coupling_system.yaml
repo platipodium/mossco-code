@@ -1,0 +1,11 @@
+coupling:
+  - components: [GOTM FABM0d]
+    interval: 40 min
+  - components: [GOTM FABMSED]
+    interval: 60 min
+  - components: [FABM0D GOTM]
+    interval: 90 min
+    direction: forward
+  - components: [FABMSED FABM0d]
+    interval: 60 min
+    direction: both
