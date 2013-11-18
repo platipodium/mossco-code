@@ -8,7 +8,7 @@ module esmf_toplevel_component
 	integer, parameter :: n = 3
   type(ESMF_GridComp),dimension(n),save  :: childComponents
   type(ESMF_State), dimension(n)         :: exportStates, importStates
-
+  
   public SetServices
 
   contains
@@ -26,34 +26,41 @@ module esmf_toplevel_component
 
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
+    type(ESMF_GridComp)    :: gridComp
+    type(ESMF_State)       :: importState
+    type(ESMF_State)       :: exportState
+    type(ESMF_Clock)       :: parentClock
+    integer, intent(out)   :: rc
 
-    type(ESMF_Grid)       :: grid
-    integer               :: petCount, localPet, i
+    integer                :: i
 	  character(ESMF_MAXSTR) :: name
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet)
 
-    ! Create a grid
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), maxIndex=(/10,20,15/), &
-      regDecomp=(/2,2,1/), name="emptyGrid", rc=rc)
-
+    call ESMF_GridCompGet(gridComp,name=name,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+ 
     ! Create n child components, call their setservices, and create states
     do i=1,n
+      call ESMF_LogWrite("Toplevel component looping",ESMF_LOGMSG_INFO)
       write(name,'(A,I1)') 'child_component_',i
-      childComponents(i)= ESMF_GridCompCreate(name=name, grid=grid, rc=rc)
+      childComponents(i)= ESMF_GridCompCreate(name=trim(name), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
       call ESMF_GridCompSetServices(childComponents(i),empty_SetServices, rc=rc)
-      write(name,'(A,I1)') 'child_component_',i,'_import_state'
-      importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name=name)
-      write(name,'(A,I1)') 'child_component_',i,'_export_state'
-      exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name=name)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      write(name,'(A,I1,A)') 'child_component_',i,'_import_state'
+      importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name=trim(name))
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      write(name,'(A,I1,A)') 'child_component_',i,'_export_state'
+      exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name=trim(name))
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
       call ESMF_GridCompInitialize(childComponents(i), importState=importStates(i), &
         exportState=exportStates(i), clock=parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
     
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
@@ -73,6 +80,8 @@ module esmf_toplevel_component
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      
+        !    call ESMF_GridCompRun(fabm0dComp, importState=fabm0dImp, exportState=fabm0dExp, clock=parentClock, rc=rc)‚
       
     enddo 
 

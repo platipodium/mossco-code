@@ -9,14 +9,14 @@ program main
    type(ESMF_Time)           :: time1, time2, startTime, stopTime
    type(ESMF_TimeInterval)   :: timeStepIntv
    integer                   :: localrc, rc, petCount,nmlunit=2013
-   double precision          :: seconds,timestep
+   double precision          :: seconds,timestep=60.0
    character(len=40)         :: timestring,start,stop,title
    type(ESMF_GridComp)       :: topComp
    type(ESMF_State)          :: topState ! for import and export, empty
    type(ESMF_Clock)          :: clock
    type(ESMF_VM)             :: vm
 
-   namelist /mossco_run/ title,start,stop,timestep
+   namelist /mossco_run/ title,start,stop
    
 
 ! Read mossco_run.nml

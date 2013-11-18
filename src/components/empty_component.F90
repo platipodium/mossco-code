@@ -29,11 +29,26 @@ module empty_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer               :: petCount, localPet
     character(ESMF_MAXSTR)     :: name, message
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Alarm)      :: alarm
+    type(ESMF_Time)       :: time
+    type(ESMF_TimeInterval) :: timeInterval, alarmInterval
     
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
-    write(message,'(A,A,A)') 'Empty component ', name, ' initialized'
+    call ESMF_GridCompGet(gridComp,name=name, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    !! Set the coupling alarm starting from current time of parent clock
+    call ESMF_ClockGet(parentClock,startTime=time,rc=rc)
+    
+    call ESMF_TimeIntervalSet(alarmInterval,m=60,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    alarm=ESMF_AlarmCreate(clock=parentClock,ringTime=time+alarmInterval, &
+      ringInterval=alarmInterval,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    write(message,'(A,A,A)') 'Empty component ', trim(name), ' initialized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
 
   end subroutine Initialize
