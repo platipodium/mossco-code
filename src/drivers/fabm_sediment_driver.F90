@@ -31,6 +31,7 @@ type,extends(rhs_driver), public :: type_sed !< sediment driver class (extends r
    type(fabm_sed_grid)          :: grid
    type(type_model),pointer     :: model
    real(rk)                     :: bioturbation,diffusivity
+   real(rk)                     :: k_par
    real(rk),dimension(:,:,:),pointer    :: fluxes,bdys
 contains
    procedure :: get_rhs
@@ -107,18 +108,21 @@ class(type_sed),intent(inout) :: sed
 integer :: i,j,k,n
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
-namelist /sed_nml/ diffusivity,bioturbation,porosity_max,porosity_fac
+real(rk) :: k_par
+namelist /sed_nml/ diffusivity,bioturbation,porosity_max,porosity_fac,k_par
 
 ! read parameters
 diffusivity   = 0.9 ! cm2/d
 bioturbation  = 0.9 ! cm2/d
 porosity_max  = 0.7
 porosity_fac  = 0.9 ! per m
+k_par         = 2.0d-3 ! 1/m
 
 read(33,nml=sed_nml)
 
 sed%bioturbation = bioturbation
 sed%diffusivity  = diffusivity
+sed%k_par        = k_par
 
 if (.not.(allocated(sed%grid%dz))) call init_sed_grid(sed%grid)
 sed%inum = sed%grid%inum
@@ -213,16 +217,15 @@ real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum+1) :: intFLux
-real(rk) :: I_0,k_par
+real(rk) :: I_0
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
 ! get sediment surface light I_0 as boundary condition, here constant:
 I_0 = 1.0 ! W/m2
-k_par = 2.0d-3 ! 2/e extinction per mm sed
 do k=1,rhsd%knum
    temp3d(:,:,k) = rhsd%bdys(:,:,1)
-   par(:,:,k) = I_0 * exp(-sum(rhsd%grid%dzc(:,:,1:k))/k_par)
+   par(:,:,k) = I_0 * exp(-sum(rhsd%grid%dzc(:,:,1:k))/rhsd%k_par)
 end do
 
 !   link state variables
