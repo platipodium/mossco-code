@@ -37,17 +37,7 @@ module empty_component
     
     call ESMF_GridCompGet(gridComp,name=name, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    !! Set the coupling alarm starting from current time of parent clock
-    call ESMF_ClockGet(parentClock,startTime=time,rc=rc)
-    
-    call ESMF_TimeIntervalSet(alarmInterval,m=60,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    alarm=ESMF_AlarmCreate(clock=parentClock,ringTime=time+alarmInterval, &
-      ringInterval=alarmInterval,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+        
     write(message,'(A,A,A)') 'Empty component ', trim(name), ' initialized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
 
