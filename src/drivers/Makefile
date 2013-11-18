@@ -25,7 +25,7 @@ ALL_TARGETS =
 ifeq ($(MOSSCO_FABM),true)
 ALL_TARGETS=libmossco_sediment libmossco_fabm0d
 ifeq ($(MOSSCO_GOTM),true)
-ALL_TARGETS=libmossco_gotmfabm
+ALL_TARGETS+=libmossco_gotmfabm
 endif
 endif
 
