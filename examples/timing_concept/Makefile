@@ -1,0 +1,38 @@
+# This Makefile is part of MOSSCO
+# 
+# Copyright (C) 2013 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+#
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /examples/timing_concept$,,$(PWD))
+endif
+
+include $(MOSSCO_DIR)/src/Rules.make
+
+LIBS := -lesmf $(LIBS)
+
+.PHONY: all exec libempty
+
+all: exec
+
+exec: main.o toplevel_component.o
+	$(F90) $(F90FLAGS) -o timing_concept toplevel_component.o main.o $(LDFLAGS) $(LIBS)
+	@echo "Created example binary timing_concept in $(PWD)" 
+	@echo "Please change to $(MOSSCO_DIR)/examples/timing_concept/ to run the example." > $(MOSSCO_BIN_PATH)/timing_concept.txt
+	
+main.o: toplevel_component.o main.F90
+toplevel_component.o: toplevel_component.F90 libempty
+main.F90:
+	ln -sf ../common/main.F90 .
+
+libempty:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components libempty
+
+clean: extraclean
+
+extraclean: 
+	@rm -f timing_concept

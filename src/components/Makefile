@@ -19,7 +19,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm
 
-TARGETS=SUBDIRS 
+TARGETS=SUBDIRS libempty
 ifeq ($(MOSSCO_ESMF),true)
 TARGETS += libocean libatmosphere
 ifeq ($(MOSSCO_EROSED),true)
@@ -57,6 +57,7 @@ libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
+libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a
 libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 
@@ -65,6 +66,9 @@ $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: fabm_sediment_component.o
 	$(AR) cruvs $@ fabm_sediment_component.o
+
+$(MOSSCO_LIBRARY_PATH)/libempty.a: empty_component.o
+	$(AR) cruvs $@ empty_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o
 	$(AR) cruvs $@ gotm_component.o
@@ -116,6 +120,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod

@@ -227,6 +227,44 @@ Debian Linux 7.1 | gfortran 4.7.2/mpich2-1.4 | FABM/ESMF | grpsrv09 (hk) | compl
 
 We are working on testing the pgfortran compiler on different systems.
 
+
+@section coupling-strategy Coupling strategy
+
+[This section is experimental and a Request For Comments] Analogous to FABM, all components to MOSSCO that are available at compile time will be compiled and aggregated in [a single, multiple?] library in @c $MOSSCO_DIR/lib/$FORTRAN_COMPILER.  At run-time, only those components that are used, are executed [this calls for dynamic loadable libraries].  The coupling itself is described in a text file, with a defined YAML structure [also add namelist, SiSi, CDL as allowed meta specifications].  A couping could be described as follows
+
+~~~~.yaml
+coupling:
+  - components: [GOTM FABM0d]
+    interval: 40 min
+  - components: [GOTM FABMSED]
+    interval: 60 min
+  - components: [FABM0D GOTM]
+    interval: 90 min
+    direction: forward
+  - components: [FABMSED FABM0d]
+    interval: 60 min
+    direction: both
+~~~~
+
+This example describes a system of 3 coupled components [find a shorter way to specify this?] and the data exchange intervals between these components. Within the coupling structure, a pair of components is specified with an update interval of data exchange and (optionally) the direction of coupling.  Direction can be any of forward, backward, and both, the default value is forward coupling.
+
+In this example, the GOTM component provides data to FABM0D at 40 min intervals and to FABMSED at 60 min intervals.  FABMSED provides data to FABM0D at 60 min intervals, and FABM0D provides data to GOTM at 90 minutes, and to FABMSED at 60 minutes intervals (note the direction "both" argument).
+
+During initialize, the components add alarms with the specified interval to the parent clock [demonstrate that this works], each alarm obtains as attributes the meta-information about each two-way coupling.  
+
+The parent clock in the top level component, which calls FABM0D, GOTM and FABMSED repeatedly in its @c Run() routine, examines its alarms for those next ringing ones and calls each component with a time duration until the next alarm suitable for that component. It then advance its own clock to the next alarm time, exchanges data, and calls the Run() routines of the two components whos alarm had triggered with a time duration until the next alarm related to each component. 
+
+In our example above.  
+1) GOTM and FABM0D are run for 40 mins, FABMSED for 60 mins
+2) at t=40 GOTM gives data to FABM0D, GOTM and FABM0D are run for another 20 minutes 
+3) at t=60 GOTM and FABM0D give data to FABMSED, FABMSED gives data to FABM0D; GOTM and FABM0D are run for 20 mins, FABMSED for 60 mins.
+4) at t=80 GOTM gives data to FABM0D, GOTM and FABM0D  are run for 10 mins
+5) at t=90 FABM0D gives data to GOTM, both are run for another 30 minutes
+6) at t=120, steps (1) and (2) are repeated.
+
+@subsection coupling-strategy-time Timers and alarms
+
+
 @section testcases Running the testcases
 
 There are several examples that you can run, amongst them
