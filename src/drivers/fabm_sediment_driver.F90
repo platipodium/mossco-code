@@ -278,6 +278,8 @@ end subroutine finalize_fabm_sed
 
 subroutine diff3d (grid, C, Cup, Cdown, fluxup, fluxdown,        &
                        BcUp, BcDown, D, VF, A, Flux, dC)
+!! the code originates in the original omexdia module
+!! authors: Kai Wirtz, Karline Soetaert & Richard Hofmeister
 
 implicit none
 type(fabm_sed_grid), intent(in)        :: grid
