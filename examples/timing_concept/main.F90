@@ -1,0 +1,119 @@
+program main
+   
+   use esmf 
+   use esmf_toplevel_component, only: SetServices
+
+   implicit none
+
+   character(LEN=8)          :: datestr
+   type(ESMF_Time)           :: time1, time2, startTime, stopTime
+   type(ESMF_TimeInterval)   :: timeStepIntv
+   integer                   :: localrc, rc, petCount,nmlunit=2013
+   double precision          :: seconds,timestep
+   character(len=40)         :: timestring,start,stop,title
+   type(ESMF_GridComp)       :: topComp
+   type(ESMF_State)          :: topState ! for import and export, empty
+   type(ESMF_Clock)          :: clock
+   type(ESMF_VM)             :: vm
+
+   namelist /mossco_run/ title,start,stop,timestep
+   
+
+! Read mossco_run.nml
+   open(nmlunit,file='mossco_run.nml',status='old',action='read')
+   read(nmlunit,nml=mossco_run)
+   close(nmlunit)
+
+! Initialize
+   call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
+     logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN,&
+     vm=vm)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   call ESMF_LogWrite(trim(title)//" start", ESMF_LOGMSG_INFO)
+
+! Get the wall clock starting time
+   call ESMF_TimeSet(time1,rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   call ESMF_TimeSyncToRealTime(time1,rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   call ESMF_TimeGet(time1,timeStringISOFrac=timestring)
+   call ESMF_LogWrite("Program starts at wall clock "//timestring, ESMF_LOGMSG_INFO)
+  
+! Create and initialize a clock from mossco_run.nml
+
+   call ESMF_TimeIntervalSet(timeStepIntv, s_r8=real(timestep,kind=ESMF_KIND_R8), rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
+   call timeString2ESMF_Time(start,startTime)
+   call timeString2ESMF_Time(stop,stopTime)
+
+   clock = ESMF_ClockCreate(timeStep=timeStepIntv, startTime=startTime, stopTime=stopTime, & 
+     name="Parent clock", rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
+   call ESMF_TimeGet(startTime,timeStringISOFrac=timestring)
+   call ESMF_LogWrite("Simulation starts at "//timestring, ESMF_LOGMSG_INFO)
+   call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
+   call ESMF_LogWrite("Simulation ends at "//timestring, ESMF_LOGMSG_INFO)
+
+! Create toplevel component and call its setservices routines
+   topComp = ESMF_GridCompCreate(name="ESMF Toplevel Component", rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   
+   call ESMF_GridCompSetServices(topComp,SetServices,rc=localrc)
+
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   
+   topState = ESMF_StateCreate(name="topState",rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
+   call ESMF_GridCompInitialize(topComp,importState=topState,exportState=topState,clock=clock,rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
+   call ESMF_GridCompRun(topComp,importState=topState,exportState=topState,clock=clock,rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
+! Destroy toplevel component and clean up
+   call ESMF_GridCompFinalize(topComp,importState=topState,exportState=topState,clock=clock,rc=localrc)
+   call ESMF_GridCompDestroy(topComp,rc=localrc)
+   call ESMF_LogWrite("All ESMF components destroyed", ESMF_LOGMSG_INFO)
+
+   call ESMF_TimeSet(time2,rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   call ESMF_TimeSyncToRealTime(time2,rc=localrc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
+   call ESMF_TimeGet(time2,timeStringISOFrac=timestring)
+   call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds) 
+
+   call ESMF_LogWrite(trim(title)//' finished on '//timestring,ESMF_LOGMSG_INFO)   
+   !call ESMF_LogWrite('ESMF/GOTM finished on '//timestring//' using '//seconds//' seconds',ESMF_LOGMSG_INFO)   
+
+   call ESMF_Finalize(rc=localrc,endflag=ESMF_END_NORMAL)
+   
+   end
+
+  !> Actually, this should be an extension of ESMF_TimeSet 
+  subroutine timeString2ESMF_Time(timestring,time)
+  use esmf
+    character(len=*), intent(in) :: timestring
+    type(ESMF_Time), intent(out) :: time
+
+    integer :: yy,mm,dd,h,m,s
+
+    read(timestring(1:4),'(i4)') yy
+    read(timestring(6:7),'(i2)') mm
+    read(timestring(9:10),'(i2)') dd
+    read(timestring(12:13),'(i2)') h
+    read(timestring(15:16),'(i2)') m
+    read(timestring(18:19),'(i2)') s
+
+    call ESMF_TimeSet(time,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s)
+
+  end subroutine timeString2ESMF_Time
+
+!EOC
+
+!-----------------------------------------------------------------------
+! Copyright by the MOSSCO-team under the GNU Public License - www.gnu.org
+!-----------------------------------------------------------------------

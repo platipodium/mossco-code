@@ -30,11 +30,11 @@ module empty_component
     integer, intent(out)  :: rc
 
     integer               :: petCount, localPet
-    character(ESMF_MAXSTR)     :: name
-
-
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet)
-    call ESMF_LogWrite("Empty component initialized",ESMF_LOGMSG_INFO) 
+    character(ESMF_MAXSTR)     :: name, message
+    
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
+    write(message,'(A,A,A)') 'Empty component ', name, ' initialized'
+    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
 
   end subroutine Initialize
 
@@ -45,7 +45,8 @@ module empty_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    call ESMF_LogWrite("Empty component running ... ",ESMF_LOGMSG_INFO)
+    integer               :: petCount, localPet
+    character(ESMF_MAXSTR)     :: name, message
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
@@ -54,7 +55,9 @@ module empty_component
       
     enddo 
 
-    call ESMF_LogWrite("Empty component finished running. ",ESMF_LOGMSG_INFO)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
+    write(message,'(A,A,A)') 'Empty component ', name, ' finished running'
+    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
  
   end subroutine Run
 
@@ -65,7 +68,12 @@ module empty_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    call ESMF_LogWrite("Empty component finalized",ESMF_LOGMSG_INFO)
+    integer               :: petCount, localPet
+    character(ESMF_MAXSTR)     :: name, message
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
+    write(message,'(A,A,A)') 'Empty component ', name, ' finalized'
+    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
    
     rc=ESMF_SUCCESS
 

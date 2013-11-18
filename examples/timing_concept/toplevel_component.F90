@@ -1,11 +1,13 @@
 module esmf_toplevel_component
 
   use esmf
-  use empty_component
+  use empty_component, only: empty_SetServices => SetServices
 
   implicit none
 
-  private
+	integer, parameter :: n = 3
+  type(ESMF_GridComp),dimension(n),save  :: childComponents
+  type(ESMF_State), dimension(n)         :: exportStates, importStates
 
   public SetServices
 
@@ -31,21 +33,29 @@ module esmf_toplevel_component
     integer, intent(out)  :: rc
 
     type(ESMF_Grid)       :: grid
-    type(ESMF_Field)      :: temperatureField
-    type(ESMF_FieldBundle) :: fieldBundle
-    integer               :: petCount, localPet
+    integer               :: petCount, localPet, i
+	  character(ESMF_MAXSTR) :: name
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet)
 
-    ! Create a grid and a field (still to clarify how to access the array
+    ! Create a grid
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), maxIndex=(/10,20,15/), &
-      regDecomp=(/2,2,1/), name="fabmGrid", rc=rc)
-    temperatureField = ESMF_FieldCreate(grid,typekind=ESMF_TYPEKIND_R8, &
-      indexflag=ESMF_INDEX_DELOCAL, staggerloc=ESMF_STAGGERLOC_CENTER, name = "temperature", rc=rc)
-    fieldBundle = ESMF_FieldBundleCreate(name="FABM field bundle", rc=rc)
-    call ESMF_FieldBundleAdd(fieldBundle, (/temperatureField/),rc=rc)
+      regDecomp=(/2,2,1/), name="emptyGrid", rc=rc)
 
+    ! Create n child components, call their setservices, and create states
+    do i=1,n
+      write(name,'(A,I1)') 'child_component_',i
+      childComponents(i)= ESMF_GridCompCreate(name=name, grid=grid, rc=rc)
+      call ESMF_GridCompSetServices(childComponents(i),empty_SetServices, rc=rc)
+      write(name,'(A,I1)') 'child_component_',i,'_import_state'
+      importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name=name)
+      write(name,'(A,I1)') 'child_component_',i,'_export_state'
+      exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name=name)
+      call ESMF_GridCompInitialize(childComponents(i), importState=importStates(i), &
+        exportState=exportStates(i), clock=parentClock, rc=rc)
+    enddo
+    
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
 
   end subroutine Initialize

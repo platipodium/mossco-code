@@ -13,7 +13,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf $(LIBS)
+LIBS := -lesmf $(LIBS) -lempty
 
 .PHONY: all exec libempty
 
@@ -26,8 +26,6 @@ exec: main.o toplevel_component.o
 	
 main.o: toplevel_component.o main.F90
 toplevel_component.o: toplevel_component.F90 libempty
-main.F90:
-	ln -sf ../common/main.F90 .
 
 libempty:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libempty
