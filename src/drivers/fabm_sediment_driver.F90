@@ -13,6 +13,7 @@
 module fabm_sediment_driver
 
 use fabm
+use fabm_standard_variables, only: type_bulk_standard_variable
 use solver_library, only: rhs_driver
 
 implicit none
@@ -36,10 +37,14 @@ contains
 end type type_sed
 
 real(rk),dimension(:,:,:),allocatable :: porosity,temp
+real(rk),dimension(:,:,:),allocatable :: par
 real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
 real(rk),dimension(:,:,:),allocatable,target :: temp3d
 real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
 real(rk),dimension(:,:),allocatable     :: zeros2d
+
+type(type_bulk_standard_variable), parameter :: &
+    varname_porosity = type_bulk_standard_variable('porosity','m3/m3','volumetric_porosity')
 
 #define _GRID_ sed%grid
 #define _INUM_ _GRID_%inum
@@ -123,6 +128,7 @@ sed%knum = sed%grid%knum
 ! set porosity
 allocate(porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(temp(_INUM_,_JNUM_,_KNUM_))
+allocate(par (_INUM_,_JNUM_,_KNUM_))
 do k=1,_KNUM_
    porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
 end do
@@ -207,11 +213,16 @@ real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum+1) :: intFLux
+real(rk) :: I_0,k_par
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
+! get sediment surface light I_0 as boundary condition, here constant:
+I_0 = 1.0 ! W/m2
+k_par = 2.0d-3 ! 2/e extinction per mm sed
 do k=1,rhsd%knum
    temp3d(:,:,k) = rhsd%bdys(:,:,1)
+   par(:,:,k) = I_0 * exp(-sum(rhsd%grid%dzc(:,:,1:k))/k_par)
 end do
 
 !   link state variables
@@ -221,7 +232,8 @@ end do
 
 !   link environment forcing
 call fabm_link_bulk_data(rhsd%model,varname_temp,temp3d)
-! not necessary: call fabm_link_bulk_data(rhsd%model,varname_porosity,porosity)
+call fabm_link_bulk_data(rhsd%model,varname_par,par)
+call fabm_link_bulk_data(rhsd%model,varname_porosity,porosity)
 
 ! calculate diffusivities (temperature)
 do n=1,size(rhsd%model%info%state_variables)
