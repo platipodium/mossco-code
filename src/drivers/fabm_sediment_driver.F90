@@ -8,6 +8,8 @@
 !! MOSSCO sediment component.
 !! The driver provides tendencies for state variables as sum of
 !! local rates (through FABM) and vertical diffusion.
+!! The units of concentrations of state variables is handled inside
+!! the driver as molar mass per volume pore water.
 #include "fabm_driver.h"
 
 module fabm_sediment_driver
@@ -166,7 +168,9 @@ diff = diffusivity
 
 end subroutine init_fabm_sed
 
-!> initialised sediment concentrations from namelist
+!> initialised sediment concentrations from namelist. Initial
+!! concentrations in the namelist are taken as molar mass per
+!! total cell volume
 subroutine init_fabm_sed_concentrations(sed)
 implicit none
 
@@ -174,7 +178,7 @@ type(type_sed), intent(inout)      :: sed
 integer                            :: n
 
 do n=1,sed%nvar
-   sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value
+   sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value/porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
 end do
 end subroutine init_fabm_sed_concentrations
@@ -185,6 +189,7 @@ end subroutine init_fabm_sed_concentrations
 !! The function returns a pointer to the 3d diagnostic variables.
 !! So far, only bulk diagnostic variables are supported. The function is a
 !! wrapper of the related FABM function.
+!! Diagnostic concentrations are given in FABM per volume pore water.
 
 function fabm_sed_diagnostic_variables(sed,n) result(diag)
 implicit none
@@ -215,7 +220,7 @@ class(type_sed)      ,intent(inout)          :: rhsd
 !real(rk),intent(out)                         :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
 real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
-real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu
+real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu,f_T
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum+1) :: intFLux
 real(rk) :: I_0
 
@@ -239,21 +244,23 @@ call fabm_link_bulk_data(rhsd%model,varname_par,par)
 call fabm_link_bulk_data(rhsd%model,varname_porosity,porosity)
 
 ! calculate diffusivities (temperature)
+f_T = _ONE_*exp(-4500.d0*(1.d0/(temp3d+273.d0) - (1.d0/288.d0)))
 do n=1,size(rhsd%model%info%state_variables)
    if (rhsd%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = 1
-      diff = (rhsd%bioturbation + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
-      conc_insitu = rhsd%conc(:,:,:,n)/(porosity-ones3d)
+      diff = rhsd%bioturbation * f_T / 86400.0_rk / 10000_rk * (ones3d-porosity)
+      conc_insitu = rhsd%conc(:,:,:,n)*porosity/(ones3d-porosity)
       call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
-              bcup, bcdown, diff, porosity-ones3d, porosity-ones3d, intFlux, transport(:,:,:,n))
+              bcup, bcdown, diff, ones3d-porosity, ones3d-porosity, intFlux, transport(:,:,:,n))
+      transport(:,:,:,n) = transport(:,:,:,n)*(ones3d-porosity)/porosity
    else
       bcup = 2
-      diff = (rhsd%diffusivity + temp3d * 0.035) * porosity / 86400.0_rk / 10000_rk
-      conc_insitu = rhsd%conc(:,:,:,n)/porosity
+      diff = (rhsd%diffusivity + temp3d * 0.035d0) * porosity / 86400.0_rk / 10000_rk
+      conc_insitu = rhsd%conc(:,:,:,n)
       call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
               bcup, bcdown, diff, porosity, porosity, intFlux, transport(:,:,:,n))
       ! set fluxes for output
-      rhsd%fluxes(:,:,n) = intFlux(:,:,1)
+      rhsd%fluxes(:,:,n) = intFlux(:,:,1)*porosity(:,:,1)
    end if
 end do
 
@@ -333,16 +340,16 @@ real(rk),dimension(grid%inum,grid%jnum,grid%knum) :: flux_cap
 do j=1,grid%jnum
    do i=1,grid%inum
       do k = 2,grid%knum
-         Flux(i,j,k) = -VF(i,j,k)*D(i,j,k) * (C(i,j,k)-C(i,j,k-1)) /grid%dzc(i,j,k-1)
+         Flux(i,j,k) = -D(i,j,k) * (C(i,j,k)-C(i,j,k-1)) /grid%dzc(i,j,k-1)
       end do
 
 ! Then the outer cells 
 ! upstream boundary
       IF (BcUp .EQ. 1) THEN
-        Flux(i,j,1) = fluxup(i,j)
+        Flux(i,j,1) = fluxup(i,j)/VF(i,j,1)
 
       ELSE IF (BcUp .EQ. 2) THEN
-        Flux(i,j,1) = -VF(i,j,1)*D(i,j,1) * (C(i,j,1)-Cup(i,j)) /grid%dz(i,j,1)
+        Flux(i,j,1) = -D(i,j,1) * (C(i,j,1)-Cup(i,j)) /grid%dz(i,j,1)
 
       ELSE IF (BcUp .EQ. 3) THEN
         Flux(i,j,1) = 0.0_rk
@@ -363,10 +370,10 @@ do j=1,grid%jnum
        
 ! downstream boundary
       IF (BcDown .EQ. 1) THEN
-        Flux(i,j,grid%knum+1) = fluxdown(i,j)
+        Flux(i,j,grid%knum+1) = fluxdown(i,j)/VF(i,j,grid%knum)
 
       ELSE IF (BcDown .EQ. 2) THEN
-        Flux(i,j,grid%knum+1) = -VF(i,j,grid%knum)*D(i,j,grid%knum) * (Cdown(i,j)-C(i,j,grid%knum)) / grid%dz(i,j,grid%knum)
+        Flux(i,j,grid%knum+1) = -D(i,j,grid%knum) * (Cdown(i,j)-C(i,j,grid%knum)) / grid%dz(i,j,grid%knum)
 
       ELSE IF (BcDown .EQ. 3) THEN
         Flux(i,j,grid%knum+1) =0.0_rk
