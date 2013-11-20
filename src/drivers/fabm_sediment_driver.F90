@@ -39,7 +39,7 @@ contains
    procedure :: get_rhs
 end type type_sed
 
-real(rk),dimension(:,:,:),allocatable :: porosity,temp
+real(rk),dimension(:,:,:),allocatable :: porosity,temp,intf_porosity
 real(rk),dimension(:,:,:),allocatable :: par
 real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
 real(rk),dimension(:,:,:),allocatable,target :: temp3d
@@ -133,11 +133,14 @@ sed%knum = sed%grid%knum
 
 ! set porosity
 allocate(porosity(_INUM_,_JNUM_,_KNUM_))
+allocate(intf_porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(temp(_INUM_,_JNUM_,_KNUM_))
 allocate(par (_INUM_,_JNUM_,_KNUM_))
 do k=1,_KNUM_
    porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
 end do
+intf_porosity(:,:,1) = porosity(:,:,1)
+intf_porosity(:,:,2:_KNUM_) = 0.5d0*(porosity(:,:,1:_KNUM_-1) + porosity(:,:,2:_KNUM_))
 
 temp = 5_rk
 
@@ -217,7 +220,6 @@ use fabm_types
 implicit none
 
 class(type_sed)      ,intent(inout)          :: rhsd
-!real(rk),intent(out)                         :: rhs(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum,1:rhsd%nvar)
 real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
 real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu,f_T
@@ -248,19 +250,19 @@ f_T = _ONE_*exp(-4500.d0*(1.d0/(temp3d+273.d0) - (1.d0/288.d0)))
 do n=1,size(rhsd%model%info%state_variables)
    if (rhsd%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = 1
-      diff = rhsd%bioturbation * f_T / 86400.0_rk / 10000_rk * (ones3d-porosity)
+      diff = rhsd%bioturbation * f_T / 86400.0_rk / 10000_rk * (ones3d-intf_porosity)
       conc_insitu = rhsd%conc(:,:,:,n)*porosity/(ones3d-porosity)
       call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
-              bcup, bcdown, diff, ones3d-porosity, ones3d-porosity, intFlux, transport(:,:,:,n))
+              bcup, bcdown, diff, ones3d-porosity, intFlux, transport(:,:,:,n))
       transport(:,:,:,n) = transport(:,:,:,n)*(ones3d-porosity)/porosity
    else
       bcup = 2
-      diff = (rhsd%diffusivity + temp3d * 0.035d0) * porosity / 86400.0_rk / 10000_rk
+      diff = (rhsd%diffusivity + temp3d * 0.035d0) * intf_porosity / 86400.0_rk / 10000_rk
       conc_insitu = rhsd%conc(:,:,:,n)
       call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
-              bcup, bcdown, diff, porosity, porosity, intFlux, transport(:,:,:,n))
+              bcup, bcdown, diff, porosity, intFlux, transport(:,:,:,n))
       ! set fluxes for output
-      rhsd%fluxes(:,:,n) = intFlux(:,:,1)*porosity(:,:,1)
+      rhsd%fluxes(:,:,n) = intFlux(:,:,1)
    end if
 end do
 
@@ -299,9 +301,9 @@ end subroutine finalize_fabm_sed
 !! Vertical diffusion in a porous sediment grid.
 
 subroutine diff3d (grid, C, Cup, Cdown, fluxup, fluxdown,        &
-                       BcUp, BcDown, D, VF, A, Flux, dC)
-!! the code originates in the original omexdia module
-!! authors: Kai Wirtz, Karline Soetaert & Richard Hofmeister
+                       BcUp, BcDown, D, VF, Flux, dC)
+!! the code originates in the original omexdia module by Karline Soetaert
+!! authors: Kai Wirtz & Richard Hofmeister
 
 implicit none
 type(fabm_sed_grid), intent(in)        :: grid
@@ -311,8 +313,8 @@ real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: C, D
 ! and convection coeff (used if Bc=4)
 real(rk), dimension(grid%inum,grid%jnum), intent(in)   :: Cup, Cdown, fluxup, fluxdown
 
-! volume fraction, surface Area
-real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: VF, A
+! volume fraction
+real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: VF
 
 ! boundary concitions (1= flux, 2=conc, 3 = 0-grad, 4=convect)
 integer, intent(in) :: BcUp, BcDown   
@@ -328,12 +330,6 @@ real(rk),dimension(grid%inum,grid%jnum,grid%knum) :: flux_cap
 
 ! -------------------------------------------------------------------------------
 
-!flux_cap=0.0_rk
-!do j=1,grid%jnum
-!do i=1,grid%inum
-!flux_cap(i,j,1:4)=(/ 0.5,0.3,0.13,0.07 /)
-!end do
-!end do
 
 ! Flux - first internal cells
 ! positive flux is directed downward
@@ -346,7 +342,7 @@ do j=1,grid%jnum
 ! Then the outer cells 
 ! upstream boundary
       IF (BcUp .EQ. 1) THEN
-        Flux(i,j,1) = fluxup(i,j)/VF(i,j,1)
+        Flux(i,j,1) = fluxup(i,j)
 
       ELSE IF (BcUp .EQ. 2) THEN
         Flux(i,j,1) = -D(i,j,1) * (C(i,j,1)-Cup(i,j)) /grid%dz(i,j,1)
@@ -370,7 +366,7 @@ do j=1,grid%jnum
        
 ! downstream boundary
       IF (BcDown .EQ. 1) THEN
-        Flux(i,j,grid%knum+1) = fluxdown(i,j)/VF(i,j,grid%knum)
+        Flux(i,j,grid%knum+1) = fluxdown(i,j)
 
       ELSE IF (BcDown .EQ. 2) THEN
         Flux(i,j,grid%knum+1) = -D(i,j,grid%knum) * (Cdown(i,j)-C(i,j,grid%knum)) / grid%dz(i,j,grid%knum)
@@ -382,7 +378,7 @@ do j=1,grid%jnum
       ENDIF
 
       DO k = 1,grid%knum
-        dC(i,j,k) = (Flux(i,j,k) - Flux(i,j,k+1))/grid%dz(i,j,k)
+        dC(i,j,k) = (Flux(i,j,k) - Flux(i,j,k+1))/(VF(i,j,k) * grid%dz(i,j,k))
       ENDDO
    end do
 end do
