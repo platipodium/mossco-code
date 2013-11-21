@@ -310,14 +310,13 @@ To run the northern North Sea annual testcase, issue the following
 
 @subsection testcases-fabm0d The FABM 0d driver
 
-Prerequisites are both FABM and GOTM.  To make the FABM library with the 0d driver,
-issue 
+Prerequisites are both FABM and GOTM. FABM has to have the mossco driver compiled, in order to use MOSSCO's FABM-0d driver:
 
 ~~~~
-make -C $FABMDIR/src 0d
+make -C $FABMDIR/src mossco
 ~~~~
   
-Then go to $MOSSCO_DIR/examples/esmf_fabm0d and run the example:
+Then compile MOSSCO, go to $MOSSCO_DIR/examples/esmf_fabm0d and run the example:
 
 ~~~~
 (cd $MOSSCO_DIR/examples/esmf_fabm0d ; ./esmf_fabm0d)
