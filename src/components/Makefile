@@ -17,11 +17,10 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-SUBDIRS=gotm
+SUBDIRS=gotm remtc
 
-TARGETS=SUBDIRS libempty
+TARGETS=libempty
 ifeq ($(MOSSCO_ESMF),true)
-TARGETS += libocean libatmosphere
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
 endif
@@ -39,13 +38,13 @@ ifeq ($(MOSSCO_GETM),true)
 TARGETS += libgetm
 endif
 
-.PHONY: $(TARGETS)
+.PHONY: $(TARGETS) subdirs $(SUBDIRS)
 
 #--------------------------------------
 # Make targets
 # add checks for libfabm and libsediment
 
-all: $(TARGETS)
+all: subdirs $(TARGETS)
 
 libgetm: prefix libgetm_external \
 	$(MOSSCO_LIBRARY_PATH)/libgetm.a(getm_component.o)
@@ -56,9 +55,7 @@ liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a
 libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
-libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a
 libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a
-libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 
 $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
@@ -75,12 +72,6 @@ $(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: fabm_0d_component.o
 	$(AR) cruvs $@ fabm_0d_component.o
-
-$(MOSSCO_LIBRARY_PATH)/libocean.a: remtc_ocean.o
-	$(AR) cruvs $@ remtc_ocean.o
-
-$(MOSSCO_LIBRARY_PATH)/libatmosphere.a: remtc_atmosphere.o
-	$(AR) cruvs $@ remtc_atmosphere.o
 
 # A really, really dirty hack for now...
 # ...and automatic rm of .o also does not work because of this.
@@ -113,12 +104,13 @@ gotm_component.o: gotm_component.F90
 endif
 
 clean: extraclean
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
+
 extraclean:
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir extraclean; done
 	$(RM) getm_component.o
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a

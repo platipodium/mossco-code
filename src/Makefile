@@ -17,7 +17,7 @@ EXTRA_DIST=README Rules.make
 
 SUBDIRS=utilities drivers
 
-ifdef ESMFMKFILE
+ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += components mediators
 endif
 
@@ -33,8 +33,10 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 clean: extraclean
-extraclean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
+
+extraclean:
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir extraclean; done 
 
 check:
 	@echo The check target is not implemented, yet
