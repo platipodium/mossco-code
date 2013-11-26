@@ -33,10 +33,10 @@ module esmf_toplevel_component
     integer, intent(out)   :: rc
 
     integer                :: i,n=3
-	  character(ESMF_MAXSTR) :: name
-	  type(ESMF_Time)        :: time,currentTime,ringTime
-	  type(ESMF_TimeInterval) :: alarmInterval, timeInterval
-	  type(ESMF_Alarm),dimension(:),allocatable :: alarmList
+    character(ESMF_MAXSTR) :: name
+    type(ESMF_Time)        :: time,currentTime,ringTime
+    type(ESMF_TimeInterval) :: alarmInterval, timeInterval
+    type(ESMF_Alarm),dimension(:),allocatable :: alarmList
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
 
@@ -107,8 +107,7 @@ module esmf_toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     !! Search the clock for next ringing Alarm
-    
-    
+        
     call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_ALL,alarmCount=n,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     allocate(alarmList(n))
@@ -130,10 +129,7 @@ module esmf_toplevel_component
     
     call ESMF_ClockGet(parentClock,currTime=currentTime,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    timeInterval = time - currentTime
-!    call ESMF_TimeIntervalSet(timeInterval,time-currentTime,rc=rc)
-!    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
+    call ESMF_ClockSet(parentClock,timeStep=time-currentTime,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
@@ -193,5 +189,38 @@ module esmf_toplevel_component
     rc=ESMF_SUCCESS
 
   end subroutine Finalize
+
+#if 0
+subroutine MOSSCO_ClockSetTimeStepByAlarms(clock)
+  !! Search the clock for next ringing Alarm
+  type (ESMF_Clock) :: clock
+        
+        
+    call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_ALL,alarmCount=n,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    allocate(alarmList(n))
+    
+    call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+    if (size(alarmList).gt.0) then
+      call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+      
+    do i=2,size(alarmList)
+      call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ringtime<time) time=ringTime
+    enddo
+    if (allocated(alarmList)) deallocate(alarmList)
+    
+    call ESMF_ClockGet(parentClock,currTime=currentTime,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(parentClock,timeStep=time-currentTime,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+#endif
+    
+
 
 end module esmf_toplevel_component
