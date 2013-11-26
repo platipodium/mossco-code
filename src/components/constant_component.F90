@@ -55,14 +55,58 @@ module constant_component
     integer(ESMF_KIND_I4) :: i,j,k
     type(ESMF_Field), dimension(:), allocatable :: exportField
     type(ESMF_Grid)                             :: grid
-  
+    type(ESMF_DistGrid)                         :: distgrid
+    type(ESMF_ArraySpec)                        :: arrayspec
+    real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
+
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="constants grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-  
+    ! Get information to generate the fields that store the pointers to variables
+    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+      totalCount=farray_shape,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !> Create export fields and add them to export state, allocate the space for these
+    !> that will be filled later with data
+    nexport=2
+    allocate(export_variables(nexport))
+    export_variables(1)%standard_name="water_temperature"
+    export_variables(2)%standard_name="salinity"
+    allocate(exportField(nexport))
+    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
+
+    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    do k=1,size(exportField)
+      exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+
+    !> Specify water temperature information
+    call ESMF_FieldGet(field=exportField(1), localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    variables(:,:,:,1) =  15.15
+    farrayPtr=variables(:,:,:,1)        
+    
+    !> Specify salinity information
+    call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    variables(:,:,:,2) =  25.25
+    farrayPtr=variables(:,:,:,2)        
+ 
     call ESMF_GridCompGet(gridComp,name=name, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
