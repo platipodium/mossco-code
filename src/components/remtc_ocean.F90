@@ -140,20 +140,20 @@ module remtc_ocean
         enddo
       enddo
     enddo
-		farrayPtr=variables(:,:,:,2)        
+    farrayPtr=variables(:,:,:,2)        
 
     !> Specify PAR      
     call ESMF_FieldGet(field=exportField(3), localDe=0, farrayPtr=farrayPtr, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     variables(:,:,:,3)=100.0
-		farrayPtr=variables(:,:,:,3)        
+    farrayPtr=variables(:,:,:,3)        
 
     !> For debugging and I/O testing purposes, write out all the export fields to netcdf
 #ifndef ESMF_MPIUNI 
     !! ESMF_FieldWrite is not supported in ESMF_MPIUNI mode     
     do k=1,3
       call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
-        .true.,0,ESMF_IOFMT_NETCDF, rc = rc)
+        append=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    enddo
 #endif
