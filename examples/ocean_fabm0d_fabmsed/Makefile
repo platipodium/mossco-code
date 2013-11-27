@@ -34,7 +34,10 @@ ocean_fabm0d_fabmsed: toplevel_component.o main.o
 	@echo "Created example binary ocean_fabm0d_fabmsed in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d_fabmsed/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d_fabmsed.txt
 
-libfabm0d libsediment libocean:
+libocean:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
+
+libfabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 liboceansedimentcoupler:

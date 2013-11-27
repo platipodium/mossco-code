@@ -45,7 +45,13 @@ ocean_fabm0d: toplevel_component.o main.o
 	@echo "Created example binary ocean_fabm0d in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d.txt
 
-libfabm0d libgotm libocean:
+libocean:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
+
+libgotm:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
+
+libfabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 main.o: toplevel_component.o

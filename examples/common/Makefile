@@ -37,8 +37,11 @@ main.o: toplevel_component.o
 toplevel_component.o: coupling_system.o toplevel_component.F90  libmossco_fabm0d libsediment libgotm libocean
 coupling_system.o: coupling_system.F90
 
-libmossco_fabm0d libsediment libocean:
+libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
+libocean:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
 libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@

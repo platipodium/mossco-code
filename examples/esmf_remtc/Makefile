@@ -27,7 +27,7 @@ exec: toplevel_component.o main.o
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_remtc/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_remtc.txt
 
 libocean libatmosphere:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
 libaocoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@

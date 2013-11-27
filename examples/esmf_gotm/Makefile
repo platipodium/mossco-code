@@ -32,7 +32,7 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 all: exec
 
 libgotm:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 exec: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o esmf_gotm_example $^ $(LDFLAGS)
