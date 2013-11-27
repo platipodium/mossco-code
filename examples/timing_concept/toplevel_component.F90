@@ -142,15 +142,61 @@ module esmf_toplevel_component
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
+    
+    type(ESMF_GridComp), dimension(:,:), pointer :: ringingComp
+    integer(ESMF_KIND_I4) :: count,i,k,j
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: startTime, currentTime
+    type(ESMF_TimeInterval) :: timeInterval
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    !! Run *all* component the first time, each until their next coupling alarm is going off
+    clock = ESMF_ClockCreate(clock=parentClock, rc=rc)    
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+	  call ESMF_ClockGet(parentClock,currTime=currentTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    if (.not. ESMF_ClockIsStopTime(parentClock, rc=rc)) then
+      count=size(childComponents)
+      do i=1,count
+        !! Determine for each child the clock and run the component with this clock   
+        !call MOSSCO_TimeIntervalGetFromAlarms(parentClock, comp=childComponents(i), timeInterval=timeInterval, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        call ESMF_ClockSet(clock, startTime=currentTime, stopTime=currentTime+timeInterval, timeStep=timeInterval, rc=rc) 
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+      	call ESMF_GridCompRun(childComponents(i),importState=importStates(i),exportState=exportStates(i), &
+      	  clock=clock, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      enddo  
+    endif
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
+	    !! Advance parentClock by next minimum time step of coupling
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-        !    call ESMF_GridCompRun(fabm0dComp, importState=fabm0dImp, exportState=fabm0dExp, clock=parentClock, rc=rc)‚
+     
+      ! call MOSSCO_ClockGetRingingComponents(parentClock, ringingComp=ringingComp, count=count, rc=rc)
+      do k=1,count
+         !call MOSSCO_GridCompGetIndex(ringingComp(k,1), index=i, rc=rc)
+         !call MOSSCO_GridCompGetIndex(ringingComp(k,2), index=j, rc=rc)
+         
+         
+         call ESMF_GridCompRun(ringingComp(k,1),importState=importStates(i), exportState=exportStates(i), &
+           clock=parentClock, rc=rc)
+         
+         ! call MOSSCO_GridCompCoupling(ringingComp(k,:), importState=exportStates(i), exportState=importStates(j), parentClock, rc=rc) 
+          
+         call ESMF_GridCompRun(ringingComp(k,2),importState=importStates(j), exportState=exportStates(j), &
+           clock=parentClock, rc=rc) 
+      enddo
+      ! call ESMF_ClockSetRinginAlarmsOff
+      ! call MOSSCO_ClockSetTimeStepByAlarms
       
     enddo 
 
@@ -190,37 +236,56 @@ module esmf_toplevel_component
 
   end subroutine Finalize
 
-#if 0
-subroutine MOSSCO_ClockSetTimeStepByAlarms(clock)
-  !! Search the clock for next ringing Alarm
-  type (ESMF_Clock) :: clock
-        
-        
-    call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_ALL,alarmCount=n,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    allocate(alarmList(n))
-    
-    call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+subroutine MOSSCO_ClockSetTimeStepByAlarms(clock, rc)
+  type(ESMF_Clock), intent(inout) :: clock
+  integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+  type(ESMF_TimeInterval) :: timeInterval
+
+	call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeInterval, rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+  call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+end subroutine MOSSCO_ClockSetTimeStepByAlarms    
+
+!> This subroutine searches a clock's alarms and returns the time interval to the next 
+!! ringing alarm
+subroutine MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeInterval, rc)
+  type (ESMF_Clock), intent(in) :: clock
+  type (ESMF_TimeInterval), intent(out) :: timeInterval
+  integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+  type(ESMF_Time)         :: ringTime, time, currentTime
+  type(ESMF_Alarm), dimension(:), allocatable :: alarmList
+  integer(ESMF_KIND_I4) :: n,i
+
+  call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=n,rc=rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  allocate(alarmList(n))
+  
+  call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
-    if (size(alarmList).gt.0) then
-      call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
+  n=size(alarmList)
+  if (n>0) then
+    call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  endif
       
-    do i=2,size(alarmList)
-      call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      if (ringtime<time) time=ringTime
-    enddo
-    if (allocated(alarmList)) deallocate(alarmList)
-    
-    call ESMF_ClockGet(parentClock,currTime=currentTime,rc=rc)
+  do i=2,n
+    call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(parentClock,timeStep=time-currentTime,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-#endif
-    
+    if (ringtime<time) time=ringTime
+  enddo
+  
+  if (allocated(alarmList)) deallocate(alarmList)
+  
+  call ESMF_ClockGet(clock,currTime=currentTime,rc=rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  timeInterval=time - currentTime
+
+end subroutine  MOSSCO_ClockGetTimeStepToNextAlarm 
 
 
 end module esmf_toplevel_component
