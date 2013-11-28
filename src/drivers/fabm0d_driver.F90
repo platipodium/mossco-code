@@ -1,5 +1,5 @@
 #include "fabm_driver.h"
-!> @file fabm_0d_driver.F90
+!> @file fabm0d_driver.F90
 !> @brief 0D independent driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !!
 !! @author Jorn Bruggeman

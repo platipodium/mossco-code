@@ -1,4 +1,4 @@
-!> @file esmf_fabm_0d_component.F90
+!> @file esmf_fabm0d_component.F90
 !! @brief ESMF/FABM 0d driver component
 !!
 !! The ESMF component contains the 0d driver module
@@ -8,7 +8,7 @@
 !> The ESMF/FABM 0d driver component module provides infrastructure for the
 !! MOSSCO 0d pelagic component.
 
-module fabm_0d_component
+module fabm0d_component
 
   use esmf
   use time, only: gotm_time_min_n => MinN, gotm_time_max_n => MaxN
@@ -241,6 +241,6 @@ module fabm_0d_component
   end subroutine timeString2ESMF_Time
 
 
-end module fabm_0d_component
+end module fabm0d_component
 
 
