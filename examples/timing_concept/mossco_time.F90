@@ -4,14 +4,14 @@ use esmf
 
 implicit none
 
-!interface MOSSCO_ClockGetTimeStepToNextAlarm
-!  module procedure MOSSCO_ClockGetTimeStepToNextAlarm_components
-!  module procedure MOSSCO_ClockGetTimeStepToNextAlarm_all
-!end interface MOSSCO_ClockGetTimeStepToNextAlarm
+interface MOSSCO_ClockGetTimeStepToNextAlarm
+  module procedure MOSSCO_ClockGetTimeStepToNextAlarm_componentname
+  module procedure MOSSCO_ClockGetTimeStepToNextAlarm_all
+end interface MOSSCO_ClockGetTimeStepToNextAlarm
 
+character(len=1), parameter :: MOSSCO_CPL_SEPARATOR = ':'
 
 contains
-
 
 subroutine MOSSCO_ClockSetTimeStepByAlarms(clock, rc)
   type(ESMF_Clock), intent(inout) :: clock
@@ -27,23 +27,24 @@ subroutine MOSSCO_ClockSetTimeStepByAlarms(clock, rc)
 end subroutine MOSSCO_ClockSetTimeStepByAlarms    
 
 
-!> This subroutine searches a clock's alarms and returns the time interval to the next 
-!! ringing alarm
+!> This subroutine searches all of a clock's alarms and returns the time 
+!! interval to the next ringing alarm
 subroutine MOSSCO_ClockGetTimeStepToNextAlarm_all(clock, timeInterval, rc)
   type (ESMF_Clock), intent(in) :: clock
   type (ESMF_TimeInterval), intent(out) :: timeInterval
   integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-  type (ESMF_GridComp), dimension(:), pointer :: component
+  call MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, '', timeInterval, rc)
+  
 end subroutine MOSSCO_ClockGetTimeStepToNextAlarm_all
 
-!> This subroutine searches a clock's alarms and returns the time interval to the next 
-!! ringing alarm
-subroutine MOSSCO_ClockGetTimeStepToNextAlarm_components(clock, timeInterval, component, rc)
+!> This subroutine searches only some of a clock's  alarms and returns the time 
+!! interval to the next ringing alarm, the selection is based on the components
+subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName, timeInterval, rc)
   type (ESMF_Clock), intent(in) :: clock
   type (ESMF_TimeInterval), intent(out) :: timeInterval
   integer(ESMF_KIND_I4), intent(out), optional :: rc
-  type (ESMF_GridComp), dimension(:), intent(in) :: component
+  character (ESMF_MAXSTR), intent(in) :: componentname
 
   type(ESMF_Time)         :: ringTime, time, currentTime
   type(ESMF_Alarm), dimension(:), allocatable :: alarmList
@@ -59,8 +60,10 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_components(clock, timeInterval, co
   n=size(alarmList)
   if (n>0) then
     call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  else
+    call ESMF_ClockGet(clock,stopTime=time, rc=rc)
   endif
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
   do i=2,n
     call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
@@ -71,9 +74,10 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_components(clock, timeInterval, co
   if (allocated(alarmList)) deallocate(alarmList)
   
   call ESMF_ClockGet(clock,currTime=currentTime,rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)  
+  
   timeInterval=time - currentTime
 
-end subroutine  MOSSCO_ClockGetTimeStepToNextAlarm_components
+end subroutine  MOSSCO_ClockGetTimeStepToNextAlarm_componentname
 
 end module mossco_time

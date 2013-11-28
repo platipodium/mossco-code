@@ -7,9 +7,7 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
-ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/timing_concept$,,$(PWD))
-endif
+export MOSSCO_DIR ?= $(subst /examples/timing_concept$,,$(PWD))
 
 include $(MOSSCO_DIR)/src/Rules.make
 
@@ -20,7 +18,7 @@ LIBS := -lesmf $(LIBS) -lempty
 all: exec
 
 exec: main.o toplevel_component.o
-	$(F90) $(F90FLAGS) -o timing_concept toplevel_component.o main.o $(LDFLAGS) $(LIBS)
+	$(F90) $(F90FLAGS) -o timing_concept toplevel_component.o main.o mossco_time.o $(LDFLAGS) $(LIBS)
 	@echo "Created example binary timing_concept in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/timing_concept/ to run the example." > $(MOSSCO_BIN_PATH)/timing_concept.txt
 	
