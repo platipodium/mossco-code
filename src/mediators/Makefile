@@ -28,7 +28,7 @@ endif
 
 SUBDIRS=
 
-.PHONY: default all subdirs $(SUBDIRS) $(TARGETS)
+.PHONY: default all subdirs $(TARGETS)
 
 all: subdirs $(TARGETS)
 
@@ -45,13 +45,15 @@ $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a: ocean_sediment_coupler.o
 $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a: vertical_mean_coupler.o
 	$(AR) cruvs $@ vertical_mean_coupler.o
 
-subdirs: $(SUBDIRS)
-
-$(SUBDIRS):
+subdirs: 
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done 
 
 clean: extraclean
+
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libaocoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
+
 	

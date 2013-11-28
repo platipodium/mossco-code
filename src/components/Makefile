@@ -38,7 +38,7 @@ ifeq ($(MOSSCO_GETM),true)
 TARGETS += libgetm
 endif
 
-.PHONY: $(TARGETS) subdirs $(SUBDIRS)
+.PHONY: $(TARGETS) subdirs
 
 #--------------------------------------
 # Make targets
@@ -108,10 +108,9 @@ gotm_component.o: gotm_component.F90
 endif
 
 clean: extraclean
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
 
 extraclean:
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir extraclean; done
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
 	$(RM) getm_component.o
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
@@ -122,6 +121,5 @@ extraclean:
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod
 
-subdirs: $(SUBDIRS)
-$(SUBDIRS):
-	$(MAKE) -C $@
+subdirs:
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done

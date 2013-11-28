@@ -43,10 +43,8 @@ default: all
 
 all: subdirs
 
-subdirs: $(SUBDIRS)
-
-$(SUBDIRS):
-	$(MAKE) -C $@
+subdirs:
+	@for dir in $(SUBDIRS) ; do make -C $$dir ; done
 
 clean: extraclean
 

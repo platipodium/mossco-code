@@ -28,15 +28,13 @@ all: subdirs
 
 components: drivers
 
-subdirs: $(SUBDIRS)
-$(SUBDIRS):
-	$(MAKE) -C $@
+subdirs: 
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done 
 
 clean: extraclean
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 
 extraclean:
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir extraclean; done 
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 
 check:
 	@echo The check target is not implemented, yet
