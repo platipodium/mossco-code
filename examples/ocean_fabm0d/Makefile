@@ -19,9 +19,9 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
 ifeq ($(OCEAN),GOTM)
-LIBS := -lfabm0d -locean -lgotm -lmossco_fabm0d -lsolver -lesmf $(LIBS)
+LIBS :=  -locean -lgotm -lmossco_fabm0d -lsolver -lesmf $(LIBS)
 else
-LIBS := -lfabm0d -locean -lmossco_fabm0d -lsolver -lesmf $(LIBS)
+LIBS := -locean -lmossco_fabm0d -lsolver -lesmf $(LIBS)
 endif
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 ifeq ($(OCEAN),GOTM)
@@ -51,15 +51,15 @@ libocean:
 libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
-libfabm0d:
+libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 main.o: toplevel_component.o
 ifeq ($(OCEAN),GOTM)
 CPPFLAGS += -D_GOTMOCEAN_
-toplevel_component.o: toplevel_component.F90 libfabm0d libgotm libocean
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libgotm libocean
 else
-toplevel_component.o: toplevel_component.F90 libfabm0d libocean
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libocean
 endif
 
 clean: extraclean

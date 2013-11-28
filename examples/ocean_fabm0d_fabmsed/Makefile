@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lfabm0d -lsediment -locean -loceansedimentcoupler -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf  $(LIBS)
+LIBS := -lsediment -locean -loceansedimentcoupler -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf  $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
@@ -37,14 +37,14 @@ ocean_fabm0d_fabmsed: toplevel_component.o main.o
 libocean:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
-libfabm0d libsediment:
+libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 liboceansedimentcoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 	
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libfabm0d libsediment libocean liboceansedimentcoupler
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment libocean liboceansedimentcoupler
 
 clean: extraclean
 
