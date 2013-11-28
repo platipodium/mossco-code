@@ -45,5 +45,5 @@ toplevel_component.o: toplevel_component.F90 libgotm
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_gotm
+	@rm -f esmf_gotm_example
 	@rm -f PET*.*
