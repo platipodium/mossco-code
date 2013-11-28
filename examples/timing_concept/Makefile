@@ -25,7 +25,7 @@ exec: main.o toplevel_component.o
 	@echo "Please change to $(MOSSCO_DIR)/examples/timing_concept/ to run the example." > $(MOSSCO_BIN_PATH)/timing_concept.txt
 	
 main.o: toplevel_component.o main.F90
-toplevel_component.o: toplevel_component.F90 libempty
+toplevel_component.o: toplevel_component.F90 libempty mossco_time.o
 
 libempty:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libempty

@@ -19,6 +19,8 @@ endif
 #OLD_SHELL := $(SHELL)
 #SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
 
+MOSSCO_INSTALL_PREFIX ?= /opt/mossco
+
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the Preamlbe section of this Rules.make in repeated calls.  In most circumstances,
@@ -160,7 +162,8 @@ endif
 #
 ifndef ESMFMKFILE
 ifndef MOSSCO_ESMF
-$(error Compiling without ESMF support. Comment this line 116 in Rules.make if you want to proceed)
+$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed)
+$(warning Compiling without ESMF support. Finding of compilers/libraries that are usually set up by ESMF might fail.)
 export MOSSCO_ESMF=false
 endif
 else
@@ -233,11 +236,18 @@ ifndef F90
 ifdef ESMF_F90COMPILER
 export F90=$(ESMF_F90COMPILER)
 F90_VERSION:=$(shell $(F90) --version | head -1)
-$(warning F90 automatically determined from ESMF_F90COMPILER variable: F90=$(F90))
 else
+ifeq ($MOSSCO_FABM,true)
 export F90=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
 F90_VERSION:=$(shell $(F90) --version | head -1)
 $(warning F90 automatically determined from FABM environment: F90=$(F90))
+else
+ifeq ($MOSSCO_GOTM,true)
+export F90=$(shell grep 'FC=' $(GOTMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+F90_VERSION:=$(shell $(F90) --version | head -1)
+$(warning F90 automatically determined from GOTM environment: F90=$(F90))
+endif
+endif
 endif
 endif
 
@@ -392,7 +402,14 @@ endif
 endif
 endif
 	#$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
-
+	
+	
+#install:
+#	@test -d  $(MOSSCO_INSTALL_PREFIX) || mkdir -p $(MOSSCO_INSTALL_PREFIX) || $(warning No permission to create #$(MOSSCO_INSTALL_PREFIX))
+#	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/lib
+#	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/include
+#	@cp $(MOSSCO_LIBRARY_PATH)/*.*  $(MOSSCO_INSTALL_PREFIX)/lib
+#	@cp $(MOSSCO_MODULE_PATH)/*.mod  $(MOSSCO_INSTALL_PREFIX)/include
 
 # Common rules
 #ifndef EXTRA_CPP
@@ -416,3 +433,6 @@ endif
 #%.o: %.f90
 #	$(F90) $(F90FLAGS) $(EXTRA_FFLAGS) -c $< -o $@
 #endif
+
+help:
+	@if [ -f README ] ; then cat README ; fi
