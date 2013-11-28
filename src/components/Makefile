@@ -50,7 +50,7 @@ libgetm: prefix libgetm_external \
 	$(MOSSCO_LIBRARY_PATH)/libgetm.a(getm_component.o)
 
 libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
-libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
+libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a
 libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
@@ -64,6 +64,7 @@ $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
 
 $(MOSSCO_LIBRARY_PATH)/libsediment.a: fabm_sediment_component.o
 	$(AR) cruvs $@ fabm_sediment_component.o
+$(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
 
 $(MOSSCO_LIBRARY_PATH)/libempty.a: empty_component.o
 	$(AR) cruvs $@ empty_component.o

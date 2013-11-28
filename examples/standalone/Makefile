@@ -25,16 +25,14 @@ ifeq ($(MOSSCO_EROSED),true)
 SUBDIRS += erosed
 endif
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS) test
+.PHONY: all clean extraclean subdirs test
 
 default: all
 
 all: subdirs
 
-subdirs: $(SUBDIRS)
-
-$(SUBDIRS):
-	$(MAKE) -C $@
+subdirs:
+	@for dir in $(SUBDIRS) ; do make -C $$dir ; done
 
 clean: extraclean
 
