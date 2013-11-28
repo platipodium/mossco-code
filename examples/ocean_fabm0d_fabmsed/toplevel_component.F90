@@ -18,7 +18,7 @@ module toplevel_component
   use remtc_ocean, only: ocean_SetServices => SetServices
   use ocean_sediment_coupler, only: oscpl_SetServices => SetServices
   use fabm_sediment_component, only: sediment_SetServices => SetServices
-  use fabm_0d_component, only: fabm0d_SetServices => SetServices
+  use fabm0d_component, only: fabm0d_SetServices => SetServices
 
   implicit none
   

@@ -75,8 +75,8 @@ $(MOSSCO_LIBRARY_PATH)/libconstant.a: constant_component.o
 $(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o
 	$(AR) cruvs $@ gotm_component.o
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: fabm_0d_component.o
-	$(AR) cruvs $@ fabm_0d_component.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: fabm0d_component.o
+	$(AR) cruvs $@ fabm0d_component.o
 
 # A really, really dirty hack for now...
 # ...and automatic rm of .o also does not work because of this.
@@ -84,7 +84,7 @@ getm_component.o: getm_component.F90
 	@echo "Compiling $<"
 	$(F90) -I$(GETM_INCLUDE_PATH) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
-fabm_0d_component.o: fabm_0d_component.F90
+fabm0d_component.o: fabm0d_component.F90
 	@echo "Compiling $<"
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d
 	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
@@ -120,7 +120,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
-	@rm -f $(MOSSCO_MODULE_PATH)/fabm_0d_component.mod
+	@rm -f $(MOSSCO_MODULE_PATH)/fabm0d_component.mod
 
 subdirs:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done

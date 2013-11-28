@@ -20,7 +20,7 @@ module toplevel_component
 #else
   use remtc_ocean, only: ocean_SetServices => SetServices
 #endif
-  use fabm_0d_component, only: fabm0d_SetServices => SetServices
+  use fabm0d_component, only: fabm0d_SetServices => SetServices
 
   implicit none
   
