@@ -8,8 +8,12 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 DOXYGEN ?= doxygen
-DOXYGEN_CONFIG = doxygen.conf
+DOXYGEN := $(shell which $(DOXYGEN))
+ifeq (x$(DOXYGEN),x)
+$(error  The program "doxygen" required to build the documentation was not found. Either specify the correct location of the doxygen executable with DOXYGEN=/your/path/to/bin/doxygen or type "make help" to learn how to access the online documentation.) 
+endif
 
+DOXYGEN_CONFIG := doxygen.conf
 EXTRA_DIST=README $(DOXYGEN_CONFIG) doxygen.css doxygen.png
 
 .PHONY: default doc www
@@ -32,4 +36,3 @@ ifdef MOSSCO_SF_USER
 else
 	@echo "Please set the environment variable MOSSCO_SF_USER to your sourceforge user name."
 endif
-
