@@ -246,7 +246,7 @@ type(type_gotm_fabm),public :: gotmfabm
    ! This will be calculated internally during each time step.
    allocate(par(1,1,1:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (par)'
-   call fabm_link_bulk_data(gotmfabm%model,varname_par,par)
+   call fabm_link_bulk_data(gotmfabm%model,standard_variables%downwelling_photosynthetic_radiative_flux,par)
 
    ! Allocate array for attenuation coefficient pf photosynthetically active radiation (PAR).
    ! This will be calculated internally during each time step.
@@ -497,15 +497,13 @@ type(type_gotm_fabm),public :: gotmfabm
       ! Update local light field (self-shading may have changed through changes in biological state variables)
       call light(gotmfabm%knum,bioshade_feedback)
       
-      do k=1,gotmfabm%knum
-        ! Time-integrate one biological time step
-        call ode_solver(gotmfabm,dt_eff,ode_method)
+      ! Time-integrate one biological time step
+      call ode_solver(gotmfabm,dt_eff,ode_method)
 
-        ! Provide FABM with (pointers to) updated state variables.
-        ! (integration scheme has redirected FABM to a temporary biogeochemical state)
-        do i=1,size(gotmfabm%model%info%state_variables)
-            call fabm_link_bulk_state_data(gotmfabm%model,i,gotmfabm%conc(:,:,:,i))
-        end do
+      ! Provide FABM with (pointers to) updated state variables.
+      ! (integration scheme has redirected FABM to a temporary biogeochemical state)
+      do i=1,size(gotmfabm%model%info%state_variables)
+        call fabm_link_bulk_state_data(gotmfabm%model,i,gotmfabm%conc(:,:,:,i))
       end do
 
       do i=1,size(gotmfabm%model%info%state_variables_ben)
@@ -559,9 +557,7 @@ type(type_gotm_fabm),public :: gotmfabm
    n = size(gotmfabm%model%info%state_variables)
 
    do i=1,size(gotmfabm%model%info%state_variables)
-     do k=1,gotmfabm%knum
       call fabm_link_bulk_state_data(gotmfabm%model,i,rhsd%conc(:,:,:,i))
-     end do
    end do
    do i=1,size(gotmfabm%model%info%state_variables_ben)
       call fabm_link_bottom_state_data(gotmfabm%model,i,rhsd%conc(:,:,1,n+i))
@@ -620,7 +616,7 @@ type(type_gotm_fabm),public :: gotmfabm
       call fabm_get_light_extinction(gotmfabm%model,1,1,i,localext)
 
       ! Add the extinction of the first half of the grid box.
-      bioext = bioext+localext*0.5*curh(i)
+      bioext = bioext+localext*0.5_rk*curh(i)
 
       ! Calculate photosynthetically active radiation (PAR), shortwave radiation, and PAR attenuation.
       par(1,1,i) = I_0*(_ONE_-A)*exp(z(i)/g2-bioext)
@@ -628,7 +624,7 @@ type(type_gotm_fabm),public :: gotmfabm
       k_par(1,1,i) = _ONE_/g2+localext
 
       ! Add the extinction of the second half of the grid box.
-      bioext = bioext+localext*0.5*curh(i)
+      bioext = bioext+localext*0.5_rk*curh(i)
 
       if (bioshade_feedback) bioshade(i)=exp(-bioext)
    end do
