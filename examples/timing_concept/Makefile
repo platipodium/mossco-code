@@ -11,9 +11,9 @@ export MOSSCO_DIR ?= $(subst /examples/timing_concept$,,$(PWD))
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf $(LIBS) -lempty
+LIBS := -lesmf $(LIBS) -lempty -lconstant
 
-.PHONY: all exec libempty
+.PHONY: all exec libempty libconstant
 
 all: exec
 
@@ -23,7 +23,10 @@ exec: main.o toplevel_component.o
 	@echo "Please change to $(MOSSCO_DIR)/examples/timing_concept/ to run the example." > $(MOSSCO_BIN_PATH)/timing_concept.txt
 	
 main.o: toplevel_component.o main.F90
-toplevel_component.o: toplevel_component.F90 libempty mossco_time.o
+toplevel_component.o: toplevel_component.F90 libempty mossco_time.o libconstant
+
+libconstant:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components libconstant
 
 libempty:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libempty

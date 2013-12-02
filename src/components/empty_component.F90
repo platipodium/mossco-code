@@ -61,7 +61,7 @@ module empty_component
     enddo 
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
-    write(message,'(A,A,A)') 'Empty component ', name, ' finished running'
+    write(message,'(A,A,A)') 'Empty component ', trim(name), ' finished running'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
  
   end subroutine Run
@@ -77,7 +77,7 @@ module empty_component
     character(ESMF_MAXSTR)     :: name, message
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
-    write(message,'(A,A,A)') 'Empty component ', name, ' finalized'
+    write(message,'(A,A,A)') 'Empty component ', trim(name), ' finalized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
    
     rc=ESMF_SUCCESS

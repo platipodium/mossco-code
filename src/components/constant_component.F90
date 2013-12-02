@@ -75,11 +75,12 @@ module constant_component
     !> Create export fields and add them to export state, allocate the space for these
     !> that will be filled later with data
     nexport=2
-    allocate(export_variables(nexport))
+    if (.not. allocated(export_variables)) allocate(export_variables(nexport))
     export_variables(1)%standard_name="water_temperature"
     export_variables(2)%standard_name="salinity"
-    allocate(exportField(nexport))
-    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
+    if (.not. allocated(exportField)) allocate(exportField(nexport))
+    if (.not. allocated(variables))   allocate(variables(farray_shape(1),&
+      farray_shape(2),farray_shape(3),nexport))
 
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -150,7 +151,7 @@ module constant_component
     
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
-    write(message,'(A,A,A)') 'Constant component ', name, ' finished running'
+    write(message,'(A,A,A)') 'Constant component ', trim(name), ' finished running'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
  
   end subroutine Run
@@ -166,7 +167,7 @@ module constant_component
     character(ESMF_MAXSTR)     :: name, message
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
-    write(message,'(A,A,A)') 'Constant component ', name, ' finalized'
+    write(message,'(A,A,A)') 'Constant component ', trim(name), ' finalized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
    
     rc=ESMF_SUCCESS

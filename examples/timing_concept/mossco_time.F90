@@ -24,6 +24,8 @@ subroutine MOSSCO_ClockSetTimeStepByAlarms(clock, rc)
   
   call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+  return
 end subroutine MOSSCO_ClockSetTimeStepByAlarms    
 
 
@@ -35,6 +37,7 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_all(clock, timeInterval, rc)
   integer(ESMF_KIND_I4), intent(out), optional :: rc
 
   call MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, '', timeInterval, rc)
+  return
   
 end subroutine MOSSCO_ClockGetTimeStepToNextAlarm_all
 
@@ -49,6 +52,7 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
   type(ESMF_Time)         :: ringTime, time, currentTime
   type(ESMF_Alarm), dimension(:), allocatable :: alarmList
   integer(ESMF_KIND_I4) :: n,i
+  character (ESMF_MAXSTR) :: name
 
   call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=n,rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -57,17 +61,19 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
   call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
-  n=size(alarmList)
-  if (n>0) then
-    call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
-  else
-    call ESMF_ClockGet(clock,stopTime=time, rc=rc)
-  endif
+  call ESMF_ClockGet(clock,stopTime=time, rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
-  do i=2,n
-    call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
+
+  do i=1,n
+    call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,name=name,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    if (componentName.ne.'') then
+      if (index(componentName,name)==0) then 
+        cycle
+      endif
+    endif
+    
     if (ringtime<time) time=ringTime
   enddo
   
@@ -77,7 +83,8 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)  
   
   timeInterval=time - currentTime
-
+  return
+  
 end subroutine  MOSSCO_ClockGetTimeStepToNextAlarm_componentname
 
 end module mossco_time
