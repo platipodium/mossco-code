@@ -21,6 +21,7 @@ module constant_component
 
   private
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
+  real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
 
   public SetServices
 
@@ -57,7 +58,6 @@ module constant_component
     type(ESMF_Grid)                             :: grid
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec
-    real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
 
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
@@ -126,13 +126,28 @@ module constant_component
 
     integer               :: petCount, localPet
     character(ESMF_MAXSTR)     :: name, message
-
-    do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
-
-      call ESMF_ClockAdvance(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-    enddo 
+    type(ESMF_Field) :: field
+    integer               :: lbnd(3),ubnd(3)
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr
+    
+    
+    call ESMF_StateGet(exportState,"water_temperature", field, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_FieldGet(field=field, localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    farrayPtr=variables(:,:,:,1)        
+ 
+    call ESMF_StateGet(exportState,"salinity", field, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_FieldGet(field=field, localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    farrayPtr=variables(:,:,:,2)        
+ 
+    
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
     write(message,'(A,A,A)') 'Constant component ', name, ' finished running'
