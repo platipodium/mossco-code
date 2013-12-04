@@ -51,30 +51,35 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
 
   type(ESMF_Time)         :: ringTime, time, currentTime
   type(ESMF_Alarm), dimension(:), allocatable :: alarmList
-  integer(ESMF_KIND_I4) :: n,i
-  character (ESMF_MAXSTR) :: name
+  integer(ESMF_KIND_I4) :: n,i, hours
+  character (ESMF_MAXSTR) :: name, message, ringName
 
   call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=n,rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   allocate(alarmList(n))
   
+  
   call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
-  call ESMF_ClockGet(clock,stopTime=time, rc=rc)
+  call ESMF_ClockGet(clock,stopTime=time, name=ringName, rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   do i=1,n
     call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,name=name,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+    !call ESMF_AlarmPrint(alarmList(i))
+        
     if (componentName.ne.'') then
-      if (index(componentName,name)==0) then 
+      if (index(trim(name),trim(componentName))==0) then 
         cycle
       endif
     endif
     
-    if (ringtime<time) time=ringTime
+    if (ringtime<time) then
+      time=ringTime
+      ringName=name
+    endif
   enddo
   
   if (allocated(alarmList)) deallocate(alarmList)
@@ -83,6 +88,13 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)  
   
   timeInterval=time - currentTime
+  call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)  
+  
+  write(message,'(A,A,I5,A)') 'Next coupling '//trim(componentName)//' (',&
+    trim(ringName)//') in ',hours, ' hours.'
+  call ESMF_LogWrite(message,ESMF_LOGMSG_INFO, rc=rc)
+  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)  
   return
   
 end subroutine  MOSSCO_ClockGetTimeStepToNextAlarm_componentname

@@ -136,12 +136,14 @@ module esmf_toplevel_component
     if (size(alarmList).gt.0) then
       call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !call ESMF_AlarmPrint(alarmList(1))
     endif
       
     do i=2,size(alarmList)
       call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (ringtime<time) time=ringTime
+      !call ESMF_AlarmPrint(alarmList(i))
     enddo
     if (allocated(alarmList)) deallocate(alarmList)
     
@@ -170,6 +172,7 @@ module esmf_toplevel_component
     type(ESMF_TimeInterval) :: timeInterval
     character(ESMF_MAXSTR) :: name, message
     real(ESMF_KIND_R8) :: timestep
+    integer(ESMF_KIND_I4) :: hours
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     logical :: isPresent
 
@@ -193,10 +196,10 @@ module esmf_toplevel_component
         call ESMF_ClockSet(clock, startTime=currentTime, stopTime=currentTime+timeInterval, timeStep=timeInterval, rc=rc) 
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-        call ESMF_TimeIntervalGet(timeInterval, s_r8=timestep, rc=rc)
+        call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-        write(message,'(A,A,A,G8.2,A)') 'Calling ',trim(name),' to run for ', timestep, ' seconds'
+        write(message,'(A,A,A,G8.2,A)') 'Calling ',trim(name),' to run for ', hours, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
         
         call ESMF_GridCompRun(childComponents(i),importState=importStates(i),exportState=exportStates(i), &
