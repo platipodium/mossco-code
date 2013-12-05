@@ -58,7 +58,6 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   allocate(alarmList(n))
   
-  
   call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
@@ -91,8 +90,8 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
   call ESMF_TimeGet(time,timeString=timeString2)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)  
 
-  if (time<=currentTime) then
-    write(message,'(A)')  trim(timeString1)//': negative time step to '//timestring2
+  if (time<currentTime) then
+    write(message,'(A)')  trim(timeString1)//': negative time step to '//trim(timestring2)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, rc=rc)
     call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   endif
