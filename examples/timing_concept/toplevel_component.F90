@@ -170,19 +170,23 @@ module esmf_toplevel_component
     integer(ESMF_KIND_I4) :: count,i,k,j, n
     type(ESMF_Time)       :: startTime, currentTime
     type(ESMF_TimeInterval) :: timeInterval
-    character(ESMF_MAXSTR) :: name, message
+    character(ESMF_MAXSTR) :: name, message, timeString1, timeString2
     real(ESMF_KIND_R8) :: timestep
     integer(ESMF_KIND_I4) :: hours
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     logical :: isPresent
 
-    call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO, rc=rc)
+    call ESMF_ClockGet(parentClock,currTime=currentTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currentTime,timeString=timeString1, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+		write(message,'(A)') trim(timeString1)//': toplevel component started running'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Run *all* component the first time, each until their next coupling alarm is going off
-    call ESMF_ClockGet(parentClock,currTime=currentTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
- 
     if (.not. ESMF_ClockIsStopTime(parentClock, rc=rc)) then
       count=size(childComponents)
       do i=1,count
@@ -199,11 +203,12 @@ module esmf_toplevel_component
         call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-        write(message,'(A,A,A,G8.2,A)') 'Calling ',trim(name),' to run for ', hours, ' hours'
+        write(message,'(A,A,G6.2,A)') trim(timeString1)//': calling '//trim(name), &
+          ' to run for ', hours, ' h'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
         
-        call ESMF_GridCompRun(childComponents(i),importState=importStates(i),exportState=exportStates(i), &
-          clock=clock, rc=rc)
+        call ESMF_GridCompRun(childComponents(i),importState=importStates(i),&
+          exportState=exportStates(i), clock=clock, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       enddo  
     endif
@@ -212,55 +217,84 @@ module esmf_toplevel_component
 
     !! Advance parentClock by next minimum time step of coupling
       call ESMF_ClockAdvance(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-     
-      call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_RINGING,alarmCount=n,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_ClockGet(parentClock,currTime=currentTime, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-      if (n<1) cycle
-      allocate(alarmList(n))
-  
-      call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_RINGING,alarmList=alarmList,rc=rc)
+      call ESMF_TimeGet(currentTime, timeString=timeString1, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
+      
+      call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_RINGING,alarmCount=n,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+      if (n<1) then
+        write(message,'(A)') timeString1//': no alarms ring now. Something strange is happening' 
+        call ESMF_LogWrite(message, ESMF_LOGMSG_WARNING,rc=rc) 
+        cycle
+      endif
+      if (.not.allocated(alarmList)) then
+        allocate(alarmList(n))     
+	    elseif (n>size(alarmList)) then
+	      deallocate(alarmList)
+	      allocate(alarmList(n))
+      endif
+      
+      call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_RINGING,alarmList=alarmList,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
       ! Go through the list of ringing alarms 
       allocate(componentList(2))
-      do k=1,count
+      do k=1,n
       
-        write(*,'(A,I1,A)') 'Cycling ',k,' alarms.'
         call ESMF_AlarmGet(alarmList(k), name=name, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
         ! Find the 2 components that have as attribute this alarm name
         ! then do their coupling
+        !> @todo determine the order of the coupling from the alarm name
         do i=1,size(childComponents)
           call ESMF_AttributeGet(childComponents(i),trim(name),isPresent=isPresent)
           if (.not.isPresent) cycle 
-          componentList(1)=childComponents(i)
-          do j=i,size(childComponents)
-            call ESMF_AttributeGet(childComponents(i),trim(name),isPresent=isPresent)
-            if (.not.isPresent) cycle 
+          if (index(trim(name),trim(componentNames(i))).eq.1) then
+            componentList(1)=childComponents(i)
+          else 
             componentList(2)=childComponents(i)
-          enddo
+          endif
         enddo
-            
+                          
         ! Do the copuling
+        !write(*,'(A,I2,A,I2,A,A,A)') 'Cycling ',k,' of ',n,' alarms. (',trim(name),')'
+        !write(*,'(A,A)') 'Coupling '//trim(componentNames(i))//' to '//trim(componentnames(j)), &
+        !  ' ('//trim(name)//')'
         ! call MOSSCO_do_copuling(componentList)
       enddo
+      
       if (allocated(componentList)) deallocate(componentList)
    
+    call ESMF_ClockGet(parentClock,currTime=currentTime,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
       do i=1,size(childComponents)
-        do k=1,count
+        do k=1,n
           call ESMF_AlarmGet(alarmList(k), name=name, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
-          if (index(componentNames(i), name)==0) cycle
+   
+          if (index(name, trim(componentNames(i))).eq.0) cycle
           
           call MOSSCO_ClockGetTimeStepToNextAlarm(parentClock, trim(componentNames(i)), timeInterval, rc)
-          call ESMF_ClockSet(clock, startTime=currentTime, stopTime=currentTime+timeInterval, &
+          call ESMF_ClockSet(clock, stopTime=currentTime+timeInterval, &
             timeStep=timeInterval, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          call ESMF_ClockSet(clock, startTime=currentTime, rc=rc) 
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
+          write(*,'(A,I2,A,I2,A,A,A)') 'Cycling ',k,' of ',n,' alarms. (',trim(name),')'
+          call ESMF_TimeGet(currentTime,timeString=message)
+          write(*,'(A)') 'Current time: '//message
+          call ESMF_TimeGet(currentTime+timeInterval,timeString=message)
+          write(*,'(A)') 'Stop time: '//message
+
           call ESMF_TimeIntervalGet(timeInterval, s_r8=timestep, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
@@ -276,6 +310,7 @@ module esmf_toplevel_component
       enddo  
     enddo 
 
+    if (allocated(alarmList)) deallocate(alarmList)
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
  
   end subroutine Run
