@@ -309,11 +309,13 @@ module fabm_sediment_component
     real(rk),dimension(:,:,:),target :: bdys,fluxes
     type(type_sed)      :: sed
     type(ESMF_State)    :: importState
-    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
+    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2,ptr_vs
     type(ESMF_Field)    :: Field
-    type(ESMF_Array)    :: array
+    type(ESMF_Array)    :: array,vs_array
     integer             :: i,rc,itemcount
     character(len=ESMF_MAXSTR) :: string
+    character(len=ESMF_MAXSTR) :: varname
+    real(rk),dimension(_IRANGE_,_JRANGE_),target :: vs,pom
 
     call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
     if (itemcount==0) then
@@ -329,19 +331,26 @@ module fabm_sediment_component
     endif
 
     do i=1,sed%nvar
-      call ESMF_StateGet(importState, &
-        trim(sed%model%info%state_variables(i)%long_name),array,rc=rc)
+      varname=trim(sed%model%info%state_variables(i)%long_name)
+      call ESMF_StateGet(importState,varname,array,rc=rc)
       if(rc /= ESMF_SUCCESS) then
         !call ESMF_LogWrite("variable not found",ESMF_LOGMSG_INFO)
       else
         if (sed%model%info%state_variables(n)%properties%get_logical( &
             'particulate',default=.false.)) then
-          ptr_f2 => fluxes(_IRANGE_,_JRANGE_,i)
+          call ESMF_StateGet(importState,trim(varname)//'_sinking_velocity',vs_array,rc=rc)
+          ptr_f2 => pom
+          ptr_vs => vs
+          call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_ArrayGet(vs_array,farrayPtr=ptr_vs,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          fluxes(_IRANGE_,_JRANGE_,i) = pom*vs
         else
           ptr_f2 => bdys(_IRANGE_,_JRANGE_,i+1)
-        end if
           call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        end if
       endif
     end do
 
