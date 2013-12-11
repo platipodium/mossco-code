@@ -24,18 +24,18 @@ endif
 LIBS := -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lfabm0d -lmossco_fabm0d -lsolver
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lmossco_fabm0d -lsolver
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 LDFLAGS += -Wl,-force_load
 endif
 
-.PHONY: all exec libfabm0d
+.PHONY: all exec 
 
 all: exec
 
-libfabm0d:
+libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 exec: toplevel_component.o main.o
@@ -44,7 +44,7 @@ exec: toplevel_component.o main.o
 	@echo "Please change to $(FABMDIR)/testcases/0d to run the example." > $(MOSSCO_BIN_PATH)/esmf_fabm0d.txt
 
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libfabm0d
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d
 
 fabm0d:
 	( unset LIBS; export FABMHOST=0d ; $(MAKE) -C $(FABMDIR)/src/ )

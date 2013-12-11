@@ -15,14 +15,14 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS := -lfabm0d -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf $(LIBS)
+LIBS :=  -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod 
 
-.PHONY: all exec libfabm0d libsediment
+.PHONY: all exec libsediment
 
 all: exec
 
@@ -30,11 +30,11 @@ exec: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o fabmsed_fabm0d $^ $(LDFLAGS)
 	@echo "Created example binary fabmsed_fabm0d in  $(PWD)" 
 
-libfabm0d libsediment:
+libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libfabm0d libsediment
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment
 
 
 clean: extraclean
