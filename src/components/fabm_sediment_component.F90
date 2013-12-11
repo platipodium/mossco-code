@@ -213,7 +213,7 @@ module fabm_sediment_component
     type(ESMF_Grid)   :: grid
     type(ESMF_FieldBundle) :: fieldBundle
     type(ESMF_Field), allocatable, dimension(:) :: fieldlist
-    integer           :: fieldcount,ode_method
+    integer           :: fieldcount
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: name,string
     
