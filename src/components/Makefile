@@ -54,7 +54,8 @@ libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a(erosed_component.o)
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
 libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
-libconstant: prefix $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
+libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
+modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
 
@@ -84,6 +85,9 @@ ifeq ($(MOSSCO_GOTM_FABM),true)
 gotm_component.o: gotm_component.F90
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -D_FABM_ -c $< -o $@
 endif
+
+$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libtypes
 
 clean: extraclean
 
