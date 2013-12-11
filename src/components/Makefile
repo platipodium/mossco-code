@@ -19,13 +19,13 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant
+TARGETS=libempty libconstant libsolver
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-TARGETS +=  libsolver libsediment
+TARGETS +=  libsediment
 
 ifeq ($(MOSSCO_GOTM),true)
 TARGETS += libmossco_fabm0d
@@ -47,34 +47,17 @@ all: subdirs $(TARGETS)
 libgetm: prefix libgetm_external \
 	$(MOSSCO_LIBRARY_PATH)/libgetm.a(getm_component.o)
 
-libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
-libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
-liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a
-libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
-libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
-libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
-libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a
-libconstant: prefix $(MOSSCO_LIBRARY_PATH)/libconstant.a
-libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+# Why these next two lines???
+#libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
+#libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o) $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
+liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a(erosed_component.o)
+libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o) $(MOSSCO_module_path)/solver_library.mod
+libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
+libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
+libconstant: prefix $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
 
-$(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
-	$(AR) cruvs $@ erosed_component.o
-
-$(MOSSCO_LIBRARY_PATH)/libsediment.a: fabm_sediment_component.o
-	$(AR) cruvs $@ fabm_sediment_component.o
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
-
-$(MOSSCO_LIBRARY_PATH)/libempty.a: empty_component.o
-	$(AR) cruvs $@ empty_component.o
-
-$(MOSSCO_LIBRARY_PATH)/libconstant.a: constant_component.o
-	$(AR) cruvs $@ constant_component.o
-
-$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o
-	$(AR) cruvs $@ gotm_component.o
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: fabm0d_component.o
-	$(AR) cruvs $@ fabm0d_component.o
 
 # A really, really dirty hack for now...
 # ...and automatic rm of .o also does not work because of this.
