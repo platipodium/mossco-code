@@ -24,7 +24,7 @@ TARGETS += libmossco_gotmfabm
 endif
 endif
 
-.PHONY: $(TARGETS)
+.PHONY: $(TARGETS) libgotm_external libtypes
 
 #--------------------------------------
 # Make targets
@@ -32,12 +32,9 @@ endif
 
 all: $(TARGETS)
 
-libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
+libgotm: prefix libgotm_external libtypes $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
 libmossco_gotmfabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 libtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
-
-$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external libtypes gotm_component.o
-	$(AR) cruvs $@ gotm_component.o
 
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
@@ -53,4 +50,4 @@ $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 
 clean: extraclean
 extraclean:
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a

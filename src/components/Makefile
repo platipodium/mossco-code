@@ -19,7 +19,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libsolver
+TARGETS=libempty libconstant 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
 endif
@@ -52,7 +52,6 @@ libgetm: prefix libgetm_external \
 #libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o) $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a(erosed_component.o)
-libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o) $(MOSSCO_module_path)/solver_library.mod
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
 libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
 libconstant: prefix $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
@@ -80,9 +79,6 @@ erosed_component.o: erosed_component.F90
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_erosed
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
-$(MOSSCO_module_path)/solver_library.mod:
-	make -C $(MOSSCO_DIR)/src/utilities libsolver
-
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
 gotm_component.o: gotm_component.F90
@@ -93,15 +89,15 @@ clean: extraclean
 
 extraclean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
-	$(RM) getm_component.o
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
-	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
-	@rm -f $(MOSSCO_MODULE_PATH)/fabm0d_component.mod
+	@-rm -f getm_component.o
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
+	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_component.mod
 
 subdirs:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done
