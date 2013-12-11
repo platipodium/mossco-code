@@ -28,7 +28,7 @@ MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 #ifneq (,$(filter $(MAKELEVEL),0 1))
 ifeq (1,1)
 # 2. Importing all FABM-related environment variables and checking that the environment is sane
-#    At the moment, we require that MOSSCO_FABMDIR, FABMHOST, and FORTRAN_COMPILER are set and that
+#    At the moment, we require that MOSSCO_FABMDIR and FORTRAN_COMPILER are set and that
 #    the fabm library is installed in the production version (libfabm_prod)
 # 
 MOSSCO_FABM=false
@@ -55,10 +55,12 @@ export MOSSCO_FABM
 ifeq ($(MOSSCO_FABM),true)
 
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
-ifndef FABMHOST
-export FABMHOST=mossco
-$(warning FABMHOST set to FABMHOST=mossco)
+ifdef FABMHOST
+ifneq ($(FABMHOST),mossco)
+$(warning FABMHOST changed from $(FABMHOST) to mossco)
 endif
+endif
+export FABMHOST=mossco
 
 ifndef FORTRAN_COMPILER
 FABM_AVAILABLE_COMPILERS=$(shell ls -1 $(FABMDIR)/compilers/compiler.* | cut -d'.' -f2)
