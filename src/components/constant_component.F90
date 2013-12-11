@@ -23,6 +23,13 @@ module constant_component
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
 
+  type,extends(MOSSCO_VariableFArray3d) :: variable_item_type
+    type(variable_item_type), pointer     :: next => null()
+    type(ESMF_Field)                      :: field
+  end type
+
+  type(variable_item_type), pointer :: cur_item,variable_items
+
   public SetServices
 
   contains
@@ -58,7 +65,7 @@ module constant_component
     type(ESMF_Grid)                             :: grid
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr
 
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
@@ -72,42 +79,54 @@ module constant_component
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !> Create export fields and add them to export state, allocate the space for these
-    !> that will be filled later with data
-    nexport=2
-    if (.not. allocated(export_variables)) allocate(export_variables(nexport))
-    export_variables(1)%standard_name="water_temperature"
-    export_variables(2)%standard_name="salinity"
-    if (.not. allocated(exportField)) allocate(exportField(nexport))
-    if (.not. allocated(variables))   allocate(variables(farray_shape(1),&
-      farray_shape(2),farray_shape(3),nexport))
-
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !> create list of export_variables, that will come from a function
+    !> which reads a text file
+
+    allocate(variable_items)
+    cur_item => variable_items
+    cur_item%next => variable_items
+
+    allocate(cur_item%next)
+    cur_item => cur_item%next
+    cur_item%standard_name='water_temperature'
+    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
+    cur_item%data(:,:,:) = 15.15d0
+    nullify(cur_item%next)
     
-    do k=1,size(exportField)
-      exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
-        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    allocate(cur_item%next)
+    cur_item => cur_item%next
+    cur_item%standard_name='salinity'
+    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
+    cur_item%data = 25.25d0
+    nullify(cur_item%next)
+
+    !> now o through list, create fields and add to exportState
+    cur_item => variable_items%next
+    do
+      !write(0,*) 'set field ',trim(cur_item%standard_name),' to ',cur_item%data(1,1,1)
+      cur_item%field = ESMF_FieldCreate(grid,arrayspec,name=cur_item%standard_name, &
+                         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
+      call ESMF_FieldGet(field=cur_item%field, localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
+      farrayPtr = cur_item%data
 
-    !> Specify water temperature information
-    call ESMF_FieldGet(field=exportField(1), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    variables(:,:,:,1) =  15.15
-    farrayPtr=variables(:,:,:,1)        
-    
-    !> Specify salinity information
-    call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    variables(:,:,:,2) =  25.25
-    farrayPtr=variables(:,:,:,2)        
- 
+      call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      if (associated(cur_item%next)) then
+        cur_item => cur_item%next
+      else
+        exit
+      end if
+
+    end do
+
     call ESMF_GridCompGet(gridComp,name=name, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
