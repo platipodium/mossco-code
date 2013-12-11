@@ -310,6 +310,7 @@ module fabm_sediment_component
     type(type_sed)      :: sed
     type(ESMF_State)    :: importState
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2,ptr_vs
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: ptr_f3
     type(ESMF_Field)    :: Field
     type(ESMF_Array)    :: array,vs_array
     integer             :: i,rc,itemcount
@@ -326,8 +327,9 @@ module fabm_sediment_component
       call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
       write(string,'(A)') "Water temperature information found"
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
-      !call ESMF_FieldGet(field,farrayPtr=fptr2d,rc=rc) !> @todo SEGFAULT
-      !bdys(:,:,1) = fptr2d   ! degC temperature
+      ptr_f2 => bdys(:,:,1)
+      call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+      ptr_f2 = ptr_f3(:,:,1)   ! get lowest vertical index for near-bed temperature
     endif
 
     do i=1,sed%nvar
