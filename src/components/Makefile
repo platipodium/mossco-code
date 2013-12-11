@@ -20,10 +20,8 @@ EXTRA_DIST=README
 SUBDIRS=gotm remtc
 
 TARGETS=libempty libconstant
-ifeq ($(MOSSCO_ESMF),true)
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
-endif
 endif
 
 ifeq ($(MOSSCO_FABM),true)
