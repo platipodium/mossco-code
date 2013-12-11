@@ -49,7 +49,7 @@ module fabm_sediment_component
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
  
-  public :: SetServices
+  public :: SetServices,bdys,fluxes,rk
   
   contains
 
