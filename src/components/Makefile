@@ -25,7 +25,7 @@ TARGETS += liberosed
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-TARGETS +=  libsolver libsediment
+TARGETS += libsediment
 
 ifeq ($(MOSSCO_GOTM),true)
 TARGETS += libmossco_fabm0d
@@ -48,14 +48,15 @@ libgetm: prefix libgetm_external \
 	$(MOSSCO_LIBRARY_PATH)/libgetm.a(getm_component.o)
 
 libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
-libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
+libsediment: prefix libsolver $(MOSSCO_LIBRARY_PATH)/libsediment.a $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 liberosed: prefix $(MOSSCO_LIBRARY_PATH)/liberosed.a
 libsolver: prefix $(MOSSCO_module_path)/solver_library.mod
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
-libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
+libmossco_fabm0d: prefix libsolver $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a
-libconstant: prefix $(MOSSCO_LIBRARY_PATH)/libconstant.a
+libconstant: prefix libtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a
 libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+libtypes: prefix $(MOSSCO_module_path)/mossco_variable_types.mod
 
 $(MOSSCO_LIBRARY_PATH)/liberosed.a: erosed_component.o
 	$(AR) cruvs $@ erosed_component.o
@@ -99,6 +100,10 @@ erosed_component.o: erosed_component.F90
 
 $(MOSSCO_module_path)/solver_library.mod:
 	make -C $(MOSSCO_DIR)/src/utilities libsolver
+
+$(MOSSCO_module_path)/mossco_variable_types.mod:
+	make -C $(MOSSCO_DIR)/src/utilities libtypes
+
 
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
