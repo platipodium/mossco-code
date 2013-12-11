@@ -1,0 +1,41 @@
+component:
+  - name: GOTM Component
+    description: General Ocean Turbulence Model
+  - export:
+    - name: practical_salinity
+      units: psu
+      other_names: [salinity]
+      internal_name: S
+      containing_module: meanflow
+    - name: grid_height
+      units: m
+    - name: temperature
+      units: degree_Celsius
+      other_names: [water_temperature, temperature_in_sea_water]
+  - import:
+      - name: wind_stress_at_surface
+        units: Pa
+
+
+system:
+  - component: GOTM
+     - import: [imports]
+     - time:
+     - grid: [1 1 nlev]
+     - export: [list-of-exports]
+  - coupler: FABMSED
+     - 
+  - export : [SPM]
+  
+coupling:
+  - components: [GOTM FABM0d]
+    interval: 40 min
+    coupler: none
+  - components: [GOTM FABMSED]
+    interval: 60 min
+    coupler: gotm_fabmsed
+  - components: [FABM0D GOTM]
+    interval: 90 min
+  - components: [FABMSED FABM0d]
+    interval: 60 min
+    direction: both
