@@ -33,9 +33,10 @@ endif
 all: $(TARGETS)
 
 libgotm: prefix $(MOSSCO_LIBRARY_PATH)/libgotm.a
-libmosscogotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+libmossco_gotmfabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+libtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
-$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external gotm_component.o
+$(MOSSCO_LIBRARY_PATH)/libgotm.a: libgotm_external libtypes gotm_component.o
 	$(AR) cruvs $@ gotm_component.o
 
 # KK-TODO: this can be removed when gotm's timestep routine is used
@@ -46,6 +47,9 @@ endif
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_gotmfabm
+
+$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libtypes
 
 clean: extraclean
 extraclean:
