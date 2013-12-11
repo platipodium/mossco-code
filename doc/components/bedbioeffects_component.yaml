@@ -1,0 +1,12 @@
+# this describees a non-existing wave component
+bedbioeffects:
+  name: Benthic fauna and flora model
+  exports:
+    bottom_roughness_length:
+  imports:
+    concentration_of_nitrate_dissolved_in_water:
+    concentration_of_oxygen_dissolved_in_water:
+    current_speed_at_bottom:
+    concentration_of_phytoplankton:
+    concentration_of_DOM:
+    

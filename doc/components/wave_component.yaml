@@ -1,0 +1,15 @@
+# this describees a non-existing wave component
+wave:
+  name: Wave component
+  description: WAM model for waves
+  exports:
+    significant_wave_height:
+      units: m
+      internal_name: h 
+    wave_period:
+      units: s
+  imports:
+    wind_x_velocity:
+      units: m s-1
+    wind_y_velocity:
+      units: m s-1

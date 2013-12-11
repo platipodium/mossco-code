@@ -1,0 +1,14 @@
+# this describees a non-existing wave component
+fabmsed:
+  name: FABM sediment component
+  description: FABM in the sediment
+  exports:
+    net_downward_flux:
+    phytoplanktion_concentrations:
+    DOM_concentrations:
+  imports:
+    DIM_concentration:
+    POM_concentration:
+    POM_sinking_velocity:
+    volumentric_erosion_flux:
+    
