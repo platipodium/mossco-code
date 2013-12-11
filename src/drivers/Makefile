@@ -39,19 +39,10 @@ all: $(ALL_TARGETS)
 
 # FABM/sediment section
 
-libmossco_sediment: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a
-libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
-libmossco_gotmfabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+libmossco_sediment: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
+libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
+libmossco_gotmfabm: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a: libsolver libfabm_external fabm_sediment_driver.o
-	$(AR) crus $@ fabm_sediment_driver.o
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a: libsolver libfabm_external libgotm_external fabm0d_driver.o
-	        $(AR) crus $@ fabm0d_driver.o
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a: libsolver libfabm_external libgotm_external fabm_gotm_driver.o
-	$(AR) crus $@ fabm_gotm_driver.o	
-	
 libsolver: $(MOSSCO_LIBRARY_PATH)/libsolver.a
 
 $(MOSSCO_LIBRARY_PATH)/libsolver.a:
@@ -76,10 +67,10 @@ libmossco_erosed: prefix						\
 
 clean: extraclean
 extraclean:
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a
-	@rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
-	@rm -f $(MOSSCO_MODULE_PATH)/fabm0d_driver.mod
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
-	@rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
-	@rm -f $(MOSSCO_MODULE_PATH)/delft_erosed_driver.mod
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a
+	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
+	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_driver.mod
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/delft_erosed_driver.mod

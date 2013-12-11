@@ -22,23 +22,16 @@ EXTRA_DIST=README
 
 all: libsolver libtypes
 
-libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a
-libtypes:  prefix $(MOSSCO_LIBRARY_PATH)/libtypes.a
+libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
+libtypes:  prefix $(MOSSCO_LIBRARY_PATH)/libtypes.a(mossco_variable_types.o)
 
+#@todo there should be a generic rule for the mods
 $(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.o
 
-$(MOSSCO_LIBRARY_PATH)/libtypes.a: mossco_variable_types.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libtypes.a mossco_variable_types.F90
-	@echo "Created types library  $(MOSSCO_LIBRARY_PATH)/libtypes.a" 
-
-$(MOSSCO_LIBRARY_PATH)/libsolver.a: solver_library.o
-	ar cruvs $(MOSSCO_LIBRARY_PATH)/libsolver.a solver_library.o
-	@echo "Created solver library  $(MOSSCO_LIBRARY_PATH)/libsolver.a" 
-
 clean: extraclean
 extraclean:
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libsolver.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libtypes.a
-	@rm -f $(MOSSCO_MODULE_PATH)/solver_library.mod
-	@rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libsolver.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libtypes.a
+	@-rm -f $(MOSSCO_MODULE_PATH)/solver_library.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
