@@ -4,6 +4,7 @@ module esmf_toplevel_component
 
   ! Registration routines for fabm
   use fabm_sediment_component, only : fabmsed_SetServices => SetServices
+  use constant_component, only : constant_SetServices => SetServices
 
   implicit none
 
@@ -11,7 +12,7 @@ module esmf_toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save  :: fabmComp
+  type(ESMF_GridComp),save  :: fabmComp,constantComp
   type(ESMF_State),save     :: fabmExp, fabmImp
 
   contains
@@ -46,10 +47,13 @@ module esmf_toplevel_component
     ! Create component, call setservices, and create states
     fabmComp = ESMF_GridCompCreate(name="fabmComp", rc=rc)
     call ESMF_GridCompSetServices(fabmComp,fabmsed_SetServices, rc=rc)
+    constantComp = ESMF_GridCompCreate(name="constantComp",rc=rc)
+    call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
     
     fabmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmImp")
     fabmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmExp")
 
+    call ESMF_GridCompInitialize(constantComp, importState=fabmExp, exportState=fabmImp,clock=parentClock,rc=rc)
     call ESMF_GridCompInitialize(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
@@ -89,8 +93,11 @@ module esmf_toplevel_component
 
     call ESMF_GridCompFinalize(fabmComp, importState=fabmImp, exportState=fabmExp, &
       clock=parentClock, rc=rc)
-
     call ESMF_GridCompDestroy(fabmComp, rc=rc)
+
+    call ESMF_GridCompFinalize(constantComp, importState=fabmExp, exportState=fabmImp, &
+      clock=parentClock, rc=rc)
+    call ESMF_GridCompDestroy(constantComp, rc=rc)
 
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
    

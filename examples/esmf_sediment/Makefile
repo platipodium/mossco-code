@@ -13,7 +13,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lsediment -lmossco_sediment -lsolver -lesmf $(LIBS)
+LIBS := -lsediment -lmossco_sediment -lconstant -lsolver -lesmf $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
@@ -30,8 +30,11 @@ exec: toplevel_component.o main.o
 libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
+libconstant:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libsediment
+toplevel_component.o: toplevel_component.F90 libsediment libconstant
 
 clean: extraclean
 
