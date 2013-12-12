@@ -311,7 +311,7 @@ module fabm_sediment_component
     type(ESMF_State)    :: importState
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2,ptr_vs
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: ptr_f3
-    type(ESMF_Field)    :: Field
+    type(ESMF_Field)    :: field,vs_field
     type(ESMF_Array)    :: array,vs_array
     integer             :: i,rc,itemcount
     character(len=ESMF_MAXSTR) :: string
@@ -351,27 +351,31 @@ module fabm_sediment_component
         call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
 #endif
       else
-        call ESMF_StateGet(importState,trim(varname),array,rc=rc)
+        call ESMF_StateGet(importState,trim(varname),field,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+#ifdef DEBUG
+        if (rc == ESMF_SUCCESS) write(0,*) 'found field ',trim(varname)
+#endif
 
-        if (sed%model%info%state_variables(n)%properties%get_logical( &
+        if (sed%model%info%state_variables(i)%properties%get_logical( &
             'particulate',default=.false.)) then
-          call ESMF_StateGet(importState,trim(varname)//'_z_velocity',vs_array,rc=rc)
+          !write(0,*) 'try to get ',trim(varname)//'_z_velocity'
+          call ESMF_StateGet(importState,trim(varname)//'_z_velocity',vs_field,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           ptr_f2 => pom
           ptr_vs => vs
-          call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
+          call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-          call ESMF_ArrayGet(vs_array,farrayPtr=ptr_vs,rc=rc)
+          call ESMF_FieldGet(vs_field,farrayPtr=ptr_vs,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
           fluxes(_IRANGE_,_JRANGE_,i) = pom*vs
         else
-          ptr_f2 => bdys(_IRANGE_,_JRANGE_,i+1)
-          call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
+          ptr_f2 => bdys(:,:,i+1)
+          call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+          ptr_f2 = ptr_f3(:,:,1) ! get lowest vertical index for near-bed concentration
         end if
       endif
     end do
