@@ -29,7 +29,7 @@ LDFLAGS += -lgotm -lmossco_gotmfabm -lsolver
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
-.PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant
+.PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm
 
 all: exec
 exec: gotmfabm_fabmsed_constant
@@ -39,7 +39,7 @@ gotmfabm_fabmsed_constant: toplevel_component.o main.o
 	@echo "Created example binary $@ in $(PWD)" 
 	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
 
-libmossco_gotmfabm:
+libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libsediment libconstant:
@@ -49,7 +49,7 @@ libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libsediment libmossco_sediment libsolver
+toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libsediment libmossco_sediment libsolver libconstant libgotm
 
 clean: extraclean
 
