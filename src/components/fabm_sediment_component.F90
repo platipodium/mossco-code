@@ -322,14 +322,18 @@ module fabm_sediment_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (itemcount==0) then
+#ifdef DEBUG
       write(string,'(A)') "No temperature information found, using default value 10 deg_C"
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+#endif
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
     else 
       call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+#ifdef DEBUG
       write(string,'(A)') "Water temperature information found"
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+#endif
       ptr_f2 => bdys(:,:,1)
       call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -342,8 +346,10 @@ module fabm_sediment_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       if (itemcount==0) then
+#ifdef DEBUG
         write(string,'(A)') "Variable '"//trim(varname)//"' not found in State. Skipping."
         call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+#endif
       else
         call ESMF_StateGet(importState,trim(varname),array,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
