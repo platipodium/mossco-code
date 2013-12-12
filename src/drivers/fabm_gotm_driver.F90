@@ -28,12 +28,23 @@ public init_gotm_mossco_fabm, do_gotm_mossco_fabm
 public init_gotm_mossco_fabm_output
 public do_gotm_mossco_fabm_output
 public set_env_gotm_fabm
+public get_export_state_by_id,get_export_state_from_variable_name
+public get_all_export_states, update_export_states
 
 type,extends(type_rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends type_rhs_driver)
    type(type_model),pointer      :: model
 contains
    procedure :: get_rhs
 end type type_gotm_fabm
+
+   type,public :: export_state_type !< GOTM-FABM driver type for export states
+       character(len=256) :: standard_name=''
+       integer            :: fabm_id=-1
+       logical            :: particulate=.false.
+       real(rk),dimension(:,:,:),pointer   :: conc
+       real(rk),dimension(:,:,:),pointer   :: ws
+   end type
+
 
 type(type_gotm_fabm),public :: gotmfabm
 
@@ -792,6 +803,68 @@ type(type_gotm_fabm),public :: gotmfabm
          end do
 
    end subroutine do_gotm_mossco_fabm_output
+
+   !> Initializes a GOTM-FABM export state by FABM state_variable id
+
+   function get_export_state_by_id(fabm_id) result(export_state)
+   type(export_state_type) :: export_state
+   integer, intent(in)     :: fabm_id
+   integer                 :: n
+
+   export_state%fabm_id=fabm_id
+   export_state%conc => gotmfabm%conc(:,:,:,export_state%fabm_id)
+   allocate(export_state%ws(1,1,1))
+   export_state%ws = 0.0d0
+   export_state%standard_name = gotmfabm%model%info%state_variables(fabm_id)%long_name
+
+   end function get_export_state_by_id
+
+!> Initializes a GOTM-FABM export state by FABM variable name
+
+   function get_export_state_from_variable_name(varname) result(export_state)
+   type(export_state_type)        :: export_state
+   character(len=256), intent(in) :: varname
+   integer                        :: n,fabm_id
+
+   fabm_id=-1
+   do n=1,size(gotmfabm%model%info%state_variables)
+     if (trim(gotmfabm%model%info%state_variables(n)%name).eq.trim(varname)) &
+         fabm_id=n
+   end do
+   export_state= get_export_state_by_id(fabm_id)
+
+   end function get_export_state_from_variable_name
+
+!> create a list of export states from FABM state_variables
+   function get_all_export_states() result(export_states)
+   type(export_state_type),allocatable,dimension(:) :: export_states
+   integer  :: n,fabm_id
+
+   allocate(export_states(gotmfabm%nvar))
+   do fabm_id=1,size(gotmfabm%model%info%state_variables)
+       export_states(fabm_id) = get_export_state_by_id(fabm_id)
+   end do
+
+   end function get_all_export_states
+
+!> update GOTM-FABM export states pointers and sinking velocities using a list of export states
+
+   subroutine update_export_states(export_states)
+   type(export_state_type), target :: export_states(:)
+   real(rk),allocatable :: wstmp(:,:,:,:)
+   type(export_state_type),pointer :: export_state
+   integer :: n
+
+   allocate(wstmp(1,1,1,gotmfabm%nvar))
+   call fabm_get_vertical_movement(gotmfabm%model,1,1,1,wstmp(1,1,1,:))
+   do n=1,size(export_states)
+     export_state => export_states(n)
+     export_state%conc => gotmfabm%conc(:,:,:,export_state%fabm_id)
+     export_state%ws = wstmp(1,1,1,export_state%fabm_id)
+   end do
+   deallocate(wstmp)
+
+   end subroutine update_export_states
 
 
 end module

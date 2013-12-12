@@ -48,6 +48,9 @@ module gotm_component
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: import_variables
+#ifdef _GOTM_MOSSCO_FABM_
+  type(export_state_type),dimension(:), pointer            :: fabm_export_states
+#endif
 
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -207,13 +210,18 @@ module gotm_component
 
     !> Create export fields and add them to export state, allocate the space for these
     !> that will be filled later with data
-    nexport=4
+    nexport = 4
     allocate(export_variables(nexport))
     export_variables(1)%standard_name="water_temperature"
     export_variables(2)%standard_name="grid_height"
     export_variables(3)%standard_name="salinity"
     export_variables(4)%standard_name="radiation"
+#ifdef _GOTM_MOSSCO_FABM_
+    fabm_export_states = get_all_export_states()    
+    allocate(exportField(nexport+2*size(fabm_export_states)))
+#else
     allocate(exportField(nexport))
+#endif
 
     nimport=0
     allocate(import_variables(nimport))
@@ -238,7 +246,7 @@ module gotm_component
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     variables(:,:,:,1) =  T0
-   	farrayPtr=variables(:,:,:,1)        
+    farrayPtr=variables(:,:,:,1)        
 
     !> Specify a grid_height 
     call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, &
@@ -251,7 +259,33 @@ module gotm_component
         enddo
       enddo
     enddo
-    farrayPtr=variables(:,:,:,2)        
+    farrayPtr=variables(:,:,:,2)
+
+#ifdef _GOTM_MOSSCO_FABM_
+    do k=1,size(fabm_export_states)
+      exportField(3+2*k) = ESMF_FieldCreate(grid, arrayspec, &
+        name=trim(fabm_export_states(k)%standard_name), &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      exportField(4+2*k) = ESMF_FieldCreate(grid, arrayspec, &
+        name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_FieldGet(field=exportField(3+2*k), localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr = fabm_export_states(k)%conc
+
+      call ESMF_FieldGet(field=exportField(4+2*k), localDe=0, farrayPtr=farrayPtr, &
+                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr = fabm_export_states(k)%ws
+
+      call ESMF_StateAddReplace(exportState,(/exportField(4+2*k),exportField(3+2*k)/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+#endif
     
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
@@ -300,6 +334,7 @@ module gotm_component
       call do_output(n,nlev)
 #ifdef _GOTM_MOSSCO_FABM_
       call do_gotm_mossco_fabm_output()
+      call update_export_states(fabm_export_states)
 #endif
     endif
     
