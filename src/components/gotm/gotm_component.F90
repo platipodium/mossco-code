@@ -49,7 +49,7 @@ module gotm_component
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: import_variables
 #ifdef _GOTM_MOSSCO_FABM_
-  type(export_state_type),dimension(:), pointer            :: fabm_export_states
+  type(export_state_type),dimension(:), allocatable        :: fabm_export_states
 #endif
 
    !> Declare an alarm to ring when output to file is requested
@@ -217,7 +217,7 @@ module gotm_component
     export_variables(3)%standard_name="salinity"
     export_variables(4)%standard_name="radiation"
 #ifdef _GOTM_MOSSCO_FABM_
-    fabm_export_states = get_all_export_states()    
+    call get_all_export_states(fabm_export_states)
     allocate(exportField(nexport+2*size(fabm_export_states)))
 #else
     allocate(exportField(nexport))

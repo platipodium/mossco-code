@@ -836,8 +836,8 @@ type(type_gotm_fabm),public :: gotmfabm
    end function get_export_state_from_variable_name
 
 !> create a list of export states from FABM state_variables
-   function get_all_export_states() result(export_states)
-   type(export_state_type),allocatable,dimension(:) :: export_states
+   subroutine get_all_export_states(export_states)
+   type(export_state_type),dimension(:),allocatable :: export_states
    integer  :: n,fabm_id
 
    allocate(export_states(gotmfabm%nvar))
@@ -845,7 +845,7 @@ type(type_gotm_fabm),public :: gotmfabm
        export_states(fabm_id) = get_export_state_by_id(fabm_id)
    end do
 
-   end function get_all_export_states
+   end subroutine get_all_export_states
 
 !> update GOTM-FABM export states pointers and sinking velocities using a list of export states
 
