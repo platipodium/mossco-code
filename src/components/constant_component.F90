@@ -103,7 +103,21 @@ module constant_component
     cur_item%data = 25.25d0
     nullify(cur_item%next)
 
-    !> now o through list, create fields and add to exportState
+    allocate(cur_item%next)
+    cur_item => cur_item%next
+    cur_item%standard_name='hzg_omexdia_p dissolved oxygen'
+    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
+    cur_item%data = 280.0d0 !mmol-O2/m3
+    nullify(cur_item%next)
+
+    allocate(cur_item%next)
+    cur_item => cur_item%next
+    cur_item%standard_name='hzg_omexdia_p dissolved phosphate'
+    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
+    cur_item%data = 1.0d0 !mmol-P/m3
+    nullify(cur_item%next)
+
+    !> now go through list, create fields and add to exportState
     cur_item => variable_items%next
     do
       !write(0,*) 'set field ',trim(cur_item%standard_name),' to ',cur_item%data(1,1,1)
@@ -131,8 +145,6 @@ module constant_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
     write(message,'(A,A,A)') 'Constant component ', trim(name), ' initialized'
-
-
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
 
   end subroutine Initialize
