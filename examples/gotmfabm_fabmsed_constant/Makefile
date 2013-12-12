@@ -1,4 +1,3 @@
-# This Makefile is part of MOSSCO
 # 
 # Copyright (C) 2013 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #                Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
@@ -10,7 +9,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/gotmfabm_fabmsed$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/gotmfabm_fabmsed_constant$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -33,12 +32,12 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 .PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant
 
 all: exec
-exec: gotmfabm_fabmsed
+exec: gotmfabm_fabmsed_constant
 
-gotmfabm_fabmsed: toplevel_component.o main.o  
-	$(F90) $(F90FLAGS) -o gotmfabm_fabmsed  $^ $(LDFLAGS)
-	@echo "Created example binary gotmfabm_fabmsed in $(PWD)" 
-	@echo "Please copy this binary $(MOSSCO_DIR)/examples/gotmfabm_fabmsed/gotmfabm_fabmsed to a setup directory." > $(MOSSCO_BIN_PATH)/gotmfabm_fabmsed.txt
+gotmfabm_fabmsed_constant: toplevel_component.o main.o  
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	@echo "Created example binary $@ in $(PWD)" 
+	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
 
 libmossco_gotmfabm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
@@ -55,4 +54,4 @@ toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libsediment libm
 clean: extraclean
 
 extraclean: 
-	@rm -f 
+	@-rm -f gotmfabm_fabmsed_constant
