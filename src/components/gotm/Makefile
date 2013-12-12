@@ -24,7 +24,7 @@ TARGETS += libmossco_gotmfabm
 endif
 endif
 
-.PHONY: $(TARGETS) libgotm_external libtypes
+.PHONY: $(TARGETS) libgotm_external libtypes libmossco_gotmfabm libgotm
 
 #--------------------------------------
 # Make targets

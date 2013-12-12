@@ -30,6 +30,7 @@ examples/ocean_fabm0d/output_0d.dat
 examples/erosed/erosed_test
 examples/erosed/delft_sediment_test.out
 examples/timing_concept/timing_concept
+examples/gotmfabm_fambsed/gotmfabm_fabmsed
 src/drivers/eromud.f90
 src/drivers/erosand.f90
 src/drivers/precision.f90
