@@ -53,11 +53,11 @@
    real(rk),allocatable      :: totals(:,:,:,:)
    character(len=128)        :: cbuf
 
-   type,extends(rhs_driver), public :: type_fabm0d !< FABM0d driver class (extends rhs_driver)
-       type(type_model),pointer       :: model
-       real(rk),dimension(1:1,1:1,1:1) :: temp,salt,par,dens,current_depth
-       real(rk),dimension(1:1,1:1)     :: wind_sf,taub,par_sf
-       real(rk)                        :: decimal_yearday
+   type,extends(type_rhs_driver), public :: type_fabm0d !< FABM0d driver class (extends type_rhs_driver)
+       type(type_model),pointer          :: model
+       real(rk),dimension(1:1,1:1,1:1)   :: temp,salt,par,dens,current_depth
+       real(rk),dimension(1:1,1:1)       :: wind_sf,taub,par_sf
+       real(rk)                          :: decimal_yearday
    contains
        procedure :: get_rhs
    end type type_fabm0d
@@ -376,34 +376,34 @@
    end subroutine update_depth
 
 
-subroutine get_rhs(rhsd,rhs)
+subroutine get_rhs(rhs_driver,rhs)
 use fabm
 use fabm_types
 implicit none
 
-class(type_fabm0d)      ,intent(inout)            :: rhsd
+class(type_fabm0d)      ,intent(inout)            :: rhs_driver
 real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 integer :: n
 
 rhs=0.0_rk
 
    ! Shortcut to the number of pelagic state variables.
-   n = size(rhsd%model%info%state_variables)
+   n = size(rhs_driver%model%info%state_variables)
 
    ! Calculate temporal derivatives due to surface exchange.
    call update_depth(SURFACE)
-   call fabm_get_surface_exchange(rhsd%model,1,1,1,rhs(1,1,1,1:n))
+   call fabm_get_surface_exchange(rhs_driver%model,1,1,1,rhs(1,1,1,1:n))
 
    ! Calculate temporal derivatives due to benthic processes.
    call update_depth(BOTTOM)
-   call fabm_do_benthos(rhsd%model,1,1,1,rhs(1,1,1,1:n),rhs(1,1,1,n+1:))
+   call fabm_do_benthos(rhs_driver%model,1,1,1,rhs(1,1,1,1:n),rhs(1,1,1,n+1:))
 
    ! For pelagic variables: surface and bottom flux (rate per surface area) to concentration (rate per volume)
    rhs(1,1,1,1:n) = rhs(1,1,1,1:n)/column_depth
 
    ! Add change in pelagic variables.
    call update_depth(CENTER)
-   call fabm_do(rhsd%model,1,1,1,rhs(1,1,1,:))
+   call fabm_do(rhs_driver%model,1,1,1,rhs(1,1,1,:))
 
 end subroutine get_rhs
 

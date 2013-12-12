@@ -29,7 +29,7 @@ public init_gotm_mossco_fabm_output
 public do_gotm_mossco_fabm_output
 public set_env_gotm_fabm
 
-type,extends(rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends rhs_driver)
+type,extends(type_rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends type_rhs_driver)
    type(type_model),pointer      :: model
 contains
    procedure :: get_rhs
@@ -545,22 +545,22 @@ type(type_gotm_fabm),public :: gotmfabm
 
 
    !> provide right-hand sides for MOSSCO's solver library
-   subroutine get_rhs(rhsd,rhs)
+   subroutine get_rhs(rhs_driver,rhs)
    use fabm
    use fabm_types
    implicit none
 
-   class(type_gotm_fabm),intent(inout) :: rhsd
+   class(type_gotm_fabm),intent(inout)               :: rhs_driver
    real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
    integer :: i,k,n
 
    n = size(gotmfabm%model%info%state_variables)
 
    do i=1,size(gotmfabm%model%info%state_variables)
-      call fabm_link_bulk_state_data(gotmfabm%model,i,rhsd%conc(:,:,:,i))
+      call fabm_link_bulk_state_data(gotmfabm%model,i,rhs_driver%conc(:,:,:,i))
    end do
    do i=1,size(gotmfabm%model%info%state_variables_ben)
-      call fabm_link_bottom_state_data(gotmfabm%model,i,rhsd%conc(:,:,1,n+i))
+      call fabm_link_bottom_state_data(gotmfabm%model,i,rhs_driver%conc(:,:,1,n+i))
    end do
 
    rhs = _ZERO_

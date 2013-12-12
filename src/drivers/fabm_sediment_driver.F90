@@ -16,7 +16,7 @@ module fabm_sediment_driver
 
 use fabm
 use fabm_standard_variables, only: type_bulk_standard_variable
-use solver_library, only: rhs_driver
+use solver_library, only: type_rhs_driver
 
 implicit none
 private
@@ -29,7 +29,7 @@ type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk) :: dzmin
 end type fabm_sed_grid
 
-type,extends(rhs_driver), public :: type_sed !< sediment driver class (extends rhs_driver)
+type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (extends type_rhs_driver)
    type(fabm_sed_grid)          :: grid
    type(type_model),pointer     :: model
    real(rk)                     :: bioturbation,diffusivity
@@ -214,63 +214,63 @@ end function
 !! dissolved properties use a concentration boundary condition. Diffusivities
 !! are calculated here depending on temperature (first index in bdys vector)
 
-subroutine get_rhs(rhsd,rhs)
+subroutine get_rhs(rhs_driver,rhs)
 use fabm
 use fabm_types
 implicit none
 
-class(type_sed)      ,intent(inout)          :: rhsd
+class(type_sed)      ,intent(inout)          :: rhs_driver
 real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
-real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum)   :: conc_insitu,f_T
-real(rk),dimension(1:rhsd%inum,1:rhsd%jnum,1:rhsd%knum+1) :: intFLux
+real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: conc_insitu,f_T
+real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum+1) :: intFLux
 real(rk) :: I_0
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
 ! get sediment surface light I_0 as boundary condition, here constant:
 I_0 = 1.0 ! W/m2
-do k=1,rhsd%knum
-   temp3d(:,:,k) = rhsd%bdys(:,:,1)
-   par(:,:,k) = I_0 * exp(-sum(rhsd%grid%dzc(:,:,1:k))/rhsd%k_par)
+do k=1,rhs_driver%knum
+   temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
+   par(:,:,k) = I_0 * exp(-sum(rhs_driver%grid%dzc(:,:,1:k))/rhs_driver%k_par)
 end do
 
 !   link state variables
-do n=1,size(rhsd%model%info%state_variables)
-   call fabm_link_bulk_state_data(rhsd%model,n,rhsd%conc(:,:,:,n))
+do n=1,size(rhs_driver%model%info%state_variables)
+   call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(:,:,:,n))
 end do
 
 !   link environment forcing
-call fabm_link_bulk_data(rhsd%model,varname_temp,temp3d)
-call fabm_link_bulk_data(rhsd%model,varname_par,par)
-call fabm_link_bulk_data(rhsd%model,varname_porosity,porosity)
+call fabm_link_bulk_data(rhs_driver%model,varname_temp,temp3d)
+call fabm_link_bulk_data(rhs_driver%model,varname_par,par)
+call fabm_link_bulk_data(rhs_driver%model,varname_porosity,porosity)
 
 ! calculate diffusivities (temperature)
 f_T = _ONE_*exp(-4500.d0*(1.d0/(temp3d+273.d0) - (1.d0/288.d0)))
-do n=1,size(rhsd%model%info%state_variables)
-   if (rhsd%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
+do n=1,size(rhs_driver%model%info%state_variables)
+   if (rhs_driver%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = 1
-      diff = rhsd%bioturbation * f_T / 86400.0_rk / 10000_rk * (ones3d-intf_porosity)
-      conc_insitu = rhsd%conc(:,:,:,n)*porosity/(ones3d-porosity)
-      call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
+      diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * (ones3d-intf_porosity)
+      conc_insitu = rhs_driver%conc(:,:,:,n)*porosity/(ones3d-porosity)
+      call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), zeros2d, rhs_driver%fluxes(:,:,n), zeros2d, &
               bcup, bcdown, diff, ones3d-porosity, intFlux, transport(:,:,:,n))
       transport(:,:,:,n) = transport(:,:,:,n)*(ones3d-porosity)/porosity
    else
       bcup = 2
-      diff = (rhsd%diffusivity + temp3d * 0.035d0) * intf_porosity / 86400.0_rk / 10000_rk
-      conc_insitu = rhsd%conc(:,:,:,n)
-      call diff3d(rhsd%grid,conc_insitu,rhsd%bdys(:,:,n+1), zeros2d, rhsd%fluxes(:,:,n), zeros2d, &
+      diff = (rhs_driver%diffusivity + temp3d * 0.035d0) * intf_porosity / 86400.0_rk / 10000_rk
+      conc_insitu = rhs_driver%conc(:,:,:,n)
+      call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), zeros2d, rhs_driver%fluxes(:,:,n), zeros2d, &
               bcup, bcdown, diff, porosity, intFlux, transport(:,:,:,n))
       ! set fluxes for output
-      rhsd%fluxes(:,:,n) = intFlux(:,:,1)
+      rhs_driver%fluxes(:,:,n) = intFlux(:,:,1)
    end if
 end do
 
 rhs=0.0_rk
-do k=1,rhsd%knum
-   do j=1,rhsd%jnum
-      do i=1,rhsd%inum
-         call fabm_do(rhsd%model,i,j,k,rhs(i,j,k,:))
+do k=1,rhs_driver%knum
+   do j=1,rhs_driver%jnum
+      do i=1,rhs_driver%inum
+         call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
       end do
    end do
 end do

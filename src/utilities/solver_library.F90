@@ -19,18 +19,17 @@
 !! (tendencies). Each driver has to inherit the base driver class
 !! called rhs_driver in this module.
 
-#define _RK4_ 1
-#define _ADAPTIVE_EULER_ 2
-#define _RK4_38_ 3
-
 module solver_library
 
 implicit none
 private
 
 integer,parameter :: rk=selected_real_kind(13) !< real kind
+integer,parameter :: RUNGE_KUTTA_4=1
+integer,parameter :: ADAPTIVE_EULER=2
+integer,parameter :: RUNGE_KUTTA_4_38=3
 
-type, public :: rhs_driver !< base driver class
+type, public :: type_rhs_driver !< base driver class
    integer :: inum,jnum,knum
    integer :: nvar
    real(selected_real_kind(13)),dimension(:,:,:,:),pointer :: conc
@@ -47,9 +46,9 @@ contains
 !! each driver instance inherits by default a get_rhs subroutine,
 !! which returns zeros for the tendencies
 
-subroutine base_get_rhs(rhsd,rhs)
-   integer, parameter                   :: rk=selected_real_kind(13)
-   class(rhs_driver), intent(inout)     :: rhsd
+subroutine base_get_rhs(rhs_driver,rhs)
+   integer, parameter                                 :: rk=selected_real_kind(13)
+   class(type_rhs_driver), intent(inout)              :: rhs_driver
    real(rk), intent(inout),dimension(:,:,:,:),pointer :: rhs
    nullify(rhs)
 end subroutine base_get_rhs
@@ -67,18 +66,18 @@ end subroutine base_get_rhs
 !! 2 - Adaptive Euler
 !! 3 - Runge-Kutta 4th-order using 3/8 rule
 
-subroutine ode_solver(driver,dt,method)
+subroutine ode_solver(rhs_driver,dt,method)
 implicit none
 
-integer            ,intent(in)   :: method
-integer,parameter :: rk = selected_real_kind(13)
-real(rk)           ,intent(in)   :: dt
-class(rhs_driver)  ,intent(inout):: driver
+integer            ,intent(in)        :: method
+integer,parameter                     :: rk = selected_real_kind(13)
+real(rk)           ,intent(in)        :: dt
+class(type_rhs_driver)  ,intent(inout):: rhs_driver
 
 logical  :: first
 real(rk),dimension(:,:,:,:),pointer :: rhs
-real(rk),dimension(1:1,1:1,1:driver%knum,1:driver%nvar),target :: rhs0,rhs1,rhs2,rhs3
-real(rk),target :: c1(1:1,1:1,1:driver%knum,1:driver%nvar)
+real(rk),dimension(1:1,1:1,1:rhs_driver%knum,1:rhs_driver%nvar),target :: rhs0,rhs1,rhs2,rhs3
+real(rk),target :: c1(1:1,1:1,1:rhs_driver%knum,1:rhs_driver%nvar)
 real(rk),dimension(:,:,:,:),pointer :: c_pointer
 integer  :: i,ci
 real(rk) :: dt_red,dt_int,relative_change
@@ -86,68 +85,68 @@ real(rk),parameter :: third=1.0_rk/3.0_rk
 
 
 select case (method)
-case(_ADAPTIVE_EULER_)
+case(ADAPTIVE_EULER)
    rhs => rhs0
    dt_int = 0.0_rk
    dt_red = dt
    do while (dt_int .lt. dt)
-      c_pointer => driver%conc
-      call driver%get_rhs(rhs)
-      c1 = driver%conc + dt_red*rhs
+      c_pointer => rhs_driver%conc
+      call rhs_driver%get_rhs(rhs)
+      c1 = rhs_driver%conc + dt_red*rhs
 
       relative_change = minval((c1-c_pointer)/c_pointer)
       if (relative_change < -0.9_rk) then ! 90% tolerance in reduction 
          dt_red = dt_red/4
       else
          c_pointer = c1
-         driver%conc => c_pointer
+         rhs_driver%conc => c_pointer
          dt_int = dt_int + dt_red
       end if
    end do
 
-case(_RK4_)
+case(RUNGE_KUTTA_4)
    ! Runge-Kutta-4th_order
-   c_pointer => driver%conc
+   c_pointer => rhs_driver%conc
    rhs => rhs0
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c1 = c_pointer + 0.5_rk*dt*rhs
 
-   driver%conc => c1
+   rhs_driver%conc => c1
    rhs => rhs1
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c1 = c_pointer + 0.5_rk*dt*rhs
 
    rhs => rhs2
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c1 = c_pointer + dt*rhs
 
    rhs => rhs3
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c_pointer = c_pointer + dt*third*(0.5_rk*rhs0 + rhs1 + rhs2 + 0.5_rk*rhs3)
 
-   driver%conc => c_pointer
+   rhs_driver%conc => c_pointer
    nullify(c_pointer)
-case(_RK4_38_)
+case(RUNGE_KUTTA_4_38)
    ! Runge-Kutta-4th_order using 3/8-rule from Kutta (1901)
-   c_pointer => driver%conc
+   c_pointer => rhs_driver%conc
    rhs => rhs0
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c1 = c_pointer + third*dt*rhs0
 
-   driver%conc => c1
+   rhs_driver%conc => c1
    rhs => rhs1
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c1 = c_pointer + dt*(rhs1 - third*rhs0)
 
    rhs => rhs2
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c1 = c_pointer + dt* (rhs0 - rhs1 + rhs2)
 
    rhs => rhs3
-   call driver%get_rhs(rhs)
+   call rhs_driver%get_rhs(rhs)
    c_pointer = c_pointer + dt*1.0_rk/8.0_rk*(rhs0 + 3.0_rk*rhs1 + 3.0_rk*rhs2 + rhs3)
 
-   driver%conc => c_pointer
+   rhs_driver%conc => c_pointer
    nullify(c_pointer)
 end select
 
