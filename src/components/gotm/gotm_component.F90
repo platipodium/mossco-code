@@ -232,7 +232,7 @@ module gotm_component
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    do k=1,size(exportField)
+    do k=1,nexport
       exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -286,7 +286,7 @@ module gotm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 #endif
-    
+
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
   end subroutine Initialize
@@ -308,7 +308,7 @@ module gotm_component
     type(ESMF_Time)         :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: n,k
-    integer                 :: itemcount
+    integer                 :: itemcount,nvar
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     type(ESMF_Field)        :: Field
     character(len=ESMF_MAXSTR) :: string,varname
@@ -324,16 +324,17 @@ module gotm_component
 #ifdef _GOTM_MOSSCO_FABM_
     ! get upward fluxes for FABM's state variables and put into bfl arrays of
     ! diffusion routine (so far - later use integration by solver_library)
-    do n=1,size(gotmfabm%model%info%state_variables)
-      varname=trim(gotmfabm%model%info%state_variables(n)%long_name)//'_upward_flux'
+    do nvar=1,size(gotmfabm%model%info%state_variables)
+      varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
       call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
       if (itemcount==0) then
-        write(string,'(A)') trim(varname),' not found'
-        call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+#ifdef DEBUG
+        call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
+#endif
       else
         call ESMF_StateGet(importState,trim(varname),field,rc=rc)
         call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-        gotm_fabm_bottom_flux(1,1,n) = ptr_f2(1,1)
+        gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
       end if
     end do
 #endif
@@ -373,7 +374,7 @@ module gotm_component
     real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
     type(ESMF_Field)     :: field
 
-	  do k=1,size(export_variables)
+    do k=1,size(export_variables)
       call ESMF_StateGet(exportState,export_variables(k)%standard_name, field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -381,7 +382,7 @@ module gotm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
-	  do k=1,size(import_variables)
+    do k=1,size(import_variables)
       call ESMF_StateGet(importState,import_variables(k)%standard_name, field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -389,7 +390,7 @@ module gotm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
-	  if (allocated(variables)) deallocate(variables)
+    if (allocated(variables)) deallocate(variables)
 
     call clean_up()
 
