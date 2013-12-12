@@ -67,7 +67,7 @@ type(type_gotm_fabm),public :: gotmfabm
 
    ! Arrays for work, vertical movement, and cross-boundary fluxes
    REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_,:) :: ws
-   REALTYPE,allocatable,dimension(:,:,:)                   :: sfl,bfl,total
+   REALTYPE,public,allocatable,dimension(:,:,:)            :: sfl,bfl,total
    REALTYPE,allocatable _ATTR_DIMENSIONS_1_                :: local
    REALTYPE,allocatable,dimension(:)                       :: Qsour,Lsour,DefaultRelaxTau,curh,curnuh
    logical,allocatable                                     :: cc_transport(:)

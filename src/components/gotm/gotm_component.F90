@@ -297,6 +297,7 @@ module gotm_component
     use meanflow, only : gotm_salinity => S
     use meanflow, only : gotm_heights => h 
     use meanflow, only : gotm_radiation => rad
+    use gotm_mossco_fabm, only: gotm_fabm_bottom_flux => bfl
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -307,6 +308,10 @@ module gotm_component
     type(ESMF_Time)         :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: n,k
+    integer                 :: itemcount
+    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
+    type(ESMF_Field)        :: Field
+    character(len=ESMF_MAXSTR) :: string,varname
 
     ! get local clock with GOTM timesteop, get global clock with coupling timestep, set n to global/local, call GOTM, advance local clock n steps., 
     call ESMF_TimeSet(clockTime)
@@ -314,6 +319,23 @@ module gotm_component
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
 #ifdef DEBUG
     call ESMF_LogWrite("GOTM run at "//timestring//")", ESMF_LOGMSG_INFO)
+#endif
+
+#ifdef _GOTM_MOSSCO_FABM_
+    ! get upward fluxes for FABM's state variables and put into bfl arrays of
+    ! diffusion routine (so far - later use integration by solver_library)
+    do n=1,size(gotmfabm%model%info%state_variables)
+      varname=trim(gotmfabm%model%info%state_variables(n)%long_name)//'_upward_flux'
+      call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
+      if (itemcount==0) then
+        write(string,'(A)') trim(varname),' not found'
+        call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+      else
+        call ESMF_StateGet(importState,trim(varname),field,rc=rc)
+        call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
+        gotm_fabm_bottom_flux(1,1,n) = ptr_f2(1,1)
+      end if
+    end do
 #endif
 
     call update_time(n)
