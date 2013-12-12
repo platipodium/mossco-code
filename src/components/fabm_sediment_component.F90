@@ -1,4 +1,4 @@
-!> @brief ESMF/FABM sediment driver component
+!> @brief FABM sediment ESMF component
 !
 !> The ESMF/FABM sediment driver component module provides infrastructure for the
 !! MOSSCO sediment component.
@@ -319,39 +319,54 @@ module fabm_sediment_component
     real(rk),dimension(_IRANGE_,_JRANGE_),target :: vs,pom
 
     call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     if (itemcount==0) then
       write(string,'(A)') "No temperature information found, using default value 10 deg_C"
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
     else 
       call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       write(string,'(A)') "Water temperature information found"
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
       ptr_f2 => bdys(:,:,1)
       call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f2 = ptr_f3(:,:,1)   ! get lowest vertical index for near-bed temperature
     endif
 
     do i=1,sed%nvar
       varname=trim(sed%model%info%state_variables(i)%long_name)
-      call ESMF_StateGet(importState,varname,array,rc=rc)
-      if(rc /= ESMF_SUCCESS) then
-        !call ESMF_LogWrite("variable not found",ESMF_LOGMSG_INFO)
+      call ESMF_StateGet(importState,itemSearch=trim(varname),itemCount=itemcount,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      if (itemcount==0) then
+        write(string,'(A)') "Variable '"//trim(varname)//"' not found in State. Skipping."
+        call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
       else
+        call ESMF_StateGet(importState,trim(varname),array,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
         if (sed%model%info%state_variables(n)%properties%get_logical( &
             'particulate',default=.false.)) then
           call ESMF_StateGet(importState,trim(varname)//'_sinking_velocity',vs_array,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
           ptr_f2 => pom
           ptr_vs => vs
           call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
           call ESMF_ArrayGet(vs_array,farrayPtr=ptr_vs,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
           fluxes(_IRANGE_,_JRANGE_,i) = pom*vs
         else
           ptr_f2 => bdys(_IRANGE_,_JRANGE_,i+1)
           call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
         end if
       endif
     end do

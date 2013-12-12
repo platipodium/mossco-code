@@ -15,7 +15,7 @@ module esmf_toplevel_component
   public SetServices
 
   type(ESMF_GridComp),save  :: fabmComp,constantComp, gotmComp
-  type(ESMF_State),save     :: fabmExp, fabmImp
+  type(ESMF_State),save     :: fabmExp, fabmImp, gotmExp, gotmImp
 
   contains
 
@@ -47,17 +47,43 @@ module esmf_toplevel_component
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
 
     ! Create component, call setservices, and create states
+    gotmComp = ESMF_GridCompCreate(name="gotmComp", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetServices(gotmComp,gotm_SetServices, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     fabmComp = ESMF_GridCompCreate(name="fabmComp", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(fabmComp,fabmsed_SetServices, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     constantComp = ESMF_GridCompCreate(name="constantComp",rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
+    gotmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="gotmImp")
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    gotmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="gotmExp")
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     fabmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmImp")
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     fabmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmExp")
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompInitialize(constantComp, importState=fabmExp, exportState=fabmImp,clock=parentClock,rc=rc)
+    call ESMF_GridCompInitialize(constantComp, importState=gotmExp, exportState=gotmImp,clock=parentClock,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompInitialize(gotmComp, importState=gotmImp, exportState=fabmImp, clock=parentClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+ ! water_temperature, 
+!'hzg_omexdia_p fast detritus C' not found in State. Skipping.
+!'hzg_omexdia_p slow detritus C' not found in State. Skipping.
+!'hzg_omexdia_p detritus-P' not found in State. Skipping.
+!'hzg_omexdia_p dissolved phosphate' not found in State. Skipping.
+!'hzg_omexdia_p dissolved nitrate' not found in State. Skipping.
+!'hzg_omexdia_p dissolved ammonium' not found in State. Skipping.
+!'hzg_omexdia_p dissolved oxygen' not found in State. Skipping.
+!'hzg_omexdia_p dissolved reduced substances' not found in Sta
     call ESMF_GridCompInitialize(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
-    call ESMF_GridCompInitialize(gotmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
 
     ! same boundary conditions as for the standalone omexdia_p example:
     bdys(1,1,1:9) = 0.0_rk
@@ -91,7 +117,7 @@ module esmf_toplevel_component
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
-      call ESMF_GridCompRun(gotmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(gotmComp, importState=gotmExp, exportState=fabmImp, clock=parentClock, rc=rc)
       call ESMF_GridCompRun(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
 
     enddo 
@@ -114,14 +140,12 @@ module esmf_toplevel_component
     call ESMF_GridCompDestroy(gotmComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompFinalize(fabmComp, importState=fabmImp, exportState=fabmExp, &
-      clock=parentClock, rc=rc)
+    call ESMF_GridCompFinalize(fabmComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(fabmComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompFinalize(constantComp, importState=fabmExp, exportState=fabmImp, &
-      clock=parentClock, rc=rc)
+    call ESMF_GridCompFinalize(constantComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(constantComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
