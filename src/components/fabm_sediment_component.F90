@@ -350,9 +350,8 @@ module fabm_sediment_component
 
         if (sed%model%info%state_variables(n)%properties%get_logical( &
             'particulate',default=.false.)) then
-          call ESMF_StateGet(importState,trim(varname)//'_sinking_velocity',vs_array,rc=rc)
+          call ESMF_StateGet(importState,trim(varname)//'_z_velocity',vs_array,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
           ptr_f2 => pom
           ptr_vs => vs
           call ESMF_ArrayGet(array,farrayPtr=ptr_f2,rc=rc)
