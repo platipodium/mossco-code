@@ -310,6 +310,7 @@ module gotm_component
     integer(ESMF_KIND_I8)   :: n,k
     integer                 :: itemcount,nvar
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     type(ESMF_Field)        :: Field
     character(len=ESMF_MAXSTR) :: string,varname
 
@@ -360,7 +361,20 @@ module gotm_component
       call update_export_states(fabm_export_states)
 #endif
     endif
-    
+
+#ifdef _GOTM_MOSSCO_FABM_
+    ! update Field data:
+    do nvar=1,size(fabm_export_states)
+      call ESMF_StateGet(exportState, &
+             trim(fabm_export_states(nvar)%standard_name),field,rc=rc)
+      call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+      ptr_f3 = fabm_export_states(nvar)%conc
+      call ESMF_StateGet(exportState, &
+             trim(fabm_export_states(nvar)%standard_name)//'_z_velocity',field,rc=rc)
+      call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+      ptr_f3 = fabm_export_states(nvar)%ws
+    end do
+#endif
 
   end subroutine Run
 

@@ -254,6 +254,7 @@ module esmf_toplevel_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
     type(ESMF_Field)      :: field
+    real(ESMF_KIND_R8),parameter    :: sinking_factor=0.3d0 !30% of Det sinks into sediment
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
@@ -276,26 +277,24 @@ module esmf_toplevel_component
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      !write(0,*) 'got upward fluxes'
-      !write(0,*) 'val1,val2',associated(val1_f2),associated(val2_f2)
       ptr_f2 = val1_f2 + val2_f2
       !   DetN flux:
       call ESMF_StateGet(fabmImp,'gotm_npzd detritus',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val1_f3,rc=rc)
       call ESMF_StateGet(fabmImp,'gotm_npzd detritus_z_velocity',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f3,rc=rc)
-      call ESMF_StateGet(gotmExp,'gotm_npzd nutrients_upward_flux',field,rc=rc)
+      call ESMF_StateGet(gotmExp,'gotm_npzd detritus_upward_flux',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
-      ptr_f2 = val1_f3(:,:,1) * val2_f3(:,:,1)
+      ptr_f2 = sinking_factor * val1_f3(:,:,1) * val2_f3(:,:,1)
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p fast detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = 106.0d0/16.0d0 * 0.5d0 * val1_f3 * val2_f3
+      ptr_f3 = sinking_factor * 106.0d0/16.0d0 * 0.5d0 * val1_f3 * val2_f3
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p slow detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = 106.0d0/16.0d0 * 0.5d0 * val1_f3 * val2_f3
+      ptr_f3 = sinking_factor * 106.0d0/16.0d0 * 0.5d0 * val1_f3 * val2_f3
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p detritus-P',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = 1.0d0/16.0d0 * val1_f3 * val2_f3
+      ptr_f3 = sinking_factor * 1.0d0/16.0d0 * val1_f3 * val2_f3
       ! DIM concentrations:
       !  oxygen is coming from constant component, ODU is set to 0.0 in Initialize
       call ESMF_StateGet(fabmImp,'gotm_npzd nutrients',field,rc=rc)
