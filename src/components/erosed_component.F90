@@ -2,7 +2,7 @@
 module erosed_component
 
   use esmf
-  use mossco_erosed, only : initerosed, erosed, getfrac_dummy 
+  use mossco_erosed, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
 
   implicit none
@@ -17,9 +17,9 @@ module erosed_component
   integer, parameter :: SEDTYP_COHESIVE              = 2
 
   !! @todo hn: read CF documnetation for correct name of this
-  !size_classes_of_upward_flux_of_pim_at_bottom 
- 
-  ! Dimensions (x,y,depth layer, fraction index) 
+  !size_classes_of_upward_flux_of_pim_at_bottom
+
+  ! Dimensions (x,y,depth layer, fraction index)
   real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
   real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
   type(ESMF_Field)            :: upward_flux_Field, downward_flux_Field
@@ -67,13 +67,13 @@ module erosed_component
     logical                                     ::lexist, anymud
 
 
-  
+
 contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
@@ -88,7 +88,7 @@ contains
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
- 
+
     implicit none
 
     type(ESMF_GridComp) :: gridComp
@@ -100,7 +100,7 @@ contains
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_ArraySpec) :: arrayspec
     type(ESMF_Array)     :: array
-    real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord 
+    real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
 
     character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
@@ -110,27 +110,80 @@ contains
     character(len=256) :: din_variable='',pon_variable=''
     integer(ESMF_KIND_I8) :: nlev
 
-    call ESMF_LogWrite('Initializing Delft erosed component',ESMF_LOGMSG_INFO)
+    integer                    :: UnitNr, istat
+    logical                    :: opnd, exst
 
-
-
-    g       = 9.81_fp   ! gravitational acceleration [m/s2]
-    rhow    = 1000.0_fp ! density of water [kg/m3]
-    !
-    !! @todo   USER INPUT  H.N.=> ToDo: namelist
-    !
-    nmlb    = 1                 ! first cell number
-    nmub    = 1                 ! last cell number
-    morfac  = 1.0               ! morphological scale factor [-]
+    namelist /globaldata/ g, rhow
+    namelist /benthic/   nmlb   ! = 1                 ! first cell number
+    namelist /benthic/   nmub   ! = 1                 ! last cell number
+    namelist /benthic/   morfac ! = 1.0               ! morphological scale factor [-]
     !
     ! -----------------------------------------------------------
     !
-    nfrac       = 2             ! number of sediment fractions
-    iunderlyr   = 2             ! Underlayer mechanism (default = 1)
-    flufflyr    = 1             ! switch for fluff layer concept
+    namelist /benthic/   nfrac      ! = 2             ! number of sediment fractions
+    namelist /benthic/   iunderlyr  ! = 2             ! Underlayer mechanism (default = 1)
+    namelist /benthic/   flufflyr   ! = 1             ! switch for fluff layer concept
                                 !  0: no fluff layer (default)
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
+
+
+    namelist /sedparams/ sedtyp(1)   != SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+    namelist /sedparams/ sedtyp(2)   != SEDTYP_COHESIVE               ! cohesive sediment (mud)
+    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
+    namelist /sedparams/ rhosol      != 2650.0_fp                     ! specific density [kg/m3]
+    namelist /sedparams/ sedd50      != 0.0001_fp                     ! 50% diameter sediment fraction [m]
+    namelist /sedparams/ sedd90      != 0.0002_fp                     ! 90% diameter sediment fraction [m]
+
+    namelist /sedparams/ frac        != 0.5_fp
+    namelist /sedparams/anymud       != .true.
+
+    call ESMF_LogWrite('Initializing Delft erosed component',ESMF_LOGMSG_INFO)
+
+
+    inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
+    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+
+if (exst.and.(.not.opnd)) then
+ UnitNr = 567
+
+ open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+
+ read (UnitNr, nml=globaldata, iostat = istat)
+
+ close (UnitNr)
+end if
+!    g       = 9.81_fp   ! gravitational acceleration [m/s2]
+!    rhow    = 1000.0_fp ! density of water [kg/m3]
+    !
+
+    !
+    inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
+    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+
+if (exst.and.(.not.opnd)) then
+ UnitNr = 568
+
+ open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+
+ read (UnitNr, nml=benthic, iostat = istat)
+
+ close (UnitNr)
+end if
+!    nmlb    = 1                 ! first cell number
+!    nmub    = 1                 ! last cell number
+!    morfac  = 1.0               ! morphological scale factor [-]
+!    !
+!    ! -----------------------------------------------------------
+!    !
+!    nfrac       = 2             ! number of sediment fractions
+!    iunderlyr   = 2             ! Underlayer mechanism (default = 1)
+!    flufflyr    = 1             ! switch for fluff layer concept
+!                                !  0: no fluff layer (default)
+!                                !  1: all mud to fluff layer, burial to bed layers
+!                                !  2: part mud to fluff layer, other part to bed layers (no burial)
     nlev=nmub-nmlb+1
 
 
@@ -163,21 +216,33 @@ contains
     allocate (mfluff(nfrac,nmlb:nmub))
     allocate (mudfrac (nmlb:nmub))
 
+   inquire ( file = 'sedparams.nml', exist=exst , opened =opnd, Number = UnitNr )
+    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
+if (exst.and.(.not.opnd)) then
+ UnitNr = 569
+
+ open (unit = UnitNr, file = 'sedparams.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+
+ read (UnitNr, nml=sedparams, iostat = istat)
+
+ close (UnitNr)
+end if
     ! ================================================================================
     !   USER INPUT
     ! ================================================================================
     !
     !   Sediment properties (see also 'sedparams.inc')
     !
-    sedtyp(1)   = SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
-    sedtyp(2)   = SEDTYP_COHESIVE               ! cohesive sediment (mud)
-    cdryb       = 1650.0_fp                     ! dry bed density [kg/m3]
-    rhosol      = 2650.0_fp                     ! specific density [kg/m3]
-    sedd50      = 0.0001_fp                     ! 50% diameter sediment fraction [m]
-    sedd90      = 0.0002_fp                     ! 90% diameter sediment fraction [m]
-
-    frac = 0.5_fp
+!    sedtyp(1)   = SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+!    sedtyp(2)   = SEDTYP_COHESIVE               ! cohesive sediment (mud)
+!    cdryb       = 1650.0_fp                     ! dry bed density [kg/m3]
+!    rhosol      = 2650.0_fp                     ! specific density [kg/m3]
+!    sedd50      = 0.0001_fp                     ! 50% diameter sediment fraction [m]
+!    sedd90      = 0.0002_fp                     ! 90% diameter sediment fraction [m]
+!
+!    frac = 0.5_fp
     !
     !   Initial bed composition
     !
@@ -215,7 +280,7 @@ contains
         'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
     write (*, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
         'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
-  
+
 
     !> create grid
     distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,nmlb,1/), maxIndex=(/1,1,nmub,nfrac/), &
@@ -228,15 +293,18 @@ contains
    !size_classes_of_upward_flux_of_pim_at_bottom(1,1,nmlb:nmub,1:nfrac) => sour(:,:)
     array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_upward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     upward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_upward_flux_of_pim_at_bottom", rc=rc)
+    array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_downward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+    downward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_downward_flux_of_pim_at_bottom", rc=rc)
+
     !array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     !pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
     !array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     !pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", rc=rc)
     !> set export state
     call ESMF_StateAdd(exportState,(/upward_flux_field/),rc=rc)
-
+    call ESMF_StateAdd(exportState,(/downward_flux_field/),rc=rc)
     call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
-    
+
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -366,5 +434,5 @@ contains
     !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
     !             & tcrdep,  tcrero, tcrfluff)
   end subroutine Finalize
-  
+
 end module erosed_component

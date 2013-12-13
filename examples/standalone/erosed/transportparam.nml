@@ -1,0 +1,8 @@
+&transportparam
+chezy   = 50.0_fp 
+h1      = 3.0_fp
+umod    = 0.0_fp
+ws      = 0.001_fp
+r1(1,:) = 2.0e-1_fp
+r1(2,:) = 2.0e-1_fp
+/

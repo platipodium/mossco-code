@@ -82,11 +82,38 @@ program example
     real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
     logical                                     ::lexist, anymud
+    integer                    :: UnitNr, istat
+    logical                    :: opnd, exst
+
+    namelist /globaldata/ g, rhow
+    namelist /benthic/   nmlb   ! = 1                 ! first cell number
+    namelist /benthic/   nmub   ! = 1                 ! last cell number
+    namelist /benthic/   morfac ! = 1.0               ! morphological scale factor [-]
+    !
+    ! -----------------------------------------------------------
+    !
+    namelist /benthic/   nfrac      ! = 2             ! number of sediment fractions
+    namelist /benthic/   iunderlyr  ! = 2             ! Underlayer mechanism (default = 1)
+    namelist /benthic/   flufflyr   ! = 1             ! switch for fluff layer concept
+                                !  0: no fluff layer (default)
+                                !  1: all mud to fluff layer, burial to bed layers
+                                !  2: part mud to fluff layer, other part to bed layers (no burial)
+
+
+    namelist /sedparams/ sedtyp(1)   != SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+    namelist /sedparams/ sedtyp(2)   != SEDTYP_COHESIVE               ! cohesive sediment (mud)
+    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
+    namelist /sedparams/ rhosol      != 2650.0_fp                     ! specific density [kg/m3]
+    namelist /sedparams/ sedd50      != 0.0001_fp                     ! 50% diameter sediment fraction [m]
+    namelist /sedparams/ sedd90      != 0.0002_fp                     ! 90% diameter sediment fraction [m]
+
+    namelist /sedparams/ frac        != 0.5_fp
+    namelist /sedparams/anymud       != .true.
 
 
 !HN. ToDo: Namelist for input
 
-!namelist /transportparam/   chezy, h1, umod, ws, r1(1,:), r1(2,:), dp
+namelist /transportparam/   chezy, h1, umod, ws, r1(1,:), r1(2,:)
 
 !namelist /layerparam/nfrac, iunderlyr,neulyr,nlalyr,theulyr,thlalyr,updbaselyr, &
 !                   maxwarn, minmass,idiffusion,ndiff,flufflyr
@@ -97,37 +124,66 @@ program example
 !namelist /userparam/ g, rhow, nmlb,nmub,tstart,tend, dt, morfac
 
 
+    inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
+    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+
+if (exst.and.(.not.opnd)) then
+ UnitNr = 567
+
+ open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+
+ read (UnitNr, nml=globaldata, iostat = istat)
+
+ close (UnitNr)
+end if
 !
 !! executable statements -------------------------------------------------------
 !
     !   Constants
     !
-    g       = 9.81_fp   ! gravitational acceleration [m/s2]
-    rhow    = 1000.0_fp ! density of water [kg/m3]
-    !
-    !
-    ! ================================================================================
-    !   USER INPUT  H.N.=> ToDo: namelist
-    ! ================================================================================
-    !
-    nmlb    = 1                 ! first cell number
-    nmub    = 1                 ! last cell number
-    tstart  = 0.0               ! start time of computation [s]
-    tend    = 50000.0            ! end time of computation [s]
-    dt      = 100.0             ! time step [s]
-    morfac  = 1.0               ! morphological scale factor [-]
-    nstep  = (tend-tstart)/dt;  ! number of time steps
+!    g       = 9.81_fp   ! gravitational acceleration [m/s2]
+!    rhow    = 1000.0_fp ! density of water [kg/m3]
+!    !
+!    !
+!    ! ================================================================================
+!    !   USER INPUT  H.N.=> ToDo: namelist
+!    ! ================================================================================
+!    !
+!    nmlb    = 1                 ! first cell number
+!    nmub    = 1                 ! last cell number
+!    tstart  = 0.0               ! start time of computation [s]
+!    tend    = 50000.0            ! end time of computation [s]
+!    dt      = 100.0             ! time step [s]
+!    morfac  = 1.0               ! morphological scale factor [-]
+!    nstep  = (tend-tstart)/dt;  ! number of time steps
     !
     ! -----------------------------------------------------------
     !
-    nfrac       = 2             ! number of sediment fractions
-    iunderlyr   = 2             ! Underlayer mechanism (default = 1)
-    flufflyr    = 1             ! switch for fluff layer concept
-                                !  0: no fluff layer (default)
+!    nfrac       = 2             ! number of sediment fractions
+!    iunderlyr   = 2             ! Underlayer mechanism (default = 1)
+!    flufflyr    = 1             ! switch for fluff layer concept
+!                                !  0: no fluff layer (default)
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
 
     ! ================================================================================
+
+
+        inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
+    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+
+if (exst.and.(.not.opnd)) then
+ UnitNr = 568
+
+ open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+
+ read (UnitNr, nml=benthic, iostat = istat)
+
+ close (UnitNr)
+end if
+
 
     Write (*, *) 'Initializing some sediment parameter ..'
 
@@ -162,6 +218,19 @@ program example
     allocate (mfluff(nfrac,nmlb:nmub))
     allocate (mudfrac (nmlb:nmub))
 
+   inquire ( file = 'sedparams.nml', exist=exst , opened =opnd, Number = UnitNr )
+    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+
+if (exst.and.(.not.opnd)) then
+ UnitNr = 569
+
+ open (unit = UnitNr, file = 'sedparams.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+
+ read (UnitNr, nml=sedparams, iostat = istat)
+
+ close (UnitNr)
+end if
 
     !
     ! ================================================================================
@@ -170,14 +239,14 @@ program example
     !
     !   Sediment properties (see also 'sedparams.inc')
     !
-    sedtyp(1)   = SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
-    sedtyp(2)   = SEDTYP_COHESIVE               ! cohesive sediment (mud)
-    cdryb       = 1650.0_fp                     ! dry bed density [kg/m3]
-    rhosol      = 2650.0_fp                     ! specific density [kg/m3]
-    sedd50      = 0.0001_fp                     ! 50% diameter sediment fraction [m]
-    sedd90      = 0.0002_fp                     ! 90% diameter sediment fraction [m]
-
-    frac = 0.5_fp
+!    sedtyp(1)   = SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+!    sedtyp(2)   = SEDTYP_COHESIVE               ! cohesive sediment (mud)
+!    cdryb       = 1650.0_fp                     ! dry bed density [kg/m3]
+!    rhosol      = 2650.0_fp                     ! specific density [kg/m3]
+!    sedd50      = 0.0001_fp                     ! 50% diameter sediment fraction [m]
+!    sedd90      = 0.0002_fp                     ! 90% diameter sediment fraction [m]
+!
+!    frac = 0.5_fp
     !
     !   Initial bed composition
     !
@@ -187,14 +256,30 @@ program example
         endif
     endif
     !
+
+
+       inquire ( file = 'transportparam.nml', exist=exst , opened =opnd, Number = UnitNr )
+    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+
+if (exst.and.(.not.opnd)) then
+ UnitNr = 570
+
+ open (unit = UnitNr, file = 'transportparam.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+
+ read (UnitNr, nml=transportparam, iostat = istat)
+
+ close (UnitNr)
+end if
+
     !   Initial flow conditions
     !
-    chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
-    h1      = 3.0_fp        ! water depth [m]
-    umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
-    ws      = 0.001_fp      ! Settling velocity [m/s]
-    r1(1,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
-    r1(2,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+!    chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
+!    h1      = 3.0_fp        ! water depth [m]
+!    umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
+!    ws      = 0.001_fp      ! Settling velocity [m/s]
+!    r1(1,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+!    r1(2,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
 
 
     do nm = nmlb, nmub
