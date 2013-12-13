@@ -205,8 +205,8 @@ module fabm_sediment_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
     do n=1,sed%nvar
-      write(string,*) trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux'
-      field = ESMF_FieldCreate(flux_grid,flux_array,name=trim(string), &
+      field = ESMF_FieldCreate(flux_grid,flux_array, &
+                         name=trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
@@ -330,8 +330,8 @@ module fabm_sediment_component
     real(rk),dimension(:,:,:),target :: bdys,fluxes
     type(type_sed)      :: sed
     type(ESMF_State)    :: importState
-    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2,ptr_vs
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: ptr_f3
+    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: ptr_f3,ptr_vs
     type(ESMF_Field)    :: field,vs_field
     type(ESMF_Array)    :: array,vs_array
     integer             :: i,rc,itemcount
@@ -382,16 +382,14 @@ module fabm_sediment_component
             'particulate',default=.false.)) then
           !write(0,*) 'try to get ',trim(varname)//'_z_velocity'
           call ESMF_StateGet(importState,trim(varname)//'_z_velocity',vs_field,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          ptr_f2 => pom
-          ptr_vs => vs
-          call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+          call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
           call ESMF_FieldGet(vs_field,farrayPtr=ptr_vs,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-          fluxes(_IRANGE_,_JRANGE_,i) = pom*vs
+          fluxes(_IRANGE_,_JRANGE_,i) = ptr_f3(:,:,1)*ptr_vs(:,:,1)
         else
           ptr_f2 => bdys(:,:,i+1)
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
