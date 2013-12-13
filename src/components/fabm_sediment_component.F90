@@ -89,13 +89,14 @@ module fabm_sediment_component
     type(ESMF_Array)     :: array
     integer              :: i
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
-    type(ESMF_Grid)      :: grid
-    type(ESMF_ArraySpec) :: arraySpec
+    type(ESMF_Grid)      :: state_grid,flux_grid
+    type(ESMF_ArraySpec) :: flux_array,state_array
 
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
     integer(ESMF_KIND_I4) :: itemcount,fieldcount
+    integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
   
     call ESMF_LogWrite('Initializing FABM sediment module',ESMF_LOGMSG_INFO)
      !! read namelist input for control of time, this should not be done like this,
@@ -165,15 +166,33 @@ module fabm_sediment_component
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+    call ESMF_ArraySpecSet(flux_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    flux_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/_INUM_,_JNUM_/), &
+      regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      name="sediment fluxes grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/_INUM_,_JNUM_,sed%grid%knum/), &
+      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      name="sediment states grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     ! put concentration array into export state
     ! it might be enough to do this once in initialize(?)
     do n=1,sed%nvar
-      array = ESMF_ArrayCreate(distgrid=distgrid_3d,farray=conc(:,:,:,i), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name=trim(sed%model%info%state_variables(n)%long_name), rc=rc)
+      field = ESMF_FieldCreate(state_grid,state_array, &
+                         name=trim(sed%model%info%state_variables(n)%long_name), &
+                         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
+      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
+                       totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      ptr_f3 => conc(:,:,:,n)
+      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
     do n=1,size(sed%model%info%diagnostic_variables)
@@ -187,12 +206,14 @@ module fabm_sediment_component
     end do
     do n=1,sed%nvar
       write(string,*) trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux'
-      array = ESMF_ArrayCreate(distgrid=distgrid_2d,farray=fluxes(:,:,n), &
-                   indexflag=ESMF_INDEX_GLOBAL, &
-                   name=trim(string), rc=rc)
+      field = ESMF_FieldCreate(flux_grid,flux_array,name=trim(string), &
+                         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
+      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
+                       totalLBound=lbnd2,totalUBound=ubnd2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      ptr_f2 = fluxes(:,:,n)
+      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
     !call ESMF_StatePrint(exportState)
