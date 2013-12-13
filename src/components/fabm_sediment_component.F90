@@ -234,6 +234,8 @@ module fabm_sediment_component
     type(ESMF_Grid)   :: grid
     type(ESMF_FieldBundle) :: fieldBundle
     type(ESMF_Field), allocatable, dimension(:) :: fieldlist
+    type(ESMF_Field)  :: field
+    real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     integer           :: fieldcount
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: name,string
@@ -302,6 +304,17 @@ module fabm_sediment_component
           write(funit,*)
       end do
     endif
+
+    ! write back fluxes into export State
+    do n=1,sed%nvar
+      call ESMF_StateGet(exportState, &
+             trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
+             field,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      ptr_f2 = fluxes(:,:,n)
+    end do
  
     if (allocated(fieldList)) deallocate(fieldlist)
 
