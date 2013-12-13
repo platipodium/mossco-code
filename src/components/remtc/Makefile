@@ -30,8 +30,8 @@ endif
 
 all: $(TARGETS)
 
-libocean: prefix $(MOSSCO_LIBRARY_PATH)/libocean.a(remtc_ocean.o)
-libatmosphere: prefix $(MOSSCO_LIBRARY_PATH)/libatmosphere.a(remtc_atmosphere.o)
+libocean: prefix libtypes $(MOSSCO_LIBRARY_PATH)/libocean.a(remtc_ocean.o)
+libatmosphere: prefix libtypes $(MOSSCO_LIBRARY_PATH)/libatmosphere.a(remtc_atmosphere.o)
 libtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
