@@ -191,7 +191,7 @@ module fabm_sediment_component
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
                        totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 => conc(:,:,:,n)
+      ptr_f3 = 0.0d0 ! initialize with 0.0
       call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
@@ -236,6 +236,7 @@ module fabm_sediment_component
     type(ESMF_Field), allocatable, dimension(:) :: fieldlist
     type(ESMF_Field)  :: field
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
     integer           :: fieldcount
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: name,string
@@ -306,7 +307,15 @@ module fabm_sediment_component
     endif
 
     ! write back fluxes into export State
+    
     do n=1,sed%nvar
+      call ESMF_StateGet(exportState, &
+             trim(sed%model%info%state_variables(n)%long_name), &
+             field,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      ptr_f3 = conc(:,:,:,n)
       call ESMF_StateGet(exportState, &
              trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
              field,rc=rc)
