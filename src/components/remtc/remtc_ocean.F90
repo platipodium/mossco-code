@@ -128,7 +128,7 @@ module remtc_ocean
         enddo
       enddo
     enddo
-		farrayPtr=variables(:,:,:,1)        
+    farrayPtr=variables(:,:,:,1)        
         
     !> Specify temperature information     
     call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, rc=rc) 
@@ -152,8 +152,13 @@ module remtc_ocean
 #ifndef ESMF_MPIUNI 
     !! ESMF_FieldWrite is not supported in ESMF_MPIUNI mode     
     do k=1,3
+#if ESMF_VERSION_MAJOR==6  
+      call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
+        overwrite=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
+#else
       call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
         append=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
+#endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    enddo
 #endif
