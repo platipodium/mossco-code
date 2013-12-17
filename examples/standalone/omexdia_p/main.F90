@@ -17,12 +17,13 @@ implicit none
 real(rk)       :: dt,dzmin
 integer        :: tnum,t,funit,output,k,n,numyears,numlayers
 integer        :: ode_method
+integer        :: presimulation_years=-1
 type(type_sed) :: sed
 real(rk),dimension(:,:,:,:),allocatable,target :: conc
 real(rk),dimension(:,:,:), allocatable,target  :: bdys,fluxes
 real(rk),dimension(:,:,:),pointer              :: diag
 
-namelist/run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
+namelist/run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years
 
 ! initialise
 dt=60._rk !s

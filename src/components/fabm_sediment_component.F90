@@ -39,6 +39,7 @@ module fabm_sediment_component
   real(rk)  :: dzmin,dt
   integer   :: t,tnum,funit,output,k,n,numyears,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
+  integer   :: presimulation_years=-1
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
@@ -47,7 +48,7 @@ module fabm_sediment_component
   type(type_sed),save :: sed
   type(ESMF_Alarm),save :: outputAlarm
 
-  namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method
+  namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years
  
   public :: SetServices,bdys,fluxes,rk
   
@@ -97,6 +98,7 @@ module fabm_sediment_component
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
     integer(ESMF_KIND_I4) :: itemcount,fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
+    integer(ESMF_KIND_I8) :: tidx
   
     call ESMF_LogWrite('Initializing FABM sediment module',ESMF_LOGMSG_INFO)
      !! read namelist input for control of time, this should not be done like this,
@@ -146,6 +148,16 @@ module fabm_sediment_component
     fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
 
     call get_boundary_conditions(sed,importState,bdys,fluxes)
+
+    !> run for some years into quasi-steady-state
+    if (presimulation_years.gt.0) &
+      write(0,*) '  postinit run sediment model on initial profiles for ',presimulation_years,' years'
+    dt=3600.0_rk
+    sed%bdys   => bdys
+    sed%fluxes => fluxes
+    do tidx=1,int(dt*presimulation_years,kind=ESMF_KIND_I8) !> run for 5 years
+      call ode_solver(sed,dt,ode_method)
+    end do
 
     !! define an output unit for tsv output, TODO: add netcdf output for this
     !! netcdf output currently not working (see commented code below)
