@@ -9,14 +9,14 @@ The software MOSSCO implements this infrastructure in the form of a library of c
 MOSSCO is free software: you can redistribute it and/or modify it under the
 terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
 hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+doc/license/LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 
 ################################################################
 
 This main directory $MOSSCO_DIR contains three subdirectories
 ./src for the library of drivers, components, and couplers
 ./doc for documentation
-./examples for example applications
+./examples for example applications to be used as templates
 
 #################################################################
 To make the documentation with full installation instructions, type
@@ -44,3 +44,5 @@ please consult the documentation, and visit the bugs database at https://sourcef
 More components and examples are built when FABM, GOTM, GETM, or EROSED are installed 
 on your system.  Please consult the documentation for information on how to build
 MOSSCO with any of these external models.
+
+
