@@ -219,6 +219,15 @@ module esmf_toplevel_component
     integer, intent(out)  :: rc
     type(ESMF_Field)      :: field
     real(ESMF_KIND_R8),parameter    :: sinking_factor=0.3d0 !30% of Det sinks into sediment
+    real(ESMF_KIND_R8),parameter    :: CN_det=106.0_rk/16.0_rk
+    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
+    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
+    real(ESMF_KIND_R8),parameter    :: fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
+    real(ESMF_KIND_R8),parameter    :: fac_sdet = (1.0_rk-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
+    !> fdet + sdet = CN_det*det
+    !> NC_fdet*fdet + NC_sdet*sdet = det
+    !> fdet = fac_fdet*det
+    !> sdet = fac_sdet*det
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
@@ -252,10 +261,10 @@ module esmf_toplevel_component
       ptr_f2 = sinking_factor * val1_f3(:,:,1) * val2_f3(:,:,1)
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p fast detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = sinking_factor * 106.0d0/16.0d0 * 0.5d0 * val1_f3 * val2_f3
+      ptr_f3 = sinking_factor * fac_fdet * val1_f3 * val2_f3
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p slow detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = sinking_factor * 106.0d0/16.0d0 * 0.5d0 * val1_f3 * val2_f3
+      ptr_f3 = sinking_factor * fac_sdet * val1_f3 * val2_f3
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p detritus-P',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       ptr_f3 = sinking_factor * 1.0d0/16.0d0 * val1_f3 * val2_f3
