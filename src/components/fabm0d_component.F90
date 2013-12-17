@@ -1,12 +1,19 @@
-!> @file esmf_fabm0d_component.F90
-!! @brief ESMF/FABM 0d driver component
-!!
-!! The ESMF component contains the 0d driver module
-!! @author Richard Hofmeister
-!! @author Carsten Lemmen
-
+!> @brief Implementation of a FABM0D component
+!
 !> The ESMF/FABM 0d driver component module provides infrastructure for the
-!! MOSSCO 0d pelagic component.
+!> MOSSCO 0d pelagic component.
+!> The ESMF component contains the 0d driver module
+!
+!  This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 
 module fabm0d_component
 
