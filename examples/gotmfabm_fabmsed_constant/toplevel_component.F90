@@ -16,8 +16,6 @@ module esmf_toplevel_component
 
   type(ESMF_GridComp),save  :: fabmComp,constantComp, gotmComp
   type(ESMF_State),save     :: fabmExp, fabmImp, gotmExp, gotmImp
-  real(ESMF_KIND_R8),dimension(:,:,:,:),allocatable,target  :: pelagic_state
-  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target :: bdy_flux
   type(ESMF_GRID) :: pelagic_bdy_grid,flux_bdy_grid
   type(ESMF_ARRAYSPEC) :: pelagic_bdy_array,flux_bdy_array
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3,val1_f3,val2_f3
@@ -81,34 +79,9 @@ module esmf_toplevel_component
     call ESMF_GridCompInitialize(gotmComp, importState=gotmImp, exportState=fabmImp, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
- ! water_temperature, 
-!'hzg_omexdia_p fast detritus C' not found in State. Skipping.
-!'hzg_omexdia_p slow detritus C' not found in State. Skipping.
-!'hzg_omexdia_p detritus-P' not found in State. Skipping.
-!'hzg_omexdia_p dissolved phosphate' not found in State. Skipping.
-!'hzg_omexdia_p dissolved nitrate' not found in State. Skipping.
-!'hzg_omexdia_p dissolved ammonium' not found in State. Skipping.
-!'hzg_omexdia_p dissolved oxygen' not found in State. Skipping.
-!'hzg_omexdia_p dissolved reduced substances' not found in Sta
     call ESMF_GridCompInitialize(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
 
-    ! same boundary conditions as for the standalone omexdia_p example:
-    bdys(1,1,1:9) = 0.0_rk
-    bdys(1,1,1) = 10._rk   ! degC temperature
-    bdys(1,1,5) = 1.0_rk   ! mmolP/m**3 po4
-    bdys(1,1,6) = 10.0_rk  ! mmolN/m**3 no3
-    bdys(1,1,7) = 0.0_rk   ! mmolN/m**3 nh3
-    bdys(1,1,8) = 250.0_rk ! mmolO2/m**3 oxy
-    bdys(1,1,9) = 0.0_rk   ! odu
-
-    fluxes(1,1,1:8) = 0.0_rk
-    fluxes(1,1,1) = 5.0_rk/86400.0_rk !fdet
-    fluxes(1,1,2) = 5.0_rk/86400.0_rk !sdet
-    fluxes(1,1,3) = 0.08/86400.0_rk !pdet
-
     ! create exchange fields in fabmImp and gotmExp:
-    nvars_pel = 3 + 2*3 !omexdia_p: 3 to-be-filled pelagic states and 3 particulate states
-    nvars_sed = 2 ! gotm_npzd: 2 exchanged quantities
 
     call ESMF_ArraySpecSet(flux_bdy_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -125,19 +98,13 @@ module esmf_toplevel_component
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    allocate(pelagic_state(1,1,1,nvars_pel))
-    pelagic_state(1,1,1,:) = 0.0d0 
-    pelagic_state(1,1,1,7:9) = 1.0d0 ! so just set POM concentration to flux
-    allocate(bdy_flux(1,1,nvars_sed))
-    bdy_flux(1,1,:) = 0.0d0
-
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
                        name="hzg_omexdia_p dissolved nitrate", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,1)
+    ptr_f3 = 0.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -146,7 +113,7 @@ module esmf_toplevel_component
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,2)
+    ptr_f3 = 0.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -156,7 +123,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,3)
+    ptr_f3 = 0.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -166,7 +133,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,4)
+    ptr_f3 = 0.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -176,7 +143,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,5)
+    ptr_f3 = 0.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -186,7 +153,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,6)
+    ptr_f3 = 0.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -196,7 +163,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,7)
+    ptr_f3 = 1.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -206,7 +173,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,8)
+    ptr_f3 = 1.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -216,7 +183,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = pelagic_state(:,:,:,9)
+    ptr_f3 = 1.0_rk
     call ESMF_StateAddReplace(fabmImp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -226,7 +193,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f2 = bdy_flux(:,:,1)
+    ptr_f2 = 0.0_rk
     call ESMF_StateAddReplace(gotmExp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -236,7 +203,7 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f2 = bdy_flux(:,:,2)
+    ptr_f2 = 0.0_rk
     call ESMF_StateAddReplace(gotmExp,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
