@@ -155,7 +155,7 @@ module fabm_sediment_component
     dt=3600.0_rk
     sed%bdys   => bdys
     sed%fluxes => fluxes
-    do tidx=1,int(dt*presimulation_years,kind=ESMF_KIND_I8) !> run for 5 years
+    do tidx=1,int(presimulation_years*365*24/(dt/3600.0_rk),kind=ESMF_KIND_I8)
       call ode_solver(sed,dt,ode_method)
     end do
 
