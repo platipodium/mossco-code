@@ -3,7 +3,7 @@
 !> This module serves as a wrapper for the General Ocean Turbulence Model
 !> (GOTM). This model describes a 1D water column.
 !> @import 
-!> @export water_temperature, grid_height
+!> @export water_temperature, grid_height, (FABM variables)
 !
 !  This computer program is part of MOSSCO. 
 !> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
@@ -45,7 +45,8 @@ module gotm_component
   implicit none
 
   private
-  
+ 
+  type(ESMF_Clock)  :: clock 
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: import_variables
@@ -79,9 +80,14 @@ module gotm_component
     integer, intent(out) :: rc
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+    rc=ESMF_SUCCESS
+    
   end subroutine SetServices
 
   !> Initialize the component
@@ -115,8 +121,6 @@ module gotm_component
     namelist /station/ name,latitude,longitude,depth
     namelist /eqstate/ eq_state_mode,eq_state_method,T0,S0,p0,dtr0,dsr0
  
-    logical :: input_from_namelist = .false.  !> @todo later to be replaced by switch passed from parent component
-
     call ESMF_LogWrite("GOTM ocean component initializing.",ESMF_LOGMSG_INFO)
     call init_gotm()
 
@@ -135,49 +139,44 @@ module gotm_component
                           bio_albedo,bio_drag_scale)
 #endif
 
-
-    ! Manipulate the time parameters from the gotm namelist
-    ! dt    ! float time steop for integration in seconds
-    ! start  ! string date in yyyy-mm-dd hh:mm:ss format for start date
-    ! stop   ! string date in yyyy-mm-dd hh:mm:ss format for end date
-  
-    call ESMF_TimeSet(clockTime)
-    if (input_from_namelist) then !> get parent clock and overwrite namelist parameters
-      call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
-      call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-      call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
-
-      timestring=gotm_time_start(1:10)//"T"//gotm_time_start(12:19)
-      !call ESMF_TimeSet(clockTime,timeStringISOFrac=timestring)
-      call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(parentClock,startTime=clockTime)
-      
-      timestring=gotm_time_stop(1:10)//"T"//gotm_time_stop(12:19)
-      !call ESMF_TimeSet(clockTime,timeStringISOFrac=timestring)
-      call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(parentClock,stopTime=clockTime)
-    else !> overwrite the parent clock's settings with the namelist parameters
-      call ESMF_LogWrite('Set GOTM input from ESMF parent',ESMF_LOGMSG_INFO)
-      call ESMF_ClockGet(parentClock,startTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_start=timestring(1:10)//" "//timestring(12:19)
-
-      call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
-      call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+    ! Create a local clock, set its parameters to those of the parent clock, then
+    ! copy start and stop time from clock to gotm's time parameters
+    clock = ESMF_ClockCreate(parentClock, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_ClockSet(clock, name='GOTM clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
      
-      call ESMF_ClockGet(parentClock,stopTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
+    call ESMF_TimeSet(clockTime,rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      gotm_time_timefmt = 2 
-      call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n)      
-    endif
-  
-    !! The output timestep is used to create an alarm
+    call ESMF_ClockGet(clock,startTime=clockTime,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    gotm_time_start=timestring(1:10)//" "//timestring(12:19)
+
+    call ESMF_ClockGet(parentClock,stopTime=clockTime)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
+
+    gotm_time_timefmt = 2 
+    call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n)      
+
+    !! The output timestep is used to create an alarm in the parent Clock
     !> @todo implement this also driven by the parent clock
-    call ESMF_ClockGet(parentClock,startTime=clockTime) 
+    call ESMF_ClockGet(clock,startTime=clockTime) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_output_nsave*gotm_time_timestep,rc=rc)
-    outputAlarm = ESMF_AlarmCreate(clock=parentClock,ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    outputAlarm = ESMF_AlarmCreate(clock=clock,ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Create the grid and coordinates
     !> This example grid is a 1 x 1 x nlev grid 
@@ -205,6 +204,8 @@ module gotm_component
 
     ! Get information to generate the fields that store the pointers to variables
     call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -316,66 +317,89 @@ module gotm_component
     character(len=ESMF_MAXSTR) :: string,varname
 
     ! get local clock with GOTM timesteop, get global clock with coupling timestep, set n to global/local, call GOTM, advance local clock n steps., 
-    call ESMF_TimeSet(clockTime)
-    call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
+    call ESMF_TimeSet(clockTime, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(parentClock,stopTime=clockTime,AdvanceCount=n, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock,stopTime=clockTime, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(parentClock,startTime=clockTime, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock,startTime=clockTime, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
 #ifdef DEBUG
     call ESMF_LogWrite("GOTM run at "//timestring//")", ESMF_LOGMSG_INFO)
 #endif
 
+   
+     do while (.not.ESMF_ClockIsStopTime(clock))
+
 #ifdef _GOTM_MOSSCO_FABM_
     ! get upward fluxes for FABM's state variables and put into bfl arrays of
     ! diffusion routine (so far - later use integration by solver_library)
-    do nvar=1,size(gotmfabm%model%info%state_variables)
-      varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
-      call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
-      if (itemcount==0) then
+      do nvar=1,size(gotmfabm%model%info%state_variables)
+        varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
+        call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
+        if (itemcount==0) then
 #ifdef DEBUG
-        call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
 #endif
-      else
-        call ESMF_StateGet(importState,trim(varname),field,rc=rc)
-        call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-        gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
-      end if
-    end do
+        else
+          call ESMF_StateGet(importState,trim(varname),field,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
+        end if
+      end do
 #endif
 
-    call update_time(n)
-    call gotm_time_step()
+      call update_time(n)
+      call gotm_time_step()
  
-    do k=1,nlev
-      variables(:,:,k,1) = gotm_temperature(k)
-      variables(:,:,k,2) = gotm_heights(k)
-      variables(:,:,k,3) = gotm_salinity(k)
-      variables(:,:,k,4) = gotm_radiation(k)
-    end do
+      do k=1,nlev
+        variables(:,:,k,1) = gotm_temperature(k)
+        variables(:,:,k,2) = gotm_heights(k)
+        variables(:,:,k,3) = gotm_salinity(k)
+        variables(:,:,k,4) = gotm_radiation(k)
+      end do
 
-    !> Check if the output alarm is ringing, if so, quiet it and 
-    !> call do_output from GOTM
-    if (ESMF_AlarmIsRinging(outputAlarm)) then
-      call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-      call prepare_output(n)
-      call do_output(n,nlev)
+      !> Check if the output alarm is ringing, if so, quiet it and 
+      !> call do_output from GOTM
+      if (ESMF_AlarmIsRinging(outputAlarm)) then
+        call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call prepare_output(n)
+        call do_output(n,nlev)
 #ifdef _GOTM_MOSSCO_FABM_
-      call do_gotm_mossco_fabm_output()
-      call update_export_states(fabm_export_states)
+        call do_gotm_mossco_fabm_output()
+        call update_export_states(fabm_export_states)
 #endif
-    endif
+      endif
 
 #ifdef _GOTM_MOSSCO_FABM_
     ! update Field data:
-    do nvar=1,size(fabm_export_states)
-      call ESMF_StateGet(exportState, &
+      do nvar=1,size(fabm_export_states)
+        call ESMF_StateGet(exportState, &
              trim(fabm_export_states(nvar)%standard_name),field,rc=rc)
-      call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = fabm_export_states(nvar)%conc
-      call ESMF_StateGet(exportState, &
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        ptr_f3 = fabm_export_states(nvar)%conc
+        call ESMF_StateGet(exportState, &
              trim(fabm_export_states(nvar)%standard_name)//'_z_velocity',field,rc=rc)
-      call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = fabm_export_states(nvar)%ws
-    end do
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        ptr_f3 = fabm_export_states(nvar)%ws
+      end do
 #endif
+ 
+    call ESMF_ClockAdvance(clock,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  end do
+
 
   end subroutine Run
 
@@ -406,6 +430,9 @@ module gotm_component
     enddo
 
     if (allocated(variables)) deallocate(variables)
+
+    call ESMF_ClockDestroy(clock,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call clean_up()
 
