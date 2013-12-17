@@ -212,7 +212,7 @@ module fabm_sediment_component
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
                        totalLBound=lbnd2,totalUBound=ubnd2, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = fluxes(:,:,n)
+      ptr_f2 = -fluxes(:,:,n)
       call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
@@ -322,7 +322,7 @@ module fabm_sediment_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = fluxes(:,:,n)
+      ptr_f2 = -fluxes(:,:,n)
     end do
  
     if (allocated(fieldList)) deallocate(fieldlist)
@@ -411,7 +411,7 @@ module fabm_sediment_component
           call ESMF_FieldGet(vs_field,farrayPtr=ptr_vs,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-          fluxes(_IRANGE_,_JRANGE_,i) = ptr_f3(:,:,1)*ptr_vs(:,:,1)
+          fluxes(_IRANGE_,_JRANGE_,i) = -ptr_f3(:,:,1)*ptr_vs(:,:,1) ! downward flux is positive
         else
           ptr_f2 => bdys(:,:,i+1)
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
