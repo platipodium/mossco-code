@@ -94,23 +94,54 @@ module esmf_toplevel_component
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
+  
+    type(ESMF_Time)       :: clockTime
+    character(ESMF_MAXSTR) :: timestring, message
+    integer(ESMF_KIND_I8) :: count
 
-    call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
-    write(0,*) '   time loop'
+    call ESMF_ClockGet(parentClock,currTime=clockTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
+    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') trim(timestring)
+    call ESMF_ClockGet(parentClock,stopTime=clockTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') trim(message)//" toplevel comp runs until "//trim(timestring)
+    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
+
+    do while (.not. ESMF_ClockIsStopTime(parentClock))
+
+      call ESMF_ClockGet(parentClock,currTime=clockTime, advanceCount=count, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      write(message,'(A,I6)') trim(timestring)//" toplevel iteration ",count
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      !call ESMF_GridCompRun(gotmComp, importState=gotmImp, exportState=gotmExp, clock=parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
-      call ESMF_GridCompRun(gotmComp, importState=gotmImp, exportState=gotmExp, clock=parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
     enddo 
 
-    write(0,*) '------------------------------------------------------------------------'
-    call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
+    call ESMF_ClockGet(parentClock,currTime=clockTime, advanceCount=count, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    write(message,'(A,I6)') trim(timestring)//" toplevel finished running."
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     rc=ESMF_SUCCESS
  
