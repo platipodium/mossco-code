@@ -314,92 +314,99 @@ module gotm_component
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     type(ESMF_Field)        :: Field
-    character(len=ESMF_MAXSTR) :: string,varname
+    character(len=ESMF_MAXSTR) :: string,varname,message
 
-    ! get local clock with GOTM timesteop, get global clock with coupling timestep, set n to global/local, call GOTM, advance local clock n steps., 
-    call ESMF_TimeSet(clockTime, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(parentClock,stopTime=clockTime,AdvanceCount=n, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(clock,stopTime=clockTime, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(parentClock,startTime=clockTime, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(clock,startTime=clockTime, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, advanceCount=n, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-#ifdef DEBUG
-    call ESMF_LogWrite("GOTM run at "//timestring//")", ESMF_LOGMSG_INFO)
-#endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
+    write(message,'(A)') trim(timestring)//" GOTM run called"
+!#ifdef DEBUG
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!#endif
 
-   
+    ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
+    call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  
+    ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
      do while (.not.ESMF_ClockIsStopTime(clock))
 
+       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
+       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+       write(message,'(A,I5)') trim(timestring)//" GOTM iteration ", n
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
 #ifdef _GOTM_MOSSCO_FABM_
-    ! get upward fluxes for FABM's state variables and put into bfl arrays of
-    ! diffusion routine (so far - later use integration by solver_library)
-      do nvar=1,size(gotmfabm%model%info%state_variables)
-        varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
-        call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
-        if (itemcount==0) then
+       ! get upward fluxes for FABM's state variables and put into bfl arrays of
+       ! diffusion routine (so far - later use integration by solver_library)
+       do nvar=1,size(gotmfabm%model%info%state_variables)
+         varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
+         call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
+         if (itemcount==0) then
 #ifdef DEBUG
-          call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
+           call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
 #endif
-        else
-          call ESMF_StateGet(importState,trim(varname),field,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
-        end if
-      end do
+         else
+             call ESMF_StateGet(importState,trim(varname),field,rc=rc)
+             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
+             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+             gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
+         end if
+       end do
 #endif
 
-      call update_time(n)
-      call gotm_time_step()
+       call update_time(n)
+       call gotm_time_step()
  
-      do k=1,nlev
-        variables(:,:,k,1) = gotm_temperature(k)
-        variables(:,:,k,2) = gotm_heights(k)
-        variables(:,:,k,3) = gotm_salinity(k)
-        variables(:,:,k,4) = gotm_radiation(k)
-      end do
+       do k=1,nlev
+         variables(:,:,k,1) = gotm_temperature(k)
+         variables(:,:,k,2) = gotm_heights(k)
+         variables(:,:,k,3) = gotm_salinity(k)
+         variables(:,:,k,4) = gotm_radiation(k)
+       end do
 
-      !> Check if the output alarm is ringing, if so, quiet it and 
-      !> call do_output from GOTM
-      if (ESMF_AlarmIsRinging(outputAlarm)) then
-        call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call prepare_output(n)
-        call do_output(n,nlev)
+       !> Check if the output alarm is ringing, if so, quiet it and 
+       !> call do_output from GOTM
+       if (ESMF_AlarmIsRinging(outputAlarm)) then
+         call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
+         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+         call prepare_output(n)
+         call do_output(n,nlev)
 #ifdef _GOTM_MOSSCO_FABM_
-        call do_gotm_mossco_fabm_output()
-        call update_export_states(fabm_export_states)
+         call do_gotm_mossco_fabm_output()
+         call update_export_states(fabm_export_states)
 #endif
-      endif
+       endif
 
 #ifdef _GOTM_MOSSCO_FABM_
     ! update Field data:
       do nvar=1,size(fabm_export_states)
         call ESMF_StateGet(exportState, &
              trim(fabm_export_states(nvar)%standard_name),field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         ptr_f3 = fabm_export_states(nvar)%conc
         call ESMF_StateGet(exportState, &
              trim(fabm_export_states(nvar)%standard_name)//'_z_velocity',field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         ptr_f3 = fabm_export_states(nvar)%ws
       end do
 #endif
  
-    call ESMF_ClockAdvance(clock,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  end do
-
+      call ESMF_ClockAdvance(clock,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    end do
 
   end subroutine Run
 

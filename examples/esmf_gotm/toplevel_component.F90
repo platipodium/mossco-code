@@ -126,7 +126,7 @@ module esmf_toplevel_component
       write(message,'(A,I6)') trim(timestring)//" toplevel iteration ",count
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      !call ESMF_GridCompRun(gotmComp, importState=gotmImp, exportState=gotmExp, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(gotmComp, importState=gotmImp, exportState=gotmExp, clock=parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
