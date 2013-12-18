@@ -68,7 +68,6 @@ type(type_gotm_fabm),public :: gotmfabm
    ! Arrays for work, vertical movement, and cross-boundary fluxes
    REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_,:) :: ws
    REALTYPE,public,allocatable,dimension(:,:,:)            :: sfl,bfl,total
-   REALTYPE,allocatable _ATTR_DIMENSIONS_1_                :: local
    REALTYPE,allocatable,dimension(:)                       :: Qsour,Lsour,DefaultRelaxTau,curh,curnuh
    logical,allocatable                                     :: cc_transport(:)
 
@@ -603,7 +602,6 @@ type(type_gotm_fabm),public :: gotmfabm
    if (allocated(swr))        deallocate(swr)
    if (allocated(pres))       deallocate(pres)
    if (allocated(total))      deallocate(total)
-   if (allocated(local))      deallocate(local)
    LEVEL1 'done.'
 
    end subroutine clean_gotm_mossco_fabm
