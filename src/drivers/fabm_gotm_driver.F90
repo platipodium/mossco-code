@@ -89,10 +89,11 @@ type(type_gotm_fabm),public :: gotmfabm
    contains
 
    !> Initializes the GOTM-FABM driver module by reading settings from fabm.nml
-   subroutine init_gotm_mossco_fabm(nlev,fname)
+   subroutine init_gotm_mossco_fabm(nlev,fname,dt)
 
    integer,          intent(in)        :: nlev
    character(len=*), intent(in)        :: fname
+   REALTYPE        , intent(in)        :: dt
 
    !  Original author(s): Jorn Bruggeman
 
@@ -142,7 +143,7 @@ type(type_gotm_fabm),public :: gotmfabm
       gotmfabm%model => fabm_create_model_from_file(namlst)
 
       ! Initialize model tree (creates metadata and assigns variable identifiers)
-      call fabm_set_domain(gotmfabm%model,1,1,nlev)
+      call fabm_set_domain(gotmfabm%model,1,1,nlev,dt)
       gotmfabm%nvar=size(gotmfabm%model%info%state_variables) + &
           size(gotmfabm%model%info%state_variables_ben)
 
