@@ -261,13 +261,13 @@ module esmf_toplevel_component
       ptr_f2 = sinking_factor * val1_f3(:,:,1) * val2_f3(:,:,1)
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p fast detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = sinking_factor * fac_fdet * val1_f3 * val2_f3
+      ptr_f3(1,1,1) = sinking_factor * fac_fdet * val1_f3(1,1,1) * val2_f3(1,1,1)
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p slow detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = sinking_factor * fac_sdet * val1_f3 * val2_f3
+      ptr_f3(1,1,1) = sinking_factor * fac_sdet * val1_f3(1,1,1) * val2_f3(1,1,1)
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p detritus-P',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3 = sinking_factor * 1.0d0/16.0d0 * val1_f3 * val2_f3
+      ptr_f3(1,1,1) = sinking_factor * 1.0d0/16.0d0 * val1_f3(1,1,1) * val2_f3(1,1,1)
       ! DIM concentrations:
       !  oxygen is coming from constant component, ODU is set to 0.0 in Initialize
       call ESMF_StateGet(fabmImp,'gotm_npzd nutrients',field,rc=rc)
@@ -278,12 +278,12 @@ module esmf_toplevel_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = 0.5d0 * val1_f3
-      call ESMF_StateGet(fabmImp,'hzg_omexdia_p dissolved nitrate',field,rc=rc)
+      ptr_f3(1,1,1) = 0.5d0 * val1_f3(1,1,1)
+      call ESMF_StateGet(fabmImp,trim('hzg_omexdia_p dissolved nitrate'),field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = 0.5d0 * val1_f3
+      ptr_f3(1,1,1) = 0.5d0 * val1_f3(1,1,1)
       call ESMF_StateGet(fabmImp,'hzg_omexdia_p dissolved phosphate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
