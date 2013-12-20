@@ -250,7 +250,7 @@ module esmf_toplevel_component
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = val1_f2 + val2_f2
+      ptr_f2(1,1) = val1_f2(1,1) + val2_f2(1,1)
       !   DetN flux:
       call ESMF_StateGet(fabmImp,'gotm_npzd detritus',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val1_f3,rc=rc)
@@ -279,7 +279,7 @@ module esmf_toplevel_component
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3(1,1,1) = 0.5d0 * val1_f3(1,1,1)
-      call ESMF_StateGet(fabmImp,trim('hzg_omexdia_p dissolved nitrate'),field,rc=rc)
+      call ESMF_StateGet(fabmImp,'hzg_omexdia_p dissolved nitrate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -288,7 +288,7 @@ module esmf_toplevel_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = 1.0d0/16.0d0 * val1_f3
+      ptr_f3(1,1,1) = 1.0d0/16.0d0 * val1_f3(1,1,1)
       
       call ESMF_GridCompRun(gotmComp, importState=gotmExp, exportState=fabmImp, clock=parentClock, rc=rc)
       call ESMF_GridCompRun(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
