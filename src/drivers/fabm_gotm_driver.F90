@@ -496,6 +496,9 @@ type(type_gotm_fabm),public :: gotmfabm
       if (gotmfabm%model%info%state_variables(i)%minimum>=_ZERO_) posconc = 1
 
       ! Do diffusion step
+      ! Euler integration of boundary fluxes
+      cc(1,1,1,i) = cc(1,1,1,i) + dt*bfl(1,1,i)/curh(1)
+      bfl(1,1,i) = 0.0d0
       call diff_center(gotmfabm%knum,dt,cnpar,posconc,curh,Neumann,Neumann,&
             sfl(1,1,i),bfl(1,1,i),curnuh,Lsour,Qsour,DefaultRelaxTau,cc(1,1,:,i),cc(1,1,:,i))
    end do
