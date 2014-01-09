@@ -163,7 +163,7 @@ module fabm_sediment_component
     !! netcdf output currently not working (see commented code below)
     funit=2
     open(funit,file='output.dat')
-    write(funit,fmt='(A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) '
+    write(funit,fmt='(A,A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) ','porosity() '
     do n=1,sed%nvar
       write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%state_variables(n)%name)
     end do
@@ -306,7 +306,9 @@ module fabm_sediment_component
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
       write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
       do k=1,_KNUM_
-          write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3)',advance='no') t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k)
+          write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3,A,E15.4E3)',advance='no') &
+            t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k),  &
+            ' ',sed%porosity(1,1,k)
           do n=1,sed%nvar
              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
           end do

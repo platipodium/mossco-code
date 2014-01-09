@@ -34,12 +34,13 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    type(type_model),pointer     :: model
    real(rk)                     :: bioturbation,diffusivity
    real(rk)                     :: k_par
-   real(rk),dimension(:,:,:),pointer    :: fluxes,bdys
+   real(rk),dimension(:,:,:),pointer :: fluxes,bdys
+   real(rk),dimension(:,:,:),pointer :: porosity
 contains
    procedure :: get_rhs
 end type type_sed
 
-real(rk),dimension(:,:,:),allocatable :: porosity,temp,intf_porosity
+real(rk),dimension(:,:,:),allocatable,target :: porosity,temp,intf_porosity
 real(rk),dimension(:,:,:),allocatable :: par
 real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
 real(rk),dimension(:,:,:),allocatable,target :: temp3d
@@ -141,6 +142,7 @@ do k=1,_KNUM_
 end do
 intf_porosity(:,:,1) = porosity(:,:,1)
 intf_porosity(:,:,2:_KNUM_) = 0.5d0*(porosity(:,:,1:_KNUM_-1) + porosity(:,:,2:_KNUM_))
+sed%porosity => porosity
 
 temp = 5_rk
 
