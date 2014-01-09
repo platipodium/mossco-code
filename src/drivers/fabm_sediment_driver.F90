@@ -36,6 +36,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk)                     :: k_par
    real(rk),dimension(:,:,:),pointer :: fluxes,bdys
    real(rk),dimension(:,:,:),pointer :: porosity
+   integer                      :: bcup_dissolved_variables=2
 contains
    procedure :: get_rhs
 end type type_sed
@@ -258,7 +259,7 @@ do n=1,size(rhs_driver%model%info%state_variables)
               bcup, bcdown, diff, ones3d-porosity, intFlux, transport(:,:,:,n))
       transport(:,:,:,n) = transport(:,:,:,n)*(ones3d-porosity)/porosity
    else
-      bcup = 2
+      bcup = rhs_driver%bcup_dissolved_variables
       diff = (rhs_driver%diffusivity + temp3d * 0.035d0) * intf_porosity / 86400.0_rk / 10000_rk
       conc_insitu = rhs_driver%conc(:,:,:,n)
       call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), zeros2d, rhs_driver%fluxes(:,:,n), zeros2d, &

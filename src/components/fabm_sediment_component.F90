@@ -147,6 +147,8 @@ module fabm_sediment_component
     allocate(fluxes(_INUM_,_JNUM_,sed%nvar))
     fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
 
+    !> use flux-boundary condition for dissolved variables as calculated in get_boundary_conditions
+    sed%bcup_dissolved_variables = 1
     call get_boundary_conditions(sed,importState,bdys,fluxes)
 
     !> run for some years into quasi-steady-state
@@ -431,6 +433,8 @@ module fabm_sediment_component
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           ptr_f2 = ptr_f3(:,:,1) ! get lowest vertical index for near-bed concentration
+          fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))* &
+            sed%grid%dz(:,:,1)*sed%diffusivity*sed%porosity(:,:,1)/86400._rk/10000._rk
         end if
       endif
     end do
