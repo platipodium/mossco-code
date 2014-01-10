@@ -481,7 +481,7 @@ type(type_gotm_fabm),public :: gotmfabm
 
       ! Do advection step due to settling or rising
       call adv_center(gotmfabm%knum,dt,curh,curh,ws(1,1,:,i),flux, &
-          flux,_ZERO_,_ZERO_,w_adv_discr,adv_mode_1,cc(1,1,1:10,i))
+          flux,_ZERO_,_ZERO_,w_adv_discr,adv_mode_1,cc(1,1,1:gotmfabm%knum,i))
 
       ! Do advection step due to vertical velocity
       if (w_adv_method/=0) call adv_center(gotmfabm%knum,dt,curh,curh,w,flux, &

@@ -147,8 +147,6 @@ module fabm_sediment_component
     allocate(fluxes(_INUM_,_JNUM_,sed%nvar))
     fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
 
-    !> use flux-boundary condition for dissolved variables as calculated in get_boundary_conditions
-    sed%bcup_dissolved_variables = 1
     call get_boundary_conditions(sed,importState,bdys,fluxes)
 
     !> run for some years into quasi-steady-state
@@ -160,6 +158,9 @@ module fabm_sediment_component
     do tidx=1,int(presimulation_years*365*24/(dt/3600.0_rk),kind=ESMF_KIND_I8)
       call ode_solver(sed,dt,ode_method)
     end do
+    !> use flux-boundary condition for dissolved variables as calculated in get_boundary_conditions
+    !> after presimulation
+    sed%bcup_dissolved_variables = 1
 
     !! define an output unit for tsv output, TODO: add netcdf output for this
     !! netcdf output currently not working (see commented code below)
@@ -433,8 +434,8 @@ module fabm_sediment_component
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           ptr_f2 = ptr_f3(:,:,1) ! get lowest vertical index for near-bed concentration
-          fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))* &
-            sed%grid%dz(:,:,1)*sed%diffusivity*sed%porosity(:,:,1)/86400._rk/10000._rk
+          fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))/ &
+            sed%grid%dz(:,:,1)*(sed%diffusivity+bdys(:,:,1)*0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
         end if
       endif
     end do
