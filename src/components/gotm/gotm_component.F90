@@ -415,10 +415,10 @@ module gotm_component
     type(ESMF_Field)     :: field
 
     do k=1,size(export_variables)
-      call ESMF_StateGet(exportState,export_variables(k)%standard_name, field, rc=rc)
+      call ESMF_StateGet(exportState,trim(export_variables(k)%standard_name), field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_StateRemove(exportState, export_variables(k)%standard_name,rc=rc)
+      call ESMF_StateRemove(exportState,(/ trim(export_variables(k)%standard_name) /),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_FieldDestroy(field, rc=rc)
@@ -427,10 +427,10 @@ module gotm_component
 
 #ifdef _GOTM_MOSSCO_FABM_
     do k=1,size(fabm_export_states)
-      call ESMF_StateGet(exportState,fabm_export_states(k)%standard_name, field, rc=rc)
+      call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_StateRemove(exportState, trim(fabm_export_states(k)%standard_name),rc=rc)
+      call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name) /),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_FieldDestroy(field, rc=rc)
@@ -439,7 +439,7 @@ module gotm_component
       call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity', field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_StateRemove(exportState, trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
+      call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_FieldDestroy(field, rc=rc)
