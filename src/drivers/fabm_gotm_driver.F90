@@ -18,6 +18,7 @@ module gotm_mossco_fabm
 
 use fabm
 use fabm_types
+use fabm_config
 use solver_library
 
 implicit none
@@ -47,6 +48,12 @@ end type type_gotm_fabm
 
 
 type(type_gotm_fabm),public :: gotmfabm
+
+type,extends(type_base_driver) :: type_mossco_driver
+contains
+   procedure :: fatal_error => mossco_driver_fatal_error
+   procedure :: log_message => mossco_driver_log_message
+end type
 
 
 !  Arrays for state and diagnostic variables
@@ -136,6 +143,8 @@ type(type_gotm_fabm),public :: gotmfabm
    gotmfabm%inum=1
    gotmfabm%jnum=1
    if (fabm_calc) then
+      ! Provide FABM with an object for communication with host
+      allocate(type_mossco_driver::driver)
 
       fabm_ready = .false.
 
@@ -181,16 +190,16 @@ type(type_gotm_fabm),public :: gotmfabm
       call init_var_gotm_mossco_fabm()
 
       ! Get ids for standard variables, to be used later to send data to FABM.
-      temp_id = fabm_get_bulk_variable_id(gotmfabm%model,varname_temp)
-      salt_id = fabm_get_bulk_variable_id(gotmfabm%model,varname_salt)
-      rho_id  = fabm_get_bulk_variable_id(gotmfabm%model,varname_dens)
-      h_id    = fabm_get_bulk_variable_id(gotmfabm%model,varname_layer_ht)
-      lon_id       = fabm_get_horizontal_variable_id(gotmfabm%model,varname_lon)
-      lat_id       = fabm_get_horizontal_variable_id(gotmfabm%model,varname_lat)
-      windspeed_id = fabm_get_horizontal_variable_id(gotmfabm%model,varname_wind_sf)
-      par_sf_id    = fabm_get_horizontal_variable_id(gotmfabm%model,varname_par_sf)
-      cloud_id     = fabm_get_horizontal_variable_id(gotmfabm%model,varname_cloud)
-      taub_id      = fabm_get_horizontal_variable_id(gotmfabm%model,varname_taub)
+      temp_id = gotmfabm%model%get_bulk_variable_id(standard_variables%temperature)
+      salt_id = gotmfabm%model%get_bulk_variable_id(standard_variables%practical_salinity)
+      rho_id  = gotmfabm%model%get_bulk_variable_id(standard_variables%density)
+      h_id    = gotmfabm%model%get_bulk_variable_id(standard_variables%cell_thickness)
+      lon_id       = gotmfabm%model%get_horizontal_variable_id(standard_variables%longitude)
+      lat_id       = gotmfabm%model%get_horizontal_variable_id(standard_variables%latitude)
+      windspeed_id = gotmfabm%model%get_horizontal_variable_id(standard_variables%wind_speed)
+      par_sf_id    = gotmfabm%model%get_horizontal_variable_id(standard_variables%surface_downwelling_photosynthetic_radiative_flux)
+      cloud_id     = gotmfabm%model%get_horizontal_variable_id(standard_variables%cloud_area_fraction)
+      taub_id      = gotmfabm%model%get_horizontal_variable_id(standard_variables%bottom_stress)
 
    end if
 
@@ -868,5 +877,19 @@ type(type_gotm_fabm),public :: gotmfabm
 
    end subroutine update_export_states
 
+   subroutine mossco_driver_fatal_error(self,location,message)
+      class (type_mossco_driver), intent(inout) :: self
+      character(len=*),  intent(in)    :: location,message
+
+      FATAL trim(location)//': '//trim(message)
+      stop 1
+   end subroutine
+
+   subroutine mossco_driver_log_message(self,message)
+      class (type_mossco_driver), intent(inout) :: self
+      character(len=*),  intent(in)    :: message
+
+      write (*,*) trim(message)
+   end subroutine
 
 end module
