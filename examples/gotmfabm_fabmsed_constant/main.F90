@@ -86,11 +86,16 @@ program main
    call ESMF_TimeGet(time2,timeStringISOFrac=timestring)
    call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds) 
 
-   call ESMF_LogWrite(trim(title)//' finished on '//timestring,ESMF_LOGMSG_INFO)   
+   call ESMF_LogWrite(trim(title)//' finished on '//timestring,ESMF_LOGMSG_INFO)
+
+   call ESMF_StateDestroy(topState,rc=rc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_ClockDestroy(clock,rc=rc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    call ESMF_Finalize(rc=localrc,endflag=ESMF_END_NORMAL)
    
-   end
+end program main
 
   !> Actually, this should be an extension of ESMF_TimeSet 
   subroutine timeString2ESMF_Time(timestring,time)
