@@ -49,7 +49,6 @@ module gotm_component
   type(ESMF_Clock)  :: clock 
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
-  type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: import_variables
 #ifdef _GOTM_MOSSCO_FABM_
   type(export_state_type),dimension(:), allocatable        :: fabm_export_states
 #endif
@@ -224,12 +223,7 @@ module gotm_component
 #else
     allocate(exportField(nexport))
 #endif
-
-    nimport=0
-    allocate(import_variables(nimport))
-    allocate(importField(nimport))
-    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport+nimport))
-    
+    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
     
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -424,17 +418,34 @@ module gotm_component
       call ESMF_StateGet(exportState,export_variables(k)%standard_name, field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
-
-    do k=1,size(import_variables)
-      call ESMF_StateGet(importState,import_variables(k)%standard_name, field, rc=rc)
+      call ESMF_StateRemove(exportState, export_variables(k)%standard_name,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_FieldDestroy(field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
+
+#ifdef _GOTM_MOSSCO_FABM_
+    do k=1,size(fabm_export_states)
+      call ESMF_StateGet(exportState,fabm_export_states(k)%standard_name, field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateRemove(exportState, trim(fabm_export_states(k)%standard_name),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_FieldDestroy(field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity', field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateRemove(exportState, trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_FieldDestroy(field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+#endif
 
     if (allocated(variables)) deallocate(variables)
 

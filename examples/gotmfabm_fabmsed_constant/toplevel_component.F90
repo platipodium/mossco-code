@@ -308,7 +308,7 @@ module esmf_toplevel_component
 
     call ESMF_LogWrite("Toplevel component finalizing",ESMF_LOGMSG_INFO)
 
-    call ESMF_GridCompFinalize(gotmComp, rc=rc)
+    call ESMF_GridCompFinalize(gotmComp, exportState=fabmImp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(gotmComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -321,6 +321,13 @@ module esmf_toplevel_component
     call ESMF_GridCompFinalize(constantComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(constantComp, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_StateDestroy(gotmExp,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateDestroy(fabmExp,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateDestroy(fabmImp,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
