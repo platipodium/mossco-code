@@ -4,8 +4,8 @@ use esmf
 implicit none
 
 interface mossco_state_get
-    procedure mossco_state_get_f2
-    procedure mossco_state_get_f3
+    module procedure mossco_state_get_f2
+    module procedure mossco_state_get_f3
 end interface
 
 contains
