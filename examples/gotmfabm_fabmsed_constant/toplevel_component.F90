@@ -8,6 +8,8 @@ module esmf_toplevel_component
   use constant_component, only : constant_SetServices => SetServices
   use gotm_component, only : gotm_SetServices => SetServices
 
+  use mossco_state
+
   implicit none
 
   private
@@ -220,6 +222,7 @@ module esmf_toplevel_component
     type(ESMF_Field)      :: field
     real(ESMF_KIND_R8),parameter    :: sinking_factor=0.3d0 !30% of Det sinks into sediment
     real(ESMF_KIND_R8),parameter    :: CN_det=106.0_rk/16.0_rk
+    !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
     real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
     real(ESMF_KIND_R8),parameter    :: fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)

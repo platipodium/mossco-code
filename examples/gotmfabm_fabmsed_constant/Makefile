@@ -21,7 +21,7 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LIBS := -lsediment -lconstant -lmossco_sediment -lesmf  $(LIBS)
+LIBS := -lsediment -lconstant -lmossco_sediment -lmossco_state -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
@@ -43,6 +43,9 @@ gotmfabm_fabmsed_constant: toplevel_component.o main.o
 libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
+libmossco_state:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+
 libsediment libconstant:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
@@ -50,7 +53,7 @@ libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 main.o: toplevel_component.o
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libsediment libmossco_sediment libsolver libconstant libgotm
+toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_state libsediment libmossco_sediment libsolver libconstant libgotm
 
 clean: extraclean
 

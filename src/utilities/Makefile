@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -21,14 +21,16 @@ EXTRA_DIST=README
 
 # Make targets
 
-all: libsolver libtypes
+all: libsolver libtypes libmossco_state
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libtypes:  prefix $(MOSSCO_LIBRARY_PATH)/libtypes.a(mossco_variable_types.o)
+libmossco_state:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_state.a(mossco_state.o)
 
 #@todo there should be a generic rule for the mods
 $(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.o
+$(MOSSCO_MODULE_PATH)/mossco_state.mod: mossco_state.o
 
 clean: extraclean
 extraclean:
@@ -36,3 +38,4 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libtypes.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/solver_library.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_state.mod
