@@ -826,7 +826,9 @@ end type
    export_state%conc => gotmfabm%conc(:,:,:,export_state%fabm_id)
    allocate(export_state%ws(1,1,1))
    export_state%ws = 0.0d0
+ !> @todo Make the next line a function call that generates a CF standard_name 
    export_state%standard_name = gotmfabm%model%info%state_variables(fabm_id)%long_name
+   !export_state%units = gotmfabm%model%info%state_variables(fabm_id)%units
 
    end function get_export_state_by_id
 
