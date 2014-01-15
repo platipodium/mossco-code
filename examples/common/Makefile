@@ -23,7 +23,9 @@ EXTRA_DIST=README
 # Determine examples to build
 SUBDIRS = 
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS)
+LIBS += lmossco_util
+
+.PHONY: all clean extraclean subdirs $(SUBDIRS) libmossco_util
 
 default: all
 
@@ -34,11 +36,16 @@ exec: toplevel_component.o main.o
 	@echo "Created example binary example in  $(PWD)"	
 
 main.o: toplevel_component.o
-toplevel_component.o: coupling_system.o toplevel_component.F90  libmossco_fabm0d libsediment libgotm libocean
+
+toplevel_component.o: coupling_system.o toplevel_component.F90  libmossco_fabm0d libsediment libgotm libocean libmossco_util
+
 coupling_system.o: coupling_system.F90
 
 libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 libocean:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@

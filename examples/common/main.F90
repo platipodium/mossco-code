@@ -2,6 +2,7 @@ program main
    
    use esmf 
    use esmf_toplevel_component, only: SetServices
+   use mossco_time
 
    implicit none
 
@@ -9,14 +10,14 @@ program main
    type(ESMF_Time)           :: time1, time2, startTime, stopTime
    type(ESMF_TimeInterval)   :: timeStepIntv
    integer                   :: localrc, rc, petCount,nmlunit=2013
-   double precision          :: seconds,timestep
+   double precision          :: seconds,timestep=360.0
    character(len=40)         :: timestring,start,stop,title
    type(ESMF_GridComp)       :: topComp
    type(ESMF_State)          :: topState ! for import and export, empty
    type(ESMF_Clock)          :: clock
    type(ESMF_VM)             :: vm
 
-   namelist /mossco_run/ title,start,stop,timestep
+   namelist /mossco_run/ title,start,stop
    
 
 ! Read mossco_run.nml
@@ -86,34 +87,13 @@ program main
    call ESMF_TimeGet(time2,timeStringISOFrac=timestring)
    call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds) 
 
-   call ESMF_LogWrite(trim(title)//' finished on '//timestring,ESMF_LOGMSG_INFO)   
-   !call ESMF_LogWrite('ESMF/GOTM finished on '//timestring//' using '//seconds//' seconds',ESMF_LOGMSG_INFO)   
+   call ESMF_LogWrite(trim(title)//' finished on '//timestring,ESMF_LOGMSG_INFO)
+
+   call ESMF_StateDestroy(topState,rc=rc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_ClockDestroy(clock,rc=rc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    call ESMF_Finalize(rc=localrc,endflag=ESMF_END_NORMAL)
    
-   end
-
-  !> Actually, this should be an extension of ESMF_TimeSet 
-  subroutine timeString2ESMF_Time(timestring,time)
-  use esmf
-    character(len=*), intent(in) :: timestring
-    type(ESMF_Time), intent(out) :: time
-
-    integer :: yy,mm,dd,h,m,s
-
-    read(timestring(1:4),'(i4)') yy
-    read(timestring(6:7),'(i2)') mm
-    read(timestring(9:10),'(i2)') dd
-    read(timestring(12:13),'(i2)') h
-    read(timestring(15:16),'(i2)') m
-    read(timestring(18:19),'(i2)') s
-
-    call ESMF_TimeSet(time,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s)
-
-  end subroutine timeString2ESMF_Time
-
-!EOC
-
-!-----------------------------------------------------------------------
-! Copyright by the MOSSCO-team under the GNU Public License - www.gnu.org
-!-----------------------------------------------------------------------
+end program main

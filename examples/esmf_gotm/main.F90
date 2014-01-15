@@ -2,27 +2,35 @@ program main
    
    use esmf 
    use esmf_toplevel_component, only: SetServices
+   use mossco_time
 
    implicit none
 
    character(LEN=8)          :: datestr
    type(ESMF_Time)           :: time1, time2, startTime, stopTime
-   type(ESMF_TimeInterval)   :: timeStep
-   integer                   :: localrc, rc, petCount
-   double precision          :: seconds
-   character(len=40)         :: timestring
+   type(ESMF_TimeInterval)   :: timeStepIntv
+   integer                   :: localrc, rc, petCount,nmlunit=2013
+   double precision          :: seconds,timestep=360.0
+   character(len=40)         :: timestring,start,stop,title
    type(ESMF_GridComp)       :: topComp
    type(ESMF_State)          :: topState ! for import and export, empty
    type(ESMF_Clock)          :: clock
    type(ESMF_VM)             :: vm
+
+   namelist /mossco_run/ title,start,stop
    
 
+! Read mossco_run.nml
+   open(nmlunit,file='mossco_run.nml',status='old',action='read')
+   read(nmlunit,nml=mossco_run)
+   close(nmlunit)
+
 ! Initialize
-   call ESMF_Initialize(defaultLogFileName="ESMF_GOTM_test_driver",rc=localrc,&
+   call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
      logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN,&
      vm=vm)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
-   call ESMF_LogWrite("ESMF/GOTM driver start", ESMF_LOGMSG_INFO)
+   call ESMF_LogWrite(trim(title)//" start", ESMF_LOGMSG_INFO)
 
 ! Get the wall clock starting time
    call ESMF_TimeSet(time1,rc=localrc)
@@ -32,17 +40,15 @@ program main
    call ESMF_TimeGet(time1,timeStringISOFrac=timestring)
    call ESMF_LogWrite("Program starts at wall clock "//timestring, ESMF_LOGMSG_INFO)
   
-! Create and initialize a clock, with 3600 second timestep, and 1 yr running time
-   call ESMF_TimeIntervalSet(timeStep, s=3600, rc=localrc)
+! Create and initialize a clock from mossco_run.nml
+
+   call ESMF_TimeIntervalSet(timeStepIntv, s_r8=real(timestep,kind=ESMF_KIND_R8), rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_TimeSet(startTime, yy=2011, mm=1, dd=1, rc=localrc)
-   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   call timeString2ESMF_Time(start,startTime)
+   call timeString2ESMF_Time(stop,stopTime)
 
-   call ESMF_TimeSet(stopTime, yy=2012, mm=12, dd=1, rc=localrc)
-   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
-
-   clock = ESMF_ClockCreate(timeStep, startTime, stopTime=stopTime, & 
+   clock = ESMF_ClockCreate(timeStep=timeStepIntv, startTime=startTime, stopTime=stopTime, & 
      name="Parent clock", rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
@@ -81,14 +87,13 @@ program main
    call ESMF_TimeGet(time2,timeStringISOFrac=timestring)
    call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds) 
 
-   call ESMF_LogWrite('ESMF/GOTM finished on '//timestring,ESMF_LOGMSG_INFO)   
-   !call ESMF_LogWrite('ESMF/GOTM finished on '//timestring//' using '//seconds//' seconds',ESMF_LOGMSG_INFO)   
+   call ESMF_LogWrite(trim(title)//' finished on '//timestring,ESMF_LOGMSG_INFO)
+
+   call ESMF_StateDestroy(topState,rc=rc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_ClockDestroy(clock,rc=rc)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    call ESMF_Finalize(rc=localrc,endflag=ESMF_END_NORMAL)
    
-   end
-!EOC
-
-!-----------------------------------------------------------------------
-! Copyright by the MOSSCO-team under the GNU Public License - www.gnu.org
-!-----------------------------------------------------------------------
+end program main
