@@ -280,8 +280,8 @@ endif
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
-F90FLAGS = -J$(MOSSCO_MODULE_PATH)
-EXTRA_CPP=
+F90FLAGS = -O3 -ffast-math -march=native -flto -fstack-arrays -fno-protect-parens -J$(MOSSCO_MODULE_PATH)
+EXTRA_CPP= 
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
 F90FLAGS = -module $(MOSSCO_MODULE_PATH)
