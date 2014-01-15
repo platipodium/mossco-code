@@ -60,8 +60,8 @@ subroutine as_yaml(self)
   
   if (len(self%name) > 0) then
     write(*,'(A)') self%name
-    if (len(self%standard_name) > 0) write(*,'(A,A)'), '  standard_name:',self%standard_name
-    if (len(self%description) > 0) write(*,'(A,A)'), '  description:',self%description
+    if (len(self%standard_name) > 0) write(*,'(A,A)') '  standard_name:',self%standard_name
+    if (len(self%description) > 0) write(*,'(A,A)') '  description:',self%description
   endif  
   
 end subroutine as_yaml
