@@ -323,7 +323,9 @@ end type
    REALTYPE, intent(in),target                              :: latitude,longitude
    REALTYPE, intent(in) :: dt_
    integer,  intent(in) :: w_adv_method_,w_adv_ctr_
-   REALTYPE, intent(in),target,dimension(:)                 :: temp,salt_,rho_,nuh_,h_,w_,bioshade_,z_
+   REALTYPE, intent(in),target,dimension(1:gotmfabm%knum)   :: temp,salt_,rho_
+   REALTYPE, intent(in),target,dimension(0:gotmfabm%knum)   :: nuh_,h_,w_
+   REALTYPE, intent(in),target,dimension(1:gotmfabm%knum)   :: bioshade_,z_
    REALTYPE, target, dimension(1:1,1:1,1:gotmfabm%knum)     :: temp3d,salt3d,rho3d,nuh3d,h3d,w3d,bioshade3d,z3d
    REALTYPE, intent(in),target                              :: I_0_,cloud,wnd,precip_,evap_,taub
    REALTYPE, target, dimension(1:1,1:1)                     :: I_02d,cloud2d,wnd2d,precip2d,evap2d,taub2d
@@ -340,9 +342,9 @@ end type
    temp3d(1,1,:)=temp
    salt3d(1,1,:)=salt_
    rho3d(1,1,:)=rho_
-   nuh3d(1,1,:)=nuh_
-   h3d(1,1,:)=h_(2:)
-   w3d(1,1,:)=w_
+   nuh3d(1,1,:)=nuh_(1:)
+   h3d(1,1,:)=h_(1:)
+   w3d(1,1,:)=w_(1:)
    bioshade3d(1,1,:)=bioshade_
    z3d(1,1,:)=z_
    I_02d(1,1)=I_0_
