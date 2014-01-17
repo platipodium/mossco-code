@@ -21,7 +21,7 @@ EXTRA_DIST=README
 
 # Make targets
 
-all: libsolver libtypes libmossco_state libmossco_util
+all: libsolver libtypes libmossco_util
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libtypes:  prefix $(MOSSCO_LIBRARY_PATH)/libtypes.a(mossco_variable_types.o)
