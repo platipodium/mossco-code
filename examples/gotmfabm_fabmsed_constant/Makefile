@@ -1,5 +1,5 @@
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
 #
