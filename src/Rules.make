@@ -375,13 +375,10 @@ ifdef MOSSCO_FABMDIR
 	$(MAKE) -C $(FABMDIR)/src
 endif
 
-# KK-TODO: think about compiling gotm without updating its exe
 libgotm_external:
 ifdef MOSSCO_GOTMDIR
-ifeq ($(MOSSCO_GOTM_FABM),true)
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
-endif
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src makedirs subdirs gotmlib)
 endif
 
 libgetm_external: prefix
