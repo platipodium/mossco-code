@@ -19,7 +19,10 @@ contains
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: fpointer
     integer :: rc
     call ESMF_StateGet(state,name,field,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if(rc /= ESMF_SUCCESS) then
+      call ESMF_StatePrint(state, rc=rc)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
+    endif
     call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   end subroutine mossco_state_get_f2
@@ -31,7 +34,10 @@ contains
     integer :: rc
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: fpointer
     call ESMF_StateGet(state,name,field,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if(rc /= ESMF_SUCCESS) then
+      call ESMF_StatePrint(state, rc=rc)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
+    endif
     call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   end subroutine mossco_state_get_f3
