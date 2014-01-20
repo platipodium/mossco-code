@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde  
@@ -34,14 +34,10 @@ endif
 all: $(TARGETS)
 
 libgotm: prefix libgotm_external libtypes $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
-libmossco_gotmfabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+libmossco_gotmfabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_component.o) libgotm_external
 libtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
-# KK-TODO: this can be removed when gotm's timestep routine is used
-ifeq ($(MOSSCO_GOTM_FABM),true)
-gotm_component.o: gotm_component.F90 libmossco_gotmfabm
-	$(F90) $(CPPFLAGS) $(F90FLAGS) -D_FABM_ -c $< -o $@
-endif
+fabm_component.o: fabm_component.F90 libmossco_gotmfabm 
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_gotmfabm
@@ -52,3 +48,4 @@ $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 clean: extraclean
 extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a

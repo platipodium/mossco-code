@@ -28,18 +28,6 @@ module gotm_component
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
   use output, only: prepare_output,do_output,gotm_output_nsave => nsave
 
-#ifdef _GOTM_MOSSCO_FABM_
-  use turbulence,  only: nuh
-  use airsea,      only: wind=>w,tx,ty,I_0,cloud,heat,precip,evap
-  use airsea,      only: bio_albedo,bio_drag_scale
-  use meanflow,    only: s,t,rho,z,h,w,bioshade,taub
-  use observations,only: SRelaxTau,sProf
-  use observations
-  use time,        only: secondsofday,yearday
-
-  use gotm_mossco_fabm
-#endif
-
   use mossco_variable_types
   
   implicit none
@@ -49,9 +37,6 @@ module gotm_component
   type(ESMF_Clock)  :: clock 
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
-#ifdef _GOTM_MOSSCO_FABM_
-  type(export_state_type),dimension(:), allocatable        :: fabm_export_states
-#endif
 
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -129,14 +114,6 @@ module gotm_component
     read(921,nml=station)
     close(921)
 
-#ifdef _GOTM_MOSSCO_FABM_
-    call init_gotm_mossco_fabm(nlev,'gotm_fabm.nml',dt)
-    call init_gotm_mossco_fabm_output()
-    call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr,t(1:nlev),s(1:nlev),rho(1:nlev), &
-                          nuh,h,w,bioshade(1:nlev),I_0,cloud,taub,wind,precip,evap,z(1:nlev), &
-                          A,g1,g2,yearday,secondsofday,SRelaxTau(1:nlev),sProf(1:nlev), &
-                          bio_albedo,bio_drag_scale)
-#endif
 
     ! Create a local clock, set its parameters to those of the parent clock, then
     ! copy start and stop time from clock to gotm's time parameters
@@ -174,7 +151,13 @@ module gotm_component
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_output_nsave*gotm_time_timestep,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    outputAlarm = ESMF_AlarmCreate(clock=clock,ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
+    ! Introduced dependency to FABM component, which use the same name for the alarm
+    outputAlarm = ESMF_AlarmCreate(clock=parentclock,name="GOTM output Alarm", &
+      ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    outputAlarm = ESMF_AlarmCreate(clock=clock,name="GOTM output Alarm", &
+      ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Create the grid and coordinates
@@ -217,12 +200,7 @@ module gotm_component
     export_variables(2)%standard_name="grid_height"
     export_variables(3)%standard_name="salinity"
     export_variables(4)%standard_name="radiation"
-#ifdef _GOTM_MOSSCO_FABM_
-    call get_all_export_states(fabm_export_states)
-    allocate(exportField(nexport+2*size(fabm_export_states)))
-#else
     allocate(exportField(nexport))
-#endif
     allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
     
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -256,32 +234,6 @@ module gotm_component
       enddo
     enddo
     farrayPtr=variables(:,:,:,2)
-
-#ifdef _GOTM_MOSSCO_FABM_
-    do k=1,size(fabm_export_states)
-      exportField(3+2*k) = ESMF_FieldCreate(grid, arrayspec, &
-        name=trim(fabm_export_states(k)%standard_name), &
-        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      exportField(4+2*k) = ESMF_FieldCreate(grid, arrayspec, &
-        name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
-        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_FieldGet(field=exportField(3+2*k), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr = fabm_export_states(k)%conc
-
-      call ESMF_FieldGet(field=exportField(4+2*k), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr = fabm_export_states(k)%ws
-
-      call ESMF_StateAddReplace(exportState,(/exportField(4+2*k),exportField(3+2*k)/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
-#endif
 
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
@@ -337,25 +289,6 @@ module gotm_component
        write(message,'(A,I5)') trim(timestring)//" GOTM iteration ", n
        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-#ifdef _GOTM_MOSSCO_FABM_
-       ! get upward fluxes for FABM's state variables and put into bfl arrays of
-       ! diffusion routine (so far - later use integration by solver_library)
-       do nvar=1,size(gotmfabm%model%info%state_variables)
-         varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
-         call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
-         if (itemcount==0) then
-#ifdef DEBUG
-           call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
-#endif
-         else
-             call ESMF_StateGet(importState,trim(varname),field,rc=rc)
-             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-             gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
-         end if
-       end do
-#endif
 
        call update_time(n)
        call gotm_time_step()
@@ -374,29 +307,8 @@ module gotm_component
          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
          call prepare_output(n)
          call do_output(n,nlev)
-#ifdef _GOTM_MOSSCO_FABM_
-         call do_gotm_mossco_fabm_output()
-         call update_export_states(fabm_export_states)
-#endif
        endif
 
-#ifdef _GOTM_MOSSCO_FABM_
-    ! update Field data:
-      do nvar=1,size(fabm_export_states)
-        call ESMF_StateGet(exportState, &
-             trim(fabm_export_states(nvar)%standard_name),field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        ptr_f3 = fabm_export_states(nvar)%conc
-        call ESMF_StateGet(exportState, &
-             trim(fabm_export_states(nvar)%standard_name)//'_z_velocity',field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        ptr_f3 = fabm_export_states(nvar)%ws
-      end do
-#endif
  
       call ESMF_ClockAdvance(clock,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -429,35 +341,6 @@ module gotm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
-#ifdef _GOTM_MOSSCO_FABM_
-    do k=1,size(fabm_export_states)
-      call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-#if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name) /),rc=rc)
-#else
-      call ESMF_StateRemove(exportState,trim(fabm_export_states(k)%standard_name),rc=rc)
-#endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity', field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-#if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /),rc=rc)
-#else
-      call ESMF_StateRemove(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
-#endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
-#endif
 
     if (allocated(variables)) deallocate(variables)
 
@@ -493,11 +376,6 @@ module gotm_component
   use input
   use observations
   use airsea
-#ifdef _GOTM_FABM_
-  use gotm_fabm,only:set_env_gotm_fabm,do_gotm_fabm
-  use gotm_fabm_input,only:init_gotm_fabm_input
-  use gotm_fabm_output,only:do_gotm_fabm_output
-#endif
   use turbulence
   use kpp
 
@@ -543,15 +421,6 @@ module gotm_component
 !     update shear and stratification
   call shear(nlev,cnpar)
   call stratification(nlev,buoy_method,timestep,cnpar,nuh,gamh)
-
-!     FABM
-#ifdef _GOTM_FABM_
-  call do_gotm_fabm(nlev)
-#else
-#ifdef _GOTM_MOSSCO_FABM_
-  call do_gotm_mossco_fabm(timestep)
-#endif
-#endif
 
 !    compute turbulent mixing
   select case (turb_method)
