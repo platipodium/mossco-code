@@ -1,12 +1,11 @@
-!> @brief Implementation of a GOTM wrapper as ESMF component
+!> @brief Implementation of a FABM (with GOTM) ESMF component
 !
-!> This module serves as a wrapper for the General Ocean Turbulence Model
-!> (GOTM). This model describes a 1D water column.
-!> @import 
-!> @export water_temperature, grid_height, (FABM variables)
+!> This module serves as a wrapper for the FABM model in a 1D GOTM context.
+!> @import water_temperature
+!> @export (FABM variables)
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -31,6 +30,7 @@ module fabm_gotm_component
 
   use gotm_mossco_fabm
   use mossco_variable_types
+  use mossco_state
   
   implicit none
 
@@ -129,15 +129,14 @@ module fabm_gotm_component
     varname="water_temperature"
     call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
     if (itemcount==0) then
-#ifdef DEBUG
-      call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize without this variable.',ESMF_LOGMSG_ABORT)
-#endif
-    else
-       call ESMF_StateGet(importState,trim(varname),field,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-       call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    end if
+      call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
+                    ' without this variable.',ESMF_LOGMSG_ERROR)
+    endif
+    call ESMF_StateGet(importState,trim(varname),field,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     ! Get information to generate the fields that store the pointers to variables
     call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
@@ -239,9 +238,9 @@ module fabm_gotm_component
          varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
          call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
          if (itemcount==0) then
-#ifdef DEBUG
+!#ifdef DEBUG
            call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
-#endif
+!#endif
          else
              call ESMF_StateGet(importState,trim(varname),field,rc=rc)
              if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -269,17 +268,12 @@ module fabm_gotm_component
 
     ! update Field data:
       do nvar=1,size(fabm_export_states)
-        call ESMF_StateGet(exportState, &
-             trim(fabm_export_states(nvar)%standard_name),field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call mossco_state_get(exportState,trim(fabm_export_states(nvar)%standard_name), &
+          ptr_f3)
         ptr_f3 = fabm_export_states(nvar)%conc
-        call ESMF_StateGet(exportState, &
-             trim(fabm_export_states(nvar)%standard_name)//'_z_velocity',field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        call mossco_state_get(exportState,trim(fabm_export_states(nvar)%standard_name)//'_z_velocity', &
+          ptr_f3)
         ptr_f3 = fabm_export_states(nvar)%ws
       end do
  
