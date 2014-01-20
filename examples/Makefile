@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -33,6 +33,7 @@ SUBDIRS += fabmsed_fabm0d
 SUBDIRS += ocean_fabm0d
 SUBDIRS += ocean_fabm0d_fabmsed
 SUBDIRS += gotmfabm_fabmsed_constant
+SUBDIRS += esmf_gotmfabm
 endif
 endif
 endif
