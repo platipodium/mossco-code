@@ -1,0 +1,37 @@
+component:
+  name: GOTM Component
+  description: General Ocean Turbulence Model
+  export: # Diagnostics and states
+    practical_salinity:
+      units: psu
+      short_name: salinity
+      internal_name: S
+      min_value: 0.0
+      max_value: 1000.0
+      default_value: 27.0
+      module: meanflow
+    grid_height:
+      name: grid_height
+      units: m
+      min_value: 0.0
+      max_value: 20000.0
+      module: meanflow
+    temperature:
+      name: temperature
+      units: degree_Celsius
+      min_value: -10.0
+      max_value: 50.0
+      default_value: 15.0
+      other_names:
+        water_temperature
+        temperature_in_sea_water
+      module: meanflow
+    bottom_shear_stress:
+       internal_name: taub
+       module: meanflow
+      units: Pa
+  import: # Traditionally called forcings
+    wind_stress_at_surface:
+      units: Pa
+      min_value: 0.0
+      module: airsea
