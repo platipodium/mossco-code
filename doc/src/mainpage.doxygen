@@ -89,6 +89,8 @@ There is a pre-built documentation available online at [mossco.de/doc](http://ww
 
 Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not, it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...) to install these programs.  Make sure that both MPI and NetCDF are compiled with the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO subsequently. Quite likely, this is not the case on your system (unless you're using a very recent operating system), so please check carefully.  We experienced a lot of difficulties and bugs with outdated compilers, and mismatches between the compiler (and respective libraries) used for the different requirements for MOSSCO. You may also consult the bug data base [mossco.de/bugs](http://www.mossco.de/bugs) for solving these problems.
 
+For ESMF, you need both the netcdf C library and (in later versions of netCDF) the separate netCDF-C++ library.  For GOTM and the netCDF data components in MOSSCO, you need to install the netcdf-fortran library.
+
 @subsection installing-esmf Installing ESMF
 
 Decide on a directory where to put the ESMF source, and set the environment variable @c $ESMF_DIR to point to this directory.
