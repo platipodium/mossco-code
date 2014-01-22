@@ -25,12 +25,12 @@ endif
 LIBS := -lesmf $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lmossco_fabm0d -lsolver
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lmossco_fabm0d -lsolver -lmossco_util
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
-ifeq ($(HAVE_LD_FORCE_LOAD),true)
-LDFLAGS += -Wl,-force_load
-endif
+#ifeq ($(HAVE_LD_FORCE_LOAD),true)
+#LDFLAGS += -Wl,-force_load
+#endif
 
 .PHONY: all exec 
 
@@ -38,13 +38,16 @@ all: exec
 
 libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+	
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 exec: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o esmf_fabm0d $^ $(LDFLAGS)
 	@echo "Created example binary esmf_fabm0d in  $(PWD)" 
 	@echo "Please change to $(FABMDIR)/testcases/0d to run the example." > $(MOSSCO_BIN_PATH)/esmf_fabm0d.txt
 
-main.o: toplevel_component.o main.F90
+main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d
 main.F90: ../common/main.F90
 	ln -f  $< $@
