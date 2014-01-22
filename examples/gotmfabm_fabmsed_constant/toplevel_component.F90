@@ -21,8 +21,10 @@ module esmf_toplevel_component
   type(ESMF_State),save     :: state,pelagicstate,sedimentstate
   type(ESMF_GRID) :: pelagic_bdy_grid,flux_bdy_grid
   type(ESMF_ARRAYSPEC) :: pelagic_bdy_array,flux_bdy_array
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN,DIN,vDETN,DIP,DETC,DETP,vDETC,vDETP
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3,val1_f3,val2_f3
   real(ESMF_KIND_R8),dimension(:,:), pointer :: ptr_f2,val1_f2,val2_f2
+  real(ESMF_KIND_R8),dimension(:,:), pointer :: DETNflux,DETCflux,DETPflux,DINflux,DIPflux
   integer :: nvar,nvars_pel,nvars_sed
 
   contains
@@ -196,6 +198,17 @@ module esmf_toplevel_component
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+#if 0
+    call mossco_create_upward_flux_fields(pelagicstate, &
+         (\"gotm_npzd nutrients", &
+           "hzg_maecs Dissolved Inorganic Nitrogen nutN DIN", &
+           "hzg_maecs Dissolved Inorganic Phosphorus nutP DIP", &
+           "gotm_npzd detritus", &
+           "hzg_maecs Detritus Nitrogen detN", &
+           "hzg_maecs Detritus Phosphorus detP", &
+           "hzg_maecs Detritus Carbon detC"\),sedimentstate)
+#endif
+
     newfield = ESMF_FieldCreate(flux_bdy_grid,flux_bdy_array, &
                        name="gotm_npzd nutrients_upward_flux", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
@@ -253,28 +266,30 @@ module esmf_toplevel_component
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateGet(sedimentstate,'gotm_npzd nutrients_upward_flux',field,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2(1,1) = val1_f2(1,1) + val2_f2(1,1)
-      !   DetN flux:
-      call ESMF_StateGet(pelagicstate,'gotm_npzd detritus',field,rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=val1_f3,rc=rc)
-      call ESMF_StateGet(pelagicstate,'gotm_npzd detritus_z_velocity',field,rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f3,rc=rc)
-      call ESMF_StateGet(sedimentstate,'gotm_npzd detritus_upward_flux',field,rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
-      ptr_f2 = sinking_factor * val1_f3(:,:,1) * val2_f3(:,:,1)
+      call mossco_state_get(sedimentstate,(/ &
+              'gotm_npzd nutrients_upward_flux                            ', &
+              'hzg_maecs Dissolved Inorganic Nitrogen nutN DIN_upward_flux'/),DINflux,rc=rc)
+      DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
+      !   Det flux:
+      call mossco_state_get(pelagicstate,(/ &
+              'gotm_npzd detritus              ', &
+              'hzg_maecs Detritus Nitrogen detN'/),DETN,rc=rc) !val1_f3-> DETN
+      call mossco_state_get(pelagicstate,(/ &
+              'gotm_npzd detritus_z_velocity              ', &
+              'hzg_maecs Detritus Nitrogen detN_z_velocity'/),vDETN,rc=rc) !val2_f3 -> vDETN
+      call mossco_state_get(sedimentstate,(/ &
+              'gotm_npzd detritus_upward_flux              ', &
+              'hzg_maecs Detritus Nitrogen detN_upward_flux'/),DETNflux,rc=rc)
+      DETNflux(1,1) = sinking_factor * DETN(1,1,1) * vDETN(1,1,1)
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p fast detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = sinking_factor * fac_fdet * val1_f3(1,1,1) * val2_f3(1,1,1)
+      ptr_f3(1,1,1) = sinking_factor * fac_fdet * DETN(1,1,1) * vDETN(1,1,1)
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p slow detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = sinking_factor * fac_sdet * val1_f3(1,1,1) * val2_f3(1,1,1)
+      ptr_f3(1,1,1) = sinking_factor * fac_sdet * DETN(1,1,1) * vDETN(1,1,1)
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p detritus-P',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = sinking_factor * 1.0d0/16.0d0 * val1_f3(1,1,1) * val2_f3(1,1,1)
+      ptr_f3(1,1,1) = sinking_factor * 1.0d0/16.0d0 * DETN(1,1,1) * vDETN(1,1,1)
       ! DIM concentrations:
       !  oxygen is coming from constant component, ODU is set to 0.0 in Initialize
       call ESMF_StateGet(pelagicstate,'gotm_npzd nutrients',field,rc=rc)
@@ -309,6 +324,40 @@ module esmf_toplevel_component
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
  
   end subroutine Run
+
+  subroutine mossco_create_upward_flux_fields(inputstate, name, outputstate)
+  type(ESMF_State)  :: inputstate,outputstate
+  character(ESMF_MAXSTR),dimension(:) :: name
+  type(ESMF_Field)  :: newfield
+  integer           :: rc,i,itemcount
+  type(ESMF_ArraySpec) :: flux_bdy_array
+  type(ESMF_Grid)      :: flux_bdy_grid
+
+  ! create arraySpec and grid for flux fields
+  call ESMF_ArraySpecSet(flux_bdy_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
+  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  flux_bdy_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+      regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      name="sediment fluxes grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      coorddep2=(/2/),rc=rc)
+  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+  do i=1,ubound(name,1)
+    ! if name present in inputstate, then create corresponding flux field
+    call ESMF_StateGet(inputstate, itemSearch=trim(name(i)), itemCount=itemcount,rc=rc)
+    if (itemcount>0) then
+      newfield = ESMF_FieldCreate(flux_bdy_grid,flux_bdy_array, &
+                       name=trim(name(i))//'_upward_flux', &
+                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      ptr_f2 = 0.0_rk
+      call ESMF_StateAddReplace(outputstate,(/newfield/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+  end do
+  end subroutine mossco_create_upward_flux_fields  
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     

@@ -281,12 +281,12 @@ module fabm_gotm_component
 
     ! update Field data:
       do nvar=1,size(fabm_export_states)
-        call mossco_state_get(exportState,trim(fabm_export_states(nvar)%standard_name), &
-          ptr_f3)
+        call mossco_state_get(exportState,(/trim(fabm_export_states(nvar)%standard_name)/), &
+          ptr_f3,rc=rc)
         ptr_f3 = fabm_export_states(nvar)%conc
         
-        call mossco_state_get(exportState,trim(fabm_export_states(nvar)%standard_name)//'_z_velocity', &
-          ptr_f3)
+        call mossco_state_get(exportState,(/trim(fabm_export_states(nvar)%standard_name)//'_z_velocity'/), &
+          ptr_f3,rc=rc)
         ptr_f3 = fabm_export_states(nvar)%ws
       end do
  
