@@ -19,6 +19,8 @@ examples/esmf_fabm0d/output_0d.dat
 examples/esmf_empty/esmf_empty
 examples/esmf_erosed/delft_sediment_test.out
 examples/esmf_erosed/esmf_erosed
+examples/esmf_gotmfabm/esmf_gotmfabm
+examples/esmf_gotmfabm/main.F90
 examples/esmf_remtc/esmf_remtc
 examples/fabmsed_fabm0d/fabmsed_fabm0d
 examples/fabmsed_fabm0d/output_0d.dat
@@ -31,6 +33,7 @@ examples/erosed/erosed_test
 examples/erosed/delft_sediment_test.out
 examples/timing_concept/timing_concept
 examples/gotmfabm_fabmsed_constant/gotmfabm_fabmsed_constant
+examples/gotmfabm_fabmsed_constant/main.F90
 src/drivers/eromud.f90
 src/drivers/erosand.f90
 src/drivers/precision.f90
