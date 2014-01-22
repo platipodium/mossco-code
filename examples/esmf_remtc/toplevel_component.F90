@@ -103,7 +103,6 @@ module esmf_toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
-      call ESMF_ClockAdvance(parentClock, rc=rc)
       call ESMF_ClockGet(parentClock, currtime=localtime, rc=rc)
       call ESMF_TimeGet(localtime, timeString=timestring, rc=rc)
       message = "Toplevel ticking at "//trim(timestring)
@@ -124,7 +123,10 @@ module esmf_toplevel_component
      ! call ESMF_FieldGet(field,farrayPtr=farrayPtr,localDE=0,rc=rc)
      ! write(*,'(20F5.1 )') farrayPtr
       
-   enddo 
+      call ESMF_ClockAdvance(parentClock, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    enddo 
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
  

@@ -217,10 +217,6 @@ module esmf_toplevel_component
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
-    !! Advance parentClock by next minimum time step of coupling
-      call ESMF_ClockAdvance(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
       call ESMF_ClockGet(parentClock,currTime=currentTime, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
@@ -341,6 +337,11 @@ module esmf_toplevel_component
       call MOSSCO_ClockGetTimeStepToNextAlarm(parentClock,timeInterval,rc)
       call ESMF_ClockSet(parentClock, timeStep=timeInterval, rc=rc) 
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    !! Advance parentClock by next minimum time step of coupling
+      call ESMF_ClockAdvance(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
 
     enddo 
 

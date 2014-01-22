@@ -104,7 +104,6 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
-      call ESMF_ClockAdvance(parentClock, rc=rc)
       call ESMF_ClockGet(parentClock, currtime=localtime, rc=rc)
       call ESMF_TimeGet(localTime, timeString=timeString, rc=rc)
 #ifdef DEBUG
@@ -126,6 +125,9 @@ module toplevel_component
       !call ESMF_GridCompRun(fabm0dComp,importState=fabm0dImportState,&
         exportState=fabm0dExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+     call ESMF_ClockAdvance(parentClock, rc=rc)
+     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
    enddo 
 

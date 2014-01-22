@@ -86,10 +86,11 @@ module esmf_toplevel_component
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
-      call ESMF_ClockAdvance(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
       call ESMF_GridCompRun(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
+
+      call ESMF_ClockAdvance(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     enddo 
 
