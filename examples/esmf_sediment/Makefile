@@ -34,7 +34,10 @@ libsediment:
 libconstant:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-main.o: toplevel_component.o main.F90
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+	
+main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libsediment libconstant
 main.F90: ../common/main.F90
 	ln -f  $< $@

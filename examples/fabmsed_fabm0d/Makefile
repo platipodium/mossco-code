@@ -33,8 +33,11 @@ exec: toplevel_component.o main.o
 
 libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+	
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-main.o: toplevel_component.o main.F90
+main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment
 
 main.F90: ../common/main.F90

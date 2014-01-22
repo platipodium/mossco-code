@@ -31,7 +31,10 @@ exec: toplevel_component.o main.o
 liberosed:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 	
-main.o: toplevel_component.o main.F90
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+	
+main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 liberosed
 main.F90: ../common/main.F90
 	ln -f  $< $@
@@ -41,3 +44,4 @@ clean: extraclean
 extraclean: 
 	@rm -f esmf_erosed main.F90
 	@rm -f PET*.*
+	@rm -f *.out

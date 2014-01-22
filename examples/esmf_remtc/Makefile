@@ -33,7 +33,10 @@ libocean libatmosphere:
 libaocoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
-main.o: toplevel_component.o main.F90
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+	
+main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
 main.F90: ../common/main.F90
 	ln -f  $< $@

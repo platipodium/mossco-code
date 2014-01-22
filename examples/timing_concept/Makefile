@@ -23,7 +23,7 @@ exec: main.o toplevel_component.o
 	@echo "Created example binary timing_concept in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/timing_concept/ to run the example." > $(MOSSCO_BIN_PATH)/timing_concept.txt
 	
-main.o: toplevel_component.o main.F90
+main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libempty mossco_time.o libconstant
 
 main.F90: ../common/main.F90
@@ -34,6 +34,9 @@ libconstant:
 
 libempty:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libempty
+
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 clean: extraclean
 

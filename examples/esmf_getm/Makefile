@@ -33,7 +33,11 @@ exec: toplevel_component.o main.o
 	@echo "Created example binary esmf_getm_example in  $(PWD)"
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_getm to run the example." > $(MOSSCO_BIN_PATH)/esmf_getm.txt
 
-main.o: toplevel_component.o main.F90
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+
+main.o: toplevel_component.o main.F90 libmossco_util
+
 toplevel_component.o: toplevel_component.F90 libgetm
 main.F90: ../common/main.F90
 	ln -f  $< $@

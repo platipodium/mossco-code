@@ -55,7 +55,10 @@ libgotm:
 libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-main.o: toplevel_component.o main.F90
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+	
+main.o: toplevel_component.o main.F90 libmossco_util
 ifeq ($(OCEAN),GOTM)
 CPPFLAGS += -D_GOTMOCEAN_
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libgotm libocean

@@ -49,7 +49,10 @@ libmossco_util:
 libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-main.o: toplevel_component.o main.F90
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+	
+main.o: toplevel_component.o main.F90 libmossco_util
 main.F90: ../common/main.F90
 	ln -f $< $@
 
