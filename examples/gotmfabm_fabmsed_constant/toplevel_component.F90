@@ -239,9 +239,6 @@ module esmf_toplevel_component
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
-      call ESMF_ClockAdvance(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
       ! change state such that gotm-fabm output is mapped to fabmsed fields:
       !   DIN flux:
       call ESMF_StateGet(state,trim('hzg_omexdia_p dissolved nitrate_upward_flux'),field,rc=rc)
@@ -295,10 +292,13 @@ module esmf_toplevel_component
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3(1,1,1) = 1.0d0/16.0d0 * val1_f3(1,1,1)
-      
+     
       call ESMF_GridCompRun(gotmComp, exportState=state, clock=parentClock, rc=rc)
       call ESMF_GridCompRun(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
       call ESMF_GridCompRun(fabmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+
+      call ESMF_ClockAdvance(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     enddo 
 
