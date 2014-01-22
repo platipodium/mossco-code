@@ -335,6 +335,7 @@ default: prefix all
 
 clean:
 	@rm -f *.o *.mod
+	@rm -f PET?.*
 
 distclean: clean
 	@rm -f *.swp
