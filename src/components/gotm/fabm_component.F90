@@ -54,7 +54,6 @@ module fabm_gotm_component
   GOTM_REALTYPE             :: cnpar,latitude,longitude,depth
   GOTM_REALTYPE             :: T0,S0,p0,dtr0,dsr0
   integer                   :: buoy_method,eq_state_mode,eq_state_method
-
     
   public :: SetServices
   
@@ -168,6 +167,7 @@ module fabm_gotm_component
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       exportField(2*k) = ESMF_FieldCreate(grid, arrayspec=arrayspec, &
+    
         name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -178,6 +178,7 @@ module fabm_gotm_component
       farrayPtr = fabm_export_states(k)%conc
 
       call ESMF_FieldGet(field=exportField(2*k), localDe=0, farrayPtr=farrayPtr, &
+      call ESMF_FieldGet(field=exportField(4+2*k), localDe=0, farrayPtr=farrayPtr, &
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       farrayPtr = fabm_export_states(k)%ws
