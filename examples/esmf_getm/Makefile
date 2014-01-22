@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde  
@@ -33,11 +33,13 @@ exec: toplevel_component.o main.o
 	@echo "Created example binary esmf_getm_example in  $(PWD)"
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_getm to run the example." > $(MOSSCO_BIN_PATH)/esmf_getm.txt
 
-main.o: toplevel_component.o
+main.o: toplevel_component.o main.F90
 toplevel_component.o: toplevel_component.F90 libgetm
+main.F90: ../common/main.F90
+	ln -f  $< $@
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_getm_example
+	@rm -f esmf_getm_example main.F90
 	@rm -f PET*.*

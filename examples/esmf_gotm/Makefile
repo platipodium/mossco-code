@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
 #
@@ -52,5 +52,5 @@ toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util  
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_gotm_example
+	@rm -f esmf_gotm_example main.F90
 	@rm -f PET*.*

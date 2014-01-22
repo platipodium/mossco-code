@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -25,6 +25,9 @@ exec: main.o toplevel_component.o
 	
 main.o: toplevel_component.o main.F90
 toplevel_component.o: toplevel_component.F90 libempty mossco_time.o libconstant
+
+main.F90: ../common/main.F90
+	ln -f $< $@
 
 libconstant:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components libconstant

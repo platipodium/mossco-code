@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
 #
@@ -55,7 +55,7 @@ libgotm:
 libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-main.o: toplevel_component.o
+main.o: toplevel_component.o main.F90
 ifeq ($(OCEAN),GOTM)
 CPPFLAGS += -D_GOTMOCEAN_
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libgotm libocean
@@ -63,8 +63,11 @@ else
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libocean
 endif
 
+main.F90: ../common/main.F90
+	ln -f  $< $@
+
 clean: extraclean
 
 extraclean: 
 	@rm -f ocean_fabm0d
-	@rm -f output_0d.dat
+	@rm -f output_0d.dat main.F90

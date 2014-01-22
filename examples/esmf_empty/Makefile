@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -25,10 +25,12 @@ exec: main.o toplevel_component.o
 	@echo "Created example binary esmf_empty in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_empty/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_empty.txt
 	
-main.o: toplevel_component.o
+main.o: toplevel_component.o main.F90
 toplevel_component.o: toplevel_component.F90
+main.F90: ../common/main.F90
+	ln -f  $< $@
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_empty
+	@rm -f esmf_empty main.F90

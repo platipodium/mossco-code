@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -34,12 +34,14 @@ exec: toplevel_component.o main.o
 libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-main.o: toplevel_component.o
+main.o: toplevel_component.o main.F90
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment
 
+main.F90: ../common/main.F90
+	ln -f  $< $@
 
 clean: extraclean
 
 extraclean: 
-	@rm -f fabmsed_fabm0d
+	@rm -f fabmsed_fabm0d main.F90
 	@rm -f PET*.* swr.png output.dat 

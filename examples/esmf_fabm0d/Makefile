@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
 #
@@ -44,8 +44,10 @@ exec: toplevel_component.o main.o
 	@echo "Created example binary esmf_fabm0d in  $(PWD)" 
 	@echo "Please change to $(FABMDIR)/testcases/0d to run the example." > $(MOSSCO_BIN_PATH)/esmf_fabm0d.txt
 
-main.o: toplevel_component.o
+main.o: toplevel_component.o main.F90
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d
+main.F90: ../common/main.F90
+	ln -f  $< $@
 
 fabm0d:
 	( unset LIBS; export FABMHOST=0d ; $(MAKE) -C $(FABMDIR)/src/ )
@@ -55,6 +57,6 @@ fabm0d:
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_fabm0d
+	@rm -f esmf_fabm0d main.F90
 	@rm -f fabm0d
 	@rm -f PET*.*

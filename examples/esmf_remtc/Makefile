@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -33,11 +33,13 @@ libocean libatmosphere:
 libaocoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
-main.o: toplevel_component.o 
+main.o: toplevel_component.o main.F90
 toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
+main.F90: ../common/main.F90
+	ln -f  $< $@
 
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_remtc
+	@rm -f esmf_remtc main.F90
