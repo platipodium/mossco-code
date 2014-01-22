@@ -26,7 +26,7 @@ module fabm_gotm_component
   use meanflow,    only: s,t,rho,z,h,w,bioshade,taub
   use observations,only: SRelaxTau,sProf
   use observations
-  use time,        only: secondsofday,yearday
+  use time,        only: secondsofday,yearday,gotm_time_timestep=>timestep
 
   use gotm_mossco_fabm
   use mossco_variable_types
@@ -54,6 +54,7 @@ module fabm_gotm_component
   GOTM_REALTYPE             :: cnpar,latitude,longitude,depth
   GOTM_REALTYPE             :: T0,S0,p0,dtr0,dsr0
   integer                   :: buoy_method,eq_state_mode,eq_state_method
+
     
   public :: SetServices
   
@@ -105,13 +106,22 @@ module fabm_gotm_component
     type(ESMF_Field), dimension(:), allocatable  :: exportField, importField
     type(ESMF_Field)     :: field
     
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr
+    namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
+    namelist /station/ name,latitude,longitude,depth
       
     call ESMF_LogWrite("FABM/GOTM component initializing.",ESMF_LOGMSG_INFO)
 
+    ! read model_setup namelist
+    open(921,file='gotmrun.nml',status='old',action='read')
+    read(921,nml=model_setup)
+    read(921,nml=station)
+    close(921)
+
     call init_gotm_mossco_fabm(nlev,'gotm_fabm.nml',dt)
     call init_gotm_mossco_fabm_output()
-    call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr,t(1:nlev),s(1:nlev),rho(1:nlev), &
+    call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr, &
+                          t(1:nlev),s(1:nlev),rho(1:nlev), &
                           nuh,h,w,bioshade(1:nlev),I_0,cloud,taub,wind,precip,evap,z(1:nlev), &
                           A,g1,g2,yearday,secondsofday,SRelaxTau(1:nlev),sProf(1:nlev), &
                           bio_albedo,bio_drag_scale)
@@ -120,10 +130,12 @@ module fabm_gotm_component
     ! copy start and stop time from clock to gotm's time parameters
     clock = ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_ClockSet(clock, name='FABM/GOTM clock', rc=rc)
+
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
+
+    call ESMF_ClockSet(clock, name='FABM/GOTM clock',timeStep=timeInterval, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
      
     !> Create the grid from existing grid of water_temperature field
     varname="water_temperature"
@@ -131,13 +143,14 @@ module fabm_gotm_component
     if (itemcount==0) then
       call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
                     ' without this variable.',ESMF_LOGMSG_ERROR)
+    else
+      call ESMF_StateGet(importState,trim(varname),field,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+      call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    call ESMF_StateGet(importState,trim(varname),field,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     ! Get information to generate the fields that store the pointers to variables
     call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -148,28 +161,28 @@ module fabm_gotm_component
 
     call get_all_export_states(fabm_export_states)
     allocate(exportField(2*size(fabm_export_states)))
-    
+
     do k=1,size(fabm_export_states)
-      exportField(3+2*k) = ESMF_FieldCreate(grid, arrayspec, &
+      exportField(2*k-1) = ESMF_FieldCreate(grid, arrayspec=arrayspec, &
         name=trim(fabm_export_states(k)%standard_name), &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      exportField(4+2*k) = ESMF_FieldCreate(grid, arrayspec, &
+      exportField(2*k) = ESMF_FieldCreate(grid, arrayspec=arrayspec, &
         name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_FieldGet(field=exportField(3+2*k), localDe=0, farrayPtr=farrayPtr, &
+      call ESMF_FieldGet(field=exportField(2*k-1), localDe=0, farrayPtr=farrayPtr, &
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       farrayPtr = fabm_export_states(k)%conc
 
-      call ESMF_FieldGet(field=exportField(4+2*k), localDe=0, farrayPtr=farrayPtr, &
+      call ESMF_FieldGet(field=exportField(2*k), localDe=0, farrayPtr=farrayPtr, &
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       farrayPtr = fabm_export_states(k)%ws
 
-      call ESMF_StateAddReplace(exportState,(/exportField(4+2*k),exportField(3+2*k)/),rc=rc)
+      call ESMF_StateAddReplace(exportState,(/exportField(2*k),exportField(2*k-1)/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
