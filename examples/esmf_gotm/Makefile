@@ -32,10 +32,10 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 
 all: exec
 
-libmossco_util:
+libsolver libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libgotm:
+libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 exec: toplevel_component.o main.o
