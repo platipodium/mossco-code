@@ -1,4 +1,5 @@
 # This Makefile is part of MOSSCO
+# This Makefile is part of MOSSCO
 # 
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
