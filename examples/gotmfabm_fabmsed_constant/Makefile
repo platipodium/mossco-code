@@ -21,13 +21,14 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LIBS := -lsediment -lconstant -lmossco_sediment -lmossco_util -lesmf  $(LIBS)
+LIBS := -lsediment -lconstant -lmossco_sediment -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lgotm -lmossco_gotmfabm -lsolver
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -lmossco_util
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
 .PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm
