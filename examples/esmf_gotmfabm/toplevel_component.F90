@@ -80,12 +80,12 @@ module esmf_toplevel_component
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
-      call ESMF_ClockAdvance(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
       call ESMF_GridCompRun(gotmComp, exportState=state, clock=parentClock, rc=rc)
       call ESMF_GridCompRun(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
 
+      call ESMF_ClockAdvance(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      
     enddo 
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
