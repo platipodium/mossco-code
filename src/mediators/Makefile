@@ -54,7 +54,7 @@ clean: extraclean
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libaocoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 
 	
