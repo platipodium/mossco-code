@@ -18,7 +18,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-SUBDIRS=gotm remtc
+SUBDIRS=gotm remtc clm
 
 TARGETS=libempty libconstant 
 ifeq ($(MOSSCO_EROSED),true)

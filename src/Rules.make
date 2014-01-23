@@ -158,6 +158,12 @@ endif
 GETM_LIBS += -lturbulence_prod -lutil_prod
 endif
 
+# CLM stuff, this is relevant since you need to store 7 GB of data for each year and might not have access to the data
+ifdef CLMDIR
+MOSSCO_CLM=true
+endif
+
+export MOSSCO_CLM
 
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
