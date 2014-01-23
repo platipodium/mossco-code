@@ -39,9 +39,9 @@ endif
 endif
 endif
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS) test
+.PHONY: all clean extraclean subdirs $(SUBDIRS) test report
 
-default: all
+default: all report
 
 all: subdirs
 
@@ -56,3 +56,8 @@ extraclean:
 test:
 	$(MAKE) -C standalone test
 	@for dir in *_* ; do (cd $$dir; test -x ./$$dir && ./$$dir; ) ; done
+
+report:
+	@-echo "The following executables have been successfully generated:"
+	@-find . -type f -a -perm 755
+
