@@ -201,8 +201,8 @@ module esmf_toplevel_component
 #if 1
     call mossco_create_upward_flux_fields(pelagicstate, (/&
            "gotm_npzd nutrients                              ", &
-           "hzg_maecs Dissolved Inorganic Nitrogen nutN DIN  ", &
-           "hzg_maecs Dissolved Inorganic Phosphorus nutP DIP", &
+           "hzg_maecs Dissolved Inorganic Nitrogen DIN nutN  ", &
+           "hzg_maecs Dissolved Inorganic Phosphorus DIP nutP", &
            "gotm_npzd detritus                               ", &
            "hzg_maecs Detritus Nitrogen detN                 ", &
            "hzg_maecs Detritus Phosphorus detP               ", &
@@ -257,7 +257,7 @@ module esmf_toplevel_component
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
-      ! change state such that gotm-fabm output is mapped to fabmsed fields:
+      !> change state such that gotm-fabm output is mapped to fabmsed fields:
       !   DIN flux:
       call ESMF_StateGet(sedimentstate,trim('hzg_omexdia_p dissolved nitrate_upward_flux'),field,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -269,8 +269,18 @@ module esmf_toplevel_component
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(sedimentstate,(/ &
               'gotm_npzd nutrients_upward_flux                            ', &
-              'hzg_maecs Dissolved Inorganic Nitrogen nutN DIN_upward_flux'/),DINflux,rc=rc)
+              'hzg_maecs Dissolved Inorganic Nitrogen DIN nutN_upward_flux'/),DINflux,rc=rc)
       DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
+
+      !   DIP flux:
+      call mossco_state_get(sedimentstate,(/ &
+              'hzg_maecs Dissolved Inorganic Phosphorus DIP nutP_upward_flux'/),DIPflux,rc=rc)
+      if (rc == 0)  then
+        call mossco_state_get(sedimentstate,(/ &
+              'hzg_omexdia_p dissolved phosphate_upward_flux'/),val1_f2,rc=rc)
+         DIPflux(1,1) = val1_f2(1,1)
+      end if
+
       !   Det flux:
       call mossco_state_get(pelagicstate,(/ &
               'gotm_npzd detritus              ', &
@@ -298,10 +308,10 @@ module esmf_toplevel_component
 
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p fast detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = sinking_factor * fac_fdet * DETN(1,1,1) * vDETN(1,1,1)
+      ptr_f3(1,1,1) = fac_fdet * DETNflux(1,1)
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p slow detritus C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = sinking_factor * fac_sdet * DETN(1,1,1) * vDETN(1,1,1)
+      ptr_f3(1,1,1) = fac_sdet * DETNflux(1,1)
    
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
@@ -310,11 +320,11 @@ module esmf_toplevel_component
         call mossco_state_get(pelagicstate,(/ &
               'hzg_maecs Detritus Phosphorus detP_z_velocity'/),vDETP,rc=rc)
         call mossco_state_get(sedimentstate,(/ &
-              'hzg_maecs Detritus Nitrogen detN_upward_flux'/),DETPflux,rc=rc)
+              'hzg_maecs Detritus Phosphorus detP_upward_flux'/),DETPflux,rc=rc)
         DETPflux(1,1) = sinking_factor * DETP(1,1,1) * vDETP(1,1,1)
       else
         if (.not.(associated(DETPflux))) allocate(DETPflux(1,1))
-        DETPflux(1,1) = sinking_factor * 1.0d0/16.0d0 * DETN(1,1,1) * vDETN(1,1,1)
+        DETPflux(1,1) = 1.0d0/16.0d0 * DETNflux(1,1)
       end if
 
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p detritus-P',field,rc=rc)
@@ -325,7 +335,7 @@ module esmf_toplevel_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(pelagicstate,(/ &
               'gotm_npzd nutrients                            ', &
-              'hzg_maecs Dissolved Inorganic Nitrogen nutN DIN'/),DIN,rc=rc)
+              'hzg_maecs Dissolved Inorganic Nitrogen DIN nutN'/),DIN,rc=rc)
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p dissolved ammonium',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
@@ -338,16 +348,16 @@ module esmf_toplevel_component
       ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
 
       !> check for DIP, if present, take as is, if not calculate it N-based
-      call mossco_state_get(pelagicstate,(/'hzg_maecs Dissolved Phosphorus nutP DIP'/),DIP,rc=rc)
+      call mossco_state_get(pelagicstate,(/'hzg_maecs Dissolved Phosphorus DIP nutP'/),DIP,rc=rc)
       if (rc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))
-        DIP(1,1,1) = DIN(1,1,1)
+        DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
       end if
       call ESMF_StateGet(pelagicstate,'hzg_omexdia_p dissolved phosphate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3(1,1,1) = 1.0d0/16.0d0 * DIP(1,1,1)
+      ptr_f3(1,1,1) = DIP(1,1,1)
 
       call ESMF_GridCompRun(gotmComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
       call ESMF_GridCompRun(fabmgotmComp, importState=sedimentstate, exportState=pelagicstate, clock=parentClock, rc=rc)
