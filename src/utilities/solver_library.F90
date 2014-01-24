@@ -25,6 +25,7 @@ implicit none
 private
 
 integer,parameter :: rk=selected_real_kind(13) !< real kind
+integer,parameter :: EULER=0
 integer,parameter :: RUNGE_KUTTA_4=1
 integer,parameter :: ADAPTIVE_EULER=2
 integer,parameter :: RUNGE_KUTTA_4_38=3
@@ -85,6 +86,11 @@ real(rk),parameter :: third=1.0_rk/3.0_rk
 
 
 select case (method)
+case(EULER)
+   rhs => rhs0
+   call rhs_driver%get_rhs(rhs)
+   rhs_driver%conc = rhs_driver%conc + dt*rhs
+
 case(ADAPTIVE_EULER)
    rhs => rhs0
    dt_int = 0.0_rk
