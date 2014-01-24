@@ -20,6 +20,8 @@ ifeq ($(MOSSCO_CLM),true)
 TARGETS += libmossco_clm
 endif
 
+CLM_DATADIR ?= /h/ksedata02/data/model/CLM/
+
 .PHONY: $(TARGETS) 
 
 #--------------------------------------------------------
@@ -27,10 +29,16 @@ endif
 
 all: $(TARGETS)
 
-libmossco_clm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_component.o)
+libmossco_clm: prefix data $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
+
+data: atmos.nc
+
+atmos.nc: $(CLM_DATADIR)/cDII.00.kss.2003.nc
+	ln -s $< $@
+
 
 clean: extraclean
 extraclean:
