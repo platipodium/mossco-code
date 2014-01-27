@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libmossco_sediment libmossco_erosed
+.PHONY: libmossco_sediment libmossco_erosed libmossco_clm
 
 # Make targets
 
@@ -35,6 +35,10 @@ ALL_TARGETS += libmossco_erosed
 INCLUDES += -I$(EROSED_DIR)/include
 endif
 
+ifeq ($(MOSSCO_CLM),true)
+ALL_TARGETS += libmossco_clm
+endif
+
 all: $(ALL_TARGETS)
 
 
@@ -43,6 +47,7 @@ all: $(ALL_TARGETS)
 libmossco_sediment: prefix libsolver $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 libmossco_gotmfabm: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
+libmossco_clm: $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libsolver: $(MOSSCO_LIBRARY_PATH)/libsolver.a
 
@@ -75,3 +80,4 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/delft_erosed_driver.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod

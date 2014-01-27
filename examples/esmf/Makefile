@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -17,30 +17,23 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 # Determine examples to build
-SUBDIRS = standalone
-ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += esmf
-SUBDIRS += esmf_remtc
-SUBDIRS += esmf_empty
+#SUBDIRS += remtc
+#SUBDIRS += empty
+
+SUBDIRS += clm
+
 ifeq ($(MOSSCO_EROSED),true)
-SUBDIRS += esmf_erosed
+#SUBDIRS += erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
-ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += esmf_sediment
+#SUBDIRS += sediment
 ifeq ($(MOSSCO_GOTM),true)
-SUBDIRS += esmf_gotm esmf_fabm0d
-SUBDIRS += fabmsed_fabm0d
-SUBDIRS += ocean_fabm0d
-SUBDIRS += ocean_fabm0d_fabmsed
-SUBDIRS += gotmfabm_fabmsed_constant
-SUBDIRS += esmf_gotmfabm
-endif
-endif
+#SUBDIRS += gotm fabm0d
+#SUBDIRS += gotmfabm
 endif
 endif
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS) test report
+.PHONY: all clean extraclean subdirs $(SUBDIRS)
 
 default: all report
 
@@ -53,12 +46,4 @@ clean: extraclean
 
 extraclean:
 	@for dir in $(SUBDIRS) ; do make -C $$dir clean; done
-
-test:
-	$(MAKE) -C standalone test
-	@for dir in *_* ; do (cd $$dir; test -x ./$$dir && ./$$dir; ) ; done
-
-report:
-	@-echo "The following executables have been successfully generated:"
-	@-find . -type f -a -perm 755
 

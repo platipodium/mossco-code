@@ -1,0 +1,5 @@
+# Resource file for atmosphere
+ 
+# Decomposition layout
+iprocs:      1
+jprocs:      1
