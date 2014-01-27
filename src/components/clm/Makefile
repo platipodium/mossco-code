@@ -20,25 +20,29 @@ ifeq ($(MOSSCO_CLM),true)
 TARGETS += libmossco_clm
 endif
 
-CLM_DATADIR ?= /h/ksedata02/data/model/CLM/
+CLM_DATADIR_H ?= /h/ksedata02/data/model/CLM/
+CLM_DATADIR_KSEZ ?= 
 
-.PHONY: $(TARGETS) 
+.PHONY: $(TARGETS) libmossco_clm_component libmossco_clm_driver data
 
 #--------------------------------------------------------
 # Make targets
 
-all: $(TARGETS)
+all: $(TARGETS) data 
 
-libmossco_clm: prefix data $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
+libmossco_clm: libmossco_clm_component
+libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
+libmossco_clm_driver:    prefix data $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_clm.a:
+$(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
 
 data: atmos.nc
 
-atmos.nc: $(CLM_DATADIR)/cDII.00.kss.2003.nc
-	ln -s $< $@
-
+atmos.nc:
+	@-ln -s /media/data/forcing/CLM/cDII.00.kss.2003.nc $@ || \
+	ln -s /h/ksedata02/data/model/CLM/cDII.00.kss.2003.nc $@ || \
+	echo "Could not find data file cDII.00.kss.2003.nc."
 
 clean: extraclean
 extraclean:
