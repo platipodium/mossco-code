@@ -2,7 +2,7 @@
 !! This module contains routines of the CLM atmospheric component.
 
 !> This module encapsulates the CLM atmospheric interface.
-module CLMAtmosComponentModule
+module clm_netcdf_component
     
     use ESMF
 
@@ -45,11 +45,11 @@ module CLMAtmosComponentModule
 
     type(atm_var), allocatable  :: var(:)
     
-    public CLMAtmos_SetServices
+    public SetServices
 
     contains
 
-    subroutine CLMAtmos_SetServices(gcomp, rc)
+    subroutine SetServices(gcomp, rc)
 
       type(ESMF_GridComp)  :: gcomp
       integer, intent(out) :: rc
@@ -64,7 +64,7 @@ module CLMAtmosComponentModule
                                       , rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    end subroutine CLMAtmos_SetServices
+    end subroutine SetServices
 
 !----------------------------------------------------------------------------------
 
@@ -399,4 +399,4 @@ module CLMAtmosComponentModule
 
     end subroutine atmos_final
 
-end module CLMAtmosComponentModule
+end module clm_netcdf_component
