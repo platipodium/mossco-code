@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde  
@@ -18,9 +18,10 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-SUBDIRS=gotm remtc clm
+SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant 
+TARGETS=libempty libconstant libmossco_clm
+
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
 endif
@@ -44,6 +45,13 @@ endif
 # add checks for libfabm and libsediment
 
 all: subdirs $(TARGETS)
+
+libmossco_clm: libmossco_clm_component
+libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
+libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
 
 libgetm: prefix libgetm_external \
 	$(MOSSCO_LIBRARY_PATH)/libgetm.a(getm_component.o)

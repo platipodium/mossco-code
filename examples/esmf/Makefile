@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -20,9 +20,8 @@ EXTRA_DIST=README
 #SUBDIRS += remtc
 #SUBDIRS += empty
 
-ifeq ($(MOSSCO_CLM),true)
 SUBDIRS += clm
-endif
+
 ifeq ($(MOSSCO_EROSED),true)
 #SUBDIRS += erosed
 endif
