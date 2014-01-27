@@ -348,7 +348,7 @@ module esmf_toplevel_component
       ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
 
       !> check for DIP, if present, take as is, if not calculate it N-based
-      call mossco_state_get(pelagicstate,(/'hzg_maecs Dissolved Phosphorus DIP nutP'/),DIP,rc=rc)
+      call mossco_state_get(pelagicstate,(/'hzg_maecs Dissolved Inorganic Phosphorus DIP nutP'/),DIP,rc=rc)
       if (rc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))
         DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
