@@ -246,7 +246,7 @@ end type
 
    ! Allocate array for vertical movement rates (m/s, positive for upwards),
    ! and set these to the values provided by the model.
-   allocate(ws(1,1,1:gotmfabm%knum,1:size(gotmfabm%model%info%state_variables)),stat=rc)
+   allocate(ws(1,1,0:gotmfabm%knum,1:size(gotmfabm%model%info%state_variables)),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (ws)'
    do i=1,size(gotmfabm%model%info%state_variables)
       ws(1,1,:,i) = gotmfabm%model%info%state_variables(i)%vertical_movement
@@ -492,11 +492,11 @@ end type
 
       ! Do advection step due to settling or rising
       call adv_center(gotmfabm%knum,dt,curh,curh,ws(1,1,:,i),flux, &
-          flux,_ZERO_,_ZERO_,w_adv_discr,adv_mode_1,cc(1,1,1:gotmfabm%knum,i))
+          flux,_ZERO_,_ZERO_,w_adv_discr,adv_mode_1,cc(1,1,0:gotmfabm%knum,i))
 
       ! Do advection step due to vertical velocity
       if (w_adv_method/=0) call adv_center(gotmfabm%knum,dt,curh,curh,w,flux, &
-          flux,_ZERO_,_ZERO_,w_adv_ctr,adv_mode_0,cc(1,1,1:gotmfabm%knum,i))
+          flux,_ZERO_,_ZERO_,w_adv_ctr,adv_mode_0,cc(1,1,0:gotmfabm%knum,i))
    end do
 
    ! Vertical diffusion
