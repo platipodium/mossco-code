@@ -44,7 +44,7 @@ src/drivers/sand_mud.f90
 src/drivers/sedparams.inc
 src/drivers/shld.f90
 src/drivers/vanRijn84.f90
-src/components/clm/atmos.nc
+examples/esmf/clm/atmos*.nc
 examples/standalone/erosed/delft_sediment_test.out
 examples/standalone/erosed/erosed
 examples/standalone/omexdia_p/omexdia_p

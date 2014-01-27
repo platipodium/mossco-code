@@ -45,8 +45,8 @@ module clm_driver
 
 ! Open file, read dimensions, get variable ids, broadcast dimensions
       if ( myrank==0 ) then
-        print *, "Opening src/clm/DATA/atm.nc"
-        ierr = nf90_open("src/clm/DATA/atm.nc", NF90_NOWRITE,iunit)
+        print *, "atmos.nc"
+        ierr = nf90_open("atmos.nc", NF90_NOWRITE,iunit)
         if ( ierr /= NF90_NOERR ) call cdf_check_err(ierr, ibuf(4))
 
         if ( ierr == NF90_NOERR ) then  ! Continue reading only if open succeeded

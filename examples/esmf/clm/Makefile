@@ -48,4 +48,5 @@ main.F90: ../../common/main.F90
 clean: extraclean
 
 extraclean: 
-	@rm -f clm main.F90 *.nc 
+	@rm -f clm main.F90
+	@rm -f atmos_*.nc PET*
