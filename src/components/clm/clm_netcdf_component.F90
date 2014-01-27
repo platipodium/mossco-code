@@ -158,7 +158,7 @@ module CLMAtmosComponentModule
       enddo
 
 ! Create grid and retrieve local loop boundaries
-      grid = ESMF_GridCreate(filename="src/clm/DATA/clm_grid.nc", &
+      grid = ESMF_GridCreate(filename="clm_grid.nc",fileFormat=ESMF_FILEFORMAT_SCRIP, &
                              regDecomp=(/iprocs,jprocs/),            &
                              isSphere=.false., rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
