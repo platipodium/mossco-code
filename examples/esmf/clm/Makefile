@@ -32,6 +32,13 @@ libmossco_clm:
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+
+data: atmos.nc
+
+atmos.nc:
+	@-ln -s /media/data/forcing/CLM/cDII.00.kss.2003.nc $@ || \
+	ln -s /h/ksedata02/data/model/CLM/cDII.00.kss.2003.nc $@ || \
+	echo "Could not find data file cDII.00.kss.2003.nc."
 	
 main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libmossco_clm

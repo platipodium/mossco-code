@@ -107,7 +107,7 @@ module clm_netcdf_component
 ! Load config file for atmospheric component
       config = ESMF_ConfigCreate(rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigLoadFile(config, "src/clm/DATA/atmos.rc", rc=rc)
+      call ESMF_ConfigLoadFile(config, "atmos.rc", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_ConfigGetAttribute(config, iprocs, label='iprocs:', rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -119,7 +119,7 @@ module clm_netcdf_component
 ! Load config file for variable selection
       config = ESMF_ConfigCreate(rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigLoadFile(config, "src/clm/DATA/config.rc", rc=rc)
+      call ESMF_ConfigLoadFile(config, "config.rc", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_ConfigGetAttribute(config, nvar, label='nvar:', rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
