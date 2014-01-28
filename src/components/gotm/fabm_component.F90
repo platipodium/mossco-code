@@ -228,6 +228,13 @@ module fabm_gotm_component
     ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
     call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ! set environment from GOTM arrays
+    call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr, &
+                          t(1:nlev),s(1:nlev),rho(1:nlev), &
+                          nuh,h,w,bioshade(1:nlev),I_0,cloud,taub,wind,precip,evap,z(1:nlev), &
+                          A,g1,g2,yearday,secondsofday,SRelaxTau(1:nlev),sProf(1:nlev), &
+                          bio_albedo,bio_drag_scale)
   
     ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
      do while (.not.ESMF_ClockIsStopTime(clock))
