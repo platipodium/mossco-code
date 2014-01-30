@@ -10,22 +10,22 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_remtc$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/remtc$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf -locean -latmosphere -laocoupler $(LIBS)
+LIBS := -lesmf -locean -latmosphere -laocoupler -lmossco_util $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec libocean libatmosphere libaocoupler
+.PHONY: all exec libocean libatmosphere libaocoupler libmossco_util
 
 all: exec
+exec: remtc
 
-exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o esmf_remtc $^ $(LDFLAGS)
-	@echo "Created example binary esmf_remtc in $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_remtc/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_remtc.txt
+remtc: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
 libocean libatmosphere:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
@@ -38,7 +38,7 @@ libmossco_util:
 	
 main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
-main.F90: ../common/main.F90
+main.F90: ../../common/main.F90
 	ln -f  $< $@
 
 

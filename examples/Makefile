@@ -21,7 +21,6 @@ SUBDIRS = standalone
 
 ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += esmf
-SUBDIRS += esmf_remtc
 ifeq ($(MOSSCO_EROSED),true)
 SUBDIRS += esmf_erosed
 endif

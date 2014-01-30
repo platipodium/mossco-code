@@ -17,9 +17,8 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 # Determine examples to build
-#SUBDIRS += remtc
 
-SUBDIRS += clm empty
+SUBDIRS += clm empty remtc
 
 ifeq ($(MOSSCO_EROSED),true)
 #SUBDIRS += erosed
