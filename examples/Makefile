@@ -32,7 +32,6 @@ SUBDIRS += fabmsed_fabm0d
 SUBDIRS += ocean_fabm0d
 SUBDIRS += ocean_fabm0d_fabmsed
 SUBDIRS += gotmfabm_fabmsed_constant
-SUBDIRS += esmf_gotmfabm
 endif
 endif
 endif
