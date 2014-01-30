@@ -1,4 +1,4 @@
-module esmf_toplevel_component
+module toplevel_component
 
   use esmf
   use clm_netcdf_component, only: clm_SetServices => SetServices
@@ -107,4 +107,4 @@ module esmf_toplevel_component
 
   end subroutine Finalize
 
-end module esmf_toplevel_component
+end module toplevel_component

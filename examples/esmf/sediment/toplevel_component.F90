@@ -1,4 +1,4 @@
-module esmf_toplevel_component
+module toplevel_component
 
   use esmf
 
@@ -120,4 +120,4 @@ module esmf_toplevel_component
 
   end subroutine Finalize
 
-end module esmf_toplevel_component
+end module toplevel_component

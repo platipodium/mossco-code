@@ -1,4 +1,4 @@
-module esmf_toplevel_component
+module toplevel_component
 
   use esmf
   use remtc_ocean, only: ocean_SetServices => SetServices
@@ -153,4 +153,4 @@ module esmf_toplevel_component
 
   end subroutine Finalize
 
-end module esmf_toplevel_component
+end module toplevel_component
