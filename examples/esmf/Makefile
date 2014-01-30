@@ -18,13 +18,16 @@ EXTRA_DIST=README
 
 # Determine examples to build
 
-SUBDIRS += clm empty remtc
+SUBDIRS += clm empty remtc # benthos
 
 ifeq ($(MOSSCO_EROSED),true)
 SUBDIRS += erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
 SUBDIRS += sediment
+ifeq ($(MOSSCO_GETM),true)
+SUBDIRS += getm
+endif
 ifeq ($(MOSSCO_GOTM),true)
 SUBDIRS += gotm fabm0d
 SUBDIRS += gotmfabm
@@ -33,7 +36,7 @@ endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS)
 
-default: all report
+default: all 
 
 all: subdirs
 
