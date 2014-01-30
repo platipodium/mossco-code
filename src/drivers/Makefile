@@ -21,7 +21,7 @@ EXTRA_DIST=README
 
 # Make targets
 
-ALL_TARGETS = libmossco_clm #libmossco_benthos
+ALL_TARGETS = libmossco_clm libmossco_benthos
 
 ifeq ($(MOSSCO_FABM),true)
 ALL_TARGETS=libmossco_sediment libmossco_fabm0d
