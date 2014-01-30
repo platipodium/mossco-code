@@ -40,8 +40,9 @@ type (statevariable)         :: Chl
      else
         g_erod_microphyto= 1.0
 
-      write (*,*) ' Error: the microphytobenthos effect on the erodibility was calculated base on Chlorophyll a  &
-              &      content in UNIT microgram /g dry Sediment, and not in microgram/ m**2 area. Therefroe, the bioeffect was not considered.'
+      write (*,*) ' Error: the microphytobenthos effect on the erodibility was calculated base on'// &
+                  '  Chlorophyll a content in UNIT microgram /g dry Sediment, and not in microgram/ m**2'// &
+                  '  area. Therefroe, the bioeffect was not considered.'
 
      end if
 
@@ -90,8 +91,9 @@ real (fp)    :: b2 = 5.08e-8
 
        g_erod_Macrofauna= 1.0
 
-      write (*,*) ' Error: the Macoma balthica effect on the erodibility can be calculated at the moment based on   &
-      &             intensity (refer to Paarlberg et al. (2005)), therefore, the effect based on Biomass was set to 1.0'
+      write (*,*) ' Error: the Macoma balthica effect on the erodibility can be calculated at the moment based'// &
+                  ' on intensity (refer to Paarlberg et al. (2005)), therefore, the effect based on Biomass'// &
+                  '  was set to 1.0'
 
     end if
 

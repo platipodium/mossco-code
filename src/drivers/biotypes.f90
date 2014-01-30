@@ -25,7 +25,7 @@ integer , parameter :: fp= selected_real_kind (8)
 
 ! data type use for defining state varaible of microphytobenthos
 type statevariable
- character (:), pointer :: Unitt  => null()
+ character (len=512), pointer :: Unitt  => null()
  real (fp)    , pointer :: amount => null()
 end type statevariable
 

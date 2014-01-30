@@ -1,5 +1,4 @@
 # This Makefile is part of MOSSCO
-# This Makefile is part of MOSSCO
 # 
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
@@ -18,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 # Determine examples to build
-SUBDIRS = 
+SUBDIRS =  #benthos
 ifeq ($(MOSSCO_FABM),true)
 SUBDIRS += omexdia_p
 endif

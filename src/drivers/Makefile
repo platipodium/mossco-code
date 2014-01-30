@@ -47,9 +47,15 @@ libmossco_gotmfabm: prefix libsolver libfabm_external libgotm_external $(MOSSCO_
 libmossco_clm: $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 # Benthos section
-libmossco_benthos: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o)
+libmossco_benthos: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
 
-mikrophytobenthos_class.o: benthoseffect_class.o biotypes.o
+microphytobenthos_class.o: criticalsheareffect.o benthoseffect_class.o biotypes.o erodibilityeffect.o
 mbalthica_class.o: macrofauna_class.o
 macrofauna_class.o: benthoseffect_class.o biotypes.o
 benthoseffect_class.o: biotypes.o
@@ -57,10 +63,7 @@ macrofauna_interface.o: mbaltica_class.o biotypes.o
 criticalsheareffect.o: macrofauna_class.o biotypes.o
 erodibilityeffect.o: macrofauna_class.o biotypes.o
 
-
-
-
-
+# Solver
 
 libsolver: $(MOSSCO_LIBRARY_PATH)/libsolver.a
 
