@@ -1,0 +1,37 @@
+# This Makefile is part of MOSSCO
+# 
+# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+#
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /examples/standalone/benthos$,,$(PWD))
+endif
+
+include $(MOSSCO_DIR)/src/Rules.make
+
+LIBS := -lmossco_benthos $(LIBS)
+
+F90FLAGS += $(INCLUDES)
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+
+.PHONY: libmossco_benthos exec
+
+all: exec
+
+libmossco_benthos:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
+
+exec: libmossco_benthos BioDriver.o
+	$(F90) -o benthos BioDriver.o $(LDFLAGS)
+	@echo "Created example binary benthos in  $(PWD)" 
+	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/benthos to run the example." > $(MOSSCO_BIN_PATH)/benthos.txt
+
+clean: extraclean
+
+extraclean: 
+	@rm -f benthos
