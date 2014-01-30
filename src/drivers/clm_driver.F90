@@ -5,7 +5,10 @@
 module clm_driver
     
     use netcdf
+
+#ifdef MOSSCO_MPI
     use mpi
+#endif
     
     implicit none
 
@@ -68,7 +71,9 @@ module clm_driver
 
       endif
         
+#ifdef MOSSCO_MPI
       call MPI_BCAST( ibuf, 4, MPI_INTEGER,   0, MPI_COMM_WORLD, ierr )
+#endif
 
       nx   = ibuf(1)
       ny   = ibuf(2)
@@ -86,7 +91,9 @@ module clm_driver
 
 ! Read available times and broadcast
       if ( myrank==0 ) ierr = nf90_get_var(iunit,varid(0),dat_time)
+#ifdef MOSSCO_MPI
       call MPI_BCAST( dat_time, nrec   , MPI_DOUBLE,   0, MPI_COMM_WORLD, ierr )
+#endif
 
 ! Check for consistency
       if ( app_time_secs < dat_time(1) .or. app_time_secs >= dat_time(nrec) ) then
@@ -181,7 +188,9 @@ module clm_driver
                                                         ,count=(/nx,ny, 2    /))
        endif
 
+#ifdef MOSSCO_MPI
        call MPI_BCAST(work,nx*ny*nvars*2,MPI_REAL,0,MPI_COMM_WORLD,ierr )
+#endif
 
        work(:,:,1,:) = work(:,:,1,:) * 0.01 ! Pa ---> hPa
 
@@ -212,8 +221,9 @@ module clm_driver
                                                          ,count=(/nx,ny,1 /))
        endif
 
+#ifdef MOSSCO_MPI
        call MPI_BCAST(work(:,:,:,1),nx*ny*nvars,MPI_REAL,0,MPI_COMM_WORLD,ierr)
-
+#endif
        work(:,:,1,1) = work(:,:,1,1) * 0.01 ! Pa ---> hPa
 
       endif

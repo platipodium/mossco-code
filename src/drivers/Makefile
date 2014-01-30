@@ -35,9 +35,7 @@ ALL_TARGETS += libmossco_erosed
 INCLUDES += -I$(EROSED_DIR)/include
 endif
 
-ifeq ($(MOSSCO_CLM),true)
 ALL_TARGETS += libmossco_clm
-endif
 
 all: $(ALL_TARGETS)
 
