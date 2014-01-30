@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_gotm$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/gotm$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -31,6 +31,7 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 .PHONY: all exec libgotm libmossco_util
 
 all: exec
+exec: gotm
 
 libsolver libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
@@ -38,13 +39,12 @@ libsolver libmossco_util:
 libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
-exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o esmf_gotm $^ $(LDFLAGS)
-	@echo "Created example binary esmf_gotm in  $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_gotm to run the example." > $(MOSSCO_BIN_PATH)/esmf_gotm.txt
+gotm: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
 main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../common/main.F90
+main.F90: ../../common/main.F90
 	ln $< $@
 
 toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util  libsolver  libgotm

@@ -21,15 +21,16 @@ SUBDIRS = standalone
 
 ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += esmf
+endif
+
 ifeq ($(MOSSCO_FABM),true)
 ifeq ($(MOSSCO_ESMF),true)
 ifeq ($(MOSSCO_GOTM),true)
-SUBDIRS += esmf_gotm esmf_fabm0d
+SUBDIRS += esmf_fabm0d
 SUBDIRS += fabmsed_fabm0d
 SUBDIRS += ocean_fabm0d
 SUBDIRS += ocean_fabm0d_fabmsed
 SUBDIRS += gotmfabm_fabmsed_constant
-endif
 endif
 endif
 endif
