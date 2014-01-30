@@ -21,7 +21,6 @@ endif
 
 MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 
-
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the Preamlbe section of this Rules.make in repeated calls.  In most circumstances,
 # Rules.make is executed at MAKELEVEL 1, unless directly called in $(MOSSCODIR)/src
@@ -168,6 +167,7 @@ export MOSSCO_CLM
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
 #
+export MOSSCO_MPI ?= false
 ifndef ESMFMKFILE
 ifndef MOSSCO_ESMF
 $(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed)
@@ -177,6 +177,7 @@ endif
 else
 include $(ESMFMKFILE)
 export MOSSCO_ESMF=true
+export MOSSCO_MPI=true  # ESMF always provides MPI stubs, even if compiled with mpiuni driver
 ifdef ESMF_DIR
 MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
 else
@@ -326,7 +327,11 @@ LIBS += $(ESMF_F90LINKLIBS)
 LIBS += $(MOSSCO_NETCDF_LIBS)
 export LIBS
 
-CPPFLAGS = $(DEFINES)  -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
+CPPFLAGS = $(DEFINES)  
+CPPFLAGS += -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
+ifneq ($(MOSSCO_MPI),false)
+CPPFLAGS += -DMOSSCO_MPI
+endif
 export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 
 LDFLAGS += $(ESMF_F90LINKOPTS)
