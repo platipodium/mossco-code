@@ -18,9 +18,8 @@ EXTRA_DIST=README
 
 # Determine examples to build
 #SUBDIRS += remtc
-#SUBDIRS += empty
 
-SUBDIRS += clm
+SUBDIRS += clm empty
 
 ifeq ($(MOSSCO_EROSED),true)
 #SUBDIRS += erosed
