@@ -20,7 +20,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_clm #libmossco_benthos
+TARGETS=libempty libconstant libmossco_clm libmossco_benthos
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
