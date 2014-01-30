@@ -16,7 +16,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS :=  -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf $(LIBS)
+LIBS :=  -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf -lmossco_util $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)

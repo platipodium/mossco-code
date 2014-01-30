@@ -17,15 +17,15 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lsediment -locean -loceansedimentcoupler -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf  $(LIBS)
+LIBS := -lsediment -locean -loceansedimentcoupler -lmossco_fabm0d -lmossco_util -lmossco_sediment -lsolver -lesmf  $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
-ifeq ($(HAVE_LD_FORCE_LOAD),true)
-LDFLAGS += -Wl,-force_load
-endif
+#ifeq ($(HAVE_LD_FORCE_LOAD),true)
+#LDFLAGS += -Wl,-force_load
+#endif
 
-.PHONY: all exec libocean libsediment liboceansedimentcoupler
+.PHONY: all exec libocean libsediment liboceansedimentcoupler libmossco_util
 
 all: exec
 exec: ocean_fabm0d_fabmsed
@@ -56,4 +56,4 @@ main.F90: ../common/main.F90
 clean: extraclean
 
 extraclean: 
-	@rm -f ocean_sediment main.F90
+	@rm -f ocean_fabm0d_fabmsed main.F90
