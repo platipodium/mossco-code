@@ -17,11 +17,11 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libmossco_sediment libmossco_erosed libmossco_clm
+.PHONY: libmossco_sediment libmossco_erosed libmossco_clm libmossco_benthos
 
 # Make targets
 
-ALL_TARGETS =
+ALL_TARGETS = libmossco_clm libmossco_benthos
 
 ifeq ($(MOSSCO_FABM),true)
 ALL_TARGETS=libmossco_sediment libmossco_fabm0d
@@ -35,17 +35,35 @@ ALL_TARGETS += libmossco_erosed
 INCLUDES += -I$(EROSED_DIR)/include
 endif
 
-ALL_TARGETS += libmossco_clm
-
 all: $(ALL_TARGETS)
-
 
 # FABM/sediment section
 
 libmossco_sediment: prefix libsolver $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 libmossco_gotmfabm: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
+
+
 libmossco_clm: $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
+
+# Benthos section
+libmossco_benthos: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
+
+microphytobenthos_class.o: criticalsheareffect.o benthoseffect_class.o biotypes.o erodibilityeffect.o
+mbalthica_class.o: macrofauna_class.o
+macrofauna_class.o: benthoseffect_class.o biotypes.o
+benthoseffect_class.o: biotypes.o
+macrofauna_interface.o: mbaltica_class.o biotypes.o
+criticalsheareffect.o: macrofauna_class.o biotypes.o
+erodibilityeffect.o: macrofauna_class.o biotypes.o
+
+# Solver
 
 libsolver: $(MOSSCO_LIBRARY_PATH)/libsolver.a
 

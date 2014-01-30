@@ -43,8 +43,9 @@ type (statevariable)               :: Chl
 
        fcr_microphyto= 1.0
 
-      write (*,*) ' Error: the microphytobenthos effect on critical shear stress can be only calculated base on Chlorophyll a  &
-      &             content in UNIT microgram /g dry Sediment, and not in microgram/ m**2 area. therefore, the effect was not calculated.'
+      write (*,*) ' Error: the microphytobenthos effect on critical shear stress can be only'// &
+                  ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment,'// &
+                  '  and not in microgram/ m**2 area. therefore, the effect was not calculated.'
 
      end if
 !else
@@ -83,8 +84,9 @@ type (Mc_statevariable)          :: Mbalthica
 
       fcr_macrofauna = 1.0
 
-      write (*,*) ' Error: the Macoma balthica effect on critical bed shear stress can at the moment be calculated base on   &
-      &             intensity (refer to Knaapen et al. (2003)), therefore, the result based on Biomass is set to 1.0'
+      write (*,*) ' Error: the Macoma balthica effect on critical bed shear stress can at the'// &
+                  ' moment be calculated base on intensity (refer to Knaapen et al. (2003)),'// &
+                  '  therefore, the result based on Biomass is set to 1.0'
 
     end if
 
