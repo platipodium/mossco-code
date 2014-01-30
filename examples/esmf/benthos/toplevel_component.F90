@@ -11,7 +11,7 @@ module toplevel_component
 
   type(ESMF_GridComp),save    :: benthosComp
   character(len=ESMF_MAXSTR)  :: benthosCompName
-  type(ESMF_State)            :: benthodsImportState, benthosExportState
+  type(ESMF_State)            :: benthosImportState, benthosExportState
 
   contains
 
