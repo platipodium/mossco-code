@@ -14,15 +14,18 @@ PET?.*
 doc/latex
 doc/html
 examples/esmf/*/main.F90
+examples/esmf/benthos/benthos
 examples/esmf/clm/clm
 examples/esmf/empty/empty
 examples/esmf/erosed/delft_sediment_test.out
 examples/esmf/erosed/erosed
 examples/esmf/fabm0d/fabm0d
 examples/esmf/fabm0d/output_0d.dat
+examples/esmf/getm/getm
 examples/esmf/gotm/gotm
 examples/esmf/gotmfabm/gotmfabm
 examples/esmf/remtc/remtc
+examples/esmf/sediment/sediment
 examples/fabmsed_fabm0d/fabmsed_fabm0d
 examples/fabmsed_fabm0d/output_0d.dat
 examples/ocean_fabm0d_fabmsed/ocean_fabm0d_fabmsed
@@ -34,6 +37,7 @@ examples/standalone/erosed/erosed_test
 examples/standalone/erosed/delft_sediment_test.out
 examples/timing_concept/timing_concept
 examples/gotmfabm_fabmsed_constant/gotmfabm_fabmsed_constant
+examples/gotmfabm_fabmsed_constant/main.F90
 src/drivers/eromud.f90
 src/drivers/erosand.f90
 src/drivers/precision.f90
