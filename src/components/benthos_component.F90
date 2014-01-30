@@ -16,10 +16,10 @@ module benthos_component
   !! @todo hn: read CF documnetation for correct name
 
   ! Dimensions (x,y,depth layer, fraction index)
-  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_Microphytobenthos_on_sediment_erodibility_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_Microphytobenthos_on_critical_bed_shearstress
-  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_Macrofauna_Mbalthica_on_sediment_erodibility_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_Macrofauna_Mbalthica_on_critical_bed_shearstress
+  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_MPB_on_sediment_erodibility_at_bottom
+  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_MPB_on_critical_bed_shearstress
+  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
+  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: Effect_of_Mbalthica_on_critical_bed_shearstress
 
   type(ESMF_Field)            :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_sherastress, &
     &                            Macrofauna_erodibility,Macrofauna_critical_bed_sherastress
@@ -99,25 +99,25 @@ write (*,*)
 
   !! @todo uncomment next line (or similar implementationw
    !size_classes_of_upward_flux_of_pim_at_bottom(1,1,nmlb:nmub,1:nfrac) => sour(:,:)
-    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_Microphytobenthos_on_sediment_erodibility_at_bottom,&
+    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_MPB_on_sediment_erodibility_at_bottom,&
       &                       indexflag=ESMF_INDEX_GLOBAL, rc=rc)
      Microphytobenthos_erodibility = ESMF_FieldCreate(grid, array,&
-      &                     name="Effect_of_Microphytobenthos_on_sediment_erodibility_at_bottom", rc=rc)
+      &                     name="Effect_of_MPB_on_sediment_erodibility_at_bottom", rc=rc)
 
-    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_Microphytobenthos_on_critical_bed_shearstress,&
+    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_MPB_on_critical_bed_shearstress,&
       &                       indexflag=ESMF_INDEX_GLOBAL, rc=rc)
      Microphytobenthos_critical_bed_sherastress= ESMF_FieldCreate(grid, array, &
-      &                         name="Effect_of_Microphytobenthos_on_critical_bed_shearstress", rc=rc)
+      &                         name="Effect_of_MPB_on_critical_bed_shearstress", rc=rc)
 
-    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_Macrofauna_Mbalthica_on_sediment_erodibility_at_bottom,&
+    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom,&
       &                       indexflag=ESMF_INDEX_GLOBAL, rc=rc)
      Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
-      &                     name="Effect_of_Macrofauna_Mbalthica_on_sediment_erodibility_at_bottom", rc=rc)
+      &                     name="Effect_of_Mbalthica_on_sediment_erodibility_at_bottom", rc=rc)
 
-    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_Macrofauna_Mbalthica_on_critical_bed_shearstress,&
+    array = ESMF_ArrayCreate(distgrid,farray=Effect_of_Mbalthica_on_critical_bed_shearstress,&
       &                       indexflag=ESMF_INDEX_GLOBAL, rc=rc)
      Macrofauna_critical_bed_sherastress= ESMF_FieldCreate(grid, array, &
-      &                             name="Effect_of_Macrofauna_Mbalthica_on_critical_bed_shearstress", rc=rc)
+      &                             name="Effect_of_Mbalthica_on_critical_bed_shearstress", rc=rc)
     !array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
     !pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
     !array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
@@ -215,4 +215,4 @@ write (12,*) 'Both Biotic erodibility =', Total_Bioturb%ErodibilityEffect
 
   end subroutine Finalize
 
-end module erosed_component
+end module benthos_component
