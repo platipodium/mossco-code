@@ -25,7 +25,7 @@ ifeq ($(MOSSCO_EROSED),true)
 #SUBDIRS += erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
-#SUBDIRS += sediment
+SUBDIRS += sediment
 ifeq ($(MOSSCO_GOTM),true)
 #SUBDIRS += gotm fabm0d
 #SUBDIRS += gotmfabm

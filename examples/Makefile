@@ -18,6 +18,7 @@ EXTRA_DIST=README
 
 # Determine examples to build
 SUBDIRS = standalone
+
 ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += esmf
 SUBDIRS += esmf_remtc
@@ -26,7 +27,6 @@ SUBDIRS += esmf_erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
 ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += esmf_sediment
 ifeq ($(MOSSCO_GOTM),true)
 SUBDIRS += esmf_gotm esmf_fabm0d
 SUBDIRS += fabmsed_fabm0d
