@@ -57,8 +57,8 @@ end type
 
 
 !  Arrays for state and diagnostic variables
-   REALTYPE,allocatable,target,dimension(_LOCATION_DIMENSIONS_,:),public :: cc
-   REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_,:),public        :: cc_diag
+   REALTYPE,allocatable,target,dimension(:,:,:,:),public :: cc
+   REALTYPE,allocatable,dimension(:,:,:,:),public        :: cc_diag
    REALTYPE,allocatable,dimension(:,:,:),                  public        :: cc_diag_hz
 
    type (type_bulk_variable_id),      save :: temp_id,salt_id,rho_id,h_id
@@ -73,13 +73,16 @@ end type
                                 save_inputs
 
    ! Arrays for work, vertical movement, and cross-boundary fluxes
-   REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_,:) :: ws
+   REALTYPE,allocatable,dimension(:,:,:,:) :: ws
    REALTYPE,public,allocatable,dimension(:,:,:)            :: sfl,bfl,total
    REALTYPE,allocatable,dimension(:)                       :: Qsour,Lsour,DefaultRelaxTau,curh,curnuh
    logical,allocatable                                     :: cc_transport(:)
 
    ! Arrays for environmental variables not supplied externally.
-   REALTYPE,allocatable,dimension(_LOCATION_DIMENSIONS_)   :: par,pres,swr,k_par
+   REALTYPE,allocatable,dimension(:,:,:)   :: par,pres,swr,k_par
+   REALTYPE,allocatable,dimension(:,:,:)   :: temp3d,salt3d,rho3d,nuh3d,h3d,w3d,bioshade3d,z3d
+   REALTYPE, target, dimension(1:1,1:1)                     :: I_02d,cloud2d,wnd2d,precip2d,evap2d,taub2d
+   REALTYPE, target, dimension(1:1,1:1)                     :: latitude2d,longitude2d
 
    ! External variables
    integer  :: w_adv_ctr   ! Scheme for vertical advection (0 if not used)
@@ -201,6 +204,15 @@ end type
       cloud_id     = gotmfabm%model%get_horizontal_variable_id(standard_variables%cloud_area_fraction)
       taub_id      = gotmfabm%model%get_horizontal_variable_id(standard_variables%bottom_stress)
 
+   allocate(temp3d(1,1,nlev))
+   allocate(salt3d(1,1,nlev))
+   allocate(rho3d(1,1,nlev))
+   allocate(nuh3d(1,1,nlev))
+   allocate(h3d(1,1,nlev))
+   allocate(w3d(1,1,nlev))
+   allocate(bioshade3d(1,1,nlev))
+   allocate(z3d(1,1,nlev))
+
    end if
 
    end subroutine init_gotm_mossco_fabm
@@ -224,7 +236,7 @@ end type
    gotmfabm%conc = _ZERO_
    do i=1,size(gotmfabm%model%info%state_variables)
       gotmfabm%conc(1,1,:,i) = gotmfabm%model%info%state_variables(i)%initial_value
-      call fabm_link_bulk_state_data(gotmfabm%model,i,cc(:,:,:,i))
+      call fabm_link_bulk_state_data(gotmfabm%model,i,cc(:,:,1:gotmfabm%knum,i))
    end do
    do i=1,size(gotmfabm%model%info%state_variables_ben)
       gotmfabm%conc(1,1,1,size(gotmfabm%model%info%state_variables)+i) = &
@@ -326,10 +338,9 @@ end type
    REALTYPE, intent(in),target,dimension(1:gotmfabm%knum)   :: temp,salt_,rho_
    REALTYPE, intent(in),target,dimension(0:gotmfabm%knum)   :: nuh_,h_,w_
    REALTYPE, intent(in),target,dimension(1:gotmfabm%knum)   :: bioshade_,z_
-   REALTYPE, target, dimension(1:1,1:1,1:gotmfabm%knum)     :: temp3d,salt3d,rho3d,nuh3d,h3d,w3d,bioshade3d,z3d
+
    REALTYPE, intent(in),target                              :: I_0_,cloud,wnd,precip_,evap_,taub
-   REALTYPE, target, dimension(1:1,1:1)                     :: I_02d,cloud2d,wnd2d,precip2d,evap2d,taub2d
-   REALTYPE, target, dimension(1:1,1:1)                     :: latitude2d,longitude2d
+   
    REALTYPE, intent(in),target :: A_,g1_,g2_
    integer,  intent(in),target :: yearday_,secondsofday_
    REALTYPE, intent(in),optional,target,dimension(:) :: SRelaxTau_,sProf_

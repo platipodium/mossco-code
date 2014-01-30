@@ -28,7 +28,7 @@ exec: toplevel_component.o main.o
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf/clm to run the example." > $(MOSSCO_BIN_PATH)/esmf_clm.txt
 
 libmossco_clm:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components/clm $@
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@

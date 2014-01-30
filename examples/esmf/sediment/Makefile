@@ -8,41 +8,41 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
-
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_remtc$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/sediment$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf -locean -latmosphere -laocoupler $(LIBS)
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LIBS := -lsediment -lmossco_sediment -lmossco_util -lconstant -lsolver -lesmf $(LIBS)
 
-.PHONY: all exec libocean libatmosphere libaocoupler
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+
+.PHONY: all exec libsediment libmossco_util
 
 all: exec
+exec: sediment
 
-exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o esmf_remtc $^ $(LDFLAGS)
-	@echo "Created example binary esmf_remtc in $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_remtc/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_remtc.txt
+sediment: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
-libocean libatmosphere:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
+libsediment:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libaocoupler:
-	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
+libconstant:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
-main.F90: ../common/main.F90
+toplevel_component.o: toplevel_component.F90 libsediment libconstant
+main.F90: ../../common/main.F90
 	ln -f  $< $@
-
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_remtc main.F90
+	@rm -f main.F90 sediment

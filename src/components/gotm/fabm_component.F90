@@ -228,7 +228,14 @@ module fabm_gotm_component
     ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
     call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
+
+    ! set environment from GOTM arrays
+    call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr, &
+                          t(1:nlev),s(1:nlev),rho(1:nlev), &
+                          nuh,h,w,bioshade(1:nlev),I_0,cloud,taub,wind,precip,evap,z(1:nlev), &
+                          A,g1,g2,yearday,secondsofday,SRelaxTau(1:nlev),sProf(1:nlev), &
+                          bio_albedo,bio_drag_scale)
+
     ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
      do while (.not.ESMF_ClockIsStopTime(clock))
 
@@ -265,7 +272,6 @@ module fabm_gotm_component
 
        call do_gotm_mossco_fabm(dt)
  
-       
        ! Introduced dependency from FABM component, which use the same name for the alarm
        call ESMF_ClockGetAlarm(parentClock, alarmname="GOTM output Alarm", alarm=outputAlarm, rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -275,24 +281,23 @@ module fabm_gotm_component
          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
          call prepare_output(n)
          call do_gotm_mossco_fabm_output()
-        ! Do we need the next line
-         call update_export_states(fabm_export_states)
        endif
 
-    ! update Field data:
-      do nvar=1,size(fabm_export_states)
-        call mossco_state_get(exportState,(/trim(fabm_export_states(nvar)%standard_name)/), &
-          ptr_f3,rc=rc)
-        ptr_f3 = fabm_export_states(nvar)%conc
-        
-        call mossco_state_get(exportState,(/trim(fabm_export_states(nvar)%standard_name)//'_z_velocity'/), &
-          ptr_f3,rc=rc)
-        ptr_f3 = fabm_export_states(nvar)%ws
-      end do
- 
       call ESMF_ClockAdvance(clock,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end do ! end of time loop
+
+    ! update Field data:
+    call update_export_states(fabm_export_states)
+    do nvar=1,size(fabm_export_states)
+      call mossco_state_get(exportState,(/trim(fabm_export_states(nvar)%standard_name)/), &
+        ptr_f3,rc=rc)
+      ptr_f3 = fabm_export_states(nvar)%conc
+
+      call mossco_state_get(exportState,(/trim(fabm_export_states(nvar)%standard_name)//'_z_velocity'/), &
+        ptr_f3,rc=rc)
+      ptr_f3 = fabm_export_states(nvar)%ws
+    end do
 
   end subroutine Run
 

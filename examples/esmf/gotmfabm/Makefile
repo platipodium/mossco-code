@@ -10,7 +10,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_gotmfabm$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/gotmfabm$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -33,12 +33,11 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 .PHONY: all exec libmossco_gotmfabm libgotm
 
 all: exec
-exec: esmf_gotmfabm
+exec: gotmfabm
 
-esmf_gotmfabm: toplevel_component.o main.o  
+gotmfabm: toplevel_component.o main.o  
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example binary $(MOSSCO_DIR)/examples/$@/$@" 
-	@echo "Please use the binary $(MOSSCO_DIR)/examples/$@/$@." > $(MOSSCO_BIN_PATH)/$@.txt
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
 libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
@@ -50,7 +49,7 @@ libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../common/main.F90
+main.F90: ../../common/main.F90
 	ln -f $< $@
 
 toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util  libsolver  libgotm
@@ -58,4 +57,4 @@ toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util  
 clean: extraclean
 
 extraclean: 
-	@-rm -f esmf_gotmfabm main.F90
+	@-rm -f gotmfabm main.F90

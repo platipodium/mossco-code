@@ -20,9 +20,9 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
 ifeq ($(OCEAN),GOTM)
-LIBS :=  -locean -lgotm -lmossco_fabm0d -lsolver -lesmf $(LIBS)
+LIBS :=  -locean -lgotm -lmossco_fabm0d -lsolver -lesmf -lmossco_util $(LIBS)
 else
-LIBS := -locean -lmossco_fabm0d -lsolver -lesmf $(LIBS)
+LIBS := -locean -lmossco_fabm0d -lsolver -lesmf -lmossco_util $(LIBS)
 endif
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 ifeq ($(OCEAN),GOTM)
@@ -32,7 +32,7 @@ LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 endif
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
-LDFLAGS += -Wl,-force_load
+#LDFLAGS += -Wl,-force_load
 endif
 
 

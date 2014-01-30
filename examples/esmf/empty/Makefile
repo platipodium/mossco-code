@@ -8,40 +8,32 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
-
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_erosed$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/empty$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lerosed -lmossco_erosed -lesmf $(LIBS)
-
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LIBS := $(LIBS) -lmossco_util -lesmf
 
 .PHONY: all exec
 
 all: exec
+exec: empty
 
-exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o esmf_erosed $^ $(LDFLAGS)
-	@echo "Created example binary esmf_erosed in $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_erosed/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_erosed.txt
-
-liberosed:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
-	
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+
+empty: main.o toplevel_component.o
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 liberosed
-main.F90: ../common/main.F90
+toplevel_component.o: toplevel_component.F90
+main.F90: ../../common/main.F90
 	ln -f  $< $@
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_erosed main.F90
-	@rm -f PET*.*
-	@rm -f *.out
+	@rm -f empty main.F90

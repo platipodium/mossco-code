@@ -17,25 +17,26 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 # Determine examples to build
-#SUBDIRS += remtc
-#SUBDIRS += empty
 
-SUBDIRS += clm
+SUBDIRS += clm empty remtc # benthos
 
 ifeq ($(MOSSCO_EROSED),true)
-#SUBDIRS += erosed
+SUBDIRS += erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
-#SUBDIRS += sediment
+SUBDIRS += sediment
+ifeq ($(MOSSCO_GETM),true)
+SUBDIRS += getm
+endif
 ifeq ($(MOSSCO_GOTM),true)
-#SUBDIRS += gotm fabm0d
-#SUBDIRS += gotmfabm
+SUBDIRS += gotm fabm0d
+SUBDIRS += gotmfabm
 endif
 endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS)
 
-default: all report
+default: all 
 
 all: subdirs
 

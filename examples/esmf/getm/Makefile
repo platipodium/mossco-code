@@ -12,7 +12,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_getm$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/getm$,,$(PWD))
 endif
 
 export MOSSCO_GETM_FABM=true
@@ -21,15 +21,16 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: all exec libgetm
+.PHONY: all exec libgetm libmossco_util
 
 all: exec
+exec: getm
 
 libgetm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-exec: toplevel_component.o main.o
-	$(F90) -o esmf_getm_example $^ $(LDFLAGS) -lgetm $(GETM_LINKDIRS) $(GETM_LIBS) $(ESMF_F90ESMFLINKLIBS)
+getm: toplevel_component.o main.o
+	$(F90) -o $@  $^ $(LDFLAGS) -lgetm $(GETM_LINKDIRS) $(GETM_LIBS) $(ESMF_F90ESMFLINKLIBS) -lmossco_util
 	@echo "Created example binary esmf_getm_example in  $(PWD)"
 	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_getm to run the example." > $(MOSSCO_BIN_PATH)/esmf_getm.txt
 
@@ -39,11 +40,11 @@ libmossco_util:
 main.o: toplevel_component.o main.F90 libmossco_util
 
 toplevel_component.o: toplevel_component.F90 libgetm
-main.F90: ../common/main.F90
+main.F90: ../../common/main.F90
 	ln -f  $< $@
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_getm_example main.F90
+	@rm -f getm main.F90
 	@rm -f PET*.*

@@ -8,32 +8,41 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
+
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_empty$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/remtc$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := $(LIBS) -lmossco_util -lesmf
+LIBS := -lesmf -locean -latmosphere -laocoupler -lmossco_util $(LIBS)
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec
+.PHONY: all exec libocean libatmosphere libaocoupler libmossco_util
 
 all: exec
+exec: remtc
+
+remtc: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
+
+libocean libatmosphere:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
+
+libaocoupler:
+	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
-
-exec: main.o toplevel_component.o
-	$(F90) $(F90FLAGS) -o esmf_empty toplevel_component.o main.o $(LDFLAGS) $(LIBS)
-	@echo "Created example binary esmf_empty in $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_empty/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_empty.txt
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90
-main.F90: ../common/main.F90
+toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
+main.F90: ../../common/main.F90
 	ln -f  $< $@
+
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_empty main.F90
+	@rm -f esmf_remtc main.F90

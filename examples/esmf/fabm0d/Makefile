@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_fabm0d$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/fabm0d$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -35,6 +35,7 @@ LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 .PHONY: all exec 
 
 all: exec
+exec: fabm0d
 
 libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
@@ -42,14 +43,13 @@ libmossco_fabm0d:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o esmf_fabm0d $^ $(LDFLAGS)
-	@echo "Created example binary esmf_fabm0d in  $(PWD)" 
-	@echo "Please change to $(FABMDIR)/testcases/0d to run the example." > $(MOSSCO_BIN_PATH)/esmf_fabm0d.txt
+fabm0d: toplevel_component.o main.o
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
 main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 libmossco_fabm0d
-main.F90: ../common/main.F90
+main.F90: ../../common/main.F90
 	ln -f  $< $@
 
 fabm0d:
