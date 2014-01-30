@@ -125,7 +125,7 @@ contains
     character(len=256) :: din_variable='',pon_variable=''
     integer(ESMF_KIND_I8) :: nlev
 
-    integer                    :: UnitNr, istat
+    integer                    :: UnitNr, istat,ii,j
     logical                    :: opnd, exst
 
     namelist /globaldata/ g, rhow
@@ -141,17 +141,17 @@ contains
                                 !  0: no fluff layer (default)
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
+   namelist /benthic/   anymud       != .true.
 
+!    namelist /sedparams/ sedtyp(1)   != SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+!    namelist /sedparams/ sedtyp(2)   != SEDTYP_COHESIVE               ! cohesive sediment (mud)
+!    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
+!    namelist /sedparams/ rhosol      != 2650.0_fp                     ! specific density [kg/m3]
+!    namelist /sedparams/ sedd50      != 0.0001_fp                     ! 50% diameter sediment fraction [m]
+!    namelist /sedparams/ sedd90      != 0.0002_fp                     ! 90% diameter sediment fraction [m]
 
-    namelist /sedparams/ sedtyp(1)   != SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
-    namelist /sedparams/ sedtyp(2)   != SEDTYP_COHESIVE               ! cohesive sediment (mud)
-    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
-    namelist /sedparams/ rhosol      != 2650.0_fp                     ! specific density [kg/m3]
-    namelist /sedparams/ sedd50      != 0.0001_fp                     ! 50% diameter sediment fraction [m]
-    namelist /sedparams/ sedd90      != 0.0002_fp                     ! 90% diameter sediment fraction [m]
+!    namelist /sedparams/ frac        != 0.5_fp
 
-    namelist /sedparams/ frac        != 0.5_fp
-    namelist /sedparams/anymud       != .true.
 
     call ESMF_LogWrite('Initializing Delft erosed component',ESMF_LOGMSG_INFO)
 
@@ -231,17 +231,22 @@ end if
     allocate (mfluff(nfrac,nmlb:nmub))
     allocate (mudfrac (nmlb:nmub))
 
-   inquire ( file = 'sedparams.nml', exist=exst , opened =opnd, Number = UnitNr )
+   inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
     write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 569
 
- open (unit = UnitNr, file = 'sedparams.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old', delim = 'APOSTROPHE')
  write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
- read (UnitNr, nml=sedparams, iostat = istat)
-
+ read (UnitNr, iostat = istat) (sedtyp(i),i=1,2)
+ if (istat ==0 ) read (UnitNr, iostat = istat) ( cdryb(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr, iostat = istat) (rhosol(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr, iostat = istat) (sedd50(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr, iostat = istat) (sedd90(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+ if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
  close (UnitNr)
 end if
     ! ================================================================================
@@ -275,7 +280,7 @@ end if
     ws      = 0.001_fp      ! Settling velocity [m/s]
     r1(1,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
     r1(2,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
-    anymud      = .true.
+    
 
     do nm = nmlb, nmub
         taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
