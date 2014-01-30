@@ -21,7 +21,7 @@ EXTRA_DIST=README
 SUBDIRS += clm empty remtc
 
 ifeq ($(MOSSCO_EROSED),true)
-#SUBDIRS += erosed
+SUBDIRS += erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
 SUBDIRS += sediment

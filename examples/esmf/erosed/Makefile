@@ -10,23 +10,23 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf_erosed$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/erosed$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lerosed -lmossco_erosed -lesmf $(LIBS)
+LIBS := -lerosed -lmossco_erosed -lesmf -lmossco_util $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec
 
 all: exec
+exec: erosed
 
 exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o esmf_erosed $^ $(LDFLAGS)
-	@echo "Created example binary esmf_erosed in $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_erosed/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_erosed.txt
+	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
+	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
 liberosed:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
@@ -36,12 +36,12 @@ libmossco_util:
 	
 main.o: toplevel_component.o main.F90 libmossco_util
 toplevel_component.o: toplevel_component.F90 liberosed
-main.F90: ../common/main.F90
+main.F90: ../../common/main.F90
 	ln -f  $< $@
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_erosed main.F90
+	@rm -f erosed main.F90
 	@rm -f PET*.*
 	@rm -f *.out
