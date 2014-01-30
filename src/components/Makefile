@@ -20,7 +20,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_clm
+TARGETS=libempty libconstant libmossco_clm #libmossco_benthos
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
@@ -47,8 +47,11 @@ endif
 all: subdirs $(TARGETS)
 
 libmossco_clm: libmossco_clm_component
+libmossco_benthos: libmossco_benthos_component
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
+
+libmossco_benthos_component: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
