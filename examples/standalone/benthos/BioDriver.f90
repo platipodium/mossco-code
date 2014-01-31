@@ -56,7 +56,8 @@ write (12,*) 'Biotic Critical bed shear stress effect= ',Micro%TauEffect
 tau = tau * Total_Bioturb%TauEffect
 Erod = Erod * Total_Bioturb%ErodibilityEffect
 
-write (*,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= ',Total_Bioturb%TauEffect,&
+write (*,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= ',&
+            Total_Bioturb%TauEffect,&
             'Both Biotic erodibility',Total_Bioturb%ErodibilityEffect
 
 write (*,*)
