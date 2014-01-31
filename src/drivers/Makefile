@@ -24,7 +24,7 @@ EXTRA_DIST=README
 ALL_TARGETS = libmossco_clm libmossco_benthos
 
 ifeq ($(MOSSCO_FABM),true)
-ALL_TARGETS=libmossco_sediment libmossco_fabm0d
+ALL_TARGETS+=libmossco_sediment libmossco_fabm0d
 ifeq ($(MOSSCO_GOTM),true)
 ALL_TARGETS+=libmossco_gotmfabm
 endif
@@ -51,16 +51,16 @@ libmossco_benthos: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_clas
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbaltica_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
 
 microphytobenthos_class.o: criticalsheareffect.o benthoseffect_class.o biotypes.o erodibilityeffect.o
-mbaltica_class.o: macrofauna_class.o
+mbalthica_class.o: macrofauna_class.o
 macrofauna_class.o: benthoseffect_class.o biotypes.o
 benthoseffect_class.o: biotypes.o
-macrofauna_interface.o: mbaltica_class.o biotypes.o
+macrofauna_interface.o: mbalthica_class.o biotypes.o
 criticalsheareffect.o: macrofauna_class.o biotypes.o
 erodibilityeffect.o: macrofauna_class.o biotypes.o
 

@@ -20,13 +20,13 @@ module macrofauna_interface
 ! and not a physically based approach, but state-of-the-art (refer to Knappen et al. 2003, Borsje et al. (2008)
 ! and Paarlberg et al (2005).
 
-use mbaltica_class
+use mbalthica_class
 use biotypes , only : BioturbationEffect
 
 implicit none
 ! New Macrofauna types should be declared here.
 
-type (Mbaltica_Object)   :: M_Baltica
+type (Mbalthica_Object)   :: M_Balthica
 
 
 contains
@@ -42,14 +42,14 @@ type (BioturbationEffect) :: Total_Bioturbation
 allocate (Total_Bioturbation%ErodibilityEffect, Total_Bioturbation%TauEffect)
 
 ! The initilize method of new species should be called here
-call init_Mbaltica(M_Baltica)
+call init_Mbaltica(M_Balthica)
 
 end subroutine Macrofanua_init
 !*********************************************************************************
 subroutine Macrofanua_set()
 ! The set method of new species should be called here, to read and set data
 
-call set_Mbaltica(M_Baltica)
+call set_Mbaltica(M_Balthica)
 
 end subroutine Macrofanua_set
 !*********************************************************************************
@@ -62,17 +62,17 @@ type (BioturbationEffect) ::Total_Bioturbation
 ! The run method of new species should be called here, to calculate the biological effect of
 ! macrofauna on sediment flux.
 
-call run_Mbaltica(M_Baltica)
+call run_Mbaltica(M_Balthica)
 
 ! It should be noted that currently only the biological effect on the critical bed shear stress and
 ! erodibiity are considered, althogh the supercall macrofauna includes many other effects.
 ! In case further effects such as biogenicstructures on flow, direct bio-resuspension und deposition
 ! and etc. are going to be activated.
 ! In case of extending the following equation to further effects such as i.e. Telina fabula it should look like the following:
-!Total_Bioturbation%TauEffect = M_Baltica%Bioturbation%TauEffect * T_fabula%Taueffect * ...
+!Total_Bioturbation%TauEffect = M_Balthica%Bioturbation%TauEffect * T_fabula%Taueffect * ...
 
-Total_Bioturbation%ErodibilityEffect = M_Baltica%Bioturbation%ErodibilityEffect
-Total_Bioturbation%TauEffect = M_Baltica%Bioturbation%TauEffect
+Total_Bioturbation%ErodibilityEffect = M_Balthica%Bioturbation%ErodibilityEffect
+Total_Bioturbation%TauEffect = M_Balthica%Bioturbation%TauEffect
 
 end subroutine Macrofanua_run
 !*********************************************************************************
@@ -82,7 +82,7 @@ implicit none
 
 type (BioturbationEffect)  ::Total_Bioturbation
 
-call fin_Mbaltica(M_Baltica)
+call fin_Mbaltica(M_Balthica)
 
 ! In case feuther features of macrofauna effect have been added, the corresponding pointers should be
 ! deallocated here
