@@ -51,8 +51,8 @@ libmossco_benthos: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_clas
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbaltica_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
 
