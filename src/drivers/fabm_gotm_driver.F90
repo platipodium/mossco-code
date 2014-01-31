@@ -36,6 +36,9 @@ public get_all_export_states, update_export_states
 type,extends(type_rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends type_rhs_driver)
    type(type_model),pointer         :: model
    integer,dimension(:),allocatable :: bundle_idx_by_fabm_id
+   integer                          :: nvar_ben=0
+   integer                          :: nvar_pel=0
+   real(rk),dimension(:),pointer    :: layer_height
 contains
    procedure :: get_rhs
 end type type_gotm_fabm
@@ -77,7 +80,7 @@ end type
    ! Arrays for work, vertical movement, and cross-boundary fluxes
    REALTYPE,allocatable,dimension(:,:,:,:) :: ws
    REALTYPE,public,allocatable,dimension(:,:,:)            :: sfl,bfl,total
-   REALTYPE,allocatable,dimension(:)                       :: Qsour,Lsour,DefaultRelaxTau,curh,curnuh
+   REALTYPE,allocatable,dimension(:),target                :: Qsour,Lsour,DefaultRelaxTau,curh,curnuh
    logical,allocatable                                     :: cc_transport(:)
 
    ! Arrays for environmental variables not supplied externally.
@@ -158,8 +161,9 @@ end type
 
       ! Initialize model tree (creates metadata and assigns variable identifiers)
       call fabm_set_domain(gotmfabm%model,1,1,nlev,dt)
-      gotmfabm%nvar=size(gotmfabm%model%info%state_variables) + &
-          size(gotmfabm%model%info%state_variables_ben)
+      gotmfabm%nvar_pel=size(gotmfabm%model%info%state_variables)
+      gotmfabm%nvar_ben=size(gotmfabm%model%info%state_variables_ben)
+      gotmfabm%nvar=gotmfabm%nvar_pel + gotmfabm%nvar_ben
       allocate(gotmfabm%bundle_idx_by_fabm_id(gotmfabm%nvar))
       gotmfabm%bundle_idx_by_fabm_id(:)=-1
 
@@ -323,6 +327,7 @@ end type
    allocate(curh(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (curh)'
    curh = _ZERO_
+   gotmfabm%layer_height=>curh
 
    allocate(curnuh(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (curnuh)'
@@ -536,7 +541,7 @@ end type
    do split=1,split_factor
       ! Update local light field (self-shading may have changed through changes in biological state variables)
       call light(gotmfabm%knum,bioshade_feedback)
-      
+
       ! Time-integrate one biological time step
       call ode_solver(gotmfabm,dt_eff,ode_method)
 
@@ -594,22 +599,24 @@ end type
    real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
    integer :: i,k,n
 
-   n = size(gotmfabm%model%info%state_variables)
+   n = rhs_driver%nvar_pel
+   if (.not.associated(rhs)) &
+     allocate(rhs(rhs_driver%inum,rhs_driver%jnum,rhs_driver%knum,rhs_driver%nvar))
 
    do i=1,size(gotmfabm%model%info%state_variables)
-      call fabm_link_bulk_state_data(gotmfabm%model,i,rhs_driver%conc(:,:,:,i))
+      call fabm_link_bulk_state_data(rhs_driver%model,i,rhs_driver%conc(:,:,:,i))
    end do
    do i=1,size(gotmfabm%model%info%state_variables_ben)
-      call fabm_link_bottom_state_data(gotmfabm%model,i,rhs_driver%conc(:,:,1,n+i))
+      call fabm_link_bottom_state_data(rhs_driver%model,i,rhs_driver%conc(:,:,1,n+i))
    end do
 
    rhs = _ZERO_
-   !call fabm_do_benthos(gotmfabm%model,1,rhs(1,1:n),rhs(1,n+1:))
-   !rhs(1,1,1,1:n) = rhs(1,1,1,1:n)/curh(1,1,1)
+   call fabm_do_benthos(rhs_driver%model,1,1,1,rhs(1,1,1,1:n),rhs(1,1,1,n+1:))
+   rhs(1,1,1,1:n) = rhs(1,1,1,1:n)/rhs_driver%layer_height(1)
 
    ! Add pelagic sink and source terms for all depth levels.
    do k=1,gotmfabm%knum
-      call fabm_do(gotmfabm%model,1,1,k,rhs(1,1,k,1:n))
+      call fabm_do(rhs_driver%model,1,1,k,rhs(1,1,k,1:n))
    end do
 
    end subroutine get_rhs
@@ -862,6 +869,10 @@ end type
      if (trim(gotmfabm%model%info%state_variables(n)%name).eq.trim(varname)) &
          fabm_id=n
    end do
+   do n=1,size(gotmfabm%model%info%state_variables_ben)
+     if (trim(gotmfabm%model%info%state_variables_ben(n)%name).eq.trim(varname)) &
+         fabm_id=n
+   end do
    export_state= get_export_state_by_id(fabm_id)
 
    end function get_export_state_from_variable_name
@@ -871,10 +882,11 @@ end type
    type(export_state_type),dimension(:),allocatable :: export_states
    integer  :: n,fabm_id
 
-   allocate(export_states(gotmfabm%nvar))
-   do fabm_id=1,size(gotmfabm%model%info%state_variables)
+   allocate(export_states(gotmfabm%nvar_pel))
+   do fabm_id=1,gotmfabm%nvar_pel
        export_states(fabm_id) = get_export_state_by_id(fabm_id)
    end do
+   !> @todo: add benthic state variables
 
    end subroutine get_all_export_states
 
@@ -894,6 +906,7 @@ end type
      export_state%ws = wstmp(1,1,1,export_state%fabm_id)
    end do
    deallocate(wstmp)
+   !> @todo add benthic state variables
 
    end subroutine update_export_states
 
