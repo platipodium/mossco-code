@@ -167,7 +167,9 @@ export MOSSCO_CLM
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
 #
-export MOSSCO_MPI ?= false
+ifndef MOSSCO_MPI
+export MOSSCO_MPI=false
+endif
 ifndef ESMFMKFILE
 ifndef MOSSCO_ESMF
 $(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed)
