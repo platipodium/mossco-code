@@ -42,14 +42,14 @@ type (BioturbationEffect) :: Total_Bioturbation
 allocate (Total_Bioturbation%ErodibilityEffect, Total_Bioturbation%TauEffect)
 
 ! The initilize method of new species should be called here
-call init_Mbaltica(M_Balthica)
+call init_Mbalthica(M_Balthica)
 
 end subroutine Macrofanua_init
 !*********************************************************************************
 subroutine Macrofanua_set()
 ! The set method of new species should be called here, to read and set data
 
-call set_Mbaltica(M_Balthica)
+call set_Mbalthica(M_Balthica)
 
 end subroutine Macrofanua_set
 !*********************************************************************************
@@ -62,7 +62,7 @@ type (BioturbationEffect) ::Total_Bioturbation
 ! The run method of new species should be called here, to calculate the biological effect of
 ! macrofauna on sediment flux.
 
-call run_Mbaltica(M_Balthica)
+call run_Mbalthica(M_Balthica)
 
 ! It should be noted that currently only the biological effect on the critical bed shear stress and
 ! erodibiity are considered, althogh the supercall macrofauna includes many other effects.
@@ -82,7 +82,7 @@ implicit none
 
 type (BioturbationEffect)  ::Total_Bioturbation
 
-call fin_Mbaltica(M_Balthica)
+call fin_Mbalthica(M_Balthica)
 
 ! In case feuther features of macrofauna effect have been added, the corresponding pointers should be
 ! deallocated here
