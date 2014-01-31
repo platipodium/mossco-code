@@ -19,13 +19,16 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-all: testfieldget
+all: testfieldget test_ArrayGet
+
+test_ArrayGet: test_ArrayGet.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 
 testfieldget: testfieldget.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 
 clean:
-	rm testfieldget.o
+	rm *.o
 
 distclean: clean
-	rm testfieldget
+	rm testfieldget test_ArrayGet
