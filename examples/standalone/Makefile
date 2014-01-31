@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 # Determine examples to build
-SUBDIRS =  #benthos
+SUBDIRS =  benthos
 ifeq ($(MOSSCO_FABM),true)
 SUBDIRS += omexdia_p
 endif
