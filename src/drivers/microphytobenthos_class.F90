@@ -31,7 +31,7 @@ implicit none
 class (Microphytobenthos) :: this
 integer :: istatus
 
-!allocate (character (17) :: this%Species)
+allocate (character (17) :: this%Species)
 allocate (this%BioMass)
 allocate (This%BioMass%amount)
 !allocate (This%BioMass%Unitt)
@@ -51,7 +51,7 @@ implicit none
 
 class (Microphytobenthos)  :: this
 real (fp)                  :: Mass
-character (len = 4)        :: Unitt
+character (len = 10)        :: Unitt
 integer                    :: StringLength, UnitNr, istat
 logical                    :: opnd, exst
 
@@ -95,6 +95,7 @@ StringLength = len_trim (unitt)
 
 if (StringLength /= 0 ) then
     !allocate (character(StringLength) :: This%BioMass%Unitt)
+allocate (This%BioMass%Unitt)
     This%BioMass%Unitt = trim (unitt)
 end if
 

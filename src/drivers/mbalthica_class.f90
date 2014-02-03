@@ -29,7 +29,7 @@ implicit none
 class (Mbalthica_Object) :: this
 !integer :: istatus
 
-!allocate (character (9) :: this%Species)
+allocate (character (9) :: this%Species)
 allocate (this%StateVar)
 !allocate (This%StateVar%amount)
 !allocate (This%BioMass%Unitt)
@@ -53,9 +53,10 @@ implicit none
 
 class (Mbalthica_Object)  :: this
 real (fp)                  :: Mass,intensity
-character (len = 4)        :: UUnit
+character (len = 10)        :: UUnit
 integer                    :: StringLength, UnitNr,istat
 logical                    :: opnd, exst
+
 namelist /Macrofaun/  UUnit, Intensity
 
 UUnit = ''
@@ -112,7 +113,8 @@ end if
  StringLength = len_trim (Uunit)
 
 if (StringLength /= 0 ) then
-    !allocate (character(StringLength) :: This%StateVar%Unitt)
+!    allocate (character(StringLength) :: This%StateVar%Unitt)
+allocate (This%StateVar%Unitt)
     This%StateVar%Unitt = trim (UUnit)
 end if
 
@@ -149,11 +151,11 @@ class (Mbalthica_Object) :: this
 integer                   :: UnitNr
 logical                   :: opnd, exst
 
-if (This%StateVar%Unitt == '-') then
+if (trim(This%StateVar%Unitt) == '-') then
 
   deallocate (This%StateVar%Intensity)
 
-elseif  (This%StateVar%Unitt == 'gCm-2') then
+elseif  (trim(This%StateVar%Unitt) == 'gCm-2') then
 
   deallocate (This%StateVar%amount)
 
