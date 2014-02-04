@@ -102,8 +102,8 @@ program example
 
    namelist /benthic/   anymud       != .true.
 
-!    namelist /sedparams/ sedtyp(1)   != SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
-!    namelist /sedparams/ sedtyp(2)   != SEDTYP_COHESIVE               ! cohesive sediment (mud)
+!    namelist /sedparams/ sedtyp(1)   !1= SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+!    namelist /sedparams/ sedtyp(2)   !2= SEDTYP_COHESIVE               ! cohesive sediment (mud)
 !    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
 !    namelist /sedparams/ rhosol      != 2650.0_fp                     ! specific density [kg/m3]
 !    namelist /sedparams/ sedd50      != 0.0001_fp                     ! 50% diameter sediment fraction [m]
@@ -114,16 +114,19 @@ program example
 
 
     inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
-    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+    write (*,*) 'globaldata.nml exists ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 567
 
- open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
- write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+ open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', iostat=istat )
+if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
+ write (*,*) ' in erosed standalone ', UnitNr, ' was just opened'
 
  read (UnitNr, nml=globaldata, iostat = istat)
-
+if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
+ write (*,*)' g= ', g
+write (*,*), ' rhow= ', rhow
  close (UnitNr)
 end if
 !
@@ -160,21 +163,26 @@ end if
 
 
         inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
-    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+    write (*,*) 'benthich.nml exists ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 568
 
- open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
- write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+ open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old')
+ write (*,*) ' in erosed-standalone ', UnitNr, ' was just opened'
+if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
 
  read (UnitNr, nml=benthic, iostat = istat)
+if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
 
- close (UnitNr)
+write (*,*)' nmlb ', nmlb, 'nmub ',  nmub, 'morfac ', morfac, 'nfrac ', nfrac, 'iunderlyr', iunderlyr &
+    & , ' flufflyr', flufflyr,' anymud ', anymud 
+
+close (UnitNr)
 end if
 
 
-    Write (*, *) 'Initializing some sediment parameter ..'
+    Write (*, *) 'Initializing some sediment parameters ...'
 
     call initerosed(nmlb,   nmub,   nfrac )
 
@@ -208,20 +216,29 @@ end if
     allocate (mudfrac (nmlb:nmub))
 
    inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
-    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+    write (*,*) 'sedparams.txt exists ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 569
 
- open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old', delim = 'APOSTROPHE')
- write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+ open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
+ 
+if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
 
- read (UnitNr, iostat = istat) (sedtyp(i),i=1,2)
- if (istat ==0 ) read (UnitNr, iostat = istat) ( cdryb(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) (rhosol(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) (sedd50(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) (sedd90(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+ read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
+if (istat/=0) write (*,*) 'error by reading  sedtyp '
+
+ write (*,*) 'sedtyp(i) ', (sedtyp(i),i=1,nfrac)
+ if (istat ==0 ) read (UnitNr,*,iostat = istat) ( cdryb(i), i=1, nfrac)
+ write (*,*) ' cdryb(i)', ( cdryb(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
+ write (*,*)'rhosol(i) ',(rhosol(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
+ write (*,*) 'sedd50(i) ', (sedd50(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
+ write (*,*) 'sedd90(i) ', (sedd90(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+ write (*,*)' frac(i,j) ', ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
  if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
  close (UnitNr)
 end if

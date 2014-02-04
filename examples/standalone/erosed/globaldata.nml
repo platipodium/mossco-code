@@ -1,4 +1,4 @@
 &globaldata
-g = 9.81_fp
-rhow=1000.0_fp
+g = 9.81
+rhow=1000.0
 /

@@ -30,6 +30,7 @@ class (Mbalthica_Object) :: this
 !integer :: istatus
 
 !allocate (character (9) :: this%Species)
+allocate (this%Species)
 allocate (this%StateVar)
 !allocate (This%StateVar%amount)
 !allocate (This%BioMass%Unitt)
@@ -53,9 +54,10 @@ implicit none
 
 class (Mbalthica_Object)  :: this
 real (fp)                  :: Mass,intensity
-character (len = 4)        :: UUnit
+character (len = 10)        :: UUnit
 integer                    :: StringLength, UnitNr,istat
 logical                    :: opnd, exst
+
 namelist /Macrofaun/  UUnit, Intensity
 
 UUnit = ''
@@ -73,7 +75,7 @@ if (exst.and.(.not.opnd)) then
  open (unit = UnitNr, file = 'mbalthica.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
  !write (*,*) ' in Mbalthica the file unit ', UnitNr, ' was just opened'
 
- read (unit=UnitNr, nml=Macrofaun, iostat = istat)
+ read (UnitNr, nml=Macrofaun, iostat = istat)
  if (istat /= 0 ) write (*,*) ' Error in reading Mbalthica data'
 
 
@@ -112,7 +114,8 @@ end if
  StringLength = len_trim (Uunit)
 
 if (StringLength /= 0 ) then
-    !allocate (character(StringLength) :: This%StateVar%Unitt)
+   ! allocate (character(StringLength) :: This%StateVar%Unitt)
+    allocate (This%StateVar%Unitt)
     This%StateVar%Unitt = trim (UUnit)
 end if
 
@@ -132,11 +135,11 @@ this%Bioturbation%TauEffect =  Crit_shear_bioeffect(this%StateVar)
 this%Bioturbation%ErodibilityEffect = erodibility_bioeffect(this%StateVar)
 
 write (*,*)
-write (*,*) 'Biotic effect of ', this%Species, ' on the tau (M_balthica%Bioturbation%TauEffect): ', &
-             this%Bioturbation%TauEffect
+write (*,*) 'Biotic effect of ', this%Species, ' on the tau (M_balthica%Bioturbation%TauEffect): '&
+            , this%Bioturbation%TauEffect
 write (*,*)
-write (*,*) 'Biotic effect of ', this%Species, ' on the Erodibility '// &
-            '(M_balthica%Bioturbation%ErodibilityEffect): ', this%Bioturbation%ErodibilityEffect
+write (*,*) 'Biotic effect of ', this%Species, ' on the Erodibility (M_balthica%Bioturbation%ErodibilityEffect): '&
+            , this%Bioturbation%ErodibilityEffect
 write (*,*)
 
 end subroutine run_Mbalthica
