@@ -31,7 +31,8 @@ implicit none
 class (Microphytobenthos) :: this
 integer :: istatus
 
-allocate (character (17) :: this%Species)
+!allocate (character (17) :: this%Species)
+allocate (this%Species)
 allocate (this%BioMass)
 allocate (This%BioMass%amount)
 !allocate (This%BioMass%Unitt)

@@ -11,7 +11,7 @@ type, abstract , public  :: BenthosEffect
 ! Species could be microphytobenthos, Macrofauna or Macrophytes, or
 ! the specific name of individual biota, such as Macoma balthica.
 
- character (:), pointer  :: Species=> null()           ! Name of the species
+ character (50), pointer  :: Species=> null()           ! Name of the species
  integer                 :: UnitNr                     ! the file unit number of input data describing biomass or intensity of the species
 
  contains
