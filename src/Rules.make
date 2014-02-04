@@ -167,9 +167,6 @@ export MOSSCO_CLM
 # 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
 #    the components and mediators to be built if ESMF is not found in your system
 #
-ifndef MOSSCO_MPI
-export MOSSCO_MPI=false
-endif
 ifndef ESMFMKFILE
 ifndef MOSSCO_ESMF
 $(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed)
@@ -179,7 +176,11 @@ endif
 else
 include $(ESMFMKFILE)
 export MOSSCO_ESMF=true
-export MOSSCO_MPI=true  # ESMF always provides MPI stubs, even if compiled with mpiuni driver
+ifneq ("x$(ESMF_COMM)","xmpiuni")
+MOSSCO_MPI ?=true
+else
+MOSSCO_MPI ?= false
+endif
 ifdef ESMF_DIR
 MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
 else
@@ -190,6 +191,10 @@ export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
 endif
 export MOSSCO_OS
 endif
+
+# In case no ESMF has been found, set the default for MOSSCO_MPI
+MOSSCO_MPI ?= false
+
 
 ## 5. EROSED
 MOSSCO_EROSED=false
@@ -331,7 +336,7 @@ export LIBS
 
 CPPFLAGS = $(DEFINES)  
 CPPFLAGS += -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
-ifneq ($(MOSSCO_MPI),false)
+ifeq ("x$(MOSSCO_MPI)","xtrue")
 CPPFLAGS += -DMOSSCO_MPI
 endif
 export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.

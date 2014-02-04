@@ -2,6 +2,7 @@
 # 
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @author Hassan Nasermoaddeli
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
@@ -14,7 +15,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lmossco_benthos $(LIBS)
+LIBS := -lmossco_benthos  $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
@@ -22,14 +23,14 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 .PHONY: libmossco_benthos exec
 
 all: exec
+exec: benthos
 
 libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
 
-exec: libmossco_benthos BioDriver.o
-	$(F90) -o benthos BioDriver.o $(LDFLAGS)
-	@echo "Created example binary benthos in  $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/benthos to run the example." > $(MOSSCO_BIN_PATH)/benthos.txt
+benthos: BioDriver.o libmossco_benthos
+	$(F90) -o $@ $< $(LDFLAGS)
+	@echo "Created example $(MOSSCO_DIR)/examples/standalone/benthos/benthos" 
 
 clean: extraclean
 
