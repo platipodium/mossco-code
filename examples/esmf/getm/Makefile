@@ -40,11 +40,11 @@ libmossco_util:
 main.o: toplevel_component.o main.F90 libmossco_util
 
 toplevel_component.o: toplevel_component.F90 libgetm
-main.F90: ../../common/main.F90
-	ln -f  $< $@
+#main.F90: ../../common/main.F90
+#	ln -f  $< $@
 
 clean: extraclean
 
 extraclean: 
-	@rm -f getm main.F90
+	@rm -f getm main.o
 	@rm -f PET*.*
