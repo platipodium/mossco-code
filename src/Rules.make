@@ -397,7 +397,7 @@ endif
 libgotm_external:
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src makedirs subdirs gotmlib)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
 endif
 
 libgetm_external: prefix
