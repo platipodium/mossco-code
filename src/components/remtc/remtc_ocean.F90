@@ -152,7 +152,7 @@ module remtc_ocean
 #ifndef ESMF_MPIUNI 
     !! ESMF_FieldWrite is not supported in ESMF_MPIUNI mode     
     do k=1,3
-#if ESMF_VERSION_MAJOR==6  
+#if ESMF_VERSION_MAJOR > 5
       call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
         overwrite=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
 #else
