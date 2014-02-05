@@ -15,7 +15,7 @@ ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/esmf/getm$,,$(PWD))
 endif
 
-export MOSSCO_GETM_FABM=true
+#export MOSSCO_GETM_FABM=true
 
 include $(MOSSCO_DIR)/src/Rules.make
 
