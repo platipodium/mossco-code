@@ -220,10 +220,10 @@ module fabm_gotm_component
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
+#ifdef DEBUG
     write(message,'(A)') trim(timestring)//" FABM/GOTM run called"
-!#ifdef DEBUG
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!#endif
+#endif
 
     ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
     call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
@@ -243,14 +243,16 @@ module fabm_gotm_component
          timestep=timeStep, rc=rc)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring, rc=rc)
+       call ESMF_TimeIntervalGet(timeStep,s_r8=dt, rc=rc)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-       call ESMF_TimeIntervalGet(timeStep,s_r8=dt, rc=rc)
+#ifdef DEBUG
+       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring, rc=rc)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
        write(message,'(A,I5)') trim(timestring)//" FABM/GOTM iteration ", n
        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+#endif
 
        ! get upward fluxes for FABM's state variables and put into bfl arrays of
        ! diffusion routine (so far - later use integration by solver_library)
@@ -258,9 +260,9 @@ module fabm_gotm_component
          varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
          call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
          if (itemcount==0) then
-!#ifdef DEBUG
+#ifdef DEBUG
            call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
-!#endif
+#endif
          else
              call ESMF_StateGet(importState,trim(varname),field,rc=rc)
              if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -271,7 +273,7 @@ module fabm_gotm_component
        end do
 
        call do_gotm_mossco_fabm(dt)
- 
+
        ! Introduced dependency from FABM component, which use the same name for the alarm
        call ESMF_ClockGetAlarm(parentClock, alarmname="GOTM output Alarm", alarm=outputAlarm, rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

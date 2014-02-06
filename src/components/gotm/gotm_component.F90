@@ -268,34 +268,35 @@ module gotm_component
     call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, advanceCount=n, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
+#ifdef DEBUG
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
     write(message,'(A)') trim(timestring)//" GOTM run called"
-!#ifdef DEBUG
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!#endif
+#endif
 
     ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
     call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
     ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
-     do while (.not.ESMF_ClockIsStopTime(clock))
+    do while (.not.ESMF_ClockIsStopTime(clock))
 
        call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+#ifdef DEBUG
        call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
        write(message,'(A,I5)') trim(timestring)//" GOTM iteration ", n
        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
+#endif
 
        call update_time(n)
        call gotm_time_step()
- 
+
        do k=1,nlev
          variables(:,:,k,1) = gotm_temperature(k)
          variables(:,:,k,2) = gotm_heights(k)
@@ -312,9 +313,8 @@ module gotm_component
          call do_output(n,nlev)
        endif
 
- 
-      call ESMF_ClockAdvance(clock,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       call ESMF_ClockAdvance(clock,rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end do
 
   end subroutine Run
