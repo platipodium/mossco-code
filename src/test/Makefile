@@ -19,12 +19,15 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lnetcdff
 
-all: test_FieldGet test_ArrayGet
+all: test_FieldGet test_ArrayGet test_Clock
 
 test_ArrayGet: test_ArrayGet.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 
 test_FieldGet: test_FieldGet.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+
+test_Clock: test_Clock.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 
 clean:
