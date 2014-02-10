@@ -25,6 +25,7 @@ module simplewave_component
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
 
   public :: SetServices
+!  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK
   
   contains
 
@@ -67,6 +68,7 @@ module simplewave_component
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
+    type(ESMF_Field)     :: exportField
     
     type(ESMF_Field), dimension(:), allocatable  :: exportFields, importFields
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
@@ -106,9 +108,9 @@ module simplewave_component
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !---- Export variable 1: wind_speed
+    !---- Export variable 1: wave_height
     exportField = ESMF_FieldCreate(grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      name='wind_speed', rc=rc)
+      name='wave_height', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
@@ -118,7 +120,7 @@ module simplewave_component
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    variables(:,:,:,1) =  wind
+!    variables(:,:,:,1) =  waveH
     farrayPtr=variables(:,:,:,1)
 
    !---- Export variable 2: wave_period
@@ -133,12 +135,12 @@ module simplewave_component
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    variables(:,:,:,2) =  waveT
+!    variables(:,:,:,2) =  waveT
     farrayPtr=variables(:,:,:,2)
 
-   !---- Export variable 3: wind_direction
+   !---- Export variable 3: wave_direction
     exportField = ESMF_FieldCreate(grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      name='wind_direction', rc=rc)
+      name='wave_direction', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
@@ -148,7 +150,7 @@ module simplewave_component
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    variables(:,:,:,3) =  windDir
+!    variables(:,:,:,3) =  waveDir
     farrayPtr=variables(:,:,:,3)
 
    !---- Export variable 4: wave_number
@@ -163,7 +165,7 @@ module simplewave_component
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    variables(:,:,:,4) =  waveK
+!    variables(:,:,:,4) =  waveK
     farrayPtr=variables(:,:,:,4)
 
     call ESMF_LogWrite('simplewave  component initialized.',ESMF_LOGMSG_INFO)
@@ -217,10 +219,10 @@ module simplewave_component
       ! Insert here your time step/run code
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-      variables(:,:,:,1) = internal_name
-      variables(:,:,:,2) = internal_name
-      variables(:,:,:,3) = internal_name
-      variables(:,:,:,4) = internal_name
+!      variables(:,:,:,1) = waveH
+!      variables(:,:,:,2) = waveT
+!      variables(:,:,:,3) = waveDir
+!      variables(:,:,:,4) = waveK
        
  
       call ESMF_ClockAdvance(clock,rc=rc)
@@ -239,20 +241,20 @@ module simplewave_component
     real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
     type(ESMF_Field)     :: field
 
-    do k=1,size(export_variables)
-      call ESMF_StateGet(exportState,trim(export_variables(k)%standard_name), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!    do k=1,size(export_variables)
+!      call ESMF_StateGet(exportState,trim(export_variables(k)%standard_name), field, rc=rc)
+!      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-#if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(export_variables(k)%standard_name) /),rc=rc)
-#else
-      call ESMF_StateRemove(exportState,trim(export_variables(k)%standard_name),rc=rc)
-#endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!#if ESMF_VERSION_MAJOR > 5
+!      call ESMF_StateRemove(exportState,(/ trim(export_variables(k)%standard_name) /),rc=rc)
+!#else
+!      call ESMF_StateRemove(exportState,trim(export_variables(k)%standard_name),rc=rc)
+!#endif
+!      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
+!      call ESMF_FieldDestroy(field, rc=rc)
+!      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!    enddo
 
     if (allocated(variables)) deallocate(variables)
 
