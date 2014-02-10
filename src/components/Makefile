@@ -118,5 +118,8 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/simplewave_component.mod
 
-subdirs:
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done
+subdirs: $(SUBDIRS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
+
