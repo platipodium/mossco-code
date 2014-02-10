@@ -22,10 +22,10 @@ module simplewave_component
   private
 
   type(ESMF_Clock)  :: clock 
-  real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
 
   public :: SetServices
-!  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK
+
+  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK
   
   contains
 
@@ -103,70 +103,54 @@ module simplewave_component
     !> that will be filled later with data
     nexport = 4
     !allocate(export_variables(nexport)) 
-    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
+
+    allocate(waveDir(farray_shape(1),farray_shape(2),farray_shape(3)))
+    waveDir = 0.0d0
+    allocate(waveH  (farray_shape(1),farray_shape(2),farray_shape(3)))
+    waveH = 0.0d0
+    allocate(waveT  (farray_shape(1),farray_shape(2),farray_shape(3)))
+    waveT = 0.0d0
+    allocate(waveK  (farray_shape(1),farray_shape(2),farray_shape(3)))
+    waveK = 0.0d0
     
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !---- Export variable 1: wave_height
-    exportField = ESMF_FieldCreate(grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      name='wave_height', rc=rc)
+   !---- Export variable 1: wave_direction
+    exportField = ESMF_FieldCreate(grid, waveDir,                     &
+                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                   name='wave_direction', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_FieldGet(field=exportField, localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+    !---- Export variable 2: wave_height
+    exportField = ESMF_FieldCreate(grid, waveH,                       &
+                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                   name='wave_height', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-!    variables(:,:,:,1) =  waveH
-    farrayPtr=variables(:,:,:,1)
-
-   !---- Export variable 2: wave_period
-    exportField = ESMF_FieldCreate(grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      name='wave_period', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_FieldGet(field=exportField, localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
+   !---- Export variable 3: wave_period
+    exportField = ESMF_FieldCreate(grid, waveT,                       &
+                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                   name='wave_period', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-!    variables(:,:,:,2) =  waveT
-    farrayPtr=variables(:,:,:,2)
-
-   !---- Export variable 3: wave_direction
-    exportField = ESMF_FieldCreate(grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      name='wave_direction', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_FieldGet(field=exportField, localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-!    variables(:,:,:,3) =  waveDir
-    farrayPtr=variables(:,:,:,3)
 
    !---- Export variable 4: wave_number
-    exportField = ESMF_FieldCreate(grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      name='wave_number', rc=rc)
+    exportField = ESMF_FieldCreate(grid, waveK,                       &
+                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                   name='wave_number', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_FieldGet(field=exportField, localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-!    variables(:,:,:,4) =  waveK
-    farrayPtr=variables(:,:,:,4)
 
     call ESMF_LogWrite('simplewave  component initialized.',ESMF_LOGMSG_INFO)
   end subroutine Initialize
@@ -183,10 +167,14 @@ module simplewave_component
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: n,k
     integer                 :: itemcount,nvar
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: depth,wind,windDir
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     type(ESMF_Field)        :: Field
     character(len=ESMF_MAXSTR) :: string,varname,message
+    real(ESMF_KIND_R8)                :: wdepth,wwind
+    real(ESMF_KIND_R8),parameter      :: min_wind=0.1d0
+    real(ESMF_KIND_R8),parameter      :: max_depth_windwaves=99999.0
 
     call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, &
                        advanceCount=n, rc=rc)
@@ -202,6 +190,33 @@ module simplewave_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     ! Get the import states and map to local variables
+    call ESMF_StateGet(importState, "water_depth", Field, rc=rc)
+    if(rc /= ESMF_SUCCESS) then
+       call ESMF_LogWrite("water_depth field not found",ESMF_LOGMSG_INFO)
+       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    else
+       call ESMF_FieldGet(field, farrayPtr=depth, rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+
+    call ESMF_StateGet(importState, "wind_speed", Field, rc=rc)
+    if(rc /= ESMF_SUCCESS) then
+       call ESMF_LogWrite("wind_speed field not found",ESMF_LOGMSG_INFO)
+       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    else
+       call ESMF_FieldGet(field, farrayPtr=wind, rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+
+    call ESMF_StateGet(importState, "wind_direction", Field, rc=rc)
+    if(rc /= ESMF_SUCCESS) then
+       call ESMF_LogWrite("wind_direction field not found",ESMF_LOGMSG_INFO)
+       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    else
+       call ESMF_FieldGet(field, farrayPtr=windDir, rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+
    
     do while (.not.ESMF_ClockIsStopTime(clock))
 
@@ -219,15 +234,18 @@ module simplewave_component
       ! Insert here your time step/run code
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!      variables(:,:,:,1) = waveH
-!      variables(:,:,:,2) = waveT
-!      variables(:,:,:,3) = waveDir
-!      variables(:,:,:,4) = waveK
-       
+      waveDir = windDir
+      wwind = max( min_wind , wind(1,1,1) )
+      wdepth = min( depth(1,1,1) , max_depth_windwaves )
+      waveH(1,1,1) = wind2waveHeight(wwind,wdepth)
+      waveT(1,1,1) = wind2wavePeriod(wwind,wdepth)
+      waveK(1,1,1) = wavePeriod2waveNumber(waveT(1,1,1),depth(1,1,1))
  
       call ESMF_ClockAdvance(clock,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end do
+
+! KK-TODO: do we have to update the exportState???
 
   end subroutine Run
 
@@ -256,8 +274,6 @@ module simplewave_component
 !      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 !    enddo
 
-    if (allocated(variables)) deallocate(variables)
-
     call ESMF_ClockDestroy(clock,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -267,4 +283,169 @@ module simplewave_component
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
   end subroutine Finalize
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: wind2waveHeight - estimates significant wave height from wind
+!
+! !INTERFACE:
+   real(ESMF_KIND_R8) function wind2waveHeight(wind,depth)
+
+! !USES:
+   use meanflow, only: gravity
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   real(ESMF_KIND_R8),intent(in) :: wind,depth
+!
+! !DESCRIPTION:
+!  Calculates significant wave height (Hm0) under assumption of unlimited fetch.
+!  See page 250 in Holthuijsen (2007).
+!
+! !REVISION HISTORY:
+!  Original author(s): Ulf Graewe
+!                      Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   real(ESMF_KIND_R8)           :: depthstar,waveHeightstar
+   real(ESMF_KIND_R8),parameter :: waveHeightstar8 = 0.24d0
+   real(ESMF_KIND_R8),parameter :: k3 = 0.343d0
+   real(ESMF_KIND_R8),parameter :: m3 = 1.14d0
+   real(ESMF_KIND_R8),parameter :: p  = 0.572d0
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+
+!  dimensionless depth
+   depthstar = gravity * depth / wind**2
+
+!  dimensionless significant wave height
+   waveHeightstar = waveHeightstar8 * tanh(k3*depthstar**m3)**p
+
+!  significant wave height
+   wind2waveHeight = wind**2 * waveHeightstar / gravity
+
+   end function wind2waveHeight
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: wind2wavePeriod - estimates peak wave period from wind
+!
+! !INTERFACE:
+   real(ESMF_KIND_R8) function wind2wavePeriod(wind,depth)
+
+! !USES:
+   use meanflow, only: gravity
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   real(ESMF_KIND_R8),intent(in) :: wind,depth
+!
+! !DESCRIPTION:
+!  Calculates peak wave period under assumption of unlimited fetch.
+!  See page 250 in Holthuijsen (2007).
+!  The peak wave period can be empirically related to the significant
+!  wave period (Holthuijsen Eqs. (4.2.7) and (4.2.9)).
+!
+! !REVISION HISTORY:
+!  Original author(s): Ulf Graewe
+!                      Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   real(ESMF_KIND_R8)           :: depthstar,wavePeriodstar
+   real(ESMF_KIND_R8),parameter :: wavePeriodstar8 = 7.69d0
+   real(ESMF_KIND_R8),parameter :: k4 = 0.10d0
+   real(ESMF_KIND_R8),parameter :: m4 = 2.01d0
+   real(ESMF_KIND_R8),parameter :: q  = 0.187d0
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+
+!  dimensionless depth
+   depthstar = gravity * depth / wind**2
+
+!  dimensionless peak wave period
+   wavePeriodstar = wavePeriodstar8 * tanh(k4*depthstar**m4)**q
+
+!  peak wave period
+   wind2wavePeriod = wind * wavePeriodstar / gravity
+
+   end function wind2wavePeriod
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !IROUTINE: wavePeriod2waveNumber - approximates wave number from wave period
+!
+! !INTERFACE:
+   real(ESMF_KIND_R8) function wavePeriod2waveNumber(period,depth)
+
+! !USES:
+   use meanflow, only: gravity
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   real(ESMF_KIND_R8),intent(in) :: period,depth
+!
+! !DESCRIPTION:
+!  x=k*D=kD,y=omega/sqrt(g/D)=omegastar
+!  y=sqrt(x*tanh(x)),y(1)=0.8727=omegastar1
+!  x'=lg(x),(dx'|dx)=1/(x*ln(10))
+!  y'=lg(y),(dy'|dy)=1/(y*ln(10))
+!  m'(x)=(dy'|dx')=(dy'|dy)*(dy|dx)*(dx|dx')=x/y*m(x)
+!  m(x)=(dy|dx)=0.5*[tanh(x)+x*(1-tanh(x)**2)]/sqrt(x*tanh(x))
+!  m(1)=0.677,m'(1)=0.77572=slopestar1
+!  y'=lg(y(1))+m'(1)*x' <=> y=y(1)*[x**m'(1)] <=> x=(y/y(1))**(1/m'(1))
+!  shallow: y=x       => x<=y(1)**(1/(1  -m'(1)))=0.5449  => y<=0.5449
+!  deep   : y=sqrt(x) => x>=y(1)**(1/(0.5-m'(1)))=1.63865 => y>=1.28
+!
+!  For alternatives see Holthuijsen (2007) page 124
+!  (Eckart, 1952 and Fenton, 1988)
+!
+! !REVISION HISTORY:
+!  Original author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   real(ESMF_KIND_R8)           :: omega,omegastar,kD
+   real(ESMF_KIND_R8),parameter :: omegastar1_rec = 1.0d0/0.8727d0
+   real(ESMF_KIND_R8),parameter :: slopestar1_rec = 1.0d0/0.77572d0
+   real(ESMF_KIND_R8),parameter :: one5th = 1.0d0/5
+   real(ESMF_KIND_R8),parameter :: pi=3.1415926535897932384626433832795029d0
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+ 
+   omega = 2 * pi / period ! radian frequency
+   omegastar = omega * sqrt(depth/gravity) ! non-dimensional radian frequency
+
+!!   approximation by Knut
+!!   (errors less than 5%)
+!   if ( omegastar .gt. 1.28d0 ) then
+!!     deep-water approximation
+!      kD = omegastar**2
+!   else if ( omegastar .lt. 0.5449d0 ) then
+!!     shallow-water approximation
+!      kD = omegastar
+!   else
+!!     tangential approximation in loglog-space for full dispersion relation
+!      kD = (omegastar1_rec * omegastar) ** slopestar1_rec
+!   end if
+
+!  approximation by Soulsby (1997, page 71) (see (18) in Lettmann et al., 2009)
+!  (errors less than 1%)
+   if ( omegastar .gt. 1.0d0 ) then
+      kD = omegastar**2 * ( 1.0d0 + one5th*exp(2*(1.0d0-omegastar**2)) )
+   else
+      kD = omegastar * ( 1.0d0 + one5th*omegastar**2 )
+   end if
+
+   wavePeriod2waveNumber = kD / depth
+
+   end function wavePeriod2waveNumber
+!EOC
+!-----------------------------------------------------------------------
 end module simplewave_component
