@@ -196,13 +196,16 @@ module gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Create export fields and add them to export state, allocate the space for these
-    !> that will be filled later with data
-    nexport = 4
+    !> that will be filled later with data, copying of data is necessary to provide 3d fields
+    !> for ESMF
+    nexport = 6
     allocate(export_variables(nexport))
     export_variables(1)%standard_name="water_temperature"
     export_variables(2)%standard_name="grid_height"
     export_variables(3)%standard_name="salinity"
     export_variables(4)%standard_name="radiation"
+    export_variables(5)%standard_name="water_x_velocity"
+    export_variables(6)%standard_name="water_y_velocity"
     allocate(exportField(nexport))
     allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
     
@@ -210,7 +213,8 @@ module gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     do k=1,nexport
-      exportField(k) = ESMF_FieldCreate(grid, arrayspec, name=export_variables(k)%standard_name, &
+      farrayPtr => variables(:,:,:,k)
+      exportField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=export_variables(k)%standard_name, &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -219,24 +223,11 @@ module gotm_component
     enddo
   
     !> Specify water temperature information from T0 field
-    call ESMF_FieldGet(field=exportField(1), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    variables(:,:,:,1) =  T0
-    farrayPtr=variables(:,:,:,1)        
-
+    !variables(:,:,:,1) =  T(1:nlev)
     !> Specify a grid_height 
-    call ESMF_FieldGet(field=exportField(2), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    do k=lbnd(3),ubnd(3)
-      do j=lbnd(2),ubnd(2)
-        do i=lbnd(1),ubnd(1) 
-          variables(i,j,k,2) = depth/nlev
-        enddo
-      enddo
-    enddo
-    farrayPtr=variables(:,:,:,2)
+    !variables(:,:,:,2) = h(1:nlev)
+    !> Specify salinity
+    !variables(:,:,:,3) = S(1:nlev)
 
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
@@ -248,6 +239,8 @@ module gotm_component
     use meanflow, only : gotm_salinity => S
     use meanflow, only : gotm_heights => h 
     use meanflow, only : gotm_radiation => rad
+    use meanflow, only : gotm_u => u
+    use meanflow, only : gotm_v => v
     use gotm_mossco_fabm, only: gotm_fabm_bottom_flux => bfl
 
     type(ESMF_GridComp)  :: gridComp
@@ -302,6 +295,8 @@ module gotm_component
          variables(:,:,k,2) = gotm_heights(k)
          variables(:,:,k,3) = gotm_salinity(k)
          variables(:,:,k,4) = gotm_radiation(k)
+         variables(:,:,k,5) = gotm_u(k)
+         variables(:,:,k,6) = gotm_v(k)
        end do
 
        !> Check if the output alarm is ringing, if so, quiet it and 
