@@ -20,7 +20,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_clm libmossco_benthos
+TARGETS=libempty libconstant libmossco_clm libmossco_benthos libmossco_simplewave
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
@@ -51,7 +51,8 @@ libmossco_benthos: libmossco_benthos_component
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
-libmossco_benthos_component: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
+libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
+libmossco_simplewave: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
@@ -111,9 +112,11 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/simplewave_component.mod
 
 subdirs:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done
