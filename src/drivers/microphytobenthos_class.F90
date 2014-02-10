@@ -42,7 +42,10 @@ allocate (this%ErodibilityEffect,stat= istatus)
 !    write (*,*) 'allocation of ErodibilityEffect was successfull'
 !else
 !    write (*,*) 'Error , allocation of ErodibilityEffect was NOT successfull'
-!end if
+!end
+
+  this%TauEffect = 1.0_fp
+  this%ErodibilityEffect = 1.0_fp
 
 end subroutine init_microphyt
 
