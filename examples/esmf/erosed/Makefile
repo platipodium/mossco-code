@@ -24,7 +24,7 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 all: exec
 exec: erosed
 
-exec: toplevel_component.o main.o
+erosed: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
