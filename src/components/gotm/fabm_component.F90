@@ -167,6 +167,11 @@ module fabm_gotm_component
         name=trim(fabm_export_states(k)%standard_name), &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !> call ESMF_AttributeSet(attPack, name,value)?
+      !> call ESMF_AttributeAdd(field, namelist,attPack=type(ESMF_AttPack))
+      !call ESMF_AttributeAdd(exportField(2*k-1),'particle_mean_diameter', &
+      !        gotmfabm%model%info%state_variables(i)%properties%get_real('diameter',default=-99.d0))
+
       exportField(2*k) = ESMF_FieldCreate(grid, arrayspec=arrayspec, &
         name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
