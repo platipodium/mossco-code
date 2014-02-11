@@ -46,7 +46,7 @@ Program | Minimum version and alternatives
 --------|----------
 GNU Make | 3.0
 Fortran 2003 Compiler | e.g. GNU  >= 4.7.2, Intel >= 12.0, PGI >= 13.2
-ESMF | 5.2 or 6.2
+ESMF | 5.2.0rp3, preferably 6.3.0r
 
 
 @subsubsection optional-system-prereqs Optional system prerequisites
@@ -97,7 +97,7 @@ Decide on a directory where to put the ESMF source, and set the environment vari
 
 - download the git repository of esmf: @code git clone git://git.code.sf.net/p/esmf/esmf $ESMF_DIR @endcode
 - change to this directory : @code cd $ESMF_DIR @endcode
-- checkout the 6_2_0 tagged version: @code git checkout ESMF_6_2_0 @endcode
+- checkout the ESMF_6_3_0r tagged version: @code git checkout ESMF_6_3_0r @endcode
 - set ESMF's environment variables (these can be a lot, see below)
 
 An example environment for ESMF could look like this:
