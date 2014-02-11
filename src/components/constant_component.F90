@@ -105,14 +105,14 @@ module constant_component
 
     allocate(cur_item%next)
     cur_item => cur_item%next
-    cur_item%standard_name='hzg_omexdia_p dissolved oxygen'
+    cur_item%standard_name='dissolved_oxygen'
     allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
     cur_item%data = 280.0d0 !mmol-O2/m3
     nullify(cur_item%next)
 
     allocate(cur_item%next)
     cur_item => cur_item%next
-    cur_item%standard_name='hzg_omexdia_p dissolved phosphate'
+    cur_item%standard_name='dissolved_phosphate'
     allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
     cur_item%data = 1.0d0 !mmol-P/m3
     nullify(cur_item%next)
