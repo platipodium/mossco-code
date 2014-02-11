@@ -232,14 +232,6 @@ module toplevel_component
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
 
-    call ESMF_StatePrint(pelagicState)
-    call ESMF_StatePrint(sedimentState)
-    call ESMF_StateGet(pelagicState,'iow_spm01 concentration of SPM',newfield)
-    call ESMF_FieldPrint(newfield)
-    !call ESMF_FieldGet(newfield,farrayPtr=ptr_f3)
-    !write(0,*) 'ptr_f3(1,1,5):',ptr_f3(1,1,5)
-    call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -267,101 +259,101 @@ module toplevel_component
 
       !> change state such that gotm-fabm output is mapped to fabmsed fields:
       !   DIN flux:
-      call ESMF_StateGet(sedimentstate,trim('hzg_omexdia_p dissolved nitrate_upward_flux'),field,rc=rc)
+      call ESMF_StateGet(sedimentstate,trim('dissolved_nitrate_upward_flux'),field,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val1_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateGet(sedimentstate,'hzg_omexdia_p dissolved ammonium_upward_flux',field,rc=rc)
+      call ESMF_StateGet(sedimentstate,'dissolved_ammonium_upward_flux',field,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(sedimentstate,(/ &
-              'gotm_npzd nutrients_upward_flux                            ', &
-              'hzg_maecs Dissolved Inorganic Nitrogen DIN nutN_upward_flux'/),DINflux,rc=rc)
+              'nutrients_upward_flux                            ', &
+              'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux'/),DINflux,rc=rc)
       DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
 
       !   DIP flux:
       call mossco_state_get(sedimentstate,(/ &
-              'hzg_maecs Dissolved Inorganic Phosphorus DIP nutP_upward_flux'/),DIPflux,rc=rc)
+              'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux'/),DIPflux,rc=rc)
       if (rc == 0)  then
         call mossco_state_get(sedimentstate,(/ &
-              'hzg_omexdia_p dissolved phosphate_upward_flux'/),val1_f2,rc=rc)
+              'dissolved_phosphate_upward_flux'/),val1_f2,rc=rc)
          DIPflux(1,1) = val1_f2(1,1)
       end if
 
       !   Det flux:
       call mossco_state_get(pelagicstate,(/ &
-              'gotm_npzd detritus              ', &
-              'hzg_maecs Detritus Nitrogen detN'/),DETN,rc=rc)
+              'detritus              ', &
+              'Detritus_Nitrogen_detN'/),DETN,rc=rc)
       call mossco_state_get(pelagicstate,(/ &
-              'gotm_npzd detritus_z_velocity              ', &
-              'hzg_maecs Detritus Nitrogen detN_z_velocity'/),vDETN,rc=rc)
+              'detritus_z_velocity              ', &
+              'Detritus_Nitrogen_detN_z_velocity'/),vDETN,rc=rc)
       call mossco_state_get(sedimentstate,(/ &
-              'gotm_npzd detritus_upward_flux              ', &
-              'hzg_maecs Detritus Nitrogen detN_upward_flux'/),DETNflux,rc=rc)
+              'detritus_upward_flux              ', &
+              'Detritus_Nitrogen_detN_upward_flux'/),DETNflux,rc=rc)
       DETNflux(1,1) = sinking_factor * DETN(1,1,1) * vDETN(1,1,1)
 
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
-      call mossco_state_get(pelagicstate,(/'hzg_maecs Detritus Carbon detC'/),DETC,rc=rc)
+      call mossco_state_get(pelagicstate,(/'Detritus_Carbon_detC'/),DETC,rc=rc)
       if (rc /= 0) then
          CN_det=106.0_rk/16.0_rk
       else
          CN_det = DETC(1,1,1)/DETN(1,1,1)
          call mossco_state_get(sedimentstate,(/ &
-              'hzg_maecs Detritus Carbon detC_upward_flux'/),DETCflux,rc=rc)
+              'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
          DETCflux(1,1) = sinking_factor * DETC(1,1,1) * vDETN(1,1,1)
       end if
       fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
       fac_sdet = (1.0_rk-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
-      call ESMF_StateGet(pelagicstate,'hzg_omexdia_p fast detritus C',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'fast_detritus_C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       ptr_f3(1,1,1) = fac_fdet * DETNflux(1,1)
-      call ESMF_StateGet(pelagicstate,'hzg_omexdia_p slow detritus C',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'slow_detritus_C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       ptr_f3(1,1,1) = fac_sdet * DETNflux(1,1)
    
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
-      call mossco_state_get(pelagicstate,(/'hzg_maecs Detritus Phosphorus detP'/),DETP,rc=rc)
+      call mossco_state_get(pelagicstate,(/'Detritus_Phosphorus_detP'/),DETP,rc=rc)
       if (rc == 0) then
         call mossco_state_get(pelagicstate,(/ &
-              'hzg_maecs Detritus Phosphorus detP_z_velocity'/),vDETP,rc=rc)
+              'Detritus_Phosphorus_detP_z_velocity'/),vDETP,rc=rc)
         call mossco_state_get(sedimentstate,(/ &
-              'hzg_maecs Detritus Phosphorus detP_upward_flux'/),DETPflux,rc=rc)
+              'Detritus_Phosphorus_detP_upward_flux'/),DETPflux,rc=rc)
         DETPflux(1,1) = sinking_factor * DETP(1,1,1) * vDETP(1,1,1)
       else
         if (.not.(associated(DETPflux))) allocate(DETPflux(1,1))
         DETPflux(1,1) = 1.0d0/16.0d0 * DETNflux(1,1)
       end if
 
-      call ESMF_StateGet(pelagicstate,'hzg_omexdia_p detritus-P',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'detritus-P',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       ptr_f3(1,1,1) = DETPflux(1,1)
       ! DIM concentrations:
       !  oxygen is coming from constant component, ODU is set to 0.0 in Initialize
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(pelagicstate,(/ &
-              'gotm_npzd nutrients                            ', &
-              'hzg_maecs Dissolved Inorganic Nitrogen DIN nutN'/),DIN,rc=rc)
-      call ESMF_StateGet(pelagicstate,'hzg_omexdia_p dissolved ammonium',field,rc=rc)
+              'nutrients                            ', &
+              'Dissolved_Inorganic_Nitrogen_DIN_nutN'/),DIN,rc=rc)
+      call ESMF_StateGet(pelagicstate,'dissolved_ammonium',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
-      call ESMF_StateGet(pelagicstate,'hzg_omexdia_p dissolved nitrate',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'dissolved_nitrate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
 
       !> check for DIP, if present, take as is, if not calculate it N-based
-      call mossco_state_get(pelagicstate,(/'hzg_maecs Dissolved Inorganic Phosphorus DIP nutP'/),DIP,rc=rc)
+      call mossco_state_get(pelagicstate,(/'Dissolved_Inorganic_Phosphorus_DIP_nutP'/),DIP,rc=rc)
       if (rc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))
         DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
       end if
-      call ESMF_StateGet(pelagicstate,'hzg_omexdia_p dissolved phosphate',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'dissolved_phosphate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
