@@ -26,6 +26,7 @@ module simplewave_component
   public :: SetServices
 
   real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK
+  real(ESMF_KIND_R8),parameter :: gravity=9.81d0
   
   contains
 
@@ -73,6 +74,8 @@ module simplewave_component
     type(ESMF_Field), dimension(:), allocatable  :: exportFields, importFields
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
 
+    call ESMF_LogWrite("simplewave component initializing ... ",ESMF_LOGMSG_INFO)
+
     ! Create a local clock, set its parameters to those of the parent clock
     clock = ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -99,6 +102,7 @@ module simplewave_component
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+!   create export state to be used in toplevel component
     !> Create export fields and add them to export state, allocate the space for these
     !> that will be filled later with data
     nexport = 4
@@ -118,7 +122,7 @@ module simplewave_component
 
    !---- Export variable 1: wave_direction
     exportField = ESMF_FieldCreate(grid, waveDir,                     &
-                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   indexflag=ESMF_INDEX_GLOBAL,      &
                                    staggerloc=ESMF_STAGGERLOC_CENTER, &
                                    name='wave_direction', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -127,7 +131,7 @@ module simplewave_component
 
     !---- Export variable 2: wave_height
     exportField = ESMF_FieldCreate(grid, waveH,                       &
-                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   indexflag=ESMF_INDEX_GLOBAL,      &
                                    staggerloc=ESMF_STAGGERLOC_CENTER, &
                                    name='wave_height', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -136,7 +140,7 @@ module simplewave_component
 
    !---- Export variable 3: wave_period
     exportField = ESMF_FieldCreate(grid, waveT,                       &
-                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   indexflag=ESMF_INDEX_GLOBAL,      &
                                    staggerloc=ESMF_STAGGERLOC_CENTER, &
                                    name='wave_period', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -145,7 +149,7 @@ module simplewave_component
 
    !---- Export variable 4: wave_number
     exportField = ESMF_FieldCreate(grid, waveK,                       &
-                                   indexflag=ESMF_INDEX_DELOCAL,      &
+                                   indexflag=ESMF_INDEX_GLOBAL,      &
                                    staggerloc=ESMF_STAGGERLOC_CENTER, &
                                    name='wave_number', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -167,7 +171,11 @@ module simplewave_component
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: n,k
     integer                 :: itemcount,nvar
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: depth,wind,windDir
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: depth=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: wind=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windDir=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windx=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windy=>null()
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     type(ESMF_Field)        :: Field
@@ -175,65 +183,57 @@ module simplewave_component
     real(ESMF_KIND_R8)                :: wdepth,wwind
     real(ESMF_KIND_R8),parameter      :: min_wind=0.1d0
     real(ESMF_KIND_R8),parameter      :: max_depth_windwaves=99999.0
+    logical                           :: calc_wind,calc_windDir
 
-    call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, &
-                       advanceCount=n, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' simplewave run() called.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
-    call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    ! Get the import states and map to local variables
+    ! associate local pointers with import data
     call ESMF_StateGet(importState, "water_depth", Field, rc=rc)
     if(rc /= ESMF_SUCCESS) then
        call ESMF_LogWrite("water_depth field not found",ESMF_LOGMSG_INFO)
        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    else
-       call ESMF_FieldGet(field, farrayPtr=depth, rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
+    call ESMF_FieldGet(field, farrayPtr=depth, rc=rc)
 
     call ESMF_StateGet(importState, "wind_speed", Field, rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       call ESMF_LogWrite("wind_speed field not found",ESMF_LOGMSG_INFO)
-       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       calc_wind = .true.
     else
+       calc_wind = .false.
        call ESMF_FieldGet(field, farrayPtr=wind, rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
+
 
     call ESMF_StateGet(importState, "wind_direction", Field, rc=rc)
     if(rc /= ESMF_SUCCESS) then
-       call ESMF_LogWrite("wind_direction field not found",ESMF_LOGMSG_INFO)
-       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       calc_windDir = .true.
     else
+       calc_windDir = .false.
        call ESMF_FieldGet(field, farrayPtr=windDir, rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
 
+    if (calc_wind .or. calc_windDir) then
+       call ESMF_StateGet(importState, "wind_x_velocity_at_10m", Field, rc=rc)
+       if (rc /= ESMF_SUCCESS) then
+          call ESMF_LogWrite("wind_x_velocity_at_10m field not found",ESMF_LOGMSG_INFO)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       end if
+       call ESMF_FieldGet(field, farrayPtr=windx, rc=rc)
+       call ESMF_StateGet(importState, "wind_y_velocity_at_10m", Field, rc=rc)
+       if (rc /= ESMF_SUCCESS) then
+          call ESMF_LogWrite("wind_y_velocity_at_10m field not found",ESMF_LOGMSG_INFO)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       end if
+       call ESMF_FieldGet(field, farrayPtr=windy, rc=rc)
+    end if
+
+    if (calc_wind) then
+      if (.not. associated(wind)) allocate(wind(1,1,1))
+      wind = sqrt(windx**2 + windy**2)
+    end if
+    if (calc_windDir) then
+      if (.not. associated(windDir)) allocate(windDir(1,1,1))
+      windDir = atan2(windy,windx) ! cartesian convention and in radians
+    end if
    
-    do while (.not.ESMF_ClockIsStopTime(clock))
-
-      call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-      write(message,'(A,I5)') trim(timestring)//' simplewave iteration ', n
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      !> @todo 
-      ! Insert here your time step/run code
-      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
       waveDir = windDir
       wwind = max( min_wind , wind(1,1,1) )
       wdepth = min( depth(1,1,1) , max_depth_windwaves )
@@ -241,12 +241,6 @@ module simplewave_component
       waveT(1,1,1) = wind2wavePeriod(wwind,wdepth)
       waveK(1,1,1) = wavePeriod2waveNumber(waveT(1,1,1),depth(1,1,1))
  
-      call ESMF_ClockAdvance(clock,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    end do
-
-! KK-TODO: do we have to update the exportState???
-
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
@@ -292,7 +286,6 @@ module simplewave_component
    real(ESMF_KIND_R8) function wind2waveHeight(wind,depth)
 
 ! !USES:
-   use meanflow, only: gravity
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
@@ -337,7 +330,6 @@ module simplewave_component
    real(ESMF_KIND_R8) function wind2wavePeriod(wind,depth)
 
 ! !USES:
-   use meanflow, only: gravity
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
@@ -384,7 +376,6 @@ module simplewave_component
    real(ESMF_KIND_R8) function wavePeriod2waveNumber(period,depth)
 
 ! !USES:
-   use meanflow, only: gravity
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
