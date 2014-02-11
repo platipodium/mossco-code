@@ -25,13 +25,14 @@ all: libsolver libtypes libmossco_util
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libtypes:  prefix $(MOSSCO_LIBRARY_PATH)/libtypes.a(mossco_variable_types.o)
-libmossco_util:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o mossco_state.o)
+libmossco_util:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o mossco_time.o mossco_state.o)
 
 #@todo there should be a generic rule for the mods
 $(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.o
 $(MOSSCO_MODULE_PATH)/mossco_state.mod: mossco_state.o
 $(MOSSCO_MODULE_PATH)/mossco_time.mod: mossco_time.o
+$(MOSSCO_MODULE_PATH)/mossco_strings.mod: mossco_strings.o
 
 clean: extraclean
 extraclean:
@@ -42,3 +43,5 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_state.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_time.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
+
