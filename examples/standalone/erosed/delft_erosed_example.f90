@@ -144,11 +144,11 @@ end if
 !    !
 !    nmlb    = 1                 ! first cell number
 !    nmub    = 1                 ! last cell number
-!    tstart  = 0.0               ! start time of computation [s]
-!    tend    = 50000.0            ! end time of computation [s]
-!    dt      = 100.0             ! time step [s]
+    tstart  = 0.0               ! start time of computation [s]
+    tend    = 50000.0            ! end time of computation [s]
+    dt      = 100.0             ! time step [s]
 !    morfac  = 1.0               ! morphological scale factor [-]
-!    nstep  = (tend-tstart)/dt;  ! number of time steps
+    nstep  = (tend-tstart)/dt;  ! number of time steps
     !
     ! -----------------------------------------------------------
     !
@@ -328,7 +328,8 @@ end if
     !   Determine fractions of all sediments in the top layer and compute the mud fraction.
 
         call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
-    !
+       ! write (*,*) ' getfrac just finished '   
+!
         !
         r0 = r1
         h0 = h1
@@ -339,12 +340,15 @@ end if
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
                 & sink      , sinkf   , sour     , sourf                         )
         !   Compute flow
-
+       ! write (*,*) ' erosed finished for step ',i, 'from total step ', nstep 
         !HN. ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
         !
         h1      = h0
         umod    = abs(1.0_fp*sin(2*3.14*i/nstep))
         !
+
+!write (*,*) ' umod =', umod
+
         do nm = nmlb, nmub
             taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm))
         enddo
