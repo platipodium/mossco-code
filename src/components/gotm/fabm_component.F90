@@ -31,6 +31,7 @@ module fabm_gotm_component
   use gotm_mossco_fabm
   use mossco_variable_types
   use mossco_state
+  use mossco_strings
   
   implicit none
 
@@ -199,6 +200,7 @@ module fabm_gotm_component
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,concfield/), &
                 name=trim(fabm_export_states(k)%standard_name),   &
                 multiflag=.true.,rc=rc)
+        gotmfabm%bundle_idx_by_fabm_id(k)=1
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
 
         call ESMF_StateGet(exportState, &
@@ -216,11 +218,9 @@ module fabm_gotm_component
         call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=rc)
         call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity',fieldBundle,rc=rc)
         call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=rc)
+        gotmfabm%bundle_idx_by_fabm_id(k) = gotmfabm%bundle_idx_by_fabm_id(k)+1
       end if
 
-      !> check if Field Bundle (if not, create a FieldBundle, else call FieldBundleAdd(fieldbundle,(/fieldlist/)multiflag=.true.)
-
-      
     enddo
 
     call ESMF_LogWrite("FABM/GOTM component initialized.",ESMF_LOGMSG_INFO)
@@ -244,11 +244,14 @@ module fabm_gotm_component
     type(ESMF_Time)         :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval, timeStep
     integer(ESMF_KIND_I8)   :: n,k
-    integer                 :: itemcount,nvar
+    integer                 :: nvar
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     real(ESMF_KIND_R8)      :: dt
     type(ESMF_Field)        :: Field
+    type(ESMF_FieldBundle)  :: fieldBundle
+    type(ESMF_Field),dimension(:),pointer ::fieldlist
+    type(ESMF_StateItem_Flag)  :: itemType
     character(len=ESMF_MAXSTR) :: string,varname,message
 
     call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, advanceCount=n, rc=rc)
@@ -273,6 +276,38 @@ module fabm_gotm_component
                           A,g1,g2,yearday,secondsofday,SRelaxTau(1:nlev),sProf(1:nlev), &
                           bio_albedo,bio_drag_scale)
 
+       ! get upward fluxes for FABM's state variables and put into bfl arrays of
+       ! diffusion routine (so far - later use integration by solver_library)
+       do nvar=1,size(gotmfabm%model%info%state_variables)
+         varname=trim(only_var_name( &
+           gotmfabm%model%info%state_variables(nvar)%long_name))//'_upward_flux'
+         !> if fieldBundle, then start counter on name and map nvar accordinlgy
+         !> later use attributes to distribute fields
+         call ESMF_StateGet(importState, trim(varname), itemType,rc=rc)
+         if (itemType == ESMF_STATEITEM_NOTFOUND) then
+#ifdef DEBUG
+           call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
+#endif
+         else if (itemType == ESMF_STATEITEM_FIELD) then
+#ifdef DEBUG
+           call ESMF_LogWrite(trim(varname)//' field found',ESMF_LOGMSG_INFO)
+#endif
+             call ESMF_StateGet(importState,trim(varname),field,rc=rc)
+             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
+             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+             gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
+         else if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+#ifdef DEBUG
+           call ESMF_LogWrite(trim(varname)//' fieldbundle found',ESMF_LOGMSG_INFO)
+#endif
+           call ESMF_StateGet(importState, trim(varname), fieldBundle,rc=rc)
+           call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+           call ESMF_FieldGet(fieldlist(gotmfabm%bundle_idx_by_fabm_id(nvar)),farrayPtr=ptr_f2,rc=rc)
+           gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
+         end if
+       end do
+
     ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
      do while (.not.ESMF_ClockIsStopTime(clock))
 
@@ -291,23 +326,6 @@ module fabm_gotm_component
        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 #endif
 
-       ! get upward fluxes for FABM's state variables and put into bfl arrays of
-       ! diffusion routine (so far - later use integration by solver_library)
-       do nvar=1,size(gotmfabm%model%info%state_variables)
-         varname=trim(gotmfabm%model%info%state_variables(nvar)%long_name)//'_upward_flux'
-         call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
-         if (itemcount==0) then
-#ifdef DEBUG
-           call ESMF_LogWrite(trim(varname)//' not found',ESMF_LOGMSG_INFO)
-#endif
-         else
-             call ESMF_StateGet(importState,trim(varname),field,rc=rc)
-             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-             gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
-         end if
-       end do
 
        call do_gotm_mossco_fabm(dt)
 

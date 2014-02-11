@@ -34,7 +34,8 @@ public get_export_state_by_id,get_export_state_from_variable_name
 public get_all_export_states, update_export_states
 
 type,extends(type_rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends type_rhs_driver)
-   type(type_model),pointer      :: model
+   type(type_model),pointer         :: model
+   integer,dimension(:),allocatable :: bundle_idx_by_fabm_id
 contains
    procedure :: get_rhs
 end type type_gotm_fabm
@@ -159,6 +160,8 @@ end type
       call fabm_set_domain(gotmfabm%model,1,1,nlev,dt)
       gotmfabm%nvar=size(gotmfabm%model%info%state_variables) + &
           size(gotmfabm%model%info%state_variables_ben)
+      allocate(gotmfabm%bundle_idx_by_fabm_id(gotmfabm%nvar))
+      gotmfabm%bundle_idx_by_fabm_id(:)=-1
 
       ! Report prognostic variable descriptions
       LEVEL2 'FABM pelagic state variables:'
