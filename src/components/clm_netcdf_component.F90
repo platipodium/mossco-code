@@ -202,13 +202,13 @@ module clm_netcdf_component
       allocate ( atmos_R(ib:ie,jb:je) )
 
 ! Create atmospheric fields and have it create the corresponding array internally
-      P_field = ESMF_FieldCreate(grid, atmos_P, name="PSL", rc=rc)
+      P_field = ESMF_FieldCreate(grid, atmos_P, name="air_pressure_at_sea_level", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      U_field = ESMF_FieldCreate(grid, atmos_U, name="U10", rc=rc)
+      U_field = ESMF_FieldCreate(grid, atmos_U, name="wind_x_velocity_at_10m", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      V_field = ESMF_FieldCreate(grid, atmos_V, name="V10", rc=rc)
+      V_field = ESMF_FieldCreate(grid, atmos_V, name="wind_y_velocity_at_10m", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      T_field = ESMF_FieldCreate(grid, atmos_T, name="T10", rc=rc)
+      T_field = ESMF_FieldCreate(grid, atmos_T, name="air_temperature_at_10m", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       Q_field = ESMF_FieldCreate(grid, atmos_Q, name="HUM", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
