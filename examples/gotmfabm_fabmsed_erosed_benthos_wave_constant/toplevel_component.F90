@@ -1,8 +1,16 @@
 module toplevel_component
 
   use esmf
-  use empty_component, only: empty_SetServices => SetServices
-  use constant_component, only: constant_SetServices => SetServices
+
+  use constant_component, only     : constant_SetServices => SetServices
+  use fabm_sediment_component, only: fabmsed_SetServices => SetServices
+  use gotm_component, only         : gotm_SetServices => SetServices
+  use fabm_gotm_component, only    : fabm_gotm_SetServices => SetServices
+  use erosed_component, only       : erosed_SetServices => SetServices
+  use benthos_component, only      : benthos_SetServices => SetServices
+  use simplewave_component, only   : simplewave_SetServices => SetServices
+
+  use mossco_state
   use mossco_time
 
   implicit none
@@ -12,7 +20,9 @@ module toplevel_component
   type(ESMF_State), dimension(:), save, allocatable   :: exportStates, importStates
   type(ESMF_Alarm), dimension(:), save, allocatable   :: couplingAlarms
   type(ESMF_Clock)      :: clock
-  
+ 
+#define  MOSSCO_CPL_SEPARATOR '/'
+ 
   public SetServices
 
   contains
@@ -36,7 +46,7 @@ module toplevel_component
     type(ESMF_Clock)       :: parentClock
     integer, intent(out)   :: rc
 
-    integer                :: i,n=3
+    integer                :: i,n=7
     character(ESMF_MAXSTR) :: name
     type(ESMF_Time)        :: time,currentTime,ringTime
     type(ESMF_TimeInterval) :: alarmInterval, timeInterval
@@ -66,9 +76,19 @@ module toplevel_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       if (i==1) then
-        call ESMF_GridCompSetServices(childComponents(i),empty_SetServices, rc=rc)
-      else
         call ESMF_GridCompSetServices(childComponents(i),constant_SetServices, rc=rc)
+      elseif (i==2) then
+        call ESMF_GridCompSetServices(childComponents(i),fabmsed_SetServices, rc=rc)
+      elseif (i==3) then
+        call ESMF_GridCompSetServices(childComponents(i),gotm_SetServices, rc=rc)
+      elseif (i==2) then
+        call ESMF_GridCompSetServices(childComponents(i),fabm_gotm_SetServices, rc=rc)
+      elseif (i==2) then
+        call ESMF_GridCompSetServices(childComponents(i),erosed_SetServices, rc=rc)
+      elseif (i==2) then
+        call ESMF_GridCompSetServices(childComponents(i),benthos_SetServices, rc=rc)
+      elseif (i==2) then
+        call ESMF_GridCompSetServices(childComponents(i),simplewave_SetServices, rc=rc)
       endif
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -87,32 +107,26 @@ module toplevel_component
         exportState=exportStates(i), clock=parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
-    
-    n=4
+   
+    n=7
     allocate(couplingAlarms(n))
     allocate(couplingnames(n))
     allocate(couplinghours(n))
-    
-    !! @todo the following information should come from external config/yaml  
-    write(couplingnames(1),'(A,A,A)') trim(componentnames(1)),MOSSCO_CPL_SEPARATOR, &
-     trim(componentnames(2))
-    write(couplingnames(2),'(A,A,A)') trim(componentnames(1)),MOSSCO_CPL_SEPARATOR, &
-     trim(componentnames(3))
-    write(couplingnames(3),'(A,A,A)') trim(componentnames(2)),MOSSCO_CPL_SEPARATOR, &
-     trim(componentnames(1))
-    write(couplingnames(4),'(A,A,A)') trim(componentnames(3)),MOSSCO_CPL_SEPARATOR, &
-     trim(componentnames(2))
+   
+    do i=1,n
+      write(couplingnames(i),'(A,A,A)') trim(componentnames(i)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(mod(i,7)+1))
+    enddo
 
-    couplinghours=(/5,24,17,37/) 
- 
-    call ESMF_AttributeSet(childComponents(1),couplingnames(1),couplinghours(1),rc=rc)
-    call ESMF_AttributeSet(childComponents(2),couplingnames(1),couplinghours(1),rc=rc)
-    call ESMF_AttributeSet(childComponents(1),couplingnames(2),couplinghours(2),rc=rc)
-    call ESMF_AttributeSet(childComponents(3),couplingnames(2),couplinghours(3),rc=rc)
-    call ESMF_AttributeSet(childComponents(1),couplingnames(3),couplinghours(1),rc=rc)
-    call ESMF_AttributeSet(childComponents(2),couplingnames(3),couplinghours(3),rc=rc)
-    call ESMF_AttributeSet(childComponents(3),couplingnames(4),couplinghours(4),rc=rc)
-    call ESMF_AttributeSet(childComponents(2),couplingnames(4),couplinghours(4),rc=rc)
+    couplinghours=(/5,24,17,37,13,5,36/) 
+
+    do i=1,n
+      call ESMF_AttributeSet(childComponents(i),couplingnames(i),couplinghours(i), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_AttributeSet(childComponents(mod(i,7)+1),couplingnames(i),couplinghours(i), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
  
    !! Set the coupling alarm starting from current time of parent clock
     call ESMF_ClockGet(parentClock,startTime=time,rc=rc)
@@ -184,7 +198,7 @@ module toplevel_component
     call ESMF_TimeGet(currentTime,timeString=timeString1, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-		write(message,'(A)') trim(timeString1)//': toplevel component started running'
+    write(message,'(A)') trim(timeString1)//': toplevel component started running'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -236,9 +250,9 @@ module toplevel_component
       endif
       if (.not.allocated(alarmList)) then
         allocate(alarmList(n))     
-	    elseif (n>size(alarmList)) then
-	      deallocate(alarmList)
-	      allocate(alarmList(n))
+      elseif (n>size(alarmList)) then
+        deallocate(alarmList)
+        allocate(alarmList(n))
       endif
       
       call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_RINGING,alarmList=alarmList,rc=rc)
