@@ -184,7 +184,7 @@ if (exst.and.(.not.opnd)) then
  write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
  read (UnitNr, nml=benthic, iostat = istat)
-
+write (*,*) 'nmlb  ', nmlb , nmub
  close (UnitNr)
 end if
 !    nmlb    = 1                 ! first cell number
@@ -231,21 +231,30 @@ end if
     allocate (mfluff(nfrac,nmlb:nmub))
     allocate (mudfrac (nmlb:nmub))
 
-   inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
+   
+    !Initialization
+    sink = 0.0_fp
+    sour = 0.0_fp
+    sinkf=0.0_fp
+    sourf=0.0_fp
+    mass =0.0_fp
+    massfluff=0.0_fp
+
+    inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
     write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 569
 
- open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+ open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
  write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
- read (UnitNr, iostat = istat) (sedtyp(i),i=1,2)
- if (istat ==0 ) read (UnitNr, iostat = istat) ( cdryb(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) (rhosol(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) (sedd50(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) (sedd90(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+ read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ( cdryb(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
  if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
  close (UnitNr)
 end if
@@ -303,33 +312,53 @@ end if
 
 
     !> create grid
-    distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,nmlb,1/), maxIndex=(/1,1,nmub,nfrac/), &
-                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,nmlb,1/),maxIndex=(/1,1,nmub,nfrac/),name="Erosed grid")
+   write (*,*) 'nfrac', nfrac 
 
+     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1,1/),maxIndex=(/1,1,2,1/), &
+           regDecomp=(/1,1,1,1/),coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
+            name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
+     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+write (*,*) ' grid was just created'
+      distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1,nmlb/), maxIndex=(/1,1,nfrac,nmub/), &
+                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+write (*,*) ' distgrid'
+    allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac,nmlb:nmub))
+    size_classes_of_upward_flux_of_pim_at_bottom(1,1,:,:)=sink (:,:)
+    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac,nmlb:nmub))
+    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:,:)=sour (:,:)
+    
+write (*,*) ' allocations'
     !> create export fields
 
   !! @todo uncomment next line (or similar implementationw
    !size_classes_of_upward_flux_of_pim_at_bottom(1,1,nmlb:nmub,1:nfrac) => sour(:,:)
     array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_upward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+write (*,*) ' array1'
+ if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     upward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_upward_flux_of_pim_at_bottom", rc=rc)
-    array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_downward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    downward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_downward_flux_of_pim_at_bottom", rc=rc)
+   write (*,* ) ' filed 1'
+ if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !array = ESMF_ArrayCreate(distgrid,farray=pon%conc,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    !pon_field = ESMF_FieldCreate(grid, array, name="particulare_organic_nitrogen_in_water", rc=rc)
-    !array = ESMF_ArrayCreate(distgrid,farray=pon%ws,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-    !pon_ws_field = ESMF_FieldCreate(grid, arrayspec, name="pon_sinking_velocity_in_water", rc=rc)
+    array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_downward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+ if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+write (*,*) ' array2'
+    downward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_downward_flux_of_pim_at_bottom", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+write (*,*) ' filed2'
     !> set export state
     call ESMF_StateAdd(exportState,(/upward_flux_field/),rc=rc)
     call ESMF_StateAdd(exportState,(/downward_flux_field/),rc=rc)
     call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
-
+write (*,*) ' state add'
+    call ESMF_FieldPrint (upward_flux_field)
+    call ESMF_FieldPrint (downward_flux_field)
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
+    type(ESMF_State)     :: importState, exportState	
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
