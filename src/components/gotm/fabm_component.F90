@@ -104,9 +104,13 @@ module fabm_gotm_component
     type(ESMF_ArraySpec) :: arrayspec
     
     type(ESMF_Field), dimension(:), allocatable  :: importField
-    type(ESMF_Field)     :: field,concfield,wsfield
+    type(ESMF_Field)          :: field,concfield,wsfield
+    type(ESMF_FieldBundle)    :: fieldBundle
+    type(ESMF_StateItem_Flag) :: itemType
     
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr,wsPtr
+    real(ESMF_KIND_R8)   :: attribute_r8
+    character(len=ESMF_MAXSTR) :: attribute_name
     namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
     namelist /station/ name,latitude,longitude,depth
       
@@ -162,26 +166,61 @@ module fabm_gotm_component
     call get_all_export_states(fabm_export_states)
 
     do k=1,size(fabm_export_states)
+      !> create field for state variable
       concfield = ESMF_FieldCreate(grid, farrayPtr=fabm_export_states(k)%conc, &
         name=trim(fabm_export_states(k)%standard_name), &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      !> call ESMF_AttributeSet(attPack, name,value)?
-      !> call ESMF_AttributeAdd(field, namelist,attPack=type(ESMF_AttPack))
-      !call ESMF_AttributeAdd(exportField(2*k-1),'particle_mean_diameter', &
-      !        gotmfabm%model%info%state_variables(i)%properties%get_real('diameter',default=-99.d0))
+      
+      !> add attributes relevant for MOSSCO
+      attribute_name=trim('mean_particle_diameter')
+      attribute_r8 = gotmfabm%model%info%state_variables(k)%properties%get_real('diameter',default=-99.d0)
+      call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
 
+      !> create field for sinking velocity of state variable
       wsPtr => fabm_export_states(k)%ws
       wsfield = ESMF_FieldCreate(grid, farrayPtr=fabm_export_states(k)%ws, &
         name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      !> call ESMF_StateAdd, if error, then get present field,
+      call ESMF_StateGet(exportState, &
+              trim(fabm_export_states(k)%standard_name),itemType, rc=rc)
+
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
+        call ESMF_StateAddReplace(exportState,(/concfield,wsfield/),rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      else if (itemType ==ESMF_STATEITEM_FIELD) then
+      !> if field present, remove from state, create bundle, add fields
+        call ESMF_StateGet(exportState, &
+                trim(fabm_export_states(k)%standard_name),field,rc=rc)
+        call ESMF_StateRemove(exportState, &
+                trim(fabm_export_states(k)%standard_name),rc=rc)
+        fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,concfield/), &
+                name=trim(fabm_export_states(k)%standard_name),   &
+                multiflag=.true.,rc=rc)
+        call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
+
+        call ESMF_StateGet(exportState, &
+                trim(fabm_export_states(k)%standard_name)//'_z_velocity',field,rc=rc)
+        call ESMF_StateRemove(exportState, &
+                trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
+        fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,wsfield/), &
+                name=trim(fabm_export_states(k)%standard_name),   &
+                multiflag=.true.,rc=rc)
+        call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
+
+      else if(itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      !> if fieldBundle, get the bundle and add field
+        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name),fieldBundle,rc=rc)
+        call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=rc)
+        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity',fieldBundle,rc=rc)
+        call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=rc)
+      end if
+
       !> check if Field Bundle (if not, create a FieldBundle, else call FieldBundleAdd(fieldbundle,(/fieldlist/)multiflag=.true.)
 
-      call ESMF_StateAddReplace(exportState,(/concfield,wsfield/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
     enddo
 
     call ESMF_LogWrite("FABM/GOTM component initialized.",ESMF_LOGMSG_INFO)
