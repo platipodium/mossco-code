@@ -26,7 +26,7 @@ LIBS := -lsediment -lconstant -lmossco_sediment -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lgotm -lmossco_gotmfabm -lsolver -lmossco_util
+LDFLAGS += -lgotm -lmossco_gotmfabm -lsolver -lmossco_util 
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lmossco_util -lmossco_benthos -lmossco_erosed -lmossco_clm -lmossco_simplewave
