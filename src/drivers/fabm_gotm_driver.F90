@@ -837,10 +837,11 @@ end type
 
    export_state%fabm_id=fabm_id
    export_state%conc => gotmfabm%conc(:,:,:,export_state%fabm_id)
-   allocate(export_state%ws(1,1,1))
+   allocate(export_state%ws(1,1,gotmfabm%knum))
    export_state%ws = 0.0d0
  !> @todo Make the next line a function call that generates a CF standard_name 
-   export_state%standard_name = gotmfabm%model%info%state_variables(fabm_id)%long_name
+   export_state%standard_name = only_var_name( &
+           gotmfabm%model%info%state_variables(fabm_id)%long_name)
    !export_state%units = gotmfabm%model%info%state_variables(fabm_id)%units
 
    end function get_export_state_by_id
@@ -906,5 +907,38 @@ end type
 
       write (*,*) trim(message)
    end subroutine
+
+   function only_var_name(longname)
+      character(:),allocatable     :: only_var_name
+      character(len=*), intent(in) :: longname
+      character(len=256)           :: words(100)
+      integer                      :: pos,pos1=1,pos2,i
+
+      !> remove model name
+      pos = INDEX(longname, " ")
+      allocate(character(len=len_trim(longname)-pos)::only_var_name)
+      only_var_name = trim(longname(pos+1:))
+
+      pos1=1
+      pos =0
+      !> replace white space with underscore
+      do
+         pos2 = INDEX(only_var_name(pos1:), " ")
+         IF (pos2 == 0) THEN
+            pos = pos + 1
+            words(pos) = only_var_name(pos1:)
+            EXIT
+         END IF
+         pos = pos + 1
+         words(pos) = only_var_name(pos1:pos1+pos2-2)
+         pos1 = pos2+pos1
+      end do
+ 
+      only_var_name=trim(words(1))
+      do i = 2, pos
+         only_var_name=trim(only_var_name)//"_"//trim(words(i))
+      end do
+
+   end function only_var_name
 
 end module

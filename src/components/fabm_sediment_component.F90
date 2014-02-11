@@ -200,7 +200,7 @@ module fabm_sediment_component
     ! it might be enough to do this once in initialize(?)
     do n=1,sed%nvar
       field = ESMF_FieldCreate(state_grid,state_array, &
-                         name=trim(sed%model%info%state_variables(n)%long_name), &
+                         name=only_var_name(sed%model%info%state_variables(n)%long_name), &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
@@ -213,7 +213,7 @@ module fabm_sediment_component
     do n=1,size(sed%model%info%diagnostic_variables)
       diag => fabm_sed_diagnostic_variables(sed,n)
       array = ESMF_ArrayCreate(distgrid=distgrid_3d,farrayPtr=diag, &
-                   name=trim(sed%model%info%diagnostic_variables(n)%long_name), rc=rc)
+                   name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
@@ -221,7 +221,7 @@ module fabm_sediment_component
     end do
     do n=1,sed%nvar
       field = ESMF_FieldCreate(flux_grid,flux_array, &
-                         name=trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
+                         name=only_var_name(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
@@ -327,14 +327,14 @@ module fabm_sediment_component
     
     do n=1,sed%nvar
       call ESMF_StateGet(exportState, &
-             trim(sed%model%info%state_variables(n)%long_name), &
+             only_var_name(sed%model%info%state_variables(n)%long_name), &
              field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3 = conc(:,:,:,n)
       call ESMF_StateGet(exportState, &
-             trim(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
+             only_var_name(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
              field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
@@ -401,7 +401,7 @@ module fabm_sediment_component
     endif
 
     do i=1,sed%nvar
-      varname=trim(sed%model%info%state_variables(i)%long_name)
+      varname=trim(only_var_name(sed%model%info%state_variables(i)%long_name))
       call ESMF_StateGet(importState,itemSearch=trim(varname),itemCount=itemcount,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -441,6 +441,39 @@ module fabm_sediment_component
     end do
 
   end subroutine get_boundary_conditions
+
+   function only_var_name(longname)
+      character(:),allocatable     :: only_var_name
+      character(len=*), intent(in) :: longname
+      character(len=256)           :: words(100)
+      integer                      :: pos,pos1=1,pos2,i
+
+      !> remove model name
+      pos = INDEX(longname, " ")
+      allocate(character(len=len_trim(longname)-pos)::only_var_name)
+      only_var_name = trim(longname(pos+1:))
+
+      pos1=1
+      pos =0
+      !> replace white space with underscore
+      do
+         pos2 = INDEX(only_var_name(pos1:), " ")
+         IF (pos2 == 0) THEN
+            pos = pos + 1
+            words(pos) = only_var_name(pos1:)
+            EXIT
+         END IF
+         pos = pos + 1
+         words(pos) = only_var_name(pos1:pos1+pos2-2)
+         pos1 = pos2+pos1
+      end do
+ 
+      only_var_name=trim(words(1))
+      do i = 2, pos
+         only_var_name=trim(only_var_name)//"_"//trim(words(i))
+      end do
+
+   end function only_var_name
 
 
 end module fabm_sediment_component
