@@ -103,10 +103,10 @@ module fabm_gotm_component
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
     
-    type(ESMF_Field), dimension(:), allocatable  :: exportField, importField
-    type(ESMF_Field)     :: field
+    type(ESMF_Field), dimension(:), allocatable  :: importField
+    type(ESMF_Field)     :: field,concfield,wsfield
     
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr,wsPtr
     namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
     namelist /station/ name,latitude,longitude,depth
       
@@ -160,10 +160,9 @@ module fabm_gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call get_all_export_states(fabm_export_states)
-    allocate(exportField(2*size(fabm_export_states)))
 
     do k=1,size(fabm_export_states)
-      exportField(2*k-1) = ESMF_FieldCreate(grid, arrayspec=arrayspec, &
+      concfield = ESMF_FieldCreate(grid, farrayPtr=fabm_export_states(k)%conc, &
         name=trim(fabm_export_states(k)%standard_name), &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -172,22 +171,16 @@ module fabm_gotm_component
       !call ESMF_AttributeAdd(exportField(2*k-1),'particle_mean_diameter', &
       !        gotmfabm%model%info%state_variables(i)%properties%get_real('diameter',default=-99.d0))
 
-      exportField(2*k) = ESMF_FieldCreate(grid, arrayspec=arrayspec, &
+      wsPtr => fabm_export_states(k)%ws
+      wsfield = ESMF_FieldCreate(grid, farrayPtr=fabm_export_states(k)%ws, &
         name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_FieldGet(field=exportField(2*k-1), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr = fabm_export_states(k)%conc
+      !> call ESMF_StateAdd, if error, then get present field,
+      !> check if Field Bundle (if not, create a FieldBundle, else call FieldBundleAdd(fieldbundle,(/fieldlist/)multiflag=.true.)
 
-      call ESMF_FieldGet(field=exportField(2*k), localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr = fabm_export_states(k)%ws
-
-      call ESMF_StateAddReplace(exportState,(/exportField(2*k),exportField(2*k-1)/),rc=rc)
+      call ESMF_StateAddReplace(exportState,(/concfield,wsfield/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
@@ -296,6 +289,9 @@ module fabm_gotm_component
 
     ! update Field data:
     call update_export_states(fabm_export_states)
+!> this is not needed any more, since the fields are created with pointers to
+!> fabm_export_states(:)%conc and fabm_export_states(:)%ws
+#if 0
     do nvar=1,size(fabm_export_states)
       call mossco_state_get(exportState,(/trim(fabm_export_states(nvar)%standard_name)/), &
         ptr_f3,rc=rc)
@@ -305,6 +301,7 @@ module fabm_gotm_component
         ptr_f3,rc=rc)
       ptr_f3 = fabm_export_states(nvar)%ws
     end do
+#endif
 
   end subroutine Run
 
@@ -350,6 +347,5 @@ module fabm_gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize
-
 
 end module fabm_gotm_component

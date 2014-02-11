@@ -110,7 +110,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p dissolved nitrate", &
+                       name="dissolved_nitrate", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -120,7 +120,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p dissolved ammonium", &
+                       name="dissolved_ammonium", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -129,17 +129,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p dissolved reduced substances", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p fast detritus C", &
+                       name="dissolved_reduced_substances", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -149,7 +139,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p slow detritus C", &
+                       name="fast_detritus_C", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -159,7 +149,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p detritus-P", &
+                       name="slow_detritus_C", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -169,7 +159,17 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p fast detritus C_z_velocity", &
+                       name="detritus-P", &
+                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    ptr_f3 = 0.0_rk
+    call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
+                       name="fast_detritus_C_z_velocity", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -179,7 +179,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p slow detritus C_z_velocity", &
+                       name="slow_detritus_C_z_velocity", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -189,7 +189,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="hzg_omexdia_p detritus-P_z_velocity", &
+                       name="detritus-P_z_velocity", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -200,17 +200,17 @@ module toplevel_component
 
 #if 1
     call mossco_create_upward_flux_fields(pelagicstate, (/&
-           "gotm_npzd nutrients                              ", &
-           "hzg_maecs Dissolved Inorganic Nitrogen DIN nutN  ", &
-           "hzg_maecs Dissolved Inorganic Phosphorus DIP nutP", &
-           "gotm_npzd detritus                               ", &
-           "hzg_maecs Detritus Nitrogen detN                 ", &
-           "hzg_maecs Detritus Phosphorus detP               ", &
-           "hzg_maecs Detritus Carbon detC                   "/),sedimentstate)
+           "nutrients                              ", &
+           "Dissolved_Inorganic_Nitrogen_DIN_nutN  ", &
+           "Dissolved_Inorganic_Phosphorus_DIP_nutP", &
+           "detritus                               ", &
+           "Detritus_Nitrogen_detN                 ", &
+           "Detritus_Phosphorus_detP               ", &
+           "Detritus_Carbon_detC                   "/),sedimentstate)
 #else
 
     newfield = ESMF_FieldCreate(flux_bdy_grid,flux_bdy_array, &
-                       name="gotm_npzd nutrients_upward_flux", &
+                       name="nutrients_upward_flux", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
@@ -220,7 +220,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(flux_bdy_grid,flux_bdy_array, &
-                       name="gotm_npzd detritus_upward_flux", &
+                       name="detritus_upward_flux", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
@@ -231,6 +231,14 @@ module toplevel_component
 #endif
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
+
+    call ESMF_StatePrint(pelagicState)
+    call ESMF_StatePrint(sedimentState)
+    call ESMF_StateGet(pelagicState,'iow_spm01 concentration of SPM',newfield)
+    call ESMF_FieldPrint(newfield)
+    !call ESMF_FieldGet(newfield,farrayPtr=ptr_f3)
+    !write(0,*) 'ptr_f3(1,1,5):',ptr_f3(1,1,5)
+    call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Initialize
 
