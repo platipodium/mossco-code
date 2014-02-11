@@ -43,8 +43,8 @@ libmossco_sediment: prefix libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/lib
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 libmossco_gotmfabm: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
 
-
-libmossco_clm: $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
+libmossco_clm: libmossco_clm_driver
+libmossco_clm_driver: $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 # Benthos section
 libmossco_benthos: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
