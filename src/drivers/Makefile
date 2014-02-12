@@ -81,8 +81,16 @@ EROSED_OBJS= \
 	$(EROSED_DIR)/source/shld.o			\
 	$(EROSED_DIR)/source/sand_mud.o
 
-libmossco_erosed: prefix						\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_OBJS)) \
+libmossco_erosed_dependencies: prefix						\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision_basics.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/erosand.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/eromud.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/vanRijn84.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/shld.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/sand_mud.o)
+
+libmossco_erosed: prefix libmossco_erosed_dependencies \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(delft_erosed_driver.o)
 
 # Generic section
