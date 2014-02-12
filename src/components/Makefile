@@ -38,15 +38,15 @@ ifeq ($(MOSSCO_GETM),true)
 TARGETS += libgetm
 endif
 
-.PHONY: $(TARGETS) subdirs
+.PHONY: $(TARGETS) subdirs utilities
 
 #--------------------------------------
 # Make targets
 # add checks for libfabm and libsediment
 
-all: subdirs $(TARGETS)
+all: utilities subdirs $(TARGETS)
 
-libmossco_clm: libmossco_clm_component 
+libmossco_clm: libmossco_clm_component libmossco_clm_driver
 libmossco_benthos: libmossco_benthos_component libmossco_benthos_drivers
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
@@ -105,6 +105,9 @@ endif
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libtypes
+
+utilities:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities
 
 clean: extraclean
 
