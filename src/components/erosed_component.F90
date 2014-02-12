@@ -4,7 +4,7 @@
 !> @export
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
 !> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
@@ -314,7 +314,7 @@ end if
     !> create grid
    write (*,*) 'nfrac', nfrac 
 
-     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1,1/),maxIndex=(/1,1,2,1/), &
+     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1,nmlb/),maxIndex=(/1,1,nfrac,nmub/), &
            regDecomp=(/1,1,1,1/),coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
             name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -358,7 +358,7 @@ write (*,*) ' state add'
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState	
+    type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
