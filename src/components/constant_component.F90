@@ -157,29 +157,12 @@ module constant_component
     integer               :: lbnd(3),ubnd(3)
     real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr
     
-    
-    call ESMF_StateGet(exportState,"water_temperature", field, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_FieldGet(field=field, localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    farrayPtr=variables(:,:,:,1)        
- 
-    call ESMF_StateGet(exportState,"salinity", field, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_FieldGet(field=field, localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    farrayPtr=variables(:,:,:,2)        
- 
-    
-
+#ifdef DEBUG 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
     write(message,'(A,A,A)') 'Constant component ', trim(name), ' finished running'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
- 
+#endif
+
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
