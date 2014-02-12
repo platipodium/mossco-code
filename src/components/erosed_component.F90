@@ -19,6 +19,7 @@ module erosed_component
   use esmf
   use mossco_erosed, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
+  use mossco_state
 
   implicit none
 
@@ -368,13 +369,15 @@ write (*,*) ' state add'
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
-    real(kind=ESMF_KIND_R8),dimension(:,:) :: ptr_f2
-    real(kind=ESMF_KIND_R8),dimension(:,:,:) :: ptr_f3,spm_concentration
+    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
+    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration
     real(kind=ESMF_KIND_R8)  :: diameter
-    integer                  :: rc,n
+
+    integer                  :: n
     type(ESMF_Field)         :: field
     type(ESMF_Field),dimension(:),pointer :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
+    logical                  :: forcing_from_coupler=.true.
 
     ! Get global clock properties
     call ESMF_TimeSet(clockTime)
@@ -387,21 +390,19 @@ write (*,*) ' state add'
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=rc)
 
 
-    if (.not.allocated(spm_concentration)) allocate(spm_concentration(1,1,nfrac)
+    if (.not.associated(spm_concentration)) allocate(spm_concentration(1,1,nfrac))
 
     !> get import state
     if (forcing_from_coupler) then
 
       !> get water depth
-      call mossco_state_get(importState,'water_depth',ptr_f2,rc=rc)
+      call mossco_state_get(importState,(/'water_depth'/),ptr_f2,rc)
       h0 = ptr_f2(1,1)
 
       !> get u,v and use bottom layer value
-      call mossco_state_get(importState,'water_x_velocity',ptr_f3,rc=rc)
-      u = ptr_f3(1,1,1)
-      call mossco_state_get(importState,'water_y_velocity',ptr_f3,rc=rc)
-      v  = ptr_f3(1,1,1)
-      umod = sqrt( u**2 + v**2 )
+      call mossco_state_get(importState,(/'water_x_velocity'/),u,rc)
+      call mossco_state_get(importState,(/'water_y_velocity'/),v,rc)
+      umod = sqrt( u(1,1,1)**2 + v(1,1,1)**2 )
 
       !> get spm concentrations
       call ESMF_StateGet(importState,'concentration_of_SPM',fieldBundle,rc=rc)
