@@ -35,7 +35,6 @@ public get_all_export_states, update_export_states
 
 type,extends(type_rhs_driver), public :: type_gotm_fabm !< gotm_fabm driver class (extends type_rhs_driver)
    type(type_model),pointer         :: model
-   integer,dimension(:),allocatable :: bundle_idx_by_fabm_id
    integer                          :: nvar_ben=0
    integer                          :: nvar_pel=0
    real(rk),dimension(:),pointer    :: layer_height
@@ -164,8 +163,6 @@ end type
       gotmfabm%nvar_pel=size(gotmfabm%model%info%state_variables)
       gotmfabm%nvar_ben=size(gotmfabm%model%info%state_variables_ben)
       gotmfabm%nvar=gotmfabm%nvar_pel + gotmfabm%nvar_ben
-      allocate(gotmfabm%bundle_idx_by_fabm_id(gotmfabm%nvar))
-      gotmfabm%bundle_idx_by_fabm_id(:)=-1
 
       ! Report prognostic variable descriptions
       LEVEL2 'FABM pelagic state variables:'

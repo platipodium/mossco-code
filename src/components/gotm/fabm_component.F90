@@ -177,6 +177,7 @@ module fabm_gotm_component
       attribute_name=trim('mean_particle_diameter')
       attribute_r8 = gotmfabm%model%info%state_variables(k)%properties%get_real('diameter',default=-99.d0)
       call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
+      call ESMF_AttributeSet(concfield,'fabm_component_internal_id',k)
 
       !> create field for sinking velocity of state variable
       wsPtr => fabm_export_states(k)%ws
@@ -200,7 +201,6 @@ module fabm_gotm_component
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,concfield/), &
                 name=trim(fabm_export_states(k)%standard_name),   &
                 multiflag=.true.,rc=rc)
-        gotmfabm%bundle_idx_by_fabm_id(k)=1
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
 
         call ESMF_StateGet(exportState, &
@@ -218,7 +218,6 @@ module fabm_gotm_component
         call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=rc)
         call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity',fieldBundle,rc=rc)
         call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=rc)
-        gotmfabm%bundle_idx_by_fabm_id(k) = gotmfabm%bundle_idx_by_fabm_id(k)+1
       end if
 
     enddo
@@ -244,7 +243,7 @@ module fabm_gotm_component
     type(ESMF_Time)         :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval, timeStep
     integer(ESMF_KIND_I8)   :: n,k
-    integer                 :: nvar
+    integer                 :: nvar,ii,fabm_idx
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     real(ESMF_KIND_R8)      :: dt
@@ -303,7 +302,15 @@ module fabm_gotm_component
 #endif
            call ESMF_StateGet(importState, trim(varname), fieldBundle,rc=rc)
            call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
-           call ESMF_FieldGet(fieldlist(gotmfabm%bundle_idx_by_fabm_id(nvar)),farrayPtr=ptr_f2,rc=rc)
+           do ii=1,size(fieldlist)
+             call ESMF_AttributeGet(fieldlist(ii),'fabm_component_internal_id',fabm_idx)
+             if (fabm_idx == nvar) then
+               call ESMF_FieldGet(fieldlist(ii),farrayPtr=ptr_f2,rc=rc)
+               exit
+             else
+               cycle
+             end if
+           end do
            gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
          end if
        end do
