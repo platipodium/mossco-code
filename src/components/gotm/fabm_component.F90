@@ -208,7 +208,7 @@ module fabm_gotm_component
         call ESMF_StateRemove(exportState, &
                 trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,wsfield/), &
-                name=trim(fabm_export_states(k)%standard_name),   &
+                name=trim(fabm_export_states(k)%standard_name)//'_z_velocity',   &
                 multiflag=.true.,rc=rc)
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
 
