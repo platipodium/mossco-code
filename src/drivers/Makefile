@@ -82,17 +82,8 @@ EROSED_OBJS= \
 	$(EROSED_DIR)/source/sand_mud.o
 
 libmossco_erosed: prefix						\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(precision_basics.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(precision.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosand.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(eromud.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(vanRijn84.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(shld.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(sand_mud.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_OBJS)) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(delft_erosed_driver.o)
-
-delft_erosed_driver.o: precision.o
-precision.o: precision_basics.o
 
 # Generic section
 
@@ -107,3 +98,4 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/delft_erosed_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
