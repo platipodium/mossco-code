@@ -121,14 +121,9 @@ module constant_component
     cur_item => variable_items%next
     do
       !write(0,*) 'set field ',trim(cur_item%standard_name),' to ',cur_item%data(1,1,1)
-      cur_item%field = ESMF_FieldCreate(grid,arrayspec,name=cur_item%standard_name, &
+      cur_item%field = ESMF_FieldCreate(grid,farrayPtr=cur_item%data,name=cur_item%standard_name, &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_FieldGet(field=cur_item%field, localDe=0, farrayPtr=farrayPtr, &
-                       totalLBound=lbnd,totalUBound=ubnd, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr = cur_item%data
 
       call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
