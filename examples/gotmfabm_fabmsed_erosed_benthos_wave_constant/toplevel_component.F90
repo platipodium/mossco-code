@@ -69,9 +69,17 @@ module toplevel_component
     allocate(componentNames(n))
     allocate(exportStates(n))
     allocate(importStates(n))   
+    
+    write(componentNames(1),'A') 'constant_component'
+    write(componentNames(2),'A') 'fabmsed_omponent'
+    write(componentNames(3),'A') 'gotm_component'
+    write(componentNames(4),'A') 'fabmgotm_component'
+    write(componentNames(5),'A') 'erosed_component'
+    write(componentNames(6),'A') 'benthos_component'
+    write(componentNames(7),'A') 'simplewave_component'
  
     do i=1,n
-      write(componentnames(i),'(A,I1)') 'child_component_',i
+      !write(componentnames(i),'(A,I1)') 'child_component_',i
       childComponents(i)= ESMF_GridCompCreate(name=trim(componentnames(i)), rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -93,11 +101,11 @@ module toplevel_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       write(name,'(A,A)') trim(componentnames(i)),'_import_state'
-      importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name=trim(name))
+      importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=trim(name))
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       write(name,'(A,A)') trim(componentnames(i)),'_export_state'
-      exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name=trim(name))
+      exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=trim(name))
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
       call ESMF_AttributeSet(childComponents(i),'component_index',i,rc=rc)      
@@ -108,17 +116,65 @@ module toplevel_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
    
+    !! Print all export states to see whether the appropriate Fields have been created
+    do i=1,n
+      call ESMF_StatePrint(exportStates(i))
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+     
     n=7
     allocate(couplingAlarms(n))
     allocate(couplingnames(n))
     allocate(couplinghours(n))
+    
+   write(componentNames(2),'A') 'fabmsed_omponent'
+    write(componentNames(3),'A') 'gotm_component'
+    write(componentNames(4),'A') 'fabmgotm_component'
+    write(componentNames(5),'A') 'erosed_component'
+    write(componentNames(6),'A') 'benthos_component'
+    write(componentNames(7),'A') 'simplewave_component'
+
+    ! FABMSED -> FABMGOTM coupling
+    ! fluxes_upward and concentrations
+    write(couplingnames(1),'(A,A,A)') trim(componentnames(2)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(3))
+  
+    ! GOTM -> Erosed coupling
+    ! h,u,v
+    write(couplingnames(2),'(A,A,A)') trim(componentnames(2)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(5))
+
+    ! FABMGOTM -> Erosed coupling
+    ! concentrations
+    write(couplingnames(3),'(A,A,A)') trim(componentnames(3)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(5))
+
+    ! Erosed -> fabmgotmcoupling
+    ! upward_flux
+    write(couplingnames(4),'(A,A,A)') trim(componentnames(5)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(3))
+  
+    ! Simplewave -> Erosed
+    ! tau, orbital_velocity
+    write(couplingnames(5),'(A,A,A)') trim(componentnames(7)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(5))
+    
+    ! Benthos -> Erosed
+    ! erodibility_effects
+    write(couplingnames(6),'(A,A,A)') trim(componentnames(6)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(5))
+    
+    ! GOTM -> simplewave
+    ! wind_speed
+    write(couplingnames(7),'(A,A,A)') trim(componentnames(1)),MOSSCO_CPL_SEPARATOR, &
+      trim(componentnames(7))
+    
    
     do i=1,n
-      write(couplingnames(i),'(A,A,A)') trim(componentnames(i)),MOSSCO_CPL_SEPARATOR, &
-      trim(componentnames(mod(i,7)+1))
+      !write(couplingnames(i),'(A,A,A)') trim(componentnames(i)),MOSSCO_CPL_SEPARATOR, &
+      !trim(componentnames(mod(i,7)+1))
+      couplinghours(i)=6
     enddo
-
-    couplinghours=(/5,24,17,37,13,5,36/) 
 
     do i=1,n
       call ESMF_AttributeSet(childComponents(i),couplingnames(i),couplinghours(i), rc=rc)

@@ -48,7 +48,8 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libmossco_simplewave libmossco_benthos libmossco_clm:
+
+libsediment libconstant libmossco_simplewave libmossco_benthos libmossco_clm libmossco_erosed:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment libsolver:
