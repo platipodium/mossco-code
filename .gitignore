@@ -35,10 +35,12 @@ examples/ocean_fabm0d_fabmsed/output.dat
 examples/ocean_fabm0d_fabmsed/output_0d.dat
 examples/ocean_fabm0d/ocean_fabm0d
 examples/ocean_fabm0d/output_0d.dat
-examples/standalone/erosed/erosed_test
+examples/standalone/erosed/erosed
+examples/standalone/benthos/benthos
 examples/standalone/erosed/delft_sediment_test.out
 examples/timing_concept/timing_concept
 examples/gotmfabm_fabmsed_constant/gotmfabm_fabmsed_constant
+examples/gotmfabm_fabmsed_erosed_benthos_wave_constant/gotmfabm_fabmsed_erosed_benthos_wave_constant
 examples/gotm*/main.F90
 src/drivers/eromud.f90
 src/drivers/erosand.f90
@@ -48,6 +50,7 @@ src/drivers/sand_mud.f90
 src/drivers/sedparams.inc
 src/drivers/shld.f90
 src/drivers/vanRijn84.f90
+src/test/test_[A-z]*
 examples/esmf/clm/atmos*.nc
 examples/standalone/erosed/delft_sediment_test.out
 examples/standalone/erosed/erosed
