@@ -15,7 +15,7 @@
 module fabm_sediment_driver
 
 use fabm
-use fabm_standard_variables, only: type_bulk_standard_variable
+!use fabm_standard_variables!, only: type_standard_variable
 use solver_library, only: type_rhs_driver
 
 implicit none
@@ -48,8 +48,8 @@ real(rk),dimension(:,:,:),allocatable,target :: temp3d
 real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
 real(rk),dimension(:,:),allocatable     :: zeros2d
 
-type(type_bulk_standard_variable), parameter :: &
-    varname_porosity = type_bulk_standard_variable('porosity','m3/m3','volumetric_porosity')
+!type(type_bulk_standard_variable) :: &
+!    varname_porosity = type_bulk_standard_variable('porosity','m3/m3','volumetric_porosity')
 
 #define _GRID_ sed%grid
 #define _INUM_ _GRID_%inum
@@ -246,7 +246,7 @@ end do
 !   link environment forcing
 call fabm_link_bulk_data(rhs_driver%model,varname_temp,temp3d)
 call fabm_link_bulk_data(rhs_driver%model,varname_par,par)
-call fabm_link_bulk_data(rhs_driver%model,varname_porosity,porosity)
+!call fabm_link_bulk_data(rhs_driver%model,varname_porosity,porosity)
 
 ! calculate diffusivities (temperature)
 f_T = _ONE_*exp(-4500.d0*(1.d0/(temp3d+273.d0) - (1.d0/288.d0)))
