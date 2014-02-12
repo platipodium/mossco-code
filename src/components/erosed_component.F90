@@ -368,6 +368,13 @@ write (*,*) ' state add'
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
+    real(kind=ESMF_KIND_R8),dimension(:,:) :: ptr_f2
+    real(kind=ESMF_KIND_R8),dimension(:,:,:) :: ptr_f3,spm_concentration
+    real(kind=ESMF_KIND_R8)  :: diameter
+    integer                  :: rc,n
+    type(ESMF_Field)         :: field
+    type(ESMF_Field),dimension(:),pointer :: fieldlist
+    type(ESMF_FieldBundle)   :: fieldBundle
 
     ! Get global clock properties
     call ESMF_TimeSet(clockTime)
@@ -380,20 +387,53 @@ write (*,*) ' state add'
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=rc)
 
 
-#if 0
-    ! get import state
+    if (.not.allocated(spm_concentration)) allocate(spm_concentration(1,1,nfrac)
+
+    !> get import state
     if (forcing_from_coupler) then
-      call ESMF_StateGet(importState, "water_temperature", water_temperature_field, rc=rc)
-      call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
-      zerod%temp = water_temperature(1,1,1)
+
+      !> get water depth
+      call mossco_state_get(importState,'water_depth',ptr_f2,rc=rc)
+      h0 = ptr_f2(1,1)
+
+      !> get u,v and use bottom layer value
+      call mossco_state_get(importState,'water_x_velocity',ptr_f3,rc=rc)
+      u = ptr_f3(1,1,1)
+      call mossco_state_get(importState,'water_y_velocity',ptr_f3,rc=rc)
+      v  = ptr_f3(1,1,1)
+      umod = sqrt( u**2 + v**2 )
+
+      !> get spm concentrations
+      call ESMF_StateGet(importState,'concentration_of_SPM',fieldBundle,rc=rc)
+      call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+      do n=1,size(fieldlist)
+        field = fieldlist(n)
+        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+        call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(n))
+        !call ESMF_AttributeGet(field,'particle_density',rhosol(n))
+        sedd90(n) = d90_from_d50(sedd50(n))
+        spm_concentration(1,1,n) = ptr_f3(1,1,1)
+      end do
+
+      !> this is not good, but should work:
+      r0(:,nmub) = spm_concentration(1,1,:)
+
+      !> get sinking velocities
+      call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity',fieldBundle,rc=rc)
+      call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+      do n=1,size(fieldlist)
+        call ESMF_FieldGet(fieldlist(n),farrayPtr=ptr_f3,rc=rc)
+        ws(n,nmub) = ptr_f3(1,1,1)
+      end do
+
+    else
+      !> use initial values
+      h0=h1
+      r0=r1
     end if
 
-#endif
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
-
-    r0 = r1
-    h0 = h1
 
     !   Computing erosion fluxes
     call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
@@ -483,5 +523,11 @@ write (*,*) ' state add'
     !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
     !             & tcrdep,  tcrero, tcrfluff)
   end subroutine Finalize
+
+  function d90_from_d50(d50)
+  real(ESMF_KIND_R8)            :: d90_from_d50
+  real(ESMF_KIND_R8),intent(in) :: d50
+  d90_from_d50 = 2.0_ESMF_KIND_R8 * d50
+  end function d90_from_d50
 
 end module erosed_component
