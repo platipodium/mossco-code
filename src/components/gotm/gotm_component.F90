@@ -36,6 +36,7 @@ module gotm_component
  
   type(ESMF_Clock)  :: clock 
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
+  real(ESMF_KIND_R8),dimension(1:1,1:1),target   :: H_2d
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
 
    !> Declare an alarm to ring when output to file is requested
@@ -94,12 +95,15 @@ module gotm_component
     integer                     :: myrank,i,j,k
     integer                     :: nimport,nexport
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
+
     type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_Grid)      :: grid
+    type(ESMF_Grid)      :: grid,grid2d
     type(ESMF_ArraySpec) :: arrayspec
     
     type(ESMF_Field), dimension(:), allocatable  :: exportField, importField
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
+    type(ESMF_Field) :: field
       
     namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
     namelist /station/ name,latitude,longitude,depth
@@ -171,6 +175,12 @@ module gotm_component
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
+    grid2d = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+      regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      name="ocean 2d grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -221,6 +231,15 @@ module gotm_component
       call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
+
+    H_2d(1,1) = sum(variables(1,1,:,2))
+    ptr_f2 => H_2d
+    field =  ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name='water_depth', &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   
     !> Specify water temperature information from T0 field
     !variables(:,:,:,1) =  T(1:nlev)
@@ -298,6 +317,7 @@ module gotm_component
          variables(:,:,k,5) = gotm_u(k)
          variables(:,:,k,6) = gotm_v(k)
        end do
+       H_2d(1,1) = sum(gotm_heights(:))
 
        !> Check if the output alarm is ringing, if so, quiet it and 
        !> call do_output from GOTM
