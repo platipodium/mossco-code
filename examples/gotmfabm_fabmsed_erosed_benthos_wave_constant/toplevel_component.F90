@@ -20,6 +20,7 @@ module toplevel_component
   type(ESMF_State), dimension(:), save, allocatable   :: exportStates, importStates
   type(ESMF_Alarm), dimension(:), save, allocatable   :: couplingAlarms
   type(ESMF_Clock)      :: clock
+  type(ESMF_State), save                              :: exchangeState, dummyState
  
 #define  MOSSCO_CPL_SEPARATOR '/'
  
@@ -67,21 +68,32 @@ module toplevel_component
     ! Create n child components, call their setservices, and create states
     allocate(childComponents(n))
     allocate(componentNames(n))
-    allocate(exportStates(n))
-    allocate(importStates(n))   
+    !allocate(exportStates(n))
+    !allocate(importStates(n))   
     
     write(componentNames(1),'(A)') 'constant_component'
-    write(componentNames(2),'(A)') 'fabmsed_omponent'
+    write(componentNames(2),'(A)') 'fabmsed_component'
     write(componentNames(3),'(A)') 'gotm_component'
     write(componentNames(4),'(A)') 'fabmgotm_component'
     write(componentNames(5),'(A)') 'erosed_component'
     write(componentNames(6),'(A)') 'benthos_component'
     write(componentNames(7),'(A)') 'simplewave_component'
+
+
+    dummyState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
+        name='dummy_state', rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    exchangeState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
+        name='exchange_state', rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ 
  
     do i=1,n
       !write(componentnames(i),'(A,I1)') 'child_component_',i
       childComponents(i)= ESMF_GridCompCreate(name=trim(componentnames(i)), rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      write(*,*) i,n
 
       if (i==1) then
         call ESMF_GridCompSetServices(childComponents(i),constant_SetServices, rc=rc)
@@ -100,34 +112,34 @@ module toplevel_component
       endif
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      write(name,'(A,A)') trim(componentnames(i)),'_import_state'
-      importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=trim(name))
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !write(name,'(A,A)') trim(componentnames(i)),'_import_state'
+      !importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=trim(name))
+      !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      write(name,'(A,A)') trim(componentnames(i)),'_export_state'
-      exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=trim(name))
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
+      !write(name,'(A,A)') trim(componentnames(i)),'_export_state'
+      !exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=trim(name))
+      !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+     
       call ESMF_AttributeSet(childComponents(i),'component_index',i,rc=rc)      
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_GridCompInitialize(childComponents(i), importState=exportStates(1), &
-        exportState=exportStates(1), clock=parentClock, rc=rc)
+      call ESMF_GridCompInitialize(childComponents(i), importState=exchangeState, &
+        exportState=exchangeState, clock=parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
+   
+   enddo
    
     !! Print all export states to see whether the appropriate Fields have been created
-    do i=1,n
-      call ESMF_StatePrint(exportStates(i))
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
+    call ESMF_StatePrint(exchangeState)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
      
     n=7
     allocate(couplingAlarms(n))
     allocate(couplingnames(n))
     allocate(couplinghours(n))
     
-   write(componentNames(2),'(A)') 'fabmsed_omponent'
+    write(componentNames(2),'(A)') 'fabmsed_component'
     write(componentNames(3),'(A)') 'gotm_component'
     write(componentNames(4),'(A)') 'fabmgotm_component'
     write(componentNames(5),'(A)') 'erosed_component'
@@ -278,10 +290,37 @@ module toplevel_component
         write(message,'(A,A,G6.2,A)') trim(timeString1)//': calling '//trim(name), &
           ' to run for ', hours, ' h'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
-        
-        call ESMF_GridCompRun(childComponents(i),importState=importStates(i),&
-          exportState=exportStates(i), clock=clock, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        write(*,*) 'Running component ', i, ' from ', k , 'th Alarm'
+           if (i == 1) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           !elseif (i == 2) call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+           !  exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 3) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 4) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 5) then
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 6) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 7) then
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           else
+              write(*,*) 'Component ', i, ' skipped'
+           endif
+
+           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+              
+        !call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+        !  exportState=exchangeState, clock=clock, rc=rc)
+        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       enddo  
     endif
 
@@ -336,7 +375,7 @@ module toplevel_component
           endif
         enddo
                           
-!        write(*,'(A,I2,A,I2,A,A,A)') 'Cycling ',k,' of ',n,' alarms. (',trim(name),')'
+        write(*,'(A,I2,A,I2,A,A,A)') 'Cycling ',k,' of ',n,' alarms. (',trim(name),')'
 
         call ESMF_GridCompGet(componentList(1),name=name,rc=rc)             
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -391,10 +430,34 @@ module toplevel_component
           write(message,'(A,A,G6.2,A)') trim(timeString1)//': calling '//trim(name), &
             ' to run for ', hours, ' h'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
-        
-          call ESMF_GridCompRun(childComponents(i),importState=importStates(i),exportState=exportStates(i), &
-            clock=clock, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       
+          !> @todo include coupler components/coupler code here
+           write(*,*) 'Running component ', i, ' from ', k , 'th Alarm'
+           if (i == 1) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           !elseif (i == 2) call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+           !  exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 3) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 4) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 5) then
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 6) then 
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           elseif (i == 7) then
+             call ESMF_GridCompRun(childComponents(i),importState=exchangeState, &
+               exportState=exchangeState, clock=clock, rc=rc)
+           else
+              write(*,*) 'Component ', i, ' skipped'
+           endif
+
+           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         enddo     
       enddo  
 
@@ -437,10 +500,11 @@ module toplevel_component
     if (allocated(couplingAlarms)) deallocate(couplingAlarms)
 
     do i=1,size(childComponents)
-      call ESMF_StateDestroy(exportStates(i),rc=rc)
-      call ESMF_StateDestroy(importStates(i),rc=rc)
+      !call ESMF_StateDestroy(exportStates(i),rc=rc)
+      !call ESMF_StateDestroy(importStates(i),rc=rc)
       call ESMF_GridCompDestroy(childComponents(i),rc=rc)
     enddo
+    call ESMF_StateDestroy(exchangeState, rc=rc)
 
     if (allocated(childComponents)) deallocate(childComponents)
     if (allocated(exportStates)) deallocate(exportStates)
