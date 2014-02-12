@@ -315,14 +315,11 @@ end if
     !> create grid
    write (*,*) 'nfrac', nfrac 
 
-     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1,nmlb/),maxIndex=(/1,1,nfrac,nmub/), &
-           regDecomp=(/1,1,1,1/),coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
+     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,nmlb/),maxIndex=(/1,1,nmub/), &
+           coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
             name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 write (*,*) ' grid was just created'
-      distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1,nmlb/), maxIndex=(/1,1,nfrac,nmub/), &
-                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 write (*,*) ' distgrid'
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac,nmlb:nmub))
@@ -333,19 +330,22 @@ write (*,*) ' distgrid'
 write (*,*) ' allocations'
     !> create export fields
 
+#if 0
   !! @todo uncomment next line (or similar implementationw
    !size_classes_of_upward_flux_of_pim_at_bottom(1,1,nmlb:nmub,1:nfrac) => sour(:,:)
-    array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_upward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-write (*,*) ' array1'
- if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    upward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_upward_flux_of_pim_at_bottom", rc=rc)
+    upward_flux_field = ESMF_FieldCreate(grid, &
+            farrayPtr=size_classes_of_upward_flux_of_pim_at_bottom, &
+            indexflag=ESMF_INDEX_GLOBAL, &
+            name="size_classes_of_upward_flux_of_pim_at_bottom", &
+            ungriddedLbound=(/1/),ungriddedUbound=(/nfrac/), rc=rc)
    write (*,* ) ' filed 1'
  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    array = ESMF_ArrayCreate(distgrid,farray=size_classes_of_downward_flux_of_pim_at_bottom,indexflag=ESMF_INDEX_GLOBAL, rc=rc)
- if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-write (*,*) ' array2'
-    downward_flux_field = ESMF_FieldCreate(grid, array, name="size_classes_of_downward_flux_of_pim_at_bottom", rc=rc)
+    downward_flux_field = ESMF_FieldCreate(grid, &
+            farrayPtr=size_classes_of_downward_flux_of_pim_at_bottom, &
+            indexflag=ESMF_INDEX_GLOBAL, &
+            name="size_classes_of_downward_flux_of_pim_at_bottom", &
+            ungriddedLbound=(/1/),ungriddedUbound=(/nfrac/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 write (*,*) ' filed2'
     !> set export state
@@ -355,6 +355,7 @@ write (*,*) ' filed2'
 write (*,*) ' state add'
     call ESMF_FieldPrint (upward_flux_field)
     call ESMF_FieldPrint (downward_flux_field)
+#endif
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -397,23 +398,37 @@ write (*,*) ' state add'
 
       !> get water depth
       call mossco_state_get(importState,(/'water_depth'/),ptr_f2,rc)
-      h0 = ptr_f2(1,1)
+      if (rc == 0) then
+        h0 = ptr_f2(1,1)
+      else
+        h0=h1
+      endif
 
       !> get u,v and use bottom layer value
       call mossco_state_get(importState,(/'water_x_velocity'/),u,rc)
       call mossco_state_get(importState,(/'water_y_velocity'/),v,rc)
-      umod = sqrt( u(1,1,1)**2 + v(1,1,1)**2 )
+      if (rc == 0) then
+        umod = sqrt( u(1,1,1)**2 + v(1,1,1)**2 )
+      else
+        umod = 0.2
+      end if
 
       !> get spm concentrations
       call ESMF_StateGet(importState,'concentration_of_SPM',fieldBundle,rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       do n=1,size(fieldlist)
         field = fieldlist(n)
         call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
         call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(n))
         !call ESMF_AttributeGet(field,'particle_density',rhosol(n))
         sedd90(n) = d90_from_d50(sedd50(n))
-        spm_concentration(1,1,n) = ptr_f3(1,1,1)
+        if (rc == ESMF_SUCCESS) then
+          spm_concentration(1,1,n) = ptr_f3(1,1,1)
+        else
+          write(0,*) 'cannot find SPM fraction',n
+        end if
       end do
 
       !> this is not good, but should work:
@@ -421,7 +436,9 @@ write (*,*) ' state add'
 
       !> get sinking velocities
       call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity',fieldBundle,rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       do n=1,size(fieldlist)
         call ESMF_FieldGet(fieldlist(n),farrayPtr=ptr_f3,rc=rc)
         ws(n,nmub) = ptr_f3(1,1,1)
