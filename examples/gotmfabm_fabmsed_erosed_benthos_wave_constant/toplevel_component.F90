@@ -70,13 +70,13 @@ module toplevel_component
     allocate(exportStates(n))
     allocate(importStates(n))   
     
-    write(componentNames(1),'A') 'constant_component'
-    write(componentNames(2),'A') 'fabmsed_omponent'
-    write(componentNames(3),'A') 'gotm_component'
-    write(componentNames(4),'A') 'fabmgotm_component'
-    write(componentNames(5),'A') 'erosed_component'
-    write(componentNames(6),'A') 'benthos_component'
-    write(componentNames(7),'A') 'simplewave_component'
+    write(componentNames(1),'(A)') 'constant_component'
+    write(componentNames(2),'(A)') 'fabmsed_omponent'
+    write(componentNames(3),'(A)') 'gotm_component'
+    write(componentNames(4),'(A)') 'fabmgotm_component'
+    write(componentNames(5),'(A)') 'erosed_component'
+    write(componentNames(6),'(A)') 'benthos_component'
+    write(componentNames(7),'(A)') 'simplewave_component'
  
     do i=1,n
       !write(componentnames(i),'(A,I1)') 'child_component_',i
@@ -89,13 +89,13 @@ module toplevel_component
         call ESMF_GridCompSetServices(childComponents(i),fabmsed_SetServices, rc=rc)
       elseif (i==3) then
         call ESMF_GridCompSetServices(childComponents(i),gotm_SetServices, rc=rc)
-      elseif (i==2) then
+      elseif (i==4) then
         call ESMF_GridCompSetServices(childComponents(i),fabm_gotm_SetServices, rc=rc)
-      elseif (i==2) then
+      elseif (i==5) then
         call ESMF_GridCompSetServices(childComponents(i),erosed_SetServices, rc=rc)
-      elseif (i==2) then
+      elseif (i==6) then
         call ESMF_GridCompSetServices(childComponents(i),benthos_SetServices, rc=rc)
-      elseif (i==2) then
+      elseif (i==7) then
         call ESMF_GridCompSetServices(childComponents(i),simplewave_SetServices, rc=rc)
       endif
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -111,8 +111,8 @@ module toplevel_component
       call ESMF_AttributeSet(childComponents(i),'component_index',i,rc=rc)      
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_GridCompInitialize(childComponents(i), importState=importStates(i), &
-        exportState=exportStates(i), clock=parentClock, rc=rc)
+      call ESMF_GridCompInitialize(childComponents(i), importState=exportStates(1), &
+        exportState=exportStates(1), clock=parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
    
@@ -127,12 +127,12 @@ module toplevel_component
     allocate(couplingnames(n))
     allocate(couplinghours(n))
     
-   write(componentNames(2),'A') 'fabmsed_omponent'
-    write(componentNames(3),'A') 'gotm_component'
-    write(componentNames(4),'A') 'fabmgotm_component'
-    write(componentNames(5),'A') 'erosed_component'
-    write(componentNames(6),'A') 'benthos_component'
-    write(componentNames(7),'A') 'simplewave_component'
+   write(componentNames(2),'(A)') 'fabmsed_omponent'
+    write(componentNames(3),'(A)') 'gotm_component'
+    write(componentNames(4),'(A)') 'fabmgotm_component'
+    write(componentNames(5),'(A)') 'erosed_component'
+    write(componentNames(6),'(A)') 'benthos_component'
+    write(componentNames(7),'(A)') 'simplewave_component'
 
     ! FABMSED -> FABMGOTM coupling
     ! fluxes_upward and concentrations
