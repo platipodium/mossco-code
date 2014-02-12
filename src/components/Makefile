@@ -54,6 +54,7 @@ libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_drive
 libmossco_benthos_drivers: prefix  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o)
 libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 libmossco_simplewave: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+libmossco_erosed: liberosed
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
