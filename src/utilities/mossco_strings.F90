@@ -12,8 +12,9 @@ contains
 
       !> remove model name
       pos = INDEX(longname, " ")
-      allocate(character(len=len_trim(longname)-pos)::only_var_name)
-      only_var_name = trim(longname(pos+1:))
+!      allocate(character(len=len_trim(longname)-pos)::only_var_name)
+     only_var_name = repeat (' ',len_trim(longname)-pos) 
+     only_var_name = trim(longname(pos+1:))
 
       pos1=1
       pos =0
