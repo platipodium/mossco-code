@@ -342,21 +342,21 @@ write (*,*) ' state add'
   !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
   call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
   if(rc /= ESMF_SUCCESS) then
-    write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM". You might &
-              & want to initialise e.g. the fabm_component before initialising the erosed_component.'      
-    call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM". Possibly &
+            & number of SPM fractions do not match with fabm_component.'      
+  else
+    call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (size(fieldlist) /= nfrac) then
+          write(0,*) 'Warning: number of boundary SPM concentrations doesnt match number of erosed fractions'
+    !call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    do n=1,size(fieldlist)
+      call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n),rc=rc)
+      !> if attribute not present, set external idx to -1
+      if(rc /= ESMF_SUCCESS) external_idx_by_nfrac(n)=-1
+    end do
   end if
-  call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
-  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  if (size(fieldlist) /= nfrac) then
-          write(0,*) 'number of boundary SPM concentrations doesnt match number of erosed fractions'
-    call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  end if
-  do n=1,size(fieldlist)
-    call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n),rc=rc)
-    !> if attribute not present, set external idx to -1
-    if(rc /= ESMF_SUCCESS) external_idx_by_nfrac(n)=-1
-  end do
   
   upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux',rc=rc)
   downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux',rc=rc)
