@@ -327,9 +327,11 @@ write (*,*) ' grid was just created'
 
 write (*,*) ' distgrid'
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac))
-    size_classes_of_upward_flux_of_pim_at_bottom(1,1,:) = sink (:,1)
-    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
-    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
+    size_classes_of_upward_flux_of_pim_at_bottom(1,1,:) = sink(:,1)-sour(:,1)
+
+!> not used fo export State, since sink,sour are used by bed module
+!    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
+!    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
     
 write (*,*) ' allocations'
     !> create export fields
@@ -342,8 +344,8 @@ write (*,*) ' state add'
   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  if (size(fieldlist) > nfrac) then
-    write(0,*) 'number of boundary SPM concentrations greater than number of erosed fractions'
+  if (size(fieldlist) /= nfrac) then
+          write(0,*) 'number of boundary SPM concentrations doesnt match number of erosed fractions'
     call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   end if
   do n=1,size(fieldlist)
@@ -352,12 +354,12 @@ write (*,*) ' state add'
     if(rc /= ESMF_SUCCESS) fabm_idx_by_nfrac(n)=-1
   end do
   
-  upward_flux_bundle = ESMF_FieldBundleCreate(name="concentration_of_SPM_upward_flux",rc=rc)
-  downward_flux_bundle = ESMF_FieldBundleCreate(name="concentration_of_SPM_downward_flux",rc=rc)
+  upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux',rc=rc)
+  downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux',rc=rc)
   do n=1,nfrac
     ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
     upward_flux_field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
-            name="concentration_of_SPM_upward_flux", rc=rc)
+            name='concentration_of_SPM_upward_flux', rc=rc)
     call ESMF_AttributeSet(upward_flux_field,'fabm_component_fabm_idx',fabm_idx_by_nfrac(n))
     call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=rc)
   end do
