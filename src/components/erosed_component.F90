@@ -39,7 +39,7 @@ module erosed_component
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
   type(ESMF_Field)            :: upward_flux_Field, downward_flux_Field
-  integer,dimension(:),allocatable              :: fabm_idx_by_nfrac
+  integer,dimension(:),allocatable              :: external_idx_by_nfrac
   integer                     :: ubnd(4),lbnd(4)
 
 
@@ -337,9 +337,9 @@ write (*,*) ' allocations'
     !> create export fields
 
 write (*,*) ' state add'
-  allocate(fabm_idx_by_nfrac(nfrac))
-  fabm_idx_by_nfrac(:)=-1
-  !> first try to get fabm_idx from "concentration_of_SPM" fieldBundle in import State
+  allocate(external_idx_by_nfrac(nfrac))
+  external_idx_by_nfrac(:)=-1
+  !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
   call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
@@ -349,9 +349,9 @@ write (*,*) ' state add'
     call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   end if
   do n=1,size(fieldlist)
-    call ESMF_AttributeGet(fieldlist(n),'fabm_component_fabm_idx',fabm_idx_by_nfrac(n),rc=rc)
+    call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n),rc=rc)
     !> if attribute not present, set external idx to -1
-    if(rc /= ESMF_SUCCESS) fabm_idx_by_nfrac(n)=-1
+    if(rc /= ESMF_SUCCESS) external_idx_by_nfrac(n)=-1
   end do
   
   upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux',rc=rc)
@@ -360,7 +360,7 @@ write (*,*) ' state add'
     ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
     upward_flux_field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
             name='concentration_of_SPM_upward_flux', rc=rc)
-    call ESMF_AttributeSet(upward_flux_field,'fabm_component_fabm_idx',fabm_idx_by_nfrac(n))
+    call ESMF_AttributeSet(upward_flux_field,'external_index',external_idx_by_nfrac(n))
     call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=rc)
   end do
   call ESMF_StateAddReplace(exportState,(/upward_flux_bundle,downward_flux_bundle/),rc=rc)
@@ -433,7 +433,7 @@ write (*,*) ' state add'
         field = fieldlist(n)
         call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
         call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(n))
-        !call ESMF_AttributeGet(field,'particle_density',rhosol(n))
+        call ESMF_AttributeGet(field,'particle_density',rhosol(n))
         sedd90(n) = d90_from_d50(sedd50(n))
         if (rc == ESMF_SUCCESS) then
           spm_concentration(1,1,n) = ptr_f3(1,1,1)

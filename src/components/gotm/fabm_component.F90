@@ -177,7 +177,11 @@ module fabm_gotm_component
       attribute_name=trim('mean_particle_diameter')
       attribute_r8 = gotmfabm%model%info%state_variables(k)%properties%get_real('diameter',default=-99.d0)
       call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
-      call ESMF_AttributeSet(concfield,'fabm_component_internal_id',k)
+      attribute_name=trim('particle_density')
+      attribute_r8 = gotmfabm%model%info%state_variables(k)%properties%get_real('density',default=-99.d0)
+      call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
+      !> add fabm index in concentration array as "external_index" to be used by other components
+      call ESMF_AttributeSet(concfield,'external_index',k)
 
       !> create field for sinking velocity of state variable
       wsPtr => fabm_export_states(k)%ws
@@ -303,7 +307,7 @@ module fabm_gotm_component
            call ESMF_StateGet(importState, trim(varname), fieldBundle,rc=rc)
            call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
            do ii=1,size(fieldlist)
-             call ESMF_AttributeGet(fieldlist(ii),'fabm_component_internal_id',fabm_idx)
+             call ESMF_AttributeGet(fieldlist(ii),'external_index',fabm_idx)
              if (fabm_idx == nvar) then
                call ESMF_FieldGet(fieldlist(ii),farrayPtr=ptr_f2,rc=rc)
                exit
