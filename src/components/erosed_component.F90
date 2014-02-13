@@ -120,7 +120,7 @@ contains
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     type(ESMF_FieldBundle) :: upward_flux_bundle,downward_flux_bundle,fieldBundle
-    type(ESMF_Field),dimension(:),pointer :: fieldlist
+    type(ESMF_Field),dimension(:),allocatable :: fieldlist
 
     character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
@@ -345,10 +345,13 @@ write (*,*) ' state add'
     write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM". Possibly &
             & number of SPM fractions do not match with fabm_component.'      
   else
+    call ESMF_FieldBundleGet(fieldBundle,fieldCount=j,rc=rc)
+    if (allocated(fieldlist)) deallocate(fieldlist)
+    allocate(fieldlist(j))
     call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (size(fieldlist) /= nfrac) then
-          write(0,*) 'Warning: number of boundary SPM concentrations doesnt match number of erosed fractions'
+    if (ubound(fieldlist,1) /= nfrac) then
+          write(0,*) 'Warning: number of boundary SPM concentrations doesnt match number of erosed fractions',ubound(fieldlist,1),rc
     !call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     do n=1,size(fieldlist)
@@ -391,7 +394,7 @@ write (*,*) ' state add'
 
     integer                  :: n
     type(ESMF_Field)         :: field
-    type(ESMF_Field),dimension(:),pointer :: fieldlist
+    type(ESMF_Field),dimension(:),allocatable :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
     logical                  :: forcing_from_coupler=.true.
 
@@ -431,6 +434,9 @@ write (*,*) ' state add'
       !> get spm concentrations
       call ESMF_StateGet(importState,'concentration_of_SPM',fieldBundle,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=rc)
+      if (allocated(fieldlist)) deallocate(fieldlist)
+      allocate(fieldlist(n))
       call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       do n=1,size(fieldlist)
