@@ -341,7 +341,11 @@ write (*,*) ' state add'
   external_idx_by_nfrac(:)=-1
   !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
   call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
-  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  if(rc /= ESMF_SUCCESS) then
+    write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM". You might &
+              & want to initialise e.g. the fabm_component before initialising the erosed_component.'      
+    call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  end if
   call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   if (size(fieldlist) /= nfrac) then
