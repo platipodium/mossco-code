@@ -36,9 +36,10 @@ module erosed_component
   !size_classes_of_upward_flux_of_pim_at_bottom
 
   ! Dimensions (x,y,depth layer, fraction index)
-  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
+  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
+  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
   type(ESMF_Field)            :: upward_flux_Field, downward_flux_Field
+  integer,dimension(:),allocatable              :: fabm_idx_by_nfrac
   integer                     :: ubnd(4),lbnd(4)
 
 
@@ -117,6 +118,9 @@ contains
     type(ESMF_ArraySpec) :: arrayspec
     type(ESMF_Array)     :: array
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
+    type(ESMF_FieldBundle) :: upward_flux_bundle,downward_flux_bundle,fieldBundle
+    type(ESMF_Field),dimension(:),pointer :: fieldlist
 
     character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
@@ -124,7 +128,7 @@ contains
     real(ESMF_KIND_R8) :: dt
     character(len=80)  :: title
     character(len=256) :: din_variable='',pon_variable=''
-    integer(ESMF_KIND_I8) :: nlev
+    integer(ESMF_KIND_I8) :: nlev,n
 
     integer                    :: UnitNr, istat,ii,j
     logical                    :: opnd, exst
@@ -315,47 +319,52 @@ end if
     !> create grid
    write (*,*) 'nfrac', nfrac 
 
-     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,nmlb/),maxIndex=(/1,1,nmub/), &
+     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
            coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
             name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 write (*,*) ' grid was just created'
 
 write (*,*) ' distgrid'
-    allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac,nmlb:nmub))
-    size_classes_of_upward_flux_of_pim_at_bottom(1,1,:,:)=sink (:,:)
-    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac,nmlb:nmub))
-    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:,:)=sour (:,:)
+    allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac))
+    size_classes_of_upward_flux_of_pim_at_bottom(1,1,:) = sink (:,1)
+    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
+    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
     
 write (*,*) ' allocations'
     !> create export fields
 
-#if 0
-  !! @todo uncomment next line (or similar implementationw
-   !size_classes_of_upward_flux_of_pim_at_bottom(1,1,nmlb:nmub,1:nfrac) => sour(:,:)
-    upward_flux_field = ESMF_FieldCreate(grid, &
-            farrayPtr=size_classes_of_upward_flux_of_pim_at_bottom, &
-            indexflag=ESMF_INDEX_GLOBAL, &
-            name="size_classes_of_upward_flux_of_pim_at_bottom", &
-            ungriddedLbound=(/1/),ungriddedUbound=(/nfrac/), rc=rc)
-   write (*,* ) ' filed 1'
- if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    downward_flux_field = ESMF_FieldCreate(grid, &
-            farrayPtr=size_classes_of_downward_flux_of_pim_at_bottom, &
-            indexflag=ESMF_INDEX_GLOBAL, &
-            name="size_classes_of_downward_flux_of_pim_at_bottom", &
-            ungriddedLbound=(/1/),ungriddedUbound=(/nfrac/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-write (*,*) ' filed2'
-    !> set export state
-    call ESMF_StateAdd(exportState,(/upward_flux_field/),rc=rc)
-    call ESMF_StateAdd(exportState,(/downward_flux_field/),rc=rc)
-    call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
 write (*,*) ' state add'
-    call ESMF_FieldPrint (upward_flux_field)
-    call ESMF_FieldPrint (downward_flux_field)
-#endif
+  allocate(fabm_idx_by_nfrac(nfrac))
+  fabm_idx_by_nfrac(:)=-1
+  !> first try to get fabm_idx from "concentration_of_SPM" fieldBundle in import State
+  call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
+  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  if (size(fieldlist) > nfrac) then
+    write(0,*) 'number of boundary SPM concentrations greater than number of erosed fractions'
+    call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  end if
+  do n=1,size(fieldlist)
+    call ESMF_AttributeGet(fieldlist(n),'fabm_component_fabm_idx',fabm_idx_by_nfrac(n),rc=rc)
+    !> if attribute not present, set external idx to -1
+    if(rc /= ESMF_SUCCESS) fabm_idx_by_nfrac(n)=-1
+  end do
+  
+  upward_flux_bundle = ESMF_FieldBundleCreate(name="concentration_of_SPM_upward_flux",rc=rc)
+  downward_flux_bundle = ESMF_FieldBundleCreate(name="concentration_of_SPM_downward_flux",rc=rc)
+  do n=1,nfrac
+    ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
+    upward_flux_field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
+            name="concentration_of_SPM_upward_flux", rc=rc)
+    call ESMF_AttributeSet(upward_flux_field,'fabm_component_fabm_idx',fabm_idx_by_nfrac(n))
+    call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=rc)
+  end do
+  call ESMF_StateAddReplace(exportState,(/upward_flux_bundle,downward_flux_bundle/),rc=rc)
+
+  call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
+
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
