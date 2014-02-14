@@ -391,8 +391,11 @@ endif
 libfabm_external: 
 ifdef MOSSCO_FABMDIR
 	@echo Recreating the FABM library in $(FABM_LIBRARY_PATH)
-	$(MAKE) -C $(FABMDIR)/src models
-	$(MAKE) -C $(FABMDIR)/src $(FABM_LIBRARY_PATH)/libfabm_prod.a
+	$(MAKE) -C $(FABMDIR)/src
+#	$(MAKE) -C $(FABMDIR)/src makedirs models
+#	$(MAKE) -C $(FABMDIR)/src $(FABM_LIBRARY_PATH)/libfabm_prod.a
+#	$(MAKE) -C $(FABMDIR)/src/config 
+#	$(MAKE) -C $(FABMDIR)/src $(FABM_LIBRARY_PATH)/libfabm_prod.a
 endif
 
 libgotm_external:
