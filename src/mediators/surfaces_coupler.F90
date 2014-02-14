@@ -59,6 +59,7 @@ module surfaces_coupler
     integer(ESMF_KIND_I4)      :: itemCount, i, nlev, srcRank
     integer(ESMF_KIND_I4)      :: totalCount(3)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+    type(ESMF_StateItem_Flag)  :: itemType
     character(len=ESMF_MAXSTR), allocatable :: itemNames(:)
     type(ESMF_Field)           :: srcField, dstField
     type(ESMF_Grid)            :: srcGrid, dstGrid
@@ -66,20 +67,52 @@ module surfaces_coupler
  
     real(ESMF_KIND_R8), pointer:: farrayPtr3d(:,:,:), farrayPtr2d(:,:)
  
-    call ESMF_LogWrite("3d/2d coupler initializing", ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("surfaces coupler initializing", ESMF_LOGMSG_INFO)
 
 	  call ESMF_StateGet(importState, itemCount=itemCount, nestedFlag=.false., rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 		allocate(itemNames(itemCount))
 		allocate(itemTypeList(itemCount))
-
+		
 	  do i=1,itemCount
-	    ! Only consider items of type ESMF_Field
-	    if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
-	      call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is not a field',ESMF_LOGMSG_INFO)
+      
+      call ESMF_StateGet(importState,itemNames(i), itemType, rc=rc)
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
+	      call ESMF_LogWrite('Could not find item '//trim(itemNames(i))//'.', &
+	         ESMF_LOGMSG_ERROR)
 	      cycle
 	    endif
+      	  
+	    ! Issue warning for items of type ESMF_FieldBundle (not yet implemented)
+	    if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+	      call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
+	         ', it is a FieldBundle.',ESMF_LOGMSG_INFO)
+	      cycle
+	    endif
+
+	    ! Issue warning for items of type ESMF_Array (not yet implemented)
+	    if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+	      call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
+	         ', it is an Array.',ESMF_LOGMSG_INFO)
+	      cycle
+	    endif
+
+	    ! Issue warning for items of type ESMF_ArrayBundle (not yet implemented)
+	    if (itemType == ESMF_STATEITEM_ARRAYBUNDLE) then
+	      call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
+	         ', it is an ArrayBundle.',ESMF_LOGMSG_INFO)
+	      cycle
+	    endif
+
+	    ! Only consider items of type ESMF_Field, but this currently does 
+	    ! not evaluate correctly, so 
+	    !> @todo evaluate ESMF_STATEITEM_FIELD
+	    !if (itemType /= ESMF_STATEITEM_FIELD) then
+	    !  call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is not a field',ESMF_LOGMSG_INFO)
+	    !  write(*,*) itemNames(i), itemTypeList(i), itemType, ESMF_STATEITEM_FIELD
+	    !  cycle
+	    !endif
 
       ! Don't consider items that contain the string 'surface'
       if (index(itemNames(i),'surface')>0) then
@@ -92,7 +125,9 @@ module surfaces_coupler
         call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is already defined at bottom',ESMF_LOGMSG_INFO)
 	      cycle
       endif
-      
+  
+      call ESMF_LogWrite("Seriously considering item "//trim(itemNames(i)), ESMF_LOGMSG_INFO)
+     
       ! Get the field and its associated grid, if that is a 2D grid cycle
       call ESMF_StateGet(importState, trim(itemNames(i)), srcField, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -129,7 +164,11 @@ module surfaces_coupler
 	      endif
       endif
       
-      
+	    call ESMF_LogWrite('Create item '//trim(itemNames(i))//'_at_bottom', &
+	      ESMF_LOGMSG_INFO)
+	    call ESMF_LogWrite('Create item '//trim(itemNames(i))//'_at_surface', &
+	      ESMF_LOGMSG_INFO)
+
       call ESMF_FieldGet(srcField, farrayPtr=farrayPtr3d, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -162,7 +201,7 @@ module surfaces_coupler
       endif    
     enddo 
       
-    call ESMF_LogWrite("3d/2d coupler initialized", ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("surfaces coupler initialized", ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 

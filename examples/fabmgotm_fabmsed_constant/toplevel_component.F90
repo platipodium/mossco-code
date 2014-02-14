@@ -101,12 +101,15 @@ module toplevel_component
     call ESMF_GridCompInitialize(fabmsedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_StatePrint(sedimentState)
+    call ESMF_StatePrint(pelagicState)
 
     call ESMF_CplCompInitialize(surfacesCplComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_StatePrint(sedimentState)
+    call ESMF_CplCompInitialize(surfacesCplComp, importState=sedimentState, exportState=pelagicstate, clock=parentClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_StatePrint(pelagicState)
 
     call ESMF_CplCompInitialize(surfacesCplComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
