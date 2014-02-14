@@ -253,7 +253,7 @@ module fabm_gotm_component
     real(ESMF_KIND_R8)      :: dt
     type(ESMF_Field)        :: Field
     type(ESMF_FieldBundle)  :: fieldBundle
-    type(ESMF_Field),dimension(:),pointer ::fieldlist
+    type(ESMF_Field),dimension(:),allocatable ::fieldlist
     type(ESMF_StateItem_Flag)  :: itemType
     character(len=ESMF_MAXSTR) :: string,varname,message
 
@@ -305,6 +305,11 @@ module fabm_gotm_component
            call ESMF_LogWrite(trim(varname)//' fieldbundle found',ESMF_LOGMSG_INFO)
 #endif
            call ESMF_StateGet(importState, trim(varname), fieldBundle,rc=rc)
+           !> allocate fieldlist by fieldCount
+           if (.not.allocated(fieldlist)) then
+             call ESMF_FieldBundleGet(fieldBundle,fieldCount=ii,rc=rc)
+             allocate(fieldlist(ii))
+           end if
            call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
            do ii=1,size(fieldlist)
              call ESMF_AttributeGet(fieldlist(ii),'external_index',fabm_idx)
@@ -379,9 +384,9 @@ module fabm_gotm_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer                     :: lbnd(3), ubnd(3), k
+    integer                    :: lbnd(3), ubnd(3), k
     real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
-    type(ESMF_Field)     :: field
+    type(ESMF_Field)           :: field
 
     do k=1,size(fabm_export_states)
       call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), field, rc=rc)
