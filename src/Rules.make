@@ -397,7 +397,8 @@ endif
 libgotm_external:
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src observations airsea meanflow turbulence output input)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTMDIR)/lib/$(FORTRAN_COMPILER)/libgotm_prod.a)
 endif
 
 libgetm_external: prefix

@@ -17,25 +17,24 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libmossco_sediment libmossco_erosed libmossco_clm libmossco_benthos
-
-# Make targets
-
-ALL_TARGETS = libmossco_clm libmossco_benthos
-
+TARGETS = libmossco_clm libmossco_benthos
 ifeq ($(MOSSCO_FABM),true)
-ALL_TARGETS+=libmossco_sediment libmossco_fabm0d
+TARGETS+=libmossco_sediment libmossco_fabm0d
 ifeq ($(MOSSCO_GOTM),true)
-ALL_TARGETS+=libmossco_gotmfabm
+TARGETS+=libmossco_gotmfabm
 endif
 endif
 
 ifeq ($(MOSSCO_EROSED),true)
-ALL_TARGETS += libmossco_erosed
+TARGETS += libmossco_erosed
 INCLUDES += -I$(EROSED_DIR)/include
 endif
 
-all: $(ALL_TARGETS)
+.PHONY: $(TARGETS)
+
+# Make targets
+# Default is to make all of the targets
+all: $(TARGETS)
 
 # FABM/sediment section
 
@@ -43,11 +42,11 @@ libmossco_sediment: prefix libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/lib
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 libmossco_gotmfabm: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
 
-libmossco_clm: libmossco_clm_driver
-libmossco_clm_driver: $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
+libmossco_clm: prefix libmossco_clm_driver
+libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 # Benthos section
-libmossco_benthos: $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
+libmossco_benthos: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
