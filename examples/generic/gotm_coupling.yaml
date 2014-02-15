@@ -1,0 +1,4 @@
+coupling:
+  - components: 
+     - gotm
+    interval: 24 h

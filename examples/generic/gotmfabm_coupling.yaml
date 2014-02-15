@@ -1,0 +1,4 @@
+coupling:
+  - components: 
+     - fabm
+    interval: 24 h

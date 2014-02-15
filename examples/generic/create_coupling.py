@@ -6,7 +6,7 @@ if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
     filename = 'coupling_system.yaml'
-    filename = 'fabm_sediment_coupling.yaml'
+    filename = 'constant_coupling.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -291,22 +291,27 @@ include $(MOSSCO_DIR)/src/Rules.make
 ''')
 
 # Place conditionals for building this coupled system
-conditionals = {'gotm' : 'GOTM', 'fabm' : 'FABM', 'erosed' : 'EROSED', 'fabm_gotm' : 'GOTM_FABM'}
+conditionals = {'gotm' : 'GOTM', 'fabm' : 'FABM', 'erosed' : 'EROSED',
+                'fabm_gotm' : 'GOTM_FABM', 'getm' : 'GETM'}
 for item in componentSet.union(couplerSet):
     if conditionals.has_key(item):
         fid.write('ifneq ($(MOSSCO_' + conditionals[item] + '),true)\n')
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
 
-libs = {'gotm'       : ['gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod', 'turbulence_prod',
+libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod', 'turbulence_prod',
                   'util_prod', 'output_prod', 'observations_prod', 'input_prod'] ,
-        'fabm'       : ['fabm_prod'],
+        'fabm'       : ['gotm', 'mossco_gotmfabm', 'solver', 'fabm_prod', 
+                  'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod', 'turbulence_prod',
+                  'util_prod', 'output_prod', 'observations_prod', 'input_prod'],
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver', 'fabm_prod'], 
         'constant'   : ['constant'],
         'fabm_gotm'  : ['mossco_gotmfabm', 'solver'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'erosed'     : ['erosed', 'mossco_erosed'],
+        'simplewave' : ['mossco_simplewave'],
+        'empty'      : ['empty'],
         'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea_prod', 
                         'input_prod', 'util_prod', 'fabm_prod']
 }
@@ -317,6 +322,11 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabmsediment' : ['libsediment'],
+        'simplewave' : ['libmossco_simplewave'],
+        'empty'      : ['libempty'],
+        'constant'   : ['libconstant'],
+        'gotm'       : ['libgotm', 'libsolver'],
+        'fabm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'] 
 }
 
 fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
@@ -331,7 +341,7 @@ for item in componentSet.union(couplerSet):
         if item=='fabm_sediment':
             fid.write(' -L$(FABM_LIBRARY_PATH)')
         if item=='fabm':
-            fid.write(' -L$(FABM_LIBRARY_PATH)')
+            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm_gotm':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm0d':
@@ -361,16 +371,19 @@ fid.write('''
 # end up in some global Rules.make 
 
 libmossco_gotmfabm libgotm:
-	#$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libmossco_clm liberosed libmossco_fabm0d:
+libsediment libconstant libmossco_clm liberosed libmossco_fabm0d :
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
+libempty libmossco_simplewave:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment libsolver:
-	#$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 libsurfacescoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
@@ -385,7 +398,7 @@ atmos.nc:
 
 clean: extraclean
 extraclean: 
-	@-rm -f coupling main.F90 toplevel_coupling.F90
+	@-rm -f coupling toplevel_coupling.F90
 
 ''')
 fid.close()

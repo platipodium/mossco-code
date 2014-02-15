@@ -33,8 +33,7 @@ extraclean: Makefile.coupling
 	$(MAKE) -f makefile.coupling extraclean
 
 ################################################
-# @todo recreate all standalone examples
-# fabm0d gotmfabm simplewave empty getm remtc gotm	sediment
+# Recreate all standalone examples
 
 #	python $<
 clm: create_coupling.py clm_coupling.yaml
@@ -48,6 +47,28 @@ erosed: create_coupling.py erosed_coupling.yaml
 
 fabm0d: create_coupling.py fabm0d_coupling.yaml
 	python $^
+
+fabm_sediment: create_coupling.py fabm_sediment_coupling.yaml
+	python $^
+	
+gotm: create_coupling.py gotm_coupling.yaml
+	python $^
+
+gotmfabm: create_coupling.py gotmfabm_coupling.yaml
+	python $^
+
+getm: create_coupling.py getm_coupling.yaml
+	python $^
+
+simplewave: create_coupling.py simplewave_coupling.yaml
+	python $^
+
+empty: create_coupling.py empty_coupling.yaml
+	python $^
+
+constant: create_coupling.py constant_coupling.yaml
+	python $^
+
 	
 	
 	

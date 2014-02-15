@@ -1,0 +1,4 @@
+coupling:
+  - components: 
+     - getm
+    interval: 24 h

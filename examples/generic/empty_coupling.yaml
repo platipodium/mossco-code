@@ -1,0 +1,4 @@
+coupling:
+  - components: 
+     - empty
+    interval: 24 h
