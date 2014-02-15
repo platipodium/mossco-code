@@ -5,8 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'coupling_system.yaml'
-    filename = 'constant_coupling.yaml'
+    filename = 'constant_gotm.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -96,7 +95,14 @@ fid.write('''
 for item in componentSet:
     fid.write('  use ' + item + '_component,\t\tonly : ' + item + '_SetServices => SetServices \n')
 
-fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n\n')
+fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
+fid.write('''
+  type(ESMF_GridComp),dimension(:),save, allocatable :: gridCompList
+  type(ESMF_CplComp),dimension(:), save, allocatable :: cplCompList
+  type(ESMF_State), dimension(:),  save, allocatable :: exportStates, importStates
+  type(ESMF_Alarm), dimension(:),  save, allocatable :: cplAlarmList
+
+''')
 
 for item in couplerSet:
     fid.write('  type(ESMF_CplComp),\tsave\t:: ' + item + 'Comp\n')    
@@ -106,7 +112,7 @@ for item in componentSet:
     fid.write('  type(ESMF_State),\tsave\t:: ' + item + 'ExportState, ' + item + 'ImportState\n')    
 
 fid.write('''
-    type(ESMF_Clock)     :: clock !> This component's internal clock
+  type(ESMF_Clock)     :: clock !> This component's internal clock
 
   contains
 
@@ -148,11 +154,13 @@ fid.write('''
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8)   :: dt
     integer              :: lbnd(3), ubnd(3),farray_shape(3)
-    integer              :: myrank,i,j,k
+    integer              :: myrank,j,k
  
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
+    
+    integer(ESMF_KIND_I4) :: numGridComp, numCplComp, i
     
     ! Create a local clock, set its parameters to those of the parent clock
     clock = ESMF_ClockCreate(parentClock, rc=rc)
@@ -163,34 +171,44 @@ fid.write('''
 
     ! Create all gridded omponents and their states
 ''')
+fid.write('    numGridComp = ' + str(len(componentSet)) + '\n')
+fid.write('    allocate(gridCompList(numGridComp))\n')
+fid.write('    allocate(importStates(numGridComp))\n')
+fid.write('    allocate(exportStates(numGridComp))\n\n')
+
+i=0
 for item in componentSet:
-    fid.write('    ' + item + 'Comp = ESMF_GridCompCreate(name=\'' + item + 'Comp\', rc=rc)\n')
+    fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=\'' + item + 'Comp\', rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
-    fid.write('    call ESMF_GridCompSetServices(' + item + 'Comp, ' + item + '_SetServices, rc=rc)\n')
+    fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' + item + '_SetServices, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
-    fid.write('    ' + item + 'ExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=\'' + item + 'ExportState\')\n')
+    fid.write('    exportStates(' + str(i+1) + ') = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=\'' + item + 'ExportState\')\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
-    fid.write('    ' + item + 'ImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=\'' + item + 'ImportState\')\n')
+    fid.write('    importStates(' + str(i+1) + ') = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=\'' + item + 'ImportState\')\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+    i += 1
 
 if len(couplerSet)>0:
     fid.write('    ! Create all coupler components')
+    fid.write('    numCplComp  = '  + str(len(couplerSet)) + '\n\n')
 for item in couplerSet:
-    fid.write('    ' + item + 'Comp = ESMF_CplCompCreate(name=\'' + item + 'Comp\', rc=rc)')
+    fid.write('    cplCompList(' + str(i+1) + ') = ESMF_CplCompCreate(name=\'' + item + 'Comp\', rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
-    fid.write('    call ESMF_CplCompSetServices(' + item + 'Comp, ' + item + '_SetServices, rc=rc)')
+    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + item + '_SetServices, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
 fid.write('    ! Initialize all gridded and coupler components\n')
+i = 0
 for item in componentSet:
-    fid.write('    call ESMF_GridCompInitialize(' + item + 'Comp, importState=' + item + 'ImportState, &\n')
-    fid.write('      exportState=' + item + 'ExportState, clock=parentClock, rc=rc)\n')
+    fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(i+1) + '), importState=importStates(' + str(i+1) + '), &\n')
+    fid.write('      exportState=exportStates(' + str(i+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+    i += 1
 fid.write('\n')
 for item in couplerSet:
-    fid.write('    call ESMF_CplCompInitialize(' + item + 'Comp, importState=' + item + 'ImportState, &\n')
-    fid.write('      exportState=' + item + 'ExportState, clock=parentClock, rc=rc)\n')
+    fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(i+1) + '), importState=importStates(' + str(i+1) + '), &\n')
+    fid.write('      exportState=exportStates(' + str(i+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 
 fid.write('''
@@ -248,14 +266,23 @@ fid.write('''
     integer, intent(out) :: rc
 
 ''')
+i=0
 for item in componentSet:
-    fid.write('    call ESMF_GridCompDestroy(' + item + 'Comp, rc=rc)\n')
+    fid.write('    call ESMF_GridCompDestroy(gridCompList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+    i += 1
+i=0
 for item in couplerSet:
-    fid.write('    call ESMF_CplCompDestroy(' + item + 'Comp, rc=rc)\n')
+    fid.write('    call ESMF_CplCompDestroy(cplCompList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
-
+    i += 1
 fid.write('''
+    if (allocated(gridCompList)) deallocate(gridCompList) 
+    if (allocated(cplCompList))  deallocate(cplCompList) 
+    if (allocated(exportStates)) deallocate(exportStates) 
+    if (allocated(importStates)) deallocate(importStates) 
+    if (allocated(cplAlarmList)) deallocate(cplAlarmList)
+
     call ESMF_ClockDestroy(clock,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -356,7 +383,7 @@ fid.write('all: exec\n\n')
 fid.write('exec: ' + coupling_name + '\n\n')
 fid.write(coupling_name + ': toplevel_coupling.o main.o\n')
 fid.write('\t$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)\n')
-fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/$@/$@"\n')
+fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/generic/$@"\n')
 fid.write('''
 main.o: toplevel_coupling.o main.F90 libmossco_util
 ''')
@@ -365,8 +392,8 @@ for item in componentSet.union(couplerSet):
     if deps.has_key(item):
         for dep in deps[item]:
             fid.write(' ' + dep)
-        fid.write('\n')
 fid.write('''
+
 # Other subsidiary targets that might not be needed, these should evetually
 # end up in some global Rules.make 
 
@@ -385,11 +412,14 @@ libempty libmossco_simplewave:
 libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler:
+libsurfacescoupler libaocoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
+libocean libatmosphere:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
 atmos.nc:
 	@-ln -s /media/data/forcing/CLM/cDII.00.kss.2003.nc $@ || \
