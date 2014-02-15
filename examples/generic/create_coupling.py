@@ -6,6 +6,7 @@ if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
     filename = 'coupling_system.yaml'
+    filename = 'clm_coupling.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -302,7 +303,12 @@ libs = {'gotm' : ['gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass
         'fabm' : ['fabm_prod'],
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'fabm_prod'], 
         'constant' : ['constant'],
-        'fabm_gotm' : ['mossco_gotmfabm', 'solver']}
+        'fabm_gotm' : ['mossco_gotmfabm', 'solver'],
+        'clm_netcdf' : ['mossco_clm'],
+}
+
+deps = { 'clm_netcdf' : ['libmossco_clm'],
+}
 
 fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
 fid.write('LDFLAGS += $(LIBRARY_PATHS)\n')
@@ -327,8 +333,19 @@ fid.write('all: exec\n\n')
 fid.write('exec: ' + coupling_name + '\n\n')
 fid.write(coupling_name + ': toplevel_coupling.o main.o\n')
 fid.write('\t$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)\n')
-fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/$@/$@"\n\n')
+fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/$@/$@"\n')
 fid.write('''
+main.o: toplevel_coupling.o main.F90 libmossco_util
+''')
+fid.write('toplevel_coupling.o: toplevel_coupling.F90')
+for item in componentSet.union(couplerSet):
+    if deps.has_key(item):
+        for dep in deps[item]:
+            fid.write(' ' + dep)
+        fid.write('\n')
+fid.write('''
+# Other subsidiary targets that might not be needed, these should evetually
+# end up in some global Rules.make 
 
 libmossco_gotmfabm libgotm:
 	#$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
@@ -336,7 +353,7 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant:
+libsediment libconstant libmossco_clm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment libsolver:
@@ -345,13 +362,14 @@ libmossco_sediment libsolver:
 libsurfacescoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
-main.o: toplevel_coupling.o main.F90 libmossco_util
-
-toplevel_coupling.o: toplevel_coupling.F90 libmossco_gotmfabm libmossco_util libsediment libmossco_sediment libsolver libconstant libgotm libsurfacescoupler
+atmos.nc:
+	@-ln -s /media/data/forcing/CLM/cDII.00.kss.2003.nc $@ || \
+	ln -s /h/ksedata02/data/model/CLM/cDII.00.kss.2003.nc $@ || \
+	echo "Could not find data file cDII.00.kss.2003.nc."
 
 clean: extraclean
 extraclean: 
-	@-rm -f coupling main.F90
+	@-rm -f coupling main.F90 toplevel_coupling.F90
 
 ''')
 fid.close()

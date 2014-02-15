@@ -1,0 +1,4 @@
+coupling:
+  - components: 
+     - clm_netcdf
+    interval: 24 h

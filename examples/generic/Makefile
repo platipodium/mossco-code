@@ -32,3 +32,15 @@ clean: extraclean
 extraclean: Makefile.coupling
 	$(MAKE) -f makefile.coupling extraclean
 
+################################################
+# @todo recreate all standalone examples
+
+#clm	fabm0d gotmfabm simplewave empty getm remtc benthos	erosed gotm	sediment: create_coupling.py #$@_coupling.yaml
+#	python $<
+clm: create_coupling.py clm_coupling.yaml
+	python $^
+	
+	
+	
+
+
