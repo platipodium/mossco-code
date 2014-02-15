@@ -150,17 +150,14 @@ fid.write('''
     integer, intent(out) :: rc
 
     character(len=19)    :: timestring
-    type(ESMF_Time)      :: clockTime
-    type(ESMF_TimeInterval) :: timeInterval
+    type(ESMF_Time)      :: clockTime, startTime, stopTime, currentTime
+    type(ESMF_Time)      :: ringTime, time
+    type(ESMF_TimeInterval) :: timeInterval, timeStep
     real(ESMF_KIND_R8)   :: dt
-    integer              :: lbnd(3), ubnd(3),farray_shape(3)
-    integer              :: myrank,j,k
- 
-    type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_Grid)      :: grid
-    type(ESMF_ArraySpec) :: arrayspec
-    
-    integer(ESMF_KIND_I4) :: numGridComp, numCplComp, i
+     
+    integer(ESMF_KIND_I4) :: numGridComp, numCplComp
+    integer(ESMF_KIND_I4) :: alarmCount, numCplAlarm, i
+    type(ESMF_Alarm), dimension(:), allocatable :: alarmList !> @todo shoudl this be a pointer?
     
     ! Create a local clock, set its parameters to those of the parent clock
     clock = ESMF_ClockCreate(parentClock, rc=rc)
@@ -169,7 +166,7 @@ fid.write('''
     call ESMF_ClockSet(clock, name=\'toplevel_coupling clock\', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    ! Create all gridded omponents and their states
+    ! Create all gridded components and their states
 ''')
 fid.write('    numGridComp = ' + str(len(componentSet)) + '\n')
 fid.write('    allocate(gridCompList(numGridComp))\n')
@@ -211,7 +208,59 @@ for item in couplerSet:
     fid.write('      exportState=exportStates(' + str(i+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 
+fid.write('    numCplAlarm = ' + str(len(couplingList)) + '\n')
+fid.write('    allocate(cplAlarmList(numCplAlarm))\n')
 fid.write('''
+
+    !! Set the coupling alarm starting from current time of local clock
+    call ESMF_ClockGet(clock,startTime=startTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+ 
+''')
+for i in range(9,len(couplingList)):
+    string = intervals[i].split()
+    number = string[0]
+    if len(string)>1:
+        unit = string[1]
+    else:
+        unit = 'h'
+    fid.write('    call ESMF_TimeIntervalSet(alarmInterval,' + unit + '=' + number + ',rc=rc)\n')
+    fid.write('''
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)    
+      
+    cplAlarmList(i)=ESMF_AlarmCreate(clock=clock,ringTime=time+alarmInterval, &
+      ringInterval=alarmInterval,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    ''')
+fid.write('''
+      
+    !! Search the clock for next ringing Alarm
+    call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=alarmCount,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    allocate(alarmList(alarmCount))
+    
+    call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+    if (size(alarmList).gt.0) then
+      call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !call ESMF_AlarmPrint(alarmList(1))
+    endif
+      
+    do i=2,size(alarmList)
+      call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ringtime<time) time=ringTime
+      !call ESMF_AlarmPrint(alarmList(i))
+    enddo
+    if (allocated(alarmList)) deallocate(alarmList)
+    
+    call ESMF_ClockGet(clock,currTime=currentTime,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock,timeStep=time-currentTime,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_LogWrite("toplevel_coupler initialized", ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
