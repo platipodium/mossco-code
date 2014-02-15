@@ -34,10 +34,19 @@ extraclean: Makefile.coupling
 
 ################################################
 # @todo recreate all standalone examples
+# fabm0d gotmfabm simplewave empty getm remtc gotm	sediment
 
-#clm	fabm0d gotmfabm simplewave empty getm remtc benthos	erosed gotm	sediment: create_coupling.py #$@_coupling.yaml
 #	python $<
 clm: create_coupling.py clm_coupling.yaml
+	python $^
+
+benthos: create_coupling.py benthos_coupling.yaml
+	python $^
+
+erosed: create_coupling.py erosed_coupling.yaml
+	python $^
+
+fabm0d: create_coupling.py fabm0d_coupling.yaml
 	python $^
 	
 	

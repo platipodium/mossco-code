@@ -6,7 +6,7 @@ if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
     filename = 'coupling_system.yaml'
-    filename = 'clm_coupling.yaml'
+    filename = 'fabm_sediment_coupling.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -298,16 +298,25 @@ for item in componentSet.union(couplerSet):
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
 
-libs = {'gotm' : ['gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod', 'turbulence_prod',
+libs = {'gotm'       : ['gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod', 'turbulence_prod',
                   'util_prod', 'output_prod', 'observations_prod', 'input_prod'] ,
-        'fabm' : ['fabm_prod'],
-        'fabm_sediment' : ['sediment', 'mossco_sediment', 'fabm_prod'], 
-        'constant' : ['constant'],
-        'fabm_gotm' : ['mossco_gotmfabm', 'solver'],
+        'fabm'       : ['fabm_prod'],
+        'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver', 'fabm_prod'], 
+        'constant'   : ['constant'],
+        'fabm_gotm'  : ['mossco_gotmfabm', 'solver'],
         'clm_netcdf' : ['mossco_clm'],
+        'benthos'    : ['mossco_benthos'],
+        'erosed'     : ['erosed', 'mossco_erosed'],
+        'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea_prod', 
+                        'input_prod', 'util_prod', 'fabm_prod']
 }
 
-deps = { 'clm_netcdf' : ['libmossco_clm'],
+deps = {'clm_netcdf' : ['libmossco_clm'],
+        'benthos'    : ['libmossco_benthos'],
+        'erosed'     : ['liberosed'],
+        'fabm0d'     : ['libmossco_fabm0d'],
+        'fabm0d'     : ['libmossco_fabm0d'],
+        'fabmsediment' : ['libsediment'],
 }
 
 fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
@@ -319,10 +328,14 @@ for item in componentSet.union(couplerSet):
             fid.write(' -L$(GOTM_LIBRARY_PATH)')
         if item=='getm':
             fid.write(' -L$(GETM_LIBRARY_PATH)')
+        if item=='fabm_sediment':
+            fid.write(' -L$(FABM_LIBRARY_PATH)')
         if item=='fabm':
             fid.write(' -L$(FABM_LIBRARY_PATH)')
         if item=='fabm_gotm':
-            fid.write(' -L$(FABM_LIBRARY_PATH)')
+            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
+        if item=='fabm0d':
+            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         for lib in libs[item]:
             fid.write(' -l' + lib)
         fid.write('\n')
@@ -353,7 +366,7 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libmossco_clm:
+libsediment libconstant libmossco_clm liberosed libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment libsolver:
@@ -361,6 +374,9 @@ libmossco_sediment libsolver:
 
 libsurfacescoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
+
+libmossco_benthos:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 atmos.nc:
 	@-ln -s /media/data/forcing/CLM/cDII.00.kss.2003.nc $@ || \
