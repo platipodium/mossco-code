@@ -1,0 +1,19 @@
+coupling:
+  - components: 
+     - constant
+     - gotm
+    interval: none
+  - components: 
+     - gotm
+     - fabm_gotm
+    interval: 60 min
+  - components: 
+     - fabm_gotm
+     - fabm_sediment
+    interval: 90 min
+    direction: forward
+  - components: 
+     - fabm_sediment
+     - fabm_gotm
+    interval: 60 min
+    direction: both
