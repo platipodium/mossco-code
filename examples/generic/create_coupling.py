@@ -152,7 +152,7 @@ fid.write('''
     character(len=19)    :: timestring
     type(ESMF_Time)      :: clockTime, startTime, stopTime, currentTime
     type(ESMF_Time)      :: ringTime, time
-    type(ESMF_TimeInterval) :: timeInterval, timeStep
+    type(ESMF_TimeInterval) :: timeInterval, timeStep, alarmInterval
     real(ESMF_KIND_R8)   :: dt
      
     integer(ESMF_KIND_I4) :: numGridComp, numCplComp
@@ -217,7 +217,7 @@ fid.write('''
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
  
 ''')
-for i in range(9,len(couplingList)):
+for i in range(0,len(couplingList)):
     string = intervals[i].split()
     number = string[0]
     if len(string)>1:
@@ -229,12 +229,15 @@ for i in range(9,len(couplingList)):
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)    
       
     cplAlarmList(i)=ESMF_AlarmCreate(clock=clock,ringTime=time+alarmInterval, &
-      ringInterval=alarmInterval,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     ''')
+    alarmName = str(couplingList[i][0]) + '--' + str(couplingList[i][-1]) + '--cplAlarm'
+    fid.write('      ringInterval=alarmInterval, name=\'' + alarmName + '\', rc=rc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n')
+ 
 fid.write('''
       
-    !! Search the clock for next ringing Alarm
+    !! Search the clock for next ringing Alarm and save the ring time in 
+    !! the variable time
     call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=alarmCount,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     allocate(alarmList(alarmCount))
@@ -242,20 +245,31 @@ fid.write('''
     call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
-    if (size(alarmList).gt.0) then
-      call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
+   
+    if (size(alarmList) > 0) then
+      call ESMF_TimeSet(time,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      !call ESMF_AlarmPrint(alarmList(1))
+      call ESMF_TimeSet(ringTime,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ 
+     call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AlarmPrint(alarmList(1))
     endif
       
     do i=2,size(alarmList)
       call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (ringtime<time) time=ringTime
-      !call ESMF_AlarmPrint(alarmList(i))
+      call ESMF_AlarmPrint(alarmList(i))
     enddo
     if (allocated(alarmList)) deallocate(alarmList)
     
+    !! Set the timestep such that it corresponds to the time until the 
+    !! first ringing alarm    
+    call ESMF_TimeSet(currentTime,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+     
     call ESMF_ClockGet(clock,currTime=currentTime,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock,timeStep=time-currentTime,rc=rc)
@@ -272,12 +286,13 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)       :: timestring
-    type(ESMF_Time)         :: clockTime
+    character(len=19)       :: timestring, timestring1
+    type(ESMF_Time)         :: clockTime, currentTime
     type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8)   :: advanceCount
+    integer(ESMF_KIND_I8)   :: advanceCount,  i
+    integer(ESMF_KIND_I4)   :: numGridComp, numCplComp, hours
     
-    character(len=ESMF_MAXSTR) :: message
+    character(len=ESMF_MAXSTR) :: message, compName
 
     call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, &
                        advanceCount=advanceCount, rc=rc)
@@ -286,9 +301,38 @@ fid.write('''
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    write(message,'(A)') trim(timestring)//' toplevel_coupler run() called.'
-
+    write(message,'(A)') trim(timestring)//' toplevel_coupler running.'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    !! Run *all* component the first time, each until their next coupling alarm is going off
+    if (.not. ESMF_ClockIsStopTime(parentClock, rc=rc)) then
+      numGridComp=size(gridCompList)
+      do i=1,numGridComp
+        !! Determine for each child the clock and run the component with this clock   
+        call ESMF_GridCompGet(gridCompList(i),name=compName, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+
+        !call MOSSCO_ClockGetTimeStepToNextAlarm(clock, compName, timeInterval, rc)
+        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        call ESMF_ClockSet(clock, startTime=currentTime, stopTime=currentTime+timeInterval, timeStep=timeInterval, rc=rc) 
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        write(message,'(A,A,G6.2,A)') trim(timeString1)//': calling '//trim(compName), &
+          ' to run for ', hours, ' h'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
+        
+        call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
+          exportState=exportStates(i), clock=clock, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      enddo  
+    endif
+
+
 
     ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
     call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
