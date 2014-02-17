@@ -44,6 +44,7 @@ end type type_gotm_fabm
 
    type,public :: export_state_type !< GOTM-FABM driver type for export states
        character(len=256) :: standard_name=''
+       character(len=256) :: units=''
        integer            :: fabm_id=-1
        logical            :: particulate=.false.
        real(rk),dimension(:,:,:),pointer   :: conc
@@ -847,11 +848,18 @@ end type
    export_state%conc => gotmfabm%conc(:,:,:,export_state%fabm_id)
    allocate(export_state%ws(1,1,gotmfabm%knum))
    export_state%ws = 0.0d0
- !> @todo Make the next line a function call that generates a CF standard_name 
-   export_state%standard_name = only_var_name( &
+   !> first check for present standard name
+   if (gotmfabm%model%info%state_variables(fabm_id)%standard_variable%name/='') then
+     export_state%standard_name = &
+       gotmfabm%model%info%state_variables(fabm_id)%standard_variable%name
+     export_state%units = &
+       gotmfabm%model%info%state_variables(fabm_id)%standard_variable%units
+   else
+   !> otherwise use CF-ed version of long_name
+     export_state%standard_name = only_var_name( &
            gotmfabm%model%info%state_variables(fabm_id)%long_name)
-   !export_state%units = gotmfabm%model%info%state_variables(fabm_id)%units
-
+     export_state%units = gotmfabm%model%info%state_variables(fabm_id)%units
+   end if
    end function get_export_state_by_id
 
 !> Initializes a GOTM-FABM export state by FABM variable name
