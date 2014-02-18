@@ -851,9 +851,9 @@ end type
    !> first check for present standard name
    if (gotmfabm%model%info%state_variables(fabm_id)%standard_variable%name/='') then
      export_state%standard_name = &
-       gotmfabm%model%info%state_variables(fabm_id)%standard_variable%name
+       trim(gotmfabm%model%info%state_variables(fabm_id)%standard_variable%name)
      export_state%units = &
-       gotmfabm%model%info%state_variables(fabm_id)%standard_variable%units
+       trim(gotmfabm%model%info%state_variables(fabm_id)%standard_variable%units)
    else
    !> otherwise use CF-ed version of long_name
      export_state%standard_name = only_var_name( &
