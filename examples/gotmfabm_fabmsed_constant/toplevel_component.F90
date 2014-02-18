@@ -129,6 +129,15 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
+                       name="mole_concentration_of_phosphate", &
+                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    ptr_f3 = 0.0_rk
+    call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
                        name="dissolved_reduced_substances", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
