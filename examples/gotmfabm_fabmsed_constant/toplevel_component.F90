@@ -4,7 +4,7 @@ module toplevel_component
 
   ! Registration routines for fabm
   use fabm_sediment_component, only : fabmsed_SetServices => SetServices
-  use fabm_sediment_component, only : bdys,fluxes,rk
+  use fabm_sediment_component, only : rk
   use constant_component, only : constant_SetServices => SetServices
   use gotm_component, only : gotm_SetServices => SetServices
   use fabm_gotm_component, only : fabm_gotm_SetServices => SetServices
@@ -110,7 +110,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="dissolved_nitrate", &
+                       name="mole_concentration_of_nitrate", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
@@ -120,7 +120,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="dissolved_ammonium", &
+                       name="mole_concentration_of_ammonium", &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -259,11 +259,11 @@ module toplevel_component
 
       !> change state such that gotm-fabm output is mapped to fabmsed fields:
       !   DIN flux:
-      call ESMF_StateGet(sedimentstate,trim('dissolved_nitrate_upward_flux'),field,rc=rc)
+      call ESMF_StateGet(sedimentstate,trim('mole_concentration_of_nitrate_upward_flux'),field,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val1_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateGet(sedimentstate,'dissolved_ammonium_upward_flux',field,rc=rc)
+      call ESMF_StateGet(sedimentstate,'mole_concentration_of_ammonium_upward_flux',field,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -277,7 +277,7 @@ module toplevel_component
               'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux'/),DIPflux,rc=rc)
       if (rc == 0)  then
         call mossco_state_get(sedimentstate,(/ &
-              'dissolved_phosphate_upward_flux'/),val1_f2,rc=rc)
+              'mole_concentration_of_phosphate_upward_flux'/),val1_f2,rc=rc)
          DIPflux(1,1) = val1_f2(1,1)
       end if
 
@@ -336,12 +336,12 @@ module toplevel_component
       call mossco_state_get(pelagicstate,(/ &
               'nutrients                            ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN'/),DIN,rc=rc)
-      call ESMF_StateGet(pelagicstate,'dissolved_ammonium',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'mole_concentration_of_ammonium',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
-      call ESMF_StateGet(pelagicstate,'dissolved_nitrate',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'mole_concentration_of_nitrate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -353,7 +353,7 @@ module toplevel_component
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))
         DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
       end if
-      call ESMF_StateGet(pelagicstate,'dissolved_phosphate',field,rc=rc)
+      call ESMF_StateGet(pelagicstate,'mole_concentration_of_phosphate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
