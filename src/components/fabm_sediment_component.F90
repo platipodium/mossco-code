@@ -149,6 +149,8 @@ module fabm_sediment_component
     fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
 
     call get_boundary_conditions(sed,importState,bdys,fluxes)
+    !> create list of state variables for export
+    call sed%get_all_export_states()
 
     !> run for some years into quasi-steady-state
     if (presimulation_years.gt.0) &
@@ -199,15 +201,27 @@ module fabm_sediment_component
 
     ! put concentration array into export state
     ! it might be enough to do this once in initialize(?)
-    do n=1,sed%nvar
+    do n=1,size(sed%export_states)
       field = ESMF_FieldCreate(state_grid,state_array, &
-                         name=only_var_name(sed%model%info%state_variables(n)%long_name), &
+                         name=trim(sed%export_states(n)%standard_name), &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
                        totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = 0.0d0 ! initialize with 0.0
+      ptr_f3 = sed%export_states(n)%data ! initialize with 0.0
+      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      !> add boundary upward fluxes
+      field = ESMF_FieldCreate(flux_grid,flux_array, &
+                         name=trim(sed%export_states(n)%standard_name)//'_upward_flux', &
+                         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
+                       totalLBound=lbnd2,totalUBound=ubnd2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
       call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
@@ -218,18 +232,6 @@ module fabm_sediment_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    end do
-    do n=1,sed%nvar
-      field = ESMF_FieldCreate(flux_grid,flux_array, &
-                         name=only_var_name(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
-                         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
-                       totalLBound=lbnd2,totalUBound=ubnd2, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = -fluxes(:,:,n)
-      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
     !call ESMF_StatePrint(exportState)
@@ -326,21 +328,21 @@ module fabm_sediment_component
 
     ! write back fluxes into export State
     
-    do n=1,sed%nvar
+    do n=1,size(sed%export_states)
       call ESMF_StateGet(exportState, &
-             only_var_name(sed%model%info%state_variables(n)%long_name), &
+             trim(sed%export_states(n)%standard_name), &
              field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = conc(:,:,:,n)
+      ptr_f3 = conc(:,:,:,sed%export_states(n)%fabm_id)
       call ESMF_StateGet(exportState, &
-             only_var_name(sed%model%info%state_variables(n)%long_name)//'_upward_flux', &
+             trim(sed%export_states(n)%standard_name)//'_upward_flux', &
              field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = -fluxes(:,:,n)
+      ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
     end do
  
     if (allocated(fieldList)) deallocate(fieldlist)
@@ -402,7 +404,14 @@ module fabm_sediment_component
     endif
 
     do i=1,sed%nvar
-      varname=trim(only_var_name(sed%model%info%state_variables(i)%long_name))
+      if (sed%model%info%state_variables(i)%standard_variable%name/='') then
+        varname = &
+          trim(sed%model%info%state_variables(i)%standard_variable%name)
+      else
+      !> otherwise use CF-ed version of long_name
+        varname = trim(only_var_name( &
+           sed%model%info%state_variables(i)%long_name))
+      end if
       call ESMF_StateGet(importState,itemSearch=trim(varname),itemCount=itemcount,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 

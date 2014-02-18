@@ -15,8 +15,9 @@
 module fabm_sediment_driver
 
 use fabm
-!use fabm_standard_variables!, only: type_standard_variable
 use solver_library, only: type_rhs_driver
+use mossco_variable_types
+use mossco_strings
 
 implicit none
 private
@@ -29,6 +30,11 @@ type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk) :: dzmin
 end type fabm_sed_grid
 
+type,extends(MOSSCO_VariableFArray3d),public :: export_state_type !< sediment driver type for export states
+   integer            :: fabm_id=-1
+   logical            :: particulate=.false.
+end type
+
 type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (extends type_rhs_driver)
    type(fabm_sed_grid)          :: grid
    type(type_model),pointer     :: model
@@ -37,8 +43,11 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk),dimension(:,:,:),pointer :: fluxes,bdys
    real(rk),dimension(:,:,:),pointer :: porosity
    integer                      :: bcup_dissolved_variables=2
+   type(export_state_type),dimension(:),allocatable :: export_states
 contains
    procedure :: get_rhs
+   procedure :: get_export_state_by_id
+   procedure :: get_all_export_states
 end type type_sed
 
 real(rk),dimension(:,:,:),allocatable,target :: porosity,temp,intf_porosity
@@ -388,5 +397,39 @@ end do
 
 end subroutine diff3D
 
+!> Initializes a sediment export state by FABM state_variable id
+function get_export_state_by_id(self,fabm_id) result(export_state)
+   class(type_sed)         :: self
+   type(export_state_type) :: export_state
+   integer, intent(in)     :: fabm_id
+   integer                 :: n
+
+   export_state%fabm_id=fabm_id
+   export_state%data => self%conc(:,:,:,export_state%fabm_id)
+   !> first check for present standard name
+   if (self%model%info%state_variables(fabm_id)%standard_variable%name/='') then
+     export_state%standard_name = &
+       trim(self%model%info%state_variables(fabm_id)%standard_variable%name)
+     export_state%unit = &
+       trim(self%model%info%state_variables(fabm_id)%standard_variable%units)
+   else
+   !> otherwise use CF-ed version of long_name
+     export_state%standard_name = only_var_name( &
+           self%model%info%state_variables(fabm_id)%long_name)
+     export_state%unit = self%model%info%state_variables(fabm_id)%units
+   end if
+   export_state%fabm_id = fabm_id
+end function get_export_state_by_id
+
+!> create a list of export states from FABM state_variables
+subroutine get_all_export_states(self)
+   class(type_sed) :: self
+   integer  :: n,fabm_id
+
+   allocate(self%export_states(self%nvar))
+   do fabm_id=1,self%nvar
+       self%export_states(fabm_id) = self%get_export_state_by_id(fabm_id)
+   end do
+end subroutine get_all_export_states
 
 end module fabm_sediment_driver
