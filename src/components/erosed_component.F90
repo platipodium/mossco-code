@@ -433,37 +433,45 @@ write (*,*) ' state add'
 
       !> get spm concentrations
       call ESMF_StateGet(importState,'concentration_of_SPM',fieldBundle,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=rc)
-      if (allocated(fieldlist)) deallocate(fieldlist)
-      allocate(fieldlist(n))
-      call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      do n=1,size(fieldlist)
-        field = fieldlist(n)
-        call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-        call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(n))
-        call ESMF_AttributeGet(field,'particle_density',rhosol(n))
-        sedd90(n) = d90_from_d50(sedd50(n))
-        if (rc == ESMF_SUCCESS) then
-          spm_concentration(1,1,n) = ptr_f3(1,1,1)
-        else
-          write(0,*) 'cannot find SPM fraction',n
-        end if
-      end do
+      if(rc /= ESMF_SUCCESS) then
+        !> run without SPM forcing from pelagic component
+#ifdef DEBUG
+        call ESMF_LogWrite( &
+           'field Bundle concentration_of_SPM not found, run without pelagic forcing', &
+           ESMF_LOGMSG_INFO)
+#endif
+      else
+        call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=rc)
+        if (allocated(fieldlist)) deallocate(fieldlist)
+        allocate(fieldlist(n))
+        call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        do n=1,size(fieldlist)
+          field = fieldlist(n)
+          call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
+          call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(n))
+          call ESMF_AttributeGet(field,'particle_density',rhosol(n))
+          sedd90(n) = d90_from_d50(sedd50(n))
+          if (rc == ESMF_SUCCESS) then
+            spm_concentration(1,1,n) = ptr_f3(1,1,1)
+          else
+            write(0,*) 'cannot find SPM fraction',n
+          end if
+        end do
 
-      !> this is not good, but should work:
-      r0(:,nmub) = spm_concentration(1,1,:)
+        !> this is not good, but should work:
+        r0(:,nmub) = spm_concentration(1,1,:)
 
-      !> get sinking velocities
-      call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity',fieldBundle,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      do n=1,size(fieldlist)
-        call ESMF_FieldGet(fieldlist(n),farrayPtr=ptr_f3,rc=rc)
-        ws(n,nmub) = ptr_f3(1,1,1)
-      end do
+        !> get sinking velocities
+        call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity',fieldBundle,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        do n=1,size(fieldlist)
+          call ESMF_FieldGet(fieldlist(n),farrayPtr=ptr_f3,rc=rc)
+          ws(n,nmub) = ptr_f3(1,1,1)
+        end do
+      end if
 
     else
       !> use initial values
