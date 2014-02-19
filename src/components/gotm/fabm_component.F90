@@ -390,7 +390,12 @@ module fabm_gotm_component
 
     do k=1,size(fabm_export_states)
       call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if(rc /= ESMF_SUCCESS) then
+        !> probably found fieldBundle
+      else
+        call ESMF_FieldDestroy(field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end if
 
 #if ESMF_VERSION_MAJOR > 5
       call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name) /),rc=rc)
@@ -399,11 +404,13 @@ module fabm_gotm_component
 #endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
       call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity', field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if(rc /= ESMF_SUCCESS) then
+        !> probably found fieldBundle
+      else
+        call ESMF_FieldDestroy(field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end if
 
 #if ESMF_VERSION_MAJOR > 5
       call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /),rc=rc)
@@ -412,8 +419,6 @@ module fabm_gotm_component
 #endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
     call ESMF_ClockDestroy(clock,rc=rc)
