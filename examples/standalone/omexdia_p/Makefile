@@ -15,7 +15,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lmossco_sediment -lsolver $(LIBS)
+LIBS := -lmossco_sediment -lsolver -lmossco_util $(LIBS)
 
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)

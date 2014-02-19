@@ -42,11 +42,11 @@ sed%grid%dzmin=dzmin
 funit=2
 
 write(0,*) '  Initialise grid with',sed%grid%knum,'vertical layers'
-call init_sed_grid(sed%grid)
+call sed%grid%init_grid()
 
 
 write(0,*) '  Initialise sediment module'
-call init_fabm_sed(sed)
+call sed%initialize()
 close(33)
 
 ! allocate concentration array
@@ -55,7 +55,7 @@ allocate(conc(sed%grid%inum,sed%grid%jnum,sed%grid%knum,sed%nvar))
 sed%conc => conc
 ! initialise values
 conc = 0.0_rk
-call init_fabm_sed_concentrations(sed)
+call sed%init_concentrations()
 
 allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
 bdys(1,1,1:9) = 0.0_rk
@@ -105,7 +105,7 @@ do t=1,tnum
              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
           end do
           do n=1,size(sed%model%info%diagnostic_variables)
-             diag => fabm_sed_diagnostic_variables(sed,n)
+             diag => sed%diagnostic_variables(n)
              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
           end do
           write(funit,*)
@@ -114,7 +114,7 @@ do t=1,tnum
 end do
 
 !finalize
-call finalize_fabm_sed()
+call sed%finalize()
 if (allocated(conc)) deallocate(conc)
 if (allocated(bdys)) deallocate(bdys)
 if (allocated(fluxes)) deallocate(fluxes)

@@ -28,6 +28,8 @@ type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk),dimension(:,:,:),allocatable :: zi,dz,zc,dzc
    integer  :: knum,inum,jnum
    real(rk) :: dzmin
+contains
+   procedure :: init_grid
 end type fabm_sed_grid
 
 type,extends(MOSSCO_VariableFArray3d),public :: export_state_type !< sediment driver type for export states
@@ -41,32 +43,30 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk)                     :: bioturbation,diffusivity
    real(rk)                     :: k_par
    real(rk),dimension(:,:,:),pointer :: fluxes,bdys
-   real(rk),dimension(:,:,:),pointer :: porosity
    integer                      :: bcup_dissolved_variables=2
    type(export_state_type),dimension(:),allocatable :: export_states
+
+   real(rk),dimension(:,:,:),allocatable :: porosity,temp,intf_porosity
+   real(rk),dimension(:,:,:),allocatable :: par
+   real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
+   real(rk),dimension(:,:,:),allocatable :: temp3d
+   real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
+   real(rk),dimension(:,:),allocatable     :: zeros2d
+
 contains
+   procedure :: initialize
+   procedure :: finalize
+   procedure :: init_concentrations
+   procedure :: diagnostic_variables
    procedure :: get_rhs
    procedure :: get_export_state_by_id
    procedure :: get_all_export_states
 end type type_sed
 
-real(rk),dimension(:,:,:),allocatable,target :: porosity,temp,intf_porosity
-real(rk),dimension(:,:,:),allocatable :: par
-real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
-real(rk),dimension(:,:,:),allocatable,target :: temp3d
-real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
-real(rk),dimension(:,:),allocatable     :: zeros2d
-
-!type(type_bulk_standard_variable) :: &
-!    varname_porosity = type_bulk_standard_variable('porosity','m3/m3','volumetric_porosity')
-
 #define _GRID_ sed%grid
 #define _INUM_ _GRID_%inum
 #define _JNUM_ _GRID_%jnum
 #define _KNUM_ _GRID_%knum
-
-public :: init_fabm_sed,init_sed_grid,finalize_fabm_sed
-public :: init_fabm_sed_concentrations,fabm_sed_diagnostic_variables
 
 contains
 
@@ -75,37 +75,37 @@ contains
 !! Allocate memory, create a grid and fill the sed_grid_type. The number of
 !! layers is set outside in beforehand by the sediment component.
 
-subroutine init_sed_grid(grid)
-implicit none
-type(fabm_sed_grid),intent(inout) :: grid
-real(rk)  :: grid_fac=10
-integer :: i,j,k
+subroutine init_grid(self)
+class(fabm_sed_grid) :: self
+real(rk)             :: grid_fac=10
+integer              :: i,j,k
+real(rk)             :: self_fac
 
-grid%inum = 1
-grid%jnum = 1
+self%inum = 1
+self%jnum = 1
 ! total depth = 18cm
-grid_fac = 0.18_rk/((grid%knum+1)/2.0_rk * grid%dzmin) - 1.0_rk ! the last layer is 10x thicker than the first layer
+self_fac = 0.18_rk/((self%knum+1)/2.0_rk * self%dzmin) - 1.0_rk ! the last layer is 10x thicker than the first layer
 
 ! create grid
-allocate(grid%dz( grid%inum,grid%jnum,grid%knum))
-allocate(grid%zc( grid%inum,grid%jnum,grid%knum))
-allocate(grid%zi( grid%inum,grid%jnum,1:grid%knum+1))
-allocate(grid%dzc(grid%inum,grid%jnum,grid%knum-1))
+allocate(self%dz( self%inum,self%jnum,self%knum))
+allocate(self%zc( self%inum,self%jnum,self%knum))
+allocate(self%zi( self%inum,self%jnum,1:self%knum+1))
+allocate(self%dzc(self%inum,self%jnum,self%knum-1))
 
-grid%zi(:,:,1) = 0_rk
-do k=1,grid%knum
-   do j=1,grid%jnum
-      do i=1,grid%inum
-         grid%dz(i,j,k) = (1.0_rk + (grid_fac-1.0_rk)*(k-1)/(grid%knum-1)) * grid%dzmin
-         grid%zc(i,j,k) = grid%zi(i,j,k) + 0.5_rk*grid%dz(i,j,k)
-         grid%zi(i,j,k+1) = grid%zi(i,j,k)+grid%dz(i,j,k)
+self%zi(:,:,1) = 0_rk
+do k=1,self%knum
+   do j=1,self%jnum
+      do i=1,self%inum
+         self%dz(i,j,k) = (1.0_rk + (self_fac-1.0_rk)*(k-1)/(self%knum-1)) * self%dzmin
+         self%zc(i,j,k) = self%zi(i,j,k) + 0.5_rk*self%dz(i,j,k)
+         self%zi(i,j,k+1) = self%zi(i,j,k)+self%dz(i,j,k)
       end do
    end do
 end do
 
-grid%dzc = grid%zc(:,:,2:grid%knum) - grid%zc(:,:,1:grid%knum-1)
+self%dzc = self%zc(:,:,2:self%knum) - self%zc(:,:,1:self%knum-1)
 
-end subroutine init_sed_grid
+end subroutine init_grid
 
 
 !> Initialise FABM sediment driver
@@ -114,7 +114,7 @@ end subroutine init_sed_grid
 !! read from namelist sed_nml, FABM is initialised and necessary arrays are
 !! allocated. Porosity is set here.
 
-subroutine init_fabm_sed(sed)
+subroutine initialize(sed)
 implicit none
 
 class(type_sed),intent(inout) :: sed
@@ -137,24 +137,23 @@ sed%bioturbation = bioturbation
 sed%diffusivity  = diffusivity
 sed%k_par        = k_par
 
-if (.not.(allocated(sed%grid%dz))) call init_sed_grid(sed%grid)
+if (.not.(allocated(sed%grid%dz))) call sed%grid%init_grid()
 sed%inum = sed%grid%inum
 sed%jnum = sed%grid%jnum
 sed%knum = sed%grid%knum
 
 ! set porosity
-allocate(porosity(_INUM_,_JNUM_,_KNUM_))
-allocate(intf_porosity(_INUM_,_JNUM_,_KNUM_))
-allocate(temp(_INUM_,_JNUM_,_KNUM_))
-allocate(par (_INUM_,_JNUM_,_KNUM_))
+allocate(sed%porosity(_INUM_,_JNUM_,_KNUM_))
+allocate(sed%intf_porosity(_INUM_,_JNUM_,_KNUM_))
+allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
+allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
 do k=1,_KNUM_
-   porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
+   sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
 end do
-intf_porosity(:,:,1) = porosity(:,:,1)
-intf_porosity(:,:,2:_KNUM_) = 0.5d0*(porosity(:,:,1:_KNUM_-1) + porosity(:,:,2:_KNUM_))
-sed%porosity => porosity
+sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
+sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
 
-temp = 5_rk
+sed%temp = 5_rk
 
 ! build model tree
 sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
@@ -165,38 +164,38 @@ call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
 ! allocate state variables
 sed%nvar = size(sed%model%info%state_variables)
 
-allocate(diff(_INUM_,_JNUM_,_KNUM_))
-allocate(transport(_INUM_,_JNUM_,_KNUM_,sed%nvar))
-transport=0.0_rk
-allocate(zeros2dv(_INUM_,_JNUM_,sed%nvar))
-zeros2dv=0.0_rk
-allocate(zeros3dv(_INUM_,_JNUM_,_KNUM_,sed%nvar))
-zeros3dv=0.0_rk
-allocate(ones3d(_INUM_,_JNUM_,_KNUM_))
-ones3d=1.0_rk
-allocate(zeros2d(_INUM_,_JNUM_))
-zeros2d=0.0_rk
-allocate(temp3d(_INUM_,_JNUM_,_KNUM_))
-temp3d=-999.0_rk
+allocate(sed%diff(_INUM_,_JNUM_,_KNUM_))
+allocate(sed%transport(_INUM_,_JNUM_,_KNUM_,sed%nvar))
+sed%transport=0.0_rk
+allocate(sed%zeros2dv(_INUM_,_JNUM_,sed%nvar))
+sed%zeros2dv=0.0_rk
+allocate(sed%zeros3dv(_INUM_,_JNUM_,_KNUM_,sed%nvar))
+sed%zeros3dv=0.0_rk
+allocate(sed%ones3d(_INUM_,_JNUM_,_KNUM_))
+sed%ones3d=1.0_rk
+allocate(sed%zeros2d(_INUM_,_JNUM_))
+sed%zeros2d=0.0_rk
+allocate(sed%temp3d(_INUM_,_JNUM_,_KNUM_))
+sed%temp3d=-999.0_rk
 
-diff = diffusivity
+sed%diff = diffusivity
 
-end subroutine init_fabm_sed
+end subroutine initialize
 
 !> initialised sediment concentrations from namelist. Initial
 !! concentrations in the namelist are taken as molar mass per
 !! total cell volume
-subroutine init_fabm_sed_concentrations(sed)
+subroutine init_concentrations(sed)
 implicit none
 
-type(type_sed), intent(inout)      :: sed
-integer                            :: n
+class(type_sed) :: sed
+integer         :: n
 
 do n=1,sed%nvar
-   sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value/porosity(:,:,:)
+   sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value/sed%porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
 end do
-end subroutine init_fabm_sed_concentrations
+end subroutine init_concentrations
 
 
 !> fabm_sed_diagnostic_variables
@@ -206,15 +205,15 @@ end subroutine init_fabm_sed_concentrations
 !! wrapper of the related FABM function.
 !! Diagnostic concentrations are given in FABM per volume pore water.
 
-function fabm_sed_diagnostic_variables(sed,n) result(diag)
+function diagnostic_variables(sed,n) result(diag)
 implicit none
 
-type(type_sed),intent(in)          :: sed
+class(type_sed)                    :: sed
 integer,intent(in)                 :: n
 real(rk),dimension(:,:,:),pointer  :: diag
 
 diag => fabm_get_bulk_diagnostic_data(sed%model,n)
-end function
+end function diagnostic_variables
 
 
 !> get right-hand sides
@@ -243,8 +242,9 @@ integer :: n,i,j,k,bcup=1,bcdown=3
 ! get sediment surface light I_0 as boundary condition, here constant:
 I_0 = 1.0 ! W/m2
 do k=1,rhs_driver%knum
-   temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
-   par(:,:,k) = I_0 * exp(-sum(rhs_driver%grid%dzc(:,:,1:k))/rhs_driver%k_par)
+   rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
+   rhs_driver%par(:,:,k) = &
+           I_0 * exp(-sum(rhs_driver%grid%dzc(:,:,1:k))/rhs_driver%k_par)
 end do
 
 !   link state variables
@@ -253,26 +253,34 @@ do n=1,size(rhs_driver%model%info%state_variables)
 end do
 
 !   link environment forcing
-call fabm_link_bulk_data(rhs_driver%model,varname_temp,temp3d)
-call fabm_link_bulk_data(rhs_driver%model,varname_par,par)
-!call fabm_link_bulk_data(rhs_driver%model,varname_porosity,porosity)
+call fabm_link_bulk_data(rhs_driver%model,varname_temp,rhs_driver%temp3d)
+call fabm_link_bulk_data(rhs_driver%model,varname_par,rhs_driver%par)
 
 ! calculate diffusivities (temperature)
-f_T = _ONE_*exp(-4500.d0*(1.d0/(temp3d+273.d0) - (1.d0/288.d0)))
+f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
 do n=1,size(rhs_driver%model%info%state_variables)
    if (rhs_driver%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = 1
-      diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * (ones3d-intf_porosity)
-      conc_insitu = rhs_driver%conc(:,:,:,n)*porosity/(ones3d-porosity)
-      call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), zeros2d, rhs_driver%fluxes(:,:,n), zeros2d, &
-              bcup, bcdown, diff, ones3d-porosity, intFlux, transport(:,:,:,n))
-      transport(:,:,:,n) = transport(:,:,:,n)*(ones3d-porosity)/porosity
+      rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
+              (rhs_driver%ones3d - rhs_driver%intf_porosity)
+      conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity/ &
+              (rhs_driver%ones3d - rhs_driver%porosity)
+      call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), &
+              rhs_driver%zeros2d, rhs_driver%fluxes(:,:,n), rhs_driver%zeros2d, &
+              bcup, bcdown, rhs_driver%diff, &
+              rhs_driver%ones3d - rhs_driver%porosity, intFlux, &
+              rhs_driver%transport(:,:,:,n))
+      rhs_driver%transport(:,:,:,n) = rhs_driver%transport(:,:,:,n) * &
+              (rhs_driver%ones3d - rhs_driver%porosity)/rhs_driver%porosity
    else
       bcup = rhs_driver%bcup_dissolved_variables
-      diff = (rhs_driver%diffusivity + temp3d * 0.035d0) * intf_porosity / 86400.0_rk / 10000_rk
+      rhs_driver%diff = (rhs_driver%diffusivity + rhs_driver%temp3d * 0.035d0) &
+             * rhs_driver%intf_porosity / 86400.0_rk / 10000_rk
       conc_insitu = rhs_driver%conc(:,:,:,n)
-      call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), zeros2d, rhs_driver%fluxes(:,:,n), zeros2d, &
-              bcup, bcdown, diff, porosity, intFlux, transport(:,:,:,n))
+      call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), &
+              rhs_driver%zeros2d, rhs_driver%fluxes(:,:,n), rhs_driver%zeros2d, &
+              bcup, bcdown, rhs_driver%diff, rhs_driver%porosity, intFlux, &
+              rhs_driver%transport(:,:,:,n))
       ! set fluxes for output
       rhs_driver%fluxes(:,:,n) = intFlux(:,:,1)
    end if
@@ -288,7 +296,7 @@ do k=1,rhs_driver%knum
 end do
 
 ! return fabm-rhs + diff-tendencies
-rhs = rhs + transport
+rhs = rhs + rhs_driver%transport
 
 end subroutine get_rhs
 
@@ -296,16 +304,16 @@ end subroutine get_rhs
 !> finalize the FABM sediment driver
 !!
 !! deallocate all the arrays
-subroutine finalize_fabm_sed()
+subroutine finalize(sed)
+class(type_sed) :: sed
+  if (allocated(sed%zeros2dv))  deallocate(sed%zeros2dv)
+  if (allocated(sed%zeros3dv))  deallocate(sed%zeros3dv)
+  if (allocated(sed%zeros2d))   deallocate(sed%zeros2d)
+  if (allocated(sed%ones3d))    deallocate(sed%ones3d)
+  if (allocated(sed%transport)) deallocate(sed%transport)
+  if (allocated(sed%diff))      deallocate(sed%diff)
 
-  if (allocated(zeros2dv)) deallocate(zeros2dv)
-  if (allocated(zeros3dv)) deallocate(zeros3dv)
-  if (allocated(zeros2d))  deallocate(zeros2d)
-  if (allocated(ones3d))    deallocate(ones3d)
-  if (allocated(transport)) deallocate(transport)
-  if (allocated(diff))      deallocate(diff)
-
-end subroutine finalize_fabm_sed
+end subroutine finalize
 
 
 !> vertical diffusion in a 3d sediment grid
@@ -318,7 +326,7 @@ subroutine diff3d (grid, C, Cup, Cdown, fluxup, fluxdown,        &
 !! authors: Kai Wirtz & Richard Hofmeister
 
 implicit none
-type(fabm_sed_grid), intent(in)        :: grid
+class(fabm_sed_grid), intent(in)        :: grid
 real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: C, D
 
 ! Boundary concentrations (used if Bc..=2,4), fluxes (used if Bc= 1) 

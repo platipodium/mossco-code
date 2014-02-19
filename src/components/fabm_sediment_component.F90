@@ -132,8 +132,8 @@ module fabm_sediment_component
     !! Write log entries
     write(string,'(A,I3,A)') 'Initialise grid with ',sed%grid%knum,' vertical layers'
     call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
-    call init_sed_grid(sed%grid)
-    call init_fabm_sed(sed)
+    call sed%grid%init_grid()
+    call sed%initialize()
     close(33)
     !! Allocate all arrays conc, bdys, fluxes 
     allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar)) 
@@ -141,7 +141,7 @@ module fabm_sediment_component
     sed%conc => conc
     ! initialise values
     conc = 0.0_rk
-    call init_fabm_sed_concentrations(sed)
+    call sed%init_concentrations()
     !> Allocate boundary conditions and initialize with zero
     allocate(bdys(_INUM_,_JNUM_,sed%nvar+1))
     bdys(1:_INUM_,1:_JNUM_,1:9) = 0.0_rk
@@ -226,7 +226,7 @@ module fabm_sediment_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
     do n=1,size(sed%model%info%diagnostic_variables)
-      diag => fabm_sed_diagnostic_variables(sed,n)
+      diag => sed%diagnostic_variables(n)
       array = ESMF_ArrayCreate(distgrid=distgrid_3d,farrayPtr=diag, &
                    name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -319,7 +319,7 @@ module fabm_sediment_component
              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
           end do
           do n=1,size(sed%model%info%diagnostic_variables)
-             diag => fabm_sed_diagnostic_variables(sed,n)
+             diag => sed%diagnostic_variables(n)
              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
           end do
           write(funit,*)
@@ -357,7 +357,7 @@ module fabm_sediment_component
 
     close(funit)
 
-    call finalize_fabm_sed()
+    call sed%finalize()
     if (allocated(conc)) deallocate(conc)
     if (allocated(bdys)) deallocate(bdys)
     if (allocated(fluxes)) deallocate(fluxes)
