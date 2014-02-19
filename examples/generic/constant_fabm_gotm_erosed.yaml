@@ -1,0 +1,9 @@
+coupling:
+  - components: 
+     - constant
+     - fabm_gotm  # This is the GOTM-FABM pelagic component
+    interval: 24 h
+  - components:
+     - fabm_gotm
+     - erosed
+    interval: 15 h

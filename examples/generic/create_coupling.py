@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'constant_fabm_gotm_erosed.yaml'
+    filename = 'fabm_gotm_coupling.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
