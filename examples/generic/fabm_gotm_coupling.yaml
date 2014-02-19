@@ -1,4 +1,4 @@
 coupling:
   - components: 
-     - fabm
+     - fabm_gotm
     interval: 24 h

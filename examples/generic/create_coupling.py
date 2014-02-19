@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'constant_gotm.yaml'
+    filename = 'constant_fabm_gotm_erosed.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -419,14 +419,13 @@ for item in componentSet.union(couplerSet):
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
 
-libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod', 'turbulence_prod',
-                  'util_prod', 'output_prod', 'observations_prod', 'input_prod'] ,
-        'fabm'       : ['gotm', 'mossco_gotmfabm', 'solver', 'fabm_prod', 
-                  'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod', 'turbulence_prod',
-                  'util_prod', 'output_prod', 'observations_prod', 'input_prod'],
+libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
+                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'] ,
+        'fabm_gotm'       : ['gotm', 'mossco_gotmfabm', 'solver', 'fabm_prod', 
+                  'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
+                  'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver', 'fabm_prod'], 
         'constant'   : ['constant'],
-        'fabm_gotm'  : ['mossco_gotmfabm', 'solver'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'erosed'     : ['erosed', 'mossco_erosed'],
@@ -446,10 +445,10 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'empty'      : ['libempty'],
         'constant'   : ['libconstant'],
         'gotm'       : ['libgotm', 'libsolver'],
-        'fabm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'] 
+        'fabm_gotm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'] 
 }
 
-fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
+#fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
 fid.write('LDFLAGS += $(LIBRARY_PATHS)\n')
 for item in componentSet.union(couplerSet):
     if libs.has_key(item):
@@ -470,7 +469,18 @@ for item in componentSet.union(couplerSet):
             fid.write(' -l' + lib)
         fid.write('\n')
 
-fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf\n\n')
+fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
+
+#for item in componentSet.union(couplerSet):
+#    if libs.has_key(item):
+#        if item=='gotm':
+#            fid.write(' $(NC_LIBS)\n\n')
+#        if item=='fabm_gotm':
+#            fid.write(' $(NC_LIBS)\n\n')
+
+
+
+
 fid.write('.PHONY: all exec\n\n')
 fid.write('all: exec\n\n')
 fid.write('exec: ' + coupling_name + '\n\n')
