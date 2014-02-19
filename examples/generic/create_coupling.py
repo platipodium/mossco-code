@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'fabm_gotm_coupling.yaml'
+    filename = 'constant_coupling.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -225,11 +225,8 @@ for i in range(0,len(couplingList)):
     else:
         unit = 'h'
     fid.write('    call ESMF_TimeIntervalSet(alarmInterval,' + unit + '=' + number + ',rc=rc)\n')
-    fid.write('''
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)    
-      
-    cplAlarmList(i)=ESMF_AlarmCreate(clock=clock,ringTime=time+alarmInterval, &
-    ''')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n\n')  
+    fid.write('    cplAlarmList(' + str(i+1) + ')=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &\n')
     alarmName = str(couplingList[i][0]) + '--' + str(couplingList[i][-1]) + '--cplAlarm'
     fid.write('      ringInterval=alarmInterval, name=\'' + alarmName + '\', rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n')
@@ -244,24 +241,23 @@ fid.write('''
     
     call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
-   
+
     if (size(alarmList) > 0) then
       call ESMF_TimeSet(time,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_TimeSet(ringTime,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
  
-     call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
+      call ESMF_AlarmGet(alarmList(1),ringTime=time,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_AlarmPrint(alarmList(1))
+      !call ESMF_AlarmPrint(alarmList(1))
     endif
       
     do i=2,size(alarmList)
       call ESMF_AlarmGet(alarmList(i),ringTime=ringTime,rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (ringtime<time) time=ringTime
-      call ESMF_AlarmPrint(alarmList(i))
+      !call ESMF_AlarmPrint(alarmList(i))
     enddo
     if (allocated(alarmList)) deallocate(alarmList)
     
@@ -274,7 +270,7 @@ fid.write('''
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock,timeStep=time-currentTime,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+    
     call ESMF_LogWrite("toplevel_coupler initialized", ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
@@ -312,11 +308,12 @@ fid.write('''
         call ESMF_GridCompGet(gridCompList(i),name=compName, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-
+        !> @todo: find the next alarm relevant for this component, now quickfixed by setting this to 6 h
+        call ESMF_TimeIntervalSet(timeInterval, h=6, rc=rc)
         !call MOSSCO_ClockGetTimeStepToNextAlarm(clock, compName, timeInterval, rc)
         !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        call ESMF_ClockSet(clock, startTime=currentTime, stopTime=currentTime+timeInterval, timeStep=timeInterval, rc=rc) 
+        call ESMF_ClockSet(clock, startTime=clockTime, stopTime=clockTime+timeInterval, timeStep=timeInterval, rc=rc) 
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
         call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
@@ -331,8 +328,6 @@ fid.write('''
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       enddo  
     endif
-
-
 
     ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
     call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
