@@ -149,16 +149,19 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)    :: timestring
-    type(ESMF_Time)      :: clockTime, startTime, stopTime, currentTime
-    type(ESMF_Time)      :: ringTime, time
+    character(len=19)       :: timestring
+    type(ESMF_Time)         :: clockTime, startTime, stopTime, currentTime
+    type(ESMF_Time)         :: ringTime, time
     type(ESMF_TimeInterval) :: timeInterval, timeStep, alarmInterval
-    real(ESMF_KIND_R8)   :: dt
+    real(ESMF_KIND_R8)      :: dt
      
-    integer(ESMF_KIND_I4) :: numGridComp, numCplComp
-    integer(ESMF_KIND_I4) :: alarmCount, numCplAlarm, i
+    integer(ESMF_KIND_I4)  :: numGridComp, numCplComp
+    integer(ESMF_KIND_I4)  :: alarmCount, numCplAlarm, i
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList !> @todo shoudl this be a pointer?
-    
+    character(ESMF_MAXSTR) :: name
+    type(ESMF_Alarm)       :: childAlarm
+    type(ESMF_Clock)       :: childClock
+     
     ! Create a local clock, set its parameters to those of the parent clock
     clock = ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -230,6 +233,35 @@ for i in range(0,len(couplingList)):
     alarmName = str(couplingList[i][0]) + '--' + str(couplingList[i][-1]) + '--cplAlarm'
     fid.write('      ringInterval=alarmInterval, name=\'' + alarmName + '\', rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n')
+    
+    fid.write('''
+    !! Copy this alarm to all children as well
+    do i=1,numGridComp
+      call ESMF_GridCompGet(gridCompList(i),name=name, rc=rc) 
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+    ''')
+    fid.write('  if (trim(name)==\'' + str(couplingList[i][0]) + '\' .or. trim(name)==\'' + str(couplingList[i][-1]) + '\') then')
+    fid.write('''
+        call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=rc) 
+        if (rc /= ESMF_SUCCESS) then
+          childClock=ESMF_ClockCreate(clock=clock, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          
+          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        endif      
+    ''')    
+    fid.write('    childAlarm=ESMF_AlarmCreate(cplAlarmList(' + str(i+1) + '), rc=rc)')
+    fid.write('''
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+        call ESMF_AlarmSet(childAlarm, clock=childClock)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      endif
+    enddo
+    ''')
+      
  
 fid.write('''
       
