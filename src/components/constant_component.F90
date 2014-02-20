@@ -154,17 +154,54 @@ module constant_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR)     :: name, message
-    type(ESMF_Field) :: field
-    integer               :: lbnd(3),ubnd(3)
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr
+    integer                :: petCount, localPet
+    character(ESMF_MAXSTR) :: name, message, timestring
+    logical                :: clockIsPresent
+    type(ESMF_Time)        :: currTime
+    type(ESMF_Clock)       :: clock
     
-#ifdef DEBUG 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
-    write(message,'(A,A,A)') 'Constant component ', trim(name), ' finished running'
-    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
-#endif
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+!#ifdef DEBUG
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!#endif
+  
+    do 
+      call ESMF_ClockAdvance(clock, rc=rc) 
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+      if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo  
+
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+!#ifdef DEBUG 
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
+!#endif
 
   end subroutine Run
 
