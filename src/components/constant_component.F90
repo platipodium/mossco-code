@@ -54,8 +54,8 @@ module constant_component
     integer, intent(out)  :: rc
 
     character(ESMF_MAXSTR)     :: name, message
-    type(ESMF_Clock)      :: clock
     type(ESMF_Alarm)      :: alarm
+    type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: time
     type(ESMF_TimeInterval) :: timeInterval, alarmInterval
 
@@ -71,6 +71,9 @@ module constant_component
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="constants grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    clock=ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! Get information to generate the fields that store the pointers to variables
@@ -172,10 +175,13 @@ module constant_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR)     :: name, message
+    integer                :: petCount, localPet
+    character(ESMF_MAXSTR) :: name, message
+    type(ESMF_Clock)       :: clock
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,clock=clock, name=name, rc=rc)
+    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_GridCompDestroy(gridComp, rc=rc)
     write(message,'(A,A,A)') 'Constant component ', trim(name), ' finalized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
    
