@@ -401,8 +401,8 @@ endif
 libgotm_external:
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src observations airsea meanflow turbulence output input)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
 endif
 
 libgetm_external: prefix
@@ -414,16 +414,16 @@ ifdef MOSSCO_FABMDIR
 endif
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src observations airsea meanflow turbulence output input)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a)
+	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
+	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
 endif
 	@echo Recreating the GETM library in $(GETM_LIBRARY_PATH)
 	(export FABM=true ; $(MAKE) -C $(GETMDIR)/src)
 else
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src observations airsea meanflow turbulence output input)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
 endif
 	@echo Recreating the GETM library without FABM in $(GETM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)

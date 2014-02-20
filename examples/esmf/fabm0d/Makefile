@@ -52,11 +52,6 @@ toplevel_component.o: toplevel_component.F90 libmossco_fabm0d
 main.F90: ../../common/main.F90
 	ln -f  $< $@
 
-fabm0d:
-	( unset LIBS; export FABMHOST=0d ; $(MAKE) -C $(FABMDIR)/src/ )
-	( unset LIBS; export FABMHOST=0d ; $(MAKE) -C $(FABMDIR)/src/drivers/0d fabm0d )
-	mv $(FABMDIR)/src/drivers/0d/fabm0d .
-
 clean: extraclean
 
 extraclean: 
