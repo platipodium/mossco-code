@@ -26,8 +26,8 @@ module benthos_component
   integer                     :: ubnd(3),lbnd(3)
 
 
-  type (microphytobenthos)  :: Micro
-  type (BioturbationEffect) :: Total_Bioturb
+  type (microphytobenthos),save  :: Micro
+  type (BioturbationEffect),save :: Total_Bioturb
   real (fp)    :: tau
   real (fp)    :: Erod
 
@@ -100,7 +100,7 @@ write (*,*)
     !> Create distgrid for arrays
     distGrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
       indexflag=ESMF_INDEX_GLOBAL, rc=rc)
- 
+
     !call ESMF_GridGet(grid,distgrid=distgrid)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -132,22 +132,33 @@ write (*,*)
     Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
       name="Effect_of_Mbalthica_on_sediment_erodibility_at_bottom", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
- 
-    allocate(Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(1,1,1))
-    Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(1,1,1) = Total_Bioturb%TauEffect
+
+    allocate(Effect_of_Mbalthica_on_critical_bed_shearstress(1,1,1))
+    Effect_of_Mbalthica_on_critical_bed_shearstress(1,1,1) = Total_Bioturb%TauEffect
     array = ESMF_ArrayCreate(distgrid=distgrid, indexflag=ESMF_INDEX_GLOBAL, &
       farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     Macrofauna_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
       name="Effect_of_Mbalthica_on_critical_bed_shearstress", rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     !> set export state
     call ESMF_StateAdd(exportState,(/Microphytobenthos_erodibility/),rc=rc)
     call ESMF_StateAdd(exportState,(/Microphytobenthos_critical_bed_shearstress/),rc=rc)
 
     call ESMF_StateAdd(exportState,(/Macrofauna_erodibility/),rc=rc)
     call ESMF_StateAdd(exportState,(/Macrofauna_critical_bed_shearstress/),rc=rc)
+
+    call ESMF_FieldPrint (Microphytobenthos_erodibility)
+      write (*,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
+    call ESMF_FieldPrint (Microphytobenthos_critical_bed_shearstress)
+      write (*,*) 'Mircrophy. Tau effect', Micro%TauEffect
+    call ESMF_FieldPrint (Macrofauna_erodibility)
+      write (*,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
+    call ESMF_FieldPrint (Macrofauna_critical_bed_shearstress)
+      write (*,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
+
+
 
     call ESMF_LogWrite('Initialized benthos component',ESMF_LOGMSG_INFO)
 
@@ -199,6 +210,15 @@ call Macrofanua_run(Total_Bioturb)
  write (*,*) 'Erodibility (microphytobenthos) =',Erod
  write (*,*)
 
+call ESMF_FieldPrint (Microphytobenthos_erodibility)
+   write (*,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
+call ESMF_FieldPrint (Microphytobenthos_critical_bed_shearstress)
+   write (*,*) 'Mircrophy. Tau effect', Micro%TauEffect
+call ESMF_FieldPrint (Macrofauna_erodibility)
+   write (*,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
+call ESMF_FieldPrint (Macrofauna_critical_bed_shearstress)
+   write (*,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
+
 !open (unit = 12, file= 'result.out',action = 'write ', status = 'replace')
 
 !write (12,*) 'critical tau (microphytobenthos) =' ,tau
@@ -218,10 +238,8 @@ write (*,*)
 !write (12,*) 'Both Biotic effects on the critical bed shear stress effect= ',Total_Bioturb%TauEffect
 
 !write (12,*) 'Both Biotic erodibility =', Total_Bioturb%ErodibilityEffect
-        !
+       !
 
-
-    call ESMF_FieldPrint(Microphytobenthos_critical_bed_shearstress)
 
   end subroutine Run
 
