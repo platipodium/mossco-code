@@ -27,7 +27,7 @@ endif
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += libmossco_erosed
-INCLUDES += -I$(MOSSCO_EROSED_DIR)/include 
+INCLUDES += -I$(EROSED_DIR)/include 
 endif
 
 .PHONY: $(TARGETS)
@@ -88,7 +88,6 @@ libmossco_erosed_dependencies: prefix libmossco_erosed_modules		\
 
 libmossco_erosed: prefix libmossco_erosed_dependencies \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(delft_erosed_driver.o)
-
 
 libmossco_erosed_modules:
 	$(MAKE) $(EROSED_OBJS)
