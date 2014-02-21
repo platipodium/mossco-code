@@ -31,12 +31,12 @@ endif
 
 all: $(TARGETS)
 
-libocean: prefix libtypes $(MOSSCO_LIBRARY_PATH)/libocean.a(remtc_ocean.o)
-libatmosphere: prefix libtypes $(MOSSCO_LIBRARY_PATH)/libatmosphere.a(remtc_atmosphere.o)
-libtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
+libocean: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libocean.a(remtc_ocean.o)
+libatmosphere: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libatmosphere.a(remtc_atmosphere.o)
+libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
-	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libtypes
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libmossco_util
 
 clean: extraclean
 extraclean:

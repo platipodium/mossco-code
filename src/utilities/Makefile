@@ -21,11 +21,11 @@ EXTRA_DIST=README
 
 # Make targets
 
-all: libsolver libtypes libmossco_util
+all: libsolver libmossco_util
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
-libtypes:  prefix $(MOSSCO_LIBRARY_PATH)/libtypes.a(mossco_variable_types.o)
-libmossco_util:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o mossco_time.o mossco_state.o)
+libmossco_util:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o \
+          mossco_variable_types.o mossco_time.o mossco_state.o)
 
 #@todo there should be a generic rule for the mods
 $(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
@@ -37,7 +37,6 @@ $(MOSSCO_MODULE_PATH)/mossco_strings.mod: mossco_strings.o
 clean: extraclean
 extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libsolver.a
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libtypes.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_util.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/solver_library.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod

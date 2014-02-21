@@ -25,7 +25,7 @@ TARGETS += libmossco_gotmfabm
 endif
 endif
 
-.PHONY: $(TARGETS) libgotm_external libtypes libmossco_gotmfabm libgotm
+.PHONY: $(TARGETS) libgotm_external libmossco_util libmossco_gotmfabm libgotm
 
 #--------------------------------------
 # Make targets
@@ -33,16 +33,15 @@ endif
 
 all: $(TARGETS)
 
-libgotm: prefix libgotm_external libtypes $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
-libmossco_gotmfabm: prefix libtypes gotmfabm_drv				\
+libgotm: prefix libgotm_external libmossco_util $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
+libmossco_gotmfabm: prefix gotmfabm_drv				\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_component.o)
 gotmfabm_drv:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_gotmfabm
-libtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
-
+libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
-	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libtypes
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libmossco_util
 
 clean: extraclean
 extraclean:

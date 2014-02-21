@@ -53,7 +53,7 @@ libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_drive
 
 libmossco_benthos_drivers: prefix  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o)
 libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
-libmossco_simplewave: prefix libtypes $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+libmossco_simplewave: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
 libmossco_erosed: liberosed
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
@@ -107,12 +107,12 @@ gotm_component.o: gotm_component.F90
 endif
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
-	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libtypes
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libmossco_util
 
 utilities:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities
 
-libmossco_util libtypes libsolver:
+libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 clean: extraclean

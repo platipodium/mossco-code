@@ -38,7 +38,7 @@ all: $(TARGETS)
 
 # FABM/sediment section
 
-libmossco_sediment: prefix libmossco_util libtypes libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
+libmossco_sediment: prefix libmossco_util libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 libmossco_gotmfabm: prefix libmossco_util libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
 
@@ -64,7 +64,7 @@ criticalsheareffect.o: macrofauna_class.o biotypes.o
 erodibilityeffect.o: macrofauna_class.o biotypes.o
 
 # utilities
-libmossco_util libtypes libsolver:
+libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 # EROSED section
