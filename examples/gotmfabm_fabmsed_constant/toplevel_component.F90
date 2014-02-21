@@ -424,17 +424,17 @@ module toplevel_component
 
     call ESMF_LogWrite("Toplevel component finalizing",ESMF_LOGMSG_INFO)
 
-    call ESMF_GridCompFinalize(fabmgotmComp, exportState=state, rc=rc)
+    call ESMF_GridCompFinalize(fabmgotmComp, exportState=pelagicstate, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(fabmgotmComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompFinalize(gotmComp, exportState=state, rc=rc)
+    call ESMF_GridCompFinalize(gotmComp, exportState=pelagicstate, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(gotmComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompFinalize(fabmsedComp, rc=rc)
+    call ESMF_GridCompFinalize(fabmsedComp, exportState=sedimentstate, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(fabmsedComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)

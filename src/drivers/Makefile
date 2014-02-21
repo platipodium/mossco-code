@@ -77,20 +77,17 @@ EROSED_OBJS= \
 	$(EROSED_DIR)/source/shld.o			\
 	$(EROSED_DIR)/source/sand_mud.o
 
-libmossco_erosed_dependencies: prefix libmossco_erosed_modules		\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision_basics.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/erosand.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/eromud.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/vanRijn84.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/shld.o) \
+libmossco_erosed_dependencies: prefix							\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision_basics.o)	\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision.o)		\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/erosand.o)		\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/eromud.o)		\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/vanRijn84.o)		\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/shld.o)		\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/sand_mud.o)
 
-libmossco_erosed: prefix libmossco_erosed_dependencies \
+libmossco_erosed: prefix libmossco_erosed_dependencies 			\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(delft_erosed_driver.o)
-
-libmossco_erosed_modules:
-	$(MAKE) $(EROSED_OBJS)
 
 # Generic section
 
@@ -106,3 +103,4 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/delft_erosed_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
+	$(RM) $(EROSED_OBJS)
