@@ -54,8 +54,8 @@ module constant_component
     integer, intent(out)  :: rc
 
     character(ESMF_MAXSTR)     :: name, message
-    type(ESMF_Clock)      :: clock
     type(ESMF_Alarm)      :: alarm
+    type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: time
     type(ESMF_TimeInterval) :: timeInterval, alarmInterval
 
@@ -71,6 +71,9 @@ module constant_component
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="constants grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    clock=ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! Get information to generate the fields that store the pointers to variables
@@ -151,17 +154,54 @@ module constant_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR)     :: name, message
-    type(ESMF_Field) :: field
-    integer               :: lbnd(3),ubnd(3)
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: farrayPtr
+    integer                :: petCount, localPet
+    character(ESMF_MAXSTR) :: name, message, timestring
+    logical                :: clockIsPresent
+    type(ESMF_Time)        :: currTime
+    type(ESMF_Clock)       :: clock
     
-#ifdef DEBUG 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
-    write(message,'(A,A,A)') 'Constant component ', trim(name), ' finished running'
-    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
-#endif
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+!#ifdef DEBUG
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!#endif
+  
+    do 
+      call ESMF_ClockAdvance(clock, rc=rc) 
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+      if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo  
+
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+!#ifdef DEBUG 
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
+!#endif
 
   end subroutine Run
 
@@ -172,10 +212,13 @@ module constant_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR)     :: name, message
+    integer                :: petCount, localPet
+    character(ESMF_MAXSTR) :: name, message
+    type(ESMF_Clock)       :: clock
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,clock=clock, name=name, rc=rc)
+    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_GridCompDestroy(gridComp, rc=rc)
     write(message,'(A,A,A)') 'Constant component ', trim(name), ' finalized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
    
