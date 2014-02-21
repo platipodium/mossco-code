@@ -34,13 +34,12 @@ endif
 all: $(TARGETS)
 
 libgotm: prefix libgotm_external libtypes $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
-libmossco_gotmfabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_component.o) libgotm_external
+libmossco_gotmfabm: prefix libtypes gotmfabm_drv				\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_component.o)
+gotmfabm_drv:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_gotmfabm
 libtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
-fabm_gotm_component.o: fabm_gotm_component.F90 libmossco_gotmfabm 
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_gotmfabm
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities libtypes

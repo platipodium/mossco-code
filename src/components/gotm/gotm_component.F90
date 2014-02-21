@@ -260,7 +260,6 @@ module gotm_component
     use meanflow, only : gotm_radiation => rad
     use meanflow, only : gotm_u => u
     use meanflow, only : gotm_v => v
-    use gotm_mossco_fabm, only: gotm_fabm_bottom_flux => bfl
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState

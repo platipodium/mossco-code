@@ -27,7 +27,7 @@ endif
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += libmossco_erosed
-INCLUDES += -I$(MOSSCO_EROSED_DIR)/include 
+INCLUDES += -I$(EROSED_DIR)/include 
 endif
 
 .PHONY: $(TARGETS)
