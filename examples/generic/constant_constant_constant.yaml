@@ -1,0 +1,13 @@
+coupling:
+  - components: 
+     - constant
+     - constant
+    interval: 2 d 
+  - components: 
+     - constant
+     - constant
+    interval: 17 h
+  - components: 
+     - constant
+     - constant
+    interval: 23 h

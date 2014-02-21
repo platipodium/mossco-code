@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'constant_coupling.yaml'
+    filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -384,7 +384,7 @@ fid.write('''
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
       if (currTime>stopTime) then
-        call ESMF_LogWrite('Clock out of scop in '//trim(compName), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite('Clock out of scope in '//trim(compName), ESMF_LOGMSG_ERROR)
         call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
       endif
 
@@ -440,8 +440,8 @@ fid.write('''
         call ESMF_ClockSet(childClock, stopTime=ringTime, rc=rc) 
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        call ESMF_ClockSet(clock, stopTime=ringTime, rc=rc) 
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        !call ESMF_ClockSet(clock, stopTime=ringTime, rc=rc) 
+        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
         call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -453,8 +453,6 @@ fid.write('''
         call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
           exportState=exportStates(i), clock=clock, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-        call ESMF_LogWrite('bra',ESMF_LOGMSG_WARNING)
       enddo
 
       !! Now that all child components have been started, find out the minimum time
@@ -462,8 +460,6 @@ fid.write('''
       call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
         alarmCount=alarmCount, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_LogWrite('bla',ESMF_LOGMSG_WARNING)
 
       if (alarmCount==0) then
         call ESMF_LogWrite('No alarm not found in '//trim(compName), ESMF_LOGMSG_WARNING)
@@ -494,7 +490,7 @@ fid.write('''
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
 !#endif
 
-      call ESMF_ClockSet(clock, stopTime=ringTime, timeStep=timeInterval, rc=rc) 
+      call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc) 
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
       call ESMF_ClockAdvance(clock, rc=rc) 
