@@ -387,35 +387,51 @@ module fabm_gotm_component
     integer                    :: lbnd(3), ubnd(3), k
     real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
     type(ESMF_Field)           :: field
+    type(ESMF_FieldBundle)     :: fieldBundle
+    type(ESMF_StateItem_Flag)  :: itemType
 
     do k=1,size(fabm_export_states)
-      call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) then
-        !> probably found fieldBundle
-      else
-        call ESMF_FieldDestroy(field, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      end if
-
-#if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name) /),rc=rc)
-#else
-      call ESMF_StateRemove(exportState,trim(fabm_export_states(k)%standard_name),rc=rc)
-#endif
+      call ESMF_StateGet(exportState, &
+              trim(fabm_export_states(k)%standard_name),itemType, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity', field, rc=rc)
-      if(rc /= ESMF_SUCCESS) then
-        !> probably found fieldBundle
-      else
+      if (itemType == ESMF_STATEITEM_FIELD) then
+        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldDestroy(field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity', field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldDestroy(field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      else if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), &
+                fieldBundle, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldBundleDestroy(fieldbundle,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+        call ESMF_StateGet(exportState, &
+                trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
+                fieldbundle, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldBundleDestroy(fieldbundle,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       end if
 
 #if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /),rc=rc)
+      call ESMF_StateRemove(exportState, &
+              (/ trim(fabm_export_states(k)%standard_name) /),relaxedFlag=.true.,rc=rc)
+      call ESMF_StateRemove(exportState, &
+              (/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /), &
+              relaxedFlag=.true.,rc=rc)
 #else
-      call ESMF_StateRemove(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
+      call ESMF_StateRemove(exportState, &
+              trim(fabm_export_states(k)%standard_name),relaxedFlag=.true.,rc=rc)
+      call ESMF_StateRemove(exportState, &
+              trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
+              relaxedFlag=.true.,rc=rc)
 #endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
