@@ -15,6 +15,7 @@ module macrofauna_interface
 ! real (fp)          , pointer  :: MudContent=> null()
 !end type BioturbationEffect
 
+
 ! so that the effect of different macrofauna species on the critical bed shear stress and erodibility
 ! are multiplied linearly to get the total effect. This approach is a simplification of the preocesses,
 ! and not a physically based approach, but state-of-the-art (refer to Knappen et al. 2003, Borsje et al. (2008)
@@ -26,7 +27,7 @@ use biotypes , only : BioturbationEffect
 implicit none
 ! New Macrofauna types should be declared here.
 
-type (Mbalthica_Object)   :: M_Balthica
+type (Mbalthica_Object),save   :: M_Balthica
 
 
 contains
@@ -40,6 +41,9 @@ implicit none
 type (BioturbationEffect) :: Total_Bioturbation
 
 allocate (Total_Bioturbation%ErodibilityEffect, Total_Bioturbation%TauEffect)
+
+Total_Bioturbation%ErodibilityEffect= 1.0_fp
+Total_Bioturbation%TauEffect=1.0_fp
 
 ! The initilize method of new species should be called here
 call init_Mbalthica(M_Balthica)
