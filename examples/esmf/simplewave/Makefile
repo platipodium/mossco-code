@@ -23,7 +23,7 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 all: exec
 
-exec: libmossco_util esmf_simplewave
+exec: libmossco_simplewave esmf_simplewave
 
 esmf_simplewave: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
@@ -35,8 +35,6 @@ libmossco_util:
 
 libmossco_simplewave:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
-	
-toplevel_component.o: toplevel_component.F90 libmossco_simplewave
 
 
 clean: extraclean
