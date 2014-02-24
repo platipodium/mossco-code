@@ -20,7 +20,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_clm libmossco_benthos libmossco_simplewave
+TARGETS=libempty libconstant libmossco_clm libmossco_benthos libmossco_simplewave libmossco_netcdf
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += liberosed
@@ -54,6 +54,7 @@ libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_drive
 libmossco_benthos_drivers: prefix  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o)
 libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 libmossco_simplewave: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+libmossco_netcdf: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o)
 libmossco_erosed: liberosed
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
