@@ -329,7 +329,7 @@ fid.write('''
     character(len=19)       :: timestring
     type(ESMF_Time)         :: stopTime, currTime, ringTime, time
     type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8)   :: advanceCount,  i, j
+    integer(ESMF_KIND_I8)   :: advanceCount,  i, j, k
     integer(ESMF_KIND_I4)   :: alarmCount, petCount, localPet
     integer(ESMF_KIND_I4)   :: numGridComp, numCplComp, hours
     
@@ -337,8 +337,16 @@ fid.write('''
     type(ESMF_Alarm)        :: childAlarm
     type(ESMF_Clock)        :: childClock, clock
     logical                 :: clockIsPresent
+    type(ESMF_State)        :: impState, expState
+    type(ESMF_Field)        :: field
+    type(ESMF_FieldBundle)  :: fieldBundle
+    type(ESMF_Array)        :: array
+    type(ESMF_ArrayBundle)  :: arrayBundle
+    type(ESMF_StateItem_Flag), dimension(:), allocatable :: itemTypeList
+    character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
+    integer                  :: itemCount
     
-    character(len=ESMF_MAXSTR) :: message, compName, name
+    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName, itemName
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
@@ -389,7 +397,105 @@ fid.write('''
       endif
 
       !! Loop through all components and check whether their clock is currently at the 
-      !! same time as my own clock's currTime
+      !! same time as my own clock's currTime, if yes, then run the component
+      do i=1,numGridComp
+        !! Determine for each child the clock    
+        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+        if (.not.clockIsPresent) then
+          call ESMF_LogWrite('Required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
+          call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
+        endif
+
+        call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+        call ESMF_ClockGet(childClock,currTime=time, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        if (time>currTime) exit
+
+        !! Find all the alarms in this child and call all the couplers that
+        !! have ringing alarms at this stage
+   
+        call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
+          alarmCount=alarmCount, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+        if (alarmCount==0) then
+          call ESMF_LogWrite('No alarm not found in '//trim(compName), ESMF_LOGMSG_WARNING)
+          timeInterval=stopTime-currTime
+        else                 
+          call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
+             alarmList=alarmList, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
+          do j=1,alarmCount        
+            call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+            !! Skip this alarm if it is inbound of this component
+            if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName(1:index(compName,'Comp')-1))) exit
+            
+            !! Skip this alarm if it is not ringing now
+            if (ringTime > currTime) exit
+  
+            call ESMF_TimeGet(ringTime,timeStringISOFrac=timeString)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          
+!            write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//timeString
+!            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            
+            compName=trim(alarmName(1:index(alarmName,'--')-1))
+            otherName=trim(alarmName(index(alarmName,'--')+2:index(alarmName,'--cplAlarm')-1))
+            
+            write(message,'(A)') trim(timeString)//' calling coupler from '//trim(compName)// &
+              ' to '//trim(otherName)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
+            
+            !! for now, transmit all Fields from my export state into the import state of the other component
+            call ESMF_GridCompGet(gridCompList(i), exportState=exportState, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+            !! Search the gridCompList for other's name
+            do k=1, ubound(gridCompList,1)
+              call ESMF_GridCompGet(gridCompList(k), name=name, rc=rc)
+              if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+              
+              if (trim(name)==trim(otherName)//'Comp') exit
+            enddo
+            call ESMF_GridCompGet(gridCompList(k), importState=impState, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            
+            call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+            if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
+            if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+            
+            call ESMF_StateGet(exportState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            
+            do k=1,itemCount
+              if (itemTypeList(k)==ESMF_STATEITEM_FIELD) then
+                 call ESMF_StateGet(exportState, itemNameList(k), field, rc=rc)
+                 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+                 call ESMF_StateAddReplace(impState,(/field/), rc=rc)        
+                 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+              else
+                write(message,'(A)') 'Did not copy non-field item'//trim(itemName)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
+              endif   
+            enddo 
+          enddo 
+        endif
+      enddo
+
+
+      !! Loop through all components and check whether their clock is currently at the 
+      !! same time as my own clock's currTime, if yes, then run the component
       do i=1,numGridComp
         !! Determine for each child the clock    
         call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=rc)
@@ -599,6 +705,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'erosed'     : ['erosed', 'mossco_erosed'],
+        'netcdf'     : ['mossco_netcdf'],
         'simplewave' : ['mossco_simplewave'],
         'empty'      : ['empty'],
         'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea_prod', 
@@ -612,6 +719,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabmsediment' : ['libsediment'],
         'simplewave' : ['libmossco_simplewave'],
+        'netcdf'      : ['libmossco_netcdf'],
         'empty'      : ['libempty'],
         'constant'   : ['libconstant'],
         'gotm'       : ['libgotm', 'libsolver'],
@@ -679,7 +787,7 @@ libmossco_util:
 libsediment libconstant libmossco_clm liberosed libmossco_fabm0d :
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libempty libmossco_simplewave:
+libempty libmossco_simplewave libmossco_netcdf:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment libsolver:
