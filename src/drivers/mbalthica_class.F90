@@ -35,8 +35,8 @@ allocate (this%StateVar)
 !allocate (This%StateVar%amount)
 !allocate (This%BioMass%Unitt)
 allocate (this%Bioturbation)
-allocate (this%Bioturbation%TauEffect)
-allocate (this%Bioturbation%ErodibilityEffect)
+allocate (this%Bioturbation%TauEffect(1,1,1))
+allocate (this%Bioturbation%ErodibilityEffect(1,1,1))
 !allocate (this%Bioturbation%ErodibilityEffect,stat= istatus)
 !if (istatus == 0) then
 !    write (*,*) 'allocation of ErodibilityEffect was successfull'
@@ -53,10 +53,10 @@ use BioTypes
 implicit none
 
 class (Mbalthica_Object)  :: this
-real (fp)                  :: Mass,intensity
-character (len = 10)        :: UUnit
-integer                    :: StringLength, UnitNr,istat
-logical                    :: opnd, exst
+real (fp)                 :: Mass,intensity
+character (len = 10)      :: UUnit
+integer                   :: StringLength, UnitNr,istat
+logical                   :: opnd, exst
 
 namelist /Macrofaun/  UUnit, Intensity
 
@@ -131,8 +131,8 @@ implicit none
 class (Mbalthica_Object) :: this
 
 
-this%Bioturbation%TauEffect =  Crit_shear_bioeffect(this%StateVar)
-this%Bioturbation%ErodibilityEffect = erodibility_bioeffect(this%StateVar)
+this%Bioturbation%TauEffect(1,1,1) =  Crit_shear_bioeffect(this%StateVar)
+this%Bioturbation%ErodibilityEffect(1,1,1) = erodibility_bioeffect(this%StateVar)
 
 write (*,*)
 write (*,*) 'Biotic effect of ', this%Species, ' on the tau (M_balthica%Bioturbation%TauEffect): '&

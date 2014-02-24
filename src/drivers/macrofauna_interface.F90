@@ -40,7 +40,7 @@ implicit none
 
 type (BioturbationEffect) :: Total_Bioturbation
 
-allocate (Total_Bioturbation%ErodibilityEffect, Total_Bioturbation%TauEffect)
+allocate (Total_Bioturbation%ErodibilityEffect(1,1,1), Total_Bioturbation%TauEffect(1,1,1))
 
 Total_Bioturbation%ErodibilityEffect= 1.0_fp
 Total_Bioturbation%TauEffect=1.0_fp

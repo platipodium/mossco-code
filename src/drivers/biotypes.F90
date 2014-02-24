@@ -52,8 +52,8 @@ end type BiogenicStrctures
 !
 ! the principal data type used for demonstarting of macrofauna effect on eroion
 type BioturbationEffect
- real (fp)          , pointer  :: TauEffect => null()          !effect on critical bed shear stress
- real (fp)          , pointer  :: ErodibilityEffect => null()  !effect on erodibility parameter
+ real (fp),dimension(:,:,:), pointer  :: TauEffect => null()          !effect on critical bed shear stress
+ real (fp),dimension(:,:,:), pointer  :: ErodibilityEffect => null()  !effect on erodibility parameter
  real (fp)          , pointer  :: d50=> null()                 !effect on changing sediment grain distribution
  real (fp)          , pointer  :: MudContent=> null()          !effect on changing mud content on the upper soil layers
 end type BioturbationEffect

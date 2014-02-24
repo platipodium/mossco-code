@@ -9,8 +9,8 @@ implicit none
 type , public, extends (BenthosEffect) :: Microphytobenthos
 
 type (statevariable) , pointer :: BioMass => null()
-real (fp)            , pointer :: TauEffect => null()
-real (fp)            , pointer :: ErodibilityEffect => null()
+real (fp),dimension (:,:,:) , pointer :: TauEffect => null()
+real (fp),dimension (:,:,:) , pointer :: ErodibilityEffect => null()
 
 
 contains
@@ -36,8 +36,8 @@ allocate (this%Species)
 allocate (this%BioMass)
 allocate (This%BioMass%amount)
 !allocate (This%BioMass%Unitt)
-allocate (this%TauEffect)
-allocate (this%ErodibilityEffect,stat= istatus)
+allocate (this%TauEffect(1,1,1))
+allocate (this%ErodibilityEffect (1,1,1),stat= istatus)
 !if (istatus == 0) then
 !    write (*,*) 'allocation of ErodibilityEffect was successfull'
 !else
@@ -55,7 +55,7 @@ implicit none
 
 class (Microphytobenthos)  :: this
 real (fp)                  :: Mass
-character (len = 10)        :: Unitt
+character (len = 10)       :: Unitt
 integer                    :: StringLength, UnitNr, istat
 logical                    :: opnd, exst
 
@@ -118,8 +118,8 @@ implicit none
 
 class (Microphytobenthos) :: this
 
-this%TauEffect =  Crit_shear_bioeffect(this%BioMass)
-this%ErodibilityEffect = erodibility_bioeffect(this%BioMass)
+this%TauEffect (1,1,1) =  Crit_shear_bioeffect(this%BioMass)
+this%ErodibilityEffect (1,1,1) = erodibility_bioeffect(this%BioMass)
 
 write (*,*) ' Biotic effect of ', this%Species, ' on tau ( Micro%TauEffect) ', this%TauEffect
 write (*,*)
