@@ -169,6 +169,7 @@ module simplewave_component
     character(len=19)       :: timestring
     type(ESMF_Time)         :: clockTime
     type(ESMF_TimeInterval) :: timeInterval
+    type(ESMF_StateItem_Flag) :: itemType
     integer(ESMF_KIND_I8)   :: n,k
     integer                 :: itemcount,nvar
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: depth=>null()
@@ -193,21 +194,22 @@ module simplewave_component
     end if
     call ESMF_FieldGet(field, farrayPtr=depth, rc=rc)
 
-    call ESMF_StateGet(importState, "wind_speed", Field, rc=rc)
-    if(rc /= ESMF_SUCCESS) then
+    call ESMF_StateGet(importState, "wind_speed", itemType)
+    if (itemType .eq. ESMF_STATEITEM_NOTFOUND) then
        calc_wind = .true.
     else
        calc_wind = .false.
-       call ESMF_FieldGet(field, farrayPtr=wind, rc=rc)
+       call ESMF_StateGet(importState, "wind_speed", Field)
+       call ESMF_FieldGet(field, farrayPtr=wind)
     end if
 
-
-    call ESMF_StateGet(importState, "wind_direction", Field, rc=rc)
-    if(rc /= ESMF_SUCCESS) then
+    call ESMF_StateGet(importState, "wind_direction", itemType)
+    if (itemType .eq. ESMF_STATEITEM_NOTFOUND) then
        calc_windDir = .true.
     else
        calc_windDir = .false.
-       call ESMF_FieldGet(field, farrayPtr=windDir, rc=rc)
+       call ESMF_StateGet(importState, "wind_direction", Field)
+       call ESMF_FieldGet(field, farrayPtr=windDir)
     end if
 
     if (calc_wind .or. calc_windDir) then
