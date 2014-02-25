@@ -11,19 +11,25 @@ program main
    type(ESMF_TimeInterval)   :: timeStepIntv
    integer                   :: localrc, rc, petCount,nmlunit=2013
    double precision          :: seconds,timestep=360.0
-   character(len=40)         :: timestring,start,stop,title
+   character(len=40)         :: timestring
+   character(len=40)         :: start='2000-01-01 00:00:00'
+   character(len=40)         :: stop='2000-01-02 00:00:00'
+   character(len=40)         :: title='main'
    type(ESMF_GridComp)       :: topComp
    type(ESMF_State)          :: topState ! for import and export, empty
    type(ESMF_Clock)          :: clock
    type(ESMF_VM)             :: vm
+   integer                   :: iostat
 
    namelist /mossco_run/ title,start,stop
    
 
 ! Read mossco_run.nml
-   open(nmlunit,file='mossco_run.nml',status='old',action='read')
-   read(nmlunit,nml=mossco_run)
-   close(nmlunit)
+   open(nmlunit,file='mossco_run.nml',status='old',action='read',iostat=iostat)
+   if (iostat .eq. 0) then
+      read(nmlunit,nml=mossco_run)
+      close(nmlunit)
+   end if
 
 ! Initialize
    call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
