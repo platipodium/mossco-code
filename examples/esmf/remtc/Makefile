@@ -15,7 +15,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lesmf -locean -latmosphere -laocoupler -lmossco_util $(LIBS)
+LIBS := -locean -latmosphere -laocoupler -lmossco_util -lesmf $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec libocean libatmosphere libaocoupler libmossco_util
