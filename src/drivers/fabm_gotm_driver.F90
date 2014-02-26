@@ -18,6 +18,7 @@ module gotm_mossco_fabm
 
 use fabm
 use fabm_types
+use fabm_driver
 use fabm_config
 use solver_library
 use mossco_strings
