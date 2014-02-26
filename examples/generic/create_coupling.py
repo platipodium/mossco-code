@@ -821,7 +821,7 @@ atmos.nc:
 
 clean: extraclean
 extraclean: 
-	@-rm -f coupling toplevel_component.F90
+	@-rm -f coupling
 
 ''')
 fid.close()

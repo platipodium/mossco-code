@@ -19,18 +19,19 @@ EXTRA_DIST=README
 
 .PHONY: all exec clean
 
-all: Makefile.coupling toplevel_coupling.F90 exec
+all: exec
 
-toplevel_coupling.F90 Makefile.coupling: create_coupling.py coupling_system.yaml
+Makefile.coupling: create_coupling.py coupling_system.yaml
 	python $<
 
 exec: Makefile.coupling
-	$(MAKE) -f Makefile.coupling all
+	$(MAKE) -f Makefile.coupling $@
 
 clean: extraclean
 
 extraclean: Makefile.coupling
-	$(MAKE) -f makefile.coupling extraclean
+	$(MAKE) -f Makefile.coupling $@
+	$(RM) Makefile.coupling toplevel_component.F90
 
 ################################################
 # Recreate all standalone examples
