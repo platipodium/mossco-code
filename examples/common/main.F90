@@ -3,6 +3,7 @@ program main
    use esmf 
    use toplevel_component, only: SetServices
    use mossco_time
+   use mossco_strings
 
    implicit none
 
@@ -30,6 +31,9 @@ program main
       read(nmlunit,nml=mossco_run)
       close(nmlunit)
    end if
+! substitute characters in title string
+   call replace_character(title,'/','-')
+   call replace_character(title,' ','_')
 
 ! Initialize
    call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
