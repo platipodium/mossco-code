@@ -5,7 +5,8 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'constant_constant_constant.yaml'
+    filename = 'constant_netcdf.yaml'
+    #    filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -328,7 +329,7 @@ fid.write('''
 
     character(len=19)       :: timestring
     type(ESMF_Time)         :: stopTime, currTime, ringTime, time
-    type(ESMF_TimeInterval) :: timeInterval
+    type(ESMF_TimeInterval) :: timeInterval, ringInterval
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j, k
     integer(ESMF_KIND_I4)   :: alarmCount, petCount, localPet
     integer(ESMF_KIND_I4)   :: numGridComp, numCplComp, hours
@@ -530,13 +531,16 @@ fid.write('''
              alarmList=alarmList, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
-          call ESMF_AlarmGet(alarmList(1), ringTime=ringTime, rc=rc)
+          call ESMF_AlarmGet(alarmList(1), ringTime=ringTime, ringInterval=ringInterval, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
+          if (ringTime==currTime) ringTime=currTime+ringInterval
         
           do j=2,alarmCount        
             call ESMF_AlarmGet(alarmList(j), ringTime=time, rc=rc)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
      
+            if (time == currTime) time=currTime + ringInterval
             if (time<ringTime) ringTime=time
           enddo 
 
@@ -559,6 +563,16 @@ fid.write('''
         call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
           exportState=exportStates(i), clock=clock, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        call ESMF_ClockGet(childClock, currTime=time, rc=rc) 
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        if (time == currTime) then
+          !! This child component did not advance its clock in its Run() routine
+          !! We do that here
+          call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=rc) 
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        endif
       enddo
 
       !! Now that all child components have been started, find out the minimum time
