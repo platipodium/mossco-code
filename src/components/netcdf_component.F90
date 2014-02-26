@@ -93,7 +93,7 @@ module netcdf_component
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
        
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString
-    type(ESMF_FileStatus_Flag) :: fileStatus
+    type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
 
     call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
@@ -157,14 +157,14 @@ module netcdf_component
           call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-          call ESMF_FieldBundleWrite(fieldBundle, fileName, singleFile=.true. &
+          call ESMF_FieldBundleWrite(fieldBundle, fileName, singleFile=.true., &
             overwrite=.true., status=fileStatus, &
              ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
         elseif (itemTypeList(i) == ESMF_STATEITEM_ARRAYBUNDLE) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), arrayBundle, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-          call ESMF_ArrayBundleWrite(arrayBundle, fileName, singleFile=.true. &
+          call ESMF_ArrayBundleWrite(arrayBundle, fileName, singleFile=.true., &
             overwrite=.true., status=fileStatus, &
              ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
         else 

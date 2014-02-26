@@ -1,0 +1,9 @@
+This directory contains a generic example application of a coupled ESMF system
+
+Please specify your coupling in a yaml file (see examples), and run the python create_coupling,py script with
+this yaml file as your first argument.
+
+Allowed interval units are
+- hours, indicated by "h"
+- days, indicated by "m"
+
