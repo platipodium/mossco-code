@@ -164,12 +164,10 @@ FORTRAN_COMPILER | GFORTRAN
 
 If you want MOSSCO to take care of the GOTM compilation, please also set the environment variable MOSSCO_GOTMDIR to the value of GOTMDIR.
 
-Only if you decide to maintain GOTMDIR yourself (and not set MOSSCO_GOTMDIR), you have to build GOTM with FABM support yourself.  Add the following environment variables
-
+Only if you decide to maintain GOTMDIR yourself (and not set MOSSCO_GOTMDIR), you have to build GOTM yourself. Please make sure to compile GOTM without FABM support (unset the environment variable FABM), since MOSSCO provides its own GOTM-FABM driver using a different fabm host specification. Also consider the GOTM documentation on how to configure your netCDF installation. A working configuration could be:
 Environment variable | value
 ---|---
-FABMDIR | $HOME/opt/src/fabm-code
-FABM | true
+NETCDF_VERSION | NETCDF4
 
 ~~~~.sh
 (cd $GOTMDIR/src ; make distclean all)
