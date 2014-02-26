@@ -84,7 +84,7 @@ module netcdf_component
     type(ESMF_Time)         :: currTime, currentTime, ringTime, time
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j
-    integer                 :: itemCount
+    integer(ESMF_KIND_I4)   :: itemCount, timeSlice
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
     type(ESMF_Array)        :: array
@@ -93,6 +93,8 @@ module netcdf_component
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
        
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString
+    type(ESMF_FileStatus_Flag) :: fileStatus
+    type(ESMF_IOFmt_Flag)      :: ioFmt
 
     call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
                        advanceCount=advanceCount, rc=rc)
@@ -120,6 +122,16 @@ module netcdf_component
     !call ESMF_StateWrite(importState, fileName, rc=rc)
     !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+    if (advanceCount<huge(timeSlice)) then
+      timeSlice=int(advanceCount, ESMF_KIND_I4)
+    else
+      write(message,'(A)') 'Cannot use this advanceCount for a netcdf timeSlice, failed to convert long int to int'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    endif
+     
+#ifndef ESMF_MPIUNI
+! The ESMF_Field/Array/Bundle/Write methods are not supported in ESMF_COMM=mpiuni mode
+
     if (itemCount>0) then
       if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
       if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
@@ -133,24 +145,40 @@ module netcdf_component
           call ESMF_StateGet(importState, trim(itemNameList(i)), array, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-          !call ESMF_ArrayWrite(array, fileName, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          call ESMF_ArrayWrite(array, fileName, overwrite=.true., status=fileStatus, &
+             ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-          !call ESMF_FieldWrite(field, fileName, rc=rc)
+          call ESMF_FieldWrite(field, fileName, overwrite=.true., status=fileStatus, &
+             ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
+        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+          call ESMF_FieldBundleWrite(fieldBundle, fileName, singleFile=.true. &
+            overwrite=.true., status=fileStatus, &
+             ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
+        elseif (itemTypeList(i) == ESMF_STATEITEM_ARRAYBUNDLE) then
+          call ESMF_StateGet(importState, trim(itemNameList(i)), arrayBundle, rc=rc) 
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+          call ESMF_ArrayBundleWrite(arrayBundle, fileName, singleFile=.true. &
+            overwrite=.true., status=fileStatus, &
+             ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
         else 
           write(message,'(A)') 'Item with name '!//trim(itemNameList(i)!//' not saved to file ' 
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       enddo
 
       if (allocated(itemTypeList)) deallocate(itemTypeList)
       if (allocated(itemNameList)) deallocate(itemNameList)
     endif 
+#endif
 
     write(message,'(A)') trim(timestring)//' netcdf_component finished running.'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
