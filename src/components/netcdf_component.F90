@@ -110,7 +110,7 @@ module netcdf_component
 ! Currently limited to write out all Arrays of a State object to a netCDF file.
 ! Future releases will enable more item types of a State to be written to files of various formats.
 
-    call ESMF_StateGet(importState, name=name, itemCount=itemCount, rc=rc)
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
  
     fileName='netcdf_component.nc'
@@ -118,9 +118,6 @@ module netcdf_component
     write(numstring,'(I10)') itemCount
     write(message,'(A)') 'Found '//trim(numstring)//' items in '//trim(name)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    !call ESMF_StateWrite(importState, fileName, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     if (advanceCount<huge(timeSlice)) then
       timeSlice=int(advanceCount, ESMF_KIND_I4)
@@ -151,7 +148,7 @@ module netcdf_component
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-          call ESMF_FieldWrite(field, fileName, overwrite=.true., status=fileStatus, &
+          call ESMF_FieldWrite(field, file=trim(itemNameList(i))//'.nc', overwrite=.true., status=fileStatus, &
              ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
