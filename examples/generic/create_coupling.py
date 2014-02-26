@@ -61,7 +61,7 @@ couplerSet=set(couplerList)
 
 # Done parsint ghte list, now write the new toplevel_compnent file
        
-outfilename = 'toplevel_coupling.F90'
+outfilename = 'toplevel_component.F90'
 fid = file(outfilename,'w')
 
 fid.write('''
@@ -85,7 +85,7 @@ fid.write('''
 !
 ''')
 
-fid.write('module ' + 'toplevel_coupling\n') 
+fid.write('module ' + 'toplevel_component\n') 
 fid.write('''
   use esmf
   use mossco_variable_types
@@ -167,7 +167,7 @@ fid.write('''
     clock = ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    call ESMF_ClockSet(clock, name=\'toplevel_coupling clock\', rc=rc)
+    call ESMF_ClockSet(clock, name=\'toplevel_component clock\', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
@@ -657,7 +657,7 @@ fid.write('''
 
   end subroutine Finalize
 
-end module toplevel_coupling
+end module toplevel_component
 ''')
 
 fid.close()
@@ -747,7 +747,8 @@ for item in componentSet.union(couplerSet):
             fid.write(' -l' + lib)
         fid.write('\n')
 
-fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
+#fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
+fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) \n\n')
 
 #for item in componentSet.union(couplerSet):
 #    if libs.has_key(item):
@@ -761,18 +762,15 @@ fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack
 
 fid.write('.PHONY: all exec\n\n')
 fid.write('all: exec\n\n')
-fid.write('exec: ' + coupling_name + '\n\n')
-fid.write(coupling_name + ': toplevel_coupling.o main.o\n')
-fid.write('\t$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)\n')
-fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/generic/$@"\n')
-fid.write('''
-main.o: toplevel_coupling.o main.F90 libmossco_util
-''')
-fid.write('toplevel_coupling.o: toplevel_coupling.F90')
+fid.write('exec: libmossco_util ')
 for item in componentSet.union(couplerSet):
     if deps.has_key(item):
         for dep in deps[item]:
             fid.write(' ' + dep)
+fid.write(' ' + coupling_name + '\n\n')
+fid.write(coupling_name + ': toplevel_component.o ../common/main.o\n')
+fid.write('\t$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)\n')
+fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/generic/$@"\n')
 fid.write('''
 
 # Other subsidiary targets that might not be needed, these should evetually
@@ -809,7 +807,7 @@ atmos.nc:
 
 clean: extraclean
 extraclean: 
-	@-rm -f coupling toplevel_coupling.F90
+	@-rm -f coupling toplevel_component.F90
 
 ''')
 fid.close()
