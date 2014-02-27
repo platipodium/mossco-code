@@ -32,6 +32,7 @@ module fabm_sediment_component
   use fabm_sediment_driver
   use solver_library!, only : ode_solver
   use mossco_strings
+  use mossco_state
 
   implicit none
 
@@ -148,6 +149,7 @@ module fabm_sediment_component
     allocate(fluxes(_INUM_,_JNUM_,sed%nvar))
     fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
 
+    call set_boundary_flags(sed,importState)
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     !> create list of state variables for export
     call sed%get_all_export_states()
@@ -451,5 +453,35 @@ module fabm_sediment_component
     end do
 
   end subroutine get_boundary_conditions
+
+  !> set ESMF attributes "required_flag", "required" and "optional" for
+  !! all boundary conditions in the importState
+  subroutine set_boundary_flags(sed,importState)
+    type(type_sed)             :: sed
+    type(ESMF_State)           :: importState
+    character(len=ESMF_MAXSTR) :: name,varname
+    integer                    :: n
+
+    name='water_temperature'
+    call set_item_boundary_flags(importState,name,requiredFlag=.true.,requiredRank=3)
+
+    do n=1,size(sed%model%info%state_variables)
+      if (sed%model%info%state_variables(n)%standard_variable%name/='') then
+        varname = &
+          trim(sed%model%info%state_variables(n)%standard_variable%name)
+      else
+      !> otherwise use CF-ed version of long_name
+        varname = trim(only_var_name( &
+           sed%model%info%state_variables(n)%long_name))
+      end if
+      call set_item_boundary_flags(importState,varname,requiredFlag=.true.,requiredRank=3)
+
+      if (sed%model%info%state_variables(n)%properties%get_logical( &
+            'particulate',default=.false.)) then
+        name = trim(varname)//'_z_velocity'
+        call set_item_boundary_flags(importState,name,requiredFlag=.true.,requiredRank=3)
+      end if
+    end do
+  end subroutine set_boundary_flags
 
 end module fabm_sediment_component

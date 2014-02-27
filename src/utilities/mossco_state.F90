@@ -66,6 +66,28 @@ contains
     end do
   end subroutine mossco_state_get_f3
 
- 
+
+  !> set ESMF attributes "required_flag", "required" and "optional" for
+  !! an item's name in the importState
+  subroutine set_item_boundary_flags(state,name,requiredFlag,optionalFlag,requiredRank)
+    type(ESMF_State)           :: state
+    character(len=ESMF_MAXSTR) :: name
+    integer,optional           :: requiredRank
+    logical,optional           :: requiredFlag,optionalFlag
+    integer                    :: rc
+     
+    if (present(requiredFlag)) then
+      call ESMF_AttributeSet(state,name=trim(name)//':required',value=requiredFlag,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (present(requiredRank)) then
+      call ESMF_AttributeSet(state,name=trim(name)//':required_rank',value=requiredRank,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (present(optionalFlag)) then
+      call ESMF_AttributeSet(state,name=trim(name)//':optional',value=optionalFlag,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+  end subroutine set_item_boundary_flags
 
 end module mossco_state
