@@ -217,18 +217,20 @@ module netcdf_component
     type(ESMF_ArraySpec)         :: arraySpec
     type(ESMF_TypeKind_Flag)     :: coordTypeKind
     integer(ESMF_KIND_I4)        :: dimCount, rank
-    integer(ESMF_KIND_I8)        :: totalCount, i
+    integer(ESMF_KIND_I8)        :: totalCount, i, seconds
     type(ESMF_Index_Flag)        :: indexFlag
     real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
     type(ESMF_Time)              :: refTime, currTime
+    integer(ESMF_KIND_I4)        :: ubnd(3), lbnd(3)
     
    
-    integer                      :: ncStatus, ncid, varid, dimid
+    integer                      :: ncStatus, ncid, varid, dimid, udimid
     integer                      :: nDims, nVars, nAtts
-    integer, dimension(NF90_MAX_VAR_DIMS) :: dimids, dimlens
-    real(ESMF_KIND_R8)           :: seconds, time
+    integer, dimension(4)        :: dimlens,dimids
+    real(ESMF_KIND_I8)           :: time
 
-    character(len=ESMF_MAXSTR)   :: message, timeString
+    character(len=ESMF_MAXSTR)   :: message, timeString, name
+    real(ESMF_KIND_R8),allocatable :: value1(:)
 
     !! Deterimine current and reference times
     call ESMF_ClockGet(clock, currTime=currTime, refTime=refTime, rc=rc)
@@ -237,7 +239,7 @@ module netcdf_component
     call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeGet(currTime, s_r8=seconds, rc=rc)
+    call ESMF_TimeGet(currTime, s_i8=seconds, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_FieldGet(field, grid=grid, arraySpec=arraySpec, rc=rc)
@@ -247,37 +249,98 @@ module netcdf_component
        indexFlag=indexFlag, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !call ESMF_GridGetCoord(grid,1, totalCount=totalCount, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    !call ESMF_GridGetCoord1RealR8(grid,1, farrayPtr=farrayPtr1, rc=rc)
-    !call ESMF_GridGetCoord(grid,1, totalCount=totalCount, rc=rc)
-  
     ncStatus = nf90_open(path=trim(fileName)//'.nc', mode=NF90_WRITE, ncid=ncid)
     if (ncStatus /= NF90_NOERR) then
       
       ncStatus=nf90_create(trim(fileName)//'.nc', NF90_CLOBBER, ncid)
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
-      ncStatus = nf90_def_dim(ncid, 'time', NF90_UNLIMITED, dimid)
+      ncStatus = nf90_def_dim(ncid, 'time', NF90_UNLIMITED, udimid)
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
-      ncStatus = nf90_def_var(ncid, 'time', NF90_DOUBLE, dimid, varid)
+      ncStatus = nf90_def_var(ncid, 'time', NF90_INT, udimid, varid)
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
       ncStatus = nf90_put_att(ncid, varid, 'unit', 'seconds since '//timeString)
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+      
+      call ESMF_FieldGet(field, rank=rank, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+!      call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+!        computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
+!      if (rc /= ESMF_SUCCESS) then
+        !! no coordinates defined for this grid, we take x, y, z then
 
-      ncStatus = nf90_def_dim(ncid, 'lon', 1, dimid)
-      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+        call ESMF_FieldGetBounds(field, localDE=0, computationalUBound=ubnd, computationalLBound=lbnd, &
+          rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-      ncStatus = nf90_def_dim(ncid, 'lat', 1, dimid)
-      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+        if (rank /= 3) then
+          write(message,'(A)') 'Not implemented: writing fields with rank /= 3'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        endif
 
-      ncStatus = nf90_def_dim(ncid, 'z', 1, dimid)
-      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+        if (rank>0) then
+          ncStatus = nf90_def_dim(ncid, 'x', ubnd(1)-lbnd(1)+1, dimid)
+          ncStatus = nf90_def_var(ncid, 'x', NF90_INT, dimid, varid)
+          ncStatus = nf90_put_att(ncid, varid, 'units', 'unitless')
+          ncStatus = nf90_put_att(ncid, varid, 'long_name', 'index_of_x_direction')
+        endif
+
+        if (rank>1) then        
+          ncStatus = nf90_def_dim(ncid, 'y', ubnd(2)-lbnd(2)+1, dimid)
+          ncStatus = nf90_def_var(ncid, 'y', NF90_INT, dimid, varid)
+          ncStatus = nf90_put_att(ncid, varid, 'units', 'unitless')
+          ncStatus = nf90_put_att(ncid, varid, 'long_name', 'index_of_y_direction')
+        endif 
+        
+        if (rank>2) then
+          ncStatus = nf90_def_dim(ncid, 'z', ubnd(3)-lbnd(3)+1, dimid)
+          ncStatus = nf90_def_var(ncid, 'z', NF90_INT, dimid, varid)
+          ncStatus = nf90_put_att(ncid, varid, 'units', 'unitless')
+          ncStatus = nf90_put_att(ncid, varid, 'long_name', 'index_of_z_direction')
+        endif
+
+
+ !     else
+!        ncStatus = nf90_def_dim(ncid, 'lon', ubnd(1)-lbnd(1)+1, dimid)
+!        if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+!
+!        call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+!          computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
+!        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        ncStatus = nf90_def_dim(ncid, 'lat', ubnd(1)-lbnd(1)+1, dimid)
+!        if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+!
+!        call ESMF_GridGetCoord(grid,coordDim=3,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+!          computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
+!        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        ncStatus = nf90_def_dim(ncid, 'z', ubnd(1)-lbnd(1)+1, dimid)
+!        if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+!      endif
 
       ncStatus = nf90_enddef(ncid)
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
+      ncStatus = nf90_inquire(ncid, nDims, nVars, nAtts, udimid)
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+    
+!      write(*,*) ncid, nDims, nVars, nAtts, udimid
+
+      !call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      !  computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=farrayPtr1, rc=rc)
+      !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      allocate(value1(ubnd(1)-lbnd(1)+1))
+      do i=1,ubound(value1,1)
+        value1(i) = i
+      end do
+
+      ncStatus = nf90_inq_varid(ncid,'x',varid)
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
+      !ncStatus = nf90_put_var(ncid, varid, farrayPtr1(lbnd(1):ubnd(1)))
+      ncStatus = nf90_put_var(ncid, varid, value1)
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
       write(message,'(A)') 'New file '//trim(fileName)//'.nc created'
@@ -285,25 +348,34 @@ module netcdf_component
 
     endif
 
-    ncStatus = nf90_inq_varid(ncid, 'time', varid)
+    !! Get general info about file
+    ncStatus = nf90_inquire(ncid, nDims, nVars, nAtts, udimid)
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
-    ncStatus = nf90_inquire_variable(ncid, varid, ndims=nDims, natts=nAtts, dimids=dimids)
-    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
-    
     do i=1,nDims
+      dimids(i)=i
       ncStatus = nf90_inquire_dimension(ncid, dimids(i), len=dimlens(i) )
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     enddo
+
+    ncStatus = nf90_inq_varid(ncid, 'time', varid)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
  
-    if (dimlens(1)>0) then
-      ncStatus = nf90_get_var(ncid, varid, time, start=(/dimlens(1)/))
+    if (dimlens(udimid)>0) then
+      ncStatus = nf90_get_var(ncid, varid, time, start=(/dimlens(udimid)/))
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
    
       if (time<seconds) then
         !! append data
         ncStatus = nf90_put_var(ncid, varid, seconds, start=(/dimlens(1)+1/))!, count=(/1/))
         if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+      elseif (time==seconds) then
+        !! replace data, this does currently not work
+        !ncStatus = nf90_put_var(ncid, varid, seconds, start=(/dimlens(1)/))!, count=(/1/))
+        !if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
+        write(message,'(A)') 'Overwriting data at '//trim(timestring)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       else
         write(message,'(A)') 'Not implemented: inserting time'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -312,8 +384,8 @@ module netcdf_component
       ncStatus = nf90_put_var(ncid, varid, seconds, start=(/dimlens(1)+1/))!, count=(/1/))
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     endif
- 
-    call ESMF_FieldGet(field, rank=rank, rc=rc)
+    
+    call ESMF_FieldGet(field, rank=rank, name=name, rc=rc)
     if (rank == 3) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=rc)
     else
@@ -321,7 +393,30 @@ module netcdf_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
+    ncStatus = nf90_inq_varid(ncid, trim(name), varid)
+    if (ncStatus /= NF90_NOERR) then
+       !! Variable not found, so create it
+    
+        ncStatus = nf90_redef(ncid)
+        if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
+        ncStatus = nf90_def_var(ncid, trim(name), NF90_DOUBLE, dimids((/2,3,4,1/)), varid)
+        if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+        
+        !! @todo ask the field for all its attributes and add them here   
+        ncStatus = nf90_enddef(ncid)
+        if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+            
+    endif
+    
+    return
+    ncStatus = nf90_inquire_variable(ncid, varid, ndims=nDims, natts=nAtts, dimids=dimids)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
    
+    write(*,*) trim(name), rank, dimids(1:4), dimlens(1:4)
+   
+    ncStatus = nf90_put_var(ncid, varid, farrayPtr3, start=(/dimlens(1)+1,1,1,1/))
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
     ncStatus = nf90_close(ncid)
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
@@ -329,5 +424,25 @@ module netcdf_component
     rc=ESMF_SUCCESS
 
   end subroutine MOSSCO_FieldWriteNc
+
+
+!  subroutine MOSSCO_Reallocate(variable,dimensions, keepLarge)
+!    integer, intent(inout), allocatable :: variable(:)
+!    integer :: dimensions
+!    logical, optional :: keepLarge
+!
+!    if (.not.present(keepLarge)) keepLarge=.false.
+!
+!    if (.not.allocated(variable)) then
+!      allocate(variable(dimensions))
+!    else
+!      if (.not.((size(variable)>=dimensions).and.keepLarge)) then
+!        deallocate(variable)
+!        allocate(variable(dimensions))
+!      endif
+!    endif
+!
+!   end subroutine MOSSCO_Reallocate 
+
 
 end module netcdf_component
