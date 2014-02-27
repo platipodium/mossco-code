@@ -456,14 +456,14 @@ module fabm_sediment_component
 
   !> set ESMF attributes "required_flag", "required" and "optional" for
   !! all boundary conditions in the importState
-  subroutine set_boundary_flags(sed,importState)
+  subroutine set_boundary_flags(sed,state)
     type(type_sed)             :: sed
-    type(ESMF_State)           :: importState
+    type(ESMF_State)           :: state
     character(len=ESMF_MAXSTR) :: name,varname
     integer                    :: n
 
     name='water_temperature'
-    call set_item_boundary_flags(importState,name,requiredFlag=.true.,requiredRank=3)
+    call set_item_flags(state,name,requiredFlag=.true.,requiredRank=3)
 
     do n=1,size(sed%model%info%state_variables)
       if (sed%model%info%state_variables(n)%standard_variable%name/='') then
@@ -474,12 +474,12 @@ module fabm_sediment_component
         varname = trim(only_var_name( &
            sed%model%info%state_variables(n)%long_name))
       end if
-      call set_item_boundary_flags(importState,varname,requiredFlag=.true.,requiredRank=3)
+      call set_item_flags(state,varname,requiredFlag=.true.,requiredRank=3)
 
       if (sed%model%info%state_variables(n)%properties%get_logical( &
             'particulate',default=.false.)) then
         name = trim(varname)//'_z_velocity'
-        call set_item_boundary_flags(importState,name,requiredFlag=.true.,requiredRank=3)
+        call set_item_flags(state,name,requiredFlag=.true.,requiredRank=3)
       end if
     end do
   end subroutine set_boundary_flags

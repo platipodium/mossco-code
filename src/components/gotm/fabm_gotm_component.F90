@@ -452,12 +452,12 @@ module fabm_gotm_component
     integer                    :: n
 
     varname="water_temperature"
-    call set_item_boundary_flags(importState,varname,requiredFlag=.true.,requiredRank=3)
+    call set_item_flags(importState,varname,requiredFlag=.true.,requiredRank=3)
 
     do n=1,size(gotmfabm%model%info%state_variables)
       varname=trim(only_var_name( &
            gotmfabm%model%info%state_variables(n)%long_name))//'_upward_flux'
-      call set_item_boundary_flags(importState,varname,optionalFlag=.true.,requiredRank=2)
+      call set_item_flags(importState,varname,optionalFlag=.true.,requiredRank=2)
     end do
   end subroutine set_import_flags
 
