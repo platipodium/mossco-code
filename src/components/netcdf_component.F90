@@ -227,22 +227,24 @@ module netcdf_component
     integer                      :: ncStatus, ncid, varid, dimid, udimid
     integer                      :: nDims, nVars, nAtts
     integer, dimension(4)        :: dimlens,dimids
-    real(ESMF_KIND_I8)           :: time
+    real(ESMF_KIND_R8)           :: time
 
     character(len=ESMF_MAXSTR)   :: message, timeString, name
     real(ESMF_KIND_R8),allocatable :: value1(:)
 
-    !! Deterimine current and reference times
+    !! Determine current and reference times, express the time as 
+    !! seconds since refTime
     call ESMF_ClockGet(clock, currTime=currTime, refTime=refTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeGet(currTime, s_i8=seconds, rc=rc)
+    call ESMF_TimeIntervalGet(currTime-refTime, s_i8=seconds, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_FieldGet(field, grid=grid, arraySpec=arraySpec, rc=rc)
+    
+    !! Look at the field and get its rank, grid, and arrayspec
+    call ESMF_FieldGet(field, grid=grid, arraySpec=arraySpec, rank=rank, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_GridGet(grid, coordTypeKind=coordTypeKind, dimCount=dimCount, &
@@ -359,31 +361,27 @@ module netcdf_component
     enddo
 
     ncStatus = nf90_inq_varid(ncid, 'time', varid)
-    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR) 
  
-    if (dimlens(udimid)>0) then
+    if (dimlens(udimid)==0) then
+      ncStatus = nf90_put_var(ncid, varid, (/seconds/), start=(/1/), count=(/1/))
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+      write(*,*) ncid, varid, seconds
+    else
       ncStatus = nf90_get_var(ncid, varid, time, start=(/dimlens(udimid)/))
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
    
       if (time<seconds) then
         !! append data
-        ncStatus = nf90_put_var(ncid, varid, seconds, start=(/dimlens(1)+1/))!, count=(/1/))
+        ncStatus = nf90_put_var(ncid, varid, seconds, start=(/dimlens(udimid)+1/))!, count=(/1/))
         if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
-      elseif (time==seconds) then
-        !! replace data, this does currently not work
-        !ncStatus = nf90_put_var(ncid, varid, seconds, start=(/dimlens(1)/))!, count=(/1/))
-        !if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
-
-        write(message,'(A)') 'Overwriting data at '//trim(timestring)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
+      elseif (time>seconds) then
         write(message,'(A)') 'Not implemented: inserting time'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
-    else
-      ncStatus = nf90_put_var(ncid, varid, seconds, start=(/dimlens(1)+1/))!, count=(/1/))
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     endif
+        
     
     call ESMF_FieldGet(field, rank=rank, name=name, rc=rc)
     if (rank == 3) then
@@ -400,7 +398,7 @@ module netcdf_component
         ncStatus = nf90_redef(ncid)
         if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
-        ncStatus = nf90_def_var(ncid, trim(name), NF90_DOUBLE, dimids((/2,3,4,1/)), varid)
+        ncStatus = nf90_def_var(ncid, trim(name), NF90_DOUBLE, dimids((/4,3,2,1/)), varid)
         if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
         
         !! @todo ask the field for all its attributes and add them here   
@@ -409,13 +407,12 @@ module netcdf_component
             
     endif
     
-    return
     ncStatus = nf90_inquire_variable(ncid, varid, ndims=nDims, natts=nAtts, dimids=dimids)
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
    
-    write(*,*) trim(name), rank, dimids(1:4), dimlens(1:4)
+    write(*,*) trim(name), rank, size(farrayPtr3), farrayPtr3
    
-    ncStatus = nf90_put_var(ncid, varid, farrayPtr3, start=(/dimlens(1)+1,1,1,1/))
+    ncStatus = nf90_put_var(ncid, varid, farrayPtr3, start=(/1,1,1,dimlens(1)/), count=(/dimlens(dimids(1:3)),1/))
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
     ncStatus = nf90_close(ncid)
