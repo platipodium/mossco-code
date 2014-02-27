@@ -14,6 +14,7 @@ module netcdf_component
 
   use esmf
   use mossco_variable_types
+  use netcdf
 
   implicit none
   private
@@ -53,23 +54,18 @@ module netcdf_component
     character(len=ESMF_MAXSTR) :: timestring, message
     type(ESMF_Time)   :: currTime
     type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8)       :: advanceCount
-    
-    type(ESMF_Field), dimension(:), allocatable  :: exportFields, importFields
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
 
     call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
-                       advanceCount=advanceCount, rc=rc)
+      rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! @todo create a netcdf file, check whether it is existing
-
-
     write(message,'(A)') trim(timestring)//' netcdf_component initialized.'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    rc=ESMF_SUCCESS
 
   end subroutine Initialize
 
@@ -84,7 +80,7 @@ module netcdf_component
     type(ESMF_Time)         :: currTime, currentTime, ringTime, time
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j
-    integer(ESMF_KIND_I4)   :: itemCount, timeSlice
+    integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
     type(ESMF_Array)        :: array
@@ -96,6 +92,13 @@ module netcdf_component
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
 
+
+    call ESMF_GridCompGet(gridComp, localPet=localPET, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ! This output routine only works on PET0
+    if (localPET>0) return
+
     call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
                        advanceCount=advanceCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -105,19 +108,16 @@ module netcdf_component
 
     write(message,'(A)') trim(timestring)//' netcdf_component running...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      
-!  ESMF_StateWrite(state, fileName, rc)
-! Currently limited to write out all Arrays of a State object to a netCDF file.
-! Future releases will enable more item types of a State to be written to files of various formats.
+
+    call ESMF_AttributeGet(importState, name='filename', value=fileName, &
+      defaultValue='netcdf_componenent', rc=rc)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
- 
-    fileName='netcdf_component.nc'
 
-    write(numstring,'(I10)') itemCount
-    write(message,'(A)') 'Found '//trim(numstring)//' items in '//trim(name)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !write(numstring,'(I10)') itemCount
+    !!write(message,'(A)') 'Found '//trim(numstring)//' items in '//trim(name)
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (advanceCount<huge(timeSlice)) then
       timeSlice=int(advanceCount, ESMF_KIND_I4)
