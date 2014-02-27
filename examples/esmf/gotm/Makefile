@@ -31,7 +31,7 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 .PHONY: all exec libgotm libmossco_util
 
 all: exec
-exec: gotm
+exec: libmossco_util libsolver libmossco_gotmfabm libgotm gotm
 
 libsolver libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
@@ -39,15 +39,9 @@ libsolver libmossco_util:
 libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
-gotm: toplevel_component.o main.o
+gotm: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
-
-main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../../common/main.F90
-	ln $< $@
-
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util  libsolver  libgotm
 
 clean: extraclean
 
