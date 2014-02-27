@@ -141,6 +141,9 @@ module fabm_gotm_component
 
     call ESMF_ClockSet(clock, name='FABM/GOTM clock',timeStep=timeInterval, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !> set required, required_rank and optional flags in the importState
+    call set_import_flags(importState)
      
     !> Create the grid from existing grid of water_temperature field
     varname="water_temperature"
@@ -441,5 +444,21 @@ module fabm_gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize
+
+  !> set boundary flags, mainly for optional forcing fields
+  subroutine set_import_flags(importState)
+    type(ESMF_State)           :: importState
+    character(len=ESMF_MAXSTR) :: name,varname
+    integer                    :: n
+
+    varname="water_temperature"
+    call set_item_boundary_flags(importState,varname,requiredFlag=.true.,requiredRank=3)
+
+    do n=1,size(gotmfabm%model%info%state_variables)
+      varname=trim(only_var_name( &
+           gotmfabm%model%info%state_variables(n)%long_name))//'_upward_flux'
+      call set_item_boundary_flags(importState,varname,optionalFlag=.true.,requiredRank=2)
+    end do
+  end subroutine set_import_flags
 
 end module fabm_gotm_component
