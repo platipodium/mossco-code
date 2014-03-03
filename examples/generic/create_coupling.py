@@ -5,8 +5,8 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'constant_netcdf.yaml'
-    #    filename = 'constant_constant_constant.yaml'
+     filename = 'constant_netcdf.yaml'
+     #filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -480,7 +480,7 @@ fid.write('''
             
             do k=1,itemCount
               if (itemTypeList(k)==ESMF_STATEITEM_FIELD) then
-                 call ESMF_StateGet(exportState, itemNameList(k), field, rc=rc)
+                 call ESMF_StateGet(exportState, trim(itemNameList(k)), field, rc=rc)
                  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
                  call ESMF_StateAddReplace(impState,(/field/), rc=rc)        
@@ -785,6 +785,11 @@ fid.write(' ' + coupling_name + '\n\n')
 fid.write(coupling_name + ': toplevel_component.o ../common/main.o\n')
 fid.write('\t$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)\n')
 fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/generic/$@"\n')
+fid.write('toplevel_component.o : toplevel_component.F90')
+for item in componentSet.union(couplerSet):
+    if deps.has_key(item):
+        for dep in deps[item]:
+            fid.write(' ' + dep)
 fid.write('''
 
 # Other subsidiary targets that might not be needed, these should evetually

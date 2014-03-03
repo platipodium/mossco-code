@@ -1,0 +1,5 @@
+coupling:
+  - components: 
+     - constant
+     - simplewave
+    interval: 24 h
