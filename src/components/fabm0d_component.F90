@@ -142,6 +142,9 @@ module fabm0d_component
     !> set export state
     call ESMF_StateAddReplace(exportState,(/dinarray,ponarray,wsarray/),rc=rc)
 
+
+
+
     !> set clock for 0d component
     call ESMF_TimeSet(clockTime) ! to initialize this time field
     if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
@@ -169,6 +172,12 @@ module fabm0d_component
       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
       gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
     endif
+ 
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' initialized.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
+   
+    rc = ESMF_SUCCESS
     
   end subroutine Initialize
 
@@ -181,7 +190,7 @@ module fabm0d_component
     character(len=ESMF_MAXSTR)    :: timestring, name, message
     type(ESMF_Time)      :: clockTime
     integer(ESMF_KIND_I8)   :: n
-    integer(ESMF_KIND_I4)   :: localPet, petCount
+    integer(ESMF_KIND_I4)   :: localPet, petCount, itemCount
 
     type(ESMF_Clock)     :: clock
     type(ESMF_Time)      :: currTime
@@ -202,40 +211,58 @@ module fabm0d_component
 
     ! get import state
     if (forcing_from_coupler) then
-      call ESMF_StateGet(importState, "water_temperature", import_field, rc=rc)
+      call ESMF_StateGet(importState, itemSearch='water_temperature', &
+        itemCount=itemCount, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(import_field, farrayPtr=water_temperature, rc=rc)
+      if (itemCount==1) then
+        call ESMF_StateGet(importState, 'water_temperature', import_field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(import_field, farrayPtr=water_temperature, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        zerod%temp = water_temperature(1,1,1)
+      else
+        write(message,'(A)') 'Required field water_temperature not found'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      endif
+
+      call ESMF_StateGet(importState, itemSearch='salinity', &
+        itemCount=itemCount, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      zerod%temp = water_temperature(1,1,1)
-
-      call ESMF_StateGet(importState, "salinity", import_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) then
-          call ESMF_LogWrite("Salinity field not found, &
-              set to default value of 30.",ESMF_LOGMSG_INFO)
-          zerod%salt = 30.
+      if (itemCount==1) then 
+        call ESMF_StateGet(importState, 'salinity', import_field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        zerod%salt = salinity(1,1,1)
       else
-          call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          zerod%salt = salinity(1,1,1)
-      end if
-
-      call ESMF_StateGet(importState, "photosynthetically_available_radiation", &
-        import_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) then
-          call ESMF_LogWrite("PAR field not found, &
-              set to default value of 100.",ESMF_LOGMSG_INFO)
-          zerod%par = 100.
-      else
-          call ESMF_FieldGet(import_field, farrayPtr=radiation, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          zerod%par  = radiation(1,1,1)
-      end if
+        call ESMF_LogWrite('Salinity field not found, '// &
+              'set to default value of 30.0',ESMF_LOGMSG_WARNING)
+        zerod%salt = 30.
+      endif
       
+      
+      call ESMF_StateGet(importState, itemSearch='photosynthetically_available_radiation', &
+        itemCount=itemCount, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (itemCount==1) then 
+        call ESMF_StateGet(importState, 'salinity', import_field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          zerod%par  = radiation(1,1,1)
+      else
+        call ESMF_LogWrite('PAR field not found, '// &
+              'set to default value of 100.0',ESMF_LOGMSG_WARNING)
+        zerod%par = 100.
+      endif
+            
 #ifdef DEBUG
     write (message,'(A,F6.3,A)') "Obtained water-temp = ",zerod%temp," from import state"
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 #endif
     end if
+
+    !write(*,*) gotm_time_start, gotm_time_stop, gotm_time_min_n, gotm_time_max_n, n
 
     ! use AdvanceCount from parent clock
     gotm_time_min_n = n
@@ -245,6 +272,19 @@ module fabm0d_component
 
     ! set export states
     call update_export_states( (/din,pon/) ) 
+     
+    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
 
   end subroutine Run
 
