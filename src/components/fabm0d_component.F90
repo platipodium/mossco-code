@@ -5,7 +5,7 @@
 !> The ESMF component contains the 0d driver module
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
@@ -75,6 +75,7 @@ module fabm0d_component
 
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Array)     :: ponarray,wsarray,dinarray
+    type(ESMF_Clock)     :: clock
 
     character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
@@ -84,16 +85,29 @@ module fabm0d_component
     character(len=80)  :: title
     logical            :: input_from_namelist = .true.
     character(len=256) :: din_variable='gotm_npzd_nut',pon_variable='gotm_npzd_det'
+    character(len=ESMF_MAXSTR) :: message
 
     namelist /model_setup/ title,start,stop,dt,ode_method, &
                            din_variable, pon_variable
     namelist /mossco_fabm0d/ forcing_from_coupler,din_variable,pon_variable
+  
 
     ! read 0d namelist
     open(namlst,file='run.nml',status='old',action='read')
     read(namlst,nml=model_setup)
     read(namlst,nml=mossco_fabm0d)
     close(namlst)
+
+    ! Create a local clock, set its parameters to those of the parent clock
+    clock = ESMF_ClockCreate(parentClock, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_ClockSet(clock, name='fabm0d_component clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
 
     call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
     call init_0d(forcing_from_coupler=forcing_from_coupler)
@@ -157,19 +171,27 @@ module fabm0d_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)    :: timestring
-    character(len=255)   ::logstring
+    character(len=ESMF_MAXSTR)    :: timestring, name, message
     type(ESMF_Time)      :: clockTime
     integer(ESMF_KIND_I8)   :: n
+    integer(ESMF_KIND_I4)   :: localPet, petCount
 
-    ! get global clock , set n to global/local, call 0d, advance local clock n steps., 
-    call ESMF_TimeSet(clockTime)
-    call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=n)
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-#ifdef DEBUG
-    write (logstring,'(A,I6,A,A)') "0d run(",n,") at ",timestring
-    call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
-#endif
+    type(ESMF_Clock)     :: clock
+    type(ESMF_Time)      :: currTime
+    
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ 
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ! get import state
     if (forcing_from_coupler) then
@@ -203,8 +225,8 @@ module fabm0d_component
       end if
       
 #ifdef DEBUG
-    write (logstring,'(A,F6.3,A)') "Obtained water-temp = ",zerod%temp," from import state"
-    call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
+    write (message,'(A,F6.3,A)') "Obtained water-temp = ",zerod%temp," from import state"
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 #endif
     end if
 
