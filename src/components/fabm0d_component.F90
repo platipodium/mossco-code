@@ -77,20 +77,40 @@ module fabm0d_component
     type(ESMF_Array)     :: ponarray,wsarray,dinarray
     type(ESMF_Clock)     :: clock
 
-    character(len=19) :: timestring
-    type(ESMF_Time)   :: wallTime, clockTime
+    type(ESMF_Time)   :: wallTime, clockTime, currTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
     integer            :: ode_method,namlst=234
     character(len=80)  :: title
     logical            :: input_from_namelist = .true.
     character(len=256) :: din_variable='gotm_npzd_nut',pon_variable='gotm_npzd_det'
-    character(len=ESMF_MAXSTR) :: message
+    character(len=ESMF_MAXSTR) :: message, timestring, name
 
     namelist /model_setup/ title,start,stop,dt,ode_method, &
                            din_variable, pon_variable
     namelist /mossco_fabm0d/ forcing_from_coupler,din_variable,pon_variable
   
+    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+    ! Create a local clock, set its parameters to those of the parent clock
+    clock = ESMF_ClockCreate(parentClock, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ! read 0d namelist
     open(namlst,file='run.nml',status='old',action='read')
@@ -98,18 +118,6 @@ module fabm0d_component
     read(namlst,nml=mossco_fabm0d)
     close(namlst)
 
-    ! Create a local clock, set its parameters to those of the parent clock
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_ClockSet(clock, name='fabm0d_component clock', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-
-    call ESMF_LogWrite('Initialize 0d',ESMF_LOGMSG_INFO)
     call init_0d(forcing_from_coupler=forcing_from_coupler)
 
     !> get export_states information
@@ -135,32 +143,31 @@ module fabm0d_component
     call ESMF_StateAddReplace(exportState,(/dinarray,ponarray,wsarray/),rc=rc)
 
     !> set clock for 0d component
-    call ESMF_TimeSet(clockTime)
+    call ESMF_TimeSet(clockTime) ! to initialize this time field
     if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
       call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
       call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-      call ESMF_ClockSet(parentClock,timeStep=timeInterval,rc=rc)
+      call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
 
       timestring=gotm_time_start(1:10)//"T"//gotm_time_start(12:19)
       call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(parentClock,startTime=clockTime)
+      call ESMF_ClockSet(clock,startTime=clockTime)
       
       timestring=gotm_time_stop(1:10)//"T"//gotm_time_stop(12:19)
       call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(parentClock,stopTime=clockTime)
-    else !> get parent clock and overwrite namelist parameters
+      call ESMF_ClockSet(clock,stopTime=clockTime)
+    else !> overwrite namelist parameters
       call ESMF_LogWrite('Set GOTM input from ESMF parent',ESMF_LOGMSG_INFO)
-      call ESMF_ClockGet(parentClock,startTime=clockTime)
+      call ESMF_ClockGet(clock,startTime=clockTime)
       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
       gotm_time_start=timestring(1:10)//" "//timestring(12:19)
 
-      call ESMF_ClockGet(parentClock,timeStep=timeInterval,rc=rc)
+      call ESMF_ClockGet(clock,timeStep=timeInterval,rc=rc)
       call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
      
-      call ESMF_ClockGet(parentClock,stopTime=clockTime)
+      call ESMF_ClockGet(clock,stopTime=clockTime)
       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
       gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
-      
     endif
     
   end subroutine Initialize
