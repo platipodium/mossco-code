@@ -77,7 +77,7 @@ module fabm0d_component
     type(ESMF_Array)     :: ponarray,wsarray,dinarray
     type(ESMF_Clock)     :: clock
 
-    type(ESMF_Time)   :: wallTime, clockTime, currTime
+    type(ESMF_Time)   :: wallTime, currTime, startTime, stopTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
     integer            :: ode_method,namlst=234
@@ -112,13 +112,31 @@ module fabm0d_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    ! read 0d namelist
+    ! initialize from namelists (called by driver with *wrong* time info)
+    call init_0d(forcing_from_coupler=forcing_from_coupler)
+
+    ! read 0d namelist also from here
     open(namlst,file='run.nml',status='old',action='read')
     read(namlst,nml=model_setup)
     read(namlst,nml=mossco_fabm0d)
     close(namlst)
 
-    call init_0d(forcing_from_coupler=forcing_from_coupler)
+    ! set the timestep from the namelist, but overwrite the namelist's 
+    ! start and stop times with the ones from the local clock
+    gotm_time_timestep=dt
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+    call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
+    
+    write(message,'(A,F8.0,A)') trim(name)//' internal timestep is ',gotm_time_timestep,' seconds'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)    
+    
+    call ESMF_ClockGet(clock,startTime=startTime, stopTime=stopTime)
+    call ESMF_TimeGet(startTime,timeStringISOFrac=timestring)
+    gotm_time_start=timestring(1:10)//" "//timestring(12:19)
+     
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
+    gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
+
 
     !> get export_states information
     din = get_export_state_from_variable_name(din_variable)
@@ -132,7 +150,6 @@ module fabm0d_component
     dinarray = ESMF_ArrayCreate(distgrid=distgrid,farray=din%conc, &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="dissolved_inorganic_nitrogen_in_water", rc=rc)
-
     ponarray = ESMF_ArrayCreate(distgrid,farray=pon%conc, &
                    indexflag=ESMF_INDEX_GLOBAL, &
                    name="particulare_organic_nitrogen_in_water", rc=rc)
@@ -141,38 +158,9 @@ module fabm0d_component
                    name="pon_sinking_velocity_in_water", rc=rc)
     !> set export state
     call ESMF_StateAddReplace(exportState,(/dinarray,ponarray,wsarray/),rc=rc)
-
-
-
-
-    !> set clock for 0d component
-    call ESMF_TimeSet(clockTime) ! to initialize this time field
-    if (input_from_namelist) then !> overwrite the parent clock's settings with the namelist parameters
-      call ESMF_LogWrite('Get GOTM input from namelist',ESMF_LOGMSG_INFO)
-      call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-      call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
-
-      timestring=gotm_time_start(1:10)//"T"//gotm_time_start(12:19)
-      call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(clock,startTime=clockTime)
-      
-      timestring=gotm_time_stop(1:10)//"T"//gotm_time_stop(12:19)
-      call timestring2ESMF_Time(timestring,clockTime)
-      call ESMF_ClockSet(clock,stopTime=clockTime)
-    else !> overwrite namelist parameters
-      call ESMF_LogWrite('Set GOTM input from ESMF parent',ESMF_LOGMSG_INFO)
-      call ESMF_ClockGet(clock,startTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_start=timestring(1:10)//" "//timestring(12:19)
-
-      call ESMF_ClockGet(clock,timeStep=timeInterval,rc=rc)
-      call ESMF_TimeIntervalGet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-     
-      call ESMF_ClockGet(clock,stopTime=clockTime)
-      call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-      gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
-    endif
  
+    call ESMF_ClockGet(clock,currTime=currTime)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' initialized.'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
@@ -187,27 +175,42 @@ module fabm0d_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR)    :: timestring, name, message
-    type(ESMF_Time)      :: clockTime
-    integer(ESMF_KIND_I8)   :: n
-    integer(ESMF_KIND_I4)   :: localPet, petCount, itemCount
-
-    type(ESMF_Clock)     :: clock
-    type(ESMF_Time)      :: currTime
+    character(len=ESMF_MAXSTR) :: timestring, name, message
+    integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
+    type(ESMF_Clock)           :: clock
+    type(ESMF_Time)            :: currTime, startTime, stopTime
+    integer(ESMF_KIND_I8)      :: seconds, advanceCount, dt
+    type(ESMF_TimeInterval)    :: timeStep
     
-
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
  
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(clock,startTime=startTime, currTime=currTime, &
+      stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running'
+     
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_TimeIntervalGet(stopTime-currTime, s_i8=seconds, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_TimeIntervalGet(timeStep, s_i8=dt, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    gotm_time_min_n=advanceCount
+    gotm_time_max_n=advanceCount + int(seconds/gotm_time_timestep, ESMF_KIND_I8)
+
+    write(message,'(A,I4,A,I4,A)') trim(message)//' ', gotm_time_max_n - gotm_time_min_n, &
+      ' steps of ',dt,' s to '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
+    write(*,*) gotm_time_start, gotm_time_stop, gotm_time_min_n, gotm_time_max_n
 
     ! get import state
     if (forcing_from_coupler) then
@@ -262,17 +265,16 @@ module fabm0d_component
 #endif
     end if
 
-    !write(*,*) gotm_time_start, gotm_time_stop, gotm_time_min_n, gotm_time_max_n, n
-
-    ! use AdvanceCount from parent clock
-    gotm_time_min_n = n
-    gotm_time_max_n = gotm_time_min_n
-   
     call time_loop_0d()
 
     ! set export states
     call update_export_states( (/din,pon/) ) 
-     
+
+    do while (.not.ESMF_ClockIsStopTime(clock))
+      call ESMF_ClockAdvance(clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+    
     call ESMF_GridCompGet(gridComp, name=name, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
