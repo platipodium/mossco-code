@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'constant_netcdf.yaml'
+     filename = 'constant_fabm0d_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
@@ -347,7 +347,7 @@ fid.write('''
     character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
     integer                  :: itemCount
     
-    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName, itemName
+    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
@@ -486,7 +486,7 @@ fid.write('''
                  call ESMF_StateAddReplace(impState,(/field/), rc=rc)        
                  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
               else
-                write(message,'(A)') 'Did not copy non-field item'//trim(itemName)
+                write(message,'(A)') 'Did not copy non-field item'//trim(itemNameList(k))
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
               endif   
             enddo 
@@ -731,7 +731,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'erosed'     : ['liberosed'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm0d'     : ['libmossco_fabm0d'],
-        'fabmsediment' : ['libsediment'],
+        'fabm_sediment' : ['libsediment', 'libmossco_sediment', 'libsolver'],
         'simplewave' : ['libmossco_simplewave'],
         'netcdf'      : ['libmossco_netcdf'],
         'empty'      : ['libempty'],

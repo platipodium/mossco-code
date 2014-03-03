@@ -1,0 +1,9 @@
+coupling:
+  - components: 
+     - constant
+     - fabm0d
+    interval: 17 h
+  - components: 
+     - fabm0d
+     - netcdf
+    interval: 48 h
