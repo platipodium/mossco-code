@@ -366,7 +366,7 @@ module netcdf_component
     if (dimlens(udimid)==0) then
       ncStatus = nf90_put_var(ncid, varid, (/seconds/), start=(/1/), count=(/1/))
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
-      write(*,*) ncid, varid, seconds
+      !write(*,*) ncid, varid, seconds
     else
       ncStatus = nf90_get_var(ncid, varid, time, start=(/dimlens(udimid)/))
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
@@ -381,7 +381,9 @@ module netcdf_component
       endif
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     endif
-        
+
+    ncStatus = nf90_inquire_dimension(ncid, dimids(udimid), len=dimlens(udimid) )
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     
     call ESMF_FieldGet(field, rank=rank, name=name, rc=rc)
     if (rank == 3) then
@@ -410,9 +412,9 @@ module netcdf_component
     ncStatus = nf90_inquire_variable(ncid, varid, ndims=nDims, natts=nAtts, dimids=dimids)
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
    
-    write(*,*) trim(name), rank, size(farrayPtr3), farrayPtr3
-   
-    ncStatus = nf90_put_var(ncid, varid, farrayPtr3, start=(/1,1,1,dimlens(1)/), count=(/dimlens(dimids(1:3)),1/))
+    !write(*,*) trim(name), rank, ubound(farrayPtr3)
+
+    ncStatus = nf90_put_var(ncid, varid, farrayPtr3, start=(/1,1,1,dimlens(1)/))
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
     ncStatus = nf90_close(ncid)
