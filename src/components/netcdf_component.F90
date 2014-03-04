@@ -51,21 +51,37 @@ module netcdf_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timestring, message
-    type(ESMF_Time)   :: currTime
-    type(ESMF_TimeInterval) :: timeInterval
+    character(len=ESMF_MAXSTR) :: timestring, message, name
+    type(ESMF_Time)            :: currTime, stopTime, startTime
+    type(ESMF_TimeInterval)    :: timeInterval, timeStep
+    integer(ESMF_KIND_I4)      :: petCount, localPet
+    integer(ESMF_KIND_I8)      :: advanceCount
+    type(ESMF_Clock)           :: clock
 
-    call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
+    clock = ESMF_ClockCreate(parentClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ 
+    call ESMF_ClockGet(clock,startTime=startTime, currTime=currTime, &
+      stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    message = nf90_inq_libvers()
-    call ESMF_LogWrite('NetCDF component uses '//trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+     
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    write(message,'(A)') trim(timestring)//' netcdf_component initialized.'
+    message = trim(nf90_inq_libvers())
+    call ESMF_LogWrite(trim(name)//' uses NetCDF '//trim(message), ESMF_LOGMSG_INFO)
+
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     rc=ESMF_SUCCESS

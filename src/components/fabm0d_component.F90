@@ -210,8 +210,6 @@ module fabm0d_component
       ' steps of ',dt,' s to '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     
-    write(*,*) gotm_time_start, gotm_time_stop, gotm_time_min_n, gotm_time_max_n
-
     ! get import state
     if (forcing_from_coupler) then
       call ESMF_StateGet(importState, itemSearch='water_temperature', &
