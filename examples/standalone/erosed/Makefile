@@ -22,12 +22,13 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 .PHONY: libmossco_erosed exec
 
 all: exec
+exec: libmossco_erosed erosed
 
 libmossco_erosed:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_erosed
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-exec: libmossco_erosed delft_erosed_example.o
-	$(F90) -o erosed delft_erosed_example.o $(LDFLAGS)
+erosed: delft_erosed_example.o
+	$(F90) -o $@ $< $(LDFLAGS)
 	@echo "Created example binary erosed in  $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/erosed to run the example." > $(MOSSCO_BIN_PATH)/erosed.txt
 
