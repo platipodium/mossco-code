@@ -23,12 +23,12 @@ LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 .PHONY: libmossco_benthos exec
 
 all: exec
-exec: benthos
+exec: libmossco_benthos benthos
 
 libmossco_benthos:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-benthos: BioDriver.o libmossco_benthos
+benthos: BioDriver.o
 	$(F90) -o $@ $< $(LDFLAGS)
 	@echo "Created example $(MOSSCO_DIR)/examples/standalone/benthos/benthos" 
 
