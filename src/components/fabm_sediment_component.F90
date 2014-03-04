@@ -48,7 +48,6 @@ module fabm_sediment_component
   real(rk),dimension(:,:),pointer   :: fptr2d
  
   type(type_sed),save :: sed
-  type(ESMF_Alarm),save :: outputAlarm
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years
  
@@ -100,6 +99,7 @@ module fabm_sediment_component
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I8) :: tidx
+    type(ESMF_Alarm)      :: outputAlarm
   
     character(len=ESMF_MAXSTR) :: timestring, name, message
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
@@ -143,8 +143,8 @@ module fabm_sediment_component
     !! also from namelist, the output timesteop is read and
     !! used to create an alarm
     call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
-!    outputAlarm = ESMF_AlarmCreate(clock,ringTime=startTime+alarmInterval, &
-!      name=trim(name)//' outputAlarm', ringInterval=alarmInterval,rc=rc)
+    outputAlarm = ESMF_AlarmCreate(clock,ringTime=startTime+alarmInterval, &
+      name='outputAlarm', ringInterval=alarmInterval,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! The grid specification should also go to outside this routine, and update the grid of
@@ -178,8 +178,12 @@ module fabm_sediment_component
     call sed%get_all_export_states()
 
     !> run for some years into quasi-steady-state
-    if (presimulation_years.gt.0) &
+    if (presimulation_years.gt.0) then 
       write(0,*) '  postinit run sediment model on initial profiles for ',presimulation_years,' years'
+      write(message,'(A,I3,A)') trim(name)//' runs ', presimulation_years, ' spinup years'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    endif
+    
     dt=3600.0_rk
     sed%bdys   => bdys
     sed%fluxes => fluxes
@@ -283,6 +287,7 @@ module fabm_sediment_component
     integer           :: fieldcount
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: string
+    type(ESMF_Alarm)           :: outputAlarm
  
     character(len=ESMF_MAXSTR) :: timestring, name, message
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
@@ -329,31 +334,32 @@ module fabm_sediment_component
 
     sed%bdys   => bdys
     sed%fluxes => fluxes
-    call ode_solver(sed,dt,ode_method)
 
-   ! reset concentrations to mininum_value
-     do n=1,sed%nvar
-       do k=1,sed%grid%knum
-         if (sed%conc(1,1,k,n) .lt. sed%model%info%state_variables(n)%minimum) then
+    call ESMF_ClockGetAlarm(clock, 'outputAlarm', outputAlarm, rc=rc)
+    
+    do while (.not.ESMF_ClockIsStopTime(clock))
+      call ode_solver(sed,dt,ode_method)
+
+      ! reset concentrations to mininum_value
+      do n=1,sed%nvar
+        do k=1,sed%grid%knum
+          if (sed%conc(1,1,k,n) .lt. sed%model%info%state_variables(n)%minimum) then
             sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%info%state_variables(n)%minimum
-         end if
-       end do
-     end do
+          end if
+        end do
+      end do
 
-     !@TODO write fluxes into export State
-
-    !@ TODO remove output and implement throughh ESMF in NetCDF:
-    !! Check if the output alarm is ringing, if so, quiet it and 
-    !! get the current advance count (formerly t) from clock
-#if 0
-    if (ESMF_AlarmIsRinging(outputAlarm)) then
-      call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-      call ESMF_ClockGet(clock,advanceCount=t)
-      write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
-      write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
-      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
-      write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
-      do k=1,_KNUM_
+      !@ TODO remove output and implement throughh ESMF in NetCDF:
+      !! Check if the output alarm is ringing, if so, quiet it and 
+      !! get the current advance count (formerly t) from clock
+      if (ESMF_AlarmIsRinging(outputAlarm)) then
+        call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
+        call ESMF_ClockGet(clock,advanceCount=t)
+        write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
+        write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
+        call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+        write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
+        do k=1,_KNUM_
           write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3,A,E15.4E3)',advance='no') &
             t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k),  &
             ' ',sed%porosity(1,1,k)
@@ -365,10 +371,13 @@ module fabm_sediment_component
              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
           end do
           write(funit,*)
-      end do
-    endif
-#endif
+        end do
+      endif
 
+      call ESMF_ClockAdvance(clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+   
     ! write back fluxes into export State
     
     do n=1,size(sed%export_states)
@@ -390,10 +399,6 @@ module fabm_sediment_component
  
     if (allocated(fieldList)) deallocate(fieldlist)
     
-    do while (.not.ESMF_ClockIsStopTime(clock))
-      call ESMF_ClockAdvance(clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    enddo
     
     call ESMF_GridCompGet(gridComp, name=name, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -423,7 +428,7 @@ module fabm_sediment_component
     if (allocated(bdys)) deallocate(bdys)
     if (allocated(fluxes)) deallocate(fluxes)
 
-    call ESMF_AlarmDestroy(outputAlarm,rc=rc)
+    !call ESMF_AlarmDestroy(outputAlarm,rc=rc)
     !@TODO destroy all items in import and export state
 
   end subroutine Finalize

@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'constant_fabm0d_netcdf.yaml'
+     filename = 'constant_fabm_sediment.yaml'
      #filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
@@ -282,7 +282,7 @@ fid.write('''
     !! the variable time
     call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=alarmCount,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    allocate(alarmList(alarmCount))
+    if (.not.allocated(alarmList)) allocate(alarmList(alarmCount))
     
     call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -334,7 +334,7 @@ fid.write('''
     integer(ESMF_KIND_I4)   :: alarmCount, petCount, localPet
     integer(ESMF_KIND_I4)   :: numGridComp, numCplComp, hours
     
-    type(ESMF_Alarm), dimension(:), allocatable, save :: alarmList
+    type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     type(ESMF_Alarm)        :: childAlarm
     type(ESMF_Clock)        :: childClock, clock
     logical                 :: clockIsPresent
@@ -347,7 +347,9 @@ fid.write('''
     character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
     integer                  :: itemCount
     
-    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName
+    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName   
+    
+    if (.not.allocated(alarmList)) allocate(alarmList(20))
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
@@ -374,8 +376,8 @@ fid.write('''
 
     numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
     
-   call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-     alarmCount=alarmCount, rc=rc)
+    call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
+      alarmCount=alarmCount, rc=rc)
     
     if (allocated(alarmList)) then
       if (size(alarmList)<alarmCount) then
@@ -424,6 +426,11 @@ fid.write('''
           alarmCount=alarmCount, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+        if (alarmCount>ubound(alarmList,1)) then
+          deallocate(alarmList)
+          allocate(alarmList(alarmCount))
+        endif
+        
         if (alarmCount==0) then
           call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
           timeInterval=stopTime-currTime
@@ -435,6 +442,9 @@ fid.write('''
           do j=1,alarmCount        
             call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, rc=rc)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+            !! Skip this alarm if it is not a cplAlarm
+            if (index(trim(alarmName),'cplAlarm') < 1) cycle
   
             !! Skip this alarm if it is inbound of this component
             if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName(1:index(compName,'Comp')-1))) cycle
