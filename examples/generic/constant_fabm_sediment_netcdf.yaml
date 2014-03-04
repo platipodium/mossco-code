@@ -1,0 +1,9 @@
+coupling:
+  - components: 
+     - constant
+     - fabm_sediment
+    interval: 17 h
+  - components: 
+     - fabm_sediment
+     - netcdf
+    interval: 48 h
