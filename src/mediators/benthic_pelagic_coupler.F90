@@ -15,7 +15,7 @@ module benthic_pelagic_coupler
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2,val1_f2,val2_f2
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux,DETPflux,DETCflux,DINflux,DIPflux
-
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux,fDETCflux,omexDETPflux
   public SetServices
 
   contains
@@ -96,17 +96,9 @@ module benthic_pelagic_coupler
     character (len=ESMF_MAXSTR) :: timestring
     character (len=ESMF_MAXSTR) :: message
     type(ESMF_Field)            :: field
-    real(ESMF_KIND_R8),parameter    :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
-    real(ESMF_KIND_R8)    :: CN_det=106.0_rk/16.0_rk
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
     real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
-    real(ESMF_KIND_R8)    :: fac_fdet
-    real(ESMF_KIND_R8)    :: fac_sdet
-    !> fdet + sdet = CN_det*det
-    !> NC_fdet*fdet + NC_sdet*sdet = det
-    !> fdet = fac_fdet*det
-    !> sdet = fac_sdet*det
 
       !   DIN flux:
       call ESMF_StateGet(importState,trim('mole_concentration_of_nitrate_upward_flux'),field,rc=rc)
@@ -132,34 +124,27 @@ module benthic_pelagic_coupler
       end if
 
       !   Det flux:
-      call mossco_state_get(exportState,(/ &
-            'detritus              ', &
-            'Detritus_Nitrogen_detN'/),DETN,rc=rc)
-      call mossco_state_get(exportState,(/ &
-            'detritus_z_velocity              ', &
-            'Detritus_Nitrogen_detN_z_velocity'/),vDETN,rc=rc)
-      DETNflux(1,1) = sinking_factor * DETN(1,1,1) * vDETN(1,1,1)
+      call mossco_state_get(importState,(/'slow_detritus_C_upward_flux'/),SDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'fast_detritus_C_upward_flux'/),FDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus-P_upward_flux'/),omexDETPflux,rc=rc)
 
-      !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
-      call mossco_state_get(exportState,(/'Detritus_Carbon_detC'/),DETC,rc=rc)
+      call mossco_state_get(exportState,(/ &
+            'detritus_upward_flux              ', &
+            'Detritus_Nitrogen_detN_upward_flux'/),DETNflux,rc=rc)
+      DETNflux(1,1) = NC_fdet*FDETCflux(1,1) + NC_sdet*SDETCflux(1,1)
+
+      !> search for Detritus-C
+      call mossco_state_get(exportState,(/'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
       if (rc == 0) then
-         call mossco_state_get(exportState,(/ &
-              'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
-         DETCflux(1,1) = sinking_factor * DETC(1,1,1) * vDETN(1,1,1)
+         DETCflux(1,1) = FDETCflux(1,1) + SDETCflux(1,1)
       end if
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
-      call mossco_state_get(exportState,(/'Detritus_Phosphorus_detP'/),DETP,rc=rc)
+      call mossco_state_get(exportState,(/'Detritus_Phosphorus_detP_upward_flux'/),DETPflux,rc=rc)
       if (rc == 0) then
-        call mossco_state_get(exportState,(/ &
-              'Detritus_Phosphorus_detP_z_velocity'/),vDETP,rc=rc)
-        DETPflux(1,1) = sinking_factor * DETP(1,1,1) * vDETP(1,1,1)
-      else
-        if (.not.(associated(DETPflux))) allocate(DETPflux(1,1))
-        DETPflux(1,1) = 1.0d0/16.0d0 * DETNflux(1,1)
+        DETPflux(1,1) = omexDETPflux(1,1)
       end if
-
 
   end subroutine Run
 
