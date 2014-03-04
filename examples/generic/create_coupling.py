@@ -415,7 +415,7 @@ fid.write('''
         call ESMF_ClockGet(childClock,currTime=time, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        if (time>currTime) exit
+        if (time>currTime) cycle
 
         !! Find all the alarms in this child and call all the couplers that
         !! have ringing alarms at this stage
@@ -425,7 +425,7 @@ fid.write('''
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
         if (alarmCount==0) then
-          call ESMF_LogWrite('No alarm not found in '//trim(compName), ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
           timeInterval=stopTime-currTime
         else                 
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
@@ -437,10 +437,10 @@ fid.write('''
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   
             !! Skip this alarm if it is inbound of this component
-            if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName(1:index(compName,'Comp')-1))) exit
+            if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName(1:index(compName,'Comp')-1))) cycle
             
             !! Skip this alarm if it is not ringing now
-            if (ringTime > currTime) exit
+            if (ringTime > currTime) cycle
   
             call ESMF_TimeGet(ringTime,timeStringISOFrac=timeString)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -486,7 +486,7 @@ fid.write('''
                  call ESMF_StateAddReplace(impState,(/field/), rc=rc)        
                  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
               else
-                write(message,'(A)') 'Did not copy non-field item'//trim(itemNameList(k))
+                write(message,'(A)') 'Did not copy non-field item '//trim(itemNameList(k))
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
               endif   
             enddo 
@@ -513,7 +513,7 @@ fid.write('''
         call ESMF_ClockGet(childClock,currTime=time, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        if (time>currTime) exit
+        if (time>currTime) cycle
         
         !! Run here all components that have stopped at currTime
         !! Find the child's alarm list, get the interval to the next ringing alarm
@@ -550,9 +550,6 @@ fid.write('''
         call ESMF_ClockSet(childClock, stopTime=ringTime, rc=rc) 
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        !call ESMF_ClockSet(clock, stopTime=ringTime, rc=rc) 
-        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
         call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
@@ -577,12 +574,15 @@ fid.write('''
 
       !! Now that all child components have been started, find out the minimum time
       !! to the next coupling and use this as a time step for my own clock Advance
+      call ESMF_GridCompGet(gridComp, name=name, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
+      
       call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
         alarmCount=alarmCount, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       if (alarmCount==0) then
-        call ESMF_LogWrite('No alarm not found in '//trim(compName), ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('No alarm not found in '//trim(name), ESMF_LOGMSG_WARNING)
         timeInterval=stopTime-currTime
       else                 
         call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
