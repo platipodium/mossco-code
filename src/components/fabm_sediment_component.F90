@@ -336,7 +336,7 @@ module fabm_sediment_component
     sed%fluxes => fluxes
 
     call ESMF_ClockGetAlarm(clock, 'outputAlarm', outputAlarm, rc=rc)
-    
+    write(*,*) 'run called'
     do while (.not.ESMF_ClockIsStopTime(clock))
       call ode_solver(sed,dt,ode_method)
 
@@ -349,12 +349,13 @@ module fabm_sediment_component
         end do
       end do
 
+      call ESMF_ClockGet(clock, advanceCount=t, rc=rc)
+      write(*,*) t,dt
       !@ TODO remove output and implement throughh ESMF in NetCDF:
       !! Check if the output alarm is ringing, if so, quiet it and 
       !! get the current advance count (formerly t) from clock
       if (ESMF_AlarmIsRinging(outputAlarm)) then
         call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-        call ESMF_ClockGet(clock,advanceCount=t)
         write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
         write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
         call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
