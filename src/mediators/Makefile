@@ -21,7 +21,8 @@ ifeq ($(MOSSCO_ESMF),true)
 TARGETS += libaocoupler
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
-TARGETS += libpelagicbenthiccoupler
+TARGETS += pelagicbenthiccoupler
+TARGETS += benthicpelagiccoupler
 endif
 ifeq ($(MOSSCO_GOTM),true)
 TARGETS += libverticalmeancoupler
@@ -38,7 +39,8 @@ libaocoupler: prefix $(MOSSCO_LIBRARY_PATH)/libaocoupler.a
 liboceansedimentcoupler: prefix $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
 libverticalmeancoupler: prefix $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 libsurfacescoupler: prefix $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o)
-libpelagicbenthiccoupler: prefix  $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
+pelagicbenthiccoupler: prefix  $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
+benthicpelagiccoupler: prefix  $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(benthic_pelagic_coupler.o)
 
 $(MOSSCO_LIBRARY_PATH)/libaocoupler.a: remtc_atmos_ocean_coupler.o 
 	$(AR) cruvs $@ remtc_atmos_ocean_coupler.o
@@ -51,8 +53,8 @@ $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a: vertical_mean_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o): surfaces_coupler.o
 
-$(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o
-	$(AR) cruvs $@ $<
+$(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o benthic_pelagic_coupler.o
+	$(AR) cruvs $@ $?
 
 subdirs: 
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done 
