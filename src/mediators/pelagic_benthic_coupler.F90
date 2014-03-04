@@ -280,7 +280,7 @@ module pelagic_benthic_coupler
      
     call ESMF_LogWrite("pelagic-benthic coupler finalizing", ESMF_LOGMSG_INFO)
 
-    call ESMF_ArraySpecDestroy(pelagic_bdy_array, rc)
+    !call ESMF_ArraySpecDestroy(pelagic_bdy_array, rc)
     call ESMF_GridDestroy(pelagic_bdy_grid, rc=rc)
 
     if (associated(DETNflux)) deallocate(DETNflux)
