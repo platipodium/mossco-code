@@ -35,7 +35,7 @@ endif
 endif
 
 ifeq ($(MOSSCO_GETM),true)
-TARGETS += libgetm
+TARGETS += libmossco_getm_component
 endif
 
 .PHONY: $(TARGETS) subdirs utilities
@@ -63,9 +63,6 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
 
-libgetm: prefix libgetm_external \
-	$(MOSSCO_LIBRARY_PATH)/libgetm.a(getm_component.o)
-
 # Why these next two lines???
 #libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 #libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
@@ -79,6 +76,12 @@ libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_compo
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
+
+libmossco_getm_component: libmossco_getm_driver \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
+
+libmossco_getm_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 # A really, really dirty hack for now...
 # ...and automatic rm of .o also does not work because of this.

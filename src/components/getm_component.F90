@@ -24,6 +24,7 @@
 !
 ! !USES:
    use esmf
+   use getm_driver
 
    IMPLICIT NONE
    private
@@ -292,35 +293,8 @@
 !  userRc to ESMF_GridCompRun().
 !
 ! !USES:
-   use integration
-   use initialise,only: runtype
-   use time,     only: update_time,timestep
-   use domain,   only: kmax
-   use meteo,    only: do_meteo,tausx,tausy,airp,fwf_method,evap,precip
-   use m2d,      only: integrate_2d
-   use variables_2d, only: fwf,fwf_int
-#ifndef NO_3D
-   use m3d,      only: integrate_3d,M
-#ifndef NO_BAROCLINIC
-   use variables_3d, only: T
-#endif
-   use rivers,   only: do_rivers
-#ifdef _FABM_
-   use getm_fabm, only: fabm_calc,do_getm_fabm
-#endif
-#ifdef GETM_BIO
-   use bio, only: bio_calc
-   use getm_bio, only: do_getm_bio
-#endif
-#endif
-#ifdef SPM
-   use suspended_matter, only: spm_calc,do_spm
-#endif
-   use input,    only: do_input
-   use output,   only: do_output,meanout
-#ifdef TEST_NESTING
-   use nesting,   only: nesting_file
-#endif
+   use initialise ,only: runtype
+   use integration,only: MinN
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -340,10 +314,6 @@
    integer(ESMF_KIND_I8)   :: loop
    integer                 :: localrc
    integer                 :: n
-   logical                 :: do_3d
-   integer                 :: progress=100
-   character(8)            :: d_
-   character(10)           :: t_
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -379,77 +349,7 @@
 
 !     This is where the model specific computation goes.
       n = int(loop,kind=kind(MinN))+MinN
-
-      if (progress .gt. 0 .and. mod(n,progress) .eq. 0) then
-         call date_and_time(date=d_,time=t_)
-         LEVEL1 t_(1:2),':',t_(3:4),':',t_(5:10),' n=',n
-      end if
-
-#ifndef NO_3D
-      do_3d = (runtype .ge. 2 .and. mod(n,M) .eq. 0)
-#endif
-
-!     INPUT (for the time being)
-      call do_input(n)
-
-      if(runtype .le. 2) then
-         call do_meteo(n)
-#ifndef NO_3D
-#ifndef NO_BAROCLINIC
-      else
-         call do_meteo(n,T(:,:,kmax))
-#endif
-#endif
-      end if
-
-      if (fwf_method .ge. 1) then
-         fwf = evap+precip
-#ifndef NO_3D
-         fwf_int = fwf_int+timestep*fwf
-#endif
-      end if
-
-#ifndef NO_BAROTROPIC
-      call integrate_2d(runtype,n,tausx,tausy,airp)
-#endif
-#ifndef NO_3D
-      call do_rivers(do_3d)
-      if (do_3d) then
-         call integrate_3d(runtype,n)
-#ifdef SPM
-         if (spm_calc) call do_spm()
-#endif
-#ifdef _FABM_
-         if (fabm_calc) call do_getm_fabm(M*timestep)
-#endif
-#ifdef GETM_BIO
-         if (bio_calc) call do_getm_bio(M*timestep)
-#endif
-#ifndef NO_3D
-         if (fwf_method .ge. 1) then
-            fwf_int = 0.0d0
-         end if
-#endif
-      end if
-#endif
-
-#ifdef TEST_NESTING
-      if (mod(n,80) .eq. 0) then
-         call nesting_file(WRITING)
-      end if
-#endif
-      call update_time(n)
-
-!     OUTPUT (for the time being)
-#ifndef NO_3D
-      if(meanout .ge. 0) then
-         call calc_mean_fields(n,meanout)
-      end if
-#endif
-      call do_output(runtype,n,timestep)
-#ifdef DIAGNOSE
-      call diagnose(n,MaxN,runtype)
-#endif
+      call time_step(runtype,n)
 
       call ESMF_ClockAdvance(getmClock)
       call ESMF_ClockGet(getmClock,currtime=getmTime,advanceCount=loop)

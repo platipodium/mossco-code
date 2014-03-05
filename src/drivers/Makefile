@@ -25,6 +25,10 @@ TARGETS+=libmossco_gotmfabm
 endif
 endif
 
+ifeq ($MOSSCO_GETM),true)
+TARGETS+=libmossco_getm_driver
+endif
+
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += libmossco_erosed
 INCLUDES += -I$(EROSED_DIR)/include 
@@ -41,9 +45,15 @@ all: $(TARGETS)
 libmossco_sediment: prefix libmossco_util libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 libmossco_gotmfabm: prefix libmossco_util libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
-
 libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
+
+libmossco_getm_driver: prefix libgetm_external $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
+# A really, really dirty hack for now...
+# ...and automatic rm of .o also does not work because of this.
+getm_driver.o: getm_driver.F90
+	@echo "Compiling $<"
+	$(F90) -I$(GETM_INCLUDE_PATH) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 # Benthos section
 libmossco_benthos: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
