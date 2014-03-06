@@ -5,13 +5,14 @@ module toplevel_component
 
   private
 
-  public topCmp_SetServices
+  public SetServices
 
+  type(ESMF_Clock)    :: topClock
   type(ESMF_GridComp) :: getmCmp
 
   contains
 
-  subroutine topCmp_SetServices(topCmp,rc)
+  subroutine SetServices(topCmp,rc)
 
     IMPLICIT NONE
 
@@ -25,7 +26,7 @@ module toplevel_component
     call ESMF_GridCompSetEntryPoint(topCmp,ESMF_METHOD_FINALIZE,       &
                                     userRoutine=topCmp_finalize,rc=rc)
 
-  end subroutine topCmp_SetServices
+  end subroutine SetServices
 
   subroutine topCmp_init(topCmp,iState,eState,pClock,rc)
 
@@ -37,23 +38,39 @@ module toplevel_component
     type(ESMF_Clock)    :: pClock
     integer,intent(out) :: rc
 
-    type(ESMF_Clock)        :: topClock,getmClock
+    type(ESMF_Clock)        :: getmClock
+    type(ESMF_Time)         :: startTime,stopTime
     type(ESMF_TimeInterval) :: runDuration
     logical                 :: ClockIsPresent
 
-!   Create child components
-    getmCmp = ESMF_GridCompCreate(name="getmCmp")
-    call ESMF_GridCompSetServices(getmCmp,getmCmp_SetServices)
-    call ESMF_GridCompInitialize(getmCmp)
-
-!   Clock
+!   Check whether application driver called ESMF_GridCompCreate() with clock.
     call ESMF_GridCompGet(topCmp,clockIsPresent=ClockIsPresent)
-    if (.not. ClockIsPresent) then
-      call ESMF_GridCompGet(getmCmp,clock=getmClock)
-      topClock = ESMF_ClockCreate(getmClock)
-      call ESMF_ClockGet(topClock,runDuration=runDuration)
-      call ESMF_ClockSet(topClock,timeStep=runDuration)
+
+!   Create child components
+    if (ClockIsPresent) then
+      call ESMF_GridCompGet(topCmp,clock=topClock)
+      getmClock = ESMF_ClockCreate(topClock)
+      call ESMF_ClockSet(getmClock,name="getmClock")
+      getmCmp = ESMF_GridCompCreate(name="getmCmp",clock=getmClock)
+    else
+      topClock = ESMF_ClockCreate(pClock)
+      call ESMF_ClockSet(topClock,name="topClock")
       call ESMF_GridCompSet(topCmp,clock=topClock)
+      getmCmp = ESMF_GridCompCreate(name="getmCmp")
+    end if
+    call ESMF_GridCompSetServices(getmCmp,getmCmp_SetServices)
+    call ESMF_GridCompInitialize(getmCmp,clock=topClock)
+
+    if (.not. ClockIsPresent) then
+      call ESMF_GridCompGet(getmCmp,clockIsPresent=ClockIsPresent)
+      if (ClockIsPresent) then
+!       adapt clock
+        call ESMF_GridCompGet(getmCmp,clock=getmClock)
+        call ESMF_ClockGet(getmClock,startTime=startTime, &
+                           stopTime=stopTime,runDuration=runDuration)
+        call ESMF_ClockSet(topClock,startTime=startTime, &
+                           stopTime=stopTime,timeStep=runDuration)
+      end if
     end if
 
     rc = ESMF_SUCCESS
@@ -69,12 +86,10 @@ module toplevel_component
     type(ESMF_Clock)    :: pClock
     integer,intent(out) :: rc
 
-    type(ESMF_Clock)        :: topClock
     type(ESMF_Time)         :: topTime,NextTime
     type(ESMF_TimeInterval) :: topTimeStep
     integer                 :: localrc
 
-    call ESMF_GridCompGet(topCmp,clock=topClock)
     call ESMF_ClockGet(topClock,timeStep=topTimeStep,currtime=topTime)
 
 !   use pClock to do determine time of calling routine
@@ -111,10 +126,6 @@ module toplevel_component
     type(ESMF_State)    :: iState,eState
     type(ESMF_Clock)    :: pClock
     integer,intent(out) :: rc
-
-    type(ESMF_Clock) :: topClock
-
-    call ESMF_GridCompGet(topCmp,clock=topClock)
 
 !   Finalize of child components
     call ESMF_GridCompFinalize(getmCmp,clock=topClock)

@@ -197,7 +197,7 @@
    integer                 :: getmRunTimeStepCount
    character(len=8)        :: datestr
    character(len=10)       :: timestr
-   character(len=19)       :: TimeStrISOFrac
+   character(len=19)       :: TimeStrISOFrac,start_external,stop_external
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -225,11 +225,12 @@
       call ESMF_GridCompGet(getmCmp,clock=getmClock)
       call ESMF_ClockGet(getmClock, &
                          startTime=getmStartTime,stopTime=getmStopTime)
-      call ESMF_TimeGet(getmStartTime,timeStringISOFrac=start)
-      call ESMF_TimeGet(getmStopTime,timeStringISOFrac=stop)
+      call ESMF_TimeGet(getmStartTime,timeStringISOFrac=start_external)
+      call ESMF_TimeGet(getmStopTime,timeStringISOFrac=stop_external)
 
       call preinit_model(datestr,timestr)
-      call init_time(MinN,MaxN,start_external=start,stop_external=stop)
+      call init_time(MinN,MaxN,start_external=start_external, &
+                     stop_external=stop_external)
       call postinit_model()
 
 !     use internal GETM time step
@@ -338,6 +339,7 @@
                          line=__LINE__,file=__FILE__,method='getmCmp_run()')
       call ESMF_ClockGet(getmClock,stopTime=NextTime)
    end if
+
 
    do while (getmTime + 0.5d0*getmTimeStep <= NextTime)
 

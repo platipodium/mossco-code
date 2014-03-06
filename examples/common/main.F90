@@ -9,18 +9,19 @@ program main
 
    character(LEN=8)          :: datestr
    type(ESMF_Time)           :: time1, time2, startTime, stopTime
-   type(ESMF_TimeInterval)   :: timeStepIntv
+   type(ESMF_TimeInterval)   :: runDuration
    integer                   :: localrc, rc, petCount,nmlunit=2013
-   double precision          :: seconds,timestep=360.0
+   double precision          :: seconds
    character(len=40)         :: timestring
    character(len=40)         :: start='2000-01-01 00:00:00'
    character(len=40)         :: stop='2000-01-02 00:00:00'
    character(len=40)         :: title='main'
    type(ESMF_GridComp)       :: topComp
    type(ESMF_State)          :: topState ! for import and export, empty
-   type(ESMF_Clock)          :: clock
+   type(ESMF_Clock)          :: mainClock,topClock
    type(ESMF_VM)             :: vm
    integer                   :: iostat
+   logical                   :: ClockIsPresent
 
    namelist /mossco_run/ title,start,stop
    
@@ -51,15 +52,12 @@ program main
    call ESMF_LogWrite("Program starts at wall clock "//timestring, ESMF_LOGMSG_INFO)
   
 ! Create and initialize a clock from mossco_run.nml
-
-   call ESMF_TimeIntervalSet(timeStepIntv, s_r8=real(timestep,kind=ESMF_KIND_R8), rc=localrc)
-   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
-
    call timeString2ESMF_Time(start,startTime)
    call timeString2ESMF_Time(stop,stopTime)
+   runDuration = stopTime - startTime
 
-   clock = ESMF_ClockCreate(timeStep=timeStepIntv, startTime=startTime, stopTime=stopTime, & 
-     name="Parent clock", rc=localrc)
+   mainClock = ESMF_ClockCreate(timeStep=runDuration, startTime=startTime, stopTime=stopTime, & 
+     name="mainClock", rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
    call ESMF_TimeGet(startTime,timeStringISOFrac=timestring)
@@ -68,8 +66,15 @@ program main
    call ESMF_LogWrite("Simulation ends at "//timestring, ESMF_LOGMSG_INFO)
 
 ! Create toplevel component and call its setservices routines
-   topComp = ESMF_GridCompCreate(name="ESMF Toplevel Component", rc=localrc)
-   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   if (iostat .eq. 0) then
+      topClock = ESMF_ClockCreate(mainClock)
+      call ESMF_ClockSet(topClock,name="topClock")
+      topComp = ESMF_GridCompCreate(name="ESMF Toplevel Component",clock=topClock,rc=localrc)
+      if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   else
+      topComp = ESMF_GridCompCreate(name="ESMF Toplevel Component", rc=localrc)
+      if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+   end if
    
    call ESMF_GridCompSetServices(topComp,SetServices,rc=localrc)
 
@@ -78,14 +83,26 @@ program main
    topState = ESMF_StateCreate(name="topState",rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_GridCompInitialize(topComp,importState=topState,exportState=topState,clock=clock,rc=localrc)
+   call ESMF_GridCompInitialize(topComp,importState=topState,exportState=topState,clock=mainClock,rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
-   call ESMF_GridCompRun(topComp,importState=topState,exportState=topState,clock=clock,rc=localrc)
+   if (iostat .ne. 0) then
+      call ESMF_GridCompGet(topComp,clockIsPresent=ClockIsPresent)
+      if (ClockIsPresent) then
+!       adapt clock
+        call ESMF_GridCompGet(topComp,clock=topClock)
+        call ESMF_ClockGet(topClock,startTime=startTime, &
+                           stopTime=stopTime,runDuration=runDuration)
+        call ESMF_ClockSet(mainClock,startTime=startTime, &
+                           stopTime=stopTime,timeStep=runDuration)
+      end if
+    end if
+
+   call ESMF_GridCompRun(topComp,importState=topState,exportState=topState,clock=mainClock,rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
 ! Destroy toplevel component and clean up
-   call ESMF_GridCompFinalize(topComp,importState=topState,exportState=topState,clock=clock,rc=localrc)
+   call ESMF_GridCompFinalize(topComp,importState=topState,exportState=topState,clock=mainClock,rc=localrc)
    call ESMF_GridCompDestroy(topComp,rc=localrc)
    call ESMF_LogWrite("All ESMF components destroyed", ESMF_LOGMSG_INFO)
 
@@ -101,7 +118,7 @@ program main
 
    call ESMF_StateDestroy(topState,rc=rc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   call ESMF_ClockDestroy(clock,rc=rc)
+   call ESMF_ClockDestroy(mainClock,rc=rc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    call ESMF_Finalize(rc=localrc,endflag=ESMF_END_NORMAL)
