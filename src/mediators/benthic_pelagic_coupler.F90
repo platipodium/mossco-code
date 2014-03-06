@@ -67,6 +67,10 @@ module benthic_pelagic_coupler
     !> @todo: check in exportState for required quantities and create those fields
     call mossco_create_upward_flux_fields(importState, (/&
            "nutrients                              ", &
+           "DIN                                    ", &
+           "DIP                                    ", &
+           "detN                                   ", &
+           "detP                                   ", &
            "Dissolved_Inorganic_Nitrogen_DIN_nutN  ", &
            "Dissolved_Inorganic_Phosphorus_DIP_nutP", &
            "detritus                               ", &
@@ -111,11 +115,13 @@ module benthic_pelagic_coupler
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(exportState,(/ &
               'nutrients_upward_flux                            ', &
+              'DIN_upward_flux                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux'/),DINflux,rc=rc)
       DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
 
       !   DIP flux:
       call mossco_state_get(exportState,(/ &
+              'DIP_upward_flux                                    ', &
               'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux'/),DIPflux,rc=rc)
       if (rc == 0)  then
         call mossco_state_get(importState,(/ &
@@ -130,18 +136,22 @@ module benthic_pelagic_coupler
 
       call mossco_state_get(exportState,(/ &
             'detritus_upward_flux              ', &
+            'detN_upward_flux                  ', &
             'Detritus_Nitrogen_detN_upward_flux'/),DETNflux,rc=rc)
       DETNflux(1,1) = NC_fdet*FDETCflux(1,1) + NC_sdet*SDETCflux(1,1)
 
       !> search for Detritus-C
-      call mossco_state_get(exportState,(/'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
+      call mossco_state_get(exportState,(/ &
+         'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
       if (rc == 0) then
          DETCflux(1,1) = FDETCflux(1,1) + SDETCflux(1,1)
       end if
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
-      call mossco_state_get(exportState,(/'Detritus_Phosphorus_detP_upward_flux'/),DETPflux,rc=rc)
+      call mossco_state_get(exportState,(/ &
+          'detP_upward_flux                    ', &
+          'Detritus_Phosphorus_detP_upward_flux'/),DETPflux,rc=rc)
       if (rc == 0) then
         DETPflux(1,1) = omexDETPflux(1,1)
       end if

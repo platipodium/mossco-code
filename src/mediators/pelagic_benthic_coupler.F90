@@ -199,9 +199,11 @@ module pelagic_benthic_coupler
       !   Det flux:
       call mossco_state_get(importState,(/ &
             'detritus              ', &
+            'detN                  ', &
             'Detritus_Nitrogen_detN'/),DETN,rc=rc)
       call mossco_state_get(importState,(/ &
             'detritus_z_velocity              ', &
+            'detN_z_velocity                  ', &
             'Detritus_Nitrogen_detN_z_velocity'/),vDETN,rc=rc)
       DETNflux(1,1) = sinking_factor * DETN(1,1,1) * vDETN(1,1,1)
 
@@ -224,9 +226,12 @@ module pelagic_benthic_coupler
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
-      call mossco_state_get(importState,(/'Detritus_Phosphorus_detP'/),DETP,rc=rc)
+      call mossco_state_get(importState,(/ &
+          'detP                    ', &
+          'Detritus_Phosphorus_detP'/),DETP,rc=rc)
       if (rc == 0) then
         call mossco_state_get(importState,(/ &
+              'detP_z_velocity                    ', &
               'Detritus_Phosphorus_detP_z_velocity'/),vDETP,rc=rc)
         DETPflux(1,1) = sinking_factor * DETP(1,1,1) * vDETP(1,1,1)
       else
@@ -243,6 +248,7 @@ module pelagic_benthic_coupler
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(importState,(/ &
               'nutrients                            ', &
+              'DIN                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN'/),DIN,rc=rc)
       call ESMF_StateGet(exportState,'mole_concentration_of_ammonium',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -256,7 +262,9 @@ module pelagic_benthic_coupler
       ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
 
       !> check for DIP, if present, take as is, if not calculate it N-based
-      call mossco_state_get(importState,(/'Dissolved_Inorganic_Phosphorus_DIP_nutP'/),DIP,rc=rc)
+      call mossco_state_get(importState,(/ &
+          'DIP                                    ', &
+          'Dissolved_Inorganic_Phosphorus_DIP_nutP'/),DIP,rc=rc)
       if (rc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))
         DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
