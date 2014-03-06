@@ -35,6 +35,7 @@
 !
 ! !PRIVATE DATA MEMBERS:
    private getmCmp_init,getmCmp_run,getmCmp_finalize
+   type(ESMF_Clock) :: getmClock
 !
 ! !REVISION HISTORY:
 !  Original author(s): Knut Klingbeil
@@ -190,7 +191,6 @@
 ! !REVISION HISTORY:
 !
 ! !LOCAL VARIABLES
-   type(ESMF_Clock)        :: getmClock
    type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
    type(ESMF_TimeInterval) :: getmTimeStep
    logical                 :: ClockIsPresent
@@ -311,7 +311,6 @@
 ! !REVISION HISTORY:
 !
 ! !LOCAL VARIABLES
-   type(ESMF_Clock)        :: getmClock
    type(ESMF_Time)         :: getmTime,NextTime
    type(ESMF_TimeInterval) :: getmTimeStep
    integer(ESMF_KIND_I8)   :: loop
@@ -404,7 +403,6 @@
 ! !REVISION HISTORY:
 !
 ! !LOCAL VARIABLES
-   type(ESMF_Clock) :: getmClock
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -414,8 +412,6 @@
    Ncall = Ncall+1
    write(debug,*) 'getmCmp_finalize() # ',Ncall
 #endif
-
-   call ESMF_GridCompGet(getmCmp,clock=getmClock)
 
 !  optional Finalize of child components
 !  Add whatever code here needed (deallocation,close files,flush results)
