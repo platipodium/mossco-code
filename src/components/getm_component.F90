@@ -174,7 +174,7 @@
 !  userRc to ESMF_GridCompInitialize().
 !
 ! !USES:
-   use time       ,only: start,timestep
+   use time       ,only: start,stop,timestep
    use initialise ,only: init_model
    use integration,only: MinN,MaxN
    IMPLICIT NONE
@@ -192,9 +192,7 @@
 ! !LOCAL VARIABLES
    type(ESMF_Clock)        :: getmClock
    type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
-   type(ESMF_Time)         :: startTime,stopTime
    type(ESMF_TimeInterval) :: getmTimeStep
-   type(ESMF_TimeInterval) :: TimeInterval
    logical                 :: ClockIsPresent
    integer                 :: getmRunTimeStepCount
    character(len=8)        :: datestr
@@ -217,50 +215,54 @@
 !  This is where the model specific setup code goes
 !  (allocation, open files, initial conditions).
    call date_and_time(datestr,timestr)
-   call init_model(datestr,timestr)
 
-!  reference time
-   TimeStrISOFrac=start(1:10)//"T"//start(12:19)
-   !call ESMF_TimeSet(refTime,timeStringISOFrac=TimeStrISOFrac)
-   call TimeStringISOFrac2ESMFtime(TimeStrISOFrac,getmRefTime)
-
-!  time step
-   call ESMF_TimeIntervalSet(getmTimeStep,s_r8=timestep)
-
-!  start time
-   getmStartTime = getmRefTime + (MinN-1)*getmTimeStep
-
-!  stop time
-   getmStopTime = getmRefTime + MaxN*getmTimeStep
-   getmRunTimeStepCount = MaxN - MinN + 1
-
-!  Clock
+!  Check whether toplevel component called ESMF_GridCompCreate() with clock. 
    call ESMF_GridCompGet(getmCmp,clockIsPresent=ClockIsPresent)
+
    if (ClockIsPresent) then
+
+!     Use startTime and stopTime from already initialised getmClock.
       call ESMF_GridCompGet(getmCmp,clock=getmClock)
-      call ESMF_ClockGet(getmClock,timeStep=TimeInterval,       &
-                         startTime=startTime,stopTime=stopTime)
-      if (getmTimeStep /= TimeInterval) then
-         call ESMF_LogWrite('TimeStep does not match',ESMF_LOGMSG_ERROR, &
-                            line=__LINE__,file=__FILE__,method='getmCmp_init()')
-         call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      end if
-      if (getmStartTime /= startTime) then
-         call ESMF_LogWrite('startTime does not match',ESMF_LOGMSG_ERROR, &
-                            line=__LINE__,file=__FILE__,method='getmCmp_init()')
-         call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      end if
-      if (getmStopTime /= stopTime) then
-         call ESMF_LogWrite('stopTime does not match',ESMF_LOGMSG_ERROR, &
-                            line=__LINE__,file=__FILE__,method='getmCmp_init()')
-         call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      end if
+      call ESMF_ClockGet(getmClock, &
+                         startTime=getmStartTime,stopTime=getmStopTime)
+      call ESMF_TimeGet(getmStartTime,timeStringISOFrac=start)
+      call ESMF_TimeGet(getmStopTime,timeStringISOFrac=stop)
+
+      call preinit_model(datestr,timestr)
+      call init_time(MinN,MaxN,start_external=start,stop_external=stop)
+      call postinit_model()
+
+!     use internal GETM time step
+      call ESMF_TimeIntervalSet(getmTimeStep,s_r8=timestep)
+      call ESMF_ClockSet(getmClock,timeStep=getmTimeStep)
+!     KK-TODO: does the getmCmp::clock point to getmClock???
+
    else
+
+      call init_model(datestr,timestr)
+
+!     reference time
+      TimeStrISOFrac=start(1:10)//"T"//start(12:19)
+      !call ESMF_TimeSet(refTime,timeStringISOFrac=TimeStrISOFrac)
+      call TimeStringISOFrac2ESMFtime(TimeStrISOFrac,getmRefTime)
+
+!     time step
+      call ESMF_TimeIntervalSet(getmTimeStep,s_r8=timestep)
+
+!     start time
+      getmStartTime = getmRefTime + (MinN-1)*getmTimeStep
+
+!     stop time
+      getmStopTime = getmRefTime + MaxN*getmTimeStep
+      getmRunTimeStepCount = MaxN - MinN + 1
+
+!     set up clock based on internal GETM specifications
       getmClock = ESMF_ClockCreate(getmTimeStep,getmStartTime,            &
                                    runTimeStepCount=getmRunTimeStepCount, &
                                    refTime=getmRefTime,                   &
                                    name='getmClock')
       call ESMF_GridCompSet(getmCmp,clock=getmClock)
+
    end if
 
 !  If the initial Export state needs to be filled, do it here.
