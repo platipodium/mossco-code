@@ -19,16 +19,15 @@ LIBS := -lmossco_simplewave -lmossco_util -lesmf $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec esmf_simplewave
+.PHONY: all exec simplewave
 
 all: exec
 
-exec: libmossco_simplewave esmf_simplewave
+exec: libmossco_simplewave simplewave
 
-esmf_simplewave: toplevel_component.o ../../common/main.o
+simplewave: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
-	@echo "Created example binary esmf_simplewave in $(PWD)" 
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_simplewave/ to run the example." > $(MOSSCO_BIN_PATH)/esmf_simplewave.txt
+	@echo "Created example binary $(PWD)/$@" 
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@

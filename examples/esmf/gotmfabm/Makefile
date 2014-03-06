@@ -36,8 +36,8 @@ all: exec
 exec: libmossco_util libsolver libmossco_gotmfabm libgotm gotmfabm
 
 gotmfabm: toplevel_component.o ../../common/main.o  
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
+	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@

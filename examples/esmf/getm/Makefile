@@ -30,9 +30,8 @@ libmossco_getm_component:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 getm: toplevel_component.o ../../common/main.o
-	$(F90) -o $@  $^ $(LDFLAGS) -lmossco_getm $(GETM_LINKDIRS) $(GETM_LIBS) $(ESMF_F90ESMFLINKLIBS) -lmossco_util
-	@echo "Created example binary esmf_getm_example in  $(PWD)"
-	@echo "Please change to $(MOSSCO_DIR)/examples/esmf_getm to run the example." > $(MOSSCO_BIN_PATH)/esmf_getm.txt
+	$(F90) $^ -o $@ $(LDFLAGS) -lmossco_getm $(GETM_LINKDIRS) $(GETM_LIBS) $(ESMF_F90ESMFLINKLIBS) -lmossco_util
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
