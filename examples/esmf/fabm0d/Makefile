@@ -32,10 +32,10 @@ LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 #LDFLAGS += -Wl,-force_load
 #endif
 
-.PHONY: all exec 
+.PHONY: all exec fabm0d
 
 all: exec
-exec: fabm0d
+exec: libmossco_util libmossco_fabm0d fabm0d
 
 libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
@@ -43,18 +43,12 @@ libmossco_fabm0d:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-fabm0d: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
-	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
-
-main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d
-main.F90: ../../common/main.F90
-	ln -f  $< $@
+fabm0d: toplevel_component.o ../../common/main.o
+	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
+	@echo "Created example binary $(PWD)/$@"
 
 clean: extraclean
 
-extraclean: 
-	@rm -f esmf_fabm0d main.F90
-	@rm -f fabm0d
+extraclean:
+	@rm -f fabm0d toplevel_component.o
 	@rm -f PET*.*
