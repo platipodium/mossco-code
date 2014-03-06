@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'constant_fabm_sediment.yaml'
+     filename = 'gotm--gotm_fabm--fabm_sediment.yaml'
      #filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
@@ -45,8 +45,12 @@ couplerList=[]
 for item in coupling:
     if type(item) is dict:
         if item.has_key("components"):
-            couplingList.append([item["components"][0], item["components"][-1]])
-            componentList.extend(item["components"])
+            componentList.extend([item["components"][0], item["components"][-1]])
+            couplingList.append(item["components"])
+            componentList.extend([item["components"][0], item["components"][-1]])
+            n=len(item["components"])
+            for i in range(1,n-1):
+                couplerList.append(item["components"][i])    
             if item.has_key("interval"):
                 intervals.append(item["interval"])
             else:
@@ -56,11 +60,13 @@ for item in coupling:
     else:
         print 'Warning, dictionary expcted for item ' + item
 
-print couplingList
 componentSet=set(componentList)
+componentList=list(componentSet)
 couplerSet=set(couplerList)
+couplerList=list(couplerSet)
+print componentSet, couplerSet
 
-# Done parsint ghte list, now write the new toplevel_compnent file
+# Done parsing the list, now write the new toplevel_component file
        
 outfilename = 'toplevel_component.F90'
 fid = file(outfilename,'w')
@@ -93,8 +99,10 @@ fid.write('''
   use mossco_state\n
 ''')
 
-for item in componentSet:
-    fid.write('  use ' + item + '_component,\t\tonly : ' + item + '_SetServices => SetServices \n')
+for item in componentList:
+    fid.write('  use ' + item + '_component, only : ' + item + '_SetServices => SetServices \n')
+for item in couplerList:
+    fid.write('  use ' + item + ', only : ' + item + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
 fid.write('''
@@ -127,15 +135,11 @@ fid.write('''
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    rc=ESMF_SUCCESS
-    
   end subroutine SetServices
 
   !> Initialize the coupling
@@ -208,35 +212,46 @@ for item in componentSet:
     fid.write('    exportStates(' + str(i+1) + ') = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=\'' + item + 'ExportState\')\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     fid.write('    importStates(' + str(i+1) + ') = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name=\'' + item + 'ImportState\')\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     i += 1
 
+fid.write('''
+    ! Initialize all gridded components
+    do i=1,numGridComp
+      call ESMF_GridCompInitialize(gridCompList(i), importState=importStates(i), &
+      exportState=exportStates(i), clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+    
+''')
+
+i=0
 if len(couplerSet)>0:
-    fid.write('    ! Create all coupler components')
-    fid.write('    numCplComp  = '  + str(len(couplerSet)) + '\n\n')
-for item in couplerSet:
+    fid.write('    ! Create all coupler components and initialize them with reverse states\n')
+
+for item in couplerList:
     fid.write('    cplCompList(' + str(i+1) + ') = ESMF_CplCompCreate(name=\'' + item + 'Comp\', rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + item + '_SetServices, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
-
-fid.write('    ! Initialize all gridded and coupler components\n')
-i = 0
-for item in componentSet:
-    fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(i+1) + '), importState=importStates(' + str(i+1) + '), &\n')
-    fid.write('      exportState=exportStates(' + str(i+1) + '), clock=clock, rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     i += 1
-fid.write('\n')
-for item in couplerSet:
-    fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(i+1) + '), importState=importStates(' + str(i+1) + '), &\n')
-    fid.write('      exportState=exportStates(' + str(i+1) + '), clock=clock, rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 
-fid.write('    numCplAlarm = ' + str(len(couplingList)) + '\n')
-fid.write('    allocate(cplAlarmList(numCplAlarm))\n')
+for i in range(0,len(couplingList)):
+    item=couplingList[i]
+    if len(item) != 3:
+        continue
+    ifrom = componentList.index(item[0])
+    ito   = componentList.index(item[2])
+    icpl  = couplerList.index(item[1])
+    
+    fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
+    fid.write('      exportState=exportStates(' + str(ifrom+1) + '), clock=clock, rc=rc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+ 
+fid.write('    numCplAlarm = ' + str(len(couplingList)))
 fid.write('''
-
+    if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
+    
     !! Set the coupling alarm starting from start time of local clock
     call ESMF_ClockGet(clock,startTime=startTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -249,7 +264,7 @@ for i in range(0,len(couplingList)):
         unit = string[1]
     else:
         unit = 'h'
-    fid.write('    call ESMF_TimeIntervalSet(alarmInterval,' + unit + '=' + number + ',rc=rc)\n')
+    fid.write('    call ESMF_TimeIntervalSet(alarmInterval, startTime, ' + unit + '=' + number + ' ,rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n\n')  
     fid.write('    cplAlarmList(' + str(i+1) + ')=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &\n')
     alarmName = str(couplingList[i][0]) + '--' + str(couplingList[i][-1]) + '--cplAlarm'
@@ -760,7 +775,9 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'simplewave' : ['mossco_simplewave'],
         'empty'      : ['empty'],
         'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea_prod', 
-                        'input_prod', 'util_prod', 'fabm_prod']
+                        'input_prod', 'util_prod', 'fabm_prod'],
+        'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
+        'benthic_pelagic_coupler' : ['pelagicbenthiccoupler']
 }
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
@@ -774,7 +791,9 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'empty'      : ['libempty'],
         'constant'   : ['libconstant'],
         'gotm'       : ['libgotm', 'libsolver'],
-        'fabm_gotm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'] 
+        'fabm_gotm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'],
+        'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
+        'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler']
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
@@ -856,6 +875,9 @@ libmossco_benthos:
 libocean libatmosphere:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
+libpelagicbenthiccoupler:
+	$(MAKE) -C $(MOSSCO_DIR)/src/mediators pelagicbenthiccoupler benthicpelagiccoupler
+ 
 atmos.nc:
 	@-ln -s /media/data/forcing/CLM/cDII.00.kss.2003.nc $@ || \
 	ln -s /h/ksedata02/data/model/CLM/cDII.00.kss.2003.nc $@ || \

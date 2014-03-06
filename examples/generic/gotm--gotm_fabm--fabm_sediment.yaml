@@ -1,0 +1,19 @@
+coupling:
+ - components: 
+   - gotm 
+   - fabm_gotm
+   interval: 360 s
+ - components:
+   - fabm_gotm
+   - pelagic_benthic_coupler
+   - fabm_sediment
+   interval: 1 h
+ - components:
+   - fabm_sediment
+   - benthic_pelagic_coupler
+   - fabm_gotm
+   interval: 1 h
+ - components:
+   - constant
+   - fabm_sediment
+   interval: 17 h
