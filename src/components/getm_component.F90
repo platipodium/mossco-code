@@ -328,7 +328,6 @@
 
 !  call ESMF_StateGet(), etc to get fields, bundles, arrays from import state
 
-   call ESMF_GridCompGet(getmCmp,clock=getmClock)
    call ESMF_ClockGet(getmClock,timeStep=getmTimeStep,currtime=getmTime,advanceCount=loop)
 
 !  use pClock to do determine time of calling routine
