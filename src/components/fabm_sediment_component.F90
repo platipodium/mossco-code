@@ -265,7 +265,12 @@ module fabm_sediment_component
     end do
     !call ESMF_StatePrint(exportState)
 
-    call ESMF_LogWrite('Initialized FABM sediment module',ESMF_LOGMSG_INFO)
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 
