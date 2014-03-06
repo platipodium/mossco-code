@@ -30,7 +30,7 @@ LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
-.PHONY: all exec libmossco_gotmfabm libgotm
+.PHONY: all exec gotmfabm libmossco_gotmfabm libgotm
 
 all: exec
 exec: libmossco_util libsolver libmossco_gotmfabm libgotm gotmfabm

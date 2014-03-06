@@ -20,7 +20,7 @@ LIBS := -lmossco_benthos  $(LIBS)
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: libmossco_benthos exec
+.PHONY: all exec benthos libmossco_benthos
 
 all: exec
 exec: libmossco_benthos benthos

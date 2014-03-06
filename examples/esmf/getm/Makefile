@@ -21,7 +21,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: all exec libmossco_getm_component libmossco_util
+.PHONY: all exec getm libmossco_getm_component libmossco_util
 
 all: exec
 exec: libmossco_util libmossco_getm_component getm

@@ -19,7 +19,7 @@ LIBS := -lmossco_simplewave -lmossco_util -lesmf $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec
+.PHONY: all exec esmf_simplewave
 
 all: exec
 

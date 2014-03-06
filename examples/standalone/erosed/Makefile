@@ -19,7 +19,7 @@ LIBS := -lmossco_erosed $(LIBS)
 F90FLAGS += $(INCLUDES)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: libmossco_erosed exec
+.PHONY: all exec erosed libmossco_erosed
 
 all: exec
 exec: libmossco_erosed erosed
