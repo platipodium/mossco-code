@@ -811,7 +811,7 @@ fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) \n\n')
 
 
 
-fid.write('.PHONY: all exec\n\n')
+fid.write('.PHONY: all exec coupling\n\n')
 fid.write('all: exec\n\n')
 fid.write('exec: libmossco_util ')
 for item in componentSet.union(couplerSet):
