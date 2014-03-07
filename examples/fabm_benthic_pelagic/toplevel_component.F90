@@ -45,11 +45,15 @@ module toplevel_component
 
     type(ESMF_Grid)       :: grid
     type(ESMF_Field)      :: temperatureField, field, newfield
-    type(ESMF_FieldBundle) :: fieldBundle
+    type(ESMF_FieldBundle):: fieldBundle
     integer               :: petCount, localPet
     real(ESMF_KIND_R8),dimension(:,:),allocatable :: farray
+    type(ESMF_TimeInterval) :: cplInterval
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
+
+    call ESMF_TimeIntervalSet(cplInterval,s_r8=360.0d0)
+    call ESMF_ClockSet(parentClock,timeStep=cplInterval)
 
     ! Create component, call setservices, and create states
     gotmComp = ESMF_GridCompCreate(name="gotmComp", rc=rc)
@@ -113,18 +117,47 @@ module toplevel_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
     type(ESMF_Field)      :: field
+    type(ESMF_Clock)      :: childClock
+    type(ESMF_TimeInterval)   :: cplInterval
+    type(ESMF_Time)       :: currtime
+    logical :: clockIsPresent
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
+
+      call ESMF_ClockGet(parentClock,currTime=currTime,timeStep=cplInterval)
 
       !> run coupler components
       call ESMF_CplCompRun(pbCplComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
       call ESMF_CplCompRun(bpCplComp, importState=sedimentstate, exportState=sedimentstate, clock=parentClock, rc=rc)
 
       !> run grid components
+      call ESMF_GridCompGet(gotmComp,clockIsPresent=clockIsPresent)
+      if (clockIsPresent) then 
+        call ESMF_GridCompGet(gotmComp,clock=childClock)
+        call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
+      else
+        childClock = parentClock
+      endif
       call ESMF_GridCompRun(gotmComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
+
+      call ESMF_GridCompGet(fabmgotmComp,clockIsPresent=clockIsPresent)
+      if (clockIsPresent) then 
+        call ESMF_GridCompGet(fabmgotmComp,clock=childClock)
+        call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
+      else
+        childClock = parentClock
+      endif
       call ESMF_GridCompRun(fabmgotmComp, importState=sedimentstate, exportState=pelagicstate, clock=parentClock, rc=rc)
+
+      call ESMF_GridCompGet(fabmsedComp,clockIsPresent=clockIsPresent)
+      if (clockIsPresent) then 
+        call ESMF_GridCompGet(fabmsedComp,clock=childClock)
+        call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
+      else
+        childClock = parentClock
+      endif
       call ESMF_GridCompRun(fabmsedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
