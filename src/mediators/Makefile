@@ -18,7 +18,7 @@ EXTRA_DIST=README
 
 TARGETS=
 ifeq ($(MOSSCO_ESMF),true)
-TARGETS += libaocoupler
+TARGETS += libaocoupler libcopycoupler
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
@@ -35,12 +35,16 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
+libcopycoupler: prefix $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a
 libaocoupler: prefix $(MOSSCO_LIBRARY_PATH)/libaocoupler.a
 liboceansedimentcoupler: prefix $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
 libverticalmeancoupler: prefix $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 libsurfacescoupler: prefix $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o)
 pelagicbenthiccoupler: prefix  $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
 benthicpelagiccoupler: prefix  $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(benthic_pelagic_coupler.o)
+
+$(MOSSCO_LIBRARY_PATH)/libcopycoupler.a: copy_coupler.o 
+	$(AR) cruvs $@ copy_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libaocoupler.a: remtc_atmos_ocean_coupler.o 
 	$(AR) cruvs $@ remtc_atmos_ocean_coupler.o
@@ -62,6 +66,7 @@ subdirs:
 clean: extraclean
 
 extraclean:
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libaocoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
