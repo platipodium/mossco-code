@@ -1,0 +1,6 @@
+The doxpy python filter preprocesses python source code
+for use in doxygen.  
+
+It the script doxpy.py was downloaded from https://github.com/0xCAFEBABE/doxypy.git.
+It was authored by Philippe Neumann and Gina Haeussge, and is available under
+the GPL version 2
