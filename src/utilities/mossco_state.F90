@@ -90,4 +90,49 @@ contains
     end if
   end subroutine set_item_flags
 
+
+  !> create fields from required attributes in a state
+  subroutine create_required_fields(state,grid)
+  type(ESMF_State), intent(inout)   :: state
+  type(ESMF_Grid),  intent(in)      :: grid
+  type(ESMF_Field)                  :: field
+  type(ESMF_Typekind_Flag)          :: typeKind=ESMF_TYPEKIND_R8
+  type(ESMF_StateItem_Flag)         :: itemFlag
+  integer                           :: n,rc,idx,attCount
+  logical                           :: required
+  character(ESMF_MAXSTR)            :: attName,fieldName
+
+  !> get Attribute list
+  call ESMF_AttributeGet(state,attCount,rc=rc)
+
+  do n=1,attCount
+    call ESMF_AttributeGet(state,attributeIndex=n,name=attName) 
+    !> check for ":required"
+    idx = index(attName,':required ')
+    if (idx>0) then
+      call ESMF_AttributeGet(state,name=attName,value=required,rc=rc)
+      if (required) then
+        fieldName=attName(1:idx-1)
+      else
+        !write(0,*) 'found attribute ',trim(attName),', but not required'
+        cycle
+      end if
+    else
+      !write(0,*) 'attribute not relevant: ',trim(attName)
+      cycle
+    end if
+    !> check for fieldName in state
+    call ESMF_StateGet(state,fieldName,itemFlag,rc=rc)
+    if (itemFlag == ESMF_STATEITEM_NOTFOUND) then
+      !> create field
+      field = ESMF_FieldCreate(grid,typekind=typeKind,name=fieldName,rc=rc)
+      !> append field to state
+      call ESMF_StateAdd(state,(/ field /),rc=rc)
+    else
+      !write(0,*) 'item ',trim(fieldName),' already present',itemFlag
+    end if
+  end do
+  end subroutine create_required_fields
+
+
 end module mossco_state

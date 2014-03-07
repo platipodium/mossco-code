@@ -63,104 +63,7 @@ module pelagic_benthic_coupler
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! create omexdia_p-related fields
-    !> @todo: check in exportState for required quantities and create those fields
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="mole_concentration_of_nitrate", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="mole_concentration_of_ammonium", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="mole_concentration_of_phosphate", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="dissolved_reduced_substances", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="fast_detritus_C", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="slow_detritus_C", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="detritus-P", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="fast_detritus_C_z_velocity", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 1.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="slow_detritus_C_z_velocity", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 1.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    newfield = ESMF_FieldCreate(pelagic_bdy_grid,pelagic_bdy_array, &
-                       name="detritus-P_z_velocity", &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 1.0_rk
-    call ESMF_StateAddReplace(exportState,(/newfield/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call create_required_fields(exportState,pelagic_bdy_grid)
 
     !> allocate temporary arrays
     allocate(DETNflux(1,1))
@@ -296,6 +199,7 @@ module pelagic_benthic_coupler
 
     call ESMF_LogWrite("pelagic-benthic coupler finalized", ESMF_LOGMSG_INFO)
   end subroutine Finalize
+
 
 end module pelagic_benthic_coupler
 
