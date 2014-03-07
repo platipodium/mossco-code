@@ -13,7 +13,6 @@ module pelagic_benthic_coupler
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP,DETP,vDETP
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
-  real(ESMF_KIND_R8),dimension(:,:), pointer :: DETNflux,DETPflux
 
   public SetServices
 
@@ -65,10 +64,6 @@ module pelagic_benthic_coupler
     ! create omexdia_p-related fields
     call create_required_fields(exportState,pelagic_bdy_grid)
 
-    !> allocate temporary arrays
-    allocate(DETNflux(1,1))
-    allocate(DETPflux(1,1))
-
     call ESMF_LogWrite("pelagic-benthic coupler initialized", ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
@@ -108,7 +103,6 @@ module pelagic_benthic_coupler
             'detritus_z_velocity              ', &
             'detN_z_velocity                  ', &
             'Detritus_Nitrogen_detN_z_velocity'/),vDETN,rc=rc)
-      DETNflux(1,1) = sinking_factor * DETN(1,1,1) * vDETN(1,1,1)
 
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
       call mossco_state_get(importState,(/'Detritus_Carbon_detC'/),DETC,rc=rc)
@@ -122,33 +116,44 @@ module pelagic_benthic_coupler
 
       call ESMF_StateGet(exportState,'fast_detritus_C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = fac_fdet * DETNflux(1,1)
+      ptr_f3(1,1,1) = fac_fdet * DETN(1,1,1)
       call ESMF_StateGet(exportState,'slow_detritus_C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = fac_sdet * DETNflux(1,1)
+      ptr_f3(1,1,1) = fac_sdet * DETN(1,1,1)
+
+      call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity'/),ptr_f3,rc=rc)
+      if (rc==0) ptr_f3(1,1,1) = sinking_factor * vDETN(1,1,1)
+      call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity'/),ptr_f3,rc=rc)
+      if (rc==0) ptr_f3(1,1,1) = sinking_factor * vDETN(1,1,1)
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
+      call mossco_state_get(exportState,(/'detritus-P'/),ptr_f3,rc=rc)
       call mossco_state_get(importState,(/ &
           'detP                    ', &
           'Detritus_Phosphorus_detP'/),DETP,rc=rc)
       if (rc == 0) then
-        call mossco_state_get(importState,(/ &
-              'detP_z_velocity                    ', &
-              'Detritus_Phosphorus_detP_z_velocity'/),vDETP,rc=rc)
-        DETPflux(1,1) = sinking_factor * DETP(1,1,1) * vDETP(1,1,1)
+        ptr_f3(1,1,1) = DETP(1,1,1)
       else
-        if (.not.(associated(DETPflux))) allocate(DETPflux(1,1))
-        DETPflux(1,1) = 1.0d0/16.0d0 * DETNflux(1,1)
+        ptr_f3(1,1,1) = 1.0d0/16.0d0 * DETN(1,1,1)
       end if
 
-      call ESMF_StateGet(exportState,'detritus-P',field,rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = DETPflux(1,1)
+      call mossco_state_get(exportState,(/'detritus-P_z_velocity'/),ptr_f3,rc=rc)
+      call mossco_state_get(importState,(/ &
+              'detP_z_velocity                    ', &
+              'Detritus_Phosphorus_detP_z_velocity'/),vDETP,rc=rc)
+      if (rc==0) then
+        ptr_f3(1,1,1) = sinking_factor * vDETP(1,1,1)
+      else
+        ptr_f3(1,1,1) = sinking_factor * vDETN(1,1,1)
+      end if
 
       ! DIM concentrations:
-      !  oxygen is coming from constant component, ODU is set to 0.0 in Initialize
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !  oxygen is coming from constant component
+      !  set reduced substances to zero
+      call mossco_state_get(exportState,(/'dissolved_reduced_substances'/),ptr_f3,rc=rc)
+      ptr_f3(1,1,1) = 0.0d0
+
       call mossco_state_get(importState,(/ &
               'nutrients                            ', &
               'DIN                                  ', &
@@ -178,8 +183,6 @@ module pelagic_benthic_coupler
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3(1,1,1) = DIP(1,1,1)
 
-! Get fields from import and export states
-
   end subroutine Run
 
   subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
@@ -193,9 +196,6 @@ module pelagic_benthic_coupler
 
     !call ESMF_ArraySpecDestroy(pelagic_bdy_array, rc)
     call ESMF_GridDestroy(pelagic_bdy_grid, rc=rc)
-
-    if (associated(DETNflux)) deallocate(DETNflux)
-    if (associated(DETPflux)) deallocate(DETPflux)
 
     call ESMF_LogWrite("pelagic-benthic coupler finalized", ESMF_LOGMSG_INFO)
   end subroutine Finalize
