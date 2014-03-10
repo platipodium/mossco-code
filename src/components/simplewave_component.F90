@@ -21,11 +21,13 @@ module simplewave_component
   implicit none
   private
 
-  type(ESMF_Clock)  :: clock 
+  type(ESMF_Clock)  :: clock
+  type(ESMF_Grid)   :: grid 
 
   public :: SetServices
 
-  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK
+  integer                      :: farray_shape(3)
+  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK,taubw
   real(ESMF_KIND_R8),parameter :: gravity=9.81d0
   
   contains
@@ -63,11 +65,10 @@ module simplewave_component
     type(ESMF_Time)   :: clockTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
-    integer                     :: lbnd(3), ubnd(3),farray_shape(3)
+    integer                     :: lbnd(3), ubnd(3)
     integer                     :: myrank,i,j,k
     integer                     :: nimport,nexport
     type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
     type(ESMF_Field)     :: exportField
     
@@ -108,13 +109,13 @@ module simplewave_component
     nexport = 4
     !allocate(export_variables(nexport)) 
 
-    allocate(waveDir(farray_shape(1),farray_shape(2),farray_shape(3)))
+    allocate(waveDir(farray_shape(1),farray_shape(2),1))
     waveDir = 0.0d0
-    allocate(waveH  (farray_shape(1),farray_shape(2),farray_shape(3)))
+    allocate(waveH  (farray_shape(1),farray_shape(2),1))
     waveH = 0.0d0
-    allocate(waveT  (farray_shape(1),farray_shape(2),farray_shape(3)))
+    allocate(waveT  (farray_shape(1),farray_shape(2),1))
     waveT = 0.0d0
-    allocate(waveK  (farray_shape(1),farray_shape(2),farray_shape(3)))
+    allocate(waveK  (farray_shape(1),farray_shape(2),1))
     waveK = 0.0d0
     
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -177,14 +178,22 @@ module simplewave_component
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windDir=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windx=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windy=>null()
-    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: z0=>null()
     type(ESMF_Field)        :: Field
     character(len=ESMF_MAXSTR) :: string,varname,message
-    real(ESMF_KIND_R8)                :: wdepth,wwind
-    real(ESMF_KIND_R8),parameter      :: min_wind=0.1d0
-    real(ESMF_KIND_R8),parameter      :: max_depth_windwaves=99999.0
-    logical                           :: calc_wind,calc_windDir
+    real(ESMF_KIND_R8)           :: wdepth,wwind
+    real(ESMF_KIND_R8)           :: Hrms,omegam1,uorb,aorb,Rew,tauwr,tauws
+    real(ESMF_KIND_R8),parameter :: avmmolm1 = 1.8d6
+    real(ESMF_KIND_R8),parameter :: sqrthalf=sqrt(0.5d0)
+    real(ESMF_KIND_R8),parameter :: pi=3.1415926535897932384626433832795029d0
+    real(ESMF_KIND_R8),parameter :: oneovertwopi=0.5d0/pi
+    real(ESMF_KIND_R8),parameter :: Rew_crit = 5.0d5 ! (Stanev et al., 2009)
+!   real(ESMF_KIND_R8),parameter :: Rew_crit = 1.5d5 ! (Soulsby & Clarke, 2005)
+    real(ESMF_KIND_R8),parameter :: min_wind=0.1d0
+    real(ESMF_KIND_R8),parameter :: max_depth_windwaves=99999.0
+    logical                      :: calc_wind,calc_windDir,calc_taubw
+    logical,save                 :: taubw_ready=.false.
+    integer                      :: i,j
 
     ! associate local pointers with import data
     call ESMF_StateGet(importState, "water_depth", Field, rc=rc)
@@ -212,6 +221,29 @@ module simplewave_component
        call ESMF_FieldGet(field, farrayPtr=windDir)
     end if
 
+    call ESMF_StateGet(importState, "bottom_roughness_length", itemType)
+    if (itemType .eq. ESMF_STATEITEM_NOTFOUND) then
+       calc_taubw = .false.
+    else
+       calc_taubw = .true.
+       call ESMF_StateGet(importState, "bottom_roughness_length", Field)
+       call ESMF_FieldGet(field, farrayPtr=z0)
+
+       if (.not. taubw_ready) then
+          allocate(taubw(farray_shape(1),farray_shape(2),1))
+          taubw = 0.0d0
+          Field = ESMF_FieldCreate(grid,taubw,                             &
+                                   indexflag=ESMF_INDEX_GLOBAL,          &
+                                   staggerloc=ESMF_STAGGERLOC_CENTER,    &
+                                   name='wave_only_bottom_stress', rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_StateAddReplace(exportState,(/Field/),rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          taubw_ready = .true.
+          call ESMF_LogWrite('simplewave component post-initialized for bottom stress.',ESMF_LOGMSG_INFO)
+       end if
+    end if
+
     if (calc_wind .or. calc_windDir) then
        call ESMF_StateGet(importState, "wind_x_velocity_at_10m", Field, rc=rc)
        if (rc /= ESMF_SUCCESS) then
@@ -228,20 +260,60 @@ module simplewave_component
     end if
 
     if (calc_wind) then
-      if (.not. associated(wind)) allocate(wind(1,1,1))
+      if (.not. associated(wind)) allocate(wind(farray_shape(1),farray_shape(2),1))
       wind = sqrt(windx**2 + windy**2)
     end if
     if (calc_windDir) then
-      if (.not. associated(windDir)) allocate(windDir(1,1,1))
+      if (.not. associated(windDir)) allocate(windDir(farray_shape(1),farray_shape(2),1))
       windDir = atan2(windy,windx) ! cartesian convention and in radians
     end if
    
-      waveDir = windDir
-      wwind = max( min_wind , wind(1,1,1) )
-      wdepth = min( depth(1,1,1) , max_depth_windwaves )
-      waveH(1,1,1) = wind2waveHeight(wwind,wdepth)
-      waveT(1,1,1) = wind2wavePeriod(wwind,wdepth)
-      waveK(1,1,1) = wavePeriod2waveNumber(waveT(1,1,1),depth(1,1,1))
+    j = 1
+    i = 1    
+    waveDir = windDir
+    wwind = max( min_wind , wind(i,j,1) )
+    wdepth = min( depth(i,j,1) , max_depth_windwaves )
+    waveH(i,j,1) = wind2waveHeight(wwind,wdepth)
+    waveT(i,j,1) = wind2wavePeriod(wwind,wdepth)
+    waveK(i,j,1) = wavePeriod2waveNumber(waveT(i,j,1),depth(i,j,1))
+
+
+    if (calc_taubw) then
+
+      Hrms = sqrthalf * waveH(i,j,1)
+      omegam1 = oneovertwopi * waveT(i,j,1)
+!     wave orbital velocity amplitude at bottom (ubot in SWAN)
+      uorb = 0.5d0 * Hrms / ( omegam1*sinh(waveK(i,j,1)*depth(i,j,1)) )
+!     wave orbital excursion
+      aorb = omegam1 * uorb
+!     wave Reynolds number
+      Rew = aorb * uorb * avmmolm1
+
+!     Note (KK): We do not calculate fw alone, because for small
+!                uorb this can become infinite.
+
+!     KK-TODO: For combined wave-current flow, the decision on
+!              turbulent or laminar flow depends on Rew AND Rec!
+!              (Soulsby & Clarke, 2005)
+!              However, here we decide according to Lettmann et al. (2009).
+!              (Or we always assume turbulent currents.)
+      if ( Rew .gt. Rew_crit ) then
+!       rough turbulent flow
+        tauwr = 0.5d0 * 1.39d0 * (omegam1/z0(i,j,1))**(-0.52d0) * uorb**(2-0.52d0)
+!       smooth turbulent flow
+        tauws = 0.5d0 * (omegam1*avmmolm1)**(-0.187d0) * uorb**(2-2*0.187d0)
+!       Note (KK): For combined wave-current flow, the decision on
+!                  rough or smooth flow depends on the final taubmax.
+!                  (Soulsby & Clarke, 2005)
+!                  However, here we decide according to Stanev et al. (2009).
+!                  (as for wave-only flow)
+        taubw(i,j,1) = max( tauwr , tauws )
+      else
+!       laminar flow
+        taubw(i,j,1) = (omegam1*avmmolm1)**(-0.5d0) * uorb
+      end if
+
+    end if
  
   end subroutine Run
 
