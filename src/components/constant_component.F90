@@ -200,7 +200,7 @@ module constant_component
     integer                :: petCount, localPet
     character(ESMF_MAXSTR) :: name, message, timestring
     logical                :: clockIsPresent
-    type(ESMF_Time)        :: currTime
+    type(ESMF_Time)        :: currTime, stopTime
     type(ESMF_Clock)       :: clock
     
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
@@ -215,7 +215,7 @@ module constant_component
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    call ESMF_ClockGet(clock,currTime=currTime, stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -225,15 +225,10 @@ module constant_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 !#endif
-  
-    do 
-      call ESMF_ClockAdvance(clock, rc=rc) 
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ 
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc) 
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
-      if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo  
-
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
