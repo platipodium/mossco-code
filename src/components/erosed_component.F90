@@ -312,8 +312,6 @@ end if
 
     write (707, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
         'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
-    write (*, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
-        'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
 
 
     !> create grid
@@ -397,6 +395,7 @@ write (*,*) ' state add'
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
     logical                  :: forcing_from_coupler=.true.
+    real(kind=ESMF_KIND_R8),parameter :: porosity=0.1 !> @todo make this an import field (e.g. by bed component)
 
     ! Get global clock properties
     call ESMF_TimeSet(clockTime)
@@ -505,8 +504,12 @@ write (*,*) ' state add'
 !                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
              write (707, '(I4,4x,I4,4x,I5,4(4x,F8.4))' ) advancecount, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
-             write (*,  '(I4,4x,I4,4x,I5,4(4x,F8.4))' )  advancecount, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
             enddo
+      !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
+      !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
+      !! sediment density.
+      size_classes_of_upward_flux_of_pim_at_bottom(1,1,l) = &
+          sink(l,1)*frac(l,1)*porosity*rhosol(l) + ws(l,1)*spm_concentration(1,1,l)
     enddo
         !
         !   Compute change in sediment composition of top layer and fluff layer
