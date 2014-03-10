@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'constant_fabm_sediment.yaml'
+     filename = '1d_reference.yaml'
      #filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
@@ -34,13 +34,19 @@ if config.has_key('copyright'):
 else:
     copyright = 'Copyright (C) 2014, Helmholtz-Zentrum Geesthacht'
 
-coupling = config.pop("coupling")
+dependencyList=[]
+
+if config.has_key('dependencies'):
+    dependencies = config.pop('dependencies');    
 
 componentList=[]
 intervals =[]
 directions = []
 couplingList=[]
 couplerList=[]
+  
+coupling = config.pop("coupling")
+
 
 for item in coupling:
     if type(item) is dict:
@@ -60,13 +66,35 @@ for item in coupling:
             if item.has_key("direction"):
                 directions.append(item["direction"])
     else:
-        print 'Warning, dictionary expcted for item ' + item
+        print 'Warning, dictionary expected for item ' + item
 
 componentSet=set(componentList)
 componentList=list(componentSet)
 couplerSet=set(couplerList)
 couplerList=list(couplerSet)
-print componentSet, couplerSet
+
+# Set a default coupling alarm interval of 6 minutes
+if len(intervals) == 0:
+    intervals=len(couplerList) * ['6 m']
+
+# if there are any dependencies specified, go through the list of components
+# and sort this list
+for component in componentList:
+    for item in dependencies:
+        if item.has_key(component):
+          compdeps = item.values()[0]
+          if type(compdeps) is list:
+              for compdep in compdeps:
+                 if componentList.index(component)< componentList.index(compdep):
+                   c=componentList.pop(componentList.index(compdep))
+                   componentList.insert(componentList.index(component),c) 
+          elif componentList.index(component)< componentList.index(compdeps):
+              c=componentList.pop(componentList.index(compdeps))
+              componentList.insert(componentList.index(component),c)
+#if componentList.index(component)>componentList.index(dep)
+#    
+
+print componentList, couplerList
 
 # Done parsing the list, now write the new toplevel_component file
        

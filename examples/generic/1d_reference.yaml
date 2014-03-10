@@ -1,0 +1,93 @@
+# configuration dependencies:
+dependencies:
+  - fabm_gotm: gotm
+  - erosed: 
+    - gotm
+    - fabm_gotm
+    - simplewave
+  - simplewave: clm
+  - benthic_pelagic_coupler: fabm_gotm
+  - benthos: erosed
+
+# @todo:
+# Knut: simplewave -> erosed
+# Kai+Hassan: fabm_sediment -> bethos
+# Hassan: benthos -> erosed
+# Knut: clm -> gotm/getm
+# Carsten: parser
+# Carsten: fabm_sediment -> netcdf
+# Carsten: erosed -> netcdf
+
+coupling:
+  - components: 
+     - clm
+     - gotm
+    interval: 6 m
+
+  - components: 
+     - clm
+     - simplewave
+    interval: 6 m
+
+  - components: 
+     - simplewave
+     - erosed
+    interval: 6 m
+
+  - components: 
+     - gotm
+     - fabm_gotm
+    interval: 6 m
+
+  - components:
+     - fabm_gotm
+     - erosed
+    interval: 6 m
+
+  - components:
+     - gotm
+     - erosed
+    interval: 6 m
+
+  - components:
+     - erosed
+     - fabm_gotm
+    interval: 6 m
+
+  - components:
+     - fabm_gotm
+     - pelagic_benthic_coupler
+     - fabm_sediment
+    interval: 6 m
+
+  - components:
+     - constant
+     - fabm_sediment
+    interval: 1 yy
+
+  - components:
+     - fabm_sediment
+     - netcdf
+    interval: 1 d
+
+  - components:
+     - erosed
+     - netcdf
+    interval: 1 h
+
+  - components:
+     - fabm_sediment
+     - benthic_pelagic_coupler
+     - fabm_gotm
+    interval: 6 m
+
+  - components:
+     - benthos
+     - erosed
+    interval: 1 h
+
+  - components:
+     - fabm_sediment
+     - benthos
+    interval: 1 h
+
