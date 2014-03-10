@@ -359,9 +359,9 @@ module fabm_sediment_component
       !! get the current advance count (formerly t) from clock
       if (ESMF_AlarmIsRinging(outputAlarm)) then
         call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-        write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
-        write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
-        call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+        !write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
+        !write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
+        !call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
         write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
         do k=1,_KNUM_
           write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3,A,E15.4E3)',advance='no') &
