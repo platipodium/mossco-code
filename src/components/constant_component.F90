@@ -71,23 +71,18 @@ module constant_component
     integer, parameter                          :: fileunit=21
     logical                                     :: file_readable=.true.
 
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
+    grid111 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="constants grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      name="constants grid 1x1x1",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-
-    clock=ESMF_ClockCreate(parentClock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     ! Get information to generate the fields that store the pointers to variables
-    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
-    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+    call ESMF_GridGetFieldBounds(grid=grid111,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    clock=ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> create list of export_variables, that will come from a function
@@ -125,82 +120,14 @@ module constant_component
 5   continue
 99  file_readable=.false.
 
-    allocate(cur_item%next)
-    cur_item => cur_item%next
-    cur_item%standard_name='water_temperature'
-    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-    cur_item%data(:,:,:) = 15.15d0
-    nullify(cur_item%next)
-    
-    
-    allocate(cur_item%next)
-    cur_item => cur_item%next
-    cur_item%standard_name='salinity'
-    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-    cur_item%data = 25.25d0
-    nullify(cur_item%next)
-
-    allocate(cur_item%next)
-    cur_item => cur_item%next
-    cur_item%standard_name='dissolved_oxygen'
-    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-    cur_item%data = 280.0d0 !mmol-O2/m3
-    nullify(cur_item%next)
-
-    allocate(cur_item%next)
-    cur_item => cur_item%next
-    cur_item%standard_name='dissolved_phosphate'
-    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-    cur_item%data = 1.0d0 !mmol-P/m3
-    nullify(cur_item%next)
-    
-    
-    grid111 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="constants grid 1x1x1",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
-      coorddep2=(/2/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-
-    ! Get information to generate the fields that store the pointers to variables
-    call ESMF_GridGetFieldBounds(grid=grid111,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
-      totalCount=farray_shape,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    allocate(cur_item%next)
-    cur_item => cur_item%next
-    cur_item%standard_name='water_depth'
-    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-    cur_item%data(:,:,:) = 32.40
-    nullify(cur_item%next)
-    
-    allocate(cur_item%next)
-    cur_item => cur_item%next
-    cur_item%standard_name='wind_x_velocity_at_10m'
-    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-    cur_item%data(:,:,:) = 7.8
-    nullify(cur_item%next)
-    
-    allocate(cur_item%next)
-    cur_item => cur_item%next
-    cur_item%standard_name='wind_y_velocity_at_10m'
-    allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-    cur_item%data(:,:,:) = 5.2
-    nullify(cur_item%next)
-
 
     !> now go through list, create fields and add to exportState
     cur_item => variable_items%next
     do
-      !write(0,*) 'set field ',trim(cur_item%standard_name),' to ',cur_item%data(1,1,1)
-      if (ubound(cur_item%data,3)>1) then
-        cur_item%field = ESMF_FieldCreate(grid,farrayPtr=cur_item%data,name=cur_item%standard_name, &
-          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      else
-        cur_item%field = ESMF_FieldCreate(grid111,farrayPtr=cur_item%data,name=cur_item%standard_name, &
-          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      endif    
-                    
+      cur_item%field = ESMF_FieldCreate(grid111, &
+              farrayPtr=cur_item%data, &
+              name=cur_item%standard_name, &
+              staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
