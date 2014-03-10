@@ -66,6 +66,10 @@ module constant_component
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr
+    character(len=ESMF_MAXSTR)                  :: varname
+    real(ESMF_KIND_R8)                          :: floatvalue
+    integer, parameter                          :: fileunit=21
+    logical                                     :: file_readable=.true.
 
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
@@ -92,6 +96,34 @@ module constant_component
     allocate(variable_items)
     cur_item => variable_items
     cur_item%next => variable_items
+
+    !> open constant_component.dat
+    !! @todo: read filename from configuration namelist/yaml
+    open(fileunit,file='constant_component.dat',err=99)
+
+    if (file_readable) then
+      do
+        !> read constant_component.dat line by line, maybe add rank later
+        !! format of each line is:
+        !!   some_standard_name  12.345
+        read(fileunit,*,end=5) varname,floatvalue
+
+        !> add item to list of constants
+        allocate(cur_item%next)
+        cur_item => cur_item%next
+        cur_item%standard_name=trim(varname)
+        allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
+        cur_item%data(:,:,:) = floatvalue
+#if 1
+        write(0,*) 'constant_component: create field ', &
+            trim(varname),' =',floatvalue
+#endif
+        nullify(cur_item%next)
+      end do
+    close(fileunit)
+    end if
+5   continue
+99  file_readable=.false.
 
     allocate(cur_item%next)
     cur_item => cur_item%next
