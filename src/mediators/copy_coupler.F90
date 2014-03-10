@@ -69,14 +69,18 @@ module copy_coupler
     integer(ESMF_KIND_I4)       :: i, itemCount
     character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
-    character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList
-    type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
+    character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
+    type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
     type(ESMF_Field)            :: field
 
     !! Set default SUCCESS return value and log the call to this 
     !! function into the log
     rc = ESMF_SUCCESS
     
+    call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
+      rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
     call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
