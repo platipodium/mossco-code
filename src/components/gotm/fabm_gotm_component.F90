@@ -316,6 +316,9 @@ module fabm_gotm_component
            call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
            do ii=1,size(fieldlist)
              call ESMF_AttributeGet(fieldlist(ii),'external_index',fabm_idx)
+#ifdef DEBUG
+             write(0,*) trim(varname),': field index:',ii,'fabm index:',fabm_idx
+#endif
              if (fabm_idx == nvar) then
                call ESMF_FieldGet(fieldlist(ii),farrayPtr=ptr_f2,rc=rc)
                exit
@@ -324,6 +327,9 @@ module fabm_gotm_component
              end if
            end do
            gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
+#ifdef DEBUG
+           write(0,*) 'flux:',ptr_f2(1,1)
+#endif
          end if
        end do
 
