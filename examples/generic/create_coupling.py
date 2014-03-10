@@ -247,7 +247,11 @@ if len(couplerList)>0:
     fid.write('''
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
+''')
 
+for i in range(0, len(couplerList)):
+    fid.write('    cplCompNames(' + str(i+1) + ') = \'' + couplerList[i] + '\'\n') 
+fid.write('''    
     do i = 1, numCplComp
       cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i))//'Comp', rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -392,7 +396,7 @@ fid.write('''
     character(len=ESMF_MAXSTR) :: timestring, cplName
     type(ESMF_Time)            :: stopTime, currTime, ringTime, time
     type(ESMF_TimeInterval)    :: timeInterval, ringInterval
-    integer(ESMF_KIND_I8)      :: advanceCount,  i, j, k
+    integer(ESMF_KIND_I8)      :: advanceCount,  i, j, k, l
     integer(ESMF_KIND_I4)      :: alarmCount, petCount, localPet
     integer(ESMF_KIND_I4)      :: numGridComp, numCplComp, hours
     
@@ -524,9 +528,9 @@ fid.write('''
           compName=trim(alarmName(1:index(alarmName,'--')-1))
           otherName=trim(alarmName(index(alarmName,'--')+2:index(alarmName,'--cplAlarm')-1))
           
-          do k=1,ubound(cplAlarmList,1) 
-            if (cplAlarmList(k) == alarmList(j)) then
-              cplName = trim(cplNames(k))
+          do l=1,ubound(cplAlarmList,1) 
+            if (cplAlarmList(l) == alarmList(j)) then
+              cplName = trim(cplNames(l))
               exit
             endif
           enddo
@@ -541,42 +545,39 @@ fid.write('''
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
             
           !! for now, transmit all Fields from my export state into the import state of the other component
-          call ESMF_GridCompGet(gridCompList(i), exportState=exportState, rc=rc)
+          call ESMF_GridCompGet(gridCompList(i), exportState=expState, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+          write(*,*) i,j,k,l
           !! Search the gridCompList for other's name
-            do k=1, ubound(gridCompList,1)
+          do k=1, ubound(gridCompList,1)
               call ESMF_GridCompGet(gridCompList(k), name=name, rc=rc)
               if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
               
               if (trim(name)==trim(otherName)//'Comp') exit
-            enddo
-            call ESMF_GridCompGet(gridCompList(k), importState=impState, rc=rc)
-            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-            
-            call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
-            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          enddo
 
-            if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-            if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
-            
-          call ESMF_StateGet(exportState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=rc)
+          write(*,*) i,j,k,l
+
+          if (trim(name) /= trim(otherName)//'Comp') then
+            write(message,'(A)') 'Did not find component '//trim(otherName)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)  
+            call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)          
+          endif
+          
+          write(*,*) i,j,k,l
+
+          call ESMF_GridCompGet(gridCompList(k), importState=impState, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-            
-          do k=1,itemCount
-            if (itemTypeList(k)==ESMF_STATEITEM_FIELD) then
-              call ESMF_StateGet(exportState, trim(itemNameList(k)), field, rc=rc)
-              if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
-              call ESMF_StateAddReplace(impState,(/field/), rc=rc)        
-              if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-            else
-              write(message,'(A)') 'Did not copy non-field item '//trim(itemNameList(k))
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
-            endif   
-          enddo 
-          !call ESMF_AlarmRingerOff(alarmList(j), rc=rc)
-          !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)          
+          
+          call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)  
+          
+          call ESMF_CplCompRun(cplCompList(l), importState=impState, exportState=expState, clock=clock, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          
         enddo 
       enddo
 
