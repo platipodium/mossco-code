@@ -28,6 +28,10 @@ module mossco_netcdf
     procedure :: update_variables => mossco_netcdf_update_variables
   end type type_mossco_netcdf
 
+  integer, parameter :: MOSSCO_NC_ERROR=-1
+  integer, parameter :: MOSSCO_NC_NOERR=0
+  integer, parameter :: MOSSCO_NC_EXISTING=1
+
   contains
 
   subroutine mossco_netcdf_variable_put(self,seconds,field)
@@ -83,20 +87,27 @@ module mossco_netcdf
   class(type_mossco_netcdf)      :: self
   character(len=ESMF_MAXSTR)     :: timeUnit
   integer, optional, intent(out) :: rc
-  integer                        :: ncStatus,varid
+  integer                        :: ncStatus,varid,rc_
   type(type_mossco_netcdf_variable), pointer :: var
 
+  rc_=MOSSCO_NC_NOERR
   ncStatus = nf90_def_dim(self%ncid, 'time', NF90_UNLIMITED, self%timeDimId)
+  if (ncStatus==NF90_ENAMEINUSE) rc_=MOSSCO_NC_EXISTING
   ncStatus = nf90_def_var(self%ncid, 'time', NF90_DOUBLE, self%timeDimId, varid)
-  ncStatus = nf90_put_att(self%ncid, varid, 'units', timeUnit)
+  if (ncStatus==NF90_ENAMEINUSE) then
+    rc_=MOSSCO_NC_EXISTING
+  else
+    ncStatus = nf90_put_att(self%ncid, varid, 'units', timeUnit)
+  end if
 
-  if (ncStatus /= NF90_NOERR) then
+  if (rc_ == MOSSCO_NC_NOERR) then
     allocate(self%variables(1))
     var => self%variables(1)
     var%name='time'
     var%unit=trim(timeUnit)
     var%rank=1
   end if
+  if (present(rc)) rc=rc_
   end subroutine mossco_netcdf_init_time
 
 
@@ -122,11 +133,12 @@ module mossco_netcdf
   class(type_mossco_netcdf)     :: self
   type(ESMF_Grid)               :: grid
   integer, intent(out),optional :: rc
-  integer                       :: ncStatus
+  integer                       :: ncStatus,rc_
   character(len=ESMF_MAXSTR)    :: gridName
   integer,allocatable           :: ubounds(:),lbounds(:)
   integer                       :: dimid,rank=3
 
+  rc_ = MOSSCO_NC_NOERR
   call ESMF_GridGet(grid,name=gridName,rank=rank,rc=rc)
   allocate(ubounds(rank))
   ubounds(:)=1
@@ -134,19 +146,34 @@ module mossco_netcdf
   lbounds(:)=1
   call ESMF_GridGetFieldBounds(grid=grid, localDe=0, &
       staggerloc=ESMF_STAGGERLOC_CENTER, totalCount=ubounds, rc=rc)
-write(0,*) ubounds
 
   ncStatus = nf90_redef(self%ncid)
   if (rank>1) then
     !! assume to have horizontal grid
     ncStatus = nf90_def_dim(self%ncid, trim(gridName)//'_x', ubounds(1)-lbounds(1)+1,dimid)
+    if (ncStatus==NF90_ENAMEINUSE) rc_=MOSSCO_NC_EXISTING
     ncStatus = nf90_def_dim(self%ncid, trim(gridName)//'_y', ubounds(2)-lbounds(2)+1,dimid)
+    if (ncStatus==NF90_ENAMEINUSE) then
+      rc_=MOSSCO_NC_EXISTING
+    elseif (ncStatus==NF90_NOERR) then
+      rc_=MOSSCO_NC_NOERR
+    else
+      rc_=MOSSCO_NC_ERROR
+    end if
   end if
   if (rank>2) then
     !! assume to have 3d grid
     ncStatus = nf90_def_dim(self%ncid, trim(gridName)//'_z', ubounds(3)-lbounds(3)+1,dimid)
+    if (ncStatus==NF90_ENAMEINUSE) then
+      rc_=MOSSCO_NC_EXISTING
+    elseif (ncStatus==NF90_NOERR) then
+      rc_=MOSSCO_NC_NOERR
+    else
+      rc_=MOSSCO_NC_ERROR
+    end if
   end if
   ncStatus = nf90_enddef(self%ncid)
+  if (present(rc)) rc=rc_
   end subroutine mossco_netcdf_use_grid_dimensions
 
 
