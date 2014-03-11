@@ -50,8 +50,67 @@ module copy_coupler
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    integer(ESMF_KIND_I4)       :: petCount, localPet
+    integer(ESMF_KIND_I4)       :: i, itemCount
+    character (len=ESMF_MAXSTR) :: timeString, message, name
+    type(ESMF_Time)             :: currTime
+    character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
+    type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
+    type(ESMF_Field)            :: field
+
+    !! Set default SUCCESS return value and log the call to this 
+    !! function into the log
     rc = ESMF_SUCCESS
     
+    call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
+      rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!#ifdef DEBUG
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!#endif
+
+    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
+      rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
+    if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+
+    call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
+      itemNameList=itemNameList, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    do i=1, itemCount
+      if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
+        call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+        call ESMF_StateAddReplace(importState,(/field/), rc=rc)        
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
+      else
+        write(message,'(A)') 'Did not copy non-field item '//trim(itemNameList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
+      endif   
+    enddo
+
+    !! Return with logging 
+    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!#ifdef DEBUG
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!#endif    
   end subroutine Initialize
 
   !> the Run() routine of this coupler copies all fields that are found
