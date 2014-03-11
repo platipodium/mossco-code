@@ -88,6 +88,7 @@ module mossco_netcdf
 
   ncStatus = nf90_def_dim(self%ncid, 'time', NF90_UNLIMITED, self%timeDimId)
   ncStatus = nf90_def_var(self%ncid, 'time', NF90_DOUBLE, self%timeDimId, varid)
+  ncStatus = nf90_put_att(self%ncid, varid, 'units', timeUnit)
 
   if (ncStatus /= NF90_NOERR) then
     allocate(self%variables(1))
@@ -122,7 +123,30 @@ module mossco_netcdf
   type(ESMF_Grid)               :: grid
   integer, intent(out),optional :: rc
   integer                       :: ncStatus
+  character(len=ESMF_MAXSTR)    :: gridName
+  integer,allocatable           :: ubounds(:),lbounds(:)
+  integer                       :: dimid,rank=3
 
+  call ESMF_GridGet(grid,name=gridName,rank=rank,rc=rc)
+  allocate(ubounds(rank))
+  ubounds(:)=1
+  allocate(lbounds(rank))
+  lbounds(:)=1
+  call ESMF_GridGetFieldBounds(grid=grid, localDe=0, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, totalCount=ubounds, rc=rc)
+write(0,*) ubounds
+
+  ncStatus = nf90_redef(self%ncid)
+  if (rank>1) then
+    !! assume to have horizontal grid
+    ncStatus = nf90_def_dim(self%ncid, trim(gridName)//'_x', ubounds(1)-lbounds(1)+1,dimid)
+    ncStatus = nf90_def_dim(self%ncid, trim(gridName)//'_y', ubounds(2)-lbounds(2)+1,dimid)
+  end if
+  if (rank>2) then
+    !! assume to have 3d grid
+    ncStatus = nf90_def_dim(self%ncid, trim(gridName)//'_z', ubounds(3)-lbounds(3)+1,dimid)
+  end if
+  ncStatus = nf90_enddef(self%ncid)
   end subroutine mossco_netcdf_use_grid_dimensions
 
 
