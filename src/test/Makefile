@@ -19,7 +19,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lnetcdff
 
-all: test_FieldGet test_ArrayGet test_Clock test_GridCreate
+all: test_FieldGet test_ArrayGet test_Clock test_GridCreate test_Netcdf
 
 test_ArrayGet: test_ArrayGet.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
@@ -32,6 +32,9 @@ test_GridCreate: test_GridCreate.o
 
 test_Clock: test_Clock.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+
+test_Netcdf: test_Netcdf.o
+	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS)
 
 clean: extraclean
 
