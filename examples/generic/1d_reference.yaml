@@ -5,7 +5,7 @@ dependencies:
     - gotm
     - fabm_gotm
     - simplewave
-  - simplewave: clm
+  - simplewave: clm_netcdf
   - benthic_pelagic_coupler: fabm_gotm
   - benthos: erosed
 
@@ -20,12 +20,12 @@ dependencies:
 
 coupling:
   - components: 
-     - clm
+     - clm_netcdf
      - gotm
     interval: 6 m
 
   - components: 
-     - clm
+     - clm_netcdf
      - simplewave
     interval: 6 m
 

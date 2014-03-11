@@ -253,21 +253,12 @@ fid.write('''
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
    
-    !! Now register all setServices routines and initialize the gridded components
+    !! Now register all setServices routines for the gridded components
 ''')
 
 for i in range(0, len(componentList)):
     fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' + componentList[i] + '_SetServices, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
-
-fid.write('''
-    do i=1,numGridComp
-      call ESMF_GridCompInitialize(gridCompList(i), importState=importStates(i), &
-      exportState=exportStates(i), clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    enddo
-    
-''')
 
 if len(couplerList)>0:
     fid.write('    !! Allocate the fields for all coupler components and their names\n')
@@ -301,7 +292,22 @@ for i in range(0,len(couplingList)):
     fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
     fid.write('      exportState=exportStates(' + str(ifrom+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
- 
+
+for i in range(0, len(componentList)):
+    item=componentList[i]
+    ifrom=i
+    for j in range(0, len(couplingList)):
+        jtem=couplingList[j]
+        if jtem[-1]==item:
+            ifrom=componentList.index(jtem[0])
+    fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
+    fid.write('      exportState=importStates(' + str(i+1) + '), clock=clock, rc=rc)\n')            
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+            
+    fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(i+1) + '), importState=importStates(' + str(ifrom+1) + '), &\n')
+    fid.write('      exportState=exportStates(' + str(i+1) + '), clock=clock, rc=rc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+     
 fid.write('    numCplAlarm = ' + str(len(couplingList)))
 fid.write('''
     if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
@@ -314,6 +320,7 @@ fid.write('''
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
  
 ''')
+
 for i in range(0,len(couplingList)):
     string = intervals[i].split()
     number = string[0]
