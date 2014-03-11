@@ -99,9 +99,10 @@ module netcdf_component
     type(ESMF_Time)         :: currTime, currentTime, ringTime, time
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j
-    integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet
+    integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
+    type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Array)        :: array
     type(ESMF_FieldBundle)  :: fieldBundle
     type(ESMF_ArrayBundle)  :: arrayBundle
@@ -166,13 +167,19 @@ module netcdf_component
 !          call ESMF_ArrayWrite(array, fileName, overwrite=.true., status=fileStatus, &
 !             ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
 ! 
-!        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-!          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
-!          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!
-!          call ESMF_FieldBundleWrite(fieldBundle, fileName, singleFile=.true., &
-!            overwrite=.true., status=fileStatus, &
-!             ioFmt=ESMF_IOFMT_NETCDF, timeSlice=timeSlice, rc=rc)
+        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+           
+           !> allocate fieldlist by fieldCount
+           if (allocated(fieldList)) deallocate(fieldList)
+           call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=rc)
+           allocate(fieldList(fieldCount))
+           
+           call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=rc)
+           do ii=1,size(fieldList)
+              call MOSSCO_FieldWriteNc(fieldList(ii), filename, parentClock, rc)
+           end do
 !       elseif (itemTypeList(i) == ESMF_STATEITEM_ARRAYBUNDLE) then
 !         call ESMF_StateGet(importState, trim(itemNameList(i)), arrayBundle, rc=rc) 
 !         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
