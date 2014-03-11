@@ -50,7 +50,6 @@ src/drivers/sand_mud.f90
 src/drivers/sedparams.inc
 src/drivers/shld.f90
 src/drivers/vanRijn84.f90
-src/test/test_[A-z]*
 examples/esmf/clm/atmos*.nc
 examples/standalone/erosed/delft_sediment_test.out
 examples/standalone/erosed/erosed
