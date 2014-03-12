@@ -20,6 +20,8 @@ SUBDIRS=
 
 .PHONY: sha
 
+all: sha
+
 git-sha.h: sha
 
 clean: extraclean
