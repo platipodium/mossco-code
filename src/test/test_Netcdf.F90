@@ -7,7 +7,7 @@ character(len=ESMF_MAXSTR) :: filename='test.nc'
 character(len=ESMF_MAXSTR) :: timeUnit='seconds since 2000-01-01 00:00:00'
 integer                    :: rc
 type(ESMF_Grid)            :: grid,grid2
-type(ESMF_Field)           :: field3d,field2d
+type(ESMF_Field)           :: field3d,field2d,field3d_c
 integer, dimension(:),pointer :: dimids => null()
 real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farray3d
 real(ESMF_KIND_R8),dimension(:,:),pointer :: farray2d
@@ -19,6 +19,7 @@ grid  = ESMF_GridCreateNoPeriDim( &
          name='test_grid',rc=rc)
 allocate(farray3d(1,4,25))
 field3d = ESMF_FieldCreate(grid,name='my_standard_name_3d',farrayPtr=farray3d)
+field3d_c = ESMF_FieldCreate(grid,name='my_standard_name_3d_copy',farrayPtr=farray3d)
 
 grid2  = ESMF_GridCreateNoPeriDim( &
          minIndex=(/1,1/),maxIndex=(/1,1/), regDecomp=(/1,1/), &
@@ -35,9 +36,10 @@ write(0,*) 'opened netcdf ',trim(filename)
 write(0,*) '  ',trim(filename),' has ',size(nc%variables),'variables'
 call nc%close()
 
-write(0,*) 'open netcdf and create variable from field on 1x4x25 grid'
+write(0,*) 'open netcdf and create variable from field3d,field3d_c on 1x4x25 grid'
 nc = mossco_netcdfOpen(filename,rc=rc)
 call nc%create_variable(field3d)
+call nc%create_variable(field3d_c)
 call nc%update_variables()
 write(0,*) '  ',trim(filename),' now has ',size(nc%variables),'variables'
 call nc%close()

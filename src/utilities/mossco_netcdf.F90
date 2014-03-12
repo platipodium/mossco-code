@@ -76,7 +76,6 @@ module mossco_netcdf
     call replace_character(gridname, ' ', '_')
     dimids => self%grid_dimensions(grid)
 
-    write(0,*) trim(gridname), trim(varname), dimids
     select case(ubound(dimids,1))
     case(2)
       coordinates='time '//trim(gridname)//'_x '
@@ -89,7 +88,6 @@ module mossco_netcdf
     !! define variable
     ncStatus = nf90_redef(self%ncid)
     ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
-    write(0,*) nf90_strerror(ncStatus)
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     
     ncStatus = nf90_put_att(self%ncid,varid,'standard_name',fieldname)
@@ -215,13 +213,14 @@ module mossco_netcdf
   function mossco_netcdf_grid_dimensions(self,grid) result(dimids)
   class(type_mossco_netcdf)     :: self
   type(ESMF_Grid)               :: grid
-  integer                       :: ncStatus,rc_,esmfrc,dimcheck=0
+  integer                       :: ncStatus,rc_,esmfrc,dimcheck
   character(len=ESMF_MAXSTR)    :: gridName
   integer,allocatable           :: ubounds(:),lbounds(:)
   integer                       :: dimid,rank=3
   integer,pointer,dimension(:)  :: dimids
 
   rc_ = MOSSCO_NC_NOERR
+  dimcheck=0
   call ESMF_GridGet(grid,name=gridName,rank=rank,rc=esmfrc)
 
   call replace_character(gridname, ' ', '_')
@@ -243,16 +242,16 @@ module mossco_netcdf
       if (ncStatus /= NF90_NOERR) dimcheck=-1
   case(2)
       ncStatus = nf90_inq_dimid(self%ncid,trim(gridname)//'_y',dimids(2))
-      if (ncStatus /= NF90_NOERR) dimcheck=-1      
+      if (ncStatus /= NF90_NOERR) dimcheck=-1
       ncStatus = nf90_inq_dimid(self%ncid,trim(gridname)//'_x',dimids(1))
-      if (ncStatus /= NF90_NOERR) dimcheck=-1      
+      if (ncStatus /= NF90_NOERR) dimcheck=-1
   case(3)
       ncStatus = nf90_inq_dimid(self%ncid,trim(gridname)//'_z',dimids(3))
-      if (ncStatus /= NF90_NOERR) dimcheck=-1      
+      if (ncStatus /= NF90_NOERR) dimcheck=-1
       ncStatus = nf90_inq_dimid(self%ncid,trim(gridname)//'_y',dimids(2))
-      if (ncStatus /= NF90_NOERR) dimcheck=-1      
+      if (ncStatus /= NF90_NOERR) dimcheck=-1
       ncStatus = nf90_inq_dimid(self%ncid,trim(gridname)//'_x',dimids(1))
-      if (ncStatus /= NF90_NOERR) dimcheck=-1      
+      if (ncStatus /= NF90_NOERR) dimcheck=-1
   case default
       call ESMF_LogWrite('create netcdf variable: only grid ranks 1,2,3 supported', ESMF_LOGMSG_INFO)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
