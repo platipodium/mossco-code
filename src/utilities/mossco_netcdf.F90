@@ -103,10 +103,17 @@ module mossco_netcdf
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     
     if (rank==3) then
-      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, start=(/1,1,1,dimlen/))
+      call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, &
+        start=(/1,1,1,dimlen/), count=(/1,1,1,1/))
     elseif (rank==2) then
+      call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, start=(/1,1,dimlen/))
     elseif (rank==2) then
+      call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, start=(/1,dimlen/))
     endif
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
