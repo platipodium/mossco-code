@@ -462,5 +462,9 @@ endif
 #	$(F90) $(F90FLAGS) $(EXTRA_FFLAGS) -c $< -o $@
 #endif
 
+sha:
+	@-git log | head -1 | awk '{print "character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = \""$$2"\"" }' \
+	> $(MOSSCO_DIR)/src/include/git-sha.h
+	
 help:
 	@if [ -f README ] ; then cat README ; fi
