@@ -33,6 +33,7 @@ module mossco_netcdf
   integer, parameter :: MOSSCO_NC_ERROR=-1
   integer, parameter :: MOSSCO_NC_NOERR=0
   integer, parameter :: MOSSCO_NC_EXISTING=1
+#include "git-sha.h"
 
   contains
 
@@ -159,8 +160,8 @@ module mossco_netcdf
   ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
   if (present(rc)) rc=ncStatus
   if (present(timeUnit)) call nc%init_time(timeUnit)
+  ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
   ncStatus = nf90_enddef(nc%ncid)
-
   end function mossco_netcdfCreate
 
 

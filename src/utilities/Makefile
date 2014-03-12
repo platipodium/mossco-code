@@ -24,7 +24,7 @@ EXTRA_DIST=README
 all: libsolver libmossco_util
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
-libmossco_util:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o \
+libmossco_util:  prefix sha $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o \
           mossco_variable_types.o mossco_time.o mossco_state.o mossco_netcdf.o)
 
 #@todo there should be a generic rule for the mods
