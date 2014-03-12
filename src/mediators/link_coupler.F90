@@ -1,4 +1,4 @@
-!> @brief Implementation of an ESMF copy coupling
+!> @brief Implementation of an ESMF link coupling
 !>
 !> This computer program is part of MOSSCO. 
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
@@ -10,7 +10,7 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
-module copy_coupler
+module link_coupler
     
   use esmf
   use mossco_state
@@ -149,18 +149,21 @@ module copy_coupler
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 !#endif
 
-    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
+   call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-    if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
 
-    call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
-      itemNameList=itemNameList, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (itemCount > 0) then
+      if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
+      if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+    
+      call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
+        itemNameList=itemNameList, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
     
     do i=1, itemCount
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
@@ -171,7 +174,7 @@ module copy_coupler
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
       else
-        write(message,'(A)') 'Did not copy non-field item '//trim(itemNameList(i))
+        write(message,'(A)') 'Did not link non-field item '//trim(itemNameList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
       endif   
     enddo
@@ -201,5 +204,5 @@ module copy_coupler
     
   end subroutine Finalize
 
-end module copy_coupler
+end module link_coupler
 

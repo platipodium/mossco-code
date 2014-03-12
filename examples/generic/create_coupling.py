@@ -57,7 +57,7 @@ for item in coupling:
             componentList.extend([item["components"][0], item["components"][-1]])
             n=len(item["components"])
             if n==2:
-                couplerList.append("copy_coupler")
+                couplerList.append("link_coupler")
             for i in range(1,n-1):
                 couplerList.append(item["components"][i])    
             if item.has_key("interval"):
@@ -314,7 +314,7 @@ fid.write('''
     if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
     if (.not.allocated(cplNames)) allocate(cplNames(numCplAlarm))
     do i=1, numCplAlarm 
-      cplNames(i)='copy'    
+      cplNames(i)='link'    
     enddo
     !! Set the coupling alarm starting from start time of local clock
     call ESMF_ClockGet(clock,startTime=startTime, rc=rc)
@@ -572,7 +572,7 @@ fid.write('''
           enddo
             
           write(message,'(A)') trim(timeString)//' '//trim(compName)//' ->'
-          if (trim(cplName) /= 'copy') then
+          if (trim(cplName) /= 'link') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
             write(message,'(A)') trim(message)//' ('//trim(cplName)//') ->'
@@ -852,7 +852,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
                         'input_prod', 'util_prod', 'fabm_prod'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
-        'copy_coupler' : ['copycoupler']
+        'link_coupler' : ['linkcoupler']
 }
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
@@ -869,7 +869,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'fabm_gotm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
-        'copy_coupler' : ['libcopycoupler']
+        'link_coupler' : ['liblinkcoupler']
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
@@ -933,26 +933,20 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libmossco_clm liberosed libmossco_fabm0d :
+libsediment libconstant libmossco_clm liberosed libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libempty libmossco_simplewave libmossco_netcdf:
+libempty libmossco_simplewave libmossco_netcdf libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler:
+libsurfacescoupler libaocoupler liblinkcoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
-
-libmossco_benthos:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libocean libatmosphere:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
-
-libcopycoupler:
-	$(MAKE) -C $(MOSSCO_DIR)/src/mediators libcopycoupler
  
 libpelagicbenthiccoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators pelagicbenthiccoupler benthicpelagiccoupler
