@@ -18,6 +18,7 @@ grid  = ESMF_GridCreateNoPeriDim( &
          minIndex=(/1,1,1/),maxIndex=(/1,4,25/), regDecomp=(/1,1,1/), &
          name='test_grid',rc=rc)
 allocate(farray3d(1,4,25))
+farray3d(:,:,:)=123.4
 field3d = ESMF_FieldCreate(grid,name='my_standard_name_3d',farrayPtr=farray3d)
 field3d_c = ESMF_FieldCreate(grid,name='my_standard_name_3d_copy',farrayPtr=farray3d)
 
@@ -39,7 +40,9 @@ call nc%close()
 write(0,*) 'open netcdf and create variable from field3d,field3d_c on 1x4x25 grid'
 nc = mossco_netcdfOpen(filename,rc=rc)
 call nc%create_variable(field3d)
-call nc%create_variable(field3d_c)
+call nc%add_timestep(3600.d0)
+call nc%put_variable(field3d_c)
+
 call nc%update_variables()
 write(0,*) '  ',trim(filename),' now has ',size(nc%variables),'variables'
 call nc%close()
@@ -48,6 +51,10 @@ write(0,*) 'open netcdf and add dimensions of a 1x1 grid'
 nc = mossco_netcdfOpen(filename,rc=rc)
 dimids => nc%grid_dimensions(grid2)
 write(0,*) '  -> grid has',size(dimids-1),'dimensions'
+write(0,*) 'put second timestep for field3d_c'
+call nc%add_timestep(7200.d0)
+farray3d(:,:,:)=721.0
+call nc%put_variable(field3d_c)
 call nc%close()
 
 call esmf_finalize()

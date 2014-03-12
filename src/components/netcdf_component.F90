@@ -175,7 +175,7 @@ module netcdf_component
 
           write(*,*) i, itemCount, trim(itemNameList(i))
           
-          call nc%put_variable(seconds, field)
+          call nc%put_variable(field)
           !if (.not.nc%variable_present(trim(itemNameList(i))))  then 
           !  call nc%create_variable(field)
           !endif
