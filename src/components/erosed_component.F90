@@ -292,8 +292,7 @@ end if
     h1      = 3.0_fp        ! water depth [m]
     umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
     ws      = 0.001_fp      ! Settling velocity [m/s]
-    r1(1,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
-    r1(2,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+    r1(:,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
     
 
     do nm = nmlb, nmub
