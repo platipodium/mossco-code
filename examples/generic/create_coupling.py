@@ -6,6 +6,7 @@ if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
      filename = '1d_reference.yaml'
+     filename = 'constant_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
@@ -34,7 +35,7 @@ if config.has_key('copyright'):
 else:
     copyright = 'Copyright (C) 2014, Helmholtz-Zentrum Geesthacht'
 
-dependencyList=[]
+dependencies=[]
 
 if config.has_key('dependencies'):
     dependencies = config.pop('dependencies');    
