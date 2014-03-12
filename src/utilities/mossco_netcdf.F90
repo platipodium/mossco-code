@@ -1,19 +1,33 @@
+!> @brief Implementation ESMF/NetCDF utility functions
+!>
+!> This computer program is part of MOSSCO. 
+!> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister
+
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 module mossco_netcdf
 
   use mossco_variable_types, only: mossco_variableInfo
   use mossco_strings 
   use esmf
   use netcdf
+  
+  private
 
-  public mossco_netcdfCreate,mossco_netcdfOpen
+  public MOSSCO_NetcdfCreate, MOSSCO_NetcdfOpen
 
-  type, extends(mossco_variableInfo), public :: type_mossco_netcdf_variable
+  type, extends(MOSSCO_VariableInfo), public :: type_mossco_netcdf_variable
     integer               :: varid
     integer               :: ncid
     integer               :: rank
     integer, allocatable  :: dimids(:), dimlens(:)
     contains
-    procedure :: put => mossco_netcdf_variable_put
+!    procedure :: put => mossco_netcdf_variable_put
   end type type_mossco_netcdf_variable
 
   type, public :: type_mossco_netcdf
@@ -28,30 +42,87 @@ module mossco_netcdf
     procedure :: update_variables => mossco_netcdf_update_variables
     procedure :: create_variable => mossco_netcdf_variable_create
     procedure :: variable_present => mossco_netcdf_variable_present
+    procedure :: put_variable => mossco_netcdf_variable_put
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
-  integer, parameter :: MOSSCO_NC_NOERR=0
+  integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
   integer, parameter :: MOSSCO_NC_EXISTING=1
 #include "git-sha.h"
 
   contains
 
   subroutine mossco_netcdf_variable_put(self,seconds,field)
-  class(type_mossco_netcdf_variable) :: self
-  type(ESMF_Field), intent(in)   :: field
-  real(ESMF_KIND_R8), intent(in) :: seconds
+  
+    implicit none
+    !class(type_mossco_netcdf_variable) :: self
+    class(type_mossco_netcdf) :: self
+    type(ESMF_Field), intent(in)   :: field
+    real(ESMF_KIND_R8), intent(in) :: seconds
+  
+    integer                     :: ncStatus, varid, rc, rank
+    integer                     :: nDims, nAtts, udimid, dimlen
+    character(len=ESMF_MAXSTR)  :: varname, message
+    type(ESMF_Grid)             :: grid
+    
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
+    real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
+    real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
+  
+    call ESMF_FieldGet(field, name=varname, rank=rank, grid=grid, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+    
+    if (rank>3 .or. rank<1) then
+       write(message,'(A)')  'Writing of fields with rank<1 or rank>3 not supported.'
+       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+       return
+    endif
+    
+    !> If the variable does not exist, create it
+    if (.not.self%variable_present(varname)) then
+      call self%create_variable(field, trim(varname), rc=rc)
+    endif
+    !> @todo what happens if variable exists but on different grid?
+    
+    ncStatus = nf90_inq_varid(self%ncid, trim(varname), varid)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+    
+    ncStatus = nf90_inquire_variable(self%ncid, varid, ndims=nDims, natts=nAtts)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
+    if (rank /= nDims-1) then
+       write(message,'(A)')  'Field rank and netcdf dimension count do not match'
+       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+       return
+    endif
+    
+    ncStatus = nf90_inq_dimid(self%ncid, 'time', udimid)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
+    ncStatus = nf90_inquire_dimension(self%ncid, udimid, len=dimlen)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+    
+    if (rank==3) then
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, start=(/1,1,1,dimlen/))
+    elseif (rank==2) then
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, start=(/1,1,dimlen/))
+    elseif (rank==2) then
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, start=(/1,dimlen/))
+    endif
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+     
   end subroutine mossco_netcdf_variable_put
 
 
   function mossco_netcdf_variable_present(self,name) result(varpresent)
-  class(type_mossco_netcdf)          :: self
-  character(len=*)                   :: name
-  logical                            :: varpresent
-  integer                            :: ncStatus,varid
-  varpresent = .false.
-  ncStatus = nf90_inq_varid(self%ncid,name,varid)
-  if (ncStatus == NF90_NOERR) varpresent=.true.
+    class(type_mossco_netcdf)          :: self
+    character(len=*)                   :: name
+    logical                            :: varpresent
+  
+    integer                            :: ncStatus,varid
+    varpresent = .false.
+    ncStatus = nf90_inq_varid(self%ncid,name,varid)
+    if (ncStatus == NF90_NOERR) varpresent=.true.
   end function mossco_netcdf_variable_present
 
 

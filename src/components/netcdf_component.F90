@@ -80,8 +80,8 @@ module netcdf_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    message = trim(nf90_inq_libvers())
-    call ESMF_LogWrite(trim(name)//' uses NetCDF '//trim(message), ESMF_LOGMSG_INFO)
+    !message = trim(nf90_inq_libvers())
+    !call ESMF_LogWrite(trim(name)//' uses NetCDF '//trim(message), ESMF_LOGMSG_INFO)
 
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -174,9 +174,11 @@ module netcdf_component
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
           write(*,*) i, itemCount, trim(itemNameList(i))
-          if (.not.nc%variable_present(trim(itemNameList(i))))  then 
-            call nc%create_variable(field)
-          endif
+          
+          call nc%put_variable(seconds, field)
+          !if (.not.nc%variable_present(trim(itemNameList(i))))  then 
+          !  call nc%create_variable(field)
+          !endif
 
         else 
           write(message,'(A)') 'Item with name '//trim(itemNameList(i))//' not saved to file ' 
