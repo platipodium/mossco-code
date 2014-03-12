@@ -15,6 +15,7 @@ module netcdf_component
   use esmf
   use mossco_variable_types
   use mossco_netcdf
+  use mossco_strings
 
   implicit none
   private
@@ -97,9 +98,10 @@ module netcdf_component
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: currTime, currentTime, ringTime, time
+    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j
+    real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
@@ -109,7 +111,7 @@ module netcdf_component
     type(ESMF_ArrayBundle)  :: arrayBundle
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
        
-    character(len=ESMF_MAXSTR) :: message, fileName, name, numString
+    character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
 
@@ -120,7 +122,7 @@ module netcdf_component
     if (localPET>0) return
 
     call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
-                       advanceCount=advanceCount, rc=rc)
+                       advanceCount=advanceCount, refTime=refTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -130,7 +132,7 @@ module netcdf_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
-      defaultValue='netcdf_component', rc=rc)
+      defaultValue='netcdf_component.nc', rc=rc)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -152,6 +154,18 @@ module netcdf_component
       
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
+
+      call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call nc%add_timestep(seconds, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
   
       do i=1,itemCount
         
@@ -159,8 +173,10 @@ module netcdf_component
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-          nc = mossco_netcdfCreate(fileName,rc=rc)
-          call nc%create_variable(field)
+          write(*,*) i, itemCount, trim(itemNameList(i))
+          if (.not.nc%variable_present(trim(itemNameList(i))))  then 
+            call nc%create_variable(field)
+          endif
 
         else 
           write(message,'(A)') 'Item with name '//trim(itemNameList(i))//' not saved to file ' 
@@ -171,6 +187,8 @@ module netcdf_component
 
       if (allocated(itemTypeList)) deallocate(itemTypeList)
       if (allocated(itemNameList)) deallocate(itemNameList)
+
+      call nc%close()
     endif 
     
     write(message,'(A)') trim(timestring)//' netcdf_component finished running.'

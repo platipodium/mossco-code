@@ -1,6 +1,7 @@
 module mossco_netcdf
 
   use mossco_variable_types, only: mossco_variableInfo
+  use mossco_strings 
   use esmf
   use netcdf
 
@@ -71,8 +72,11 @@ module mossco_netcdf
   if (.not.self%variable_present(varname)) then
     call ESMF_FieldGet(field,grid=grid,rc=esmfrc)
     call ESMF_GridGet(grid,name=gridname,rc=esmfrc)
+
+    call replace_character(gridname, ' ', '_')
     dimids => self%grid_dimensions(grid)
 
+    write(0,*) trim(gridname), trim(varname), dimids
     select case(ubound(dimids,1))
     case(2)
       coordinates='time '//trim(gridname)//'_x '
@@ -85,7 +89,8 @@ module mossco_netcdf
     !! define variable
     ncStatus = nf90_redef(self%ncid)
     ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
-    !write(0,*) nf90_strerror(ncStatus)
+    write(0,*) nf90_strerror(ncStatus)
+    if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     
     ncStatus = nf90_put_att(self%ncid,varid,'standard_name',fieldname)
     ncStatus = nf90_put_att(self%ncid,varid,'long_name',fieldname)
@@ -99,9 +104,20 @@ module mossco_netcdf
   end subroutine mossco_netcdf_variable_create
 
 
-  subroutine mossco_netcdf_add_timestep(self,seconds)
+  subroutine mossco_netcdf_add_timestep(self,seconds, rc)
   class(type_mossco_netcdf) :: self
   real(ESMF_KIND_R8), intent(in) :: seconds
+  integer, optional              :: rc
+
+  integer           :: ncStatus, dimlen, varid
+
+  ncStatus = nf90_inq_varid(self%ncid, 'time', varid)
+  !>@todo check for exsiting time
+  ncStatus = nf90_inquire_dimension(self%ncid, self%timedimid, len=dimlen)
+
+  ncStatus = nf90_put_var(self%ncid, varid, seconds, start=(/dimlen+1/))
+  if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
   end subroutine mossco_netcdf_add_timestep
 
 
@@ -114,12 +130,22 @@ module mossco_netcdf
   end subroutine mossco_netcdf_close
 
 
-  function mossco_netcdfOpen(filename,rc) result(nc)
+  function mossco_netcdfOpen(filename, timeUnit, rc) result(nc)
   character(len=ESMF_MAXSTR)    :: filename
   type(type_mossco_netcdf)      :: nc
+  character(len=*),optional     :: timeUnit
   integer, intent(out),optional :: rc
   integer                       :: ncStatus
   ncStatus = nf90_open(trim(filename), mode=NF90_WRITE, ncid=nc%ncid)
+  
+  if (ncStatus /= NF90_NOERR) then
+    if (present(timeUnit))  then
+      nc = MOSSCO_NetcdfCreate(trim(filename), timeUnit=trim(timeUnit), rc = rc)
+    else
+      nc = MOSSCO_NetcdfCreate(trim(filename), rc = rc)
+    endif 
+  endif
+  
   ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
   call nc%update_variables()
   if (present(rc)) rc=ncStatus
@@ -135,6 +161,8 @@ module mossco_netcdf
   ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
   if (present(rc)) rc=ncStatus
   if (present(timeUnit)) call nc%init_time(timeUnit)
+  ncStatus = nf90_enddef(nc%ncid)
+
   end function mossco_netcdfCreate
 
 
@@ -195,6 +223,8 @@ module mossco_netcdf
 
   rc_ = MOSSCO_NC_NOERR
   call ESMF_GridGet(grid,name=gridName,rank=rank,rc=esmfrc)
+
+  call replace_character(gridname, ' ', '_')
   allocate(ubounds(rank))
   ubounds(:)=1
   allocate(lbounds(rank))
