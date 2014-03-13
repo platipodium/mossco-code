@@ -26,8 +26,6 @@ module mossco_netcdf
     integer               :: ncid
     integer               :: rank
     integer, allocatable  :: dimids(:), dimlens(:)
-    contains
-!    procedure :: put => mossco_netcdf_variable_put
   end type type_mossco_netcdf_variable
 
   type, public :: type_mossco_netcdf
@@ -52,13 +50,13 @@ module mossco_netcdf
 
   contains
 
-  subroutine mossco_netcdf_variable_put(self,field,seconds)
+  subroutine mossco_netcdf_variable_put(self,field,seconds,name)
   
     implicit none
-    !class(type_mossco_netcdf_variable) :: self
-    class(type_mossco_netcdf) :: self
-    type(ESMF_Field), intent(in)   :: field
+    class(type_mossco_netcdf)               :: self
+    type(ESMF_Field), intent(in)            :: field
     real(ESMF_KIND_R8), intent(in),optional :: seconds
+    character(len=*),optional               :: name
   
     integer                     :: ncStatus, varid, rc, esmfrc, rank
     integer                     :: nDims, nAtts, udimid, dimlen
@@ -71,7 +69,8 @@ module mossco_netcdf
   
     call ESMF_FieldGet(field, name=varname, rank=rank, grid=grid, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-    
+    if (present(name)) varname=trim(name)
+
     if (rank>3 .or. rank<1) then
        write(message,'(A)')  'Writing of fields with rank<1 or rank>3 not supported.'
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)

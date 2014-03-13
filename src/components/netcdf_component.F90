@@ -110,6 +110,8 @@ module netcdf_component
     type(ESMF_FieldBundle)  :: fieldBundle
     type(ESMF_ArrayBundle)  :: arrayBundle
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
+    character(len=ESMF_MAXSTR) :: fieldName
+    character(len=3)        :: numberstring
        
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
@@ -172,8 +174,25 @@ module netcdf_component
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
           call nc%put_variable(field)
+
+        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          allocate(fieldList(fieldCount))
+          call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+          !! go through list of fields and put fields into netcdf using field name and number
+          do ii=1,size(fieldList)
+            call ESMF_FieldGet(fieldList(ii),name=fieldName,rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+            write(numberstring,'(I0.3)') ii
+            call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
+          end do
+          deallocate(fieldList)
         else 
           write(message,'(A)') 'Item with name '//trim(itemNameList(i))//' not saved to file ' 
         endif
@@ -216,23 +235,5 @@ module netcdf_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine Finalize
-
-!  subroutine MOSSCO_Reallocate(variable,dimensions, keepLarge)
-!    integer, intent(inout), allocatable :: variable(:)
-!    integer :: dimensions
-!    logical, optional :: keepLarge
-!
-!    if (.not.present(keepLarge)) keepLarge=.false.
-!
-!    if (.not.allocated(variable)) then
-!      allocate(variable(dimensions))
-!    else
-!      if (.not.((size(variable)>=dimensions).and.keepLarge)) then
-!        deallocate(variable)
-!        allocate(variable(dimensions))
-!      endif
-!    endif
-!
-!   end subroutine MOSSCO_Reallocate 
 
 end module netcdf_component
