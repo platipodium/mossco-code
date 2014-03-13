@@ -267,6 +267,7 @@ endif
 endif
 endif
 
+ifeq (${MOSSCO_FABM},true)
 ifneq ($(F90_VERSION),$(FABM_F90COMPILER_VERSION))
 MPICH_F90COMPILER=$(shell $(F90) -compile_info 2> /dev/null | cut -d' ' -f1)
 #MPICH_F90COMPILER_VERSION:=$(shell $(MPICH_F90COMPILER) --version | head -1)
@@ -276,10 +277,11 @@ $(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
 endif
 endif
 endif
+export FABM_F90COMPILER_VERSION
+endif
 export MOSSCO_COMPILER=$(F90)
 export F90
 export F90_VERSION
-export FABM_F90COMPILER_VERSION
 export MPICH_F90COMPILER_VERSION
 
 ifeq ($(MOSSCO_FABM),true)
