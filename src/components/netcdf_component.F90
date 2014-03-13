@@ -98,7 +98,7 @@ module netcdf_component
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime
+    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime,startTime
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j
     real(ESMF_KIND_R8)      :: seconds
@@ -123,7 +123,7 @@ module netcdf_component
     ! This output routine only works on PET0
     if (localPET>0) return
 
-    call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
+    call ESMF_ClockGet(parentClock,currTime=currTime, startTime=startTime, timestep=timeInterval, &
                        advanceCount=advanceCount, refTime=refTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
@@ -164,7 +164,12 @@ module netcdf_component
       call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-      nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, rc=rc)
+      if (currTime == startTime) then
+        nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, rc=rc)
+      else
+        nc = mossco_netcdfOpen(fileName, rc=rc)
+      end if
+
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       call nc%add_timestep(seconds, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
