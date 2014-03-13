@@ -1,13 +1,12 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
 # 
-# Copyright (C) 2013 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# Copyright (C) 2013, 2014 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
-
 
 # 1. Checking that we're using GNU make 
 #    Of course, this command already requires gmake, so a better solution is required here
@@ -22,37 +21,65 @@ endif
 MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
-# of the Preamlbe section of this Rules.make in repeated calls.  In most circumstances,
+# of the preamble section of this Rules.make in repeated calls.  In most circumstances,
 # Rules.make is executed at MAKELEVEL 1, unless directly called in $(MOSSCODIR)/src
 #ifneq (,$(filter $(MAKELEVEL),0 1))
-ifeq (1,1)
-# 2. Importing all FABM-related environment variables and checking that the environment is sane
-#    At the moment, we require that MOSSCO_FABMDIR and FORTRAN_COMPILER are set and that
-#    the fabm library is installed in the production version (libfabm_prod)
-# 
-MOSSCO_FABM=false
 
-ifndef MOSSCO_FABMDIR
-external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
-ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
-export MOSSCO_FABMDIR=$(external_FABMDIR)
+# 2. ESMF stuff, only if ESMFMKFILE is declared. 
+#
+ifndef ESMFMKFILE
+  ifndef MOSSCO_ESMF
+    $(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
+    export MOSSCO_ESMF=false
+  endif
+else
+  include $(ESMFMKFILE)
+  export MOSSCO_ESMF=true
+  ifneq ("x$(ESMF_COMM)","xmpiuni")
+    MOSSCO_MPI ?=true
+  else
+    MOSSCO_MPI ?= false
+  endif
+  ifdef ESMF_DIR
+    MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
+  else
+    MOSSCO_OS=$(shell uname -s)
+  endif
+  ifneq ("x$(ESMF_NETCDF)","x")
+    export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
+  endif
+  export MOSSCO_OS
+  ifdef ESMF_F90COMPILER
+    export MOSSCO_F03COMPILER=$(ESMF_F90COMPILER)
+    export F90 = $(ESMF_F90COMPILER)
+    export FC  = $(ESMF_F90COMPILER)
+    export F77 = $(ESMF_F77COMPILER)
+    MOSSCO_F03VERSION==$(shell $(F90) --version | head -1)
+  endif
 endif
+
+# 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
+#    of these three components to process them later
+MOSSCO_FABM=false
+ifndef MOSSCO_FABMDIR
+  external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
+  ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+    export MOSSCO_FABMDIR=$(external_FABMDIR)
+  endif
 endif
 
 ifdef MOSSCO_FABMDIR
-export FABMDIR=$(MOSSCO_FABMDIR)
-MOSSCO_FABM=true
+  export FABMDIR=$(MOSSCO_FABMDIR)
+  MOSSCO_FABM=true
 else
-ifdef FABMDIR
-MOSSCO_FABM=true
-$(warning Assuming you have a working FABM in ${FABMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_FABMDIR explicitly to enable the build system to take  care of the FABM build) 
+  ifdef FABMDIR
+    MOSSCO_FABM=true
+    $(warning Assuming you have a working FABM in ${FABMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_FABMDIR  explicitly to enable the build system to take  care of the FABM build) 
+  endif
 endif
-endif
-
 export MOSSCO_FABM
 
 ifeq ($(MOSSCO_FABM),true)
-
 #!> @todo remove FABMHOST here and move it to makefiles where FABM is remade
 ifdef FABMHOST
 ifneq ($(FABMHOST),mossco)
@@ -61,22 +88,7 @@ endif
 endif
 export FABMHOST=mossco
 
-ifndef FORTRAN_COMPILER
-FABM_AVAILABLE_COMPILERS=$(shell ls -1 $(FABMDIR)/compilers/compiler.* | cut -d'.' -f2)
-FABM_AVAILABLE_COMPILERS:=$(patsubst %compiler.,,$(FABM_AVAILABLE_COMPILERS))
-$(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers: $(FABM_AVAILABLE_COMPILERS))
-endif
-
-FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
-FABM_INCLUDE_PATH=$(FABMDIR)/include
-FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
-
-endif
-
-# 3. (optional) Importing all GOTM-related environment variables and checking that the environment is sane
-# At the moment, we require that GOTMDIR, FABM, and FORTRAN_COMPILER are set and that
-# the gotm library is installed in the production version (libgotm_prod)
-
+# 3b. GOTM
 MOSSCO_GOTM=false
 
 ifndef MOSSCO_GOTMDIR
@@ -99,11 +111,51 @@ endif
 ifdef GOTMDIR
 MOSSCO_GOTM=true
 endif
-
 export MOSSCO_GOTM
 
-ifeq ($(MOSSCO_GOTM),true)
+# 3c. GETM
+MOSSCO_GETM=false
 
+ifndef MOSSCO_GETMDIR
+  external_GETMDIR = $(MOSSCO_DIR)/external/getm-git
+  ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+    export MOSSCO_GETMDIR=$(external_GETMDIR)
+  endif
+endif
+
+ifdef MOSSCO_GETMDIR
+  export GETMDIR=$(MOSSCO_GETMDIR)
+else
+  ifdef GETMDIR
+    $(warning Assuming you have a working GETM in ${GETMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GETMDIR explicitly to enable the build system to take  care of the GETM build) 
+  endif
+endif
+
+ifdef GETMDIR
+MOSSCO_GETM=true
+endif
+export MOSSCO_GETM
+
+# 4. Dealing with compiler matching of ESMF and FABM/GOTM/GETM, if one of those
+# is found, we require  that FORTRAN_COMPILER is set and that
+# the libraries are installed in the production version (libfabm_prod)
+# @todo adjust this generic for FABM/GOTM/GETM
+
+ifneq (,$(filter $(MOSSCO_GOTM),$(MOSSCO_FABM),$(MOSSCO_GETM) true))
+  ifndef FORTRAN_COMPILER
+    FABM_AVAILABLE_COMPILERS=$(shell ls -1 $(FABMDIR)/compilers/compiler.* | cut -d'.' -f2)
+    FABM_AVAILABLE_COMPILERS:=$(patsubst %compiler.,,$(FABM_AVAILABLE_COMPILERS))
+    $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers: $(FABM_AVAILABLE_COMPILERS))
+  endif
+endif
+
+ifeq ($(MOSSCO_FABM),true)
+FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
+FABM_INCLUDE_PATH=$(FABMDIR)/include
+FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
+endif
+
+ifeq ($(MOSSCO_GOTM),true)
 GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
 GOTM_INCLUDE_PATH=$(GOTMDIR)/include
 GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
@@ -112,33 +164,6 @@ DEFINES += -D_GOTM_MOSSCO_FABM_
 MOSSCO_GOTM_FABM=true
 endif
 endif
-
-### GETM
-
-MOSSCO_GETM=false
-
-ifndef MOSSCO_GETMDIR
-external_GETMDIR = $(MOSSCO_DIR)/external/getm-git
-ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-export MOSSCO_GETMDIR=$(external_GETMDIR)
-endif
-endif
-
-ifdef MOSSCO_GETMDIR
-export GETMDIR=$(MOSSCO_GETMDIR)
-MOSSCO_GETM=true
-else
-ifdef GETMDIR
-MOSSCO_GETM=true
-$(warning Assuming you have a working GETM in ${GETMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GETMDIR explicitly to enable the build system to take  care of the GETM build) 
-endif
-endif
-
-ifdef GETMDIR
-MOSSCO_GETM=true
-endif
-
-export MOSSCO_GETM
 
 ifeq ($(MOSSCO_GETM),true)
 GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
@@ -157,46 +182,14 @@ endif
 GETM_LIBS += -lturbulence_prod -lutil_prod
 endif
 
-# CLM stuff, this is relevant since you need to store 7 GB of data for each year and might not have access to the data
+# 5. CLM stuff, this is relevant since you need to store 7 GB of data for each year and might not have access to the data
 ifdef CLMDIR
 MOSSCO_CLM=true
 endif
-
 export MOSSCO_CLM
 
-# 4. ESMF stuff, only if ESMFMKFILE is declared.  We need to work on an intelligent system that prevents
-#    the components and mediators to be built if ESMF is not found in your system
-#
-ifndef ESMFMKFILE
-ifndef MOSSCO_ESMF
-$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed)
-$(warning Compiling without ESMF support. Finding of compilers/libraries that are usually set up by ESMF might fail.)
-export MOSSCO_ESMF=false
-endif
-else
-include $(ESMFMKFILE)
-export MOSSCO_ESMF=true
-ifneq ("x$(ESMF_COMM)","xmpiuni")
-MOSSCO_MPI ?=true
-else
-MOSSCO_MPI ?= false
-endif
-ifdef ESMF_DIR
-MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
-else
-MOSSCO_OS=$(shell uname -s)
-endif
-ifneq ("x$(ESMF_NETCDF)","x")
-export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
-endif
-export MOSSCO_OS
-endif
 
-# In case no ESMF has been found, set the default for MOSSCO_MPI
-MOSSCO_MPI ?= false
-
-
-## 5. EROSED
+## 6. EROSED
 MOSSCO_EROSED=false
 
 ifndef EROSED_DIR
@@ -209,10 +202,9 @@ endif
 ifdef EROSED_DIR
 MOSSCO_EROSED=true
 endif
-
 export MOSSCO_EROSED
 
-# 6. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
+# 7. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
 #
 ifndef MOSSCO_DIR
@@ -239,60 +231,58 @@ export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
 export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
 export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 
-# 7. Putting everything together.  This section could need some cleanup, but does work for now
-#
+# 7. Putting everything together. 
+# This is the list of ESMF-supported compilers:
+# absoft absoftintel cce default g95 gfortran gfortranclang intel intelcl intelgcc
+# lahey nag nagintel pathscale pgi pgigcc sxcross xlf xlfgcc
 
-# determine the compiler used by FABM
+# determine the compiler used by FABM/GOTM/GETM
 ifeq (${MOSSCO_FABM},true)
 FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
 FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
+ifndef F90
+export F90=$(FABM_F90COMPILER)
+$(warning F90 automatically determined from FABM environment: F90=$(F90))
+endif
 endif
 
+ifeq (${MOSSCO_GETM},true)
+GETM_F90COMPILER=$(shell grep 'FC=' $(GETMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+GETM_F90COMPILER_VERSION:=$(shell $(GETM_F90COMPILER) --version | head -1)
 ifndef F90
-ifdef ESMF_F90COMPILER
-export F90=$(ESMF_F90COMPILER)
-F90_VERSION:=$(shell $(F90) --version | head -1)
-else
-ifeq ($MOSSCO_FABM,true)
-export F90=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-F90_VERSION:=$(shell $(F90) --version | head -1)
-$(warning F90 automatically determined from FABM environment: F90=$(F90))
-else
-ifeq ($MOSSCO_GOTM,true)
-export F90=$(shell grep 'FC=' $(GOTMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-F90_VERSION:=$(shell $(F90) --version | head -1)
+export F90=$(GETM_F90COMPILER)
+$(warning F90 automatically determined from GETM environment: F90=$(F90))
+endif
+endif
+
+ifeq (${MOSSCO_GOTM},true)
+GOTM_F90COMPILER=$(shell grep 'FC=' $(GOTMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) --version | head -1)
+ifndef F90
+export F90=$(GOTM_F90COMPILER)
 $(warning F90 automatically determined from GOTM environment: F90=$(F90))
 endif
 endif
-endif
-endif
 
-ifeq (${MOSSCO_FABM},true)
-ifneq ($(F90_VERSION),$(FABM_F90COMPILER_VERSION))
-MPICH_F90COMPILER=$(shell $(F90) -compile_info 2> /dev/null | cut -d' ' -f1)
-#MPICH_F90COMPILER_VERSION:=$(shell $(MPICH_F90COMPILER) --version | head -1)
-ifneq ($(MPICH_F90COMPILER_VERSION),$(FABM_F90COMPILER_VERSION))
-ifndef MOSSCO_COMPILER
-$(warning F90=$(F90) different from compiler used by FABM ($(FABM_F90COMPILER)))
-endif
-endif
-endif
-export FABM_F90COMPILER_VERSION
-endif
-export MOSSCO_COMPILER=$(F90)
-export F90
-export F90_VERSION
-export MPICH_F90COMPILER_VERSION
 
-ifeq ($(MOSSCO_FABM),true)
-INCLUDES  = -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
-endif
+# Include directories
 INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(MOSSCO_DIR)/src/include
-ifeq ($(MOSSCO_GOTM),true)
-INCLUDES += -I$(GOTM_MODULE_PATH)
+ifeq (${MOSSCO_FABM},true)
+INCLUDES  += -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
 endif
+ifeq ($(MOSSCO_GOTM),true)
+INCLUDES += -I$(GOTM_MODULE_PATH) -I$(GOTM_INCLUDE_PATH)
+endif
+ifeq ($(MOSSCO_GETM),true)
+INCLUDES += -I$(GETM_MODULE_PATH) -I$(GETM_INCLUDE_PATH)
+endif
+
+#ifeq (${MOSSCO_FABM},true)
+#ifneq ($(F90_VERSION),$(FABM_F90COMPILER_VERSION))
+#MPICH_F90COMPILER_VERSION:=$(shell $(MPICH_F90COMPILER) --version | head -1)
+#ifneq ($(MPICH_F90COMPILER_VERSION),$(FABM_F90COMPILER_VERSION))
 
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
@@ -468,6 +458,8 @@ endif
 sha:
 	@-git log | head -1 | awk '{print "character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = \""$$2"\"" }' \
 	> $(MOSSCO_DIR)/src/include/git-sha.h
-	
+ 
+ help:
+
 help:
 	@if [ -f README ] ; then cat README ; fi
