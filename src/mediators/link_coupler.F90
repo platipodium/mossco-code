@@ -72,28 +72,28 @@ module link_coupler
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 !#ifdef DEBUG
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 !#endif
 
     call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
     if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
 
-    call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
+    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
       itemNameList=itemNameList, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     do i=1, itemCount
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=rc)
+        call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-        call ESMF_StateAddReplace(importState,(/field/), rc=rc)        
+        call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
       else
@@ -107,10 +107,9 @@ module link_coupler
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!#ifdef DEBUG
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!#endif    
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
   end subroutine Initialize
 
   !> the Run() routine of this coupler copies all fields that are found
@@ -144,33 +143,31 @@ module link_coupler
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!#ifdef DEBUG
     write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!#endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (itemCount > 0) then
       if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
       if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
     
-      call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
+      call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     
     do i=1, itemCount
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=rc)
+        call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-        call ESMF_StateAddReplace(importState,(/field/), rc=rc)        
+        call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
       else
@@ -184,10 +181,8 @@ module link_coupler
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!#ifdef DEBUG
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!#endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine Run
 
