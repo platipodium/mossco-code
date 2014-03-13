@@ -173,13 +173,7 @@ module netcdf_component
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-          write(*,*) i, itemCount, trim(itemNameList(i))
-          
           call nc%put_variable(field)
-          !if (.not.nc%variable_present(trim(itemNameList(i))))  then 
-          !  call nc%create_variable(field)
-          !endif
-
         else 
           write(message,'(A)') 'Item with name '//trim(itemNameList(i))//' not saved to file ' 
         endif

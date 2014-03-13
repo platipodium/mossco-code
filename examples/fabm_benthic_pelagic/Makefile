@@ -22,7 +22,7 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LIBS := -lsediment -lconstant -lerosed -lmossco_erosed -lmossco_sediment -lesmf  $(LIBS)
+LIBS := -lsediment -lconstant -lerosed -lmossco_erosed -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)

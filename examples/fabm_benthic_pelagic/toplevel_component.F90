@@ -10,6 +10,7 @@ module toplevel_component
   use pelagic_benthic_coupler, only : pb_coupler_SetServices => SetServices
   use benthic_pelagic_coupler, only : bp_coupler_SetServices => SetServices
   use erosed_component, only: erosed_SetServices => SetServices
+  use netcdf_component, only: netcdf_SetServices => SetServices
 
   use mossco_state
 
@@ -19,7 +20,8 @@ module toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save  :: fabmsedComp, constantComp, gotmComp, fabmgotmComp, erosedComp
+  type(ESMF_GridComp),save  :: fabmsedComp, constantComp, gotmComp, fabmgotmComp
+  type(ESMF_GridComp), save :: erosedComp, netcdfComp  
   type(ESMF_CplComp),save   :: pbCplComp,bpCplComp
   type(ESMF_State),save     :: state,pelagicstate,sedimentstate
 
@@ -77,6 +79,10 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(erosedComp,erosed_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    netcdfComp = ESMF_GridCompCreate(name="netcdfComp",rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetServices(netcdfComp,netcdf_SetServices, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     bpCplComp = ESMF_CplCompCreate(name="bpCoupler",rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -107,6 +113,8 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompInitialize(erosedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompInitialize(netcdfComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_CplCompInitialize(pbCplComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -126,14 +134,17 @@ module toplevel_component
     type(ESMF_Field)      :: field
     type(ESMF_Clock)      :: childClock
     type(ESMF_TimeInterval)   :: cplInterval
-    type(ESMF_Time)       :: currtime
+    type(ESMF_Time)       :: currtime, ringTime
+    type(ESMF_Alarm)      :: alarm
     logical :: clockIsPresent
+    integer(ESMF_KIND_I8) :: advanceCount
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
-      call ESMF_ClockGet(parentClock,currTime=currTime,timeStep=cplInterval)
+      call ESMF_ClockGet(parentClock,currTime=currTime,timeStep=cplInterval, &
+        advanceCount=advanceCount, rc=rc)
 
       !> run coupler components
       call ESMF_CplCompRun(pbCplComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
@@ -176,6 +187,15 @@ module toplevel_component
       endif
       call ESMF_GridCompRun(fabmsedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
 
+      !call ESMF_GridCompGet(gotmComp,clockIsPresent=clockIsPresent)
+      !  call ESMF_GridCompGet(gotmComp,clock=childClock)
+      !  call ESMF_ClockGetAlarm(childClock,'outputAlarm', alarm, rc=rc)
+      !  write(0,*) rc
+      
+      if (mod(advanceCount,240)==0) &
+          call ESMF_GridCompRun(netcdfComp, & 
+          importState=sedimentstate, exportState=sedimentstate, clock=parentClock, rc=rc)
+      
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -217,6 +237,11 @@ module toplevel_component
     call ESMF_GridCompFinalize(erosedComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(erosedComp, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompFinalize(netcdfComp, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompDestroy(netcdfComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_StateDestroy(state,rc=rc)
