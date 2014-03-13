@@ -8,7 +8,7 @@ if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
      filename = '1d_reference.yaml'
-     filename = 'constant_fabm_sediment_netcdf.yaml'
+     #filename = 'constant_fabm_sediment_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
 
 print sys.argv, len(sys.argv)
@@ -43,25 +43,27 @@ if config.has_key('dependencies'):
     dependencies = config.pop('dependencies');    
 
 componentList=[]
+gridCompList=[]
+cplCompList=[]
+couplingList=[]
+
 intervals =[]
 directions = []
-couplingList=[]
-couplerList=[]
   
 coupling = config.pop("coupling")
 
-
 for item in coupling:
     if type(item) is dict:
-        if item.has_key("components"):
-            componentList.extend([item["components"][0], item["components"][-1]])
-            couplingList.append(item["components"])
-            componentList.extend([item["components"][0], item["components"][-1]])
+        if item.has_key("components"):            
+            gridCompList.extend([item["components"][0], item["components"][-1]])
             n=len(item["components"])
-            if n==2:
-                couplerList.append("link_coupler")
+            if n>2:
+                couplingList.append(item["components"])
+            elif n==2:
+                couplingList.append([item["components"][0], "link_coupler", item["components"][-1]])
+                cplCompList.append("link_coupler")
             for i in range(1,n-1):
-                couplerList.append(item["components"][i])    
+                cplCompList.append(item["components"][i])    
             if item.has_key("interval"):
                 intervals.append(item["interval"])
             else:
@@ -71,18 +73,20 @@ for item in coupling:
     else:
         print 'Warning, dictionary expected for item ' + item
 
-componentSet=set(componentList)
+gridCompSet=set(gridCompList)
+gridCompList=list(gridCompSet)
+cplCompSet=set(cplCompList)
+cplCompList=list(cplCompSet)
+componentSet=gridCompSet.union(cplCompSet)
 componentList=list(componentSet)
-couplerSet=set(couplerList)
-couplerList=list(couplerSet)
 
 # Set a default coupling alarm interval of 6 minutes
 if len(intervals) == 0:
-    intervals=len(couplerList) * ['6 m']
+    intervals=len(cplCompList) * ['6 m']
 
 # if there are any dependencies specified, go through the list of components
 # and sort this list
-for component in componentList:
+for component in componentSet:
     for item in dependencies:
         if item.has_key(component):
           compdeps = item.values()[0]
@@ -94,10 +98,21 @@ for component in componentList:
           elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
-#if componentList.index(component)>componentList.index(dep)
-#    
 
-print componentList, couplerList
+if 'link_coupler' in componentList:
+    c=componentList.pop(componentList.index('link_coupler'))
+    componentList.insert(0,c)
+   
+print 'Components to process:', componentList
+cplCompList=[]
+gridCompList=[]
+for item in componentList:
+    if item in gridCompSet:
+        gridCompList.append(item)
+    else:
+        cplCompList.append(item)
+
+# print gridCompList, cplCompList
 
 # Done parsing the list, now write the new toplevel_component file
        
@@ -132,9 +147,9 @@ fid.write('''
   use mossco_state\n
 ''')
 
-for item in componentList:
+for item in gridCompList:
     fid.write('  use ' + item + '_component, only : ' + item + '_SetServices => SetServices \n')
-for item in couplerList:
+for item in cplCompList:
     fid.write('  use ' + item + ', only : ' + item + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
@@ -148,11 +163,11 @@ fid.write('''
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplNames
 ''')
 
-for item in couplerList:
+for item in cplCompList:
     fid.write('  type(ESMF_CplComp), save  :: ' + item + 'Comp\n')    
-for item in componentList:
+for item in gridCompList:
     fid.write('  type(ESMF_GridComp), save :: ' + item + 'Comp\n')    
-for item in componentList:
+for item in gridCompList:
     fid.write('  type(ESMF_State), save    :: ' + item + 'ExportState, ' + item + 'ImportState\n')    
 
 fid.write('''
@@ -232,7 +247,7 @@ fid.write('''
 
     !! Allocate the fields for all gridded components and their names
 ''')
-fid.write('    numGridComp = ' + str(len(componentList)) )
+fid.write('    numGridComp = ' + str(len(gridCompList)) )
 fid.write('''
     allocate(gridCompList(numGridComp))
     allocate(gridCompNames(numGridComp))
@@ -240,8 +255,8 @@ fid.write('''
     allocate(exportStates(numGridComp))
     
 ''')
-for i in range(0, len(componentList)):
-    fid.write('    gridCompNames(' + str(i+1) + ') = \'' + componentList[i] + '\'\n') 
+for i in range(0, len(gridCompList)):
+    fid.write('    gridCompNames(' + str(i+1) + ') = \'' + gridCompList[i] + '\'\n') 
     
 fid.write('''
     !! Create all gridded components, and create import and export states for these
@@ -259,20 +274,20 @@ fid.write('''
     !! Now register all setServices routines for the gridded components
 ''')
 
-for i in range(0, len(componentList)):
-    fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' + componentList[i] + '_SetServices, rc=rc)\n')
+for i in range(0, len(gridCompList)):
+    fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' + gridCompList[i] + '_SetServices, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 
-if len(couplerList)>0:
-    fid.write('    !! Allocate the fields for all coupler components and their names\n')
-    fid.write('    numCplComp = ' + str(len(couplerList)) )
+if len(cplCompList)>0:
+    fid.write('\n    !! Allocate the fields for all coupler components and their names\n')
+    fid.write('    numCplComp = ' + str(len(cplCompList)) )
     fid.write('''
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
 ''')
 
-for i in range(0, len(couplerList)):
-    fid.write('    cplCompNames(' + str(i+1) + ') = \'' + couplerList[i] + '\'\n') 
+for i in range(0, len(cplCompList)):
+    fid.write('    cplCompNames(' + str(i+1) + ') = \'' + cplCompList[i] + '\'\n') 
 fid.write('''    
     do i = 1, numCplComp
       cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i))//'Comp', rc=rc)
@@ -280,37 +295,47 @@ fid.write('''
     enddo
     
 ''')
-for i in range(0,len(couplerList)):
-    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + couplerList[i] + '_SetServices, rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+for i in range(0,len(cplCompList)):
+    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + cplCompList[i] + '_SetServices, rc=rc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 
-for i in range(0,len(couplingList)):
-    item=couplingList[i]
-    if len(item) != 3:
-        continue
-    ifrom = componentList.index(item[0])
-    ito   = componentList.index(item[2])
-    icpl  = couplerList.index(item[1])
-    
-    fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
-    fid.write('      exportState=exportStates(' + str(ifrom+1) + '), clock=clock, rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+fid.write('''
+    !! Initialize all components, both cpl and grid components, do this
+    !! in the order specified by dependencies/couplings
+    !! Also, try to find coupling/dependency specific export/import states in
+    !! the initialization
+''')
 
-for i in range(0, len(componentList)):
+for i in range(0,len(componentList)):
     item=componentList[i]
-    ifrom=i
-    for j in range(0, len(couplingList)):
-        jtem=couplingList[j]
-        if jtem[-1]==item:
-            ifrom=componentList.index(jtem[0])
-    fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=importStates(' + str(i+1) + '), clock=clock, rc=rc)\n')            
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
-            
-    fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(i+1) + '), importState=importStates(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=exportStates(' + str(i+1) + '), clock=clock, rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
-     
+    fid.write('    !! Initializing ' + str(i) + ': ' + componentList[i] +'\n')
+    if item in gridCompList:
+        ifrom=gridCompList.index(item)
+        ito=ifrom
+        for j in range(0, len(couplingList)):
+            jtem=couplingList[j]
+            if jtem[-1]==item:
+                ifrom=gridCompList.index(jtem[0])
+                fid.write('    !! which couples from ' + gridCompList[ifrom] + '\n')
+                #print 'Run cplCompList ', cplCompList[0],': ', ifrom, '-->', ito
+                fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
+                fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')            
+                fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+        j=gridCompList.index(item)
+        fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
+        fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
+        fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')        
+    else:
+        for j in range(0, len(couplingList)):
+            jtem=couplingList[j]
+            if jtem[1]==item:
+                ifrom=gridCompList.index(jtem[0])
+                ito=gridCompList.index(jtem[2])
+        j=cplCompList.index(item)
+        fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(j+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
+        fid.write('      exportState=exportStates(' + str(ifrom+1) + '), clock=clock, rc=rc)\n')
+        fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+       
 fid.write('    numCplAlarm = ' + str(len(couplingList)))
 fid.write('''
     if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
@@ -768,12 +793,12 @@ fid.write('''
     logical              :: clockIsPresent
 ''')
 i=0
-for item in componentList:
+for item in gridCompList:
     fid.write('    call ESMF_GridCompDestroy(gridCompList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     i += 1
 i=0
-for item in couplerList:
+for item in cplCompList:
     fid.write('    call ESMF_CplCompDestroy(cplCompList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     i += 1
@@ -827,7 +852,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 # Place conditionals for building this coupled system
 conditionals = {'gotm' : 'GOTM', 'fabm' : 'FABM', 'erosed' : 'EROSED',
                 'fabm_gotm' : 'GOTM_FABM', 'getm' : 'GETM'}
-for item in componentSet.union(couplerSet):
+for item in gridCompSet.union(cplCompSet):
     if conditionals.has_key(item):
         fid.write('ifneq ($(MOSSCO_' + conditionals[item] + '),true)\n')
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
@@ -872,7 +897,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
 fid.write('LDFLAGS += $(LIBRARY_PATHS)\n')
-for item in componentSet.union(couplerSet):
+for item in gridCompSet.union(cplCompSet):
     if libs.has_key(item):
         fid.write('LDFLAGS +=')
         if item=='gotm':
@@ -894,7 +919,7 @@ for item in componentSet.union(couplerSet):
 #fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
 fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) \n\n')
 
-#for item in componentSet.union(couplerSet):
+#for item in gridCompSet.union(cplCompSet):
 #    if libs.has_key(item):
 #        if item=='gotm':
 #            fid.write(' $(NC_LIBS)\n\n')
@@ -907,7 +932,7 @@ fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) \n\n')
 fid.write('.PHONY: all exec coupling\n\n')
 fid.write('all: exec\n\n')
 fid.write('exec: libmossco_util ')
-for item in componentSet.union(couplerSet):
+for item in gridCompSet.union(cplCompSet):
     if deps.has_key(item):
         for dep in deps[item]:
             fid.write(' ' + dep)
@@ -916,7 +941,7 @@ fid.write(coupling_name + ': toplevel_component.o ../common/main.o\n')
 fid.write('\t$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)\n')
 fid.write('\t@echo "Created example $(MOSSCO_DIR)/examples/generic/$@"\n')
 fid.write('toplevel_component.o : toplevel_component.F90')
-for item in componentSet.union(couplerSet):
+for item in gridCompSet.union(cplCompSet):
     if deps.has_key(item):
         for dep in deps[item]:
             fid.write(' ' + dep)
