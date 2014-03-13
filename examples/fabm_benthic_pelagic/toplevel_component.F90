@@ -103,7 +103,7 @@ module toplevel_component
     sedimentstate = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Sediment state")
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompInitialize(constantComp, importState=pelagicState, exportState=pelagicstate,clock=parentClock,rc=rc)
+    call ESMF_GridCompInitialize(constantComp, importState=pelagicState, exportState=pelagicState,clock=parentClock,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompInitialize(gotmComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)

@@ -25,7 +25,7 @@ private
 integer, public, parameter :: rk=selected_real_kind(12) !< real kind
 
 type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
-   real(rk),dimension(:,:,:),allocatable :: zi,dz,zc,dzc
+   real(rk),dimension(:,:,:),pointer :: zi,dz,zc,dzc
    integer  :: knum,inum,jnum
    real(rk) :: dzmin
 contains
@@ -44,12 +44,13 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk)                     :: k_par
    real(rk),dimension(:,:,:),pointer :: fluxes,bdys
    integer                      :: bcup_dissolved_variables=2
+   integer                      :: ndiag=0
    type(export_state_type),dimension(:),allocatable :: export_states
 
-   real(rk),dimension(:,:,:),allocatable :: porosity,temp,intf_porosity
-   real(rk),dimension(:,:,:),allocatable :: par
+   real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity
+   real(rk),dimension(:,:,:),pointer     :: par
    real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
-   real(rk),dimension(:,:,:),allocatable :: temp3d
+   real(rk),dimension(:,:,:),pointer     :: temp3d
    real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
    real(rk),dimension(:,:),allocatable     :: zeros2d
 
@@ -60,6 +61,7 @@ contains
    procedure :: diagnostic_variables
    procedure :: get_rhs
    procedure :: get_export_state_by_id
+   procedure :: get_export_state_by_diag_id
    procedure :: get_all_export_states
 end type type_sed
 
@@ -137,7 +139,7 @@ sed%bioturbation = bioturbation
 sed%diffusivity  = diffusivity
 sed%k_par        = k_par
 
-if (.not.(allocated(sed%grid%dz))) call sed%grid%init_grid()
+if (.not.(associated(sed%grid%dz))) call sed%grid%init_grid()
 sed%inum = sed%grid%inum
 sed%jnum = sed%grid%jnum
 sed%knum = sed%grid%knum
@@ -163,6 +165,7 @@ call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
 
 ! allocate state variables
 sed%nvar = size(sed%model%info%state_variables)
+sed%ndiag = size(sed%model%info%diagnostic_variables)
 
 allocate(sed%diff(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%transport(_INUM_,_JNUM_,_KNUM_,sed%nvar))
@@ -429,15 +432,56 @@ function get_export_state_by_id(self,fabm_id) result(export_state)
    export_state%fabm_id = fabm_id
 end function get_export_state_by_id
 
+!> Initializes a sediment export state by FABM diagnostic_variable id
+function get_export_state_by_diag_id(self,fabm_id) result(export_state)
+   class(type_sed)         :: self
+   type(export_state_type) :: export_state
+   integer, intent(in)     :: fabm_id
+   integer                 :: n
+
+   export_state%fabm_id=fabm_id
+   !> data needs to be linked in the driver component
+
+   !> first check for present standard name
+   if (self%model%info%diagnostic_variables(fabm_id)%standard_variable%name/='') then
+     export_state%standard_name = &
+       trim(self%model%info%diagnostic_variables(fabm_id)%standard_variable%name)
+     export_state%unit = &
+       trim(self%model%info%diagnostic_variables(fabm_id)%standard_variable%units)
+   else
+   !> otherwise use CF-ed version of long_name
+     export_state%standard_name = only_var_name( &
+           self%model%info%diagnostic_variables(fabm_id)%long_name)
+     export_state%unit = self%model%info%diagnostic_variables(fabm_id)%units
+   end if
+end function get_export_state_by_diag_id
+
+
 !> create a list of export states from FABM state_variables
 subroutine get_all_export_states(self)
    class(type_sed) :: self
    integer  :: n,fabm_id
 
-   allocate(self%export_states(self%nvar))
+   allocate(self%export_states(self%nvar+5))
+   self%export_states(1)%standard_name='porosity_in_sediment'
+   self%export_states(1)%data => self%porosity
+
+   self%export_states(2)%standard_name='layer_height_in_sediment'
+   self%export_states(2)%data => self%grid%dz
+
+   self%export_states(3)%standard_name='layer_center_depth_in_sediment'
+   self%export_states(3)%data => self%grid%zc
+
+   self%export_states(4)%standard_name='temperature_in_sediment'
+   self%export_states(4)%data => self%temp3d
+
+   self%export_states(5)%standard_name='photosynthetically_available_radiation_in_sediment'
+   self%export_states(5)%data => self%par
+
    do fabm_id=1,self%nvar
-       self%export_states(fabm_id) = self%get_export_state_by_id(fabm_id)
+       self%export_states(5+fabm_id) = self%get_export_state_by_id(fabm_id)
    end do
+   
 end subroutine get_all_export_states
 
 end module fabm_sediment_driver

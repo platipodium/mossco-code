@@ -242,25 +242,27 @@ module fabm_sediment_component
       call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      !> add boundary upward fluxes
-      field = ESMF_FieldCreate(flux_grid,flux_array, &
+      if (sed%export_states(n)%fabm_id/=-1) then
+        !> add boundary upward fluxes
+        field = ESMF_FieldCreate(flux_grid,flux_array, &
                          name=trim(sed%export_states(n)%standard_name)//'_upward_flux', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
                        totalLBound=lbnd2,totalUBound=ubnd2, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
-      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
+        call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end if
     end do
     do n=1,size(sed%model%info%diagnostic_variables)
       diag => sed%diagnostic_variables(n)
-      array = ESMF_ArrayCreate(distgrid=distgrid_3d,farrayPtr=diag, &
+      field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
                    name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_StateAddReplace(exportState,(/array/),rc=rc)
+      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
     !call ESMF_StatePrint(exportState)
@@ -391,14 +393,16 @@ module fabm_sediment_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = conc(:,:,:,sed%export_states(n)%fabm_id)
-      call ESMF_StateGet(exportState, &
+      ptr_f3 = sed%export_states(n)%data
+      if (sed%export_states(n)%fabm_id /= -1) then
+        call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_upward_flux', &
              field,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
+      end if
     end do
  
     if (allocated(fieldList)) deallocate(fieldlist)
