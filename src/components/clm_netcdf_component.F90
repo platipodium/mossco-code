@@ -1,10 +1,21 @@
-!>  @file
+!> @brief Implementation of an ESMF CLM netcdf reader
 !! This module contains routines of the CLM atmospheric component.
+!!
+!! This computer program is part of MOSSCO. 
+!! @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!! @author Hartmut Kapitza, Carsten Lemmen
+
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 
 !> This module encapsulates the CLM atmospheric interface.
 module clm_netcdf_component
     
-    use ESMF
+    use esmf
 
     use clm_driver, only : CLM_init, CLM_final
     use clm_driver, only : CLM_getrecord, CLM_getdata
@@ -49,18 +60,20 @@ module clm_netcdf_component
 
     contains
 
-    subroutine SetServices(gcomp, rc)
+    subroutine SetServices(gridComp, rc)
 
-      type(ESMF_GridComp)  :: gcomp
+      type(ESMF_GridComp)  :: gridComp
       integer, intent(out) :: rc
+      
+      rc = ESMF_SUCCESS
 
-      call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_INITIALIZE, atmos_init  &
+      call ESMF_GridCompSetEntryPoint(gridComp, ESMF_METHOD_INITIALIZE, Initialize  &
                                       , rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_RUN,        atmos_run   &
+      call ESMF_GridCompSetEntryPoint(gridComp, ESMF_METHOD_RUN,        Run   &
                                       , rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSetEntryPoint(gcomp, ESMF_METHOD_FINALIZE,   atmos_final &
+      call ESMF_GridCompSetEntryPoint(gridComp, ESMF_METHOD_FINALIZE,   atmos_final &
                                       , rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -68,12 +81,12 @@ module clm_netcdf_component
 
 !----------------------------------------------------------------------------------
 
-    subroutine atmos_init(gcomp, importState, exportState, externalclock, rc)
+    subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
 
-      type(ESMF_GridComp)  :: gcomp
+      type(ESMF_GridComp)  :: gridComp
       type(ESMF_State)     :: importState
       type(ESMF_State)     :: exportState
-      type(ESMF_Clock)     :: externalclock
+      type(ESMF_Clock)     :: parentClock
       integer, intent(out) :: rc
 
       type(ESMF_Grid)             :: grid
@@ -86,10 +99,8 @@ module clm_netcdf_component
       integer                     :: lbnd(2), ubnd(2)
       integer                     :: ibuf(3)
       integer                     :: ib, ie, jb, je
-      integer                     :: myrank, ierr, dimid, lrc
+      integer                     :: ierr, dimid, lrc
       integer                     :: i, j, iprocs, jprocs
-      character (len=ESMF_MAXSTR) :: timestring
-      type(ESMF_Time)             :: app_time
       type(ESMF_TimeInterval)     :: d_time
       real(ESMF_KIND_R8)          :: app_time_secs
       integer                     :: ind, inda, nvar, id
@@ -99,80 +110,114 @@ module clm_netcdf_component
       character (len=2)           :: label2
       character (len=3)           :: label3
      
-      call ESMF_LogWrite("CLM atmos_init called", ESMF_LOGMSG_INFO)
+    character(len=ESMF_MAXSTR)    :: timeString, message, name
+    logical                       :: clockIsPresent
+    type(ESMF_Clock)              :: clock
+    type(ESMF_Time)               :: currTime
+    integer(ESMF_KIND_I4)         :: localPet, petCount
 
-      call ESMF_GridCompGet(gcomp, localPet=myrank, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc = ESMF_SUCCESS
+     
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-! Load config file for atmospheric component
-      config = ESMF_ConfigCreate(rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigLoadFile(config, "atmos.rc", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigGetAttribute(config, iprocs, label='iprocs:', rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigGetAttribute(config, jprocs, label='jprocs:', rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigDestroy(config, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompGet(gridComp, localPet=localPet, petCount=petCount, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !> Load config file for atmospheric component
+    config = ESMF_ConfigCreate(rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ConfigLoadFile(config, "atmos.rc", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ConfigGetAttribute(config, iprocs, label='iprocs:', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ConfigGetAttribute(config, jprocs, label='jprocs:', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ConfigDestroy(config, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Load config file for variable selection
-      config = ESMF_ConfigCreate(rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigLoadFile(config, "config.rc", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigGetAttribute(config, nvar, label='nvar:', rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    config = ESMF_ConfigCreate(rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ConfigLoadFile(config, "config.rc", rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ConfigGetAttribute(config, nvar, label='nvar:', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      allocate (lvarid(nvar))
-      allocate ( vname(nvar))
-      allocate (active(nvar))
-      allocate (vscale(nvar))
-      allocate ( ndims(nvar))
+    allocate (lvarid(nvar))
+    allocate ( vname(nvar))
+    allocate (active(nvar))
+    allocate (vscale(nvar))
+    allocate ( ndims(nvar))
 
-      do ind=1,nvar
+    do ind=1,nvar
 
-        lvarid(ind) = ind
+      lvarid(ind) = ind
 
-        if ( ind < 10 ) then
+      if ( ind < 10 ) then
           write(label2,"(i1,a)") ind,':'
           call ESMF_ConfigFindLabel(config, label2, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        else
+      else
           write(label3,"(i2,a)") ind,':'
           call ESMF_ConfigFindLabel(config, label3, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        endif
+      endif
 
-        call ESMF_ConfigGetAttribute(config, vname(ind), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_ConfigGetAttribute(config, active(ind), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_ConfigGetAttribute(config, vscale(ind), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_ConfigGetAttribute(config, ndims(ind), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ConfigGetAttribute(config, vname(ind), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ConfigGetAttribute(config, active(ind), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ConfigGetAttribute(config, vscale(ind), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ConfigGetAttribute(config, ndims(ind), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-        if ( myrank == 0 .and. active(ind) == 1 ) print *,"ind,name,ndims=",ind,vname(ind),ndims(ind)
-
-      enddo
+      if ( localPet == 0 .and. active(ind) == 1 ) then
+        ! print *,"ind,name,ndims=",ind,vname(ind),ndims(ind)
+        write(message,'(A,I2,A,I1)') trim(name)//' uses variable ',ind,' '//trim(vname(ind))//' of rank ',ndims(ind)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      endif
+    enddo
 
 ! Create grid and retrieve local loop boundaries
-      grid = ESMF_GridCreate(filename="clm_grid.nc",fileFormat=ESMF_FILEFORMAT_SCRIP, &
+    grid = ESMF_GridCreate(filename="clm_grid.nc",fileFormat=ESMF_FILEFORMAT_SCRIP, &
                              regDecomp=(/iprocs,jprocs/),            &
                              isSphere=.false., rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridGetCoordBounds(grid, coordDim=1, localDE=0, &
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridGetCoordBounds(grid, coordDim=1, localDE=0, &
                            computationalLBound=lbnd, &
                            computationalUBound=ubnd, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      ib = lbnd(1)
-      ie = ubnd(1)
-      jb = lbnd(2)
-      je = ubnd(2)
+    ib = lbnd(1)
+    ie = ubnd(1)
+    jb = lbnd(2)
+    je = ubnd(2)
 
-      allocate ( de(ib:ie,jb:je) )
+    allocate ( de(ib:ie,jb:je) )
 
 ! Create variable type for active variables and fill with information
 
@@ -223,16 +268,16 @@ module clm_netcdf_component
 
 ! Setup timing
       call ESMF_TimeSet(ref_time, yy=1948, rc=rc)
-      call ESMF_ClockGet(externalclock, currtime=app_time, rc=rc)
-      d_time = app_time - ref_time
+      call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+      d_time = currTime - ref_time
       call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=rc)
 
 ! Open netcdf file for atmospheric data
-      call CLM_init(myrank, app_time_secs, lrc)
+      call CLM_init(localPet, app_time_secs, lrc)
       if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Find first record of data window
-      call CLM_getrecord(myrank, app_time_secs, lrc)
+      call CLM_getrecord(localPet, app_time_secs, lrc)
       if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Get initial values
@@ -244,7 +289,7 @@ module clm_netcdf_component
       call CLM_getdata(atmos_C, ib, ie, jb, je, 'C')
       call CLM_getdata(atmos_R, ib, ie, jb, je, 'R')
 
-      de = myrank
+      de = localPet
 
 ! Fill export state
       call ESMF_StateAdd(exportState, (/P_field/), rc=rc)
@@ -262,7 +307,8 @@ module clm_netcdf_component
       call ESMF_StateAdd(exportState, (/R_field/), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-! Output to netCDF files
+! Output to netCDF files, seems to be broken on some systems.
+#ifdef DEBUG
       print_count = 1
       call ESMF_FieldWrite(P_field, file="atmos_P.nc", timeslice=print_count, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -280,6 +326,7 @@ module clm_netcdf_component
 !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldWrite(de_field, file="atmos_de.nc", rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+#endif
 
 ! Destroy field
       call ESMF_FieldDestroy(de_field, rc=rc)
@@ -287,46 +334,60 @@ module clm_netcdf_component
 
       deallocate ( de )
 
-    end subroutine atmos_init
+    !! Log the successful completion of this function
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+
+    end subroutine Initialize
 
 !----------------------------------------------------------------------------------
 
-    subroutine atmos_run(gcomp, importState, exportState, externalclock, rc)
+    subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
-      type(ESMF_GridComp)  :: gcomp
+      type(ESMF_GridComp)  :: gridComp
       type(ESMF_State)     :: importState
       type(ESMF_State)     :: exportState
-      type(ESMF_Clock)     :: externalclock
+      type(ESMF_Clock)     :: parentClock
       integer, intent(out) :: rc
 
-      integer                     :: myrank, ib, ie, jb, je, i, j, ierr, lrc
-      character (len=ESMF_MAXSTR) :: timestring
-      character (len=ESMF_MAXSTR) :: message
+      integer                     :: ib, ie, jb, je, i, j, ierr, lrc
       real(ESMF_KIND_R8)          :: r
-      type(ESMF_Time)             :: app_time
       type(ESMF_TimeInterval)     :: d_time
       real(ESMF_KIND_R8)          :: app_time_secs
+      
+      integer(ESMF_KIND_I4)       :: localPet, petCount
+      character(len=ESMF_MAXSTR)  :: message, name, timeString
+      type(ESMF_Time)             :: currTime, time
+      type(ESMF_Clock)            :: clock
 
-      ib = lbound(atmos_T,1)
-      ie = ubound(atmos_T,1)
-      jb = lbound(atmos_T,2)
-      je = ubound(atmos_T,2)
-     
-      call ESMF_GridCompGet(gcomp, localPet=myrank, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ClockGet(externalclock, currtime=app_time, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_TimeGet(app_time, timeString=timestring, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      message = "atmos_run called at "//trim(timestring)
-      call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
-      print *, "Proc ",myrank," time=",trim(timestring)
-      d_time = app_time - ref_time
-      call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=rc)
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet, &
+      name=name, clock=clock, rc=rc)  
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
+    call ESMF_ClockSet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+    ib = lbound(atmos_T,1)
+    ie = ubound(atmos_T,1)
+    jb = lbound(atmos_T,2)
+    je = ubound(atmos_T,2)
+
+    write(0,*) "Proc ",localPet," time=",trim(timestring)
+    d_time = currTime - ref_time
+    call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 ! Check data interval
-      call CLM_getrecord(myrank, app_time_secs, lrc)
-      if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call CLM_getrecord(localPet, app_time_secs, lrc)
+    if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Get data interpolated in time
       call CLM_getdata(atmos_P, ib, ie, jb, je, 'P')
@@ -337,7 +398,8 @@ module clm_netcdf_component
       call CLM_getdata(atmos_C, ib, ie, jb, je, 'C')
       call CLM_getdata(atmos_R, ib, ie, jb, je, 'R')
 
-! Output to netCDF files
+#ifdef debug
+! Output to netCDF files, fails on some systems
       print_count = print_count + 1
       call ESMF_FieldWrite(P_field, file="atmos_P.nc", timeslice=print_count, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -353,22 +415,40 @@ module clm_netcdf_component
 !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 !     call ESMF_FieldWrite(R_field, file="atmos_R.nc", timeslice=print_count, rc=rc)
 !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+#endif
 
-    end subroutine atmos_run
+    do 
+      call ESMF_ClockAdvance(clock, rc=rc) 
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+      if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)           
+    enddo
+
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
+
+    end subroutine Run
 
 !----------------------------------------------------------------------------------
 
-    subroutine atmos_final(gcomp, importState, exportState, externalclock, rc)
+    subroutine atmos_final(gridComp, importState, exportState, parentClock, rc)
 
-      type(ESMF_GridComp)  :: gcomp
+      type(ESMF_GridComp)  :: gridComp
       type(ESMF_State)     :: importState
       type(ESMF_State)     :: exportState
-      type(ESMF_Clock)     :: externalclock
+      type(ESMF_Clock)     :: parentClock
       integer, intent(out) :: rc
 
-      integer              :: myrank, ierr
+      integer              :: localPet, ierr
      
-      call ESMF_GridCompGet(gcomp, localPet=myrank, rc=rc)
+      call ESMF_GridCompGet(gridComp, localPet=localPet, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldDestroy(P_field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -393,7 +473,7 @@ module clm_netcdf_component
       deallocate ( atmos_C )
       deallocate ( atmos_R )
 
-      call CLM_final(myrank)
+      call CLM_final(localPet)
 
       call ESMF_LogWrite("CLM atmos_final called", ESMF_LOGMSG_INFO)
 
