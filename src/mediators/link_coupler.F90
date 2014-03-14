@@ -51,7 +51,7 @@ module link_coupler
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I4)       :: petCount, localPet
-    integer(ESMF_KIND_I4)       :: i, itemCount
+    integer(ESMF_KIND_I4)       :: i, itemCount, count
     character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
@@ -93,11 +93,20 @@ module link_coupler
         call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-        call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
+          itemCount=count, rc=rc)
+        if (count>0) then
+          write(message,'(A)') 'Did not link existing field '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
+          
+          !call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
+        else        
+          call ESMF_StateAddReplace(exportState,(/field/), rc=rc)  
+        endif      
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
         
       else
-        write(message,'(A)') 'Did not copy non-field item '//trim(itemNameList(i))
+        write(message,'(A)') 'Did not link non-field item '//trim(itemNameList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
       endif   
     enddo
@@ -124,7 +133,7 @@ module link_coupler
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I4)       :: petCount, localPet
-    integer(ESMF_KIND_I4)       :: i, itemCount
+    integer(ESMF_KIND_I4)       :: i, itemCount, count
     character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
@@ -154,8 +163,15 @@ module link_coupler
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (itemCount > 0) then
-      if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-      if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+      if (.not.allocated(itemTypeList)) then
+        allocate(itemTypeList(itemCount))
+        if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+      elseif (ubound(itemTypeList,1)<itemCount) then
+        deallocate(itemTypeList)
+        allocate(itemTypeList(itemCount))
+        deallocate(itemNameList)
+        allocate(itemNameList(itemCount))
+      endif
     
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=rc)
@@ -167,15 +183,24 @@ module link_coupler
         call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-        call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
+          itemCount=count, rc=rc)
+        if (count>0) then
+          write(message,'(A)') 'Did not link existing field '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
+          
+          !call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
+        else        
+          call ESMF_StateAdd(exportState,(/field/), rc=rc)  
+        endif      
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
         
       else
         write(message,'(A)') 'Did not link non-field item '//trim(itemNameList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
       endif   
     enddo
-
+    
     !! Return with logging 
     call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -195,7 +220,19 @@ module link_coupler
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    type(ESMF_Time)            :: currTime
+    character(len=ESMF_MAXSTR) :: message, timeString, name 
+
     rc = ESMF_SUCCESS
+
+    !! Return with logging 
+    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalized.'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
     
   end subroutine Finalize
 

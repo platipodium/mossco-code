@@ -67,7 +67,7 @@ for item in coupling:
             if item.has_key("interval"):
                 intervals.append(item["interval"])
             else:
-                intervals.append("60 min")
+                intervals.append("6 m")
             if item.has_key("direction"):
                 directions.append(item["direction"])
     else:
