@@ -4,10 +4,11 @@ dependencies:
   - erosed: 
     - gotm
     - fabm_gotm
-    - simplewave
-  - simplewave: clm_netcdf
+#    - simplewave
+#  - simplewave:
+#    - clm_netcdf
   - benthic_pelagic_coupler: fabm_gotm
-  - benthos: erosed
+#  - benthos: erosed
 
 # @todo:
 # Knut: simplewave -> erosed
@@ -22,17 +23,14 @@ coupling:
   - components: 
      - clm_netcdf
      - gotm
-    interval: 6 m
 
-  - components: 
-     - clm_netcdf
-     - simplewave
-    interval: 6 m
+# - components: 
+#     - clm_netcdf
+#     - simplewave
 
-  - components: 
-     - simplewave
-     - erosed
-    interval: 6 m
+#  - components: 
+#     - simplewave
+#     - erosed
 
   - components: 
      - gotm
@@ -81,13 +79,12 @@ coupling:
      - fabm_gotm
     interval: 6 m
 
-  - components:
-     - benthos
-     - erosed
-    interval: 1 h
+#  - components:
+#     - benthos
+#     - erosed
+#    interval: 1 h
 
-  - components:
-     - fabm_sediment
-     - benthos
-    interval: 1 h
-
+#  - components:
+#     - fabm_sediment
+#     - benthos
+#    interval: 1 h
