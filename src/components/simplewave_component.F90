@@ -167,12 +167,11 @@ module simplewave_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)       :: timestring
     type(ESMF_Time)         :: clockTime
     type(ESMF_TimeInterval) :: timeInterval
     type(ESMF_StateItem_Flag) :: itemType
     integer(ESMF_KIND_I8)   :: n,k
-    integer                 :: itemcount,nvar
+    integer                 :: nvar
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: depth=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: wind=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windDir=>null()
@@ -180,7 +179,7 @@ module simplewave_component
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windy=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: z0=>null()
     type(ESMF_Field)        :: Field
-    character(len=ESMF_MAXSTR) :: string,varname,message
+    character(len=ESMF_MAXSTR) :: string,varname
     real(ESMF_KIND_R8)           :: wdepth,wwind
     real(ESMF_KIND_R8)           :: Hrms,omegam1,uorb,aorb,Rew,tauwr,tauws
     real(ESMF_KIND_R8),parameter :: avmmolm1 = 1.8d6
@@ -195,12 +194,38 @@ module simplewave_component
     logical,save                 :: taubw_ready=.false.
     integer                      :: i,j
 
+    !type(EMSF_Clock)             :: clock ! currently global
+    character(len=ESMF_MAXSTR)    :: message, timeString, name
+    type(ESMF_Time)               :: currTime
+    integer(ESMF_KIND_I4)         :: localPet, petCount, itemCount
+
+    !! Set default SUCCESS return value and log the call to this 
+    !! function into the log
+    rc = ESMF_SUCCESS
+    
+    call ESMF_GridCompGet(gridComp, name=name, petCount=petCount, localPet=localPet, &
+      rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+
     ! associate local pointers with import data
-    call ESMF_StateGet(importState, "water_depth", Field, rc=rc)
-    if(rc /= ESMF_SUCCESS) then
-       call ESMF_LogWrite("water_depth field not found",ESMF_LOGMSG_INFO)
+    call ESMF_StateGet(importState, itemSearch='water_depth', &
+      itemCount=itemCount, rc = rc)
+    if (itemCount == 0) then
+       write(message,'(A)') trim(name)//' required import field water_depth not found.' 
+       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+       call ESMF_StatePrint(importState)
        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    end if
+    endif      
+          
+    call ESMF_StateGet(importState, "water_depth", field, rc=rc)
     call ESMF_FieldGet(field, farrayPtr=depth, rc=rc)
 
     call ESMF_StateGet(importState, "wind_speed", itemType)
