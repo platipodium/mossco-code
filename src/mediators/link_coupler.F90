@@ -139,6 +139,7 @@ module link_coupler
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
     type(ESMF_Field)            :: field
+    type(ESMF_FieldBundle)      :: fieldBundle
 
     !! Set default SUCCESS return value and log the call to this 
     !! function into the log
@@ -186,19 +187,40 @@ module link_coupler
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=count, rc=rc)
         if (count>0) then
-          write(message,'(A)') 'Did not link existing field '//trim(itemNameList(i))
+          write(message,'(A)') trim(name)//' replaced existing field '//trim(itemNameList(i))
+          !write(message,'(A)') trim(name)//' did not link existing field '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
           
-          !call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
+          call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
         else        
           call ESMF_StateAdd(exportState,(/field/), rc=rc)  
         endif      
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
         
+      elseif (itemTypeList(i)==ESMF_STATEITEM_FIELDBUNDLE) then
+        call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+        call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
+          itemCount=count, rc=rc)
+        if (count>0) then
+          write(message,'(A)') trim(name)//' replaced existing fieldBundle '//trim(itemNameList(i))
+          !write(message,'(A)') trim(name)//' did not link existing field '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
+          
+          call ESMF_StateAddReplace(exportState,(/fieldBundle/), rc=rc)        
+        else        
+          call ESMF_StateAdd(exportState,(/fieldBundle/), rc=rc)  
+        endif      
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
+       
       else
-        write(message,'(A)') 'Did not link non-field item '//trim(itemNameList(i))
+        write(message,'(A)') trim(name)//' did not link non-field item '//trim(itemNameList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
       endif   
+
+
+
     enddo
     
     !! Return with logging 
