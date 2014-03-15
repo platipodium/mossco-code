@@ -33,8 +33,13 @@ test_GridCreate: test_GridCreate.o
 test_Clock: test_Clock.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 
-test_Netcdf: test_Netcdf.o
+test_Netcdf: test_Netcdf.o 
 	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS)
+
+test_Netcdf.o: libmossco_util
+
+libmossco_util:
+	make -C $(MOSSCO_DIR)/src/utilities libmossco_util
 
 clean: extraclean
 
