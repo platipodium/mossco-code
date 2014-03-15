@@ -41,6 +41,7 @@ module mossco_netcdf
     procedure :: create_variable => mossco_netcdf_variable_create
     procedure :: variable_present => mossco_netcdf_variable_present
     procedure :: put_variable => mossco_netcdf_variable_put
+    procedure :: create_coordinate =>mossco_netcdf_coordinate_create
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -149,6 +150,7 @@ module mossco_netcdf
     integer                        :: dimids_1d(2),dimids_2d(3),dimids_3d(4),rank
     integer, dimension(:),pointer  :: dimids => null()
     integer, optional              :: rc
+    character(len=1), dimension(3) :: coordNames = (/'x','y','z'/)
 
     call ESMF_FieldGet(field,name=fieldname,rc=esmfrc)
     varname = trim(fieldname)
@@ -162,9 +164,9 @@ module mossco_netcdf
       dimids => self%grid_dimensions(grid)
 
       if (ubound(dimids,1)>1) then
-        write(coordinates,'(A,I1)') trim(gridname)//'_',ubound(dimids,1)-1
+        write(coordinates,'(A)') trim(gridname)//'_'//coordnames(ubound(dimids,1)-1)
         do i=ubound(dimids,1)-2,1,-1
-          write(coordinates,'(A,I1)') trim(coordinates)//' '//trim(gridname)//'_',i
+          write(coordinates,'(A)') trim(coordinates)//' '//trim(gridname)//'_'//coordnames(i)
         enddo
       endif
       
@@ -305,8 +307,10 @@ module mossco_netcdf
     integer                       :: ncStatus,rc_,esmfrc,dimcheck
     character(len=ESMF_MAXSTR)    :: gridName, name
     integer,allocatable           :: ubounds(:),lbounds(:)
-    integer                       :: dimid,rank=3
     integer,pointer,dimension(:)  :: dimids
+
+    integer(ESMF_KIND_I4)         :: dimCount, dimid, rank
+    character(len=ESMF_MAXSTR)    :: message
 
     rc_ = MOSSCO_NC_NOERR
     dimcheck=0
@@ -328,7 +332,10 @@ module mossco_netcdf
     do i=1,rank
       write(name,'(A,I1)') trim(gridname)//'_',i
       ncStatus = nf90_inq_dimid(self%ncid,trim(name),dimids(i))
-      if (ncStatus /= NF90_NOERR) dimcheck=-1
+      if (ncStatus /= NF90_NOERR) then
+        dimcheck=-1
+        exit
+        endif
     enddo
 
     !! if grid not present, create grid
@@ -348,7 +355,97 @@ module mossco_netcdf
       enddo
       ncStatus = nf90_enddef(self%ncid)
     end if
+    
+    !! if grid not present, also create the coordinate variables
+    if (dimcheck == -1) call self%create_coordinate(grid)
+
   end function mossco_netcdf_grid_dimensions
+
+
+  subroutine mossco_netcdf_coordinate_create(self,grid)
+  
+    implicit none
+    class(type_mossco_netcdf)               :: self
+    type(ESMF_Grid), intent(in)             :: grid
+
+    integer                     :: ncStatus, varid, rc, esmfrc, rank
+    integer                     :: nDims, nAtts, udimid, dimlen, i, dimid, j
+    character(len=ESMF_MAXSTR)  :: varName, gridName, message, dimName
+    
+    character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
+    real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
+    real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
+    integer, pointer, dimension(:)     :: dimids
+    type(ESMF_CoordSys_Flag)                         :: coordSys
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, totalCount
+    integer(ESMF_KIND_I4)                            :: dimCount
+
+    call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
+      name=gridName, rc=esmfrc)
+    call replace_character(gridname, ' ', '_')
+    if (dimCount<1) return
+      
+    !if (coordSys == ESMF_COORDSYS_CART) then
+    !  coordnames=(/'lon   ','lat   ','radius'/)
+    !  coordunits=(/'degree_east ','degree_north','m           '/)
+    !elseif (coordSys == ESMF_COORDSYS_CART) then
+    !  coordnames=(/'lon   ','lat   ','radius'/)
+    !  coordunits=(/'rad','rad','m  '/)
+    !else !(coordSys == ESMF_COORDSYS_CART) then
+      coordnames=(/'x','y','z'/)
+      coordunits=(/' ',' ','m'/)
+    !endif
+                    
+    allocate(coordDimCount(dimCount))
+    call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=esmfrc)
+    dimids => self%grid_dimensions(grid)
+    do i=1,dimCount
+      
+      !write(0,*)  i,dimCount,trim(gridname), trim(coordNames(i)), trim(coordUnits(i))
+      write(varName,'(A)') trim(gridname)//'_'//trim(coordNames(i)) 
+      if (self%variable_present(varName)) then
+        write(message,'(A)') 'A variable with this name already exists'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+         
+      if (allocated(totalCount)) deallocate(totalCount)
+      allocate(totalCount(coordDimCount(i)))
+      do j=1,coordDimCount(i)
+        write(dimName,'(A,I1)') trim(gridname)//'_',j
+        ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),dimids(j))
+      enddo
+      !write(0,*), i, dimCount, trim(varname), coordDimCount, dimids(1:j)
+      
+      
+      ncStatus = nf90_redef(self%ncid)
+      ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids(1:coordDimCount(i)),varid)
+      if (ncStatus /= NF90_NOERR) call &    
+          ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+    
+      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
+      ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
+      ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
+      ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
+      ncStatus = nf90_enddef(self%ncid)  
+    
+      if (coordDimCount(i) == 1) then
+        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, rc=esmfrc)
+        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1)
+      elseif (coordDimCount(i) == 2) then
+        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, rc=esmfrc)
+        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2)
+      elseif (coordDimCount(i) == 3) then
+        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, rc=esmfrc)
+        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3)
+      endif
+    enddo
+    if (allocated(coordDimCount)) deallocate(coordDimCount)
+     
+  end subroutine mossco_netcdf_coordinate_create
+
+
 
 
 end module
