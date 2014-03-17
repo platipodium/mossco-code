@@ -455,7 +455,7 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR) :: varname
     real(rk),dimension(_IRANGE_,_JRANGE_),target :: vs,pom
 
-    call ESMF_StateGet(importState,itemSearch="water_temperature",itemCount=itemcount,rc=rc)
+    call ESMF_StateGet(importState,itemSearch="temperature_in_water",itemCount=itemcount,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (itemcount==0) then
@@ -465,7 +465,7 @@ module fabm_sediment_component
 #endif
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
     else 
-      call ESMF_StateGet(importState,"water_temperature",field,rc=rc)
+      call ESMF_StateGet(importState,"temperature_in_water",field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 #ifdef DEBUG
       write(string,'(A)') "Water temperature information found"
@@ -534,7 +534,7 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR) :: name,varname
     integer                    :: n
 
-    name='water_temperature'
+    name='temperature_in_water'
     call set_item_flags(state,name,requiredFlag=.true.,requiredRank=3)
 
     do n=1,size(sed%model%info%state_variables)

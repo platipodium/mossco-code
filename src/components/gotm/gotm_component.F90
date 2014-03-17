@@ -210,12 +210,12 @@ module gotm_component
     !> for ESMF
     nexport = 6
     allocate(export_variables(nexport))
-    export_variables(1)%standard_name="water_temperature"
+    export_variables(1)%standard_name="temperature"
     export_variables(2)%standard_name="grid_height"
     export_variables(3)%standard_name="salinity"
     export_variables(4)%standard_name="radiation"
-    export_variables(5)%standard_name="water_x_velocity"
-    export_variables(6)%standard_name="water_y_velocity"
+    export_variables(5)%standard_name="x_velocity"
+    export_variables(6)%standard_name="y_velocity"
     allocate(exportField(nexport))
     allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
     
@@ -224,7 +224,7 @@ module gotm_component
     
     do k=1,nexport
       farrayPtr => variables(:,:,:,k)
-      exportField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=export_variables(k)%standard_name, &
+      exportField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables(k)%standard_name)//'_in_water', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -234,7 +234,7 @@ module gotm_component
 
     H_2d(1,1) = sum(variables(1,1,:,2))
     ptr_f2 => H_2d
-    field =  ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name='water_depth', &
+    field =  ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name='water_depth_at_soil_surface', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -278,7 +278,7 @@ module gotm_component
 
     call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, advanceCount=n, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+   
 #ifdef DEBUG
     call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)

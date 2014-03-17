@@ -1,7 +1,7 @@
 !> @brief Implementation of a FABM (with GOTM) ESMF component
 !
 !> This module serves as a wrapper for the FABM model in a 1D GOTM context.
-!> @import water_temperature
+!> @import temperature_in_water
 !> @export (FABM variables)
 !
 !  This computer program is part of MOSSCO. 
@@ -145,8 +145,8 @@ module fabm_gotm_component
     !> set required, required_rank and optional flags in the importState
     call set_import_flags(importState)
      
-    !> Create the grid from existing grid of water_temperature field
-    varname="water_temperature"
+    !> Create the grid from existing grid of temperature_in_water field
+    varname="temperature_in_water"
     call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
     if (itemcount==0) then
       call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
@@ -457,7 +457,7 @@ module fabm_gotm_component
     character(len=ESMF_MAXSTR) :: name,varname
     integer                    :: n
 
-    varname="water_temperature"
+    varname="temperature_in_water"
     call set_item_flags(importState,varname,requiredFlag=.true.,requiredRank=3)
 
     do n=1,size(gotmfabm%model%info%state_variables)

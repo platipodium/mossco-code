@@ -413,7 +413,7 @@ write (*,*) ' state add'
     if (forcing_from_coupler) then
 
       !> get water depth
-      call mossco_state_get(importState,(/'water_depth'/),ptr_f2,rc)
+      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),ptr_f2,rc)
       if (rc == 0) then
         h0 = ptr_f2(1,1)
       else
@@ -421,8 +421,8 @@ write (*,*) ' state add'
       endif
 
       !> get u,v and use bottom layer value
-      call mossco_state_get(importState,(/'water_x_velocity'/),u,rc)
-      call mossco_state_get(importState,(/'water_y_velocity'/),v,rc)
+      call mossco_state_get(importState,(/'x_velocity_in_water'/),u,rc)
+      call mossco_state_get(importState,(/'y_velocity_in_water'/),v,rc)
       if (rc == 0) then
         umod = sqrt( u(1,1,1)**2 + v(1,1,1)**2 )
       else

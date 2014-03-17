@@ -212,25 +212,25 @@ module fabm0d_component
     
     ! get import state
     if (forcing_from_coupler) then
-      call ESMF_StateGet(importState, itemSearch='water_temperature', &
+      call ESMF_StateGet(importState, itemSearch='temperature_in_water', &
         itemCount=itemCount, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (itemCount==1) then
-        call ESMF_StateGet(importState, 'water_temperature', import_field, rc=rc)
+        call ESMF_StateGet(importState, 'temperature_in_water', import_field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(import_field, farrayPtr=water_temperature, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         zerod%temp = water_temperature(1,1,1)
       else
-        write(message,'(A)') 'Required field water_temperature not found'
+        write(message,'(A)') 'Required field temperature_in_water not found'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       endif
 
-      call ESMF_StateGet(importState, itemSearch='salinity', &
+      call ESMF_StateGet(importState, itemSearch='salinity_in_water', &
         itemCount=itemCount, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (itemCount==1) then 
-        call ESMF_StateGet(importState, 'salinity', import_field, rc=rc)
+        call ESMF_StateGet(importState, 'salinity_in_water', import_field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -242,11 +242,11 @@ module fabm0d_component
       endif
       
       
-      call ESMF_StateGet(importState, itemSearch='photosynthetically_available_radiation', &
+      call ESMF_StateGet(importState, itemSearch='radiation_in_water', &
         itemCount=itemCount, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (itemCount==1) then 
-        call ESMF_StateGet(importState, 'salinity', import_field, rc=rc)
+        call ESMF_StateGet(importState, 'radiation_in_water', import_field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
