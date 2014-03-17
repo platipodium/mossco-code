@@ -26,8 +26,8 @@ module simplewave_component
 
   public :: SetServices
 
-  integer                      :: farray_shape(3)
-  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK,taubw
+  integer                      :: farray_shape(2)
+  real(ESMF_KIND_R8),dimension(:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK,taubw
   real(ESMF_KIND_R8),parameter :: gravity=9.81d0
   
   contains
@@ -65,11 +65,9 @@ module simplewave_component
     type(ESMF_Time)   :: clockTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
-    integer                     :: lbnd(3), ubnd(3)
-    integer                     :: myrank,i,j,k
+    integer                     :: myrank,i,j
     integer                     :: nimport,nexport
     type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_ArraySpec) :: arrayspec
     type(ESMF_Field)     :: exportField
     
     type(ESMF_Field), dimension(:), allocatable  :: exportFields, importFields
@@ -90,8 +88,8 @@ module simplewave_component
 
     !> Create the grid and coordinates
     !> This example grid is a 1 x 1 x 1 grid, you need to adjust this 
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL, &
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+      regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL, &
       name='simplewave grid', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
@@ -109,18 +107,15 @@ module simplewave_component
     nexport = 4
     !allocate(export_variables(nexport)) 
 
-    allocate(waveDir(farray_shape(1),farray_shape(2),1))
+    allocate(waveDir(farray_shape(1),farray_shape(2)))
     waveDir = 0.0d0
-    allocate(waveH  (farray_shape(1),farray_shape(2),1))
+    allocate(waveH  (farray_shape(1),farray_shape(2)))
     waveH = 0.0d0
-    allocate(waveT  (farray_shape(1),farray_shape(2),1))
+    allocate(waveT  (farray_shape(1),farray_shape(2)))
     waveT = 0.0d0
-    allocate(waveK  (farray_shape(1),farray_shape(2),1))
+    allocate(waveK  (farray_shape(1),farray_shape(2)))
     waveK = 0.0d0
     
-    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
    !---- Export variable 1: wave_direction
     exportField = ESMF_FieldCreate(grid, waveDir,                     &
                                    indexflag=ESMF_INDEX_GLOBAL,      &
@@ -170,14 +165,14 @@ module simplewave_component
     type(ESMF_Time)         :: clockTime
     type(ESMF_TimeInterval) :: timeInterval
     type(ESMF_StateItem_Flag) :: itemType
-    integer(ESMF_KIND_I8)   :: n,k
+    integer(ESMF_KIND_I8)   :: n
     integer                 :: nvar
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: depth=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: wind=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windDir=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windx=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: windy=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: z0=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: depth=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: wind=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: windDir=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: windx=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: windy=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: z0=>null()
     type(ESMF_Field)        :: Field
     character(len=ESMF_MAXSTR) :: string,varname
     real(ESMF_KIND_R8)           :: wdepth,wwind
@@ -216,16 +211,16 @@ module simplewave_component
 
 
     ! associate local pointers with import data
-    call ESMF_StateGet(importState, itemSearch='water_depth', &
+    call ESMF_StateGet(importState, itemSearch='water_depth_at_soil_surface', &
       itemCount=itemCount, rc = rc)
     if (itemCount == 0) then
-       write(message,'(A)') trim(name)//' required import field water_depth not found.' 
+       write(message,'(A)') trim(name)//' required import field water_depth_at_soil_surface not found.' 
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
        call ESMF_StatePrint(importState)
        call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif      
           
-    call ESMF_StateGet(importState, "water_depth", field, rc=rc)
+    call ESMF_StateGet(importState, "water_depth_at_soil_surface", field, rc=rc)
     call ESMF_FieldGet(field, farrayPtr=depth, rc=rc)
 
     call ESMF_StateGet(importState, "wind_speed", itemType)
@@ -255,7 +250,7 @@ module simplewave_component
        call ESMF_FieldGet(field, farrayPtr=z0)
 
        if (.not. taubw_ready) then
-          allocate(taubw(farray_shape(1),farray_shape(2),1))
+          allocate(taubw(farray_shape(1),farray_shape(2)))
           taubw = 0.0d0
           Field = ESMF_FieldCreate(grid,taubw,                             &
                                    indexflag=ESMF_INDEX_GLOBAL,          &
@@ -285,30 +280,30 @@ module simplewave_component
     end if
 
     if (calc_wind) then
-      if (.not. associated(wind)) allocate(wind(farray_shape(1),farray_shape(2),1))
+      if (.not. associated(wind)) allocate(wind(farray_shape(1),farray_shape(2)))
       wind = sqrt(windx**2 + windy**2)
     end if
     if (calc_windDir) then
-      if (.not. associated(windDir)) allocate(windDir(farray_shape(1),farray_shape(2),1))
+      if (.not. associated(windDir)) allocate(windDir(farray_shape(1),farray_shape(2)))
       windDir = atan2(windy,windx) ! cartesian convention and in radians
     end if
    
     j = 1
     i = 1    
     waveDir = windDir
-    wwind = max( min_wind , wind(i,j,1) )
-    wdepth = min( depth(i,j,1) , max_depth_windwaves )
-    waveH(i,j,1) = wind2waveHeight(wwind,wdepth)
-    waveT(i,j,1) = wind2wavePeriod(wwind,wdepth)
-    waveK(i,j,1) = wavePeriod2waveNumber(waveT(i,j,1),depth(i,j,1))
+    wwind = max( min_wind , wind(i,j) )
+    wdepth = min( depth(i,j) , max_depth_windwaves )
+    waveH(i,j) = wind2waveHeight(wwind,wdepth)
+    waveT(i,j) = wind2wavePeriod(wwind,wdepth)
+    waveK(i,j) = wavePeriod2waveNumber(waveT(i,j),depth(i,j))
 
 
     if (calc_taubw) then
 
-      Hrms = sqrthalf * waveH(i,j,1)
-      omegam1 = oneovertwopi * waveT(i,j,1)
+      Hrms = sqrthalf * waveH(i,j)
+      omegam1 = oneovertwopi * waveT(i,j)
 !     wave orbital velocity amplitude at bottom (ubot in SWAN)
-      uorb = 0.5d0 * Hrms / ( omegam1*sinh(waveK(i,j,1)*depth(i,j,1)) )
+      uorb = 0.5d0 * Hrms / ( omegam1*sinh(waveK(i,j)*depth(i,j)) )
 !     wave orbital excursion
       aorb = omegam1 * uorb
 !     wave Reynolds number
@@ -324,7 +319,7 @@ module simplewave_component
 !              (Or we always assume turbulent currents.)
       if ( Rew .gt. Rew_crit ) then
 !       rough turbulent flow
-        tauwr = 0.5d0 * 1.39d0 * (omegam1/z0(i,j,1))**(-0.52d0) * uorb**(2-0.52d0)
+        tauwr = 0.5d0 * 1.39d0 * (omegam1/z0(i,j))**(-0.52d0) * uorb**(2-0.52d0)
 !       smooth turbulent flow
         tauws = 0.5d0 * (omegam1*avmmolm1)**(-0.187d0) * uorb**(2-2*0.187d0)
 !       Note (KK): For combined wave-current flow, the decision on
@@ -332,10 +327,10 @@ module simplewave_component
 !                  (Soulsby & Clarke, 2005)
 !                  However, here we decide according to Stanev et al. (2009).
 !                  (as for wave-only flow)
-        taubw(i,j,1) = max( tauwr , tauws )
+        taubw(i,j) = max( tauwr , tauws )
       else
 !       laminar flow
-        taubw(i,j,1) = (omegam1*avmmolm1)**(-0.5d0) * uorb
+        taubw(i,j) = (omegam1*avmmolm1)**(-0.5d0) * uorb
       end if
 
     end if
@@ -348,7 +343,6 @@ module simplewave_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer                     :: lbnd(3), ubnd(3), k
     real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
     type(ESMF_Field)     :: field
 

@@ -12,7 +12,7 @@ module toplevel_component
   type(ESMF_GridComp),save    :: simplewave_Comp
   character(len=ESMF_MAXSTR)  :: simplewave_CompName 
   type(ESMF_State)            :: simplewave_ImportState, simplewave_ExportState
-  real(ESMF_KIND_R8),dimension(:,:,:),allocatable,target :: wind,windDir,depth,windx,windy
+  real(ESMF_KIND_R8),dimension(:,:),allocatable,target :: wind,windDir,depth,windx,windy
 
   contains
 
@@ -43,17 +43,17 @@ module toplevel_component
 
     !> Create the grid and coordinates
     !> This example grid is a 1 x 1 x 1 grid, you need to adjust this 
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL, &
+    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+      regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL, &
       name='top grid', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
 
-    allocate(windx(1,1,1))
+    allocate(windx(1,1))
     windx = 10.0d0
-    allocate(windy(1,1,1))
+    allocate(windy(1,1))
     windy = 2.0d0
-    allocate(depth(1,1,1))
+    allocate(depth(1,1))
     depth = 100.0d0
 
 !   create child component
@@ -84,7 +84,7 @@ module toplevel_component
     exportField = ESMF_FieldCreate(grid, depth,                       &
                                    indexflag=ESMF_INDEX_GLOBAL,      &
                                    staggerloc=ESMF_STAGGERLOC_CENTER, &
-                                   name='water_depth', rc=rc)
+                                   name='water_depth_at_soil_surface', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_StateAddReplace(simplewave_ImportState,(/exportField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
