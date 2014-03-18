@@ -37,8 +37,8 @@ Erod = 0.00006
 write (*,*) 'Abitotic critical tau =' , tau, 'Abiotic Erodibility = ', Erod
 write (*,*)
 
- tau = tau * Micro%TauEffect
- Erod = Erod * Micro%ErodibilityEffect
+ tau = tau * Micro%TauEffect(1,1,1)
+ Erod = Erod * Micro%ErodibilityEffect(1,1,1)
 
 
 write (*,*) 'critical tau (microphytobenthos) =' , tau
@@ -53,11 +53,11 @@ write (12,*) 'Biotic erodibility=', Micro%ErodibilityEffect
 write (12,*) 'Biotic Critical bed shear stress effect= ',Micro%TauEffect
 
 
-tau = tau * Total_Bioturb%TauEffect
-Erod = Erod * Total_Bioturb%ErodibilityEffect
+tau = tau * Total_Bioturb%TauEffect(1,1,1)
+Erod = Erod * Total_Bioturb%ErodibilityEffect(1,1,1)
 
 write (*,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= '& 
-       &       ,Total_Bioturb%TauEffect, 'Both Biotic erodibility',Total_Bioturb%ErodibilityEffect
+       &       ,Total_Bioturb%TauEffect(1,1,1), 'Both Biotic erodibility',Total_Bioturb%ErodibilityEffect(1,1,1)
 
 write (*,*)
 
@@ -65,7 +65,7 @@ write (12,*) 'tau (macrofaunau and microphytobenthos) =' ,tau
 
 write (12,*) 'Both Biotic effects on the critical bed shear stress effect= ',Total_Bioturb%TauEffect
 
-write (12,*) 'Both Biotic erodibility =', Total_Bioturb%ErodibilityEffect
+write (12,*) 'Both Biotic erodibility =', Total_Bioturb%ErodibilityEffect(1,1,1)
 
 ! finalizing the classes
  call fin_micropyht(Micro)
