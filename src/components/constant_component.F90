@@ -20,12 +20,12 @@ module constant_component
   implicit none
 
   private
-  type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
-  real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
 
-  type,extends(MOSSCO_VariableFArray3d) :: variable_item_type
+  type,extends(MOSSCO_VariableInfo) :: variable_item_type
     type(variable_item_type), pointer     :: next => null()
     type(ESMF_Field)                      :: field
+    integer :: rank
+    real(ESMF_KIND_R4) :: value
   end type
 
   type(variable_item_type), pointer :: cur_item,variable_items
@@ -62,23 +62,61 @@ module constant_component
     integer(ESMF_KIND_I4) :: nexport,lbnd(3),ubnd(3),farray_shape(3)
     integer(ESMF_KIND_I4) :: i,j,k
     type(ESMF_Field), dimension(:), allocatable :: exportField
-    type(ESMF_Grid)                             :: grid, grid111
+    type(ESMF_Grid)                             :: grid2, grid3
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr
+    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:) 
     character(len=ESMF_MAXSTR)                  :: varname
-    real(ESMF_KIND_R8)                          :: floatvalue
     integer, parameter                          :: fileunit=21
-    logical                                     :: file_readable=.true.
+    logical                                     :: file_readable=.true., clockIsPresent
+    integer(ESMF_KIND_I4)                       :: start
+    
+    character(len=ESMF_MAXSTR)                  :: timeString
+    type(ESMF_Time)                             :: currTime
+    
+    
 
-    grid111 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
+    rc = ESMF_SUCCESS
+     
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+    grid3 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="constants grid 1x1x1",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+    grid2 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      name="constants grid 1x1",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      coorddep2=(/2/),rc=rc)      
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     ! Get information to generate the fields that store the pointers to variables
-    call ESMF_GridGetFieldBounds(grid=grid111,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+    call ESMF_GridGetFieldBounds(grid=grid3,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -101,18 +139,25 @@ module constant_component
         !> read constant_component.dat line by line, maybe add rank later
         !! format of each line is:
         !!   some_standard_name  12.345
-        read(fileunit,*,end=5) varname,floatvalue
+        read(fileunit,*,end=5) varname,cur_item%value
 
         !> add item to list of constants
         allocate(cur_item%next)
         cur_item => cur_item%next
         cur_item%standard_name=trim(varname)
-        allocate(cur_item%data(farray_shape(1),farray_shape(2),farray_shape(3)))
-        cur_item%data(:,:,:) = floatvalue
-#if 1
+        cur_item%rank = 3
+        start=1
+        do while (index(cur_item%standard_name(start:),'_at_')>0)
+          cur_item%rank=cur_item%rank - 1
+          start = index(cur_item%standard_name(start:),'_at_')+1
+        enddo 
+        
         write(0,*) 'constant_component: create field ', &
-            trim(varname),' =',floatvalue
-#endif
+            trim(varname),' =',cur_item%value
+        write(message,'(A,I1,A,F4.2)') trim(name)//' created field '//trim(varname)// &
+          ' rank(',cur_item%rank,'), value ',cur_item%value
+        call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
+
         nullify(cur_item%next)
       end do
     close(fileunit)
@@ -124,12 +169,31 @@ module constant_component
     !> now go through list, create fields and add to exportState
     cur_item => variable_items%next
     do
-      cur_item%field = ESMF_FieldCreate(grid111, &
-              farrayPtr=cur_item%data, &
+      if (cur_item%rank==3) then 
+        cur_item%field = ESMF_FieldCreate(grid3, &
+              typekind=ESMF_TYPEKIND_R8, &
               name=cur_item%standard_name, &
               staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+              
+        call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr3, rc=rc)     
+        farrayPtr3(:,:,:)=cur_item%value
+              
+      elseif (cur_item%rank==2) then
+       cur_item%field = ESMF_FieldCreate(grid2, &
+              typekind=ESMF_TYPEKIND_R8, &
+              name=cur_item%standard_name, &
+              staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+        call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr2, rc=rc)     
+        farrayPtr2(:,:)=cur_item%value
+              
+      else
+        write(0,*) 'Not IMPLEMENTED'
+        stop
+      endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+      
+      
+      
       call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -145,7 +209,7 @@ module constant_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
     write(message,'(A,A,A)') 'Constant component ', trim(name), ' initialized'
-    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
+    call ESMF_LogWrite(message,ESMF_LOGMSG_TRACE) 
 
   end subroutine Initialize
 
@@ -180,10 +244,8 @@ module constant_component
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-!#ifdef DEBUG
     write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!#endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
  
     call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc) 
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -194,11 +256,9 @@ module constant_component
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-!#ifdef DEBUG 
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
-!#endif
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
 
   end subroutine Run
 

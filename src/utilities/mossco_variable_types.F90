@@ -5,52 +5,46 @@ module mossco_variable_types
 #endif  
   
   implicit none
+  
+  
 
-  type, public :: MOSSCO_VariableInfo
+  type, public, abstract :: MOSSCO_VariableInfo
     character(len=255) :: name  = ''   ! Short name
     character(len=255) :: unit = ''    ! Units
     character(len=511) :: standard_name = '' ! CF standard name 
     character(len=511) :: description = '' ! long description 
-    
     contains 
       procedure :: as_yaml
     
   end type
 
 #ifdef ESMF 
-  type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray0d
-     real(ESMF_KIND_R8), pointer :: data
-  end type
-  type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray1d
-     real(ESMF_KIND_R8), pointer, dimension(:) :: data
-  end type
-  type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray2d
-     real(ESMF_KIND_R8), pointer, dimension(:,:) :: data
-  end type
-  type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray3d
-     real(ESMF_KIND_R8), pointer, dimension(:,:,:) :: data
-  end type
-  type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray4d
-     real(ESMF_KIND_R8), pointer, dimension(:,:,:,:) :: data
-  end type
+integer, parameter :: MOSSCO_KIND_R8=ESMF_KIND_R8
 #else
+integer, parameter :: MOSSCO_KIND_R8=selected_real_kind(13)
+#endif
+
   type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray0d
-     double precision, pointer :: data
+     real(MOSSCO_KIND_R8), pointer :: data
+     integer :: rank = 0
   end type
   type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray1d
-     double precision, pointer, dimension(:) :: data
+     real(MOSSCO_KIND_R8), pointer, dimension(:) :: data
+     integer :: rank=1
   end type
   type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray2d
-     double precision, pointer, dimension(:,:) :: data
+     real(MOSSCO_KIND_R8), pointer, dimension(:,:) :: data
+     integer :: rank=2
+     
   end type
   type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray3d
-     double precision, pointer, dimension(:,:,:) :: data
+     real(MOSSCO_KIND_R8), pointer, dimension(:,:,:) :: data
+     integer :: rank=3
   end type
   type, extends(MOSSCO_VariableInfo), public :: MOSSCO_VariableFArray4d
-     double precision, pointer, dimension(:,:,:,:) :: data
+     real(MOSSCO_KIND_R8), pointer, dimension(:,:,:,:) :: data
+     integer :: rank=4
   end type
-#endif 
-
 
 contains
 
