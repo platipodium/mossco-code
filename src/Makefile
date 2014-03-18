@@ -38,7 +38,7 @@ clean: extraclean
 
 extraclean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
-	@rm $(MOSSCO_DIR)/src/include/git-sha.h	
+	@$(RM) $(MOSSCO_DIR)/src/include/git-sha.h	
 
 check:
 	@echo The check target is not implemented, yet
