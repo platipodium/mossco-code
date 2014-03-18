@@ -1,0 +1,29 @@
+dependencies:
+  - erosed: fabm_gotm
+  - fabm_gotm: gotm
+
+coupling:
+  - components: 
+     - gotm
+     - fabm_gotm 
+    interval: 6 m
+  - components: 
+     - gotm
+     - erosed 
+    interval: 6 m
+  - components: 
+     - fabm_gotm
+     - erosed 
+    interval: 6 m
+  - components: 
+    - erosed
+    - fabm_gotm
+    interval: 6 m
+  - components: 
+    - erosed
+    - netcdf
+    interval: 2 h
+  - components: 
+    - fabm_gotm
+    - netcdf
+    interval: 4 h
