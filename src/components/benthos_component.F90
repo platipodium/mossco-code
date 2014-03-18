@@ -107,9 +107,14 @@ write (*,*)
     !> create export fields
     allocate(Effect_of_MPB_on_sediment_erodibility_at_bottom(1,1,1))
     Effect_of_MPB_on_sediment_erodibility_at_bottom => Micro%ErodibilityEffect
-    array = ESMF_ArrayCreate(distgrid=distgrid, &
+
+    write (*,*) ' Effect_of_MPB_on_sediment_erodibility_at_bottom', &
+    Effect_of_MPB_on_sediment_erodibility_at_bottom
+
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
       farrayPtr=Effect_of_MPB_on_sediment_erodibility_at_bottom,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     Microphytobenthos_erodibility = ESMF_FieldCreate(grid, array, &
       name="Effect_of_MPB_on_sediment_erodibility_at_bottom", &
       staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
@@ -117,7 +122,9 @@ write (*,*)
 
     allocate(Effect_of_MPB_on_critical_bed_shearstress(1,1,1))
     Effect_of_MPB_on_critical_bed_shearstress => Micro%TauEffect
-    array = ESMF_ArrayCreate(distgrid=distgrid, &
+    write (*,*) 'Effect_of_MPB_on_critical_bed_shearstress',&
+     Effect_of_MPB_on_critical_bed_shearstress
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
       farrayPtr=Effect_of_MPB_on_critical_bed_shearstress, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     Microphytobenthos_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
@@ -126,7 +133,10 @@ write (*,*)
 
     allocate( Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(1,1,1))
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom => Total_Bioturb%ErodibilityEffect
-    array = ESMF_ArrayCreate(distgrid=distgrid,  &
+
+    write (*,*) 'Effect_of_Mbalthica_on_sediment_erodibility_at_bottom', &
+    Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL,  &
       farrayPtr=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
@@ -135,7 +145,10 @@ write (*,*)
 
     allocate(Effect_of_Mbalthica_on_critical_bed_shearstress(1,1,1))
     Effect_of_Mbalthica_on_critical_bed_shearstress => Total_Bioturb%TauEffect
-    array = ESMF_ArrayCreate(distgrid=distgrid, &
+    write (*,*) 'Effect_of_Mbalthica_on_critical_bed_shearstress',&
+    Effect_of_Mbalthica_on_critical_bed_shearstress
+
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
       farrayPtr=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     Macrofauna_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
