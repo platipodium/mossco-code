@@ -93,12 +93,14 @@ write (*,*)
     !> create grid
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
-      coorddep2=(/2/),rc=rc)
+  !    name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+  !    coorddep2=(/2/),rc=rc)
+       name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
+
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Create distgrid for arrays
-    distGrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
+    distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
       indexflag=ESMF_INDEX_GLOBAL, rc=rc)
 
     !call ESMF_GridGet(grid,distgrid=distgrid)
@@ -112,7 +114,7 @@ write (*,*)
     Effect_of_MPB_on_sediment_erodibility_at_bottom
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
-      farrayPtr=Effect_of_MPB_on_sediment_erodibility_at_bottom,rc=rc)
+      farray=Effect_of_MPB_on_sediment_erodibility_at_bottom,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     Microphytobenthos_erodibility = ESMF_FieldCreate(grid, array, &
@@ -125,7 +127,7 @@ write (*,*)
     write (*,*) 'Effect_of_MPB_on_critical_bed_shearstress',&
      Effect_of_MPB_on_critical_bed_shearstress
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
-      farrayPtr=Effect_of_MPB_on_critical_bed_shearstress, rc=rc)
+      farray=Effect_of_MPB_on_critical_bed_shearstress, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     Microphytobenthos_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
       name="Effect_of_MPB_on_critical_bed_shearstress", rc=rc)
@@ -137,7 +139,7 @@ write (*,*)
     write (*,*) 'Effect_of_Mbalthica_on_sediment_erodibility_at_bottom', &
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL,  &
-      farrayPtr=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
+      farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
       name="Effect_of_Mbalthica_on_sediment_erodibility_at_bottom", rc=rc)
@@ -149,7 +151,7 @@ write (*,*)
     Effect_of_Mbalthica_on_critical_bed_shearstress
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
-      farrayPtr=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
+      farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     Macrofauna_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
       name="Effect_of_Mbalthica_on_critical_bed_shearstress", rc=rc)
