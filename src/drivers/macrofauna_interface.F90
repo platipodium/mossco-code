@@ -69,10 +69,10 @@ type (BioturbationEffect) ::Total_Bioturbation
 call run_Mbalthica(M_Balthica)
 
 ! It should be noted that currently only the biological effect on the critical bed shear stress and
-! erodibiity are considered, althogh the supercall macrofauna includes many other effects.
+! erodibiity are considered, althogh the superclass macrofauna includes many other effects.
 ! In case further effects such as biogenicstructures on flow, direct bio-resuspension und deposition
-! and etc. are going to be activated.
-! In case of extending the following equation to further effects such as i.e. Telina fabula it should look like the following:
+! and etc. are going to be activated, they should be considered in the corresponding parameters with the class.
+! In case of extending the following equation to further effects such as i.e. Tellina fabula it should look like the following:
 !Total_Bioturbation%TauEffect = M_Balthica%Bioturbation%TauEffect * T_fabula%Taueffect * ...
 
 Total_Bioturbation%ErodibilityEffect = M_Balthica%Bioturbation%ErodibilityEffect
