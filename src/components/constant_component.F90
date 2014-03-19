@@ -73,6 +73,7 @@ module constant_component
     
     character(len=ESMF_MAXSTR)                  :: timeString
     type(ESMF_Time)                             :: currTime
+    real(ESMF_KIND_R8)                          :: floatValue
     
     
 
@@ -139,13 +140,14 @@ module constant_component
         !> read constant_component.dat line by line, maybe add rank later
         !! format of each line is:
         !!   some_standard_name  12.345
-        read(fileunit,*,end=5) varname,cur_item%value
+        read(fileunit,*,end=5) varname,floatValue
 
         !> add item to list of constants
         allocate(cur_item%next)
         cur_item => cur_item%next
         cur_item%standard_name=trim(varname)
         cur_item%rank = 3
+        cur_item%value = floatValue
         start=1
         do while (index(cur_item%standard_name(start:),'_at_')>0)
           cur_item%rank=cur_item%rank - 1
