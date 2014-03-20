@@ -332,8 +332,8 @@ for i in range(0,len(componentList)):
                 ifrom=gridCompList.index(jtem[0])
                 ito=gridCompList.index(jtem[2])
         j=cplCompList.index(item)
-        fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(j+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
-        fid.write('      exportState=exportStates(' + str(ifrom+1) + '), clock=clock, rc=rc)\n')
+        fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(j+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
+        fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
         fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
        
 fid.write('    numCplAlarm = ' + str(len(couplingList)))
@@ -609,7 +609,7 @@ fid.write('''
           write(message,'(A)') trim(message)//' '//trim(otherName)  
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)            
             
-          call ESMF_GridCompGet(gridCompList(i), exportState=expState, rc=rc)
+          call ESMF_GridCompGet(gridCompList(i), exportState=impState, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
           !! Search the gridCompList for other's name
@@ -631,7 +631,7 @@ fid.write('''
               if (trim(cplCompNames(l))==trim(cplName)//'_coupler') exit
           enddo
 
-          call ESMF_GridCompGet(gridCompList(k), importState=impState, rc=rc)
+          call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
