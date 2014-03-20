@@ -20,10 +20,11 @@ module toplevel_component
 
   public SetServices
 
-  type(ESMF_GridComp),save  :: fabmsedComp, constantComp, gotmComp, fabmgotmComp
-  type(ESMF_GridComp), save :: erosedComp, netcdfComp  
-  type(ESMF_CplComp),save   :: pbCplComp,bpCplComp
-  type(ESMF_State),save     :: state,pelagicstate,sedimentstate
+  type(ESMF_GridComp),save     :: fabmsedComp, constantComp, gotmComp, fabmgotmComp
+  type(ESMF_GridComp), save    :: erosedComp, netcdfComp  
+  type(ESMF_CplComp),save      :: pbCplComp,bpCplComp
+  type(ESMF_State),save,target :: state
+  type(ESMF_State),pointer     :: pelagicstate,sedimentstate
 
   contains
 
@@ -93,15 +94,16 @@ module toplevel_component
     call ESMF_CplCompSetServices(pbCplComp,pb_coupler_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
 
-    ! States for exchange (only one generic)
-    ! GOTM and constant don't have import states, FABM both, sed both
-    ! GOTM export goes into FABMGOTM and is filled, then passed on to sediment
+    !> State for exchange (only one generic)
+    !! keep pelagicstate and sedimentstate as used before 2014-03-20
     state = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Exchange state")
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    pelagicstate = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Pelagic state")
+
+    !> use fbp_exchange_state.nc as filename when coupling to netcdf_component
+    call ESMF_AttributeSet(state,name='filename',value='fbp_exchange_state.nc',rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    sedimentstate = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Sediment state")
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    pelagicstate => state
+    sedimentstate => state
 
     call ESMF_GridCompInitialize(constantComp, importState=pelagicState, exportState=pelagicState,clock=parentClock,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
