@@ -165,7 +165,7 @@ contains
     Effect_of_Mbalthica_on_critical_bed_shearstress
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
-      farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
+      farray=Effect_of_Mbalthica_on_critical_bed_shearstress, rc=rc)
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
