@@ -40,14 +40,14 @@ end type SedEffect
 
 ! basic data type demonstraing the effect of macrofauna and/ or Macrophytes on near bed flow field
 type NearBedEffect
- real (fp), pointer :: BedShearStress              !effect on bed shera stress
- real (fp), pointer :: NearBedVelocity             !effect on near bed velocity
+ real (fp), pointer :: BedShearStress=> null()              !effect on bed shera stress
+ real (fp), pointer :: NearBedVelocity=> null()             !effect on near bed velocity
 end type NearBedEffect
 
 ! data type for demonstrating the effect of biogenic structures on flow and roughness
 type BiogenicStrctures
- type (SedEffect)    , pointer :: roughness
- type (NearBedEffect), pointer :: FlowEffect
+ type (SedEffect)    , pointer :: roughness=> null()
+ type (NearBedEffect), pointer :: FlowEffect=> null()
 end type BiogenicStrctures
 !
 ! the principal data type used for demonstarting of macrofauna effect on eroion
