@@ -456,7 +456,7 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timestring, cplName
+    character(len=ESMF_MAXSTR) :: timestring, cplName, myName
     type(ESMF_Time)            :: stopTime, currTime, ringTime, time
     type(ESMF_TimeInterval)    :: timeInterval, ringInterval
     integer(ESMF_KIND_I8)      :: advanceCount,  i, j, k, l
@@ -585,7 +585,7 @@ fid.write('''
           write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
             
-          compName=trim(alarmName(1:index(alarmName,'--')-1))
+          myName=trim(alarmName(1:index(alarmName,'--')-1))
           otherName=trim(alarmName(index(alarmName,'--')+2:index(alarmName,'--cplAlarm')-1))
           
           do k=1,ubound(cplAlarmList,1) 
@@ -595,7 +595,7 @@ fid.write('''
             endif
           enddo
             
-          write(message,'(A)') trim(timeString)//' '//trim(compName)//' ->'
+          write(message,'(A)') trim(timeString)//' '//trim(myName)//' ->'
           if (trim(cplName) /= 'link') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
@@ -669,7 +669,7 @@ fid.write('''
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
         if (alarmCount==0) then
-          call ESMF_LogWrite('No alarm not found in '//trim(compName), ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
           timeInterval=stopTime-currTime
         else                 
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
