@@ -86,6 +86,7 @@ elseif (opnd) then
 else
 
  write (*,*) 'ERROR: The input file for Microphytobenthos doesnot exists!'
+ stop
 
 end if
 
