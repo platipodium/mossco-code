@@ -65,7 +65,7 @@ module benthic_pelagic_coupler
 
     ! create coupler fields
     !> @todo: check in exportState for required quantities and create those fields
-    call mossco_create_upward_flux_fields(importState, (/&
+    call mossco_create_upward_flux_fields(exportState, (/&
            "nutrients                              ", &
            "DIN                                    ", &
            "DIP                                    ", &
@@ -117,7 +117,10 @@ module benthic_pelagic_coupler
               'nutrients_upward_flux                            ', &
               'DIN_upward_flux                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux'/),DINflux,rc=rc)
+      if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
+      ! add constant boundary flux of DIN (through groundwater, advection, rain
+      DINflux(1,1) = DINflux(1,1) + 50.0/(86400.0*365.0)
 
       !   DIP flux:
       call mossco_state_get(exportState,(/ &
@@ -138,6 +141,7 @@ module benthic_pelagic_coupler
             'detritus_upward_flux              ', &
             'detN_upward_flux                  ', &
             'Detritus_Nitrogen_detN_upward_flux'/),DETNflux,rc=rc)
+      if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       DETNflux(1,1) = NC_fdet*FDETCflux(1,1) + NC_sdet*SDETCflux(1,1)
 
       !> search for Detritus-C
