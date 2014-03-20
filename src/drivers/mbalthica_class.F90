@@ -91,6 +91,7 @@ elseif (opnd) then
 else
 
  write (*,*) 'ERROR: The input file for Mbalthica doesnot exists!'
+ stop
 
 end if
 
