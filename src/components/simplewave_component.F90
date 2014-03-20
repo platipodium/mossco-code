@@ -73,7 +73,7 @@ module simplewave_component
     type(ESMF_Field), dimension(:), allocatable  :: exportFields, importFields
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
 
-    call ESMF_LogWrite("simplewave component initializing ... ",ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("simplewave component initializing ... ",ESMF_LOGMSG_TRACE)
 
     ! Create a local clock, set its parameters to those of the parent clock
     clock = ESMF_ClockCreate(parentClock, rc=rc)
@@ -152,7 +152,7 @@ module simplewave_component
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_LogWrite('simplewave  component initialized.',ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite('simplewave  component initialized.',ESMF_LOGMSG_TRACE)
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -260,20 +260,20 @@ module simplewave_component
           call ESMF_StateAddReplace(exportState,(/Field/),rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           taubw_ready = .true.
-          call ESMF_LogWrite('simplewave component post-initialized for bottom stress.',ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite('simplewave component post-initialized for bottom stress.',ESMF_LOGMSG_TRACE)
        end if
     end if
 
     if (calc_wind .or. calc_windDir) then
        call ESMF_StateGet(importState, "wind_x_velocity_at_10m", Field, rc=rc)
        if (rc /= ESMF_SUCCESS) then
-          call ESMF_LogWrite("wind_x_velocity_at_10m field not found",ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite("wind_x_velocity_at_10m field not found",ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
        end if
        call ESMF_FieldGet(field, farrayPtr=windx, rc=rc)
        call ESMF_StateGet(importState, "wind_y_velocity_at_10m", Field, rc=rc)
        if (rc /= ESMF_SUCCESS) then
-          call ESMF_LogWrite("wind_y_velocity_at_10m field not found",ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite("wind_y_velocity_at_10m field not found",ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
        end if
        call ESMF_FieldGet(field, farrayPtr=windy, rc=rc)

@@ -39,7 +39,7 @@ module toplevel_component
     type(ESMF_Field)      :: exportField
     type(ESMF_Grid)       :: grid
     
-    call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_TRACE)
 
     !> Create the grid and coordinates
     !> This example grid is a 1 x 1 x 1 grid, you need to adjust this 
@@ -93,7 +93,7 @@ module toplevel_component
     call ESMF_GridCompInitialize(simplewave_Comp,importState=simplewave_ImportState,exportState=simplewave_ExportState,&
       clock=parentClock,rc=rc)
 
-    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
+    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_TRACE) 
 
   end subroutine Initialize
 
@@ -109,7 +109,7 @@ module toplevel_component
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring,message
 
-    call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_TRACE)
     call ESMF_GridCompGet(gridComp, localPet=myrank, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -118,14 +118,14 @@ module toplevel_component
       call ESMF_ClockGet(parentClock, currtime=localtime, rc=rc)
       call ESMF_TimeGet(localtime, timeString=timestring, rc=rc)
       message = "Toplevel ticking at "//trim(timestring)
-      call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
       
       call ESMF_GridCompRun(simplewave_Comp,importState=simplewave_ImportState,&
         exportState=simplewave_ExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    enddo 
 
-    call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_TRACE)
  
   end subroutine Run
 
@@ -140,7 +140,7 @@ module toplevel_component
                             clock=parentclock, rc=rc)
     call ESMF_GridCompDestroy(simplewave_Comp,rc=rc)
   
-    call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_TRACE)
    
     rc=ESMF_SUCCESS
 
