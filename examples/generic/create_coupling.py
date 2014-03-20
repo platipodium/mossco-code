@@ -340,9 +340,14 @@ fid.write('    numCplAlarm = ' + str(len(couplingList)))
 fid.write('''
     if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
     if (.not.allocated(cplNames)) allocate(cplNames(numCplAlarm))
-    do i=1, numCplAlarm 
-      cplNames(i)='link'    
-    enddo
+    cplNames(:) = 'link'
+''')
+for idx,couplingItem in enumerate(couplingList):
+    if couplingItem[1][:4] == 'link':
+        continue
+    else:
+        fid.write("    cplNames(%d)='%s'\n" % (idx+1,couplingItem[1].split('_coupler')[0]))
+fid.write('''
     !! Set the coupling alarm starting from start time of local clock
     call ESMF_ClockGet(clock,startTime=startTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
