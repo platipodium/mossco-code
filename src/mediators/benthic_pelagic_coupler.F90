@@ -64,19 +64,18 @@ module benthic_pelagic_coupler
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     ! create coupler fields
-    !> @todo: check in exportState for required quantities and create those fields
-    call mossco_create_upward_flux_fields(exportState, (/&
-           "nutrients                              ", &
-           "DIN                                    ", &
-           "DIP                                    ", &
-           "detN                                   ", &
-           "detP                                   ", &
-           "Dissolved_Inorganic_Nitrogen_DIN_nutN  ", &
-           "Dissolved_Inorganic_Phosphorus_DIP_nutP", &
-           "detritus                               ", &
-           "Detritus_Nitrogen_detN                 ", &
-           "Detritus_Phosphorus_detP               ", &
-           "Detritus_Carbon_detC                   "/),exportState)
+    call create_optional_fields_from_names(exportState, (/&
+           "nutrients_upward_flux                              ", &
+           "DIN_upward_flux                                    ", &
+           "DIP_upward_flux                                    ", &
+           "detN_upward_flux                                   ", &
+           "detP_upward_flux                                   ", &
+           "Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux  ", &
+           "Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux", &
+           "detritus_upward_flux                               ", &
+           "Detritus_Nitrogen_detN_upward_flux                 ", &
+           "Detritus_Phosphorus_detP_upward_flux               ", &
+           "Detritus_Carbon_detC_upward_flux                   "/),flux_bdy_grid)
 
     !> allocate temporary arrays
     allocate(DETNflux(1,1))
