@@ -110,7 +110,7 @@ module mossco_netcdf
         start=(/1,1,1,1,dimlen/))
     elseif (rank==3) then
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, &
         start=(/1,1,1,dimlen/))
     elseif (rank==2) then
@@ -344,7 +344,7 @@ module mossco_netcdf
       do i=1,rank
         write(name,'(A,I1)') trim(gridname)//'_',i
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
-          ubounds(1)-lbounds(1)+1,dimids(i))
+          ubounds(i)-lbounds(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
           rc_=MOSSCO_NC_EXISTING
         elseif  (ncStatus==NF90_NOERR) then
