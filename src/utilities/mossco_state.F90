@@ -134,5 +134,60 @@ contains
   end do
   end subroutine create_required_fields
 
+  !> create optional fields from available names and optional attributes in a state
+  subroutine create_optional_fields_from_names(state,names,grid)
+  type(ESMF_State), intent(inout)   :: state
+  type(ESMF_Grid),  intent(in)      :: grid
+  character(len=*),dimension(:)     :: names
+  type(ESMF_Field)                  :: field
+  type(ESMF_Typekind_Flag)          :: typeKind=ESMF_TYPEKIND_R8
+  type(ESMF_StateItem_Flag)         :: itemFlag
+  integer                           :: n,rc,idx,attCount
+  logical                           :: optional
+  character(ESMF_MAXSTR)            :: attName,potentialFieldName
+
+  !> get Attribute list
+  call ESMF_AttributeGet(state,attCount,rc=rc)
+  write(0,*) 'check ',attCount,'attributes for names: ',names 
+
+  do n=1,attCount
+    call ESMF_AttributeGet(state,attributeIndex=n,name=attName) 
+    !> check for ":optional"
+    idx = index(attName,':optional ')
+    if (idx>0) then
+      call ESMF_AttributeGet(state,name=attName,value=optional,rc=rc)
+      if (optional) then
+        potentialFieldName=attName(1:idx-1)
+      else
+        write(0,*) 'found attribute ',trim(attName),', but not optional'
+        cycle
+      end if
+    else
+      write(0,*) 'attribute not relevant: ',trim(attName)
+      cycle
+    end if
+    
+    write(0,*) ' check for potential field name ',trim(potentialFieldName)
+    !> check for available names == potentialFieldName
+    do idx=1,ubound(names,1)
+      if (trim(names(idx))==trim(potentialFieldName)) then
+        !> check for fieldName in state
+        call ESMF_StateGet(state,potentialFieldName,itemFlag,rc=rc)
+        if (itemFlag == ESMF_STATEITEM_NOTFOUND) then
+          !> create field
+          field = ESMF_FieldCreate(grid,typekind=typeKind,name=potentialFieldName,rc=rc)
+          !> append field to state
+         call ESMF_StateAdd(state,(/ field /),rc=rc)
+        else
+          write(0,*) 'item ',trim(potentialFieldName),' already present',itemFlag
+        end if
+        exit
+      else
+        write(0,*) 'name ',trim(names(idx)),' not matching optional field ',trim(potentialFieldName)
+        cycle
+      end if
+    end do
+  end do
+  end subroutine create_optional_fields_from_names
 
 end module mossco_state
