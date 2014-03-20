@@ -1,3 +1,11 @@
+!> @file test_Netcdf.F90
+!! @brief test mossco_netcdf module
+!! @author Richard Hofmeister
+!!
+!! creates the netcdf file test.nc for testing writing files,
+!! coordinates and variables. The file test.nc is created and opened
+!! three times in order to add items to the netcdf file.
+
 program test_Netcdf
 use mossco_netcdf
 use esmf

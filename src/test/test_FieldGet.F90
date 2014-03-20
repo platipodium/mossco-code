@@ -1,3 +1,11 @@
+!> @file test_FieldGet.F90
+!! @brief test ESMF_FieldGet performance
+!! @author Carsten Lemmen, Richard Hofmeister
+!!
+!! runs 1e6 times the ESMF routine FieldGet to retrieve the
+!! array pointer from an ESMF_Field. The performance is much
+!! improved in ESMF v.6.3beta4+
+
 program testfieldget
 
 use esmf

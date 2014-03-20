@@ -1,5 +1,14 @@
+!> @file test_Clock.F90
+!! @brief Tests the speed of the clock
+!! @author Richard Hofmeister
+!!
+!! test the performance of the ESMF_Clock related routines. In the test,
+!! 0.5e6 ESMF-controlled timesteps are iterated and an additional 
+!! plain loop, which iterates through a running integer and per timestep
+!! calls ESMF_Clock routines to get the current time.
+!! The ESMF iteration is found to be 3x slower. 
+
 program test_Clock
-! Tests the speed of the clock
 
 use esmf
 

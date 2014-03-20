@@ -1,3 +1,11 @@
+!> @file test_ArrayGet.F90
+!! @brief test ESMF_ArrayGet performance
+!! @author Carsten Lemmen, Richard Hofmeister
+!!
+!! runs 1e6 times the ESMF routine ArrayGet to retrieve the
+!! array pointer from an ESMF_Array. The performance is much
+!! improved in ESMF v.6.3beta4+
+
 program test_ArrayGet
 ! Tests the speed of the call ESMF_ArrayGEt(array,farrayPtr=farrayPtr)
 
