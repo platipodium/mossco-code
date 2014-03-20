@@ -148,7 +148,7 @@ contains
 
   !> get Attribute list
   call ESMF_AttributeGet(state,attCount,rc=rc)
-  write(0,*) 'check ',attCount,'attributes for names: ',names 
+  !write(0,*) 'check ',attCount,'attributes for names: ',names 
 
   do n=1,attCount
     call ESMF_AttributeGet(state,attributeIndex=n,name=attName) 
@@ -159,15 +159,14 @@ contains
       if (optional) then
         potentialFieldName=attName(1:idx-1)
       else
-        write(0,*) 'found attribute ',trim(attName),', but not optional'
+        !write(0,*) 'found attribute ',trim(attName),', but not optional'
         cycle
       end if
     else
-      write(0,*) 'attribute not relevant: ',trim(attName)
+      !write(0,*) 'attribute not relevant: ',trim(attName)
       cycle
     end if
     
-    write(0,*) ' check for potential field name ',trim(potentialFieldName)
     !> check for available names == potentialFieldName
     do idx=1,ubound(names,1)
       if (trim(names(idx))==trim(potentialFieldName)) then
@@ -179,11 +178,11 @@ contains
           !> append field to state
          call ESMF_StateAdd(state,(/ field /),rc=rc)
         else
-          write(0,*) 'item ',trim(potentialFieldName),' already present',itemFlag
+          !write(0,*) 'item ',trim(potentialFieldName),' already present',itemFlag
         end if
         exit
       else
-        write(0,*) 'name ',trim(names(idx)),' not matching optional field ',trim(potentialFieldName)
+        !write(0,*) 'name ',trim(names(idx)),' not matching optional field ',trim(potentialFieldName)
         cycle
       end if
     end do
