@@ -232,7 +232,7 @@ module fabm_sediment_component
     ! it might be enough to do this once in initialize(?)
     do n=1,size(sed%export_states)
       field = ESMF_FieldCreate(state_grid,state_array, &
-                         name=trim(sed%export_states(n)%standard_name), &
+                         name=trim(sed%export_states(n)%standard_name)//'_in_soil', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
@@ -259,7 +259,7 @@ module fabm_sediment_component
     do n=1,size(sed%model%info%diagnostic_variables)
       diag => sed%diagnostic_variables(n)
       field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
-                   name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name), rc=rc)
+                   name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
@@ -388,7 +388,7 @@ module fabm_sediment_component
     
     do n=1,size(sed%export_states)
       call ESMF_StateGet(exportState, &
-             trim(sed%export_states(n)%standard_name), &
+             trim(sed%export_states(n)%standard_name)//'_in_soil', &
              field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)

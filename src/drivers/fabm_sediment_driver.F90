@@ -463,19 +463,19 @@ subroutine get_all_export_states(self)
    integer  :: n,fabm_id
 
    allocate(self%export_states(self%nvar+5))
-   self%export_states(1)%standard_name='porosity_in_sediment'
+   self%export_states(1)%standard_name='porosity'
    self%export_states(1)%data => self%porosity
 
-   self%export_states(2)%standard_name='layer_height_in_sediment'
+   self%export_states(2)%standard_name='layer_height'
    self%export_states(2)%data => self%grid%dz
 
-   self%export_states(3)%standard_name='layer_center_depth_in_sediment'
+   self%export_states(3)%standard_name='layer_center_depth'
    self%export_states(3)%data => self%grid%zc
 
-   self%export_states(4)%standard_name='temperature_in_sediment'
+   self%export_states(4)%standard_name='temperature'
    self%export_states(4)%data => self%temp3d
 
-   self%export_states(5)%standard_name='photosynthetically_available_radiation_in_sediment'
+   self%export_states(5)%standard_name='photosynthetically_available_radiation'
    self%export_states(5)%data => self%par
 
    do fabm_id=1,self%nvar
