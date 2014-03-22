@@ -133,18 +133,15 @@ module link_coupler
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I4)       :: petCount, localPet
-    integer(ESMF_KIND_I4)       :: i, itemCount, count
+    integer(ESMF_KIND_I4)       :: i, itemCount, count, otherCount
     character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
-    type(ESMF_Field)            :: field
+    type(ESMF_StateItem_Flag)   :: itemType
+    type(ESMF_Field)            :: field, otherField
     type(ESMF_FieldBundle)      :: fieldBundle
 
-    !! Set default SUCCESS return value and log the call to this 
-    !! function into the log
-    rc = ESMF_SUCCESS
-    
     call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -180,19 +177,35 @@ module link_coupler
     endif
     
     do i=1, itemCount
+      
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
         call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=count, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
         if (count>0) then
-          write(message,'(A)') trim(name)//' replaced existing field '//trim(itemNameList(i))
-          !write(message,'(A)') trim(name)//' did not link existing field '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
-          
-          call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
+          call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
+          itemType=itemType, rc=rc)
+          if (itemType == itemTypeList(i)) then
+            call ESMF_StateGet(exportState, trim(itemNameList(i)), otherField, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+            if (otherField /= field) then
+              write(message,'(A)') trim(name)//' replaced existing field '//trim(itemNameList(i))
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
+              call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
+       
+            else
+              write(message,'(A)') trim(name)//' skipped existing field '//trim(itemNameList(i))
+              !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
+            endif            
+          endif          
         else        
+          write(message,'(A)') trim(name)//' added field '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
           call ESMF_StateAdd(exportState,(/field/), rc=rc)  
         endif      
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
