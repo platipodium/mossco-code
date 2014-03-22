@@ -78,15 +78,15 @@ module netcdf_component
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    !message = trim(nf90_inq_libvers())
-    !call ESMF_LogWrite(trim(name)//' uses NetCDF '//trim(message), ESMF_LOGMSG_INFO)
+    ! This routine is mostly empty, as everything is done during Run()
 
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    rc=ESMF_SUCCESS
+    !! Finally, log the successful completion of this function
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine Initialize
 
@@ -102,7 +102,7 @@ module netcdf_component
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j
     real(ESMF_KIND_R8)      :: seconds
-    integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii
+    integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii, petCount
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
@@ -112,26 +112,37 @@ module netcdf_component
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     character(len=ESMF_MAXSTR) :: fieldName
     character(len=3)        :: numberstring
+    type(ESMF_Clock)        :: clock
+    logical                    :: clockIsPresent
+
        
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
 
-    call ESMF_GridCompGet(gridComp, localPet=localPET, rc=rc)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     ! This output routine only works on PET0
     if (localPET>0) return
+    
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockGet(parentClock,currTime=currTime, startTime=startTime, timestep=timeInterval, &
+    call ESMF_ClockGet(clock,currTime=currTime, startTime=startTime, timestep=timeInterval, &
                        advanceCount=advanceCount, refTime=refTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    write(message,'(A)') trim(timestring)//' netcdf_component running...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
       defaultValue='netcdf_component.nc', rc=rc)
@@ -211,8 +222,17 @@ module netcdf_component
       call nc%close()
     endif 
     
-    write(message,'(A)') trim(timestring)//' netcdf_component finished running.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !! This component has no do loop over an internal timestep, it is advance with the
+    !! timestep written into its local clock from a parent component
+    call ESMF_ClockAdvance(clock, rc=rc)
+    
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
  
   end subroutine Run
 
@@ -223,21 +243,43 @@ module netcdf_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    type(ESMF_Time)      :: currTime
-    type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8)   :: advanceCount
-    character(len=ESMF_MAXSTR) :: message, timeString
+    type(ESMF_Time)            :: currTime
+    type(ESMF_TimeInterval)    :: timeInterval
+    integer(ESMF_KIND_I8)      :: advanceCount
+    character(len=ESMF_MAXSTR) :: message, timeString, name
+    logical                    :: clockIsPresent
+    type(ESMF_Clock)           :: clock
+    integer(ESMF_KIND_I4)      :: localPet, petCount
 
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockGet(parentClock,currTime=currTime, timestep=timeInterval, &
-                       advanceCount=advanceCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
     
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+   
+    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    write(message,'(A)') trim(timestring)//' netcdf_component finalized'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
   end subroutine Finalize
 

@@ -201,15 +201,17 @@ module empty_component
     !! Here comes your own finalization code
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Destroy your clock
-    !! 3. Deallocate all your model's internal allocated memory    
-  
+    !! 2. Deallocate all your model's internal allocated memory    
+    !! 3. Destroy your clock
 
+    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+  
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
+          ' finalized'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
 
