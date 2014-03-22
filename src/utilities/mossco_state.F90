@@ -189,4 +189,83 @@ contains
   end do
   end subroutine create_optional_fields_from_names
 
+  subroutine MOSSCO_StateLog(state, rc)
+    type(ESMF_State)                :: state
+    integer(ESMF_KIND_I4), optional :: rc
+
+    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits
+    character(len=ESMF_MAXSTR)      :: fieldName, name, message, string, gridName
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+    type(ESMF_Field)                :: field
+    type(ESMF_FieldBundle)          :: fieldBundle
+    integer(ESMF_KIND_I4)           :: totalLWidth(7), totalUWidth(7)
+    type(ESMF_Grid)                 :: grid
+    logical                         :: isPresent, isNeeded
+    type(ESMF_LocStream)            :: locStream
+    type(ESMF_TypeKind_Flag)        :: typeKind
+      
+    if (present(rc)) rc=ESMF_SUCCESS
+    
+    call ESMF_StateGet(state, name=name, itemCount=itemCount, rc=localRc)
+    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (itemCount==0) then
+      write(message,'(A)')  trim(name)//' contains no items'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+      return
+    endif
+      
+    allocate(itemTypeList(itemCount))
+    allocate(itemNameList(itemCount))
+  
+    call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, &
+      rc=localRc)
+    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    do i=1,itemCount
+      if (itemtypeList(i) == ESMF_STATEITEM_FIELD) then
+        call ESMF_StateGet(state, itemNameList(i), field, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
+        call ESMF_FieldGet(field, name=fieldName, rank=rank, grid=grid, &
+          rc=localRc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+      else
+        write(message,'(A)')  trim(name)//' non-field item '//trim(itemNameList(i))//' skipped'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+      
+      call ESMF_GridGet(grid, name=gridName, rc=localRc)  
+      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !call ESMF_LocStreamGet(locStream, name=gridName, rc=localRc)  
+      !if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      !maxDigits=1
+      !do j=1,rank
+      !  if (log10(totalUWidth(j)*1.0)>maxDigits) maxDigits=ceiling(log10(totalUWidth(j)*1.0))
+      !enddo
+
+      !write(string,'(A,I1,A,I1)') 'A,',rank,'I',maxDigits      
+      !write(message,string)  trim(name)//' field '//trim(fieldName)//' [',totalUWidth
+      write(message,'(A,I1)')  trim(name)//' field '//trim(fieldName)//' of rank ',rank
+
+      call ESMF_AttributeGet(state, name=trim(fieldName)//':required', isPresent=isPresent, &
+        typekind=typeKind, rc=rc)
+      if (isPresent) then
+        call ESMF_AttributeGet(state, name=trim(fieldName)//':required', value=isNeeded, rc=rc)
+        if (isNeeded) write(message,'(A)')  trim(message)//', required'
+      endif    
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    enddo
+    
+    deallocate(itemTypeList)
+    deallocate(itemNameList)
+    
+  
+  end subroutine MOSSCO_StateLog
+    
+  
 end module mossco_state
