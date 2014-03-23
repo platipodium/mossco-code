@@ -203,8 +203,13 @@ module fabm_gotm_component
       !> if field present, remove from state, create bundle, add fields
         call ESMF_StateGet(exportState, &
                 trim(fabm_export_states(k)%standard_name),field,rc=rc)
+#if ESMF_VERSION_MAJOR > 5
+        call ESMF_StateRemove(exportState, &
+                (/ trim(fabm_export_states(k)%standard_name) /),rc=rc)
+#else
         call ESMF_StateRemove(exportState, &
                 trim(fabm_export_states(k)%standard_name),rc=rc)
+#endif
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,concfield/), &
                 name=trim(fabm_export_states(k)%standard_name),   &
                 multiflag=.true.,rc=rc)
@@ -212,8 +217,13 @@ module fabm_gotm_component
 
         call ESMF_StateGet(exportState, &
                 trim(fabm_export_states(k)%standard_name)//'_z_velocity',field,rc=rc)
+#if ESMF_VERSION_MAJOR > 5
+        call ESMF_StateRemove(exportState, &
+                (/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /),rc=rc)
+#else
         call ESMF_StateRemove(exportState, &
                 trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
+#endif
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,wsfield/), &
                 name=trim(fabm_export_states(k)%standard_name)//'_z_velocity',   &
                 multiflag=.true.,rc=rc)
