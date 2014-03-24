@@ -5,10 +5,10 @@
 !! fractions of cohesive and noncohesive sediment.
 
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2012 Stichting Deltares 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2012 Stichting Deltares
 !>                          2013 Bundesanstalt für Wasserbau
-!> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau 
+!> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -44,6 +44,7 @@ module mossco_erosed
 
 
 use precision
+use Biotypes ,only: BioturbationEffect
 
 implicit none
 
@@ -177,7 +178,7 @@ contains
 subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 & ws        , umod    , h        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf                         )
+                & sink      , sinkf   , sour     , sourf , Bioeffects )
 !----- GPL ---------------------------------------------------------------------
 !
 !  Copyright (C)  Stichting Deltares, 2012.
@@ -244,7 +245,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(out)  :: sourf         ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent (in)  :: frac          ! sediment (mass) fraction [-]
     real(fp)    , dimension(nmlb:nmub)          , intent (in)  :: mudfrac       ! mud fraction [-]
-
+    type (BioturbationEffect) , optional        , intent (in)  :: Bioeffects
 
 !
 ! Local variables
@@ -297,6 +298,14 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !
                 !   Compute source and sink fluxes for cohesive sediment (mud)
                 !
+                if (present (Bioeffects)) then
+                 write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (1,1,1)
+
+                 write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
+                 eropar(l,nm)  = eropar(l,nm) * Bioeffects%ErodibilityEffect (1,1,1)
+                 tcrero(l,nm)  = tcrero(l,nm) * Bioeffects%TauEffect (1,1,1)
+                endif
+
                 fracf   = 0.0_fp
                 if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
                 !
@@ -319,6 +328,11 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 else
                     smfac = 1.0_fp
                 endif
+
+                if (present (Bioeffects)) then
+                    write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
+                    smfac =smfac * Bioeffects%TauEffect(1,1,1)
+                end if
                 !
                 !   Apply sediment transport formula ( in this case vanRijn (1984) )
                 !
