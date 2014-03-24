@@ -21,7 +21,7 @@ SUBDIRS=
 TARGETS=SUBDIRS
 
 ifeq ($(MOSSCO_ESMF),true)
-TARGETS += libatmosphere libocean
+TARGETS += libremtc
 endif
 
 .PHONY: $(TARGETS)
@@ -31,8 +31,8 @@ endif
 
 all: $(TARGETS)
 
-libocean: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libocean.a(remtc_ocean.o)
-libatmosphere: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libatmosphere.a(remtc_atmosphere.o)
+libremtc: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libremtc.a(remtc_ocean.o) \
+          $(MOSSCO_LIBRARY_PATH)/libremtc.a(remtc_atmosphere.o)
 libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
@@ -40,9 +40,8 @@ $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 
 clean: extraclean
 extraclean:
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libocean.a
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libatmosphere.a
-
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libremtc.a
+	
 subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	$(MAKE) -C $@

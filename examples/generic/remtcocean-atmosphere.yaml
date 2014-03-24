@@ -1,0 +1,11 @@
+coupling:
+ - components: 
+   - remtc_atmosphere 
+   - grid_coupler
+   - remtc_ocean
+   interval: 360 s
+ - components:
+   - remtc_ocean
+   - grid_coupler
+   - remtc_atmosphere
+   interval: 1 h

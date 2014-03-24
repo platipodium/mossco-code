@@ -5,7 +5,7 @@
 !> The ocean exports "water_temperature, photosynthetically_available_radiation, and salinity"
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
 !> @author Hartmut Kapitza, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
@@ -15,7 +15,7 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
-module remtc_ocean
+module remtc_ocean_component
 
   use esmf
   use mossco_variable_types
@@ -66,7 +66,32 @@ module remtc_ocean
     real(ESMF_KIND_R8), pointer ::  farrayPtr(:,:,:)
     type(ESMF_Field) :: exportField(3), importField(1)
 
-    call ESMF_LogWrite("Remtc Ocean component initializing ...",ESMF_LOGMSG_INFO)
+    integer               :: petCount, localPet
+    character(ESMF_MAXSTR):: name, message, timeString
+    logical               :: clockIsPresent
+    type(ESMF_Time)       :: currTime
+    type(ESMF_Clock)      :: clock
+     
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
  
     !> Create the grid and coordinates
     !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
@@ -190,7 +215,11 @@ module remtc_ocean
     enddo
 		farrayPtr=variables(:,:,:,1+size(exportField))                
   
-    call ESMF_LogWrite("Remtc Ocean component initialized.",ESMF_LOGMSG_INFO)
+    !! Finally, log the successful completion of this function
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
   end subroutine Initialize
     
  
@@ -207,22 +236,36 @@ module remtc_ocean
 
     integer(ESMF_KIND_I4)       :: myrank
     type(ESMF_Time)             :: localtime
-    character (len=ESMF_MAXSTR) :: timestring
-    character (len=ESMF_MAXSTR) :: message
     integer(ESMF_KIND_I8)       :: advancecount
     integer(ESMF_KIND_I4)       :: printcount
     type(ESMF_Field)            :: field
     real(ESMF_KIND_R8), pointer :: farrayPtr(:,:,:)
     
+    integer               :: petCount, localPet
+    character(ESMF_MAXSTR):: name, message, timeString
+    logical               :: clockIsPresent
+    type(ESMF_Time)       :: currTime
+    type(ESMF_Clock)      :: clock
      
-    call ESMF_GridCompGet(gridComp, localPet=myrank, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(parentClock, currtime=localtime, advanceCount=advancecount, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(localtime, timeString=timestring, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    message = "Remtc ocean called at "//trim(timestring)
-    !call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !> Get import state and extract arrays
     call ESMF_StateGet(importState, "air_temperature", field, rc=rc)
@@ -231,17 +274,35 @@ module remtc_ocean
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         !> water_temperature is in k=2, this needs to be programmatically determined  
         variables(:,:,:,2) = variables(:,:,:,2) * 0.009d0 + farrayPtr * 0.001d0
-      elseif (rc == ESMF_RC_NOT_FOUND) then
-        call ESMF_LogWrite("Import field not found, no local changes applied",ESMF_LOGMSG_INFO)
-     else
-       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-     endif
+    elseif (rc == ESMF_RC_NOT_FOUND) then
+      call ESMF_LogWrite("Import field not found, no local changes applied",ESMF_LOGMSG_INFO)
+    else
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    call ESMF_ClockAdvance(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     rc = ESMF_SUCCESS
     
     !> Output to netCDF files
     printcount=int(advancecount,ESMF_KIND_I4)
     !call ESMF_FieldWrite(field, file="water_temperature.nc", timeslice=printcount, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    do while (.not. ESMF_ClockIsStopTime(clock, rc=rc))
+
+      !! Your own code continued:
+      !! 2. Calling a single (or even multiple) internal of your model
+       
+      
+    enddo       
+      
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
   end subroutine Run
 
@@ -282,4 +343,4 @@ module remtc_ocean
 
   end subroutine Finalize
 
-end module remtc_ocean
+end module remtc_ocean_component

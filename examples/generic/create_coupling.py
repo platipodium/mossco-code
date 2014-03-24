@@ -880,7 +880,9 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
                         'input_prod', 'util_prod', 'fabm_prod'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
-        'link_coupler' : ['linkcoupler']
+        'grid_coupler' : ['gridcoupler'],
+        'remtc_atmosphere' : ['remtc'],
+        'remtc_ocean' : ['remtc'],
 }
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
@@ -897,7 +899,10 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'fabm_gotm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
-        'link_coupler' : ['liblinkcoupler']
+        'grid_coupler' : ['libgridcoupler'],
+        'link_coupler' : ['liblinkcoupler'],
+        'remtc_atmosphere' : ['libremtc'],
+        'remtc_ocean' : ['libremtc'],
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
@@ -970,10 +975,10 @@ libempty libmossco_simplewave libmossco_netcdf libmossco_benthos:
 libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler:
+libsurfacescoupler libaocoupler liblinkcoupler libgridcoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
-libocean libatmosphere:
+libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
  
 libpelagicbenthiccoupler:
