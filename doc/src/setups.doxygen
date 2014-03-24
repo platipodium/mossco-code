@@ -1,0 +1,77 @@
+/**
+@page mossco-setups MOSSCO setups
+
+@section setups-examples Setups versus examples
+
+MOSSCO setups are more elaborate then the examples that reside in @c $MOSSCO_DIR/examples.  Whereas the examples serve as testing code for individual components and couplings, and should be used as templates for developing your own codes, the setups are complete in the sense that they provide an entire set of parameter files and (often) input data to do scientifically exploitable simulations with coupled systems built with the MOSSCO infrastructure, or with standalone models.
+
+@section getting-setups Getting the setups
+
+MOSSCO setups are a separate @c git repository, also located at sourceforge under the MOSSCO project. 
+
+The code is available via @c git for read-only access. Choose any local directory @c $MOSSCO_SETUPDIR, where you would like the mossco setups to reside; we recommend to set this directory relative to @c MOSSCO_DIR, e.g., 
+
+~~~~.sh
+export MOSSCO_SETUPDIR=${MOSSCO_DIR}/../mossco-setups
+git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
+~~~~
+
+or, alternatively using the http protocol 
+
+~~~~.sh
+git clone http://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
+~~~~
+
+@section available-setups Available setups
+
+Five different setups are available.  Not all are yet ready for scientific simulations.  These five setups are
+1. Helgoland: a deep-water offshore North Sea 1D setup;
+2. List: a shallow-water Wadden sea setup
+3. Gotland Deep: a deep-water Baltic Sea setup;
+4. German Bight: a 3D setup covering the German Bight part of the North Sea
+5. Shallow Sea: an artificial shallow sea testcase.
+
+@subsection helgoland-setup Helgoland setup
+
+Located in $MOSSCO_SETUPDIR/helgoland
+This is a 1D setup for the Helgoland Reede station, located at  54.189N, 7.892E.  We chose a water depth of 25 m, which is an intermediate value between the shallow water between the islands Helgoland and Düne and the deep water (40 m) surrounding the island.
+
+In this setup, we provide configuration files for MOSSCO itself, several components [gotm, fabm_gotm, fabm_sediment, clm_netcdf, benthos, erosed] and input files.
+
+
+Model or component | Configuration files | Input files
+-- | -- | --
+MOSSCO | mossco_run.nml | --
+gotm | airsea.nml, globaldata.nml, gotmmean.nml, gotmrun.nml, gotmturb.nml, obs.nml, transportparam.nml  | env.dat, gotm_meteo.dat
+clm_netcdf  | atmos.rc, clm_grid.rc, config.rc | atmos.nc
+benthos | benthic.nml, mbalthica.nml, microphyt.nml | --
+constant | | constant_component.dat
+fabm_gotm | fabm-npzd-spm.nml, fabm.nml, gotm_fabm.nml, maecs_env.nml, maecs_graz.nml, maecs_init.nml, maecs_pars.nml, maecs_switch.nml, run.nml | --
+fabm_sediment | omexdia_p_mpb.nml, omexdia_p_par.nml, omexdia_p_switch.nml, omexdia_p_init.nml, fabm_sed.nml, run_sed.nml | --
+
+
+@subsubsection helgoland-plotting Plotting
+Simple @c Python scripts to generate quicklook views of the output produced in the Helgoland setup are available in the @c Plots subdirectory.
+
+@subsection list-setup List setup
+
+Located in @c $MOSSCO_SETUPDIR/list
+
+@subsection gotland-setup Gotland Deep setup
+
+Located in $MOSSCO_SETUPDIR/gotland
+
+@subsection germanbight-setup German Bight setup
+
+Located in $MOSSCO_SETUPDIR/germanbight
+
+@subsection shallowsea-setup Shallow Sea setup
+
+Located in $MOSSCO_SETUPDIR/shallowsea
+
+
+
+@section references References
+
+
+*/

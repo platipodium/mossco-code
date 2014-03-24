@@ -1,4 +1,5 @@
-!> @brief Implementation of an empty ESMF
+!> @brief Implementation of an empty ESMF gridded component
+!> @file empty_component.F90
 !!
 !  This computer program is part of MOSSCO. 
 !> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
@@ -9,14 +10,15 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
 module empty_component
+
 
   use esmf
 
   implicit none
 
   private
-
   public SetServices
 
   contains

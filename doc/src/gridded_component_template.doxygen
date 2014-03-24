@@ -1,5 +1,5 @@
 /**  
-@page  Gridded Component Template
+@page gridcomp-template Gridded Component Template
 
 @dontinclude empty_component.F90
 Each component is encapsulated in a Fortran @c module.  Name your module like your file name to help the build system automatically assemble components.  The @c module starts with a declaration part that contains use statements for ESMF, and a @c public announcement of the SetServices routine.  Everything else is @c private.  There should be no module scope
@@ -84,7 +84,7 @@ Then, it destroys all created objects, i.e., grids, fields, etc. that were creat
     @code
     call ESMF_Destroy(grid)
     call ESMF_Destroy(field)
-    @code
+    @endcode
     
 \skip ClockDestroy
 \until TimeGet
