@@ -92,6 +92,10 @@ module grid_coupler
       allocate(itemNameList(itemCount))
       allocate(itemTypeList(itemCount))
       
+      call ESMF_StateGet(importState, itemNameList=itemNameList, &
+        itemTypeList=itemTypeList, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      
       do i=1,itemCount
         if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then 
           write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
@@ -203,6 +207,10 @@ module grid_coupler
       allocate(itemNameList(itemCount))
       allocate(itemTypeList(itemCount))
       
+      call ESMF_StateGet(importState, itemNameList=itemNameList, &
+        itemTypeList=itemTypeList, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          
       do i=1,itemCount
         if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then 
           write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
@@ -297,3 +305,90 @@ module grid_coupler
   end subroutine Finalize
 
 end module grid_coupler
+
+#undef UNITTESTS
+#ifdef UNITTESTS
+program test
+
+  use esmf
+  use grid_coupler, only : SetServices
+
+  implicit none
+  
+  type(ESMF_State) :: states(2)
+  type(ESMF_Field) :: fields(9)
+  type(ESMF_Grid)  :: grid34,grid55,grid565
+  integer(ESMF_KIND_I4) :: i, rc
+  type(ESMF_CplComp) :: coupler
+  type(ESMF_Clock)   :: clock
+  type(ESMF_TimeInterval) :: timeInterval
+  type(ESMF_Time)         :: time
+  
+  call ESMF_Initialize(defaultLogFileName="test_grid_coupler", &
+    logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN)
+  
+  !! Initialize
+  do i=1,2
+   states(i)=ESMF_StateCreate()
+  enddo
+  
+  call ESMF_TimeSet(time, yy=2014)
+  call ESMF_TimeSyncToRealTime(time,rc=rc)
+  call ESMF_TimeIntervalSet(timeInterval, d=1)
+  clock=ESMF_ClockCreate(timeInterval, time)
+  
+  grid34=ESMF_GridCreate(maxIndex=(/3,4/))
+  grid55=ESMF_GridCreate(maxIndex=(/5,5/))
+  grid565=ESMF_GridCreate(maxIndex=(/5,6,5/))
+
+
+  fields(1)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field1")
+  fields(2)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field2")
+  fields(3)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field3")
+  fields(4)=ESMF_FieldCreate(grid55, typekind=ESMF_TYPEKIND_R8, name="field4")
+  fields(5)=ESMF_FieldCreate(grid565, typekind=ESMF_TYPEKIND_R8, name="field5")
+
+  !! Identical field
+  fields(6)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field1")
+
+  !! Same name, different grid, same rank
+  fields(7)=ESMF_FieldCreate(grid55, typekind=ESMF_TYPEKIND_R8, name="field2")
+  
+  !! Same name, same grid, different type
+  fields(8)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_I8, name="field3")
+  
+  !! Same name, different rank
+  fields(9)=ESMF_FieldCreate(grid565, typekind=ESMF_TYPEKIND_I8, name="field4")
+  
+  
+  coupler=ESMF_CplCompCreate(name="coupler")
+  call ESMF_CplCompSetServices(coupler, SetServices, rc=rc)
+
+  !! Run tests
+
+  call ESMF_StateAdd(states(1),fields(1:5)) 
+  call ESMF_StateAdd(states(2),fields(6:9))
+
+  call ESMF_StatePrint(states(1))
+  call ESMF_StatePrint(states(2))
+
+  call ESMF_CplCompInitialize(coupler, importState=states(1), exportState=states(2), clock=clock)
+  !call ESMF_CplCompRun(coupler, importState=states(1), exportState=states(2))
+
+  !! Cleanup
+  do i=1,ubound(fields,1)
+    call ESMF_FieldDestroy(fields(i))
+  enddo
+
+  do i=1,ubound(states,1)
+    call ESMF_StateDestroy(states(i))
+  enddo
+  
+  call ESMF_GridDestroy(grid34)
+  call ESMF_GridDestroy(grid55)
+  call ESMF_GridDestroy(grid565)
+
+  call ESMF_Finalize()  
+
+end program test
+#endif

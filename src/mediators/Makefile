@@ -77,4 +77,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 
-	
+test: test_grid_coupler	
+
+test_grid_coupler: grid_coupler.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) -lesmf

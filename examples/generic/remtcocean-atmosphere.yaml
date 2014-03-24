@@ -1,3 +1,7 @@
+dependencies:
+ - grid_coupler:
+   - remtc_atmosphere
+   - remtc_ocean  
 coupling:
  - components: 
    - remtc_atmosphere 
