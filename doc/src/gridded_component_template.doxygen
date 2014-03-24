@@ -1,0 +1,96 @@
+/**  
+@page  Gridded Component Template
+
+@dontinclude empty_component.F90
+Each component is encapsulated in a Fortran @c module.  Name your module like your file name to help the build system automatically assemble components.  The @c module starts with a declaration part that contains use statements for ESMF, and a @c public announcement of the SetServices routine.  Everything else is @c private.  There should be no module scope
+state declarations or clock declarations. 
+
+@skipline module
+@until contains
+The contains section includes at least four routines, that should be named @c SetServices, @c Initialize, @c Run, and @c Finalize.  The first one is the @c public @c SetServices routine.  Please do not name this routine by any other name (e.g., prefix it with the component's name), as automatic coupling routines rely on this routine being exactly named @c SetServices
+@until end subroutine
+
+
+The @c Initialize function is private.  Like @c Run and @c Finalize, it takes as arguments an import and export ESMF_State, and a parent ESMF_Clock, and returns in the argument rc ESMF_SUCCESS if nothing unexpected happens.
+
+The parameter declaration must be stated exactly as shown below (enforced by ESMF), do not add @c optional statements, for example.  
+
+For the user-declared variables, there is a standard set of declarations that should be found in all MOSSCO ESMF component routines, namely the strings @c name, @c message, @c timeString, a @c clock, a time @c currTime, and a logical indicating if @c clockIsPresent.   These variables are used in writing TRACE messages to the log file.
+
+There may be more user-defined variables, of course
+\until ESMF_SUCCESS
+\skip GridCompGet
+
+Your components @c Initialize routine should start with a standard set of commands that establishes a local clock and writes TRACE messages to the log.  Within your component, the variable @c name refers to the name of your component, and is usually set from a parent component in its @c ESMF_GridCompCreate call.  
+
+\until ESMF_LOGMSG_TRACE 
+
+Then, introduce your user initialization code.
+In particular, this should contain
+1. Setting your internal timestep and adding it to your clock, this could be a timestep read from an external file, use 
+   @code{.F90} 
+   call ESMF_TimeIntervalSet(timeStep)
+   call ESMF_ClockSet(Clock, timeStep=timeStep)
+   @endcode 
+  
+2. Creating your own fields, these could be Fields that store a pointer to
+   your model's internal fields, or could be a new allocated storage space
+   @code{.F90}
+   field = ESMF_FieldCreate() 
+   @endcode
+   
+3. Adding fields to your exportState, so that they are accessible to other components in the system.
+    @code{.F90}
+    call ESMF_StateAdd(exportState, /(field)/)
+    @endcode
+4. Adding fieldname:required attributes to your import State, so that other components know what you expect
+    @code{.F90}
+    call ESMF_AttributeAdd(importState, "fieldname:required", .true.)
+    @endcode
+   
+Finally, after all your user code, end this function with a log message
+\skip TimeGet
+\until Initialize
+
+The @c Run routine starts very similar to the @c Initialize routine; the first (boilerplate) part checks for @c clock, @c name, and parallelization information.
+
+\until ESMF_LOGMSG_TRACE 
+
+Now, introduce the code for obtaining information for this call of the @c Run routine.  In particular, get information about your import state create pointers to content of fields that your require.  
+    @code{.F90}
+    call ESMF_StateGet(importState, itemCount)
+    call ESMF_StateGet(importState, fieldname, field)
+    call ESMF_FieldGet(field, farrayPtr)
+    @endcode
+
+Be aware that oftentimes the import state you get here is an export from an entirely different ESMF component.  In particular, you cannot rely on your import state to be the same as your @c Initialize routine's import state. 
+
+Then, start a loop over all your internal time steps
+
+\skipline while
+
+Introduce your own time step code, ideally a call to your models internal timestep routine.  After that call, advance your local clock
+\skip ClockAdvance
+\until enddo
+
+Finally, after all your user code, end this function with a log message
+\skip TimeGet
+\until Run
+
+The @c Finalize routine starts similar to the @c Run routine with boilerplate code. 
+\until TRACE
+
+Then, it destroys all created objects, i.e., grids, fields, etc. that were created by this component. Do not destroy objects that contain still other objects, and do not create objects that this component did not create itself.  Deallocate all your allocated pointers
+    @code
+    call ESMF_Destroy(grid)
+    call ESMF_Destroy(field)
+    @code
+    
+\skip ClockDestroy
+\until TimeGet
+
+Last, destroy the component's local @c clock, log a TRACE message and exit cleanly. End the module (which could contain more user code, of course)
+
+\until module
+
+*/
