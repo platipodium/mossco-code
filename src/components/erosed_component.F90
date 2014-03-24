@@ -1,10 +1,10 @@
 !> @brief Implementation of an ESMF component for erosion and sedimentation
 !
-!> @import 
+!> @import
 !> @export
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
 !> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
@@ -236,7 +236,7 @@ end if
     allocate (mfluff(nfrac,nmlb:nmub))
     allocate (mudfrac (nmlb:nmub))
 
-   
+
     !Initialization
     sink = 0.0_fp
     sour = 0.0_fp
@@ -293,7 +293,7 @@ end if
     umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
     ws      = 0.001_fp      ! Settling velocity [m/s]
     r1(:,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
-    
+
 
     do nm = nmlb, nmub
         taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
@@ -314,7 +314,7 @@ end if
 
 
     !> create grid
-   write (*,*) 'nfrac', nfrac 
+   write (*,*) 'nfrac', nfrac
 
      grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
            coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
@@ -329,7 +329,7 @@ write (*,*) ' distgrid'
 !> not used fo export State, since sink,sour are used by bed module
 !    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
 !    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
-    
+
 write (*,*) ' allocations'
     !> create export fields
 
@@ -340,7 +340,7 @@ write (*,*) ' state add'
   call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
   if(rc /= ESMF_SUCCESS) then
     write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM". Possibly &
-            & number of SPM fractions do not match with fabm_component.'      
+            & number of SPM fractions do not match with fabm_component.'
   else
     call ESMF_FieldBundleGet(fieldBundle,fieldCount=j,rc=rc)
     if (allocated(fieldlist)) deallocate(fieldlist)
@@ -357,7 +357,7 @@ write (*,*) ' state add'
       if(rc /= ESMF_SUCCESS) external_idx_by_nfrac(n)=-1
     end do
   end if
-  
+
   upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux',rc=rc)
   downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux',rc=rc)
   do n=1,nfrac
@@ -374,6 +374,8 @@ write (*,*) ' state add'
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
+    use BioTypes , only :  BioturbationEffect
+
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
@@ -388,13 +390,16 @@ write (*,*) ' state add'
     real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration
     real(kind=ESMF_KIND_R8)  :: diameter
-
+    type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
+    &                            Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
     integer                  :: n
     type(ESMF_Field)         :: field
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
     logical                  :: forcing_from_coupler=.true.
     real(kind=ESMF_KIND_R8),parameter :: porosity=0.1 !> @todo make this an import field (e.g. by bed component)
+
+    type (BioturbationEffect):: BioEffects
 
     ! Get global clock properties
     call ESMF_TimeSet(clockTime)
@@ -428,6 +433,69 @@ write (*,*) ' state add'
       else
         umod = 0.2
       end if
+
+      !> get bio effects
+
+      call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_bottom', &
+                                                    Microphytobenthos_erodibility,rc=rc)
+      if (rc==0) then
+
+       if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(1,1,1))
+
+       call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f3, rc=rc)
+
+        BioEffects%ErodibilityEffect = ptr_f3
+
+        write (*,*) 'in erosed component run:BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+
+      end if
+
+      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_bottom', &
+                                                           Macrofauna_erodibility,rc=rc)
+      if (rc==0) then
+
+        if (.not. associated (BioEffects%ErodibilityEffect)) then
+
+            allocate (BioEffects%ErodibilityEffect(1,1,1))
+
+            BioEffects%ErodibilityEffect = 1.0
+
+        end if
+
+        call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f3, rc=rc)
+
+        BioEffects%ErodibilityEffect = ptr_f3 * BioEffects%ErodibilityEffect
+
+      end if
+
+      call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress', &
+                                      Microphytobenthos_critical_bed_shearstress ,rc=rc)
+      if (rc==0) then
+
+         if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(1,1,1))
+
+         call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f3, rc=rc)
+
+         BioEffects%TauEffect = ptr_f3
+
+      endif
+
+      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress', &
+                           Macrofauna_critical_bed_shearstress ,rc=rc)
+      if (rc==0) then
+         if (.not.associated(BioEffects%TauEffect)) then
+
+            allocate (BioEffects%TauEffect(1,1,1))
+
+            BioEffects%TauEffect =1.0
+
+          end if
+
+         call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f3, rc=rc)
+
+         BioEffects%TauEffect = ptr_f3 * BioEffects%TauEffect
+
+      endif
 
       !> get spm concentrations
       call ESMF_StateGet(importState,'concentration_of_SPM',fieldBundle,rc=rc)
@@ -481,10 +549,22 @@ write (*,*) ' state add'
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
     !   Computing erosion fluxes
+
+
+    if (.not.associated(BioEffects%ErodibilityEffect)) then
+
     call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
                 & ws        , umod    , h0        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf                         )
+                & sink      , sinkf   , sour     , sourf              )
+    else
+
+     call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
+                & ws        , umod    , h0        , chezy  , taub          , &
+                & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
+                & sink      , sinkf   , sour     , sourf  ,BioEffects )
+    end if
+
 
     !   Compute flow
     ! HN. @ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
