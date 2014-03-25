@@ -45,6 +45,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk),dimension(:,:,:),pointer :: fluxes,bdys
    integer                      :: bcup_dissolved_variables=2
    integer                      :: ndiag=0
+   logical                      :: do_output=.true.
    type(export_state_type),dimension(:),allocatable :: export_states
 
    real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity

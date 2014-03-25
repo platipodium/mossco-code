@@ -39,7 +39,7 @@ module fabm_sediment_component
   private
  
   real(rk)  :: dzmin,dt
-  integer   :: t,tnum,funit,output,k,n,numyears,numlayers
+  integer   :: t,tnum,funit,output=-1,k,n,numyears,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
   integer   :: presimulation_years=-1
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
@@ -142,10 +142,15 @@ module fabm_sediment_component
  
     !! also from namelist, the output timesteop is read and
     !! used to create an alarm
-    call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
-    outputAlarm = ESMF_AlarmCreate(clock,ringTime=startTime+alarmInterval, &
-      name='outputAlarm', ringInterval=alarmInterval,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !! no output, if output <= 0
+    sed%do_output = output .gt. 0
+
+    if (sed%do_output) then
+      call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
+      outputAlarm = ESMF_AlarmCreate(clock,ringTime=startTime+alarmInterval, &
+        name='outputAlarm', ringInterval=alarmInterval,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
 
     !! The grid specification should also go to outside this routine, and update the grid of
     !! this component, numlayers and dzmin are read from nml
@@ -194,18 +199,19 @@ module fabm_sediment_component
     !> after presimulation
     sed%bcup_dissolved_variables = 1
 
-    !! define an output unit for tsv output, TODO: add netcdf output for this
-    !! netcdf output currently not working (see commented code below)
-    funit=2
-    open(funit,file='output.dat')
-    write(funit,fmt='(A,A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) ','porosity() '
-    do n=1,sed%nvar
-      write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%state_variables(n)%name)
-    end do
-    do n=1,size(sed%model%info%diagnostic_variables)
-      write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%diagnostic_variables(n)%name)
-    end do
-    write(funit,*)
+    !! define an output unit for tsv output
+    if (sed%do_output) then
+      funit=2
+      open(funit,file='output.dat')
+      write(funit,fmt='(A,A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) ','porosity() '
+      do n=1,sed%nvar
+        write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%state_variables(n)%name)
+      end do
+      do n=1,size(sed%model%info%diagnostic_variables)
+        write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%diagnostic_variables(n)%name)
+      end do
+      write(funit,*)
+    end if
 
     distGrid_3d =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,sed%grid%knum/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
@@ -327,18 +333,7 @@ module fabm_sediment_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 !#endif
 
-#if 0
-    !call ESMF_StatePrint(importState,options="long",nestedFlag=.true.,rc=rc)
-    call ESMF_StateGet(importState,"FABM field bundle",fieldBundle,rc=rc)
-    !call ESMF_FieldBundlePrint(fieldBundle,rc=rc)
-    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldcount,rc=rc)
-    allocate(fieldlist(fieldcount))
-    call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldlist,rc=rc)
-    call ESMF_FieldGet(fieldlist(1),name=name,rc=rc)
-#endif
-
     call get_boundary_conditions(sed,importState,bdys,fluxes)
-
     sed%bdys   => bdys
     sed%fluxes => fluxes
 
@@ -356,29 +351,31 @@ module fabm_sediment_component
       end do
 
       call ESMF_ClockGet(clock, advanceCount=t, rc=rc)
-      !@ TODO remove output and implement throughh ESMF in NetCDF:
-      !! Check if the output alarm is ringing, if so, quiet it and 
-      !! get the current advance count (formerly t) from clock
-      if (ESMF_AlarmIsRinging(outputAlarm)) then
-        call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-        !write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
-        !write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
-        !call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
-        write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
-        do k=1,_KNUM_
-          write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3,A,E15.4E3)',advance='no') &
-            t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k),  &
-            ' ',sed%porosity(1,1,k)
-          do n=1,sed%nvar
-             write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
+
+      if (sed%do_output) then
+        !! Check if the output alarm is ringing, if so, quiet it and 
+        !! get the current advance count (formerly t) from clock
+        if (ESMF_AlarmIsRinging(outputAlarm)) then
+          call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
+          !write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
+          !write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
+          !call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+          write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
+          do k=1,_KNUM_
+            write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3,A,E15.4E3)',advance='no') &
+              t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k),  &
+              ' ',sed%porosity(1,1,k)
+            do n=1,sed%nvar
+              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
+            end do
+            do n=1,size(sed%model%info%diagnostic_variables)
+              diag => sed%diagnostic_variables(n)
+              write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
+            end do
+            write(funit,*)
           end do
-          do n=1,size(sed%model%info%diagnostic_variables)
-             diag => sed%diagnostic_variables(n)
-             write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
-          end do
-          write(funit,*)
-        end do
-      endif
+        end if
+      end if
 
       call ESMF_ClockAdvance(clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
