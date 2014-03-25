@@ -14,7 +14,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := $(LIBS) -lmossco_util -lesmf
+LIBS :=  -lmossco_util -lesmf $(LIBS)
 
 .PHONY: all exec
 
