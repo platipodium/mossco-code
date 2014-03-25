@@ -1,0 +1,7 @@
+# coupling between the erosed component and the benthos-effects component
+
+coupling:
+  - components:
+     - benthos
+     - erosed
+    interval: 2 h
