@@ -11,14 +11,14 @@ MOSSCO setups are a separate @c git repository, also located at sourceforge unde
 
 The code is available via @c git for read-only access. Choose any local directory @c $MOSSCO_SETUPDIR, where you would like the mossco setups to reside; we recommend to set this directory relative to @c MOSSCO_DIR, e.g., 
 
-~~~~.sh
+~~~~sh
 export MOSSCO_SETUPDIR=${MOSSCO_DIR}/../mossco-setups
 git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
 ~~~~
 
 or, alternatively using the http protocol 
 
-~~~~.sh
+~~~~sh
 git clone http://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
 ~~~~
 
@@ -39,14 +39,14 @@ This is a 1D setup for the Helgoland Reede station, located at  54.189N, 7.892E.
 In this setup, we provide configuration files for MOSSCO itself, several components [gotm, fabm_gotm, fabm_sediment, clm_netcdf, benthos, erosed] and input files.
 
 
-Model or component | Configuration files | Input files
+Model or component | Configuration files | Input files
 -- | -- | --
 MOSSCO | mossco_run.nml | --
-gotm | airsea.nml, globaldata.nml, gotmmean.nml, gotmrun.nml, gotmturb.nml, obs.nml, transportparam.nml  | env.dat, gotm_meteo.dat
+gotm | airsea.nml, globaldata.nml, gotmmean.nml, gotmrun.nml, gotmturb.nml, obs.nml, transportparam.nml  | env.dat, gotm_meteo.dat
 clm_netcdf  | atmos.rc, clm_grid.rc, config.rc | atmos.nc
-benthos | benthic.nml, mbalthica.nml, microphyt.nml | --
-constant | | constant_component.dat
-fabm_gotm | fabm-npzd-spm.nml, fabm.nml, gotm_fabm.nml, maecs_env.nml, maecs_graz.nml, maecs_init.nml, maecs_pars.nml, maecs_switch.nml, run.nml | --
+benthos  | benthic.nml, mbalthica.nml, microphyt.nml | --
+constant | | constant_component.dat 
+fabm_gotm | fabm-npzd-spm.nml, fabm.nml, gotm_fabm.nml, maecs_env.nml, maecs_graz.nml, maecs_init.nml, maecs_pars.nml, maecs_switch.nml, run.nml | --
 fabm_sediment | omexdia_p_mpb.nml, omexdia_p_par.nml, omexdia_p_switch.nml, omexdia_p_init.nml, fabm_sed.nml, run_sed.nml | --
 
 

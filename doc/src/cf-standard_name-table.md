@@ -10,6 +10,13 @@ Within MOSSCO, no formal distinction is made between fresh water and sea water. 
 
     sea_water_temperature => water_temperature
 
+## Special implementation
+In accordance with the NUOPC standard, attributes can indicate that certain variables/fields are required.  This is implemented by appending the suffix
+	
+	:required
+	
+to an attribute with the same name of the required variable.
+
 
 
 ## Table of currently used CF names ##
@@ -17,8 +24,10 @@ Within MOSSCO, no formal distinction is made between fresh water and sea water. 
 
 | CF Standard Name | Units | Abbreviations/Alternates |  Explanation  |
 | ------------- |:-------------:| :---| -----|
-| air_pressure_at_sea_level | Pa | SLP, PSL |  
-| air_temperature | | | at 2m or 3D
+| air_pressure_at_water_surface | Pa | SLP, PSL, air_pressure_at_sea_level |  
+| temperature_in_air | air_temperature | | 
+| temperature_in_water | water_temperature | | 
+| temperature_at_water_surface | sea_surface_temperature | | 
 | cloud_area_fraction | | cloud_cover
 | eastward_wind m | s-1 | air_x_velocity
 | northward_wind | s-1 | air_y_velocity
@@ -32,7 +41,6 @@ Within MOSSCO, no formal distinction is made between fresh water and sea water. 
 | sea_surface_temperature
 | sea_water_potential_temperature | | sigma_temperature
 | sea_water_salinity | PSU | water_salinity, salinity
-| sea_water_temperature |  | water_temperature
 | sea_water_x_velocity | m s-1 | water_x_velocity
 | sea_water_y_velocity | m s-1 | water_y_velocity
 | upward_sea_water_velocity | m s**-1 | water_z_velocity
