@@ -881,6 +881,8 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'grid_coupler' : ['gridcoupler'],
+        'link_coupler' : ['linkcoupler'],
+        'remtc_atmosphere' : ['remtc'],
         'remtc_atmosphere' : ['remtc'],
         'remtc_ocean' : ['remtc'],
 }
