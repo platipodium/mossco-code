@@ -36,7 +36,10 @@ test_Clock: test_Clock.o
 test_Netcdf: test_Netcdf.o 
 	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS)
 
-test_Netcdf.o: libmossco_util
+test_Dictionary: test_Dictionary.o 
+	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS)
+
+test_Netcdf.o test_Dictionary.o: libmossco_util
 
 libmossco_util:
 	make -C $(MOSSCO_DIR)/src/utilities libmossco_util
