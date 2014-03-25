@@ -135,6 +135,7 @@ class (Mbalthica_Object) :: this
 this%Bioturbation%TauEffect(1,1,1) =  Crit_shear_bioeffect(this%StateVar)
 this%Bioturbation%ErodibilityEffect(1,1,1) = erodibility_bioeffect(this%StateVar)
 
+#ifdef DEBUG
 write (*,*)
 write (*,*) 'Biotic effect of ', this%Species, ' on the tau (M_balthica%Bioturbation%TauEffect): '&
             , this%Bioturbation%TauEffect
@@ -142,6 +143,7 @@ write (*,*)
 write (*,*) 'Biotic effect of ', this%Species, ' on the Erodibility (M_balthica%Bioturbation%ErodibilityEffect): '&
             , this%Bioturbation%ErodibilityEffect
 write (*,*)
+#endif
 
 end subroutine run_Mbalthica
 

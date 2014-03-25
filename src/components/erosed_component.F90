@@ -445,9 +445,9 @@ write (*,*) ' state add'
        call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f3, rc=rc)
 
         BioEffects%ErodibilityEffect = ptr_f3
-
+#ifdef DEBUG
         write (*,*) 'in erosed component run:BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
-
+#endif
       end if
 
       call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_bottom', &

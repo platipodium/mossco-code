@@ -299,9 +299,11 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !   Compute source and sink fluxes for cohesive sediment (mud)
                 !
                 if (present (Bioeffects)) then
+#ifdef DEBUG
                  write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (1,1,1)
 
                  write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
+#endif
                  eropar(l,nm)  = eropar(l,nm) * Bioeffects%ErodibilityEffect (1,1,1)
                  tcrero(l,nm)  = tcrero(l,nm) * Bioeffects%TauEffect (1,1,1)
                 endif
@@ -330,7 +332,9 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 endif
 
                 if (present (Bioeffects)) then
+#ifdef DEBUG
                     write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
+#endif
                     smfac =smfac * Bioeffects%TauEffect(1,1,1)
                 end if
                 !

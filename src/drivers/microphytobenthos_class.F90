@@ -122,10 +122,12 @@ class (Microphytobenthos) :: this
 this%TauEffect (1,1,1) =  Crit_shear_bioeffect(this%BioMass)
 this%ErodibilityEffect (1,1,1) = erodibility_bioeffect(this%BioMass)
 
+#ifdef DEBUG
 write (*,*) ' Biotic effect of ', this%Species, ' on tau ( Micro%TauEffect) ', this%TauEffect
 write (*,*)
 write (*,*) 'Biotic effect of ', this%Species, ' on the Erodibility (Micro%ErodibilityEffect): ', this%ErodibilityEffect
 write (*,*)
+#endif
 
 end subroutine run_microphyt
 
