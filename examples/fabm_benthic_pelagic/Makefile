@@ -48,7 +48,7 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant liberosed:
+libsediment libconstant liberosed libmossco_netcdf:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libpelagicbenthiccoupler:
@@ -61,7 +61,7 @@ main.o: toplevel_component.o main.F90 libmossco_util
 main.F90: ../common/main.F90
 	ln -f $< $@
 
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libsediment libmossco_sediment libsolver libconstant libgotm libpelagicbenthiccoupler libmossco_erosed liberosed
+toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libsediment libmossco_sediment libsolver libconstant libgotm libpelagicbenthiccoupler libmossco_erosed liberosed libmossco_netcdf
 
 clean: extraclean
 

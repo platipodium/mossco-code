@@ -96,7 +96,7 @@ libmossco_erosed_dependencies: prefix							\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/shld.o)		\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/sand_mud.o)
 
-libmossco_erosed: prefix libmossco_erosed_dependencies 			\
+libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies 			\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(delft_erosed_driver.o)
 
 # Generic section
