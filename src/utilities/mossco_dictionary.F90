@@ -120,9 +120,60 @@ character(len=256)              :: key
 end function get_value
 
 
-subroutine add_dictionary(dict,dictionary)
+subroutine add_dictionary(dict,key,dictionary)
 class(type_mossco_dictionary) :: dict
 type(type_mossco_dictionary)  :: dictionary
+character(len=*)              :: key
+integer                       :: k,d
+type(type_key),dimension(:),pointer,save   :: oldkeys,newkeys
+type(type_key),pointer         :: curkey
+type(type_mossco_dictionary),dimension(:),pointer,save :: oldvalues,newvalues
+
+! select key and prepare values list
+if (associated(dict%dictionaries)) then
+  if (dict%key_is_present(key)) then
+    write(0,*) '  key is present'
+    stop
+  else
+    !extend list and generate new key
+    write(0,*) '  generate new key '
+    curlen = ubound(dict%dictionaries,1)
+    oldvalues => dict%dictionaries
+    allocate(newvalues(curlen+1))
+    newvalues(1:curlen) = oldvalues(1:curlen)
+    dict%dictionaries => newvalues
+    deallocate(oldvalues)
+
+    curlenkeys = ubound(dict%keys,1)
+    oldkeys => dict%keys
+    allocate(newkeys(curlenkeys+1))
+    newkeys(1:curlenkeys) = oldkeys(1:curlenkeys)
+    dict%keys => newkeys
+    deallocate(oldkeys)
+    curkey => dict%keys(curlenkeys+1)
+    curkey%index=curlen+1
+  end if
+else
+  if (.not.associated(dict%keys)) then
+    write(0,*) '  initialise keys'
+    allocate(dict%keys(1))
+    curkey => dict%keys(1)
+  else
+    write(0,*) '  generate new key'
+    curlenkeys = ubound(dict%keys,1)
+    oldkeys => dict%keys
+    allocate(newkeys(curlenkeys+1))
+    newkeys(1:curlenkeys) = oldkeys(1:curlenkeys)
+    dict%keys => newkeys
+    deallocate(oldkeys)
+    curkey => dict%keys(curlenkeys+1)
+  end if
+  allocate(dict%dictionaries(1))
+  curkey%index = 1
+end if
+curkey%type = _DICTIONARY_
+curkey%name = trim(key)
+dict%dictionaries(curkey%index)=dictionary
 end subroutine add_dictionary
 
 
@@ -160,7 +211,7 @@ curindent='--              '
 if (present(indent)) curindent=trim(curindent)//trim(indent)
 do k=1,ubound(dict%keys,1)
   if (dict%keys(k)%type == _VALUE_) then
-    write(0,*) trim(curindent)//trim(dict%keys(k)%name)//' = '//trim(dict%values(dict%keys(k)%index)%value)
+    write(0,*) trim(curindent)//trim(dict%keys(k)%name)//' : '//trim(dict%values(dict%keys(k)%index)%value)
   else
     if (dict%keys(k)%type == _DICTIONARY_) &
         call dict%dictionaries(dict%keys(k)%index)%dump(indent='--')

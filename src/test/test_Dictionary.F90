@@ -7,7 +7,7 @@
 program test_Netcdf
 use mossco_dictionary
 
-type(type_mossco_dictionary) :: dict
+type(type_mossco_dictionary) :: dict,dict2
 
 write(0,*) 'create dictionary and add keys'
 !dict => mossco_dictionary_create()
@@ -17,12 +17,23 @@ call dict%set_value(key='Carsten',value='Lemmen')
 
 write(0,*) 'dump dictionary:'
 call dict%dump()
+write(0,*) '----------------'
+
+call dict2%set_value(key='Kai',value='Wirtz')
+call dict2%set_value(key='Hans',value='Burchard')
+call dict2%set_value(key='Frank',value='Koesters')
+
+call dict%add_dictionary(key='again',dictionary=dict2)
+write(0,*) 'dump dictionary:'
+call dict%dump()
+write(0,*) '----------------'
 
 write(0,*) 'correct key Richard in dictionary'
 call dict%set_value(key='Richard',value='Hofmeister')
 
 write(0,*) 'dump dictionary:'
 call dict%dump()
+write(0,*) '----------------'
 
 write(0,*) 'finished dictionary test'
 
