@@ -3,6 +3,7 @@
 !> This computer program is part of MOSSCO. 
 !> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
+!> @author Carsten Lemmen
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -69,6 +70,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
   
+  
     call ESMF_FieldGet(field, name=varname, rank=rank, grid=grid, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
     if (present(name)) varname=trim(name)
@@ -124,6 +126,7 @@ module mossco_netcdf
     endif
     if (ncStatus /= NF90_NOERR) call & 
       ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
      
   end subroutine mossco_netcdf_variable_put
 
@@ -148,17 +151,20 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)     :: varname,gridname,fieldname,coordinates=''
     integer                        :: ncStatus,esmfrc,rc_,varid,dimcheck=0
     integer                        :: dimids_1d(2),dimids_2d(3),dimids_3d(4),rank
-    integer, dimension(:),pointer  :: dimids => null()
+    integer, dimension(:),pointer  :: dimids
     integer, optional              :: rc
     character(len=1), dimension(3) :: coordNames = (/'x','y','z'/)
 
     call ESMF_FieldGet(field,name=fieldname,rc=esmfrc)
+    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
     varname = trim(fieldname)
     if (present(name)) varname=trim(name)
 
     if (.not.self%variable_present(varname)) then
       call ESMF_FieldGet(field,grid=grid,rc=esmfrc)
+      if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
       call ESMF_GridGet(grid,name=gridname,rc=esmfrc)
+      if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
 
       call replace_character(gridname, ' ', '_')
       dimids => self%grid_dimensions(grid)
@@ -185,7 +191,7 @@ module mossco_netcdf
 
       ncStatus = nf90_enddef(self%ncid)
     end if
-    
+   
     if (present(rc)) rc = ESMF_SUCCESS
 
   end subroutine mossco_netcdf_variable_create
@@ -315,6 +321,7 @@ module mossco_netcdf
     rc_ = MOSSCO_NC_NOERR
     dimcheck=0
     call ESMF_GridGet(grid,name=gridName,rank=rank,rc=esmfrc)
+    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
 
     call replace_character(gridname, ' ', '_')
     allocate(ubounds(rank))
@@ -327,6 +334,7 @@ module mossco_netcdf
 
     call ESMF_GridGetFieldBounds(grid=grid, localDe=0, &
       staggerloc=ESMF_STAGGERLOC_CENTER, totalCount=ubounds, rc=esmfrc)
+    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
 
     ! get grid dimension-ids
     do i=1,rank
@@ -399,6 +407,7 @@ module mossco_netcdf
                     
     allocate(coordDimCount(dimCount))
     call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=esmfrc)
+    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
     dimids => self%grid_dimensions(grid)
     do i=1,dimCount
       
@@ -440,6 +449,7 @@ module mossco_netcdf
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, rc=esmfrc)
         ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3)
       endif
+      if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
     enddo
     if (allocated(coordDimCount)) deallocate(coordDimCount)
      
