@@ -164,7 +164,7 @@ module toplevel_component
       endif
       call ESMF_GridCompRun(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
       
-      if (mod(advanceCount,240)==0) &
+      if (mod(advanceCount,20)==0) &
           call ESMF_GridCompRun(netcdfComp, & 
           importState=state, exportState=state, clock=parentClock, rc=rc)
       
