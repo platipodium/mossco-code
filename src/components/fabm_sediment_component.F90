@@ -107,32 +107,35 @@ module fabm_sediment_component
     type(ESMF_Time)            :: currTime, startTime, stopTime
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
+    logical                    :: clockIsPresent
 
-    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  
-    ! Create a local clock, set its parameters to those of the parent clock
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_ClockGet(clock,currTime=currTime, startTime=startTime, &
-      stopTime=stopTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !! read namelist input for control of time, this should not be done like this,
-    !! but handled outside the component.  Maybe later introduce a local clock 
+    !! but handled outside the component.   
     open(33,file='run_sed.nml',action='read',status='old')
     read(33,nml=run_nml)
 
@@ -301,12 +304,11 @@ module fabm_sediment_component
     end do
     !call ESMF_StatePrint(exportState)
 
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine Initialize
 
@@ -336,30 +338,27 @@ module fabm_sediment_component
     type(ESMF_Time)            :: currTime, startTime, stopTime
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
+    logical                    :: clockIsPresent
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clock=clock, rc=rc)
+      clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
- 
-    call ESMF_ClockGet(clock,startTime=startTime, currTime=currTime, &
-      stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running'
-     
-    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
+      timeStep=timeInterval, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    write(message,'(A,A,F6.0,A)') trim(message)//' with ', &
-      ' steps of ',dt,' s to '//trim(timestring)
-!#ifdef DEBUG
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!#endif
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     sed%bdys   => bdys
@@ -433,17 +432,13 @@ module fabm_sediment_component
     if (allocated(fieldList)) deallocate(fieldlist)
     
     
-    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
     
   
   end subroutine Run
@@ -454,6 +449,12 @@ module fabm_sediment_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
+
     close(funit)
 
     call sed%finalize()
@@ -461,8 +462,15 @@ module fabm_sediment_component
     if (allocated(bdys)) deallocate(bdys)
     if (allocated(fluxes)) deallocate(fluxes)
 
-    !call ESMF_AlarmDestroy(outputAlarm,rc=rc)
-    !@TODO destroy all items in import and export state
+    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+  
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
   end subroutine Finalize
 
@@ -480,13 +488,15 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR) :: varname
     real(rk),dimension(_IRANGE_,_JRANGE_),target :: vs,pom
 
+
+
     call ESMF_StateGet(importState,itemSearch="temperature_in_water",itemCount=itemcount,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (itemcount==0) then
 #ifdef DEBUG
       write(string,'(A)') "No temperature information found, using default value 10 deg_C"
-      call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite(string,ESMF_LOGMSG_WARNING)
 #endif
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
     else 
@@ -547,6 +557,8 @@ module fabm_sediment_component
             sed%grid%dz(:,:,1)*(sed%diffusivity+bdys(:,:,1)*0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
         end if
       endif
+ 
+  
     end do
 
   end subroutine get_boundary_conditions

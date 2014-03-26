@@ -1,3 +1,16 @@
+!> @brief Main routine for calling coupled systems
+!> @file main.F90
+!!
+!  This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
+!> @author Carsten Lemmen, HZG
+!> @author Knut Klingbeil, IOW
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 program main
    
    use esmf 
@@ -7,32 +20,32 @@ program main
 
    implicit none
 
-   character(LEN=8)          :: datestr
-   type(ESMF_Time)           :: time1, time2, startTime, stopTime
-   type(ESMF_TimeInterval)   :: runDuration
-   integer                   :: localrc, rc, petCount,nmlunit=2013
-   double precision          :: seconds
-   character(len=40)         :: timestring
-   character(len=40)         :: start='2000-01-01 00:00:00'
-   character(len=40)         :: stop='2000-01-02 00:00:00'
-   character(len=40)         :: title='main'
-   type(ESMF_GridComp)       :: topComp
-   type(ESMF_State)          :: topState ! for import and export, empty
-   type(ESMF_Clock)          :: mainClock,topClock
-   type(ESMF_VM)             :: vm
-   integer                   :: iostat
-   logical                   :: ClockIsPresent
+   character(LEN=8)           :: datestr
+   type(ESMF_Time)            :: time1, time2, startTime, stopTime
+   type(ESMF_TimeInterval)    :: runDuration
+   integer                    :: localrc, rc, petCount,nmlunit=2013
+   double precision           :: seconds
+   character(len=40)          :: timestring
+   character(len=40)          :: start='2000-01-01 00:00:00'
+   character(len=40)          :: stop='2000-01-05 00:00:00'
+   character(len=40)          :: title='Untitled'
+   type(ESMF_GridComp)        :: topComp
+   type(ESMF_State)           :: topState ! for import and export, empty
+   type(ESMF_Clock)           :: mainClock,topClock
+   type(ESMF_VM)              :: vm
+   integer                    :: iostat
+   logical                    :: ClockIsPresent
+   character(len=ESMF_MAXSTR) :: message
 
    namelist /mossco_run/ title,start,stop
    
-
-! Read mossco_run.nml
+   ! Read mossco_run.nml
    open(nmlunit,file='mossco_run.nml',status='old',action='read',iostat=iostat)
    if (iostat .eq. 0) then
       read(nmlunit,nml=mossco_run)
       close(nmlunit)
    end if
-! substitute characters in title string
+  ! substitute characters in title string
    call replace_character(title,'/','-')
    call replace_character(title,' ','_')
 
@@ -40,8 +53,9 @@ program main
    call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
      logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN,&
      vm=vm)
-   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
-   call ESMF_LogWrite(trim(title)//" start", ESMF_LOGMSG_INFO)
+   if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   write(message,'(A)')  trim(title)//" coupled system starts"
+   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 ! Get the wall clock starting time
    call ESMF_TimeSet(time1,rc=localrc)
@@ -49,7 +63,8 @@ program main
    call ESMF_TimeSyncToRealTime(time1,rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
    call ESMF_TimeGet(time1,timeStringISOFrac=timestring)
-   call ESMF_LogWrite("Program starts at wall clock "//timestring, ESMF_LOGMSG_INFO)
+   write(message,'(A)')  "Program starts at wall clock "//trim(timestring)
+   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
   
 ! Create and initialize a clock from mossco_run.nml
    call timeString2ESMF_Time(start,startTime)
@@ -57,7 +72,7 @@ program main
    runDuration = stopTime - startTime
 
    mainClock = ESMF_ClockCreate(timeStep=runDuration, startTime=startTime, stopTime=stopTime, & 
-     name="mainClock", rc=localrc)
+     name=trim(title)//" clock", rc=localrc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
    call ESMF_TimeGet(startTime,timeStringISOFrac=timestring)
@@ -68,11 +83,11 @@ program main
 ! Create toplevel component and call its setservices routines
    if (iostat .eq. 0) then
       topClock = ESMF_ClockCreate(mainClock)
-      call ESMF_ClockSet(topClock,name="topClock")
-      topComp = ESMF_GridCompCreate(name="ESMF Toplevel Component",clock=topClock,rc=localrc)
+      call ESMF_ClockSet(topClock,name="toplevel clock")
+      topComp = ESMF_GridCompCreate(name="toplevel",clock=topClock,rc=localrc)
       if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
    else
-      topComp = ESMF_GridCompCreate(name="ESMF Toplevel Component", rc=localrc)
+      topComp = ESMF_GridCompCreate(name="toplevel", rc=localrc)
       if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
    end if
    
@@ -114,7 +129,9 @@ program main
    call ESMF_TimeGet(time2,timeStringISOFrac=timestring)
    call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds) 
 
-   call ESMF_LogWrite(trim(title)//' finished on '//timestring,ESMF_LOGMSG_INFO)
+   write(message,'(A,G7.1,A)') trim(title)//' needed ',seconds,' seconds to run'
+   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+   call ESMF_LogWrite(trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
 
    call ESMF_StateDestroy(topState,rc=rc)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

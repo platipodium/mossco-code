@@ -102,16 +102,18 @@ module empty_component
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
+    type(ESMF_GridComp)     :: gridComp
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Clock)        :: parentClock
+    integer, intent(out)    :: rc
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR):: name, message, timeString
-    logical               :: clockIsPresent
-    type(ESMF_Time)       :: currTime
-    type(ESMF_Clock)      :: clock
+    integer(ESMF_KIND_I8)   :: advanceCount
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
+    type(ESMF_TimeInterval) :: timeInterval
      
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
@@ -124,15 +126,14 @@ module empty_component
     
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
+      timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
 
     !> Here comes your own run code
     !! In particular, this should contain
@@ -174,11 +175,11 @@ module empty_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR)     :: name, message, timeString
-    logical               :: clockIsPresent
-    type(ESMF_Time)       :: currTime
-    type(ESMF_Clock)      :: clock
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
