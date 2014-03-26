@@ -45,7 +45,7 @@ MOSSCO has some necessary and some optional prerequisites.  Please make sure you
 Program | Minimum version and alternatives
 --------|----------
 GNU Make | 3.0
-Fortran 2003 Compiler | e.g. GNU  >= 4.7.2, Intel >= 12.0, PGI >= 13.2
+Fortran 2003 Compiler | e.g. GNU  >= 4.7.3, Intel >= 12.0, PGI >= 13.2
 ESMF | 5.2.0rp3, preferably 6.3.0r
 
 
@@ -53,10 +53,10 @@ ESMF | 5.2.0rp3, preferably 6.3.0r
 
 Program | Minimum version and alternatives
 -------|-----------
-NetCDF | 3.6
+NetCDF | 3.6, preferably version 4
 Message Passing Interface | OpenMPI or MPICH >= 3.0.4 
 
-We recommend that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not been tested.  
+We recommend strongly that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not necessarily been tested.  
 
 You may also try to go ahead with an existing lower version of any of the required software packages, report possible errors, and argue why you would like us to support your version.  No argument, however, about the Fortran 2003 standard!
 
@@ -87,9 +87,9 @@ There is a pre-built documentation available online at [mossco.de/doc](http://ww
 
 @subsection installing-netcdf Installing MPI and NetCDF
 
-Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not, it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...) to install these programs.  Make sure that both MPI and NetCDF are compiled with the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO subsequently. Quite likely, this is not the case on your system (unless you're using a very recent operating system), so please check carefully.  We experienced a lot of difficulties and bugs with outdated compilers, and mismatches between the compiler (and respective libraries) used for the different requirements for MOSSCO. You may also consult the bug data base [mossco.de/bugs](http://www.mossco.de/bugs) for solving these problems.
+Quite likely, a version MPI and NetCDF are preinstalled on your system.  If not, it is preferable to use your package manager (Yast, zypper, apt, port, etc. ...) to install these programs.  Make sure that both MPI and NetCDF are compiled with the *same* Fortran 2003 compiler that you would like to use for ESMF and MOSSCO subsequently. Often, this is not the case (unless you're using a very recent operating system), so please check carefully.  We experienced a lot of difficulties and bugs with outdated compilers, and mismatches between the compiler (and respective libraries) used for the different requirements for MOSSCO. You may also consult the bug data base [mossco.de/bugs](http://www.mossco.de/bugs) for solving these problems.
 
-For ESMF, you need both the netcdf C library and (in later versions of netCDF) the separate netCDF-C++ library.  For GOTM and the netCDF data components in MOSSCO, you need to install the netcdf-fortran library.
+For ESMF, you need both the NetCDF C library and (in later versions of netCDF > 4.1.3 ) the separate legacy NetCDF-C++ library.  For GOTM and the NetCDF data components in MOSSCO, you need to install the NetCDF Fortran library (if using NetCDF > 4.1.3).
 
 @subsection installing-esmf Installing ESMF
 
@@ -327,10 +327,10 @@ All configuration files are contained in the example.
 @subsection Delft3D erosion-sedimentation (erosed) test case
 
 Prerequisite for this test case is ESMF.  You also need to obtain original Delft3D routines.  
-Create a directory @c $DELFT_DIR, and get up-to-date sources via subversion
+Create a directory @c $EROSED_DIR, and get up-to-date sources via subversion
 
 ~~~~sh
-svn checkout https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $DELFT_DIR
+svn checkout https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $EROSED_DIR
 ~~~~
 
 Access to the Delft3D open source repository is restricted to registered users.  You can register at 
@@ -340,10 +340,12 @@ After compilation of the example, you can run it in the local directory.
 
 @section references References
 
-- K. W. Wirtz et al. (2012): Modular System for Shelves and Coasts (MOSSCO), Proposal for a project in response to the BMBF call Küstenmeerforschung in Nord- und Ostsee in the framework of Forschung für nachhaltige Entwicklungen (FONA).  Available online http://www.mossco.de/Leitantrag_MOSSCO.pdf.
+- Lemmen, C. et al. (2013): "Das Modulare System für Schelfmeere und Küsten (MOSSCO) - Konzepte und Infrastruktur zum Zusammenwirken verschiedener Modelle für die Küstenforschung", in KFKI Newsletter 2013 (2), edited by R. Lehfeldt, Kuratorium für Forschung im Küsteningenieurwesen, available online http://www.kfki.de/files/kfki-aktuell/0/13-2-DE.pdf
 
-- B. von Bodungen et al. (2011): Küstenforschungsagenda für Nord- und Ostsee Im Rahmen des BMBF-Programms „Forschungen für nachhaltige Entwicklungen,   Projektträger Jülich (PTJ). Available online http://www.ptj.de/lw_resource/datapool/_items/item_3404/kstenforschung02122011_internet.pdf
+- Wirtz, K.W. et al. (2012): Modular System for Shelves and Coasts (MOSSCO), Proposal for a project in response to the BMBF call Küstenmeerforschung in Nord- und Ostsee in the framework of Forschung für nachhaltige Entwicklungen (FONA).  Available online http://www.mossco.de/Leitantrag_MOSSCO.pdf.
 
-- B. von Bodungen et al. (2007): Küstenmeere im Wandel: Forschungsbedarf der deutschen Küsten- und Randmeerforschung, Konsortium Deutsche Meeresforschung (KDM). Available online http://www.deutsche-meeresforschung.de/docs/KDM_Kuestenschrift_3.pdf (English translation at http://www.deutsche-meeresforschung.de/docs/KDM_Coastal_Seas_Memorandum.pdf)
+- von Bodungen, B. et al. (2011): Küstenforschungsagenda für Nord- und Ostsee Im Rahmen des BMBF-Programms „Forschungen für nachhaltige Entwicklungen,   Projektträger Jülich (PTJ). Available online http://www.ptj.de/lw_resource/datapool/_items/item_3404/kstenforschung02122011_internet.pdf
+
+- von Bodungen, B. et al. (2007): Küstenmeere im Wandel: Forschungsbedarf der deutschen Küsten- und Randmeerforschung, Konsortium Deutsche Meeresforschung (KDM). Available online http://www.deutsche-meeresforschung.de/docs/KDM_Kuestenschrift_3.pdf (English translation at http://www.deutsche-meeresforschung.de/docs/KDM_Coastal_Seas_Memorandum.pdf)
 
 */
