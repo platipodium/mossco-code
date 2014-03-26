@@ -277,7 +277,6 @@ module constant_component
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,clock=clock, name=name, rc=rc)
     call ESMF_ClockDestroy(clock, rc=rc)
-    call ESMF_GridCompDestroy(gridComp, rc=rc)
     write(message,'(A,A,A)') 'Constant component ', trim(name), ' finalized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
    

@@ -344,13 +344,13 @@ module gotm_component
     type(ESMF_Field)     :: field
 
     do k=1,size(export_variables)
-      call ESMF_StateGet(exportState,trim(export_variables(k)%standard_name), field, rc=rc)
+      call ESMF_StateGet(exportState,trim(export_variables(k)%standard_name)//'_in_water', field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 #if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(export_variables(k)%standard_name) /),rc=rc)
+      call ESMF_StateRemove(exportState,(/ trim(export_variables(k)%standard_name)//'_in_water' /),rc=rc)
 #else
-      call ESMF_StateRemove(exportState,trim(export_variables(k)%standard_name),rc=rc)
+      call ESMF_StateRemove(exportState,trim(export_variables(k)%standard_name)//'_in_water',rc=rc)
 #endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
