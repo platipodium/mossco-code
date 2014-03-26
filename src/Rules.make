@@ -286,18 +286,19 @@ endif
 
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
+F90FLAGS = $(ESMF_F90COMPILEOPTS)
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
-F90FLAGS = -O3 -J$(MOSSCO_MODULE_PATH)
+F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
 EXTRA_CPP= 
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
-F90FLAGS = -module $(MOSSCO_MODULE_PATH)
+F90FLAGS += -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP= -stand f03
 else
 ifeq ($(FORTRAN_COMPILER),PGF90)
-F90FLAGS = -module $(MOSSCO_MODULE_PATH)
+F90FLAGS += -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP=
 else
 $(error I don't know where to place modules with this compiler)
