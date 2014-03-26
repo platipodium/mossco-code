@@ -52,9 +52,13 @@ end do
 end function key_is_present
 
 subroutine set_value(dict,key,value)
+
+implicit none
+
 class(type_mossco_dictionary)  :: dict
 character(len=*), intent(in)   :: value
 character(len=*), intent(in)   :: key
+
 integer                        :: curlen,curlenkeys
 type(type_key),dimension(:),pointer,save   :: oldkeys,newkeys
 type(type_key),pointer         :: curkey
@@ -121,13 +125,18 @@ end function get_value
 
 
 subroutine add_dictionary(dict,key,dictionary)
+
+implicit none
+
 class(type_mossco_dictionary) :: dict
 type(type_mossco_dictionary)  :: dictionary
 character(len=*)              :: key
+
 integer                       :: k,d
 type(type_key),dimension(:),pointer,save   :: oldkeys,newkeys
 type(type_key),pointer         :: curkey
 type(type_mossco_dictionary),dimension(:),pointer,save :: oldvalues,newvalues
+integer                        :: curlen,curlenkeys
 
 ! select key and prepare values list
 if (associated(dict%dictionaries)) then
