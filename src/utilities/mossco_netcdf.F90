@@ -365,7 +365,7 @@ module mossco_netcdf
     end if
     
     !! if grid not present, also create the coordinate variables
-    if (dimcheck == -1) call self%create_coordinate(grid)
+    !if (dimcheck == -1) call self%create_coordinate(grid)
 
   end function mossco_netcdf_grid_dimensions
 
