@@ -637,7 +637,7 @@ fid.write('''
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)  
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
           
           call ESMF_CplCompRun(cplCompList(l), importState=impState, exportState=expState, clock=clock, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -709,7 +709,7 @@ fid.write('''
         
         write(message,'(A,A,G6.2,A)') trim(timeString)//' calling '//trim(compName), &
           ' to run for ', hours, ' h'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
         
         call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
           exportState=exportStates(i), clock=clock, rc=rc)
@@ -759,10 +759,8 @@ fid.write('''
       call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-!#ifdef DEBUG 
       write(message,'(A)') trim(name)//' stepping to '//trim(timeString)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
-!#endif
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
 
       call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc) 
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)

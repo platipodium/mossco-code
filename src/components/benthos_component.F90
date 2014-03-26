@@ -66,7 +66,6 @@ contains
     type(ESMF_Array)     :: array
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
 
-    character(len=19) :: timestring
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
@@ -74,8 +73,37 @@ contains
     character(len=256) :: din_variable='',pon_variable=''
     integer(ESMF_KIND_I8) :: nlev
 
-    call ESMF_LogWrite('Initializing benthos effect component',ESMF_LOGMSG_INFO)
-
+    character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime
+    logical               :: clockIsPresent
+    
+    rc = ESMF_SUCCESS
+     
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     nlev=1
 
@@ -205,7 +233,11 @@ contains
       write (*,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
 #endif
 
-    call ESMF_LogWrite('Initialized benthos component',ESMF_LOGMSG_INFO)
+    !! Finally, log the successful completion of this function
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine Initialize
 
@@ -215,24 +247,38 @@ contains
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)        :: timestring
     character(len=255)       :: logstring
     type(ESMF_Time)          :: clockTime
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
-    ! Get global clock properties
-    call ESMF_TimeSet(clockTime)
+     integer               :: petCount, localPet
+    character(ESMF_MAXSTR):: name, message, timeString
+    logical               :: clockIsPresent
+    type(ESMF_Time)       :: currTime
+    type(ESMF_Clock)      :: clock
+     
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockGet(parentClock,currTime=clockTime,AdvanceCount=advancecount,&
-      runTimeStepCount=runtimestepcount,timeStep=timestep,rc=rc)
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+    call ESMF_ClockGet(clock,currTime=currTime, AdvanceCount=advancecount,&
+      runTimeStepCount=runtimestepcount,timeStep=timestep, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    write (logstring,'(A,I6,A,A)') "Benthos run(",advancecount,") at ",timestring
-
-    call ESMF_LogWrite(trim(logstring), ESMF_LOGMSG_INFO)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=rc)
 
@@ -274,6 +320,13 @@ contains
     write (*,*)
 #endif
 
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
   end subroutine Run
 
@@ -283,9 +336,44 @@ contains
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    integer               :: petCount, localPet
+    character(ESMF_MAXSTR)     :: name, message, timeString
+    logical               :: clockIsPresent
+    type(ESMF_Time)       :: currTime
+    type(ESMF_Clock)      :: clock
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     call fin_micropyht(Micro)
     call Macrofanua_fin(Total_Bioturb)
+
+    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+  
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
 
   end subroutine Finalize
