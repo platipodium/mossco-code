@@ -1,0 +1,46 @@
+# This coupling configuration describes an example benthic geoecology
+# coupling.  It can be used to test the generic coupling infrastructure
+# of MOSSCO against the manually code $MOSSCO_DIR/examples/benthic_geoecology
+# example
+#
+# configuration dependencies:
+dependencies:
+  - fabm_gotm: gotm
+  - erosed:
+    - gotm
+    - fabm_gotm
+  - benthos: erosed
+
+coupling:
+  - components:
+     - constant
+     - gotm
+    interval: 1 yy
+  - components:
+     - gotm
+     - fabm_gotm
+  - components:
+     - benthos
+     - erosed
+  - components:
+     - fabm_gotm
+     - erosed
+  - components:
+     - erosed
+     - fabm_gotm
+  - components:
+     - benthos
+     - netcdf
+    interval: 180 m
+  - components:
+     - erosed
+     - netcdf
+    interval: 180 m
+  - components:
+     - gotm
+     - netcdf
+    interval: 180 m
+  - components:
+     - fabm_gotm
+     - netcdf
+    interval: 180 m
