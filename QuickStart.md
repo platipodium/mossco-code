@@ -37,7 +37,7 @@ For those not already working with their own FABM and GOTM codes, the easiest wa
    `cd $MOSSCO_DIR`
    `make fabm-git gotm-git`
 
-This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system. If these source codes are not available in `$MOSSCO_DIR/external`, MOSSCO will check for the environment variables `MOSSCO_FABMDIR`, `MOSSCO_GOTMDIR`, `FABMDIR` and `GOTMDIR`, the latter ones usually already set for the individual work with these models. `MOSSCO_FABMDIR` and `MOSSCO_GOTMDIR` (which can be different from `FABMDIR` and `GOTMDIR`) indicate that MOSSCO is allowed to initiate compilations within these model directories. If only `FABMDIR` and `GOTMDIR` are available, the user is responsible for the proper compilation of the models.
+This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system. Alternatively, MOSSCO checks for the environment variables `MOSSCO_FABMDIR`, `MOSSCO_GOTMDIR`, `FABMDIR` and `GOTMDIR`, the latter ones usually already set for the individual work with these models. `MOSSCO_FABMDIR` and `MOSSCO_GOTMDIR` (which can be different from `FABMDIR` and `GOTMDIR`) indicate that MOSSCO is allowed to initiate compilations within these model directories. If only `FABMDIR` and `GOTMDIR` are available, the user is responsible for the proper compilation of the models.
 	
 Next, define all environment variables that are needed for FABM, GOTM and MOSSCO (these may vary on your system), e.g.:
 
