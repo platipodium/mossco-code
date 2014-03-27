@@ -184,13 +184,14 @@ module fabm_gotm_component
       attribute_r8 = gotmfabm%model%info%state_variables(k)%properties%get_real('density',default=-99.d0)
       call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
       !> add fabm index in concentration array as "external_index" to be used by other components
-      call ESMF_AttributeSet(concfield,'external_index',k)
+      call ESMF_AttributeSet(concfield,'external_index',fabm_export_states(k)%fabm_id)
 
       !> create field for sinking velocity of state variable
       wsPtr => fabm_export_states(k)%ws
       wsfield = ESMF_FieldCreate(grid, farrayPtr=fabm_export_states(k)%ws, &
         name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      call ESMF_AttributeSet(wsfield,'external_index',fabm_export_states(k)%fabm_id)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateGet(exportState, &
@@ -331,6 +332,9 @@ module fabm_gotm_component
 #endif
              if (fabm_idx == nvar) then
                call ESMF_FieldGet(fieldlist(ii),farrayPtr=ptr_f2,rc=rc)
+#ifdef DEBUG
+               write(0,*) 'use external_index',fabm_idx,'for variable',nvar
+#endif
                exit
              else
                cycle
