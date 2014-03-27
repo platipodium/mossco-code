@@ -35,20 +35,18 @@ ifndef ESMFMKFILE
 else
   include $(ESMFMKFILE)
   export MOSSCO_ESMF=true
+  ESMF_COMM = $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d' ' -f3-)
   ifneq ("x$(ESMF_COMM)","xmpiuni")
-    MOSSCO_MPI ?=true
+    export MOSSCO_MPI ?= true
   else
-    MOSSCO_MPI ?= false
+    export MOSSCO_MPI ?= false
   endif
-  ifdef ESMF_DIR
-    MOSSCO_OS=$(shell $(ESMF_DIR)/scripts/esmf_os)
-  else
-    MOSSCO_OS=$(shell uname -s)
-  endif
+  ESMF_NETCDF = $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d' ' -f3-)
   ifneq ("x$(ESMF_NETCDF)","x")
-    export MOSSCO_NETCDF_LIBPATH=$(ESMF_NETCDF_LIBPATH)
+    export MOSSCO_NETCDF ?= true
+  else
+    export MOSSCO_NETCDF ?= false
   endif
-  export MOSSCO_OS
   ifdef ESMF_F90COMPILER
     export MOSSCO_F03COMPILER=$(ESMF_F90COMPILER)
     export F90 = $(ESMF_F90COMPILER)
@@ -319,9 +317,6 @@ endif
 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
-ifneq ($(MOSSCO_NETCDF_LIBPATH),)
-LIBRARY_PATHS += -L$(MOSSCO_NETCDF_LIBPATH)
-endif
 export LIBRARY_PATHS
 
 LIBS += $(ESMF_F90ESMFLINKLIBS)
