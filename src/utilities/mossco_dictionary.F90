@@ -9,8 +9,17 @@ type :: type_key
   character(len=256) :: name
 end type
 
+#define _DICTIONARY_ -1
+#define _INTEGER_ 3
+#define _LOGICAL_ 4
+#define _STRING_ 1
+#define _REAL_ 2
+
 type :: type_value
-  character(len=256) :: value
+  character(len=256) :: string
+  integer            :: integer
+  real               :: real
+  logical            :: logical
   type(type_key)     :: key
 end type
 
@@ -18,19 +27,19 @@ type :: type_mossco_dictionary
   type(type_mossco_dictionary),dimension(:),pointer :: dictionaries => null()
   type(type_value),dimension(:),pointer             :: values => null()
   type(type_key),dimension(:),pointer               :: keys => null()
+  integer                                           :: type_dictionary=_DICTIONARY_
+  integer                                           :: type_string=_STRING_
+  integer                                           :: type_real=_REAL_
+  integer                                           :: type_integer=_INTEGER_
+  integer                                           :: type_logical=_LOGICAL_
 contains
   procedure :: set_value
   procedure :: get_value
   procedure :: get_key
   procedure :: add_dictionary
-  procedure :: get_dictionaries
-  procedure :: get_values
   procedure :: dump
   procedure :: key_is_present
 end type
-
-#define _VALUE_ 1
-#define _DICTIONARY_ 2
 
 contains
 
@@ -51,13 +60,16 @@ do k=1,ubound(dict%keys,1)
 end do
 end function key_is_present
 
-subroutine set_value(dict,key,value)
+subroutine set_value(dict,key,string,logical,integer,real)
 
 implicit none
 
 class(type_mossco_dictionary)  :: dict
-character(len=*), intent(in)   :: value
-character(len=*), intent(in)   :: key
+character(len=*),intent(in)    :: key
+character(len=*),intent(in),optional :: string
+logical         ,intent(in),optional :: logical
+integer         ,intent(in),optional :: integer
+real            ,intent(in),optional :: real
 
 integer                        :: curlen,curlenkeys
 type(type_key),dimension(:),pointer,save   :: oldkeys,newkeys
@@ -69,7 +81,7 @@ if (associated(dict%values)) then
   if (dict%key_is_present(key)) then
     write(0,*) '  key is present, overwriting'
     curkey => dict%get_key(key)
-    if (curkey%type /= _VALUE_) then
+    if (curkey%type < 0) then
       write(0,*) '  key refers to dictionary'
       stop
     end if
@@ -110,18 +122,35 @@ else
   allocate(dict%values(1))
   curkey%index = 1
 end if
-curkey%type = _VALUE_
 curkey%name = trim(key)
-dict%values(curkey%index)%value=trim(value)
+if (present(string)) then
+  dict%values(curkey%index)%string=trim(string)
+  curkey%type = dict%type_string
+endif
+if (present(integer)) then
+  dict%values(curkey%index)%integer=integer
+  curkey%type = dict%type_integer
+endif
+if (present(real)) then
+  dict%values(curkey%index)%real=real
+  curkey%type = dict%type_real
+endif
+if (present(logical)) then
+  dict%values(curkey%index)%logical=logical
+  curkey%type = dict%type_logical
+endif
 dict%values(curkey%index)%key = curkey
 end subroutine set_value
 
 
-function get_value(dict,key) result(value)
+subroutine get_value(dict,key,real,integer,logical,string)
 class(type_mossco_dictionary)   :: dict
-character(len=256)              :: value
-character(len=256)              :: key
-end function get_value
+character(len=*),optional       :: string
+integer         ,optional       :: integer
+real            ,optional       :: real
+logical         ,optional       :: logical
+character(len=*)                :: key
+end subroutine get_value
 
 
 subroutine add_dictionary(dict,key,dictionary)
@@ -180,20 +209,10 @@ else
   allocate(dict%dictionaries(1))
   curkey%index = 1
 end if
-curkey%type = _DICTIONARY_
+curkey%type = dict%type_dictionary
 curkey%name = trim(key)
 dict%dictionaries(curkey%index)=dictionary
 end subroutine add_dictionary
-
-
-subroutine get_dictionaries(dict)
-class(type_mossco_dictionary) :: dict
-end subroutine get_dictionaries
-
-
-subroutine get_values(dict)
-class(type_mossco_dictionary) :: dict
-end subroutine get_values
 
 function get_key(dict,keyname) result(key)
 class(type_mossco_dictionary) :: dict
@@ -219,12 +238,18 @@ integer                       :: k,v,d
 curindent='--              '
 if (present(indent)) curindent=trim(curindent)//trim(indent)
 do k=1,ubound(dict%keys,1)
-  if (dict%keys(k)%type == _VALUE_) then
-    write(0,*) trim(curindent)//trim(dict%keys(k)%name)//' : '//trim(dict%values(dict%keys(k)%index)%value)
-  else
-    if (dict%keys(k)%type == _DICTIONARY_) &
-        call dict%dictionaries(dict%keys(k)%index)%dump(indent='--')
-  end if
+  select case(dict%keys(k)%type)
+  case(_STRING_)
+    write(0,*) trim(curindent)//trim(dict%keys(k)%name)//' : '//trim(dict%values(dict%keys(k)%index)%string)
+  case(_INTEGER_)
+    write(0,*) trim(curindent)//trim(dict%keys(k)%name)//' : ',dict%values(dict%keys(k)%index)%integer
+  case(_REAL_)
+    write(0,*) trim(curindent)//trim(dict%keys(k)%name)//' : ',dict%values(dict%keys(k)%index)%real
+  case(_LOGICAL_)
+    write(0,*) trim(curindent)//trim(dict%keys(k)%name)//' : ',dict%values(dict%keys(k)%index)%logical
+  case(_DICTIONARY_)
+    call dict%dictionaries(dict%keys(k)%index)%dump(indent='--')
+    end select
 end do
 end subroutine dump
 
