@@ -29,6 +29,12 @@ ifeq ($(MOSSCO_GOTM),true)
 SUBDIRS += fabmsed_fabm0d
 SUBDIRS += ocean_fabm0d
 SUBDIRS += ocean_fabm0d_fabmsed
+SUBDIRS += fabmgotm_fabmsed_constant
+ifeq ($(MOSSCO_EROSED),true)
+SUBDIRS += benthic_geoecology
+SUBDIRS += fabm_benthic_pelagic
+SUBDIRS += generic
+endif
 endif
 endif
 endif
