@@ -31,16 +31,16 @@ coupling:
   - components:
      - benthos
      - netcdf
-    interval: 180 m
+    interval: 30 m
   - components:
      - erosed
      - netcdf
-    interval: 180 m
+    interval: 30 m
   - components:
      - gotm
      - netcdf
-    interval: 180 m
+    interval: 30 m
   - components:
      - fabm_gotm
      - netcdf
-    interval: 180 m
+    interval: 30 m
