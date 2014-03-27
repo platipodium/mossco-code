@@ -18,7 +18,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -locean -latmosphere -laocoupler -lmossco_util -lesmf $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec libocean libatmosphere libaocoupler libmossco_util
+.PHONY: all exec libaocoupler libmossco_util libremtc
 
 all: exec
 exec: remtc
@@ -27,7 +27,7 @@ remtc: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
-libocean libatmosphere:
+libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
 libaocoupler:
@@ -37,7 +37,7 @@ libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libocean libatmosphere libaocoupler
+toplevel_component.o: toplevel_component.F90 libremtc libaocoupler
 main.F90: ../../common/main.F90
 	ln -f  $< $@
 

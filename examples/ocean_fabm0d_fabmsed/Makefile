@@ -25,7 +25,7 @@ LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 #LDFLAGS += -Wl,-force_load
 #endif
 
-.PHONY: all exec libocean libsediment liboceansedimentcoupler libmossco_util
+.PHONY: all exec libremtc libsediment liboceansedimentcoupler libmossco_util
 
 all: exec
 exec: ocean_fabm0d_fabmsed
@@ -35,7 +35,7 @@ ocean_fabm0d_fabmsed: toplevel_component.o main.o
 	@echo "Created example binary ocean_fabm0d_fabmsed in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d_fabmsed/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d_fabmsed.txt
 
-libocean:
+libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
 libmossco_fabm0d libsediment:

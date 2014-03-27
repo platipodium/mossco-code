@@ -36,7 +36,7 @@ ifeq ($(HAVE_LD_FORCE_LOAD),true)
 endif
 
 
-.PHONY: all exec libocean libsediment liboceansedimentcoupler libgotm
+.PHONY: all exec libremtc libsediment liboceansedimentcoupler libgotm
 
 all: exec
 exec: ocean_fabm0d
@@ -46,7 +46,7 @@ ocean_fabm0d: toplevel_component.o main.o
 	@echo "Created example binary ocean_fabm0d in $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d.txt
 
-libocean:
+libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
 libgotm:
