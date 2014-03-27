@@ -10,6 +10,7 @@ type :: type_key
 end type
 
 #define _DICTIONARY_ -1
+#define _UNKNOWN_ 0
 #define _INTEGER_ 3
 #define _LOGICAL_ 4
 #define _STRING_ 1
@@ -32,10 +33,12 @@ type :: type_mossco_dictionary
   integer                                           :: type_real=_REAL_
   integer                                           :: type_integer=_INTEGER_
   integer                                           :: type_logical=_LOGICAL_
+  integer                                           :: type_unknown=_UNKNOWN_
 contains
   procedure :: set_value
   procedure :: get_value
   procedure :: get_key
+  procedure :: get_type
   procedure :: add_dictionary
   procedure :: dump
   procedure :: key_is_present
@@ -143,13 +146,38 @@ dict%values(curkey%index)%key = curkey
 end subroutine set_value
 
 
+function get_type(dict,key) result(valuetype)
+class(type_mossco_dictionary) :: dict
+character(len=*)              :: key
+integer                       :: k,valuetype
+
+valuetype=dict%type_unknown
+do k=1,ubound(dict%keys,1)
+  if (trim(key)==trim(dict%keys(k)%name)) then
+    valuetype = dict%keys(k)%type
+    continue
+  end if
+end do
+end function get_type
+
+
 subroutine get_value(dict,key,real,integer,logical,string)
-class(type_mossco_dictionary)   :: dict
-character(len=*),optional       :: string
-integer         ,optional       :: integer
-real            ,optional       :: real
-logical         ,optional       :: logical
-character(len=*)                :: key
+class(type_mossco_dictionary) :: dict
+character(len=*),optional     :: string
+integer         ,optional     :: integer
+real            ,optional     :: real
+logical         ,optional     :: logical
+character(len=*)              :: key
+integer                       :: k
+
+do k=1,ubound(dict%keys,1)
+  if (trim(key)==trim(dict%keys(k)%name)) then
+    if (present(string)) string=dict%values(dict%keys(k)%index)%string
+    if (present(real)) real=dict%values(dict%keys(k)%index)%real
+    if (present(logical)) logical=dict%values(dict%keys(k)%index)%logical
+    if (present(integer)) integer=dict%values(dict%keys(k)%index)%integer
+  end if
+end do
 end subroutine get_value
 
 

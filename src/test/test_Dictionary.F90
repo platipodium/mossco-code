@@ -8,6 +8,7 @@ program test_Netcdf
 use mossco_dictionary
 
 type(type_mossco_dictionary) :: dict,dict2
+character(len=20)            :: string
 
 write(0,*) 'create dictionary and add keys'
 !dict => mossco_dictionary_create()
@@ -35,6 +36,13 @@ call dict%set_value(key='Richard',string='Hofmeister')
 write(0,*) 'dump dictionary:'
 call dict%dump()
 write(0,*) '----------------'
+write(0,*)
+
+write(0,*) 'key years has top be of type integer (=3):',dict2%get_type('years')
+
+call dict2%get_value('Hans',string=string)
+write(0,*) 'last name of Hans: '//trim(string)
+write(0,*)
 
 write(0,*) 'finished dictionary test'
 
