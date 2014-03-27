@@ -135,12 +135,15 @@ module netcdf_component
     !! Get the local clock and adjust its time step to the parent clock's time steop
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(clock,currTime=currTime, startTime=startTime, &
-                       advanceCount=advanceCount, refTime=refTime, rc=rc)
+    call ESMF_ClockGet(clock,startTime=startTime, &
+      advanceCount=advanceCount, refTime=refTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_ClockGet(parentClock, timeStep=timeInterval, rc=rc)
+    call ESMF_ClockGet(parentClock, currTime=currTime,  &
+      timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
+    
+    !! Synchronize local clock with parent clock
+    call ESMF_ClockSet(clock, currTime=currTime, timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
