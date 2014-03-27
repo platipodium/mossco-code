@@ -72,7 +72,7 @@ The coupled system, or coupling, is described as a list of coupling pairs, where
 
 You can now create the source code for a coupled system (which will end up in the file `toplevel_component.F90` and a special `Makefile.coupling` snippet) by invoking the create_coupling script
 
-	> ./create_coupling.py maecs_omexdia.yaml
+	./create_coupling.py maecs_omexdia.yaml
 
 This will give a output information that it processed seven components.
 
@@ -80,7 +80,7 @@ This will give a output information that it processed seven components.
 	
 Now type make to create an executable for your home-brew coupled system
 
-	> make
+	make
 
 # Running a setup
 
@@ -104,14 +104,3 @@ You will see some screen output, and at least two files will be written
 
 - `netcdf_component.nc` (a netcdf file containing all the output)
 - `PET0.Helgoland` (a log file for your simulation)
-
-
-	
-	
-	
-	
-	
-	
-	
-	
-	
