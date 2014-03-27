@@ -1,0 +1,21 @@
+# This configuration describes a coupling between pelagic and sediment ecology (both
+# implemented through FABM models
+coupling:
+ - components: 
+   - gotm       # The ocean in 1D (physics)
+   - fabm_gotm  # The ocean biogeochemistry, choose models in fabm.nml
+   interval: 360 s # The coupling interval of these two components
+ - components:
+   - fabm_gotm
+   - pelagic_benthic_coupler # The special coupler between pelagial and benthos
+   - fabm_sediment
+   interval: 6 m
+ - components:
+   - fabm_sediment
+   - benthic_pelagic_coupler
+   - fabm_gotm
+   interval:  6 m
+ - components:
+   - constant # This component delivers needed constant values, e.g oxygen
+   - fabm_sediment
+   interval: 360 d
