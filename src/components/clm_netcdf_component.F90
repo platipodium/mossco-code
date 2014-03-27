@@ -173,9 +173,8 @@ module clm_netcdf_component
     allocate ( ndims(nvar))
 
     do ind=1,nvar
-
       lvarid(ind) = ind
-
+ 
       if ( ind < 10 ) then
           write(label2,"(i1,a)") ind,':'
           call ESMF_ConfigFindLabel(config, label2, rc=rc)
@@ -201,16 +200,19 @@ module clm_netcdf_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       endif
     enddo
+    write(0,*) 'Hurray'
 
 ! Create grid and retrieve local loop boundaries
     grid = ESMF_GridCreate(filename="clm_grid.nc",fileFormat=ESMF_FILEFORMAT_SCRIP, &
                              regDecomp=(/iprocs,jprocs/),            &
                              isSphere=.false., rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(0,*) 'Hurray'
     call ESMF_GridGetCoordBounds(grid, coordDim=1, localDE=0, &
                            computationalLBound=lbnd, &
                            computationalUBound=ubnd, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(0,*) 'Hurray'
 
     ib = lbnd(1)
     ie = ubnd(1)

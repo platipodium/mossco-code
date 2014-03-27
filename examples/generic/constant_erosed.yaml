@@ -1,4 +1,7 @@
+dependencies:
+  - erosed : constant
 coupling:
   - components: 
      - erosed
+     - constant
     interval: 24 h

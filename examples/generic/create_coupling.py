@@ -562,7 +562,6 @@ fid.write('''
         endif
                 
         if (alarmCount==0) then
-          call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
           timeInterval=stopTime-currTime
         else                 
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
@@ -674,7 +673,7 @@ fid.write('''
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
         if (alarmCount==0) then
-          call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
+          !call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
           timeInterval=stopTime-currTime
         else                 
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
@@ -736,7 +735,7 @@ fid.write('''
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       if (alarmCount==0) then
-        call ESMF_LogWrite('No alarm not found in '//trim(name), ESMF_LOGMSG_WARNING)
+        !call ESMF_LogWrite('No alarm found in '//trim(name), ESMF_LOGMSG_WARNING)
         timeInterval=stopTime-currTime
       else                 
         call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
@@ -792,8 +791,48 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    type(ESMF_Clock)     :: clock
-    logical              :: clockIsPresent
+    integer(ESMF_KIND_I8)   :: i
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+    do i=1,ubound(cplCompList,1)
+      call ESMF_CplCompFinalize(cplCompList(i), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+    do i=1,ubound(gridCompList,1)
+      call ESMF_GridCompFinalize(gridCompList(i), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+    do i=1,ubound(gridCompList,1)
+      !!@todo destroy any remaining fields/arrays in states   
+      call ESMF_StateDestroy(exportStates(i), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_StateDestroy(importStates(i), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+    
 ''')
 i=0
 for item in gridCompList:

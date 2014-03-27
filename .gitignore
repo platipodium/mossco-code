@@ -38,9 +38,6 @@ examples/ocean_fabm0d/output_0d.dat
 examples/standalone/erosed/erosed
 examples/standalone/benthos/benthos
 examples/standalone/erosed/delft_sediment_test.out
-examples/timing_concept/timing_concept
-examples/gotmfabm_fabmsed_constant/gotmfabm_fabmsed_constant
-examples/gotmfabm_fabmsed_erosed_benthos_wave_constant/gotmfabm_fabmsed_erosed_benthos_wave_constant
 examples/gotm*/main.F90
 src/drivers/eromud.f90
 src/drivers/erosand.f90
