@@ -1,6 +1,13 @@
 # Quickstart Intro
 
-These instructions should get you started on building your own coupled system with MOSSCO.
+These instructions should get you started on building your own coupled system with MOSSCO. It is really only a quick start, if you or someone else has already installed
+
+- Fortran (i.e., a F2003 capable fortran compiler)
+- ESMF (The Earth System Modeling Framework)
+- NetCDF
+- Python with YAML support
+
+for you to use at this point. If not, you have to do it now (it is not quick!). You may find some help at http://www.mossco.de/doc
 
 We will build a system that connects a pelagic ecosystem, running in a 1D ocean model to a benthic pelagic ecosystem, using two external models
 
