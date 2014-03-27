@@ -154,6 +154,7 @@ module mossco_netcdf
     integer, dimension(:),pointer  :: dimids
     integer, optional              :: rc
     character(len=1), dimension(3) :: coordNames = (/'x','y','z'/)
+    integer                        :: external_index=-1
 
     call ESMF_FieldGet(field,name=fieldname,rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
@@ -187,6 +188,10 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'coordinates',trim(coordinates))
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
+
+      ! write external index, that is used to e.g. communicate FABM variable index
+      call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1,rc=rc)
+      ncStatus = nf90_put_att(self%ncid,varid,'external_index',external_index)
       !! @todo get unit from field attributes
 
       ncStatus = nf90_enddef(self%ncid)
