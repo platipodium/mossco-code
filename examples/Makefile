@@ -29,9 +29,6 @@ ifeq ($(MOSSCO_GOTM),true)
 SUBDIRS += fabmsed_fabm0d
 SUBDIRS += ocean_fabm0d
 SUBDIRS += ocean_fabm0d_fabmsed
-ifeq ($(MOSSCO_EROSED),true)
-SUBDIRS += gotmfabm_fabmsed_erosed_benthos_wave_constant
-endif
 endif
 endif
 endif
