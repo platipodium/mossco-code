@@ -39,7 +39,7 @@ module erosed_component
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
   type(ESMF_Field)            :: upward_flux_Field, downward_flux_Field
-  integer,dimension(:),allocatable              :: external_idx_by_nfrac
+  integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                     :: ubnd(4),lbnd(4)
 
 
@@ -362,7 +362,9 @@ write (*,*) ' allocations'
 
 write (*,*) ' state add'
   allocate(external_idx_by_nfrac(nfrac))
+  allocate(nfrac_by_external_idx(nfrac))
   external_idx_by_nfrac(:)=-1
+  nfrac_by_external_idx(:)=-1
   !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
   call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
   if(rc /= ESMF_SUCCESS) then
@@ -384,6 +386,14 @@ write (*,*) ' state add'
       if(rc /= ESMF_SUCCESS) external_idx_by_nfrac(n)=-1
     end do
   end if
+
+  !> @todo change mapping from order of SPM fields in fieldbundle to trait-related
+  !!       mapping by e.g. d50. It is unknown here, which SPM fraction in water is
+  !!       related to SPM fractions in the bed module
+  !! after having external_index defined by nfrac, create nfrac_by_external_idx:
+  do n=1,ubound(external_idx_by_nfrac,1)
+    nfrac_by_external_idx(external_idx_by_nfrac(n))=n
+  end do
 
   upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux',rc=rc)
   downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux',rc=rc)
@@ -432,7 +442,9 @@ write (*,*) ' state add'
     logical               :: clockIsPresent
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
-     
+    integer               :: external_index
+    
+!#define DEBUG 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -558,12 +570,13 @@ write (*,*) ' state add'
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         do n=1,size(fieldlist)
           field = fieldlist(n)
+          call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1)
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-          call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(n))
-          call ESMF_AttributeGet(field,'particle_density',rhosol(n))
-          sedd90(n) = d90_from_d50(sedd50(n))
+          call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)))
+          call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)))
+          sedd90(n) = d90_from_d50(sedd50(nfrac_by_external_idx(external_index)))
           if (rc == ESMF_SUCCESS) then
-            spm_concentration(1,1,n) = ptr_f3(1,1,1)
+            spm_concentration(1,1,nfrac_by_external_idx(external_index)) = ptr_f3(1,1,1)
           else
             write(0,*) 'cannot find SPM fraction',n
           end if
@@ -579,7 +592,8 @@ write (*,*) ' state add'
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         do n=1,size(fieldlist)
           call ESMF_FieldGet(fieldlist(n),farrayPtr=ptr_f3,rc=rc)
-          ws(n,nmub) = ptr_f3(1,1,1)
+          call ESMF_AttributeGet(fieldlist(n),'external_index',external_index,defaultvalue=-1)
+          ws(nfrac_by_external_idx(external_index),nmub) = ptr_f3(1,1,1)
         end do
       end if
 
