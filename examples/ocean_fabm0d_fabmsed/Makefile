@@ -17,7 +17,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-LIBS := -lsediment -locean -loceansedimentcoupler -lmossco_fabm0d -lmossco_util -lmossco_sediment -lsolver -lesmf  $(LIBS)
+LIBS := -lsediment -lremtc -loceansedimentcoupler -lmossco_fabm0d -lmossco_util -lmossco_sediment -lsolver $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
@@ -48,7 +48,7 @@ libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment libocean liboceansedimentcoupler
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment libremtc liboceansedimentcoupler
 
 main.F90: ../common/main.F90
 	ln -f $< $@

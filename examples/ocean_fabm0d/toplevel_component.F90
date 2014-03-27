@@ -18,7 +18,7 @@ module toplevel_component
 #ifdef _GOTMOCEAN_
   use gotm_component, only: ocean_SetServices => SetServices
 #else
-  use remtc_ocean, only: ocean_SetServices => SetServices
+  use remtc_ocean_component, only: ocean_SetServices => SetServices
 #endif
   use fabm0d_component, only: fabm0d_SetServices => SetServices
 

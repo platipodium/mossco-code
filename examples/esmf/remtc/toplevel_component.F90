@@ -1,8 +1,8 @@
 module toplevel_component
 
   use esmf
-  use remtc_ocean, only: ocean_SetServices => SetServices
-  use remtc_atmosphere, only: atmosphere_SetServices => SetServices
+  use remtc_ocean_component, only: ocean_SetServices => SetServices
+  use remtc_atmosphere_component, only: atmosphere_SetServices => SetServices
   use remtc_atmosphere_ocean_coupler, only: aocpl_SetServices => SetServices
 
   implicit none

@@ -14,15 +14,15 @@ ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/ocean_fabm0d$,,$(PWD))
 endif
 
-OCEAN=GOTM
+OCEAN?=GOTM
 
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
 ifeq ($(OCEAN),GOTM)
-LIBS :=  -locean -lgotm -lmossco_fabm0d -lsolver -lesmf -lmossco_util $(LIBS)
+LIBS :=  -lgotm -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 else
-LIBS := -locean -lmossco_fabm0d -lsolver -lesmf -lmossco_util $(LIBS)
+LIBS := -lremtc -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 endif
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 ifeq ($(OCEAN),GOTM)
@@ -61,9 +61,9 @@ libmossco_util:
 main.o: toplevel_component.o main.F90 libmossco_util
 ifeq ($(OCEAN),GOTM)
 CPPFLAGS += -D_GOTMOCEAN_
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libgotm libocean
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libgotm
 else
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libocean
+toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libremtc
 endif
 
 main.F90: ../common/main.F90

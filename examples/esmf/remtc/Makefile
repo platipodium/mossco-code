@@ -15,10 +15,10 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -locean -latmosphere -laocoupler -lmossco_util -lesmf $(LIBS)
+LIBS := -lremtc -lmossco_util $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
-.PHONY: all exec libaocoupler libmossco_util libremtc
+.PHONY: all exec libmossco_util libremtc
 
 all: exec
 exec: remtc
@@ -29,20 +29,17 @@ remtc: toplevel_component.o main.o
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
-
-libaocoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libremtc libaocoupler
+toplevel_component.o: toplevel_component.F90 libremtc
 main.F90: ../../common/main.F90
 	ln -f  $< $@
-
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_remtc main.F90
+	@rm -f remtc main.F90
