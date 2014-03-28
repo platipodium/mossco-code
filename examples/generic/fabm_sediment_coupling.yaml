@@ -1,4 +1,0 @@
-coupling:
-  - components: 
-     - fabm_sediment
-    interval: 24 h
