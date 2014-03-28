@@ -10,6 +10,7 @@ else:
      filename = '1d_reference.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
+     #filename = 'constant_empty_netcdf.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -638,12 +639,12 @@ fid.write('''
           write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
           
-          call ESMF_CplCompRun(cplCompList(l), importState=impState, exportState=expState, clock=clock, rc=rc)
+          call ESMF_CplCompRun(cplCompList(l), importState=impState, &
+            exportState=expState, clock=clock, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           
         enddo 
       enddo
-
 
       !! Loop through all components and check whether their clock is currently at the 
       !! same time as my own clock's currTime, if yes, then run the component
@@ -755,20 +756,23 @@ fid.write('''
         timeInterval=ringTime-currTime
       endif
 
+      !> Log current and next ring time 
+      call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      write(message,'(A)') trim(timeString)//' '//trim(name)//' stepping to'
       call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      write(message,'(A)') trim(name)//' stepping to '//trim(timeString)
+      write(message,'(A)') trim(message)//' '//trim(timeString)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
 
+      !> Set new time interval and advance clock, stop if end of 
+      !! simulation reached
       call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc) 
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
       call ESMF_ClockAdvance(clock, rc=rc) 
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)           
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)           
     enddo
 
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
@@ -798,31 +802,32 @@ fid.write('''
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
+    !> Obtain information on the component, especially whether there is a local
+    !! clock to obtain the time from and to later destroy
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+	clock=parentClock
+    else 
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+    !> Get the time and log it
     call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     do i=1,ubound(cplCompList,1)
-      call ESMF_CplCompFinalize(cplCompList(i), rc=rc)
+      call ESMF_CplCompFinalize(cplCompList(i), clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
     do i=1,ubound(gridCompList,1)
-      call ESMF_GridCompFinalize(gridCompList(i), rc=rc)
+      call ESMF_GridCompFinalize(gridCompList(i), clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
     do i=1,ubound(gridCompList,1)
@@ -850,16 +855,15 @@ fid.write('''
     if (allocated(exportStates)) deallocate(exportStates) 
     if (allocated(importStates)) deallocate(importStates) 
     if (allocated(cplAlarmList)) deallocate(cplAlarmList)
-
-    call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
-    if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      call ESMF_ClockDestroy(clock,rc=rc)
-    endif
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+  
+    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE) 
+  
   end subroutine Finalize
 
 end module toplevel_component
