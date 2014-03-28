@@ -120,12 +120,12 @@ module empty_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      clock = parentClock
+    else
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -143,16 +143,17 @@ module empty_component
     !!    ESMF component.  In particular, you cannot rely on your import state to be
     !!    the same as your Initialize() routines import state. 
 
-    do while (.not. ESMF_ClockIsStopTime(clock, rc=rc))
+    if (clockIsPresent) then 
+      do while (.not. ESMF_ClockIsStopTime(clock, rc=rc))
 
       !! Your own code continued:
       !! 2. Calling a single (or even multiple) internal of your model
        
-      call ESMF_ClockAdvance(clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-    enddo       
-      
+        call ESMF_ClockAdvance(clock, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      enddo       
+    endif
+    
     !! 3. You should not have to do anything with the export state, because the mapping
     !!    between your internal model's data and the exported fields has already been
     !!    done in the Initialize() routine.  In MOSSCO, this is recommended practices, but

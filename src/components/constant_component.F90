@@ -75,8 +75,6 @@ module constant_component
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
     
-    
-
     rc = ESMF_SUCCESS
      
     !! Check whether there is already a clock (it might have been set 
@@ -217,57 +215,80 @@ module constant_component
       end do
     endif
         
-    write(message,'(A,A,A)') 'Constant component ', trim(name), ' initialized'
-    call ESMF_LogWrite(message,ESMF_LOGMSG_TRACE) 
+    !! Finally, log the successful completion of this function
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
+    type(ESMF_GridComp)     :: gridComp
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Clock)        :: parentClock
+    integer, intent(out)    :: rc
 
-    integer                :: petCount, localPet
-    character(ESMF_MAXSTR) :: name, message, timestring
-    logical                :: clockIsPresent
-    type(ESMF_Time)        :: currTime, stopTime
-    type(ESMF_Clock)       :: clock
-    
+    integer(ESMF_KIND_I8)   :: advanceCount
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
+    type(ESMF_TimeInterval) :: timeInterval
+     
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
+      clock = parentClock
+    else
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_ClockGet(clock,currTime=currTime, stopTime=stopTime, rc=rc)
+    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
+      timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
- 
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc) 
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
+
+    !> Here comes your own run code
+    !! In particular, this should contain
+    !! 1. Checking for fields in your import State and mapping the values/pointers
+    !!    in these import fields to your model's internal data.  Be aware that
+    !!    oftentimes the import state you get here is an export from an entirely different
+    !!    ESMF component.  In particular, you cannot rely on your import state to be
+    !!    the same as your Initialize() routines import state. 
+
+    if (clockIsPresent) then 
+      do while (.not. ESMF_ClockIsStopTime(clock, rc=rc))
+
+      !! Your own code continued:
+      !! 2. Calling a single (or even multiple) internal of your model
+       
+        call ESMF_ClockAdvance(clock, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      enddo       
+    endif
+    
+    !! 3. You should not have to do anything with the export state, because the mapping
+    !!    between your internal model's data and the exported fields has already been
+    !!    done in the Initialize() routine.  In MOSSCO, this is recommended practices, but
+    !!    don't rely on this.
+
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
   end subroutine Run
 
