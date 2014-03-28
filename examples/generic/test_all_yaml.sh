@@ -38,6 +38,7 @@ EOT
 
 for F in $G/${FILTER}; do
   D=$(date "+%Y%m%d %H:%M:00")
+  P=$S/PET0.Helgoland
   B=$(basename $F)
   B=${B%.yaml}
   python $G/create_coupling.py $F
@@ -62,7 +63,7 @@ for F in $G/${FILTER}; do
   
   if [ -e $P ]; then : 
   else
-    echo "$H | $B | $D | failed, no PET.log" >> $L
+    echo "$H | $B | $D | failed, no PET.log $P" >> $L
     continue
   fi
   
