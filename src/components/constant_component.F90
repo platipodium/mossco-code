@@ -143,8 +143,6 @@ module constant_component
         !!   some_standard_name  12.345
         read(fileunit,*, iostat=rc) varname,floatValue
 	      if (rc /= 0) then
-          write(message,'(A)') trim(name)//' error reading constant_component.dat'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
           exit
 	      endif
         !> @todo this routine should exit if no values have been read (empty file, 
