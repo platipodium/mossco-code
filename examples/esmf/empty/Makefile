@@ -14,7 +14,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS :=  -lmossco_util -lesmf $(LIBS)
+LIBS :=  -lempty -lmossco_util -lesmf $(LIBS)
 
 .PHONY: all exec
 
@@ -24,14 +24,17 @@ exec: empty
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-empty: main.o toplevel_component.o
+empty: main.o toplevel_component.o 
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
 	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90
+toplevel_component.o: toplevel_component.F90 libempty
 main.F90: ../../common/main.F90
 	ln -f  $< $@
+
+libempty:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 clean: extraclean
 
