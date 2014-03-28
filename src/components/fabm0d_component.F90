@@ -289,15 +289,50 @@ module fabm0d_component
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
+    
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
 
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
+
+	  !> Obtain information on the component, especially whether there is a local
+	  !! clock to obtain the time from and to later destroy
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (.not.clockIsPresent) then
+			clock=parentClock
+    else 
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    !> Get the time and log it
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+   
     call finalize_0d()
 
+    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+
   end subroutine Finalize
-  
+
     !> Actually, this should be an extension of ESMF_TimeSet 
   subroutine timeString2ESMF_Time(timestring,time)
     character(len=*), intent(in) :: timestring

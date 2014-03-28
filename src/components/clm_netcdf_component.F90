@@ -448,8 +448,35 @@ module clm_netcdf_component
       type(ESMF_Clock)     :: parentClock
       integer, intent(out) :: rc
 
-      integer              :: localPet, ierr
+      integer              :: ierr
      
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
+
+	  !> Obtain information on the component, especially whether there is a local
+	  !! clock to obtain the time from and to later destroy
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (.not.clockIsPresent) then
+			clock=parentClock
+    else 
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    !> Get the time and log it
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+
       call ESMF_GridCompGet(gridComp, localPet=localPet, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldDestroy(P_field, rc=rc)
@@ -477,7 +504,13 @@ module clm_netcdf_component
 
       call CLM_final(localPet)
 
-      call ESMF_LogWrite("CLM atmos_final called", ESMF_LOGMSG_INFO)
+    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
 
     end subroutine atmos_final
 

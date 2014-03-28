@@ -208,8 +208,6 @@ module empty_component
     !! 3. Destroy your clock
 
     if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-  
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
