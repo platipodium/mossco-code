@@ -133,14 +133,24 @@ module constant_component
 
     !> open constant_component.dat
     !! @todo: read filename from configuration namelist/yaml
-    open(fileunit,file='constant_component.dat',err=99)
-
-    if (file_readable) then
+    open(fileunit,file='constant_component.dat',iostat=rc, action='read', status='old')
+    if (rc /= 0) then
+      file_readable=.false.
+      write(message,'(A)') trim(name)//' could not open constant_component.dat'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+    else
       do
         !> read constant_component.dat line by line, maybe add rank later
         !! format of each line is:
         !!   some_standard_name  12.345
-        read(fileunit,*,end=5) varname,floatValue
+        read(fileunit,*, iostat=rc) varname,floatValue
+	      if (rc /= 0) then
+          write(message,'(A)') trim(name)//' error reading constant_component.dat'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          exit
+	      endif
+        !> @todo this routine should exit if no values have been read (empty file, 
+        !! or empty lines
 
         !> add item to list of constants
         allocate(cur_item%next)
@@ -164,51 +174,48 @@ module constant_component
       end do
     close(fileunit)
     end if
-5   continue
-99  file_readable=.false.
+!5   continue    
 
 
     !> now go through list, create fields and add to exportState
     cur_item => variable_items%next
-    do
-      if (cur_item%rank==3) then 
-        cur_item%field = ESMF_FieldCreate(grid3, &
+    if (file_readable) then 
+      do
+        if (cur_item%rank==3) then 
+          cur_item%field = ESMF_FieldCreate(grid3, &
               typekind=ESMF_TYPEKIND_R8, &
               name=cur_item%standard_name, &
               staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
               
-        call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr3, rc=rc)     
-        farrayPtr3(:,:,:)=cur_item%value
+          call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr3, rc=rc)     
+          farrayPtr3(:,:,:)=cur_item%value
               
-      elseif (cur_item%rank==2) then
-       cur_item%field = ESMF_FieldCreate(grid2, &
+        elseif (cur_item%rank==2) then
+          cur_item%field = ESMF_FieldCreate(grid2, &
               typekind=ESMF_TYPEKIND_R8, &
               name=cur_item%standard_name, &
               staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-        call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr2, rc=rc)     
-        farrayPtr2(:,:)=cur_item%value
+          call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr2, rc=rc)     
+          farrayPtr2(:,:)=cur_item%value
               
-      else
-        write(0,*) 'Not IMPLEMENTED'
-        stop
-      endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
-      
-      
-      call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        else
+          write(0,*) cur_item%rank, trim(varname), cur_item%rank
+          write(message,'(A,I1,A)') trim(name)//' not implemented reading rank(', &
+            cur_item%rank,') variable '//trim(varname)
+          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
+        endif
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          
+        call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      if (associated(cur_item%next)) then
-        cur_item => cur_item%next
-      else
-        exit
-      end if
-
-    end do
-
-    call ESMF_GridCompGet(gridComp,name=name, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (associated(cur_item%next)) then
+          cur_item => cur_item%next
+        else
+          exit
+        end if
+      end do
+    endif
         
     write(message,'(A,A,A)') 'Constant component ', trim(name), ' initialized'
     call ESMF_LogWrite(message,ESMF_LOGMSG_TRACE) 
