@@ -1,0 +1,33 @@
+# This file describes the CLM NetCDF component
+clm_netcdf:
+  name: CLM_NetCDF
+  description: Climate Local Model NetCDF Component
+  exports:
+    CC:
+      - units: 1
+      - other_names: [fraction_of_cloud_cover_at_water_surface]
+      - internal_name: CLCT
+    PSL:
+      - units: Pa 
+      - other_names: [mean_pressure_at_water_surface]
+      - internal_name: PMSL
+    HUM:
+      - units: 0.01 
+      - other_names: [relative_humidity_at_2m_above_water_surface]
+      - internal_name: RELHUM_2M
+    RR:
+      - units: kg m-2
+      - other_names: [precipitation_at_water_surface]
+      - internal_name: TOT_PREC
+    T10:
+      - units: K
+      - other_names: [temperature_at_10m_above_water_surface]
+      - internal_name: T_2M
+    U10:
+      - units: m s-1 
+      - other_names: [wind_x_velocity_at_10m_above_water_surface]
+      - internal_name: V_10M
+    V10:
+      - units: m s-1 
+      - other_names: [wind_y_velocity_at_10m_above_water_surface]
+      - internal_name: V_10M

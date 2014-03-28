@@ -1,19 +1,35 @@
+#! /bin/env/python
 
 from xml.etree import ElementTree as et
 import sys
 import os.path
 import yaml
 
+if len(sys.argv) > 1:
+    filename = sys.argv[1]
+else:
+     filename = 'clm_netcdf_component.yaml'
 
-yaml_file='test_component.yaml'
-cf_xml_file='cf-standard-name-table.xml'
+print sys.argv, len(sys.argv)
+if not os.path.exists(filename):
+    print 'File ' + filename + ' does not exist.'
+    exit(1)
+    
+print 'Using ' + filename + ' ...' 
 
-fid = file(yaml_file,'rU')
+fid = file(filename,'rU')
 config = yaml.load(fid)
 fid.close()
 
-exportlist=config.values()[0]['exports'].keys()
-importlist=config.values()[0]['imports'].keys()
+cf_xml_file='cf-standard-name-table.xml'
+
+importlist=[]
+exportlist=[]
+top=config.values()[0]
+if top.has_key('exports'):
+    exportlist=config.values()[0]['exports'].keys()
+if top.has_key('imports'):
+    importlist=config.values()[0]['imports'].keys()
 component={'name': config.keys()[0], 'imports' : importlist, 'exports' : exportlist}
 
 # Determine the height of the box needed:
@@ -24,7 +40,7 @@ doc = et.Element('svg', width='280', height=str(height), version='1.1', xmlns='h
  
 def draw_component(doc, component):
  
-  titlewidth=len(component['name'])*28
+  titlewidth=len(component['name'])*23
   # Add the top left corner rounded rectangle where the component title goes
   et.SubElement(doc, 'rect', ry='10', y='10', x='10', height='50', width=str(titlewidth), style = 'fill:#f2f2f2;fill-opacity:1;stroke:#999999;stroke-width:2;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0')
 
@@ -36,37 +52,42 @@ def draw_component(doc, component):
   text.text=component['name'] 
   doc.append(text)
 
-  # Add the import statements
-  text=et.Element('text', style='font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y='70')
-  text.text='@imports' 
-  doc.append(text)
-  
-  text=et.Element('text', style='font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y='85')
   if len(importlist)>0:
-    text.text=importlist[0] 
-    if len(importlist)>1:
-      for imports in importlist[1:]:
-        text.text+=', ' + imports
-    doc.append(text)
-
+      # Add the import statements
+  
+      text=et.Element('text', style='font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y='70')
+      text.text='@imports' 
+      doc.append(text)
+  
+      text=et.Element('text', style='font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y='85')
+      text.text=importlist[0] 
+      if len(importlist)>1:
+          for imports in importlist[1:]:
+              text.text+=', ' + imports
+      doc.append(text)
 
   offset = 100 + 12 * len(importlist)
 
-  # Add the export statements
-  text=et.Element('text', style='font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y=str(offset))
-  text.text='@exports' 
-  doc.append(text)
-  
-  text=et.Element('text', style='font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y=str(offset+15))
   if len(exportlist)>0:
-    text.text=exportlist[0] 
-    if len(exportlist)>1:
-      for exports in exportlist[1:]:
-        text.text+=', ' + exports
-    doc.append(text)
-
-def write_document(filename,doc):
-  f = open(filename, 'w')
+      # Add the export statements
+      text=et.Element('text', style='font-size:16px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y=str(offset))
+      text.text='@exports' 
+      doc.append(text)
+  
+      text=et.Element('text', style='font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:begin;line-height:100%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:begin;fill:#666666;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans', x='20', y=str(offset+15))
+      text.text=''
+      
+      for i in range(0,len(exportlist)):
+          item=top['exports'][exportlist[i]]
+          text.text += exportlist[i]
+          print item, item[0]
+          if item is dict and item.has_key('units'):
+              text.text += '[' + item['units'] + ']'
+          if item is list and item.index('units')>-1:
+              text.text += '[' + item.pop('units') + ']'
+          if len(exportlist)>=i:
+              text.text += ', '
+      doc.append(text)
 
 def write_document(filename,doc):
   f = open(filename, 'w')
@@ -75,7 +96,6 @@ def write_document(filename,doc):
   f.write('\"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\">\n')
   f.write(et.tostring(doc))
   f.close()
-
 
 draw_component(doc,component)
 write_document(component['name'] + '_component.svg',doc)
