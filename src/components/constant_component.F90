@@ -278,16 +278,47 @@ module constant_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer                :: petCount, localPet
-    character(ESMF_MAXSTR) :: name, message
-    type(ESMF_Clock)       :: clock
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,clock=clock, name=name, rc=rc)
-    call ESMF_ClockDestroy(clock, rc=rc)
-    write(message,'(A,A,A)') 'Constant component ', trim(name), ' finalized'
-    call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
+	  !> Obtain information on the component, especially whether there is a local
+	  !! clock to obtain the time from and to later destroy
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (.not.clockIsPresent) then
+			clock=parentClock
+    else 
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    !> Get the time and log it
+    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
    
-    rc=ESMF_SUCCESS
+    !! Here comes your own finalization code
+    !! 1. Destroy all fields that you created, be aware that other components
+    !!    might have interfered with your fields, e.g., moved them into a fieldBundle
+    !! 2. Deallocate all your model's internal allocated memory    
+    !! 3. Destroy your clock
+
+    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+  
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
 
   end subroutine Finalize
 

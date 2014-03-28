@@ -181,21 +181,21 @@ module empty_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
+	  !> Obtain information on the component, especially whether there is a local
+	  !! clock to obtain the time from and to later destroy
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
     if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+			clock=parentClock
+    else 
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+    !> Get the time and log it
     call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
@@ -207,16 +207,15 @@ module empty_component
     !! 2. Deallocate all your model's internal allocated memory    
     !! 3. Destroy your clock
 
-    call ESMF_ClockDestroy(clock, rc=rc)
+    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
   
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
-
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
 
   end subroutine Finalize
 
