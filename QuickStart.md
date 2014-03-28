@@ -6,8 +6,8 @@ These instructions should get you started on building your own coupled system wi
 - Fortran2003 compliant compiler (e.g. gfortran package)
 - ESMF (The Earth System Modeling Framework) with NetCDF (e.g. libnetcdf-dev package) and MPI (e.g. mpich2 package) support
 
-for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You may find some help at http://www.mossco.de/doc.
-The ESMF installation finally provides a file `esmf.mk`, those location must be provided to MOSSCO, e.g.:
+for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You may find some help at [www.mossco.de/doc](http://www.mossco.de/doc).
+The ESMF installation finally provides a file `esmf.mk`, this location must be provided to MOSSCO, e.g.:
 
 	export ESMFMKFILE=<path_to_esmf_install>/lib/lib0/Linux.gfortran.64.mpich2.esmf6/esmf.mk
 
@@ -27,22 +27,22 @@ For these models, we will combine several MOSSCO components (you can find them i
 
 First, define the directories where MOSSCO should be located on your system, and get the codes:
 
-	`export MOSSCO_DIR=$HOME/MOSSCO/mossco-code`
-	`export MOSSCO_SETUPDIR=$HOME/MOSSCO/mossco-setups`
-	`git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR`
-	`git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR`
+	export MOSSCO_DIR=$HOME/MOSSCO/mossco-code
+	export MOSSCO_SETUPDIR=$HOME/MOSSCO/mossco-setups
+	git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
+	git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
 
 For those not already working with their own FABM and GOTM codes, the easiest way to obtain and use them within MOSSCO is:
 
-   `cd $MOSSCO_DIR`
-   `make fabm-git gotm-git`
+    cd $MOSSCO_DIR
+    make fabm-git gotm-git
 
 This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system. Alternatively, MOSSCO checks for the environment variables `MOSSCO_FABMDIR`, `MOSSCO_GOTMDIR`, `FABMDIR` and `GOTMDIR`, the latter ones usually already set for the individual work with these models. `MOSSCO_FABMDIR` and `MOSSCO_GOTMDIR` (which can be different from `FABMDIR` and `GOTMDIR`) indicate that MOSSCO is allowed to initiate compilations within these model directories. If only `FABMDIR` and `GOTMDIR` are available, the user is responsible for the proper compilation of the models.
 	
 Next, define all environment variables that are needed for FABM, GOTM and MOSSCO (these may vary on your system), e.g.:
 
-	`export FORTRAN_COMPILER=GFORTRAN`
-	`export NETCDF_VERSION=NETCDF4`
+	export FORTRAN_COMPILER=GFORTRAN
+	export NETCDF_VERSION=NETCDF4
 
 Finally, build the MOSSCO infrastructure
 
