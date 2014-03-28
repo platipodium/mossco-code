@@ -1,0 +1,13 @@
+coupling:
+  - components: 
+     - constant
+     - empty
+    interval: 2 d 
+  - components: 
+     - empty
+     - netcdf
+    interval: 17 h
+  - components: 
+     - netcdf
+     - constant
+    interval: 23 h

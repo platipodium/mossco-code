@@ -1,0 +1,5 @@
+coupling:
+  - components: 
+     - benthos
+     - netcdf
+    interval: 8 h
