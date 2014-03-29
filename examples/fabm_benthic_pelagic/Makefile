@@ -22,7 +22,7 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LIBS := -lsediment -lconstant -lerosed -lmossco_erosed -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
+LIBS := -lsediment -lconstant -lmossco_erosed -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
@@ -32,7 +32,7 @@ LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
-.PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm libmossco_erosed liberosed
+.PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm libmossco_erosed
 
 all: exec
 exec: fabm_benthic_pelagic
@@ -48,20 +48,17 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant liberosed libmossco_netcdf:
+libsediment libconstant libmossco_erosed libmossco_netcdf:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libpelagicbenthiccoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators pelagicbenthiccoupler benthicpelagiccoupler
 
-libmossco_erosed libmossco_sediment libsolver:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
-
 main.o: toplevel_component.o main.F90 libmossco_util
 main.F90: ../common/main.F90
 	ln -f $< $@
 
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libsediment libmossco_sediment libsolver libconstant libgotm libpelagicbenthiccoupler libmossco_erosed liberosed libmossco_netcdf
+toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler libmossco_erosed libmossco_netcdf
 
 clean: extraclean
 

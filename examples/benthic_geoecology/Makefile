@@ -22,7 +22,7 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LIBS := -lconstant -lerosed -lmossco_erosed -lmossco_benthos -lmossco_netcdf -lesmf  $(LIBS)
+LIBS := -lconstant -lmossco_erosed -lmossco_benthos -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
@@ -32,7 +32,7 @@ LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
-.PHONY: all exec libmossco_gotmfabm libconstant libgotm libmossco_erosed liberosed libmossco_benthos
+.PHONY: all exec libmossco_gotmfabm libconstant libgotm libmossco_erosed libmossco_benthos
 
 all: exec
 exec: benthic_geoecology
@@ -48,17 +48,14 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant liberosed libmossco_benthos libmossco_netcdf:
+libsediment libconstant libmossco_erosed libmossco_benthos libmossco_netcdf:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
-
-libmossco_erosed libmossco_benthos libsolver:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 main.o: toplevel_component.o main.F90 libmossco_util
 main.F90: ../common/main.F90
 	ln -f $< $@
 
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libsolver libconstant libgotm libmossco_erosed liberosed libmossco_benthos libmossco_netcdf
+toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libconstant libgotm libmossco_erosed libmossco_benthos libmossco_netcdf
 
 clean: extraclean
 

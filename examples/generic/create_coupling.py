@@ -913,7 +913,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'constant'   : ['constant'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
-        'erosed'     : ['erosed', 'mossco_erosed'],
+        'erosed'     : ['mossco_erosed'],
         'netcdf'     : ['mossco_netcdf'],
         'simplewave' : ['mossco_simplewave'],
         'empty'      : ['empty'],
@@ -930,7 +930,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthos'    : ['libmossco_benthos'],
-        'erosed'     : ['liberosed'],
+        'erosed'     : ['libmossco_erosed'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm_sediment' : ['libsediment', 'libmossco_sediment', 'libsolver'],
@@ -1009,7 +1009,7 @@ libmossco_gotmfabm libgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libmossco_clm liberosed libmossco_fabm0d:
+libsediment libconstant libmossco_clm libmossco_erosed libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libempty libmossco_simplewave libmossco_netcdf libmossco_benthos:

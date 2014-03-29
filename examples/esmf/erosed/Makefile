@@ -15,7 +15,7 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lerosed -lmossco_erosed -lmossco_util -lesmf $(LIBS)
+LIBS := -lmossco_erosed -lmossco_util -lesmf $(LIBS)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
@@ -28,14 +28,14 @@ erosed: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
 	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
 
-liberosed:
+libmossco_erosed:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 	
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 	
 main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 liberosed
+toplevel_component.o: toplevel_component.F90 libmossco_erosed
 main.F90: ../../common/main.F90
 	ln -f  $< $@
 

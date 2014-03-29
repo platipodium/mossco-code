@@ -23,7 +23,7 @@ SUBDIRS=gotm remtc
 TARGETS=libempty libconstant libmossco_clm libmossco_benthos libmossco_simplewave libmossco_netcdf
 
 ifeq ($(MOSSCO_EROSED),true)
-TARGETS += liberosed
+TARGETS += libmossco_erosed
 endif
 
 ifeq ($(MOSSCO_FABM),true)
@@ -55,7 +55,12 @@ libmossco_benthos_drivers: prefix  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mi
 libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 libmossco_simplewave: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
 libmossco_netcdf: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o)
-libmossco_erosed: liberosed
+libmossco_erosed: erosed_driver erosed_component
+.PHONY: erosed_driver
+erosed_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_erosed
+.PHONY: erosed_component
+erosed_component: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosed_component.o)
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
@@ -67,9 +72,7 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 #libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 #libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o) $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
-liberosed: prefix libmossco_util erosed_drv $(MOSSCO_LIBRARY_PATH)/liberosed.a(erosed_component.o)
-erosed_drv:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_erosed
+
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
 libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
@@ -99,11 +102,6 @@ fabm_sediment_component.o: fabm_sediment_component.F90
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_sediment
 	$(F90) $(CPPFLAGS) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
 
-#erosed_component.o: erosed_component.F90
-#	@echo "Compiling $<"
-#	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_erosed
-#	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
 gotm_component.o: gotm_component.F90
@@ -126,7 +124,7 @@ extraclean:
 	@-rm -f getm_component.o
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libsediment.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgetm.a
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/liberosed.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a
