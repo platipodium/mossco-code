@@ -98,7 +98,7 @@ libmossco_erosed_dependencies: prefix							\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/sand_mud.o)
 
 libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies 			\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(delft_erosed_driver.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosed_driver.o)
 
 # Generic section
 
@@ -111,7 +111,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
-	@-rm -f $(MOSSCO_MODULE_PATH)/delft_erosed_driver.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/erosed_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a
 	$(RM) $(EROSED_OBJS)
