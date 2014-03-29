@@ -33,7 +33,7 @@ program example
 ! NONE
 !!--declarations----------------------------------------------------------------
 
-    use mossco_erosed
+    use erosed_driver
 
     !
     implicit none
