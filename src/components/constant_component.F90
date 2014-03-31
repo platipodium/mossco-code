@@ -142,9 +142,9 @@ module constant_component
         !! format of each line is:
         !!   some_standard_name  12.345
         read(fileunit,*, iostat=rc) varname,floatValue
-	      if (rc /= 0) then
+        if (rc /= 0) then
           exit
-	      endif
+        endif
         !> @todo this routine should exit if no values have been read (empty file, 
         !! or empty lines
 
@@ -303,13 +303,13 @@ module constant_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-	  !> Obtain information on the component, especially whether there is a local
-	  !! clock to obtain the time from and to later destroy
+    !> Obtain information on the component, especially whether there is a local
+    !! clock to obtain the time from and to later destroy
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.clockIsPresent) then
-			clock=parentClock
+      clock=parentClock
     else 
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

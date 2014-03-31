@@ -213,7 +213,7 @@ module remtc_ocean_component
         enddo
       enddo
     enddo
-		farrayPtr=variables(:,:,:,1+size(exportField))                
+    farrayPtr=variables(:,:,:,1+size(exportField))                
   
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -348,7 +348,7 @@ module remtc_ocean_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-	  do k=1,size(export_variables)
+    do k=1,size(export_variables)
       call ESMF_StateGet(exportState,export_variables(k)%standard_name, field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -356,7 +356,7 @@ module remtc_ocean_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
-	  do k=1,size(import_variables)
+    do k=1,size(import_variables)
       call ESMF_StateGet(importState,import_variables(k)%standard_name, field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -364,7 +364,7 @@ module remtc_ocean_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
-	  if (allocated(variables)) deallocate(variables)
+    if (allocated(variables)) deallocate(variables)
  
     if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)

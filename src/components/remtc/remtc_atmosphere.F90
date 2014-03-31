@@ -116,7 +116,7 @@ module remtc_atmosphere_component
     enddo
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-		export_variables(1)%standard_name="air_temperature"
+    export_variables(1)%standard_name="air_temperature"
 
     call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
                                  totalCount=farray_shape,rc=rc)
@@ -149,8 +149,8 @@ module remtc_atmosphere_component
         enddo
       enddo
     enddo
-		farrayPtr=variables(:,:,:,1)
-		
+    farrayPtr=variables(:,:,:,1)
+
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -255,7 +255,7 @@ module remtc_atmosphere_component
 
 
 
-	  do k=1,size(export_variables)
+    do k=1,size(export_variables)
       call ESMF_StateGet(exportState,export_variables(k)%standard_name, field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -263,7 +263,7 @@ module remtc_atmosphere_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
 
-	  if (allocated(variables)) deallocate(variables)
+    if (allocated(variables)) deallocate(variables)
 
     call ESMF_ClockDestroy(clock, rc=rc)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
