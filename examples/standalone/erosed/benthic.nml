@@ -3,7 +3,7 @@ nmlb= 1
 nmub= 1
 morfac=1.0
 nfrac= 2 
-iunderlyr= 2
-flufflyr= 1
+iunderlyr= 1
+flufflyr= 0
 anymud=.true.
 /      
