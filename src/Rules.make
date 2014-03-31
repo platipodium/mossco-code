@@ -35,14 +35,14 @@ ifndef ESMFMKFILE
 else
   include $(ESMFMKFILE)
   export MOSSCO_ESMF=true
-  ESMF_COMM = $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d' ' -f3-)
-  ifneq ("x$(ESMF_COMM)","xmpiuni")
+  ESMF_COMM = $(strip $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
+  ifneq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI ?= true
   else
     export MOSSCO_MPI ?= false
   endif
-  ESMF_NETCDF = $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d' ' -f3-)
-  ifneq ("x$(ESMF_NETCDF)","x")
+  ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
+  ifneq ("$(ESMF_NETCDF)","")
     export MOSSCO_NETCDF ?= true
   else
     export MOSSCO_NETCDF ?= false
