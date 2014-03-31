@@ -17,7 +17,7 @@
 module erosed_component
 
   use esmf
-  use mossco_erosed !, only : initerosed, erosed, getfrac_dummy
+  use erosed_driver !, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
   use mossco_state
 
@@ -680,25 +680,21 @@ end if
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
 
-    
-    !> Get the time and log it
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
@@ -736,16 +732,18 @@ end if
     !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
     !             & tcrdep,  tcrero, tcrfluff)
 
-    
-    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
-   
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
+
+
+
   end subroutine Finalize
 
   function d90_from_d50(d50)
