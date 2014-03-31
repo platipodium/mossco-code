@@ -85,6 +85,7 @@ $(warning FABMHOST changed from $(FABMHOST) to mossco)
 endif
 endif
 export FABMHOST=mossco
+endif
 
 # 3b. GOTM
 MOSSCO_GOTM=false
@@ -333,7 +334,6 @@ export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 LDFLAGS += $(ESMF_F90LINKOPTS)
 LDFLAGS += $(LIBRARY_PATHS)
 #export LDFLAGS
-endif
 
 # Make targets
 .PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external

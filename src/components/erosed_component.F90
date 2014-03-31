@@ -17,7 +17,7 @@
 module erosed_component
 
   use esmf
-  use mossco_erosed, only : initerosed, erosed, getfrac_dummy
+  use erosed_driver, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
   use mossco_state
 

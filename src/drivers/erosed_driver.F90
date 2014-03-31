@@ -16,7 +16,7 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
-module mossco_erosed
+module erosed_driver
 
 !This Module needs the following subroutines form delft-example programs:
 !eromud.f90
@@ -871,4 +871,4 @@ E = sandmud_arguments%E
 
 end subroutine get_erosion_velocity
 
-end module mossco_erosed
+end module erosed_driver
