@@ -297,7 +297,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !
                 !   Compute source and sink fluxes for cohesive sediment (mud)
 
-                write (*,*) 'cohesive ..'
+!                write (*,*) 'cohesive ..'
                 fracf   = 0.0_fp
                 if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
                 !
