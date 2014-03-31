@@ -21,7 +21,7 @@ This file could look as follows:
 
 ### `config.rc`: NetCDF information
 
-* PLEASE BE AWARE THAT THIS CONFIG FILE IS NOT FULLY FUNCTIONAL YET.*
+* PLEASE BE AWARE THAT THIS CONFIG FILE IS NOT FULLY FUNCTIONAL YET AND SERVES AS AN EXAMPLE ONLY.*
  
 It contains information about the content of the CLM atmospheric data files which is generated from an `NF90_INQUIRE` call augmented with some switches and name tags and also gives the netcdf-names and -longnames. The legend is given in the header of the file. "nvar" is self-explaining. The flag "ACT" allows a user of the module to select the variables to be used as well as their ESMF_Field names in the column "NAME". A scale factor can be given in the column labelled "SCALE".
 
@@ -64,9 +64,9 @@ This file could look similar to the following (output from `ncdump -h clm_grid.n
 	  :title = "CLM sample grid" ;
 	}
 
-
+See this information from the ESMF Manual on [SCRIP](http://www.earthsystemmodeling.org/esmf_releases/public/ESMF_6_3_0r/ESMF_refdoc/node3.html#SECTION03024000000000000000)
 
 
 ### `atmos.nc`: Atmospheric data file
-This file contains the atmospheric data.  You can obtain this data file from the CoastDat database located at http://www.coastdat.de/data_all/index.php.
+This file contains the atmospheric data.  You can obtain this data file from the CoastDat database located at [http://www.coastdat.de/data_all/index.php](http://www.coastdat.de/data_all/index.php) .
 
