@@ -263,7 +263,6 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 !
 !! executable statements ------------------
 !
-    !
 
     !   User defined parameters
     !
@@ -297,26 +296,34 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
             if (sedtyp(l)==SEDTYP_COHESIVE) then
                 !
                 !   Compute source and sink fluxes for cohesive sediment (mud)
+
+                write (*,*) 'cohesive ..'
+                fracf   = 0.0_fp
+                if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
                 !
+!
                 if (present (Bioeffects)) then
 #ifdef DEBUG
                  write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (1,1,1)
 
                  write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
-#endif
-                 eropar(l,nm)  = eropar(l,nm) * Bioeffects%ErodibilityEffect (1,1,1)
-                 tcrero(l,nm)  = tcrero(l,nm) * Bioeffects%TauEffect (1,1,1)
-                endif
 
-                fracf   = 0.0_fp
-                if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
-                !
+                 write (*,*) 'eropar(l,nm)= in erosed',  eropar(l,nm)
+                 write (*,*) 'tcrero(l,nm)=', tcrero(l,nm)
+
+                 write (*,*) 'Bio eropar(l,nm)=', eropar(l,nm)* Bioeffects%ErodibilityEffect (1,1,1)
+                 write (*,*) 'Bio tcrero(l,nm)=', tcrero(l,nm)* Bioeffects%TauEffect (1,1,1)
+#endif
 
                 call  eromud_arguments%set ( ws(l,nm)      , fixfac(l,nm)  , taub(nm)      , frac(l,nm)     , fracf  , &
-                          & tcrdep(l,nm)  , tcrero(l,nm)  , eropar(l,nm)  , flufflyr       , mfltot , &
-                          & tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
+                          & tcrdep(l,nm)  , tcrero(l,nm) * Bioeffects%TauEffect (1,1,1) , eropar(l,nm)* Bioeffects%ErodibilityEffect (1,1,1)  ,  &
+                         & flufflyr       , mfltot , tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
 
-
+                else
+                 call  eromud_arguments%set ( ws(l,nm)      , fixfac(l,nm)  , taub(nm)      , frac(l,nm)     , fracf  , &
+                          & tcrdep(l,nm)  , tcrero(l,nm)  , eropar(l,nm)    , flufflyr       , mfltot,  &
+                         &  tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
+                endif
                 call eromud_arguments%run ()
 
                 call eromud_arguments%get(sour (l,nm), sink (l,nm), sourf (l,nm), sinkf (l,nm) )
@@ -325,17 +332,23 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !
                 ! Compute correction factor for critical bottom shear stress with sand-mud interaction
                 !
+                write (*,*) 'pmcrit = ',pmcrit(nm)
                 if ( pmcrit(nm) > 0.0_fp ) then
                     smfac = ( 1.0_fp + mudfrac(nm) ) ** betam
+    !                write (*,*) 'betam ', betam
+     !               write (*,*) ' mudfrac',mudfrac
                 else
                     smfac = 1.0_fp
                 endif
-
+                write (*,*) ' smfac= ', smfac
                 if (present (Bioeffects)) then
 #ifdef DEBUG
                     write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
 #endif
                     smfac =smfac * Bioeffects%TauEffect(1,1,1)
+#ifdef DEBUG
+                    write (*,*) 'Bio smfac= ', smfac
+#endif
                 end if
                 !
                 !   Apply sediment transport formula ( in this case vanRijn (1984) )
@@ -632,7 +645,8 @@ source = eromud_arguments%sour
 sinkf = eromud_arguments%sinkf
 sourcef = eromud_arguments%sourf
 
-!write (*,*) ' in get_fluxes :: sink ', sink
+!write (*,*) ' in eromud get_fluxes :: sink ', sink
+!write (*,*) ' in eromud get_fluxes :: source ', source
 
 end subroutine get_fluxes
 
@@ -720,8 +734,8 @@ real (fp), intent (out) :: source, sink
 sink = erosand_arguments%sink
 source = erosand_arguments%sour
 
-!write (*,*) ' in get_fluxes_s :: source ', source
-
+!write (*,*) ' in get_fluxes_s in erosand:: source ', source
+!write (*,*) ' in get_fluxes_s in erosand:: sink ', sink
 
 end subroutine get_fluxes_s
 
