@@ -26,8 +26,11 @@ ifeq ($(MOSSCO_ESMF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o)\
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o) 
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o)
+ifeq ($(MOSSCO_NETCDF),true)
+LIBMOSSCO_UTIL_OBJS+= 							\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o)
+endif
 endif
 
 
