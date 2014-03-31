@@ -332,7 +332,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !
                 ! Compute correction factor for critical bottom shear stress with sand-mud interaction
                 !
-                write (*,*) 'pmcrit = ',pmcrit(nm)
+                !write (*,*) 'pmcrit = ',pmcrit(nm)
                 if ( pmcrit(nm) > 0.0_fp ) then
                     smfac = ( 1.0_fp + mudfrac(nm) ) ** betam
     !                write (*,*) 'betam ', betam
@@ -340,7 +340,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 else
                     smfac = 1.0_fp
                 endif
-                write (*,*) ' smfac= ', smfac
+                !write (*,*) ' smfac= ', smfac
                 if (present (Bioeffects)) then
 #ifdef DEBUG
                     write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
