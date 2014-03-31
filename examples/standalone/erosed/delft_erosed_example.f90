@@ -33,10 +33,8 @@ program example
 ! NONE
 !!--declarations----------------------------------------------------------------
 
-
-    use erosed_driver
+    use mossco_erosed
     use BioTypes , only :  BioturbationEffect
-
     !
     implicit none
 
@@ -256,8 +254,8 @@ end if
 if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(1,1,1))
 if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(1,1,1))
 
-BioEffects%ErodibilityEffect = 2.0
-BioEffects%TauEffect = 1.5
+BioEffects%ErodibilityEffect = 4.0
+BioEffects%TauEffect = 0.5
 
     !
     ! ================================================================================
