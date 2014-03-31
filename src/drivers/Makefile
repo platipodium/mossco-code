@@ -17,7 +17,11 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS = libmossco_clm libmossco_benthos
+TARGETS = libmossco_benthos
+ifeq ($(MOSSCO_NETCDF),true)
+TARGETS+=libmossco_clm
+endif
+
 ifeq ($(MOSSCO_FABM),true)
 TARGETS+=libmossco_sediment libmossco_fabm0d
 ifeq ($(MOSSCO_GOTM),true)
