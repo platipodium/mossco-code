@@ -52,6 +52,14 @@ else
     export F90 = $(ESMF_F90COMPILER)
     export FC  = $(ESMF_F90COMPILER)
     export F77 = $(ESMF_F77COMPILER)
+    export ESMF_FC = $(notdir $(ESMF_F90COMPILER))
+    ifeq ($(ESMF_FC),mpif90)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
+      ESMF_FC:=$(notdir $(ESMF_FC))
+      ifeq ($(ESMF_FC),)
+        $(error Could not derive FORTRAN_COMPILER from ESMFMKFILE.)
+      endif
+    endif
     MOSSCO_F03VERSION==$(shell $(F90) --version | head -1)
   endif
 endif
@@ -363,6 +371,9 @@ info:
 	@echo LINKDIRS = $(LINKDIRS)
 	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
 	@env | grep ^F90 | sort 
+ifeq ($(MOSSCO_ESMF),true)
+	@echo ESMF_FC = $(ESMF_FC)
+endif
 ifeq ($(MOSSCO_FABM),true)
 	@env | grep ^FABM | sort 
 endif
