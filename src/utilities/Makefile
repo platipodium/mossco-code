@@ -17,25 +17,36 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libsolver
+.PHONY: libsolver libmossco_util
+
+LIBMOSSCO_UTIL_OBJS=							\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_dictionary.o)	\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+ifeq ($(MOSSCO_ESMF),true)
+LIBMOSSCO_UTIL_OBJS+= 							\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o) 	\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o)
+endif
+
+
 
 # Make targets
 
 all: libsolver libmossco_util
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
-libmossco_util:  prefix sha $(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o \
-          mossco_variable_types.o mossco_time.o mossco_state.o mossco_netcdf.o \
-	  mossco_dictionary.o)
+libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 
 #@todo there should be a generic rule for the mods
-$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
-$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.o
-$(MOSSCO_MODULE_PATH)/mossco_state.mod: mossco_state.o
-$(MOSSCO_MODULE_PATH)/mossco_time.mod: mossco_time.o
-$(MOSSCO_MODULE_PATH)/mossco_strings.mod: mossco_strings.o
-$(MOSSCO_MODULE_PATH)/mossco_netcdf.mod: mossco_netcdf.o mossco_variable_types.o
-$(MOSSCO_MODULE_PATH)/mossco_dictionary.mod: mossco_dictionary.o
+#$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
+#$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.o
+#$(MOSSCO_MODULE_PATH)/mossco_state.mod: mossco_state.o
+#$(MOSSCO_MODULE_PATH)/mossco_time.mod: mossco_time.o
+#$(MOSSCO_MODULE_PATH)/mossco_strings.mod: mossco_strings.o
+#$(MOSSCO_MODULE_PATH)/mossco_netcdf.mod: mossco_netcdf.o mossco_variable_types.o
+#$(MOSSCO_MODULE_PATH)/mossco_dictionary.mod: mossco_dictionary.o
 
 clean: extraclean
 extraclean:
