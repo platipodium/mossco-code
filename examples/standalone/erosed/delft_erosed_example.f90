@@ -33,14 +33,24 @@ program example
 ! NONE
 !!--declarations----------------------------------------------------------------
 
+
     use erosed_driver
+    use BioTypes , only :  BioturbationEffect
 
     !
     implicit none
 
+  !  type BioturbationEffect
+  !    real (fp),dimension(:,:,:), pointer  :: TauEffect => null()          !effect on critical bed shear stress
+  !    real (fp),dimension(:,:,:), pointer  :: ErodibilityEffect => null()  !effect on erodibility parameter
+  !    real (fp)          , pointer  :: d50=> null()                 !effect on changing sediment grain distribution
+  !    real (fp)          , pointer  :: MudContent=> null()
+  !  end type BioturbationEffect
+
+    type (BioturbationEffect)                           :: bioeffects
     !
-    integer                                    :: nmlb           ! first cell number
-    integer                                    :: nmub           ! last cell number
+    integer                                    :: nmlb           ! first (vertical) column number
+    integer                                    :: nmub           ! last (vertical) column number-> as a matter of fact number of cells in plain
     integer                                    :: flufflyr       ! switch for fluff layer concept
     integer                                    :: iunderlyr      ! Underlayer mechanism
     integer                                    :: nfrac          ! number of sediment fractions
@@ -110,7 +120,7 @@ program example
 !    namelist /sedparams/ sedd90      != 0.0002_fp                     ! 90% diameter sediment fraction [m]
 
 !    namelist /sedparams/ frac        != 0.5_fp
-   
+
 
 
     inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
@@ -126,7 +136,7 @@ if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
  read (UnitNr, nml=globaldata, iostat = istat)
 if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
  write (*,*)' g= ', g
-write (*,*), ' rhow= ', rhow
+write (*,*) ' rhow= ', rhow
  close (UnitNr)
 end if
 !
@@ -145,7 +155,7 @@ end if
 !    nmlb    = 1                 ! first cell number
 !    nmub    = 1                 ! last cell number
     tstart  = 0.0               ! start time of computation [s]
-    tend    = 50000.0            ! end time of computation [s]
+    tend    = 5000.0            ! end time of computation [s]
     dt      = 100.0             ! time step [s]
 !    morfac  = 1.0               ! morphological scale factor [-]
     nstep  = (tend-tstart)/dt;  ! number of time steps
@@ -176,7 +186,7 @@ if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
 if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
 
 write (*,*)' nmlb ', nmlb, 'nmub ',  nmub, 'morfac ', morfac, 'nfrac ', nfrac, 'iunderlyr', iunderlyr &
-    & , ' flufflyr', flufflyr,' anymud ', anymud 
+    & , ' flufflyr', flufflyr,' anymud ', anymud
 
 close (UnitNr)
 end if
@@ -186,8 +196,7 @@ end if
 
     call initerosed(nmlb,   nmub,   nfrac )
 
-
-    !
+       !
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
     allocate (sedd50    (nfrac))
@@ -222,7 +231,7 @@ if (exst.and.(.not.opnd)) then
  UnitNr = 569
 
  open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
- 
+
 if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
 
  read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
@@ -242,6 +251,13 @@ if (istat/=0) write (*,*) 'error by reading  sedtyp '
  if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
  close (UnitNr)
 end if
+
+!initializing Bioeffects
+if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(1,1,1))
+if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(1,1,1))
+
+BioEffects%ErodibilityEffect = 2.0
+BioEffects%TauEffect = 1.5
 
     !
     ! ================================================================================
@@ -328,19 +344,20 @@ end if
     !   Determine fractions of all sediments in the top layer and compute the mud fraction.
 
         call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
-       ! write (*,*) ' getfrac just finished '   
+       ! write (*,*) ' getfrac just finished '
 !
         !
         r0 = r1
         h0 = h1
+
         !
         !   Computing erosion fluxes
         call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
                 & ws        , umod    , h0        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf                         )
+                & sink      , sinkf   , sour     , sourf , bioeffects            )
         !   Compute flow
-       ! write (*,*) ' erosed finished for step ',i, 'from total step ', nstep 
+       ! write (*,*) ' erosed finished for step ',i, 'from total step ', nstep
         !HN. ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
         !
         h1      = h0
@@ -361,7 +378,7 @@ end if
 !                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
              write (707, '(I4,4x,I4,4x,I5,4(4x,F8.4))' ) i, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
-             write (*,  '(I4,4x,I4,4x,I5,4(4x,F8.4))' )  i, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
+          !   write (*,  '(I4,4x,I4,4x,I5,4(4x,F8.4))' )  i, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
             enddo
         enddo
         !
