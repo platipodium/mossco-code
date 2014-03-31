@@ -17,7 +17,7 @@
 module erosed_component
 
   use esmf
-  use erosed_driver, only : initerosed, erosed, getfrac_dummy
+  use mossco_erosed !, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
   use mossco_state
 
@@ -28,9 +28,9 @@ module erosed_component
   private
 
   ! These Parameters are defined in sedparam.inc seperately for delft-routine
-  integer, parameter :: SEDTYP_NONCOHESIVE_TOTALLOAD = 0
-  integer, parameter :: SEDTYP_NONCOHESIVE_SUSPENDED = 1
-  integer, parameter :: SEDTYP_COHESIVE              = 2
+ ! integer, parameter :: SEDTYP_NONCOHESIVE_TOTALLOAD = 0
+ ! integer, parameter :: SEDTYP_NONCOHESIVE_SUSPENDED = 1
+ ! integer, parameter :: SEDTYP_COHESIVE              = 2
 
   !! @todo hn: read CF documnetation for correct name of this
   !size_classes_of_upward_flux_of_pim_at_bottom
@@ -147,8 +147,8 @@ contains
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
    namelist /benthic/   anymud       != .true.
 
-!    namelist /sedparams/ sedtyp(1)   != SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
-!    namelist /sedparams/ sedtyp(2)   != SEDTYP_COHESIVE               ! cohesive sediment (mud)
+!    namelist /sedparams/ sedtyp(1)   !1= SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
+!    namelist /sedparams/ sedtyp(2)   !2= SEDTYP_COHESIVE               ! cohesive sediment (mud)
 !    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
 !    namelist /sedparams/ rhosol      != 2650.0_fp                     ! specific density [kg/m3]
 !    namelist /sedparams/ sedd50      != 0.0001_fp                     ! 50% diameter sediment fraction [m]
@@ -160,26 +160,26 @@ contains
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime
     logical               :: clockIsPresent
-    
+
     rc = ESMF_SUCCESS
-     
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+
+    !! Check whether there is already a clock (it might have been set
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
     call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     else
       clock = ESMF_ClockCreate(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     !! Log the call to this function
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -189,13 +189,13 @@ contains
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
-    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+    !write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 567
 
  open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
- write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+ !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
  read (UnitNr, nml=globaldata, iostat = istat)
 
@@ -207,16 +207,16 @@ end if
 
     !
     inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
-    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 568
 
  open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
- write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+ !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
  read (UnitNr, nml=benthic, iostat = istat)
-write (*,*) 'nmlb  ', nmlb , nmub
+
  close (UnitNr)
 end if
 !    nmlb    = 1                 ! first cell number
@@ -235,6 +235,7 @@ end if
 
 
     call initerosed( nmlb, nmub, nfrac)
+
 
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
@@ -273,13 +274,13 @@ end if
     massfluff=0.0_fp
 
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
-    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+  !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 569
 
  open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
- write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+ !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
  read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) ( cdryb(i), i=1, nfrac)
@@ -330,7 +331,7 @@ end if
     inquire (file ='delft_sediment_test.out', exist = lexist)
 
     if (lexist) then
-        write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
+  !      write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
         open (unit = 707, file = 'delft_sediment_test.out', status = 'REPLACE', action = 'WRITE')
     else
         open (unit = 707, file = 'delft_sediment_test.out', status = 'NEW', action = 'WRITE')
@@ -341,15 +342,12 @@ end if
 
 
     !> create grid
-   write (*,*) 'nfrac', nfrac
 
      grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
            coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
             name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-write (*,*) ' grid was just created'
 
-write (*,*) ' distgrid'
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac))
     size_classes_of_upward_flux_of_pim_at_bottom(1,1,:) = sink(:,1)-sour(:,1)
 
@@ -357,10 +355,8 @@ write (*,*) ' distgrid'
 !    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
 !    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
 
-write (*,*) ' allocations'
     !> create export fields
 
-write (*,*) ' state add'
   allocate(external_idx_by_nfrac(nfrac))
   allocate(nfrac_by_external_idx(nfrac))
   external_idx_by_nfrac(:)=-1
@@ -443,8 +439,8 @@ write (*,*) ' state add'
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
     integer               :: external_index
-    
-!#define DEBUG 
+
+!#define DEBUG
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -453,7 +449,7 @@ write (*,*) ' state add'
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -627,47 +623,47 @@ write (*,*) ' state add'
     !   Compute flow
     ! HN. @ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
     h1      = h0
-    umod    = abs(1.0_fp*sin(2*3.14*advancecount/runtimestepcount))
+    !umod    = abs(1.0_fp*sin(2*3.14*advancecount/runtimestepcount))
 
-    ! Loop over all depths
+    ! Loop over all cells
     do nm = nmlb, nmub
       taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm))
     enddo
 
-    !   Updating sediment concentration in water column
+    !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
             do nm = nmlb, nmub
                 rn(l,nm) = r0(l,nm) ! explicit
 !                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
-             write (707, '(I4,4x,I4,4x,I5,4(4x,F8.4))' ) advancecount, l, nm, sink(l,nm), sour (l,nm),frac (l,nm), mudfrac(nm)
+             write (707, '(I4,4x,I4,4x,I5,4(4x,F8.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(1,1,l), sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm)
             enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
       size_classes_of_upward_flux_of_pim_at_bottom(1,1,l) = &
-          sink(l,1)*frac(l,1)*porosity*rhosol(l) + ws(l,1)*spm_concentration(1,1,l)
+          sour(l,1)* 1000.0 - sink(l,1)*spm_concentration(1,1,l)
     enddo
         !
         !   Compute change in sediment composition of top layer and fluff layer
         !
-    mass       = 0.0_fp    ! change in sediment composition of top layer, [kg/m2]
-    massfluff  = 0.0_fp    ! change in sediment composition of fluff layer [kg/m2]
-        !
-    do l = 1, nfrac
-            do nm = nmlb, nmub
-                !
-                ! Update dbodsd value at nm
-                !
-                mass(l, nm) = mass(l, nm) + dt*morfac*( sink(l,nm)*rn(l,nm) - sour(l,nm) )
-                !
-                ! Update dfluff value at nm
-                !
-                if (flufflyr>0) then
-                    massfluff(l, nm) = massfluff(l, nm) + dt*( sinkf(l,nm)*rn(l,nm) - sourf(l,nm) )
-                endif
-            enddo
-    enddo
+!    mass       = 0.0_fp    ! change in sediment composition of top layer, [kg/m2]
+!    massfluff  = 0.0_fp    ! change in sediment composition of fluff layer [kg/m2]
+!        !
+!    do l = 1, nfrac
+!            do nm = nmlb, nmub
+!                !
+!                ! Update dbodsd value at nm
+!                !
+!                mass(l, nm) = mass(l, nm) + dt*morfac*( sink(l,nm)*rn(l,nm) - sour(l,nm) )
+!                !
+!                ! Update dfluff value at nm
+!                !
+!                if (flufflyr>0) then
+!                    massfluff(l, nm) = massfluff(l, nm) + dt*( sinkf(l,nm)*rn(l,nm) - sourf(l,nm) )
+!                endif
+!            enddo
+!    enddo
         !
 
   end subroutine Run
@@ -695,8 +691,12 @@ write (*,*) ' state add'
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
+
     
     !> Get the time and log it
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -735,15 +735,17 @@ write (*,*) ' state add'
     !! @todo uncomment next line
     !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
     !             & tcrdep,  tcrero, tcrfluff)
+
     
     if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finalized'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
-    
+   
   end subroutine Finalize
 
   function d90_from_d50(d50)
