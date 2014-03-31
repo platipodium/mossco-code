@@ -27,15 +27,13 @@ MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 
 # 2. ESMF stuff, only if ESMFMKFILE is declared. 
 #
+MOSSCO_ESMF=false
 ifndef ESMFMKFILE
-  ifndef MOSSCO_ESMF
-    $(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
-    export MOSSCO_ESMF=false
-  endif
   export FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
+  #$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
 else
   include $(ESMFMKFILE)
-  export MOSSCO_ESMF=true
+  MOSSCO_ESMF=true
   ESMF_COMM = $(strip $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI ?= true
@@ -71,6 +69,7 @@ else
     MOSSCO_F03VERSION==$(shell $(F90) --version | head -1)
   endif
 endif
+export MOSSCO_ESMF
 
 # 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
@@ -252,6 +251,8 @@ export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 # lahey nag nagintel pathscale pgi pgigcc sxcross xlf xlfgcc
 
 # determine the compiler used by FABM/GOTM/GETM
+ifdef FORTRAN_COMPILER
+
 ifeq (${MOSSCO_FABM},true)
 FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
 FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
@@ -279,6 +280,9 @@ $(warning F90 automatically determined from GOTM environment: F90=$(F90))
 endif
 endif
 
+export F90 ?= $(shell echo $(FORTRAN_COMPILER) | tr A-Z a-z)
+
+endif
 
 # Include directories
 INCLUDES += $(ESMF_F90COMPILEPATHS)
@@ -316,7 +320,7 @@ ifeq ($(FORTRAN_COMPILER),PGF90)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP=
 else
-$(error I don't know where to place modules with this compiler)
+$(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER))
 endif
 endif
 endif
