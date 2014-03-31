@@ -32,6 +32,7 @@ ifndef ESMFMKFILE
     $(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
     export MOSSCO_ESMF=false
   endif
+  export FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
 else
   include $(ESMFMKFILE)
   export MOSSCO_ESMF=true
@@ -60,6 +61,13 @@ else
         $(error Could not derive FORTRAN_COMPILER from ESMFMKFILE.)
       endif
     endif
+    ESMF_FORTRAN_COMPILER = $(shell echo $(ESMF_FC) | tr a-z A-Z)
+    ifdef FORTRAN_COMPILER
+      ifneq ("$(ESMF_FORTRAN_COMPILER)","$(FORTRAN_COMPILER)")
+        $(warning Overwriting FORTRAN_COMPILER=$(FORTRAN_COMPILER) with $(ESMF_FORTRAN_COMPILER))
+      endif
+    endif
+    export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
     MOSSCO_F03VERSION==$(shell $(F90) --version | head -1)
   endif
 endif
@@ -369,11 +377,12 @@ info:
 	@echo LDFLAGS = $(LDFLAGS)
 	@echo LIBS = $(LIBS)
 	@echo LINKDIRS = $(LINKDIRS)
-	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
-	@env | grep ^F90 | sort 
+	@echo FC = $(FC)
 ifeq ($(MOSSCO_ESMF),true)
 	@echo ESMF_FC = $(ESMF_FC)
 endif
+	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
+	@env | grep ^F90 | sort 
 ifeq ($(MOSSCO_FABM),true)
 	@env | grep ^FABM | sort 
 endif
