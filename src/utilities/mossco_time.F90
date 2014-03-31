@@ -20,7 +20,7 @@ subroutine MOSSCO_ClockSetTimeStepByAlarms(clock, rc)
 
   type(ESMF_TimeInterval) :: timeInterval
 
-	call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeInterval, rc)
+  call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeInterval, rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
   
   call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)

@@ -260,13 +260,13 @@ module link_coupler
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-	  !> Obtain information on the component, especially whether there is a local
-	  !! clock to obtain the time from and to later destroy
+    !> Obtain information on the component, especially whether there is a local
+    !! clock to obtain the time from and to later destroy
     call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.clockIsPresent) then
-			clock=parentClock
+      clock=parentClock
     else 
       call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

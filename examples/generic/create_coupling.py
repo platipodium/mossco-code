@@ -808,7 +808,7 @@ fid.write('''
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.clockIsPresent) then
-	clock=parentClock
+      clock=parentClock
     else 
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

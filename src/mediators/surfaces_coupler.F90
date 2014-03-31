@@ -69,61 +69,61 @@ module surfaces_coupler
  
     call ESMF_LogWrite("surfaces coupler initializing", ESMF_LOGMSG_INFO)
 
-	  call ESMF_StateGet(importState, itemCount=itemCount, nestedFlag=.false., rc=rc)
+    call ESMF_StateGet(importState, itemCount=itemCount, nestedFlag=.false., rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-		allocate(itemNames(itemCount))
-		allocate(itemTypeList(itemCount))
-		
-	  do i=1,itemCount
+    allocate(itemNames(itemCount))
+    allocate(itemTypeList(itemCount))
+
+    do i=1,itemCount
       
       call ESMF_StateGet(importState,itemNames(i), itemType, rc=rc)
       if (itemType == ESMF_STATEITEM_NOTFOUND) then
-	      call ESMF_LogWrite('Could not find item '//trim(itemNames(i))//'.', &
-	         ESMF_LOGMSG_ERROR)
-	      cycle
-	    endif
-      	  
-	    ! Issue warning for items of type ESMF_FieldBundle (not yet implemented)
-	    if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
-	      call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
-	         ', it is a FieldBundle.',ESMF_LOGMSG_INFO)
-	      cycle
-	    endif
+        call ESMF_LogWrite('Could not find item '//trim(itemNames(i))//'.', &
+          ESMF_LOGMSG_ERROR)
+        cycle
+      endif
+        
+     ! Issue warning for items of type ESMF_FieldBundle (not yet implemented)
+     if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+       call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
+         ', it is a FieldBundle.',ESMF_LOGMSG_INFO)
+       cycle
+     endif
 
-	    ! Issue warning for items of type ESMF_Array (not yet implemented)
-	    if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
-	      call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
-	         ', it is an Array.',ESMF_LOGMSG_INFO)
-	      cycle
-	    endif
+     ! Issue warning for items of type ESMF_Array (not yet implemented)
+     if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+       call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
+         ', it is an Array.',ESMF_LOGMSG_INFO)
+       cycle
+     endif
 
-	    ! Issue warning for items of type ESMF_ArrayBundle (not yet implemented)
-	    if (itemType == ESMF_STATEITEM_ARRAYBUNDLE) then
-	      call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
-	         ', it is an ArrayBundle.',ESMF_LOGMSG_INFO)
-	      cycle
-	    endif
+     ! Issue warning for items of type ESMF_ArrayBundle (not yet implemented)
+     if (itemType == ESMF_STATEITEM_ARRAYBUNDLE) then
+       call ESMF_LogWrite('Skipped item '//trim(itemNames(i))// &
+         ', it is an ArrayBundle.',ESMF_LOGMSG_INFO)
+       cycle
+     endif
 
-	    ! Only consider items of type ESMF_Field, but this currently does 
-	    ! not evaluate correctly, so 
-	    !> @todo evaluate ESMF_STATEITEM_FIELD
-	    !if (itemType /= ESMF_STATEITEM_FIELD) then
-	    !  call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is not a field',ESMF_LOGMSG_INFO)
-	    !  write(*,*) itemNames(i), itemTypeList(i), itemType, ESMF_STATEITEM_FIELD
-	    !  cycle
-	    !endif
-
-      ! Don't consider items that contain the string 'surface'
+     ! Only consider items of type ESMF_Field, but this currently does 
+     ! not evaluate correctly, so 
+     !> @todo evaluate ESMF_STATEITEM_FIELD
+     !if (itemType /= ESMF_STATEITEM_FIELD) then
+     !  call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is not a field',ESMF_LOGMSG_INFO)
+     !  write(*,*) itemNames(i), itemTypeList(i), itemType, ESMF_STATEITEM_FIELD
+     !  cycle
+     !endif
+    
+     ! Don't consider items that contain the string 'surface'
       if (index(itemNames(i),'surface')>0) then
         call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is already defined at surface',ESMF_LOGMSG_INFO)
-	      cycle
+        cycle
       endif
 
       ! Don't consider items that contain the string 'bottom'
       if (index(itemNames(i),'bottom')>0) then
         call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is already defined at bottom',ESMF_LOGMSG_INFO)
-	      cycle
+        cycle
       endif
   
       call ESMF_LogWrite("Seriously considering item "//trim(itemNames(i)), ESMF_LOGMSG_INFO)
@@ -140,13 +140,13 @@ module surfaces_coupler
       
       if (srcRank == 2) then
         call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is defined on 2D grid already',ESMF_LOGMSG_INFO)
-	      cycle
-	    endif
+        cycle
+      endif
      
       if (srcRank /= 3) then
         call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', it is not defined on 3D grid',ESMF_LOGMSG_WARNING)
-	      cycle
-	    endif
+        cycle
+      endif
       
       ! Now we're ready to consider this 3D field and create for each 3D field in the 
       ! import state the respective 2D fields in the export state at bottom and surface
@@ -160,14 +160,14 @@ module surfaces_coupler
         if (itemTypeList(1) /= ESMF_STATEITEM_NOTFOUND) then 
           call ESMF_LogWrite('Skipped item '//trim(itemNames(i))//', &
             there is already a corresponding bottom field',ESMF_LOGMSG_WARNING)
-	        cycle
-	      endif
+           cycle
+        endif
       endif
       
-	    call ESMF_LogWrite('Create item '//trim(itemNames(i))//'_at_bottom', &
-	      ESMF_LOGMSG_INFO)
-	    call ESMF_LogWrite('Create item '//trim(itemNames(i))//'_at_surface', &
-	      ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite('Create item '//trim(itemNames(i))//'_at_bottom', &
+        ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite('Create item '//trim(itemNames(i))//'_at_surface', &
+        ESMF_LOGMSG_INFO)
 
       call ESMF_FieldGet(srcField, farrayPtr=farrayPtr3d, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
