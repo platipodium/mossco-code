@@ -257,7 +257,7 @@ end do
 end function get_key
 
 
-subroutine dump(dict,indent)
+recursive subroutine dump(dict,indent)
 class(type_mossco_dictionary) :: dict
 character(len=*), optional    :: indent
 character(len=16)             :: curindent
