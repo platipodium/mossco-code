@@ -57,7 +57,7 @@ else
 endif
 
 .PHONY: external fabm-git gotm-git getm-git erosed-svn
-external: fabm-git gotm-git getm-git erosed-svn
+external: fabm-git gotm-git getm-git #erosed-svn
 
 fabm-git:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
