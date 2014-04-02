@@ -452,6 +452,19 @@ endif
 #	@cp $(MOSSCO_LIBRARY_PATH)/*.*  $(MOSSCO_INSTALL_PREFIX)/lib
 #	@cp $(MOSSCO_MODULE_PATH)/*.mod  $(MOSSCO_INSTALL_PREFIX)/include
 
+.PHONY: mossco_clean
+mossco_clean:
+ifdef MOSSCO_FABMDIR
+	$(MAKE) -C $(MOSSCO_FABMDIR)/src distclean
+endif
+ifdef MOSSCO_GOTMDIR
+	$(MAKE) -C $(MOSSCO_GOTMDIR) distclean
+endif
+ifdef MOSSCO_GETMDIR
+	$(MAKE) -C $(MOSSCO_GETMDIR) distclean
+endif
+	$(MAKE) -C $(MOSSCO_DIR) distclean
+
 # Common rules
 #ifndef EXTRA_CPP
 
