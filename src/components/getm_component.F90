@@ -1,3 +1,4 @@
+#define DEBUG
 !> @brief Implementation of a GETM ocean component
 !
 !  This computer program is part of MOSSCO. 
@@ -208,6 +209,8 @@
    write(debug,*) 'getmCmp_init() # ',Ncall
 #endif
 
+   call ESMF_LogWrite("getm component initializing ... ",ESMF_LOGMSG_TRACE)
+
 !  Optional creation of child components
 !  (Create, SetServices, Initialize)
 !  ...
@@ -270,6 +273,8 @@
    !call ESMF_StateAdd(eState,field,rc)
    !call ESMF_StateAdd(eState,bundle,rc)
 
+   call ESMF_LogWrite("getm component initialized",ESMF_LOGMSG_TRACE)
+
    rc = ESMF_SUCCESS
 
 #ifdef DEBUG
@@ -326,6 +331,8 @@
    write(debug,*) 'getmCmp_run() # ',Ncall
 #endif
 
+   call ESMF_LogWrite("getm component running ... ",ESMF_LOGMSG_TRACE)
+
 !  call ESMF_StateGet(), etc to get fields, bundles, arrays from import state
 
    call ESMF_ClockGet(getmClock,timeStep=getmTimeStep,currtime=getmTime,advanceCount=loop)
@@ -359,6 +366,8 @@
    end do
 
 !  Fill export state here using ESMF_StateAdd(), etc
+
+   call ESMF_LogWrite("getm component finished running. ",ESMF_LOGMSG_TRACE)
 
    rc = ESMF_SUCCESS
 
@@ -412,6 +421,8 @@
    write(debug,*) 'getmCmp_finalize() # ',Ncall
 #endif
 
+   call ESMF_LogWrite("getm component finalizing ... ",ESMF_LOGMSG_TRACE)
+
 !  optional Finalize of child components
 !  Add whatever code here needed (deallocation,close files,flush results)
 #ifndef NO_3D
@@ -422,6 +433,8 @@
    call clean_up(dryrun,runtype,MaxN)
 
    call ESMF_ClockDestroy(getmClock)
+
+   call ESMF_LogWrite("getm component finalized",ESMF_LOGMSG_TRACE)
 
    rc = ESMF_SUCCESS
 
