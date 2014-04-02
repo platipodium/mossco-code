@@ -71,7 +71,8 @@ module toplevel_component
         call ESMF_ClockGet(getmClock,startTime=startTime, &
                            stopTime=stopTime,runDuration=runDuration)
         call ESMF_ClockSet(topClock,startTime=startTime, &
-                           stopTime=stopTime,timeStep=runDuration)
+                           stopTime=stopTime,timeStep=runDuration, &
+                           currTime=startTime)
       end if
     end if
 

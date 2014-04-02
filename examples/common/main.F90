@@ -109,7 +109,8 @@ program main
         call ESMF_ClockGet(topClock,startTime=startTime, &
                            stopTime=stopTime,runDuration=runDuration)
         call ESMF_ClockSet(mainClock,startTime=startTime, &
-                           stopTime=stopTime,timeStep=runDuration)
+                           stopTime=stopTime,timeStep=runDuration, &
+                           currTime=startTime)
       end if
     end if
 
