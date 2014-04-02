@@ -26,6 +26,15 @@ clean:
 	@rm -rf modules lib bin
 
 distclean: clean
+ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
+	$(MAKE) -C $(MOSSCO_DIR)/external/fabm-git/src $@
+endif
+ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
+	$(MAKE) -C $(MOSSCO_DIR)/external/gotm-git $@
+endif
+ifneq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
+	$(MAKE) -C $(MOSSCO_DIR)/external/getm-git $@
+endif
 
 all: subdirs
 
