@@ -444,8 +444,8 @@ subroutine initerosed( nmlb,   nmub,   nfrac)
     !   Parameters sediment
     !
     eropar      = 1.0e-2_fp     ! erosion parameter for mud [kg/m2/s]
-    tcrdep      = 1000.0_fp     ! critical bed shear stress for mud sedimentation [N/m2]
-    tcrero      = 1.0_fp        ! critical bed shear stress for mud erosion [N/m2]
+    tcrdep      = 0.18_fp     ! critical bed shear stress for mud sedimentation [N/m2]
+    tcrero      = 0.288_fp        ! critical bed shear stress for mud erosion [N/m2]
     !
     !   Parameters fluff layer
     !
@@ -490,7 +490,7 @@ implicit none
  if (anymud) then
   do j = 1,nfrac
     do i = nmlb, nmub
-      frac (i,j) = 0.5_fp
+      frac (i,j) = 0.3_fp
     enddo
   enddo
        !
