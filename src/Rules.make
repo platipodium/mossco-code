@@ -56,6 +56,11 @@ else
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
       ESMF_FC:=$(notdir $(ESMF_FC))
       ifeq ($(ESMF_FC),)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null ) 
+	# previous command -compile_info failed, probably due to an openmpi
+	# installation, where we have to use a different command
+      endif
+      ifeq ($(ESMF_FC),)
         $(error Could not derive FORTRAN_COMPILER from ESMFMKFILE.)
       endif
     endif
