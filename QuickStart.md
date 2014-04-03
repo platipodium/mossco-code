@@ -2,11 +2,26 @@
 
 These instructions should get you started on building your own coupled system with MOSSCO. It is really only a quick start, if you or someone else has already installed
 
-- Python with YAML support (e.g. python-yaml package)
-- Fortran2003 compliant compiler (e.g. gfortran package)
-- ESMF (The Earth System Modeling Framework) with NetCDF (e.g. libnetcdf-dev package) and MPI (e.g. mpich2 package) support
+- Python with YAML support
+- Fortran2003 compliant compiler
+- ESMF (The Earth System Modeling Framework) with NetCDF and MPI support
 
 for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You may find some help at [www.mossco.de/doc](http://www.mossco.de/doc).
+
+suggested packages     | Ubuntu        | Suse | MAC
+for                    |               |      |
+-----------------------|---------------|------|-----
+compilers              | gcc           |      |
+                       | gfortran      |      |
+                       | g++           |      |
+-----------------------|---------------|------|-----
+netcdf                 | libnetcdf-dev |      |
+                       | netcdf-bin    |      |
+-----------------------|---------------|------|-----
+mpi                    | mpich2        |      |
+-----------------------|---------------|------|-----
+yaml                   | python-yaml   |      |
+
 The ESMF installation finally provides a file `esmf.mk`, this location must be provided to MOSSCO, e.g.:
 
 	export ESMFMKFILE=<path_to_esmf_install>/lib/lib0/Linux.gfortran.64.mpich2.esmf6/esmf.mk
