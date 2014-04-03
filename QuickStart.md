@@ -8,19 +8,22 @@ These instructions should get you started on building your own coupled system wi
 
 for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You may find some help at [www.mossco.de/doc](http://www.mossco.de/doc).
 
-suggested packages     | Ubuntu        | Suse | MAC
-for                    |               |      |
------------------------|---------------|------|-----
-compilers              | gcc           |      |
-                       | gfortran      |      |
-                       | g++           |      |
------------------------|---------------|------|-----
-netcdf                 | libnetcdf-dev |      |
-                       | netcdf-bin    |      |
------------------------|---------------|------|-----
-mpi                    | mpich2        |      |
------------------------|---------------|------|-----
-yaml                   | python-yaml   |      |
+suggested packages     | Ubuntu        | Suse | MacPorts      | Fink
+for                    |               |      |               |
+-----------------------|---------------|------|---------------|----------------
+compilers              | gcc           |      | gcc48         | gcc48-compiler
+                       | gfortran      |      |               |
+                       | g++           |      |               |
+-----------------------|---------------|------|---------------|----------------
+netcdf                 | libnetcdf-dev |      |               | netcdf-c7
+                       | netcdf-bin    |      |               | netcdf-fortran5
+                       |               |      |               | netcdf-cxx4
+-----------------------|---------------|------|---------------|----------------
+mpi                    | mpich2        |      | mpich-gcc48   |
+                       |               |      | oder          |
+                       |               |      | openmpi-gcc48 | openmpi
+-----------------------|---------------|------|---------------|----------------
+yaml                   | python-yaml   |      | py27-yaml     |
 
 The ESMF installation finally provides a file `esmf.mk`, this location must be provided to MOSSCO, e.g.:
 
