@@ -74,9 +74,11 @@ type (Mc_statevariable)          :: Mbalthica
           ! or     (mgm-2 :: microgram/ m**2 area)
 
 !IT IS TO BE CHANGED
-!if (ALLOCATED (Mbalthica%unitt) ) then
+    if (Mbalthica%Intensity == 0.0_fp ) then
 
-    if (trim(Mbalthica%unitt) == '-' )  then
+      fcr_macrofauna = 1.0
+
+    elseif (trim(Mbalthica%unitt) == '-' )  then
 
       fcr_macrofauna = 0.0016 * log (Mbalthica%Intensity **2) -0.085 * log(Mbalthica%Intensity) +1.0    ! Knaapen et al (2003)
 
