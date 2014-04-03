@@ -80,16 +80,17 @@ real (fp)    :: b2 = 5.08e-8
 !statements
 
 
-!if (ALLOCATED (Mbalthica%unitt) ) then
+    if ((Mbalthica%Intensity==0.0_fp) ) then
 
-    if (trim(Mbalthica%unitt) == '-' )  then
+      g_erod_Macrofauna = 1.0
 
+    elseif (trim(Mbalthica%unitt) == '-' )  then
 
-       g_erod_Macrofauna=    b2 * gammaa /I/(b2 + gammaa * b1** Mbalthica%Intensity) ! Paarlberg et al (2005)
+      g_erod_Macrofauna =    b2 * gammaa /I/(b2 + gammaa * b1** Mbalthica%Intensity) ! Paarlberg et al (2005)
 
     else if (trim(Mbalthica%unitt) == '' ) then    ! according to Borsje et al. (2008)
 
-       g_erod_Macrofauna= 1.0
+       g_erod_Macrofauna = 1.0
 
       write (*,*) ' Error: the Macoma balthica effect on the erodibility can be calculated at the moment based'// &
                   ' on intensity (refer to Paarlberg et al. (2005)), therefore, the effect based on Biomass'// &
@@ -97,7 +98,6 @@ real (fp)    :: b2 = 5.08e-8
 
     end if
 
-!end if
 return
 end function Mbalthica_erodibility_func
 
