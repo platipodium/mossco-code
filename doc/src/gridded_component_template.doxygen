@@ -1,5 +1,5 @@
 /**  
-@page gridcomp-template Gridded Component Template
+@page gridcomp-template Template #1: Gridded Component
 
 @dontinclude empty_component.F90
 Each component is encapsulated in a Fortran @c module.  Name your module like your file name to help the build system automatically assemble components.  The @c module starts with a declaration part that contains use statements for ESMF, and a @c public announcement of the SetServices routine.  Everything else is @c private.  There should be no module scope

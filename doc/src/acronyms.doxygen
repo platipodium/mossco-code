@@ -1,0 +1,64 @@
+/**
+
+@page acronyms Acronyms and Abbreviations
+
+Acronym | Full name | Description
+--------|:-----------|:----------
+0D | Zero-dimensional | Domain of process models that are unaware of space
+1D | One-dimensional | Domain of spatial models along one dimension, often the vertical
+2D | Two-dimensional | Domain of spatial models along two dimensions
+3D | Three-dimensional | Domain of spatial models along three dimensions
+AWI | Alfred-Wegener Institut | German research center with several campuses
+BACOSA | Baltic Coastal system analysis and status evaluation | KüNO project
+BAW | Bundesanstalt für Wasserbau | National waterways agency
+BFG | Bespoke Framework Generator | Generator for coupling software
+BGC | Bio-Geo-Chemical 
+BMBF | Bundesministerium für Bildung und Forschung | The German ministry for research and education
+CC | Creative Commons | Open documentation license
+CF | Climate and Forecast | NetCDF metadata convention
+CGT | Code Generation Toolkit |
+CLM | Climate Limited Area Model | Regional atmospheric model
+ESMF | Earth System Modeling Framework | Coupling software framework
+ERGOM | | BGC model and FABM submodel to describe explicitly the N cycle, developed at IOW
+EROSED | Erosion-Sedimentation | Erosion-sedimentation software developed by Deltares
+ERSEM | European Regional Seas Ecosystem Model | plankton functional type model 
+FABM | Framework for Aquatic Biogeochemical Models | Software for coupling aquatic processes
+FONA | Forschung für Nachhaltigkeit | The BMBF sustainability research program
+FOSS | Free and Open Source Software
+GETM | General Estuarine Transport Model | Regional ocean circulation model
+GNU | Gnu is Not Unix | Recursive acronym of the GNU operating system
+GOTM | General Ocean Turbulence Model | Watercolumn hydrographic model
+GPL | GNU Public License | Open source copyleft software license
+HPC | High Performance Computing | Parallel or vectorized computing on large computing infrastructure
+HELCOM | Helsinki Commission | Baltic marine environment protection commission 
+HLRN | Norddeutscher Verbund für Hoch- und Höchstleistungsrechnen | German HPC facility
+HZG | Helmholtz-Zentrum Geesthacht |
+ICE | Internal Compiler Error
+IO | Input/Output 
+IOW | Institut für Ostseeforschung Warnemünde | Institute for Baltic Sea research
+KFKI | Kuratioriums für Forschung im Küsteningenieurwesen
+KMU | Kleine und Mittlere Unternehmen | Small and Medium Enterprise
+KüNO | Küstenforschung für Nord- und Ostsee | The German Coastal Research funding project
+MAECS | Model for Adaptive Ecosystems in Coastal Seas | FABM submodel
+MCT | Modular Coupling Toolkit | Parallel coupling software
+MESSy | Modular Earth Submodel System | Process coupling infrastructure
+MOM | Modular Ocean Model | Ocean circulation model
+MOSSCO | MOdular System for Shelf and Coastal Seas | BMBF project and software framework
+MPI | Message Passing Interface | Communication standard for parallel execution
+NOAH | North Sea Observation and Assessment of Habitats | KüNO project
+NPZD | Nutrients Phytoplankton Zooplankton Detritus | Four compartment description of marine food webs
+NUOPC | National Unified Operational Prediction Capability
+OASIS | | coupler software
+ODE | Ordinary Differential Equation 
+OMEXDIA | | 1D model of C, N, O diagenesis in marine sediment
+OMEXDIA-P | diagenetic model plus phosphorous
+PI | Principal Investigator 
+PDF | Portable Document Format
+SECOS | Service of Sediments in German Coastal Seas | KüNO project
+STopP | Sediment to Top Predator | KüNO project
+SPM | Suspended Particulate Matter
+SWAN | Simulating Waves Nearshore | Wave model developed by Deltares
+WAM | Wave Atmospheric Model | Wave model
+YAML | Yaml Ain't Markup Language | Recursive acronym for simple structured documents
+
+*/
