@@ -19,9 +19,7 @@ EXTRA_DIST=README
 
 TARGETS = libmossco_benthos
 ifeq ($(MOSSCO_NETCDF),true)
-ifeq ($(MOSSCO_MPI),true)
 TARGETS+=libmossco_clm
-endif
 endif
 
 ifeq ($(MOSSCO_FABM),true)
