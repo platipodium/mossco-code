@@ -2,28 +2,18 @@
 
 These instructions should get you started on building your own coupled system with MOSSCO. It is really only a quick start, if you or someone else has already installed
 
-- Python with YAML support
-- Fortran2003 compliant compiler
-- ESMF (The Earth System Modeling Framework) with NetCDF and MPI support
+- Python with YAML support (any version)
+- Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC > 4.7.2)
+- ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 6.3.0)
 
-for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You may find some help at [www.mossco.de/doc](http://www.mossco.de/doc).
+for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You will find some help at [www.mossco.de/doc](http://www.mossco.de/doc).
 
-suggested packages     | Ubuntu        | Suse | MacPorts      | Fink
-for                    |               |      |               |
------------------------|---------------|------|---------------|----------------
-compilers              | gcc           |      | gcc48         | gcc48-compiler
-                       | gfortran      |      |               |
-                       | g++           |      |               |
------------------------|---------------|------|---------------|----------------
-netcdf                 | libnetcdf-dev |      |               | netcdf-c7
-                       | netcdf-bin    |      |               | netcdf-fortran5
-                       |               |      |               | netcdf-cxx4
------------------------|---------------|------|---------------|----------------
-mpi                    | mpich2        |      | mpich-gcc48   |
-                       |               |      | oder          |
-                       |               |      | openmpi-gcc48 | openmpi
------------------------|---------------|------|---------------|----------------
-yaml                   | python-yaml   |      | py27-yaml     |
+Package                | Ubuntu        | Suse | MacPorts      | Fink
+-----------------------|:--------------|:-----|:--------------|:---------------
+compilers              | gcc, gfortran, g++|      | gcc48         | gcc48-compiler
+NetCDF                 | libnetcdf-dev, netcdf-bin |      |               | netcdf-c7, netcdf-fortran4, netcdf-cxx4
+MPI                    | mpich2        |      | mpich-gcc48 *or* openmpi-gcc48   | openmpi
+YAML                   | python-yaml   |      | py27-yaml  | yaml-py27
 
 The ESMF installation finally provides a file `esmf.mk`, this location must be provided to MOSSCO, e.g.:
 
