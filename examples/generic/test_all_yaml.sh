@@ -19,7 +19,7 @@ else
   FILTER="$1.yaml"
 fi
 
-MOSSCO_SETUPDIR=$MOSSCO_DIR/../mossco-setups
+MOSSCO_SETUPDIR=${MOSSCO_DIR%code}setups
 S=$MOSSCO_SETUPDIR/helgoland
 L=${0%.sh}.log
 G=$MOSSCO_DIR/examples/generic
@@ -47,25 +47,48 @@ for F in $G/${FILTER}; do
     echo "$H | $B | $D | python failed" >> $L
     continue
   fi
-  
-  make -j2 -C $G all
+ 
+  if [ $(hostname) == ocean-fe.fzg.local ] ; then
+    make -C $G all
+  else
+    make -j4 -C $G all
+  fi
   if [ $? -eq 0 ]; then :
   else
     echo "$H | $B | $D | make failed" >> $L
     continue
   fi
-    
-  (cd $S ; rm -f PET* net*.nc ;  $G/coupling)
-  if [ $? -ne 0 ]; then
-    echo "$H | $B | $D | run failed" >> $L
-    continue
+  
+  if [ $(hostname) == ocean-fe.fzg.local ] ; then
+cat << EOT > $S/job.sh
+#!/bin/sh
+
+#$ -N  $B
+#$ -pe orte 1
+#$ -cwd
+#$ -V
+
+cat $PE_HOSTFILE
+mpirun $G/coupling > $S/$B.log
+EOT
+    (cd $S; rm -f $P net*.nc; qsub $S/job.sh )
+    while ! [ -f $P ] ; do
+      sleep 1
+    done
+
+  else
+    (cd $S ; rm -f PET* net*.nc ;  $G/coupling)
+    if [ $? -ne 0 ]; then
+      echo "$H | $B | $D | run failed" >> $L
+      continue
+    fi
+    if [ -f $P ]; then : 
+    else
+      echo "$H | $B | $D | failed, no PET.log $P" >> $L
+      continue
+    fi
   fi
   
-  if [ -e $P ]; then : 
-  else
-    echo "$H | $B | $D | failed, no PET.log $P" >> $L
-    continue
-  fi
   
   mv $P ${P%.log}_$B.log
   P=${P%.log}_$B.log
