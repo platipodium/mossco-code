@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
-import yaml
 import sys
 import os
+
+try:
+    import yaml
+except:
+    sys.path.append('/home/lemmen/opt/lib64/python2.6/site-packages/')
+    import yaml
+
 
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = '1d_reference.yaml'
+     filename = 'reference_1d.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
      #filename = 'constant_empty_netcdf.yaml'
