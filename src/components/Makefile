@@ -35,7 +35,7 @@ endif
 endif
 
 ifeq ($(MOSSCO_GETM),true)
-TARGETS += libmossco_getm_component
+TARGETS += libmossco_getm
 endif
 
 .PHONY: $(TARGETS) subdirs utilities
@@ -79,6 +79,8 @@ libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_compo
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
+
+libmossco_getm: libmossco_getm_driver libmossco_getm_component
 
 libmossco_getm_component: libmossco_getm_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)

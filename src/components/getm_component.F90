@@ -31,11 +31,10 @@
    private
 !
 ! !PUBLIC DATA MEMBERS:
-   public getmCmp_SetServices ! must be public
+   public SetServices ! must be public
    !public getm_esmf_SetVM     ! optional
 !
 ! !PRIVATE DATA MEMBERS:
-   private getmCmp_init,getmCmp_run,getmCmp_finalize
    type(ESMF_Clock) :: getmClock
 !
 ! !REVISION HISTORY:
@@ -52,7 +51,7 @@
 ! !ROUTINE: getmCmp_SetServices - register GriddedComponent GETM
 !
 ! !INTERFACE:
-   subroutine getmCmp_SetServices(getmCmp,rc)
+   subroutine SetServices(getmCmp,rc)
 !
 ! !DESCRIPTION:
 !  The toplevel component requires this sub for its mandatory call to
@@ -106,7 +105,7 @@
 #endif
    return
 
-   end subroutine getmCmp_SetServices
+   end subroutine SetServices
 !EOC
 !-----------------------------------------------------------------------
 #if 0

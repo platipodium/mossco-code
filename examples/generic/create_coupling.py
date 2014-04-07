@@ -932,6 +932,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'remtc_atmosphere' : ['remtc'],
         'remtc_atmosphere' : ['remtc'],
         'remtc_ocean' : ['remtc'],
+        'getm' : ['mossco_getm $(GETM_LINKDIRS) $(GETM_LIBS)'],
 }
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
@@ -952,6 +953,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'link_coupler' : ['liblinkcoupler'],
         'remtc_atmosphere' : ['libremtc'],
         'remtc_ocean' : ['libremtc'],
+        'getm' : ['libmossco_getm'],
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
@@ -1018,7 +1020,7 @@ libmossco_util:
 libsediment libconstant libmossco_clm libmossco_erosed libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libempty libmossco_simplewave libmossco_netcdf libmossco_benthos:
+libempty libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment libsolver:

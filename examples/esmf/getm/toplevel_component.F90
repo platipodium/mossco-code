@@ -30,7 +30,7 @@ module toplevel_component
 
   subroutine topCmp_init(topCmp,iState,eState,pClock,rc)
 
-    use getm_component, only : getmCmp_SetServices
+    use getm_component, only : SetServices
     IMPLICIT NONE
 
     type(ESMF_GridComp) :: topCmp
@@ -60,7 +60,7 @@ module toplevel_component
       call ESMF_GridCompSet(topCmp,clock=topClock)
       getmCmp = ESMF_GridCompCreate(name="getmCmp")
     end if
-    call ESMF_GridCompSetServices(getmCmp,getmCmp_SetServices)
+    call ESMF_GridCompSetServices(getmCmp,SetServices)
     call ESMF_GridCompInitialize(getmCmp,clock=topClock)
 
     if (.not. ClockIsPresent) then

@@ -21,12 +21,12 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: all exec getm libmossco_getm_component libmossco_util
+.PHONY: all exec getm libmossco_getm libmossco_util
 
 all: exec
-exec: libmossco_util libmossco_getm_component getm
+exec: libmossco_util libmossco_getm getm
 
-libmossco_getm_component:
+libmossco_getm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 getm: toplevel_component.o ../../common/main.o
