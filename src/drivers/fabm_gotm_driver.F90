@@ -309,7 +309,7 @@ end type
    ! Initialize scalar to hold day of the year (floating point value),
    ! and link it to FABM.
    decimal_yearday = _ZERO_
-   call fabm_link_scalar_data(gotmfabm%model,varname_yearday,decimal_yearday)
+   call fabm_link_scalar_data(gotmfabm%model,standard_variables%number_of_days_since_start_of_the_year,decimal_yearday)
 
    allocate(Qsour(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (Qsour)'

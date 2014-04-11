@@ -281,15 +281,15 @@
    end do
 
    ! Link environmental data to FABM
-   call fabm_link_bulk_data(zerod%model,varname_temp,   zerod%temp)
-   call fabm_link_bulk_data(zerod%model,varname_salt,   zerod%salt)
-   call fabm_link_bulk_data(zerod%model,varname_par,    zerod%par)
-   call fabm_link_bulk_data(zerod%model,varname_pres,   zerod%current_depth)
-   call fabm_link_bulk_data(zerod%model,varname_dens,   zerod%dens)
-   call fabm_link_horizontal_data(zerod%model,varname_wind_sf,zerod%wind_sf)
-   call fabm_link_horizontal_data(zerod%model,varname_par_sf, zerod%par_sf)
-   call fabm_link_horizontal_data(zerod%model,varname_taub, zerod%taub)
-   call fabm_link_scalar_data(zerod%model,varname_yearday, zerod%decimal_yearday)
+   call fabm_link_bulk_data(zerod%model,standard_variables%temperature                              ,zerod%temp         )
+   call fabm_link_bulk_data(zerod%model,standard_variables%practical_salinity                       ,zerod%salt         )
+   call fabm_link_bulk_data(zerod%model,standard_variables%downwelling_photosynthetic_radiative_flux,zerod%par          )
+   call fabm_link_bulk_data(zerod%model,standard_variables%pressure                                 ,zerod%current_depth)
+   call fabm_link_bulk_data(zerod%model,standard_variables%density                                  ,zerod%dens         )
+   call fabm_link_horizontal_data(zerod%model,standard_variables%wind_speed                                       ,zerod%wind_sf)
+   call fabm_link_horizontal_data(zerod%model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,zerod%par_sf )
+   call fabm_link_horizontal_data(zerod%model,standard_variables%bottom_stress                                    ,zerod%taub   )
+   call fabm_link_scalar_data(zerod%model,standard_variables%number_of_days_since_start_of_the_year,zerod%decimal_yearday)
 
    ! Open the output file.
    open(out_unit,file=output_file,action='write', &

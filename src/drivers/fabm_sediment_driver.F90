@@ -257,8 +257,8 @@ do n=1,size(rhs_driver%model%info%state_variables)
 end do
 
 !   link environment forcing
-call fabm_link_bulk_data(rhs_driver%model,varname_temp,rhs_driver%temp3d)
-call fabm_link_bulk_data(rhs_driver%model,varname_par,rhs_driver%par)
+call fabm_link_bulk_data(rhs_driver%model,standard_variables%temperature,rhs_driver%temp3d)
+call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosynthetic_radiative_flux,rhs_driver%par)
 
 ! calculate diffusivities (temperature)
 f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
