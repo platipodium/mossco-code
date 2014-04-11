@@ -51,20 +51,17 @@ else
     export F90 = $(ESMF_F90COMPILER)
     export FC  = $(ESMF_F90COMPILER)
     export F77 = $(ESMF_F77COMPILER)
-    export ESMF_FC = $(notdir $(ESMF_F90COMPILER))
-    ifeq ($(ESMF_FC),mpif90)
-      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
-      ESMF_FC:=$(notdir $(ESMF_FC))
-      ifeq ($(ESMF_FC),)
-      ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null ) 
-	# previous command -compile_info failed, probably due to an openmpi
-	# installation, where we have to use a different command
-      endif
-      ifeq ($(ESMF_FC),)
-        $(error Could not derive FORTRAN_COMPILER from ESMFMKFILE.)
-      endif
+#   Test against some mpi wrappers first
+#   1) mpich2
+    ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
+    ifeq ($(ESMF_FC),)
+#     2) open-mpi
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null )
     endif
-    ESMF_FORTRAN_COMPILER = $(shell echo $(ESMF_FC) | tr a-z A-Z)
+    ifeq ($(ESMF_FC),)
+      ESMF_FC:=$(ESMF_F90COMPILER)
+    endif
+    ESMF_FORTRAN_COMPILER = $(shell echo $(notdir $(ESMF_FC)) | tr a-z A-Z)
     ifdef FORTRAN_COMPILER
       ifneq ("$(ESMF_FORTRAN_COMPILER)","$(FORTRAN_COMPILER)")
         $(warning Overwriting FORTRAN_COMPILER=$(FORTRAN_COMPILER) with $(ESMF_FORTRAN_COMPILER))
@@ -387,9 +384,6 @@ info:
 	@echo LIBS = $(LIBS)
 	@echo LINKDIRS = $(LINKDIRS)
 	@echo FC = $(FC)
-ifeq ($(MOSSCO_ESMF),true)
-	@echo ESMF_FC = $(ESMF_FC)
-endif
 	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
 	@env | grep ^F90 | sort 
 ifeq ($(MOSSCO_FABM),true)
