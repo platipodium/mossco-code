@@ -53,7 +53,7 @@ else
     export F77 = $(ESMF_F77COMPILER)
 #   Test against some mpi wrappers first
 #   1) mpich2
-    ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1)
+    ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     ifeq ($(ESMF_FC),)
 #     2) open-mpi
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null )
