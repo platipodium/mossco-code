@@ -246,7 +246,7 @@
 
 !     reference time
       TimeStrISOFrac=start(1:10)//"T"//start(12:19)
-      !call ESMF_TimeSet(refTime,timeStringISOFrac=TimeStrISOFrac)
+      !call ESMF_TimeSet(getmRefTime,timeStringISOFrac=TimeStrISOFrac)
       call TimeStringISOFrac2ESMFtime(TimeStrISOFrac,getmRefTime)
 
 !     time step
