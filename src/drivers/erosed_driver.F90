@@ -178,7 +178,7 @@ contains
 subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 & ws        , umod    , h        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf , Bioeffects )
+                & sink      , sinkf   , sour     , sourf , anymud, Bioeffects )
 !----- GPL ---------------------------------------------------------------------
 !
 !  Copyright (C)  Stichting Deltares, 2012.
@@ -234,8 +234,12 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: chezy         ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: h             ! water depth [m]
     real(fp)    , dimension(nfrac)              , intent(in)   :: rhosol        ! specific sediment density [kg/m3]
-    real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: sedd50        ! 50% diameter sediment fraction [m]
-    real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: sedd90        ! 90% diameter sediment fraction [m]
+   ! real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: sedd50        ! 50% diameter sediment fraction [m]
+   ! real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: sedd90        ! 90% diameter sediment fraction [m]
+    real(fp)    , dimension(nfrac)              , intent(in)   :: sedd50        ! 50% diameter sediment fraction [m]
+    real(fp)    , dimension(nfrac)              , intent(in)   :: sedd90        ! 90% diameter sediment fraction [m]
+
+
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: taub          ! bottom shear stress [N/m2]
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: umod          ! velocity magnitude (in bottom cell) [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(in)   :: ws            ! sediment settling velocity (hindered) [m/s]
@@ -246,7 +250,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent (in)  :: frac          ! sediment (mass) fraction [-]
     real(fp)    , dimension(nmlb:nmub)          , intent (in)  :: mudfrac       ! mud fraction [-]
     type (BioturbationEffect) , optional        , intent (in)  :: Bioeffects
-
+    logical                                     , intent (in)  :: anymud
 !
 ! Local variables
 !
@@ -263,7 +267,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 !
 !! executable statements ------------------
 !
-
+!#define DEBUG
     !   User defined parameters
     !
     !   Initialization
@@ -327,7 +331,10 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 call eromud_arguments%run ()
 
                 call eromud_arguments%get(sour (l,nm), sink (l,nm), sourf (l,nm), sinkf (l,nm) )
-                 !
+#ifdef DEBUG
+                 write (*,*) 'erosed mud sour', sour (l,nm), l
+                write (*,*) 'erosed mud sink',sink (l,nm), l
+#endif                !
             else
                 !
                 ! Compute correction factor for critical bottom shear stress with sand-mud interaction
@@ -343,18 +350,20 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !write (*,*) ' smfac= ', smfac
                 if (present (Bioeffects)) then
 #ifdef DEBUG
-                    write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
+!                    write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
 #endif
                     smfac =smfac * Bioeffects%TauEffect(1,1,1)
 #ifdef DEBUG
-                    write (*,*) 'Bio smfac= ', smfac
+!                    write (*,*) 'Bio smfac= ', smfac
 #endif
                 end if
                 !
                 !   Apply sediment transport formula ( in this case vanRijn (1984) )
                 !
+                rksc = 3.0 * sedd90(l)    ! note that this ks-value is only applicable for grain related roughness
+                                        ! for wave-related roughness it should be modified.
 
-                call vanrijn84_arguments%set ( umod(nm)  ,sedd50(nm),sedd90(nm),h(nm) ,ws(l,nm), &
+                call vanrijn84_arguments%set ( umod(nm)  ,sedd50(l),sedd90(l),h(nm) ,ws(l,nm), &
                              & rhosol(l) ,alf1      ,rksc ,smfac )
 
                 call vanrijn84_arguments%run()
@@ -364,11 +373,12 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 
                 !
                 ssus =  ssus * rhosol(l)
-                !
+                !mass of equilibrium suspended load
                 !   Compute reference concentration
                 !
                 if (umod(nm)*h(nm)>0.0_fp) then
                     rsedeq(l,nm) = frac(l,nm) * ssus / (umod(nm)*h(nm))
+
                 endif
                 !
                 !   Compute suspended sediment fluxes for non-cohesive sediment (sand)
@@ -378,7 +388,10 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 call erosand_arguments%run()
 
                 call erosand_arguments%get(sour (l,nm), sink (l,nm) )
-
+#ifdef DEBUG
+!                write (*,*) 'erosed sand sour', sour (l,nm), l
+!                write (*,*) 'erosed sand sink',sink (l,nm), l
+#endif
             endif
         enddo
     enddo
@@ -386,6 +399,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 
     ! Recompute fluxes due to sand-mud interaction
     !
+    if (anymud) then
     do nm = nmlb, nmub
         ! Compute erosion velocities
         E = 0.0_fp
@@ -404,8 +418,11 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
         !
         do l = 1, nfrac
             sour(l,nm) = frac(l,nm)*rhosol(l)*E(l)
+      !      write (*,*) 'erosed sand_mud sour', sour (l,nm), l
+      !       write (*,*) 'erosed sand_mud sink',sink (l,nm), l
         enddo
     enddo
+    end if
     !
     call eromud_arguments%finalize()
     call erosand_arguments%finalize()
@@ -444,7 +461,7 @@ subroutine initerosed( nmlb,   nmub,   nfrac)
     !   Parameters sediment
     !
     eropar      = 1.0e-2_fp     ! erosion parameter for mud [kg/m2/s]
-    tcrdep      = 0.18_fp     ! critical bed shear stress for mud sedimentation [N/m2]
+    tcrdep      = 100_fp     ! critical bed shear stress for mud sedimentation [N/m2]
     tcrero      = 0.288_fp        ! critical bed shear stress for mud erosion [N/m2]
     !
     !   Parameters fluff layer
@@ -481,18 +498,13 @@ implicit none
     integer                                                         , intent(in)  :: nmub
     integer                                                         , intent(in)  :: nfrac
     logical                                                         , intent(in)  :: anymud
-    real(fp), dimension(nmlb:nmub, nfrac)                           , intent(out) :: frac
+    real(fp), dimension(nmlb:nmub, nfrac)                           , intent(in)  :: frac
     real(fp), dimension(nmlb:nmub)                                  , intent(out) :: mudfrac
     integer , dimension(nfrac)                                                    :: sedtyp
     integer                                                                       :: i,j
 
 
  if (anymud) then
-  do j = 1,nfrac
-    do i = nmlb, nmub
-      frac (i,j) = 0.3_fp
-    enddo
-  enddo
        !
        ! Add simulated mud fractions.
        !
