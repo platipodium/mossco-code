@@ -20,7 +20,8 @@ else
 fi
 
 MOSSCO_SETUPDIR=${MOSSCO_DIR%code}setups
-S=$MOSSCO_SETUPDIR/helgoland
+#S=$MOSSCO_SETUPDIR/helgoland
+S=$GETMDIR/../getm-setups/box_cartesian
 L=${0%.sh}.log
 G=$MOSSCO_DIR/examples/generic
 P=$S/PET0.Helgoland

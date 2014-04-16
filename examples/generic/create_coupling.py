@@ -165,6 +165,7 @@ fid.write('''
   type(ESMF_CplComp),dimension(:), save, allocatable :: cplCompList
   type(ESMF_State), dimension(:),  save, allocatable :: exportStates, importStates
   type(ESMF_Alarm), dimension(:),  save, allocatable :: cplAlarmList
+  type(ESMF_Clock), dimension(:),  save, allocatable :: gridCompClockList 
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplNames
@@ -257,6 +258,7 @@ fid.write('''
 fid.write('    numGridComp = ' + str(len(gridCompList)) )
 fid.write('''
     allocate(gridCompList(numGridComp))
+    allocate(gridCompClockList(numGridComp))
     allocate(gridCompNames(numGridComp))
     allocate(importStates(numGridComp))
     allocate(exportStates(numGridComp))
@@ -268,7 +270,10 @@ for i in range(0, len(gridCompList)):
 fid.write('''
     !! Create all gridded components, and create import and export states for these
     do i = 1, numGridComp
-      gridCompList(i) = ESMF_GridCompCreate(name=trim(gridCompNames(i))//'Comp', rc=rc)
+      gridCompClockList(i) = ESMF_ClockCreate(clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      gridCompList(i) = ESMF_GridCompCreate(name=trim(gridCompNames(i))//'Comp',  &
+        clock=gridCompClockList(i), rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNames(i))//'ExportState')
@@ -847,6 +852,8 @@ fid.write('''
 ''')
 i=0
 for item in gridCompList:
+# The clock is already destroyed locally
+#    fid.write('    call ESMF_ClockDestroy(gridCompClockList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    call ESMF_GridCompDestroy(gridCompList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     i += 1
@@ -856,6 +863,7 @@ for item in cplCompList:
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
     i += 1
 fid.write('''
+    if (allocated(gridCompClockList)) deallocate(gridCompClockList) 
     if (allocated(gridCompList)) deallocate(gridCompList) 
     if (allocated(cplCompList))  deallocate(cplCompList) 
     if (allocated(exportStates)) deallocate(exportStates) 
