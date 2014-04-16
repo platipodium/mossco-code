@@ -43,13 +43,13 @@ module erosed_component
   integer                     :: ubnd(4),lbnd(4)
 
 
-   integer                                    :: nmlb           ! first cell number
-   integer                                    :: nmub           ! last cell number
-   integer                                    :: flufflyr       ! switch for fluff layer concept
-   integer                                    :: iunderlyr      ! Underlayer mechanism
-   integer                                    :: nfrac          ! number of sediment fractions
-   real(fp)    , dimension(:,:)    , pointer :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
-   real(fp)    , dimension(:,:)    , pointer :: frac
+   integer                                     :: nmlb           ! first cell number
+   integer                                     :: nmub           ! last cell number
+   integer                                     :: flufflyr       ! switch for fluff layer concept
+   integer                                     :: iunderlyr      ! Underlayer mechanism
+   integer                                     :: nfrac          ! number of sediment fractions
+   real(fp)    , dimension(:,:)    , pointer   :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
+   real(fp)    , dimension(:,:)    , pointer   :: frac
     !
     ! Local variables
     !
@@ -77,7 +77,7 @@ module erosed_component
     real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
     real(fp)    , dimension(:,:), allocatable   :: sink         ! sediment sink flux [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sinkf        ! sediment sink flux fluff layer [m/s]
-    real(fp)    , dimension(:,:), allocatable, target   :: sour         ! sediment source flux [kg/m2/s]
+    real(fp)    , dimension(:,:), allocatable   :: sour         ! sediment source flux [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: sourf        ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
@@ -272,7 +272,8 @@ end if
     sourf=0.0_fp
     mass =0.0_fp
     massfluff=0.0_fp
-
+    mudfrac = 0.0_fp
+    mfluff =0.0_fp
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
   !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
@@ -289,6 +290,7 @@ if (exst.and.(.not.opnd)) then
  if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
  if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
+
  close (UnitNr)
 end if
     ! ================================================================================
@@ -318,7 +320,7 @@ end if
     !
     chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
     h1      = 3.0_fp        ! water depth [m]
-    umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
+    umod    = 0.1_fp        ! depth averaged flow magnitude [m/s]
     ws      = 0.001_fp      ! Settling velocity [m/s]
     r1(:,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
 
@@ -430,7 +432,7 @@ end if
     type(ESMF_FieldBundle)   :: fieldBundle
     logical                  :: forcing_from_coupler=.true.
     real(kind=ESMF_KIND_R8),parameter :: porosity=0.1 !> @todo make this an import field (e.g. by bed component)
-
+    real(kind=ESMF_KIND_R8),parameter :: ws_convention_factor=-1.0
     type (BioturbationEffect):: BioEffects
 
     integer               :: petCount, localPet
@@ -498,7 +500,7 @@ end if
 
         BioEffects%ErodibilityEffect = ptr_f3
 #ifdef DEBUG
-        write (*,*) 'in erosed component run:BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+        write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
 #endif
       end if
 
@@ -517,6 +519,9 @@ end if
         call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f3, rc=rc)
 
         BioEffects%ErodibilityEffect = ptr_f3 * BioEffects%ErodibilityEffect
+#ifdef DEBUG
+        write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+#endif
 
       end if
 
@@ -571,6 +576,7 @@ end if
           call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)))
           call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)))
           sedd90(n) = d90_from_d50(sedd50(nfrac_by_external_idx(external_index)))
+
           if (rc == ESMF_SUCCESS) then
             spm_concentration(1,1,nfrac_by_external_idx(external_index)) = ptr_f3(1,1,1)
           else
@@ -598,27 +604,27 @@ end if
       h0=h1
       r0=r1
     end if
+     umod =umod * 1.2
 
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
     !   Computing erosion fluxes
 
-
     if (.not.associated(BioEffects%ErodibilityEffect)) then
 
     call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
-                & ws        , umod    , h0        , chezy  , taub          , &
+                & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf              )
+                & sink      , sinkf   , sour     , sourf ,anymud             )
     else
 
      call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
-                & ws        , umod    , h0        , chezy  , taub          , &
+                & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf  ,BioEffects )
+                & sink      , sinkf   , sour     , sourf  , anymud, BioEffects )
     end if
-
+  
 
     !   Compute flow
     ! HN. @ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
@@ -642,8 +648,13 @@ end if
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
       size_classes_of_upward_flux_of_pim_at_bottom(1,1,l) = &
-          sour(l,1)* 1000.0 - sink(l,1)*spm_concentration(1,1,l)
+          sour(l,1) *1000.0_fp - sink(l,1)*spm_concentration(1,1,l)
+   
+!          write (*,*) 'SPM',l,'=', spm_concentration(1,1,l)
+    !      write (*,*) 'sour*1000.0', sour(l,1) *1000.0_fp
+    !      write (*,*) 'sink *concentration', sink(l,1)*spm_concentration(1,1,l)
     enddo
+   
         !
         !   Compute change in sediment composition of top layer and fluff layer
         !
