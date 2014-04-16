@@ -69,7 +69,7 @@ type (Mc_statevariable)              :: Mbalthica
 !Intensity ! unit (-) : meaning dimensionless-> indv. /m-2 / 1 indiv. /m-2
 !Biomass   ! unit (gcm: meaning gC/m-2)
 
-! local variables
+! local variables from Paarlberg et al. 2005
 
 real (fp)    :: gammaa = 6.0e-7
 real (fp)    :: I = 4.68e-8
