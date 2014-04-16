@@ -80,7 +80,7 @@ type (Mc_statevariable)          :: Mbalthica
 
     elseif (trim(Mbalthica%unitt) == '-' )  then
 
-      fcr_macrofauna = 0.0016 * log (Mbalthica%Intensity **2) -0.085 * log(Mbalthica%Intensity) +1.0    ! Knaapen et al (2003)
+      fcr_macrofauna = 0.0016 * log (Mbalthica%Intensity * Mbalthica%Intensity) -0.085 * log(Mbalthica%Intensity) +1.0    ! Knaapen et al (2003)
 
     else if (trim(Mbalthica%unitt) == '' ) then    ! according to Borsje et al. (2008)
 
