@@ -26,6 +26,8 @@ G=$MOSSCO_DIR/examples/generic
 P=$S/PET0.Helgoland
 H=$(uname -mns)
 D=$(date "+%Y%m%d %H:%M:00")
+V=$(grep ESMF_LIBSDIR $ESMFMKFILE)
+V=${V}
 
 cat << EOT >> $L
 
