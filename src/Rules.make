@@ -141,6 +141,9 @@ endif
 
 ifdef MOSSCO_GETMDIR
   export GETMDIR=$(MOSSCO_GETMDIR)
+  # use static allocation of GETM arrays
+  # later dynamic allocation should take over -> Knut?
+  export STATIC=-DSTATIC
 else
   ifdef GETMDIR
     $(warning Assuming you have a working GETM in ${GETMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GETMDIR explicitly to enable the build system to take  care of the GETM build) 
@@ -196,6 +199,10 @@ GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
 GETM_LIBS += -lgotm_fabm_prod -lfabm_prod
 endif
 GETM_LIBS += -lturbulence_prod -lutil_prod
+# Compile for parallel execution
+ifeq ($(GETM_PARALLEL),true)
+DEFINES += -DGETM_PARALLEL
+endif
 endif
 
 # 5. CLM stuff, this is relevant since you need to store 7 GB of data for each year and might not have access to the data
