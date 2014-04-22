@@ -6,7 +6,7 @@ These instructions should get you started on building your own coupled system wi
 - Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC > 4.7.2)
 - ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 6.3.0)
 
-for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You will find some help at [www.mossco.de/doc](http://www.mossco.de/doc).
+for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You will find some help at [www.mossco.de/doc](http://www.mossco.de/doc/index.html#installing-esmf).
 
 Package                | Ubuntu        | Suse | MacPorts      | Fink
 -----------------------|:--------------|:-----|:--------------|:---------------
