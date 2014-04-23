@@ -460,27 +460,27 @@ subroutine initerosed( nmlb,   nmub,   nfrac)
     !
     !   Parameters sediment
     !
-    eropar      = 1.0e-2_fp     ! erosion parameter for mud [kg/m2/s]
-    tcrdep      = 100_fp     ! critical bed shear stress for mud sedimentation [N/m2]
-    tcrero      = 0.288_fp        ! critical bed shear stress for mud erosion [N/m2]
-    !
-    !   Parameters fluff layer
-    !
-    depeff      = 0.95_fp       ! deposition efficiency [-]
-    depfac      = 0.2_fp        ! deposition factor (flufflayer=2) [-]
-    parfluff0   = 2.0e-1_fp     ! erosion parameter 1 [s/m]
-    parfluff1   = 1.0_fp        ! erosion parameter 2 [ms/kg]
-    tcrfluff    = 0.05_fp       ! critical bed shear stress for fluff layer erosion [N/m2]
-
-    !   Parameters sand-mud interaction
-    !
-    betam       =  1.0_fp       ! power factor for adaptation of critical bottom shear stress [-]
-    pmcrit      =  0.6_fp       ! critical mud fraction [-]
-    !
-    !   Parameters sediment transport formulation
-    !
-    alf1        = 2.0_fp        ! calibration coefficient [-]
-    rksc        = 0.1_fp        ! reference level [m]
+!    eropar      = 1.0e-3_fp     ! erosion parameter for mud [kg/m2/s]
+!    tcrdep      = 1000_fp     ! critical bed shear stress for mud sedimentation [N/m2]
+!    tcrero      = 0.4 !0.288_fp        ! critical bed shear stress for mud erosion [N/m2]
+!    !
+!    !   Parameters fluff layer
+!    !
+!    depeff      = 0.95_fp       ! deposition efficiency [-]
+!    depfac      = 0.2_fp        ! deposition factor (flufflayer=2) [-]
+!    parfluff0   = 2.0e-1_fp     ! erosion parameter 1 [s/m]
+!    parfluff1   = 1.0_fp        ! erosion parameter 2 [ms/kg]
+!    tcrfluff    = 0.05_fp       ! critical bed shear stress for fluff layer erosion [N/m2]
+!
+!    !   Parameters sand-mud interaction
+!    !
+!    betam       =  1.0_fp       ! power factor for adaptation of critical bottom shear stress [-]
+!    pmcrit      =  0.6_fp       ! critical mud fraction [-]
+!    !
+!    !   Parameters sediment transport formulation
+!    !
+!    alf1        = 2.0_fp        ! calibration coefficient [-]
+!    rksc        = 0.1_fp        ! reference level [m]
     !
     ! ================================================================================
 
