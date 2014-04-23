@@ -10,9 +10,9 @@ for you to use at this point. If not, you have to do it now (ESMF cannot be inst
 
 Package                | Ubuntu        | Suse | MacPorts      | Fink
 -----------------------|:--------------|:-----|:--------------|:---------------
-compilers              | gcc, gfortran, g++|gcc-4_8-branch revision 202388  | gcc48         | gcc48-compiler
-NetCDF                 | libnetcdf-dev, netcdf-bin |libnetcdf-dev    |               | netcdf-c7, netcdf-fortran4, netcdf-cxx4
-MPI                    | mpich2        |openmpi-dev      | mpich-gcc48 *or* openmpi-gcc48   | openmpi
+compilers              | gcc, gfortran, g++ | gcc-4_8-branch revision 202388  | gcc48         | gcc48-compiler
+NetCDF                 | libnetcdf-dev, netcdf-bin | libnetcdf-dev    |               | netcdf-c7, netcdf-fortran4, netcdf-cxx4
+MPI                    | libmpich2-dev, mpich2     | openmpi-dev      | mpich-gcc48 *or* openmpi-gcc48   | openmpi
 YAML                   | python-yaml   |Python-yaml | py27-yaml  | yaml-py27
 
 The ESMF installation finally provides a file `esmf.mk`, this location must be provided to MOSSCO, e.g.:
@@ -83,7 +83,7 @@ You can now create the source code for a coupled system (which will end up in th
 
 	./create_coupling.py maecs_omexdia.yaml
 
-This will give a output information that it processed seven components.
+This will give an output information about seven components to process.
 
 	Components to process: ['link_coupler', 'pelagic_benthic_coupler', 'fabm_sediment', 'constant', 'gotm', 'fabm_gotm', 'benthic_pelagic_coupler']
 	
