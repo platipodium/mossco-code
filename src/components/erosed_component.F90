@@ -132,6 +132,13 @@ contains
     integer                    :: UnitNr, istat,ii,j
     logical                    :: opnd, exst
 
+    character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime
+    logical               :: clockIsPresent
+
+
+
     namelist /globaldata/ g, rhow
     namelist /benthic/   nmlb   ! = 1                 ! first cell number
     namelist /benthic/   nmub   ! = 1                 ! last cell number
@@ -147,6 +154,11 @@ contains
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
    namelist /benthic/   anymud       != .true.
 
+
+
+
+
+
 !    namelist /sedparams/ sedtyp(1)   !1= SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
 !    namelist /sedparams/ sedtyp(2)   !2= SEDTYP_COHESIVE               ! cohesive sediment (mud)
 !    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
@@ -156,10 +168,6 @@ contains
 
 !    namelist /sedparams/ frac        != 0.5_fp
 
-    character(ESMF_MAXSTR):: name, message, timeString
-    type(ESMF_Clock)      :: clock
-    type(ESMF_Time)       :: currTime
-    logical               :: clockIsPresent
 
     rc = ESMF_SUCCESS
 
@@ -281,17 +289,35 @@ if (exst.and.(.not.opnd)) then
  UnitNr = 569
 
  open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
- !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
+ ! non-cohesive sediment
  read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) ( cdryb(i), i=1, nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+ ! cohesive sediment
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
+ ! fluff layer
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+ ! cohesive sediment
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
+ ! sediment transport formulation
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
+
  if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
 
  close (UnitNr)
+
 end if
     ! ================================================================================
     !   USER INPUT
@@ -624,7 +650,7 @@ end if
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
                 & sink      , sinkf   , sour     , sourf  , anymud, BioEffects )
     end if
-  
+
 
     !   Compute flow
     ! HN. @ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
@@ -649,12 +675,12 @@ end if
       !! sediment density.
       size_classes_of_upward_flux_of_pim_at_bottom(1,1,l) = &
           sour(l,1) *1000.0_fp - sink(l,1)*spm_concentration(1,1,l)
-   
+
 !          write (*,*) 'SPM',l,'=', spm_concentration(1,1,l)
     !      write (*,*) 'sour*1000.0', sour(l,1) *1000.0_fp
     !      write (*,*) 'sink *concentration', sink(l,1)*spm_concentration(1,1,l)
     enddo
-   
+
         !
         !   Compute change in sediment composition of top layer and fluff layer
         !
