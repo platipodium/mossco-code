@@ -630,9 +630,9 @@ end if
       h0=h1
 !      r0=r1
     end if
-    ! umod =umod * 1.2
-     umod = 1.0
-     h0 = 20
+     umod =umod * 1.2
+   !  umod = 1.0
+    ! h0 = 20
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
