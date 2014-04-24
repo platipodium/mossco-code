@@ -1,6 +1,0 @@
-This directory contains the documentation for the MOSSCO project
-
-In the subdirectory ./txt, additional documentation for the manual is located,
-in the subdirectory ./img, images for the documentation are located
-The source documentation is provided by doxygen
-
