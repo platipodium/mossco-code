@@ -194,45 +194,51 @@ endif
 endif
 
 ifeq ($(MOSSCO_GETM),true)
-export GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
-export GETM_INCLUDE_PATH=$(GETMDIR)/include
-export GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
-GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
-GETM_LIBS = -lgetm_prod	-loutput_prod -lmeteo_prod
-ifneq ($(GETM_NO_3D),true)
-GETM_LIBS += -l3d_prod
+  GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
+  GETM_INCLUDE_PATH=$(GETMDIR)/include
+  GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
+  GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
+  GETM_LIBS = -lgetm_prod	-loutput_prod -lmeteo_prod
+  ifneq ($(GETM_NO_3D),true)
+    GETM_LIBS += -l3d_prod
+  endif
+  GETM_LIBS += -l2d_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
+  ifeq ($(MOSSCO_GETM_FABM),true)
+    GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
+    GETM_LIBS += -lgotm_fabm_prod -lfabm_prod
+  endif
+  GETM_LIBS += -lturbulence_prod -lutil_prod
+
+  ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
+    DEFINES += -DGETM_PARALLEL
+  endif
+  export GETM_MODULE_PATH
+  export GETM_INCLUDE_PATH
+  export GETM_LIBRARY_PATH
+  export GETM_LINKDIRS
+  export GETM_LIBS
 endif
-GETM_LIBS += -l2d_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
-ifeq ($(MOSSCO_GETM_FABM),true)
-export GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
-export GETM_LIBS += -lgotm_fabm_prod -lfabm_prod
-endif
-GETM_LIBS += -lturbulence_prod -lutil_prod
-# Compile for parallel execution
-ifeq ($(GETM_PARALLEL),true)
-DEFINES += -DGETM_PARALLEL
-endif
-endif
+export MOSSCO_GETM
 
 # 5. CLM stuff, this is relevant since you need to store 7 GB of data for each year and might not have access to the data
 ifdef CLMDIR
-MOSSCO_CLM=true
+  MOSSCO_CLM=true
 endif
 export MOSSCO_CLM
-
 
 ## 6. EROSED
 MOSSCO_EROSED=false
 
 ifndef EROSED_DIR
-external_EROSED_DIR = $(MOSSCO_DIR)/external/erosed-svn
-ifneq ($(wildcard $(external_EROSED_DIR)),)
-export EROSED_DIR=$(external_EROSED_DIR)
-endif
+  external_EROSED_DIR = $(MOSSCO_DIR)/external/erosed-svn
+  ifneq ($(wildcard $(external_EROSED_DIR)),)
+    EROSED_DIR=$(external_EROSED_DIR)
+  endif
+  export EROSED_DIR
 endif
 
 ifdef EROSED_DIR
-MOSSCO_EROSED=true
+  MOSSCO_EROSED=true
 endif
 export MOSSCO_EROSED
 
@@ -460,7 +466,8 @@ endif
 	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)
 endif
 endif
-	#$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
+
+#$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 	
 	
 #install:
