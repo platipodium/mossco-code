@@ -1,9 +1,9 @@
 #!/bin/bash
 
 
-export TAGS="ESMF_6_3_0r" # ESMF_7_0_0_beta_snapshot_06 ESMF_6_3_0rp1_beta_snapshot_07 ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
+export TAGS="ESMF_6_3_0r ESMF_7_0_0_beta_snapshot_06 ESMF_6_3_0rp1_beta_snapshot_07 ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
 export COMPS="gfortran" #pgi intel"
-export COMMS="mpich2" #mpiuni
+export COMMS="mpich2 mpiuni"
 
 export ESMF_DIR=${HOME}/devel/ESMF/esmf-code
 export ESMF_INSTALL_PREFIX=/opt/esmf
@@ -76,7 +76,7 @@ EOT
 
        which install_name_tool || continue
        
-       install_name_tool -change $ESMF_DIR/lib/libg/Darwin.${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/Darwin.${ESMF_STRING}/libesmf.dylib  $ESMF_DIR/lib/libg/Darwin.${ESMF_STRING}/libesmf.dylib  
+       install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/Darwin.${ESMF_STRING}/libesmf.dylib  $ESMF_DIR/lib/libg/Darwin.${ESMF_STRING}/libesmf.dylib  
         for F in $ESMF_INSTALL_PREFIX/bin/bing/Darwin.${ESMF_STRING}/* ; do
           install_name_tool -change $ESMF_DIR/lib/libg/Darwin.${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/Darwin.${ESMF_STRING}/libesmf.dylib  $F
         done
