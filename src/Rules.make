@@ -8,15 +8,18 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 
+# 0. Execute the preamble only if we are calling Rules make for the first time
+# this is detected by the presence of the variabl MOSSCO_PREFIX
+# All variables that should be passed to submakes need to be exported, 
+# including all variables that appear in the rules at the end of this file
+
+ifndef MOSSCO_PREFIX
+
 # 1. Checking that we're using GNU make 
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
 $(error GNU make is required)
 endif 
-
-# More useful output from Make and count of iterations of Rules.make
-#OLD_SHELL := $(SHELL)
-#SHELL = $(warning Building $@$(if $<, (from $<))$(if $?, ($? newer)))$(OLD_SHELL)
 
 MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 
@@ -143,7 +146,13 @@ ifdef MOSSCO_GETMDIR
   export GETMDIR=$(MOSSCO_GETMDIR)
   # use static allocation of GETM arrays
   # later dynamic allocation should take over -> Knut?
-  export STATIC=-DSTATIC
+  ifneq ($(wildcard $(GETMDIR)/src/domain/dimensions.h),)
+    export STATIC=-DSTATIC
+  else
+    $(warning GETM will be built with dynamic array allocation and *not* parallel)
+    export STATIC=
+    export GETM_PARALLEL=false
+  endif
 else
   ifdef GETMDIR
     $(warning Assuming you have a working GETM in ${GETMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GETMDIR explicitly to enable the build system to take  care of the GETM build) 
@@ -169,25 +178,25 @@ ifneq (,$(filter $(MOSSCO_GOTM),$(MOSSCO_FABM),$(MOSSCO_GETM) true))
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
-FABM_INCLUDE_PATH=$(FABMDIR)/include
-FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
+export FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
+export FABM_INCLUDE_PATH=$(FABMDIR)/include
+export FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
 endif
 
 ifeq ($(MOSSCO_GOTM),true)
-GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
-GOTM_INCLUDE_PATH=$(GOTMDIR)/include
-GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
+export GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
+export GOTM_INCLUDE_PATH=$(GOTMDIR)/include
+export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
 ifeq ($(MOSSCO_FABM),true)
 DEFINES += -D_GOTM_MOSSCO_FABM_
-MOSSCO_GOTM_FABM=true
+export MOSSCO_GOTM_FABM=true
 endif
 endif
 
 ifeq ($(MOSSCO_GETM),true)
-GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
-GETM_INCLUDE_PATH=$(GETMDIR)/include
-GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
+export GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
+export GETM_INCLUDE_PATH=$(GETMDIR)/include
+export GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
 GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
 GETM_LIBS = -lgetm_prod	-loutput_prod -lmeteo_prod
 ifneq ($(GETM_NO_3D),true)
@@ -195,8 +204,8 @@ GETM_LIBS += -l3d_prod
 endif
 GETM_LIBS += -l2d_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
 ifeq ($(MOSSCO_GETM_FABM),true)
-GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
-GETM_LIBS += -lgotm_fabm_prod -lfabm_prod
+export GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
+export GETM_LIBS += -lgotm_fabm_prod -lfabm_prod
 endif
 GETM_LIBS += -lturbulence_prod -lutil_prod
 # Compile for parallel execution
@@ -362,7 +371,10 @@ export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 
 LDFLAGS += $(ESMF_F90LINKOPTS)
 LDFLAGS += $(LIBRARY_PATHS)
-#export LDFLAGS
+export LDFLAGS
+
+endif # End of MAKELEVEL 1 preamble
+
 
 # Make targets
 .PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external
@@ -473,6 +485,35 @@ endif
 
 # Common rules
 #ifndef EXTRA_CPP
+
+
+
+
+
+
+
+# Portable rules form ESMF Userguide
+
+.SUFFIXES: .f90 .F90 .c .C
+.f90:
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) \
+	$(ESMF_F90COMPILEFREENOCPP) $<
+	$(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) \
+	$(ESMF_F90LINKRPATHS) -o $@ $*.o $(ESMF_F90ESMFLINKLIBS)
+.F90:
+	$(ESMF_F90COMPILER) -c $(ESMF_F90COMPILEOPTS) $(ESMF_F90COMPILEPATHS) \
+	$(ESMF_F90COMPILEFREECPP) $(ESMF_F90COMPILECPPFLAGS) $< $(ESMF_F90LINKER) $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) \
+	$(ESMF_F90LINKRPATHS) -o $@ $*.o $(ESMF_F90ESMFLINKLIBS)
+.c:
+	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) \
+	$(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) \
+	$(ESMF_CXXCOMPILECPPFLAGS) $<
+	$(ESMF_CXXLINKER) $(ESMF_CXXLINKOPTS) $(ESMF_CXXLINKPATHS) \
+	$(ESMF_CXXLINKRPATHS) -o $@ $*.o $(ESMF_CXXESMFLINKLIBS)
+.C:
+	$(ESMF_CXXCOMPILER) -c $(ESMF_CXXCOMPILEOPTS) \
+	$(ESMF_CXXCOMPILEPATHSLOCAL) $(ESMF_CXXCOMPILEPATHS) $(ESMF_CXXCOMPILECPPFLAGS) $<
+
 
 %.o: %.F90
 	@echo "Compiling $<"
