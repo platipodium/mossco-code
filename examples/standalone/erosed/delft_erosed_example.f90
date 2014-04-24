@@ -34,7 +34,7 @@ program example
 !!--declarations----------------------------------------------------------------
 
     use erosed_driver
-    use BioTypes , only :  BioturbationEffect
+   ! use BioTypes , only :  BioturbationEffect
     !
     implicit none
 
@@ -45,7 +45,7 @@ program example
   !    real (fp)          , pointer  :: MudContent=> null()
   !  end type BioturbationEffect
 
-    type (BioturbationEffect)                           :: bioeffects
+    !type (BioturbationEffect)                           :: bioeffects
     !
     integer                                    :: nmlb           ! first (vertical) column number
     integer                                    :: nmub           ! last (vertical) column number-> as a matter of fact number of cells in plain
@@ -171,7 +171,7 @@ end if
 
 
         inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
-    write (*,*) 'benthich.nml exists ', exst, 'opened ', opnd, ' file unit', UnitNr
+    write (*,*) 'benthic.nml exists ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
  UnitNr = 568
@@ -246,16 +246,33 @@ if (istat/=0) write (*,*) 'error by reading  sedtyp '
  write (*,*) 'sedd90(i) ', (sedd90(i), i=1, nfrac)
  if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
  write (*,*)' frac(i,j) ', ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+  ! cohesive sediment
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
+ ! fluff layer
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+ ! cohesive sediment
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
+ ! sediment transport formulation
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
+ if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
+
  if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
  close (UnitNr)
 end if
 
 !initializing Bioeffects
-if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(1,1,1))
-if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(1,1,1))
-
-BioEffects%ErodibilityEffect = 4.0
-BioEffects%TauEffect = 0.5
+!if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(1,1,1))
+!if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(1,1,1))
+!
+!BioEffects%ErodibilityEffect = 4.0
+!BioEffects%TauEffect = 0.5
 
     !
     ! ================================================================================
@@ -332,7 +349,6 @@ BioEffects%TauEffect = 0.5
     !   TIME LOOP
     ! ================================
 
-      anymud      = .true.
 
     write (*,*) ' Start running ...'
 
@@ -353,7 +369,7 @@ BioEffects%TauEffect = 0.5
         call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
                 & ws        , umod    , h0        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf , bioeffects            )
+                & sink      , sinkf   , sour     , sourf , anymud            )
         !   Compute flow
        ! write (*,*) ' erosed finished for step ',i, 'from total step ', nstep
         !HN. ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
