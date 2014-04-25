@@ -72,9 +72,9 @@ module erosed_component
     real(fp)    , dimension(:)  , allocatable   :: umod         ! depth averaged flow magnitude [m/s]
     real(fp)    , dimension(:,:), allocatable   :: mass         ! change in sediment composition of top layer, [kg/m2]
     real(fp)    , dimension(:,:), allocatable   :: massfluff    ! change in sediment composition of fluff layer [kg/m2]
-    real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
-    real(fp)    , dimension(:,:), allocatable   :: r1           ! concentration new time level[kg/m3]
-    real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
+!    real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
+!    real(fp)    , dimension(:,:), allocatable   :: r1           ! concentration new time level[kg/m3]
+!    real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
     real(fp)    , dimension(:,:), allocatable   :: sink         ! sediment sink flux [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sinkf        ! sediment sink flux fluff layer [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sour         ! sediment source flux [kg/m2/s]
@@ -256,9 +256,9 @@ end if
     allocate (h1        (nmlb:nmub))
     allocate (umod      (nmlb:nmub))
     allocate (taub      (nmlb:nmub))
-    allocate (r0        (nfrac,nmlb:nmub))
-    allocate (r1        (nfrac,nmlb:nmub))
-    allocate (rn        (nfrac,nmlb:nmub))
+!    allocate (r0        (nfrac,nmlb:nmub))
+!    allocate (r1        (nfrac,nmlb:nmub))
+!    allocate (rn        (nfrac,nmlb:nmub))
     allocate (ws        (nfrac,nmlb:nmub))
     !
     allocate (mass      (nfrac,nmlb:nmub))
@@ -348,7 +348,7 @@ end if
     h1      = 3.0_fp        ! water depth [m]
     umod    = 0.1_fp        ! depth averaged flow magnitude [m/s]
     ws      = 0.001_fp      ! Settling velocity [m/s]
-    r1(:,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+!    r1(:,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
 
 
     do nm = nmlb, nmub
@@ -611,7 +611,7 @@ end if
         end do
 
         !> this is not good, but should work:
-        r0(:,nmub) = spm_concentration(1,1,:)
+!        r0(:,nmub) = spm_concentration(1,1,:)
 
         !> get sinking velocities
         call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity',fieldBundle,rc=rc)
@@ -628,10 +628,11 @@ end if
     else
       !> use initial values
       h0=h1
-      r0=r1
+!      r0=r1
     end if
      umod =umod * 1.2
-
+   !  umod = 1.0
+    ! h0 = 20
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
@@ -652,10 +653,6 @@ end if
     end if
 
 
-    !   Compute flow
-    ! HN. @ToDo: the followings loop can be placed in a Module containing a generic procedure UPDATE
-    h1      = h0
-    !umod    = abs(1.0_fp*sin(2*3.14*advancecount/runtimestepcount))
 
     ! Loop over all cells
     do nm = nmlb, nmub
@@ -665,8 +662,8 @@ end if
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
             do nm = nmlb, nmub
-                rn(l,nm) = r0(l,nm) ! explicit
-!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
+!                rn(l,nm) = r0(l,nm) ! explicit
+!!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
              write (707, '(I4,4x,I4,4x,I5,4(4x,F8.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(1,1,l), sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm)
             enddo
@@ -750,9 +747,9 @@ end if
     deallocate (h1)
     deallocate (umod)
     deallocate (taub)
-    deallocate (r0)
-    deallocate (r1)
-    deallocate (rn)
+!    deallocate (r0)
+!    deallocate (r1)
+!    deallocate (rn)
     deallocate (ws)
     !
     deallocate (mass)

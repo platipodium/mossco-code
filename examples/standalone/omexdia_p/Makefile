@@ -17,9 +17,8 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_sediment -lsolver -lmossco_util $(LIBS)
 
-F90FLAGS += $(INCLUDES)
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += $(MOSSCO_LIBRARY_PATH) $(LIBS)
+LDFLAGS += -L $(FABM_LIBRARY_PATH) -lfabm_prod
 
 .PHONY: exec libmossco_sediment
 
@@ -29,7 +28,7 @@ libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 exec: main.F90 libmossco_sediment
-	$(F90) $(F90FLAGS) -c -o omexdia_p.o main.F90 
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c -o omexdia_p.o main.F90 
 	$(F90) -o omexdia_p omexdia_p.o $(LDFLAGS)
 	@echo "Created example binary omexdia_p in  $(PWD)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/omexdia_p to run the example." > $(MOSSCO_BIN_PATH)/omexdia_p.txt

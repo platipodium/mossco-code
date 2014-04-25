@@ -1,9 +1,14 @@
-&benthic
-nmlb= 1
-nmub= 1
-morfac=1.0
-nfrac= 2 
-iunderlyr= 1
-flufflyr= 0
-anymud=.true.
-/      
+&benthic 
+nmlb=1         ! first vertical column number 
+nmub=1         ! last vertical column number (as a matter of fact,
+               ! nmub -nmlb +1 is total number of elements in plain) 
+morfac=1.0     ! morphological time factor 
+nfrac= 2       ! number of sediment fractions 
+iunderlyr= 1   ! underlayer mechnism (1: no multibedlayer, 2: multibed layer) 
+flufflyr= 0    ! fluff layer mechnism
+               !  0: no fluff layer (default) 
+               !  1: all mud to fluff layer, burial to bed layers 
+               !  2: part mud to fluff layer, other part to bed layers (no burial) 
+anymud=.false.  ! flag for presence of mud 
+/
+ 
