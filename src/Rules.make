@@ -221,8 +221,13 @@ endif
 export MOSSCO_GETM
 
 # 5. CLM stuff, this is relevant since you need to store 7 GB of data for each year and might not have access to the data
+MOSSCO_CLM=false
 ifdef CLMDIR
-  MOSSCO_CLM=true
+  ifneq ($(wildcard $(CLMDIR)),)
+    MOSSCO_CLM=true
+  else
+    $(error You specified none or an invalid path for CLMDIR=$CLMDIR)
+  endif
 endif
 export MOSSCO_CLM
 
@@ -246,11 +251,11 @@ export MOSSCO_EROSED
 #    to the PREFIX
 #
 ifndef MOSSCO_DIR
-ifdef MOSSCODIR
-MOSSCO_DIR=$(MOSSCODIR)
-else
-MOSSCO_DIR=$(subst /src$,,$(PWD))
-endif
+  ifdef MOSSCODIR
+    MOSSCO_DIR=$(MOSSCODIR)
+  else
+    MOSSCO_DIR=$(subst /src$,,$(PWD))
+  endif
 endif
 export MOSSCO_DIR
 
@@ -258,10 +263,11 @@ ifeq ($(wildcard $(MOSSCO_DIR)),)
 $(error the directory MOSSCO_DIR=$(MOSSCO_DIR) does not exist)
 endif
 
-ifdef PREFIX
-MOSSCO_PREFIX=$(PREFIX)
-else
 MOSSCO_PREFIX=$(MOSSCO_DIR)
+ifdef PREFIX
+  ifneq ($(wildcard $(PREFIX),)
+    MOSSCO_PREFIX=$(PREFIX)
+  endif
 endif
 export MOSSCO_PREFIX
 
