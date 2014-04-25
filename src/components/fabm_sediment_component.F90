@@ -327,7 +327,7 @@ module fabm_sediment_component
     type(ESMF_Field)  :: field
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
-    integer           :: fieldcount
+    integer           :: fieldcount, i
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: string
     type(ESMF_Alarm)           :: outputAlarm
@@ -339,6 +339,10 @@ module fabm_sediment_component
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
     logical                    :: clockIsPresent
+    
+    type(ESMF_Alarm), allocatable :: alarmList(:)
+    integer(ESMF_KIND_I4)      :: alarmCount
+    character(len=ESMF_MAXSTR) :: alarmName
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
@@ -364,7 +368,22 @@ module fabm_sediment_component
     sed%bdys   => bdys
     sed%fluxes => fluxes
 
-    call ESMF_ClockGetAlarm(clock, 'outputAlarm', outputAlarm, rc=rc)
+    call ESMF_ClockGet(clock, alarmCount=alarmCount, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (alarmCount>0) then
+      if (.not.allocated(alarmList)) allocate(alarmList(alarmCount))
+      call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_ALL, alarmList=alarmList, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      do i=1,alarmCount
+        call ESMF_AlarmGet(alarmList(i), name=alarmName, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        if (trim(alarmName)=='outputAlarm') then
+           outputAlarm=alarmList(i)
+           exit
+        endif 
+      enddo     
+    endif
+
     do while (.not.ESMF_ClockIsStopTime(clock))
       call ode_solver(sed,dt,ode_method)
 
@@ -456,13 +475,13 @@ module fabm_sediment_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-	  !> Obtain information on the component, especially whether there is a local
-	  !! clock to obtain the time from and to later destroy
+    !> Obtain information on the component, especially whether there is a local
+    !! clock to obtain the time from and to later destroy
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.clockIsPresent) then
-			clock=parentClock
+      clock=parentClock
     else 
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
