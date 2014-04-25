@@ -23,7 +23,7 @@ program main
    character(LEN=8)           :: datestr
    type(ESMF_Time)            :: time1, time2, startTime, stopTime
    type(ESMF_TimeInterval)    :: runDuration
-   integer                    :: localrc, rc, petCount,nmlunit=2013
+   integer                    :: localrc, rc,nmlunit=2013
    double precision           :: seconds
    character(len=40)          :: timestring
    character(len=40)          :: start='2000-01-01 00:00:00'
@@ -33,9 +33,18 @@ program main
    type(ESMF_State)           :: topState ! for import and export, empty
    type(ESMF_Clock)           :: mainClock,topClock
    type(ESMF_VM)              :: vm
-   integer                    :: iostat
+   integer(ESMF_KIND_I4)      :: iostat, localPet, petCount
    logical                    :: ClockIsPresent
    character(len=ESMF_MAXSTR) :: message
+   
+
+!> Read the namelist `mossco_run.nml`and evaluate three parameters:
+!> 1. `start`: the start date of the simulation in YYYY-MM-DD hh:mm:ss format
+!> 2. `stop` : the stop date of the simulation in the same format
+!> 3. `title`: the title of the simulation.
+!> 
+!> If this file is not present, then the default simulation with title "Untitled"
+!> will be executed for the time 2000-01-01 00:00:00 to 2000-01-05 00:00:00
 
    namelist /mossco_run/ title,start,stop
    
@@ -45,16 +54,20 @@ program main
       read(nmlunit,nml=mossco_run)
       close(nmlunit)
    end if
-  ! substitute characters in title string
+   ! substitute slash and space characters in title string
    call replace_character(title,'/','-')
    call replace_character(title,' ','_')
 
-! Initialize
+
+   ! Initialize ESMF, get resources, and log this
    call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
      logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN,&
      vm=vm)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    write(message,'(A)')  trim(title)//" coupled system starts"
+   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+   call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=rc)
+   write(message,'(A,I4,A,I4)') 'Creating multiple logs, this is processor ',localPet,' of ', petCount 
    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 ! Get the wall clock starting time
