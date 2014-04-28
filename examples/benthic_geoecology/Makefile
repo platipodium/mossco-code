@@ -35,12 +35,11 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 .PHONY: all exec libmossco_gotmfabm libconstant libgotm libmossco_erosed libmossco_benthos
 
 all: exec
-exec: benthic_geoecology
+exec: libmossco_util libmossco_gotmfabm libconstant libgotm libmossco_erosed libmossco_benthos libmossco_netcdf benthic_geoecology
 
-benthic_geoecology: toplevel_component.o main.o  
+benthic_geoecology: toplevel_component.o ../common/main.o  
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example binary $@ in $(PWD)" 
-	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
+	@echo "Created example binary $(PWD)/$@" 
 
 libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
@@ -51,14 +50,8 @@ libmossco_util:
 libsediment libconstant libmossco_erosed libmossco_benthos libmossco_netcdf:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../common/main.F90
-	ln -f $< $@
-
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libconstant libgotm libmossco_erosed libmossco_benthos libmossco_netcdf
-
 clean: extraclean
 
 extraclean: 
-	@-rm -f benthic_geoecology main.F90
-	@-rm -f main.o toplevel_component.o
+	@-rm -f benthic_geoecology
+	@-rm -f toplevel_component.o
