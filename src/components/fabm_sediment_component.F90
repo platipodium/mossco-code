@@ -209,8 +209,6 @@ module fabm_sediment_component
     fluxes(:,:,1) = 5.0_rk/86400.0_rk !fdet
     fluxes(:,:,2) = 5.0_rk/86400.0_rk !sdet
     fluxes(:,:,8) = 0.08/86400.0_rk !pdet
-    ! use Dirichlet boundary condition for pre-simulation
-    sed%bcup_dissolved_variables = 2
 #else
 ! FABM from sourceforge
     bdys(:,:,1) = 5.0 !degC
@@ -223,6 +221,8 @@ module fabm_sediment_component
     fluxes(:,:,2) = 5.0_rk/86400.0_rk !sdet
     fluxes(:,:,3) = 0.08/86400.0_rk !pdet
 #endif
+    ! use Dirichlet boundary condition for pre-simulation
+    sed%bcup_dissolved_variables = 2
     do tidx=1,int(presimulation_years*365*24/(dt/3600.0_rk),kind=ESMF_KIND_I8)
       call ode_solver(sed,dt,ode_method)
     end do
