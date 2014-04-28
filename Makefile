@@ -16,6 +16,8 @@ SUBDIRS = doc src examples
 export MOSSCO_DIR=$(CURDIR)
 export MOSSCO_DATE=$(shell date "+%Y%m%d")
 
+include $(MOSSCO_DIR)/src/Rules.make
+
 .PHONY: default doc src info examples all clean subdirs $(SUBDIRS)
 
 default: src
