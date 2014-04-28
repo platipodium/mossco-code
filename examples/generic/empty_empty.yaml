@@ -1,0 +1,9 @@
+instances:
+  - empty1: empty
+  - empty2: empty
+
+coupling:
+  - components: 
+     - empty1
+     - empty2
+    interval: 17 h

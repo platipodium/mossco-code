@@ -13,7 +13,7 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'reference_1d.yaml'
+     filename = 'empty_empty.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
      #filename = 'constant_empty_netcdf.yaml'
@@ -45,9 +45,12 @@ else:
     copyright = 'Copyright (C) 2014, Helmholtz-Zentrum Geesthacht'
 
 dependencies=[]
-
 if config.has_key('dependencies'):
     dependencies = config.pop('dependencies');    
+
+instances=[]
+if config.has_key('instances'):
+    instances = config.pop('instances')
 
 componentList=[]
 gridCompList=[]
@@ -109,7 +112,11 @@ for component in componentSet:
 if 'link_coupler' in componentList:
     c=componentList.pop(componentList.index('link_coupler'))
     componentList.insert(0,c)
-   
+
+instanceDict={}
+for i in range(0,len(instances)):
+   instanceDict[instances[i].keys()[0]]=instances[i].values()[0]
+
 print 'Components to process:', componentList
 cplCompList=[]
 gridCompList=[]
@@ -154,9 +161,15 @@ fid.write('''
   use mossco_state\n
 ''')
 
-for item in gridCompList:
+for jtem in gridCompList:
+    if instanceDict.has_key(jtem):
+        item=instanceDict[jtem]
+    else: item=jtem
     fid.write('  use ' + item + '_component, only : ' + item + '_SetServices => SetServices \n')
-for item in cplCompList:
+for jtem in cplCompList:
+    if instanceDict.has_key(jtem):
+        item=instanceDict[jtem]
+    else: item=jtem
     fid.write('  use ' + item + ', only : ' + item + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
@@ -287,7 +300,10 @@ fid.write('''
 ''')
 
 for i in range(0, len(gridCompList)):
-    fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' + gridCompList[i] + '_SetServices, rc=rc)\n')
+    item=gridCompList[i]
+    if instanceDict.has_key(item):
+        item=instanceDict[item]    
+    fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' +item + '_SetServices, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 
 if len(cplCompList)>0:
@@ -967,6 +983,8 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
 fid.write('LDFLAGS += $(LIBRARY_PATHS)\n')
 for item in gridCompSet.union(cplCompSet):
+    if instanceDict.has_key(item): 
+        item=instanceDict[item]
     if libs.has_key(item):
         fid.write('LDFLAGS +=')
         if item=='gotm':
@@ -1002,6 +1020,8 @@ fid.write('.PHONY: all exec coupling\n\n')
 fid.write('all: exec\n\n')
 fid.write('exec: libmossco_util ')
 for item in gridCompSet.union(cplCompSet):
+    if instanceDict.has_key(item): 
+        item=instanceDict[item]
     if deps.has_key(item):
         for dep in deps[item]:
             fid.write(' ' + dep)
