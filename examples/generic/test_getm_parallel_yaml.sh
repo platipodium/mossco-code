@@ -1,10 +1,11 @@
 #! /bin/bash
 
-# @brief test routine for getm couplings
+# @brief test routine for getm parallel couplings
+# based on test_all_yaml.sh
 #
 # This computer program is part of MOSSCO. 
 # @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @author Ulrich Körner <ulrich.koerner@hzg.de>
 
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -13,7 +14,12 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
-NPROCS=4
+# check parallel.inp (1-D, 2-D mesh), for a 2-D setup a value of 1 for NRPOCS_X/Y is not allowed
+NPROCS_X=5
+NPROCS_Y=2
+((NPROCS=NPROCS_X*NPROCS_Y))
+echo NPROCS $NPROCS
+
 if [ "x$1" == "x" ]; then
   FILTER="*.yaml"
 else
@@ -43,6 +49,10 @@ for F in $G/${FILTER}; do
   P=$S/PET0.${exampleSetupName}
   B=$(basename $F .yaml)
 
+  make -C $MOSSCO_GETMDIR/src distclean
+  make -C $S distclean
+  make -C $G distclean
+
   python $G/create_coupling.py $F
 
   if [ $? -eq 0 ]; then :
@@ -51,7 +61,16 @@ for F in $G/${FILTER}; do
     continue
   fi
  
+  # set up a dimension file for static compilation and set the link
+  # a 2x2 setup corresponds to 4 process default setup
+  sed -e "s/imin=1,imax=iextr/imin=1,imax=iextr\/$NPROCS_X/" \
+      -e "s/jmin=1,jmax=jextr/jmin=1,jmax=jextr\/$NPROCS_Y/" \
+      $S/box_cartesian.1p.dim > $S/box_cartesian.4p.dim
+  ln -sf $S/box_cartesian.4p.dim $S/box_cartesian.dim
+  ln -sf $S/box_cartesian.dim $GETMDIR/include/dimensions.h
+
   if [ $(hostname) == ocean-fe.fzg.local ] ; then
+    make -C $MOSSCO_GETMDIR/src
     make -C $G all
   else
     make -j4 -C $G all
@@ -62,18 +81,34 @@ for F in $G/${FILTER}; do
     continue
   fi
   
+  # remove files from last run
+  rm -f $S/PET* $S/getm_coupling*
+  
+  # mossco_run.nml is no part of getm examples
+  cat <<-EOT > $S/mossco_run.nml
+	&mossco_run
+	  title = '${exampleSetupName}'
+	  start= "2004-01-01 00:00:00"
+	  stop= "2004-01-11 00:00:00"
+	/
+	EOT
+
+  # if getm model setup is set to serial, change it to parallel
+  sed --in-place -e 's/parallel = .false./parallel = .true./' $S/getm.inp
+
   if [ $(hostname) == ocean-fe.fzg.local ] ; then
-cat << EOT > $S/job.sh
-#!/bin/sh
 
-#$ -N  $B
-#$ -pe orte $NPROCS
-#$ -cwd
-#$ -V
+	cat <<-EOT > $S/job.sh
+	#!/bin/sh
 
-cat $PE_HOSTFILE
-mpirun -np $NPROCS $G/coupling > $S/$B.log
-EOT
+	#$ -N  $B
+	#$ -pe orte $NPROCS
+	#$ -cwd
+	#$ -V
+
+	cat \$PE_HOSTFILE
+	mpirun -np $NPROCS $G/coupling > $S/$B.log
+	EOT
     (cd $S; rm -f $P net*.nc; qsub $S/job.sh )
     while ! [ -f $P ] ; do
       sleep 1
