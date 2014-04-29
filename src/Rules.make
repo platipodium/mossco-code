@@ -424,7 +424,8 @@ ifeq ($(MOSSCO_GOTM),true)
 	@env | grep ^GOTM | sort 
 endif
 ifeq ($(MOSSCO_GETM),true)
-	@env | grep ^GETM | sort 
+	@env | grep ^GETM | sort
+	@echo STATIC = $(STATIC)
 endif
 	@env | grep ^MOSSCO_ | sort 
 
