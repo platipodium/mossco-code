@@ -370,7 +370,7 @@ module mossco_netcdf
     end if
     
     !! if grid not present, also create the coordinate variables
-    !if (dimcheck == -1) call self%create_coordinate(grid)
+    if (dimcheck == -1) call self%create_coordinate(grid)
 
   end function mossco_netcdf_grid_dimensions
 
@@ -446,15 +446,17 @@ module mossco_netcdf
     
       if (coordDimCount(i) == 1) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, rc=esmfrc)
-        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1)
+        if (esmfrc == ESMF_SUCCESS) &
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1)
       elseif (coordDimCount(i) == 2) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, rc=esmfrc)
-        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2)
+        if (esmfrc == ESMF_SUCCESS) &
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2)
       elseif (coordDimCount(i) == 3) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, rc=esmfrc)
-        ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3)
+        if (esmfrc == ESMF_SUCCESS) &
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3)
       endif
-      if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
     enddo
     if (allocated(coordDimCount)) deallocate(coordDimCount)
      

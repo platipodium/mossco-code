@@ -25,6 +25,9 @@ call esmf_initialize()
 grid  = ESMF_GridCreateNoPeriDim( &
          minIndex=(/1,1,1/),maxIndex=(/1,4,25/), regDecomp=(/1,1,1/), &
          name='test_grid',rc=rc)
+! dont add coordinates here:
+!call ESMF_GridAddCoord(grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+
 allocate(farray3d(1,4,25))
 farray3d(:,:,:)=123.4
 field3d = ESMF_FieldCreate(grid,name='my_standard_name_3d',farrayPtr=farray3d)
@@ -33,7 +36,16 @@ field3d_c = ESMF_FieldCreate(grid,name='my_standard_name_3d_copy',farrayPtr=farr
 grid2  = ESMF_GridCreateNoPeriDim( &
          minIndex=(/1,1/),maxIndex=(/1,1/), regDecomp=(/1,1/), &
          name='one_by_one_grid',rc=rc)
+call ESMF_GridAddCoord(grid2, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+
 allocate(farray2d(1,1))
+! write coordinate values:
+call ESMF_GridGetCoord(grid2, 1, farrayPtr=farray2d, rc=rc)
+farray2d(1,1) = 15.15d0
+call ESMF_GridGetCoord(grid2, 2, farrayPtr=farray2d, rc=rc)
+farray2d(1,1) = 53.53d0
+
+! create fields to write into netcdf
 field2d = ESMF_FieldCreate(grid2,name='my_standard_name_2d',farrayPtr=farray2d)
 
 nc = mossco_netcdfCreate(filename,timeUnit=timeUnit,rc=rc)
