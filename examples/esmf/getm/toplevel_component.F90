@@ -43,8 +43,6 @@ module toplevel_component
     type(ESMF_TimeInterval) :: runDuration
     logical                 :: ClockIsPresent
 
-    call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_TRACE)
-
 !   Check whether application driver called ESMF_GridCompCreate() with clock.
     call ESMF_GridCompGet(topCmp,clockIsPresent=ClockIsPresent)
 
@@ -71,12 +69,9 @@ module toplevel_component
         call ESMF_ClockGet(getmClock,startTime=startTime, &
                            stopTime=stopTime,runDuration=runDuration)
         call ESMF_ClockSet(topClock,startTime=startTime, &
-                           stopTime=stopTime,timeStep=runDuration, &
-                           currTime=startTime)
+                           stopTime=stopTime,timeStep=runDuration)
       end if
     end if
-
-    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_TRACE)
 
     rc = ESMF_SUCCESS
 
@@ -94,8 +89,6 @@ module toplevel_component
     type(ESMF_Time)         :: topTime,NextTime
     type(ESMF_TimeInterval) :: topTimeStep
     integer                 :: localrc
-
-    call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_TRACE)
 
     call ESMF_ClockGet(topClock,timeStep=topTimeStep,currtime=topTime)
 
@@ -122,8 +115,6 @@ module toplevel_component
       call ESMF_ClockGet(topClock,currtime=topTime)
 
     end do
-
-    call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_TRACE)
  
   end subroutine topCmp_run
 
@@ -136,8 +127,6 @@ module toplevel_component
     type(ESMF_Clock)    :: pClock
     integer,intent(out) :: rc
 
-    call ESMF_LogWrite("Toplevel component finalizing ... ",ESMF_LOGMSG_TRACE)
-
 !   Finalize of child components
     call ESMF_GridCompFinalize(getmCmp,clock=topClock)
 
@@ -145,8 +134,6 @@ module toplevel_component
     call ESMF_GridCompDestroy(getmCmp)
 
     call ESMF_ClockDestroy(topClock)
-
-    call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_TRACE)
    
     rc=ESMF_SUCCESS
 
