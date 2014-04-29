@@ -457,6 +457,7 @@ module mossco_netcdf
         if (esmfrc == ESMF_SUCCESS) &
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3)
       endif
+      esmfrc = 0 ! reset esmfrc after checking its status above
     enddo
     if (allocated(coordDimCount)) deallocate(coordDimCount)
      
