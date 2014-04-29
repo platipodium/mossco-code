@@ -20,8 +20,8 @@ else
 fi
 
 MOSSCO_SETUPDIR=${MOSSCO_DIR%code}setups
-#S=$MOSSCO_SETUPDIR/helgoland
-S=$GETMDIR/../getm-setups/box_cartesian
+S=$MOSSCO_SETUPDIR/helgoland
+#S=$GETMDIR/../getm-setups/box_cartesian
 L=${0%.sh}.log
 G=$MOSSCO_DIR/examples/generic
 P=$S/PET0.Helgoland
@@ -96,16 +96,20 @@ EOT
   mv $P ${P%.log}_$B.log
   P=${P%.log}_$B.log
   
+  X=$(grep -c "finished at wall clock" $P)
   W=$(grep -c WARNING $P)
   E=$(grep -c ERROR $P)
-  
-  if [ $E -ne 0 ]; then
+    
+  if [ $X -eq 0 ]; then
     echo "$H | $B | $D | failed, $E errors, $W warnings " >> $L  
+  else
+    echo "$H | $B | $D | success, $E errors, $W warnings " >> $L  
+  fi 
+
+  if [ $E -ne 0 ]; then
     continue
   fi
 
-  echo "$H | $B | $D | succeeded, $W warnings " >> $L   
-  
   if [ $W -eq 0 ] ; then
     rm -f $P
   fi
