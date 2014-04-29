@@ -23,7 +23,7 @@ TARGETS+=libmossco_clm
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-TARGETS+=libmossco_sediment libmossco_fabm0d
+TARGETS+=libmossco_sediment libmossco_fabmpelagic libmossco_fabm0d
 ifeq ($(MOSSCO_GOTM),true)
 ifeq ($(MOSSCO_NETCDF),true)
 TARGETS+=libmossco_gotmfabm
@@ -55,6 +55,7 @@ libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_getm_driver: prefix libgetm_external $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
+libmossco_fabmpelagic: prefix libmossco_util libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
 # A really, really dirty hack for now...
 # ...and automatic rm of .o also does not work because of this.
 getm_driver.o: getm_driver.F90
