@@ -339,26 +339,46 @@ module gotm_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer                     :: lbnd(3), ubnd(3), k
-    real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
-    type(ESMF_Field)     :: field
+    integer                      :: lbnd(3), ubnd(3), k
+    real(ESMF_KIND_R8),pointer   :: farrayPtr(:,:,:)
+    type(ESMF_Field)             :: field
+    type(ESMF_StateItem_Flag), allocatable    :: itemTypeList(:)
+    integer(ESMF_KIND_I4)        :: itemCount, localRc, i
+    character(len=ESMF_MAXSTR)   :: name
+    character(len=ESMF_MAXSTR),allocatable   :: itemNameList(:)
 
-    do k=1,size(export_variables)
-      call ESMF_StateGet(exportState,trim(export_variables(k)%standard_name)//'_in_water', field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!!> @todo StateGet gets a destroyed state here in the generic coupling, this needs to be fixed
+     return
 
+    call ESMF_StateGet(exportState, name=name, itemCount=itemCount, rc=localRc)
+    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (itemCount /= 0) then
+      allocate(itemTypeList(itemCount))
+      allocate(itemNameList(itemCount))
+      call ESMF_StateGet(exportState, itemTypeList=itemTypeList, itemNameList=itemNameList, &
+        rc=localRc)
+      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    do i=1,itemCount
+      if (itemtypeList(i) == ESMF_STATEITEM_FIELD) then
+        call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)        
+        
 #if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(export_variables(k)%standard_name)//'_in_water' /),rc=rc)
+        call ESMF_StateRemove(exportState,trim(itemNameList(i)),rc=rc)
 #else
-      call ESMF_StateRemove(exportState,trim(export_variables(k)%standard_name)//'_in_water',rc=rc)
+        call ESMF_StateRemove(exportState,trim(itemNameList(i)),rc=rc)
 #endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldDestroy(field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+	    endif
     enddo
 
-
+	  if (allocated(itemNameList)) deallocate(itemNameList)
+	  if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(variables)) deallocate(variables)
 
     call ESMF_ClockDestroy(clock,rc=rc)
