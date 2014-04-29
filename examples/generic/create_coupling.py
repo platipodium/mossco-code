@@ -383,12 +383,19 @@ fid.write('''
 ''')
 
 for i in range(0,len(couplingList)):
+    
     string = intervals[i].split()
     number = string[0]
-    if len(string)>1:
-        unit = string[1]
+    if (number == 'inf') or (number == 'none') or (number == '0'):
+    	  unit = 'yy'
+    	  number = '99999'
     else:
+      if len(string)>1:
+        unit = string[1]
+      else:
         unit = 'h'
+        
+        
     fid.write('    call ESMF_TimeIntervalSet(alarmInterval, startTime, ' + unit + '=' + number + ' ,rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n\n')  
     fid.write('    cplAlarmList(' + str(i+1) + ')=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &\n')
