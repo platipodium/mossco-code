@@ -142,9 +142,8 @@ module constant_component
         !! format of each line is:
         !!   some_standard_name  12.345
         read(fileunit,*, iostat=rc) varname,floatValue
-        if (rc /= 0) then
-          exit
-        endif
+        if (rc /= 0) exit
+        if (varname(1:1) == '#') exit
         !> @todo this routine should exit if no values have been read (empty file, 
         !! or empty lines
 
