@@ -144,24 +144,26 @@ endif
 
 ifdef MOSSCO_GETMDIR
   export GETMDIR=$(MOSSCO_GETMDIR)
+else
+  ifdef GETMDIR
+    $(warning Assuming you have a working GETM in ${GETMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GETMDIR explicitly to enable the build system to take  care of the GETM build)
+  endif
+endif
+
+ifdef GETMDIR
+  MOSSCO_GETM=true
   # use static allocation of GETM arrays
   # later dynamic allocation should take over -> Knut?
-  ifneq ($(wildcard $(GETMDIR)/src/domain/dimensions.h),)
+  ifneq ($(wildcard $(GETMDIR)/include/dimensions.h),)
     export STATIC=-DSTATIC
   else
     $(warning GETM will be built with dynamic array allocation and *not* parallel)
     export STATIC=
     export GETM_PARALLEL=false
   endif
-else
-  ifdef GETMDIR
-    $(warning Assuming you have a working GETM in ${GETMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GETMDIR explicitly to enable the build system to take  care of the GETM build) 
-  endif
 endif
 
-ifdef GETMDIR
-MOSSCO_GETM=true
-endif
+
 export MOSSCO_GETM
 
 # 4. Dealing with compiler matching of ESMF and FABM/GOTM/GETM, if one of those
