@@ -17,7 +17,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lesmf  $(LIBS)
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS) -lnetcdff
+LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
 
 all: test_FieldGet test_ArrayGet test_Clock test_GridCreate test_Netcdf test_Grid test_ClockDestroy
 
