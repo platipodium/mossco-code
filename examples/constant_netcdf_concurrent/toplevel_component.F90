@@ -147,8 +147,15 @@ module toplevel_component
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    gridCompList(2) = ESMF_GridCompCreate(name=trim(gridCompNames(2))//'Comp',  &
+    if (petCount>1) then 
+      gridCompList(2) = ESMF_GridCompCreate(name=trim(gridCompNames(2))//'Comp',  &
         clock=gridCompClockList(2), petList=(/1/), rc=rc)
+    else 
+      gridCompList(2) = ESMF_GridCompCreate(name=trim(gridCompNames(2))//'Comp',  &
+        clock=gridCompClockList(2), petList=(/0/), rc=rc)
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
 
     do i = 1, numGridComp
       exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
