@@ -25,7 +25,7 @@ tests:
 	echo TEST_SRC=$(TEST_SRC)
 	echo TEST_OBJ=$(TEST_OBJ)
 
-all: test_FieldGet test_ArrayGet test_Clock test_GridCreate test_Netcdf test_Grid test_ClockDestroy
+all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy
 
 
 esmf_initialize_test: ESMF_Initialize_test.o
@@ -46,7 +46,7 @@ test_GridCreate: test_GridCreate.o
 test_ClockDestroy: test_ClockDestroy.o ../components/empty_component.o
 	$(F90) $(F90FLAGS) -o $@  $^  $(LDFLAGS)
 
-../empty_component.o:
+../components/empty_component.o:
 	$(MAKE) -C ../components libmossco_empty
 
 test_Clock: test_Clock.o

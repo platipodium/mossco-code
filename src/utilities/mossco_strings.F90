@@ -39,5 +39,29 @@ contains
          end if
       end do
    end subroutine replace_character
+   
+   subroutine split_string(string,remainder, char)
+     character(len=*), intent(out)   :: remainder
+     character(len=*), intent(inout) :: string
+     character(len=1), intent(in)    :: char
+     
+     integer :: pos
+     
+     !!@implementation needs to be done
+   
+     remainder=string
+     pos=index(string,char)
+     if (pos>0) then 
+       do while (pos==1) 
+         string=string(pos:)
+         pos=index(string,char)
+       enddo
+       if (pos==0) return
+        
+       remainder=string(pos+1:)
+       string=string(1:pos-1)
+     endif   
+     return
+   end subroutine split_string
 
 end module mossco_strings
