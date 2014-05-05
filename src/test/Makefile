@@ -18,8 +18,18 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+TEST_SRC = $(shell ls  *.c *.F90)
+TEST_OBJ = ${TEST_SRC%.}.o
+
+tests:
+	echo TEST_SRC=$(TEST_SRC)
+	echo TEST_OBJ=$(TEST_OBJ)
 
 all: test_FieldGet test_ArrayGet test_Clock test_GridCreate test_Netcdf test_Grid test_ClockDestroy
+
+
+esmf_initialize_test: ESMF_Initialize_test.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 
 test_Grid: test_Grid.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
