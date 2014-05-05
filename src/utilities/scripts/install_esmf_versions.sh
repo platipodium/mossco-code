@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 export TAGS="ESMF_6_3_0r"  #ESMF_7_0_0_beta_snapshot_06 ESMF_6_3_0rp1_beta_snapshot_07 ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
 export COMPS="gfortran" # intel pgi"
 export COMMS="mpich2" #  mpiuni"
