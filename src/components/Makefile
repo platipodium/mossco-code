@@ -46,6 +46,8 @@ endif
 
 all: utilities subdirs $(TARGETS)
 
+libmossco_constant: libconstant
+libmossco_empty: libempty
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 libmossco_clm: libmossco_clm_driver libmossco_clm_component 
 libmossco_benthos: libmossco_benthos_drivers libmossco_benthos_component

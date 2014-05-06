@@ -17,46 +17,52 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lesmf  $(LIBS)
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(LIBRARY_PATHS) 
 TEST_SRC = $(shell ls  *.c *.F90)
 TEST_OBJ = ${TEST_SRC%.}.o
+
+
+.PHONY: libmossco_empty libmossco_constant libmossco_info
+
+all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency
 
 tests:
 	echo TEST_SRC=$(TEST_SRC)
 	echo TEST_OBJ=$(TEST_OBJ)
 
-all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy
-
 
 esmf_initialize_test: ESMF_Initialize_test.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)  $(LIBS)
+
+test_Concurrency: test_Concurrency.o libmossco_constant libmossco_info
+	$(F90) $(F90FLAGS) -o $@  $< $(LDFLAGS) -lconstant -lmossco_info $(LIBS)
 
 test_Grid: test_Grid.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
 test_ArrayGet: test_ArrayGet.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
 test_FieldGet: test_FieldGet.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
 test_GridCreate: test_GridCreate.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
-test_ClockDestroy: test_ClockDestroy.o ../components/empty_component.o
-	$(F90) $(F90FLAGS) -o $@  $^  $(LDFLAGS)
+test_ClockDestroy:  test_ClockDestroy.o libmossco_empty 
+	$(F90) $(F90FLAGS) -o $@  $<  $(LDFLAGS) -lempty $(LIBS)
 
-../components/empty_component.o:
-	$(MAKE) -C ../components libmossco_empty
+libmossco_empty libmossco_info libmossco_constant:
+	$(MAKE) -C ../components $@
 
 test_Clock: test_Clock.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
 test_Netcdf: test_Netcdf.o 
-	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
 
 test_Dictionary: test_Dictionary.o 
-	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS)
+	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
 
 test_Netcdf.o test_Dictionary.o: libmossco_util
 
