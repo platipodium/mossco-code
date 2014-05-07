@@ -1,0 +1,8 @@
+50.0          !chezy 
+3.0           ! h1: water depth
+0.0           ! mean flow velocity : umod
+0.001 0.001   ! settling velocity : ws
+2.0e-1 2.0e-1 ! sediment concentration for class 1 to nfrac: r1(nmub:nmlb, 1:nfrac) 
+
+
+/
