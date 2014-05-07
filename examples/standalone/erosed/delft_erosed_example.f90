@@ -52,8 +52,8 @@ program example
     integer                                    :: flufflyr       ! switch for fluff layer concept
     integer                                    :: iunderlyr      ! Underlayer mechanism
     integer                                    :: nfrac          ! number of sediment fractions
-    real(fp)    , dimension(:,:)    , pointer :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
-    real(fp)    , dimension(:,:)    , pointer :: frac
+    real(fp)    , dimension(:,:)    , pointer  :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
+    real(fp)    , dimension(:,:)    , pointer  :: frac
     !
     ! Local variables
     !
@@ -90,8 +90,8 @@ program example
     real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
     logical                                     ::lexist, anymud
-    integer                    :: UnitNr, istat, ii, j
-    logical                    :: opnd, exst
+    integer                                     :: UnitNr, istat, ii, j
+    logical                                     :: opnd, exst
 
     namelist /globaldata/ g, rhow
     namelist /benthic/   nmlb   ! = 1                 ! first cell number
@@ -106,9 +106,7 @@ program example
                                 !  0: no fluff layer (default)
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
-
-
-   namelist /benthic/   anymud       != .true.
+    namelist /benthic/   anymud       != .true.
 
 !    namelist /sedparams/ sedtyp(1)   !1= SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
 !    namelist /sedparams/ sedtyp(2)   !2= SEDTYP_COHESIVE               ! cohesive sediment (mud)
@@ -119,24 +117,30 @@ program example
 
 !    namelist /sedparams/ frac        != 0.5_fp
 
+!    namelist /transportparam/ chezy  ! = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
+!    namelist /transportparam/ h1     ! = 3.0_fp        ! water depth [m]
+!    namelist /transportparam/umod    ! = 0.0_fp        ! depth averaged flow magnitude [m/s]
+!    namelist /transportparam/ws      ! = 0.001_fp      ! Settling velocity [m/s]
+!    namelist /transportparam/r1(1,:) ! = 2.0e-1_fp     ! sediment concentration [kg/m3]
+!    namelist /transportparam/r1(2,:) ! = 2.0e-1_fp     ! sediment concentration [kg/m3]
 
 
     inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
     write (*,*) 'globaldata.nml exists ', exst, 'opened ', opnd, ' file unit', UnitNr
 
-if (exst.and.(.not.opnd)) then
- UnitNr = 567
+    if (exst.and.(.not.opnd)) then
+         UnitNr = 567
 
- open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', iostat=istat )
-if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
- write (*,*) ' in erosed standalone ', UnitNr, ' was just opened'
+         open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', iostat=istat )
 
- read (UnitNr, nml=globaldata, iostat = istat)
-if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
- write (*,*)' g= ', g
-write (*,*) ' rhow= ', rhow
- close (UnitNr)
-end if
+         if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
+         write (*,*) ' in erosed standalone ', UnitNr, ' was just opened'
+
+         read (UnitNr, nml=globaldata, iostat = istat)
+         if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
+
+         close (UnitNr)
+    end if
 !
 !! executable statements -------------------------------------------------------
 !
@@ -170,24 +174,25 @@ end if
     ! ================================================================================
 
 
-        inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
+    inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
     write (*,*) 'benthic.nml exists ', exst, 'opened ', opnd, ' file unit', UnitNr
 
-if (exst.and.(.not.opnd)) then
- UnitNr = 568
+    if (exst.and.(.not.opnd)) then
+         UnitNr = 568
 
- open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old')
- write (*,*) ' in erosed-standalone ', UnitNr, ' was just opened'
-if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
+         open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old')
 
- read (UnitNr, nml=benthic, iostat = istat)
-if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
+         write (*,*) ' in erosed-standalone ', UnitNr, ' was just opened'
+         if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
 
-write (*,*)' nmlb ', nmlb, 'nmub ',  nmub, 'morfac ', morfac, 'nfrac ', nfrac, 'iunderlyr', iunderlyr &
-    & , ' flufflyr', flufflyr,' anymud ', anymud
+         read (UnitNr, nml=benthic, iostat = istat)
+         if (istat/=0) write (*,*) 'error by reading from unit number ', UnitNr
 
-close (UnitNr)
-end if
+         write (*,*)' nmlb ', nmlb, 'nmub ',  nmub, 'morfac ', morfac, 'nfrac ', nfrac, 'iunderlyr', iunderlyr &
+            & , ' flufflyr', flufflyr,' anymud ', anymud
+
+         close (UnitNr)
+    end if
 
 
     Write (*, *) 'Initializing some sediment parameters ...'
@@ -222,50 +227,77 @@ end if
     allocate (mfluff(nfrac,nmlb:nmub))
     allocate (mudfrac (nmlb:nmub))
 
-   inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
+    inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
     write (*,*) 'sedparams.txt exists ', exst, 'opened ', opnd, ' file unit', UnitNr
 
-if (exst.and.(.not.opnd)) then
- UnitNr = 569
+    if (exst.and.(.not.opnd)) then
+         UnitNr = 569
 
- open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
+         open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
 
-if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
+         if (istat/=0) write (*,*) 'error by openning unit number ', UnitNr
 
- read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
-if (istat/=0) write (*,*) 'error by reading  sedtyp '
+         read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
+         if (istat/=0) write (*,*) 'error by reading  sedtyp '
+         write (*,*) 'sedtyp(i) ', (sedtyp(i),i=1,nfrac)
 
- write (*,*) 'sedtyp(i) ', (sedtyp(i),i=1,nfrac)
- if (istat ==0 ) read (UnitNr,*,iostat = istat) ( cdryb(i), i=1, nfrac)
- write (*,*) ' cdryb(i)', ( cdryb(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
- write (*,*)'rhosol(i) ',(rhosol(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
- write (*,*) 'sedd50(i) ', (sedd50(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
- write (*,*) 'sedd90(i) ', (sedd90(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
- write (*,*)' frac(i,j) ', ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
-  ! cohesive sediment
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
- ! fluff layer
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
- ! cohesive sediment
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
- ! sediment transport formulation
- if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
+         if (istat ==0 ) read (UnitNr,*,iostat = istat) ( cdryb(i), i=1, nfrac)
+         write (*,*) ' cdryb(i)', ( cdryb(i), i=1, nfrac)
 
- if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
- close (UnitNr)
-end if
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
+         write (*,*)'rhosol(i) ',(rhosol(i), i=1, nfrac)
+
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
+         write (*,*) 'sedd50(i) ', (sedd50(i), i=1, nfrac)
+
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
+         write (*,*) 'sedd90(i) ', (sedd90(i), i=1, nfrac)
+
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+         write (*,*)'frac(i,j) ', ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+          ! cohesive sediment
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
+         write (*,*) 'eropar (i,j)',((eropar(i,j), i=1, nfrac), j=nmlb,nmub) 
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
+         write (*,*) 'tcrdep (i,j)',((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
+	 write (*,*) 'tcrero (i,j)',((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)
+         ! fluff layer
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
+         write (*,*) 'depeff (i,j)',((depeff(i,j), i=1, nfrac), j=nmlb,nmub)
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
+         write (*,*) 'depfac (i,j)',((depfac(i,j), i=1, nfrac), j=nmlb,nmub)
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
+	 write (*,*) 'parfluff0 (i,j)',((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
+	 write (*,*) 'parfluff1 (i,j)',((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+	 write (*,*) 'tcrfluff (i,j)',((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub)
+         
+	! cohesive sediment
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
+         write (*,*) 'pmcrit (i)',(pmcrit(i), i=nmlb,nmub)
+         
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
+   	 write (*,*) 'betam ',  betam
+
+         ! sediment transport formulation
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
+	 write (*,*) 'alf1 ', alf1 
+         if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
+
+         if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
+	 write (*,*) 'rksc ',  rksc
+         
+close (UnitNr)
+    end if
 
 !initializing Bioeffects
 !if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(1,1,1))
@@ -300,28 +332,45 @@ end if
     !
 
 
-!       inquire ( file = 'transportparam.nml', exist=exst , opened =opnd, Number = UnitNr )
-!    write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+   inquire ( file = 'transportparam.txt', exist=exst , opened =opnd, Number = UnitNr )
+   write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
-!if (exst.and.(.not.opnd)) then
-! UnitNr = 570
+   if (exst.and.(.not.opnd)) then
+      UnitNr = 570
 
-! open (unit = UnitNr, file = 'transportparam.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
-! write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+       open (unit = UnitNr, file = 'transportparam.txt', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+       write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
 
-! read (UnitNr, nml=transportparam, iostat = istat)
+       read (UnitNr,*, iostat = istat) (chezy(i),i=nmlb,nmub)
+       if (istat/=0) write (*,*) 'error by reading Chezy '
 
-! close (UnitNr)
-!end if
+       read (UnitNr,*, iostat = istat) (h1(i),i=nmlb,nmub)
+       if (istat/=0) write (*,*) 'error by reading water level'
+
+       read (UnitNr,*, iostat = istat) (umod (i),i=nmlb,nmub)
+       if (istat/=0) write (*,*) 'error by reading mean velocity'
+       
+       do j= nmlb, nmub
+        read (UnitNr,*, iostat = istat) (ws (i, j),i=1, nfrac)
+        if (istat/=0) write (*,*) 'error by reading settling velocity'
+       end do
+       do j = nmlb, nmub
+        read (UnitNr,*, iostat = istat) (r1 (i,j),i=1, nfrac)
+        if (istat/=0) write (*,*) 'error by reading settling velocity'
+       end do
+
+        close (UnitNr)
+
+   end if
 
     !   Initial flow conditions
     !
-    chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
-    h1      = 3.0_fp        ! water depth [m]
-    umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
-    ws      = 0.001_fp      ! Settling velocity [m/s]
-    r1(1,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
-    r1(2,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+!    chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
+!    h1      = 3.0_fp        ! water depth [m]
+!    umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
+!    ws      = 0.001_fp      ! Settling velocity [m/s]
+!    r1(1,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
+!    r1(2,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
 
 
     do nm = nmlb, nmub
@@ -459,4 +508,5 @@ end if
     !             & tcrdep,  tcrero, tcrfluff)
 
 end program example
+
 
