@@ -40,6 +40,9 @@ test_Concurrency: test_Concurrency.o libmossco_constant libmossco_info
 test_Grid: test_Grid.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
+test_Ugrid: test_Ugrid.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
+
 test_ArrayGet: test_ArrayGet.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
