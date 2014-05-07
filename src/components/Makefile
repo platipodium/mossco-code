@@ -20,7 +20,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_clm libmossco_benthos libmossco_simplewave libmossco_netcdf
+TARGETS=libempty libconstant libmossco_clm libmossco_benthos libmossco_simplewave libmossco_netcdf libmossco_info
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += libmossco_erosed
@@ -46,6 +46,9 @@ endif
 
 all: utilities subdirs $(TARGETS)
 
+libmossco_constant: libconstant
+libmossco_empty: libempty
+libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 libmossco_clm: libmossco_clm_driver libmossco_clm_component 
 libmossco_benthos: libmossco_benthos_drivers libmossco_benthos_component
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
