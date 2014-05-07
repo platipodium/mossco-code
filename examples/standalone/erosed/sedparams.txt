@@ -1,18 +1,18 @@
-1 2
-1650.0 1650.0
-2650.0 2650.0
-100e-6 20e-6
-200e-6 40e-6
-0.5 0.5
-1.0e-3 1.0e-3
-1000 1000
-0.4 0.4
-0.95 0.95
-0.2 0.2
-2.0 2.0
-1.0 1.0
-0.05 0.05
-0.6 0.6
-1.0
-2.0
-0.1
+1 2			!Sedtyp: Sediment type  non-cohesive suspended sediment (1), cohesive (2)
+1650.0 1650.0		! cdryb dry bed density [kg/m3]
+2650.0 2650.0		! rhosol: specific density [kg/m3]
+100e-6 20e-6		! sedd50: 50% diameter sediment fraction [m]
+200e-6 40e-6		! sedd90: ! 90% diameter sediment fraction [m]
+0.5 0.5			! frac: sediment fraction of each type sum=1
+1.0e-3 1.0e-3		! eropar: erosion parameter for mud [kg/m2/s]
+1000 1000		! tcrdep: critical bed shear stress for mud sedimentation [N/m2]
+0.4 0.4			! tcrero: critical bed shear stress for mud erosion [N/m2]
+0.95 0.95		! depeff: deposition efficiency [-]for fluff layer
+0.2 0.2			! depfac: deposition factor for fluff layer if method of computaion flufflayer=2 [-]
+2.0 2.0			! parfluff0: erosion parameter 1 [s/m] for fluff layer
+1.0 1.0			! parfluff1: erosion parameter 2 [ms/kg]for fluff layer
+0.05 0.05		! tcrfluff:critical bed shear stress for fluff layer erosion [N/m2]
+0.6 0.6			! pmcrit: critical fraction of mud, beyond which cohesive regime is considered, if mud/sand mixing flag (anymud=.TRUE.)  
+1.0			! betam : power factor for adaptation of critical bottom shear stress [-]
+2.0			! alfa1 : calibration coefficient van Rijn (1984) [-]
+0.1			! rksc  : roghness
