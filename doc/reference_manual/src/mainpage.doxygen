@@ -17,8 +17,13 @@ While the public web site with documentation on the MOSSCO project is hosted at 
 {\begin{center}\includegraphics[width=.7\hsize]{../../img/sf_git_screenshot.png}\\ {Screenshot of using sourceforge}\end{center}
 @endlatexonly
 
+Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable. 
 
-The code is available via @c git for read-only access. Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable. If you don't have @c git, you can download and install a suitable version from [git-scm.com](http://git-scm.com "The GIT SCM website").
+		export MOSSCO_DIR=$HOME/some/local/directory # for bash users
+		setenv MOSSCO_DIR $HOME/some/local/directory # for csh users	
+
+
+The code is available via @c git for read-only access. If you don't have @c git, you can download and install a suitable version from [git-scm.com](http://git-scm.com "The GIT SCM website").
 
 ~~~~sh
 git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
@@ -45,7 +50,7 @@ MOSSCO has some necessary and some optional prerequisites.  Please make sure you
 Program | Minimum version and alternatives
 --------|----------
 GNU Make | 3.0
-Fortran 2003 Compiler | e.g. GNU  >= 4.7.3, Intel >= 12.0, PGI >= 13.2
+Fortran 2003 Compiler | e.g. GNU  >= 4.8.2, Intel >= 12.0, PGI >= 13.2
 ESMF | 5.2.0rp3, preferably 6.3.0r
 
 
@@ -54,7 +59,7 @@ ESMF | 5.2.0rp3, preferably 6.3.0r
 Program | Minimum version and alternatives
 -------|-----------
 NetCDF | 3.6, preferably version 4
-Message Passing Interface | OpenMPI or MPICH >= 3.0.4 
+Message Passing Interface | OpenMPI >= 1.7 or MPICH >= 3.0.4 
 
 We recommend strongly that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not necessarily been tested.  
 

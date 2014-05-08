@@ -3,7 +3,7 @@
 These instructions should get you started on building your own coupled system with MOSSCO. It is really only a quick start, if you or someone else has already installed
 
 - Python with YAML support (any version)
-- Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC > 4.7.2)
+- Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC >= 4.8.2)
 - ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 6.3.0)
 
 for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You will find some help at [www.mossco.de/doc](http://www.mossco.de/doc/index.html#installing-esmf).
@@ -18,6 +18,12 @@ YAML                   | python-yaml   |Python-yaml | py27-yaml  | yaml-py27
 The ESMF installation finally provides a file `esmf.mk`, this location must be provided to MOSSCO, e.g.:
 
 	export ESMFMKFILE=<path_to_esmf_install>/lib/lib0/Linux.gfortran.64.mpich2.esmf6/esmf.mk
+
+Depending on your shell, the above definition of environment variables could also follow the `csh` syntax
+
+	setenv ESMFMKFILE <path_to_esmf_install>/lib/lib0/Linux.gfortran.64.mpich2.esmf6/esmf.mk
+
+Throughout this document, however, we will show the `bash` style commands only; you may freely substitute these with equivalent `csh` statements. 
 
 We will build a system that connects a pelagic ecosystem, running in a 1D ocean model to a benthic pelagic ecosystem, using two external models
 
@@ -35,8 +41,9 @@ For these models, we will combine several MOSSCO components (you can find them i
 
 First, define the directories where MOSSCO should be located on your system, and get the codes:
 
-	export MOSSCO_DIR=$HOME/MOSSCO/mossco-code
+	export MOSSCO_DIR=$HOME/MOSSCO/mossco-code # for bash users
 	export MOSSCO_SETUPDIR=$HOME/MOSSCO/mossco-setups
+	
 	git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 	git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
 
