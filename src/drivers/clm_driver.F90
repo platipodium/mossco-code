@@ -92,7 +92,7 @@ module clm_driver
 ! Read available times and broadcast
       if ( myrank==0 ) ierr = nf90_get_var(iunit,varid(0),dat_time)
 #ifdef MOSSCO_MPI
-      call MPI_BCAST( dat_time, nrec   , MPI_DOUBLE,   0, MPI_COMM_WORLD, ierr )
+      call MPI_BCAST( dat_time, nrec   , MPI_DOUBLE_PRECISION,   0, MPI_COMM_WORLD, ierr )
 #endif
 
 ! Check for consistency
