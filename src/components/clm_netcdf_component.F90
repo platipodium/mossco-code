@@ -207,6 +207,7 @@ module clm_netcdf_component
                              regDecomp=(/iprocs,jprocs/),            &
                              isSphere=.false., rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(grid, rc=rc)
     write(0,*) 'Hurray'
     call ESMF_GridGetCoordBounds(grid, coordDim=1, localDE=0, &
                            computationalLBound=lbnd, &

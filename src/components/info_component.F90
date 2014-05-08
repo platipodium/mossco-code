@@ -166,9 +166,11 @@ module info_component
     write(*,*) trim(message)
     allocate(itemTypeList(itemCount))
     allocate(itemNameList(itemCount))
+    call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=rc)
+    
     if (itemCount>0) write(message,'(A)') 'itemNameList: ['//trim(itemNameList(1))
     do i=2, itemCount
-      write(message,'(A)') trim(message)//', '//trim(itemNameList(i))
+      write(message,'(A)') trim(message)//' ... ' !', '//trim(itemNameList(i))
     enddo
     if (itemCount>0) write(message,'(A)') trim(message)//']'
     write(*,*) trim(message)
@@ -183,6 +185,7 @@ module info_component
         write(message,'(A,I1,A,I1,A,I2)') trim(message)//', dimCount: ',dimCount,' , rank: ',rank,&
           ' , localDeCount: ', localDeCount
           
+        write(0,*) trim(message)
         allocate(exclusiveLBound(rank))
         allocate(exclusiveUBound(rank))
         allocate(exclusiveCount(rank))
@@ -202,6 +205,7 @@ module info_component
           write(message,'(A,3I2)') trim(message)//' , exclusiveCount: ',exclusiveCount  
           write(message,'(A,3I2)') trim(message)//' , computationalCount: ',computationalCount  
           write(message,'(A,3I2)') trim(message)//' , totalCount: ',totalCount  
+          write(0,*) trim(message)
         enddo
         deallocate(exclusiveLbound,exclusiveUBound,exclusiveCount)
         deallocate(computationalLBound,computationalUBound,computationalCount)

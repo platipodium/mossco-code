@@ -375,6 +375,8 @@ end if
            coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
             name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+     call ESMF_GridAddCoord(grid, rc=rc)
+     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac))
     size_classes_of_upward_flux_of_pim_at_bottom(1,1,:) = sink(:,1)-sour(:,1)
