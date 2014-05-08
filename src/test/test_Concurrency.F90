@@ -26,8 +26,8 @@ clock = ESMF_ClockCreate(timeStep=stopTime-startTime, startTime=startTime, stopT
   name="clock", rc=rc)
 
 !! Create States, register and initialize components
-importState=ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, rc=rc)
-exportState=ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, rc=rc)
+importState=ESMF_StateCreate(name='import', stateintent=ESMF_STATEINTENT_UNSPECIFIED, rc=rc)
+exportState=ESMF_StateCreate(name='export', stateintent=ESMF_STATEINTENT_UNSPECIFIED, rc=rc)
 
 !! Create components on different PET elements
 call ESMF_VmGet(vm, petCount=petCount, rc=rc)
@@ -36,14 +36,28 @@ allocate(petList(petCount-1))
 do i=1, petCount
   petList(i)=i-1
 enddo
-constantComp=ESMF_GridCompCreate(clock=clock, petList=(/0/))
-infoComp=ESMF_GridCompCreate(clock=clock, petList=petList)
+constantComp=ESMF_GridCompCreate(name='constant', clock=clock, petList=(/0/))
+infoComp=ESMF_GridCompCreate(name='info', clock=clock, petList=petList)
 
 call ESMF_GridCompSetServices(constantComp, constant_SetServices, rc=rc)
 call ESMF_GridCompSetServices(infoComp, info_SetServices, rc=rc)
 
+call ESMF_GridCompInitialize(constantComp, importState=importState, exportState=exportState, clock=clock, &
+rc=rc)
+call ESMF_GridCompInitialize(constantComp, importState=exportState, exportState=importState, clock=clock, &
+rc=rc)
 
-call ESMF_ClockDestroy(clock,rc=rc)
+call ESMF_GridCompRun(constantComp, importState=importState, exportState=exportState, clock=clock, &
+rc=rc)
+call ESMF_GridCompRun(infoComp, importState=exportState, exportState=importState, clock=clock, &
+rc=rc)
+
+call ESMF_GridCompFinalize(constantComp, importState=importState, exportState=exportState, clock=clock, &
+rc=rc)
+call ESMF_GridCompFinalize(infoComp, importState=exportState, exportState=importState, clock=clock, &
+rc=rc)
+
+!call ESMF_ClockDestroy(clock,rc=rc)
 call ESMF_Finalize()
 
 end program

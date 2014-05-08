@@ -24,7 +24,7 @@ TEST_OBJ = ${TEST_SRC%.}.o
 
 .PHONY: libmossco_empty libmossco_constant libmossco_info
 
-all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency
+all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency test_FieldBounds
 
 tests:
 	echo TEST_SRC=$(TEST_SRC)
@@ -36,6 +36,9 @@ esmf_initialize_test: ESMF_Initialize_test.o
 
 test_Concurrency: test_Concurrency.o libmossco_constant libmossco_info
 	$(F90) $(F90FLAGS) -o $@  $< $(LDFLAGS) -lconstant -lmossco_info $(LIBS)
+
+test_FieldBounds: test_FieldBounds.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
 test_Grid: test_Grid.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
