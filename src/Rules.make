@@ -267,7 +267,7 @@ endif
 
 MOSSCO_PREFIX=$(MOSSCO_DIR)
 ifdef PREFIX
-  ifneq ($(wildcard $(PREFIX),)
+  ifneq ($(wildcard $(PREFIX)),)
     MOSSCO_PREFIX=$(PREFIX)
   endif
 endif
