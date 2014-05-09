@@ -257,45 +257,48 @@ program example
          write (*,*)'frac(i,j) ', ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
           ! cohesive sediment
          if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
-         write (*,*) 'eropar (i,j)',((eropar(i,j), i=1, nfrac), j=nmlb,nmub) 
-         
+         write (*,*) 'eropar (i,j)',((eropar(i,j), i=1, nfrac), j=nmlb,nmub)
+
 	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
          write (*,*) 'tcrdep (i,j)',((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)
-         
+
 	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
 	 write (*,*) 'tcrero (i,j)',((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)
-         ! fluff layer
-         
-	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
-         write (*,*) 'depeff (i,j)',((depeff(i,j), i=1, nfrac), j=nmlb,nmub)
-         
-	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
-         write (*,*) 'depfac (i,j)',((depfac(i,j), i=1, nfrac), j=nmlb,nmub)
-         
-	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
-	 write (*,*) 'parfluff0 (i,j)',((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)
-         
-	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
-	 write (*,*) 'parfluff1 (i,j)',((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)
-         
-	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
-	 write (*,*) 'tcrfluff (i,j)',((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub)
-         
-	! cohesive sediment
+
+     	! cohesive sediment
          if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
          write (*,*) 'pmcrit (i)',(pmcrit(i), i=nmlb,nmub)
-         
+
 	 if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
    	 write (*,*) 'betam ',  betam
 
          ! sediment transport formulation
          if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
-	 write (*,*) 'alf1 ', alf1 
+	 write (*,*) 'alf1 ', alf1
          if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
 
          if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
 	 write (*,*) 'rksc ',  rksc
-         
+
+         ! fluff layer
+
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
+         write (*,*) 'depeff (i,j)',((depeff(i,j), i=1, nfrac), j=nmlb,nmub)
+
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
+         write (*,*) 'depfac (i,j)',((depfac(i,j), i=1, nfrac), j=nmlb,nmub)
+
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
+	 write (*,*) 'parfluff0 (i,j)',((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)
+
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
+	 write (*,*) 'parfluff1 (i,j)',((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)
+
+	 if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+	 write (*,*) 'tcrfluff (i,j)',((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub)
+
+
+
 close (UnitNr)
     end if
 
@@ -349,7 +352,7 @@ close (UnitNr)
 
        read (UnitNr,*, iostat = istat) (umod (i),i=nmlb,nmub)
        if (istat/=0) write (*,*) 'error by reading mean velocity'
-       
+
        do j= nmlb, nmub
         read (UnitNr,*, iostat = istat) (ws (i, j),i=1, nfrac)
         if (istat/=0) write (*,*) 'error by reading settling velocity'
