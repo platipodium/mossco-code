@@ -49,7 +49,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    logical                      :: do_output=.true.
    type(export_state_type),dimension(:),allocatable :: export_states
 
-   real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity
+   real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity,bioturbation_factor
    real(rk),dimension(:,:,:),pointer     :: par
    real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
    real(rk),dimension(:,:,:),pointer     :: temp3d
@@ -126,12 +126,15 @@ class(type_sed),intent(inout) :: sed
 integer :: i,j,k,n
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
-real(rk) :: k_par
-namelist /sed_nml/ diffusivity,bioturbation,porosity_max,porosity_fac,k_par
+real(rk) :: k_par,bioturbation_depth,bioturbation_min
+namelist /sed_nml/ diffusivity,bioturbation,porosity_max,porosity_fac,k_par, &
+        bioturbation_depth,bioturbation_min
 
 ! read parameters
 diffusivity   = 0.9 ! cm2/d
 bioturbation  = 0.9 ! cm2/d
+bioturbation_depth = 5.0 ! cm
+bioturbation_min = 0.2 ! cm2/d
 porosity_max  = 0.7
 porosity_fac  = 0.9 ! per m
 k_par         = 2.0d-3 ! 1/m
@@ -150,10 +153,15 @@ sed%knum = sed%grid%knum
 ! set porosity
 allocate(sed%porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%intf_porosity(_INUM_,_JNUM_,_KNUM_))
+allocate(sed%bioturbation_factor(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
+sed%bioturbation_factor=1.0d0
 do k=1,_KNUM_
    sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
+   sed%bioturbation_factor(:,:,k) = &
+       max(bioturbation_min, &
+       max(bioturbation_depth-100.0d0*sum(sed%grid%dzc(:,:,1:k)),0.0d0)/bioturbation_depth)
 end do
 sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
 sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
@@ -268,9 +276,11 @@ do n=1,size(rhs_driver%model%info%state_variables)
    if (rhs_driver%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = 1
       rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
-              (rhs_driver%ones3d - rhs_driver%intf_porosity)
-      conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity/ &
-              (rhs_driver%ones3d - rhs_driver%porosity)
+              (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
+      !write(0,*) rhs_driver%diff(1,1,:),'fac',rhs_driver%bioturbation_factor(1,1,:)
+      !stop
+      conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity!/ &
+!              (rhs_driver%ones3d - rhs_driver%porosity)
       call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), &
               rhs_driver%zeros2d, rhs_driver%fluxes(:,:,n), rhs_driver%zeros2d, &
               bcup, bcdown, rhs_driver%diff, &
