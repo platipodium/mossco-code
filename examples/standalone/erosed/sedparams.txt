@@ -1,18 +1,19 @@
-1 2			!Sedtyp: Sediment type  non-cohesive suspended sediment (1), cohesive (2)
-1650.0 1650.0		! cdryb dry bed density [kg/m3]
-2650.0 2650.0		! rhosol: specific density [kg/m3]
-100e-6 20e-6		! sedd50: 50% diameter sediment fraction [m]
-200e-6 40e-6		! sedd90: ! 90% diameter sediment fraction [m]
-0.5 0.5			! frac: sediment fraction of each type sum=1
-1.0e-3 1.0e-3		! eropar: erosion parameter for mud [kg/m2/s]
-1000 1000		! tcrdep: critical bed shear stress for mud sedimentation [N/m2]
-0.4 0.4			! tcrero: critical bed shear stress for mud erosion [N/m2]
-0.95 0.95		! depeff: deposition efficiency [-]for fluff layer
-0.2 0.2			! depfac: deposition factor for fluff layer if method of computaion flufflayer=2 [-]
-2.0 2.0			! parfluff0: erosion parameter 1 [s/m] for fluff layer
-1.0 1.0			! parfluff1: erosion parameter 2 [ms/kg]for fluff layer
-0.05 0.05		! tcrfluff:critical bed shear stress for fluff layer erosion [N/m2]
-0.6 0.6			! pmcrit: critical fraction of mud, beyond which cohesive regime is considered, if mud/sand mixing flag (anymud=.TRUE.)  
-1.0			! betam : power factor for adaptation of critical bottom shear stress [-]
-2.0			! alfa1 : calibration coefficient van Rijn (1984) [-]
-0.1			! rksc  : roghness
+1 2                !sedtyp(1:nfrac):Sediment type 1= SEDTYP_NONCOHESIVE_SUSPENDED, 2= SEDTYP_COHESIVE
+1650.0 1650.0      !cdryb(1:nfrac) : dry bed density [kg/m3]
+2650.0 2650.0      !rhosol(1:nfrac): specific density [kg/m3]
+100e-6 20e-6       !sedd50(1:nfrac):50% diameter sediment fraction [m]
+200e-6 40e-6       !sedd90(1:nfrac):90% diameter sediment fraction [m]
+0.5 0.5            !frac
+1.0e-3 1.0e-1      !eropar(1:frac,nmlb:nmub): erosion parameter for mud [kg/m2/s]
+1000 1000          !tcrdep(1:frac,nmlb:nmub):critical bed shear stress for mud sedimentation [N/m2]
+0.4 0.4            !tcrero(1:frac,nmlb:nmub):critical bed shear stress for mud erosion [N/m2]
+0.6 0.6            ! pmcrit: critical fraction of mud, beyond which cohesive regime is considered, if mud/sand mixing flag (anymud=.TRUE.)
+1.0                !betam:power factor for adaptation of critical bottom shear stress [-]
+2.0                !alf1:calibration coefficient van Rijn (1984) [-]
+0.1                !rksc: roughness height [m], at th epresent current-related roughness
+0.95 0.95          !depeff(1:frac,nmlb:nmub):deposition efficiency for fluff layer[ -]
+0.2 0.2            !depfac(1:frac,nmlb:nmub):deposition factor (flufflayer=2) [-]
+2.0 2.0            !parfluff0(1:frac,nmlb:nmub):erosion parameter 1 for fluff layer [s/m]
+1.0 1.0            !parfluff1(1:frac,nmlb:nmub):erosion parameter 2 for fluff layer [ms/kg]
+0.05 0.05          !tcrfluff(1:frac,nmlb:nmub):critical bed shear stress for fluff layer erosion [N/m2]
+
