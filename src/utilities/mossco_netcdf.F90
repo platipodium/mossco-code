@@ -155,6 +155,7 @@ module mossco_netcdf
     integer, optional              :: rc
     character(len=1), dimension(3) :: coordNames = (/'x','y','z'/)
     integer                        :: external_index=-1
+    real(ESMF_KIND_R8)             :: mean_diameter
 
     call ESMF_FieldGet(field,name=fieldname,rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
@@ -192,6 +193,8 @@ module mossco_netcdf
       ! write external index, that is used to e.g. communicate FABM variable index
       call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1,rc=rc)
       ncStatus = nf90_put_att(self%ncid,varid,'external_index',external_index)
+      call ESMF_AttributeGet(field,'mean_particle_diameter',mean_diameter,defaultvalue=-1.0d0,rc=rc)
+      ncStatus = nf90_put_att(self%ncid,varid,'mean_particle_diameter',mean_diameter)
       !! @todo get unit from field attributes
 
       ncStatus = nf90_enddef(self%ncid)
