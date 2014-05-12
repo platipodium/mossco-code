@@ -33,6 +33,8 @@ integer,parameter :: RUNGE_KUTTA_4_38=3
 type, public :: type_rhs_driver !< base driver class
    integer :: inum,jnum,knum
    integer :: nvar
+   real(selected_real_kind(13)) :: dt_min=1.d-9 ! minimum timestep
+   real(selected_real_kind(13)) :: relative_change_min=-0.9d0 ! minimum relative change
    real(selected_real_kind(13)),dimension(:,:,:,:),pointer :: conc
 contains
    procedure :: get_rhs => base_get_rhs
@@ -101,7 +103,8 @@ case(ADAPTIVE_EULER)
       c1 = rhs_driver%conc + dt_red*rhs
 
       relative_change = minval((c1-c_pointer)/c_pointer)
-      if (relative_change < -0.9_rk) then ! 90% tolerance in reduction 
+      if ((relative_change < rhs_driver%relative_change_min) &
+              .and. (dt_red> rhs_driver%dt_min)) then 
          dt_red = dt_red/4
       else
          c_pointer = c1

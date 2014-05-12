@@ -39,6 +39,7 @@ module fabm_sediment_component
   private
  
   real(rk)  :: dzmin,dt
+  real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: t,tnum,funit,output=-1,k,n,numyears,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
   integer   :: presimulation_years=-1
@@ -49,7 +50,8 @@ module fabm_sediment_component
  
   type(type_sed),save :: sed
 
-  namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years
+  namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
+                     dt_min,relative_change_min
  
   public :: SetServices,bdys,fluxes,rk
   
@@ -196,7 +198,11 @@ module fabm_sediment_component
     sed%bdys   => bdys
     sed%fluxes => fluxes
 
-    ! set boundary conditions for pre-simulation    
+    ! set solver_settings:
+    sed%dt_min=dt_min
+    sed%relative_change_min=relative_change_min
+
+    ! set boundary conditions for pre-simulation
     bdys(:,:,1) = 5.0 !degC
     do i=1,size(sed%model%info%state_variables)
       varname = trim(only_var_name(sed%model%info%state_variables(i)%long_name))
