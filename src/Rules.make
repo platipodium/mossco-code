@@ -246,6 +246,7 @@ endif
 
 ifdef EROSED_DIR
   MOSSCO_EROSED=true
+  DEFINES += -DMOSSCO_EROSED
 endif
 export MOSSCO_EROSED
 

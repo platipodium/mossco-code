@@ -9,7 +9,9 @@ module toplevel_component
   use fabm_gotm_component, only : fabm_gotm_SetServices => SetServices
   use pelagic_benthic_coupler, only : pb_coupler_SetServices => SetServices
   use benthic_pelagic_coupler, only : bp_coupler_SetServices => SetServices
+#ifdef MOSSCO_EROSED
   use erosed_component, only: erosed_SetServices => SetServices
+#endif
   use netcdf_component, only: netcdf_SetServices => SetServices
 
   use mossco_state
@@ -21,7 +23,10 @@ module toplevel_component
   public SetServices
 
   type(ESMF_GridComp),save     :: fabmsedComp, constantComp, gotmComp, fabmgotmComp
-  type(ESMF_GridComp), save    :: erosedComp, netcdfComp  
+#ifdef MOSSCO_EROSED
+  type(ESMF_GridComp), save    :: erosedComp
+#endif
+  type(ESMF_GridComp), save    :: netcdfComp  
   type(ESMF_CplComp),save      :: pbCplComp,bpCplComp
   type(ESMF_State),save,target :: state
   type(ESMF_State),pointer     :: pelagicstate,sedimentstate
@@ -76,10 +81,12 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#ifdef MOSSCO_EROSED
     erosedComp = ESMF_GridCompCreate(name="erosedComp",rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(erosedComp,erosed_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
     netcdfComp = ESMF_GridCompCreate(name="netcdfComp",rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(netcdfComp,netcdf_SetServices, rc=rc)
@@ -113,8 +120,10 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompInitialize(fabmsedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#ifdef MOSSCO_EROSED
     call ESMF_GridCompInitialize(erosedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
     call ESMF_GridCompInitialize(netcdfComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -162,6 +171,7 @@ module toplevel_component
       endif
       call ESMF_GridCompRun(gotmComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
 
+#ifdef MOSSCO_EROSED
       call ESMF_GridCompGet(erosedComp,clockIsPresent=clockIsPresent)
       if (clockIsPresent) then 
         call ESMF_GridCompGet(erosedComp,clock=childClock)
@@ -170,6 +180,7 @@ module toplevel_component
         childClock = parentClock
       endif
       call ESMF_GridCompRun(erosedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
+#endif
 
       call ESMF_GridCompGet(fabmgotmComp,clockIsPresent=clockIsPresent)
       if (clockIsPresent) then 
@@ -236,10 +247,12 @@ module toplevel_component
     call ESMF_GridCompDestroy(constantComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+#ifdef MOSSCO_EROSED
     call ESMF_GridCompFinalize(erosedComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(erosedComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
 
     call ESMF_GridCompFinalize(netcdfComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
