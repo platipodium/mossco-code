@@ -35,12 +35,11 @@ LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -luti
 .PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm libmossco_erosed
 
 all: exec
-exec: fabm_benthic_pelagic
+exec: libmossco_util libmossco_gotmfabm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler libmossco_erosed libmossco_netcdf fabm_benthic_pelagic
 
-fabm_benthic_pelagic: toplevel_component.o main.o  
+fabm_benthic_pelagic: toplevel_component.o ../common/main.o  
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example binary $@ in $(PWD)" 
-	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
@@ -54,13 +53,7 @@ libsediment libconstant libmossco_erosed libmossco_netcdf:
 libpelagicbenthiccoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators pelagicbenthiccoupler benthicpelagiccoupler
 
-main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../common/main.F90
-	ln -f $< $@
-
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler libmossco_erosed libmossco_netcdf
-
 clean: extraclean
 
 extraclean: 
-	@-rm -f fabm_benthic_pelagic main.F90
+	@-rm -f fabm_benthic_pelagic
