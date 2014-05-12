@@ -82,7 +82,7 @@ module fabm_sediment_component
     integer, intent(out) :: rc
 
     type(ESMF_TimeInterval) :: timeInterval,alarmInterval
-    character(len=ESMF_MAXSTR) :: string,fileName
+    character(len=ESMF_MAXSTR) :: string,fileName,varname
     type(ESMF_Config)     :: config
     type(ESMF_FieldBundle) :: fieldBundle(3)
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
@@ -195,32 +195,22 @@ module fabm_sediment_component
     dt=3600.0_rk
     sed%bdys   => bdys
     sed%fluxes => fluxes
-#if 0
-!! @todo put these boundary conditions into importState
-!!       but pelagic-benthic coupler might not be initialised yet.(?)
-!!       so far, indices depend on FABM's omexdia_p initialisation
-! HZG-repo
+
+    ! set boundary conditions for pre-simulation    
     bdys(:,:,1) = 5.0 !degC
-    bdys(:,:,4) = 2.5 !no3
-    bdys(:,:,5) = 2.5 !nh4
-    bdys(:,:,6) = 250. !oxy
-    bdys(:,:,7) = 0.0 !odu
-    bdys(:,:,9) = 0.15 !po4
-    fluxes(:,:,1) = 5.0_rk/86400.0_rk !fdet
-    fluxes(:,:,2) = 5.0_rk/86400.0_rk !sdet
-    fluxes(:,:,8) = 0.08/86400.0_rk !pdet
-#else
-! FABM from sourceforge
-    bdys(:,:,1) = 5.0 !degC
-    bdys(:,:,6) = 2.5 !no3
-    bdys(:,:,7) = 2.5 !nh4
-    bdys(:,:,8) = 250. !oxy
-    bdys(:,:,9) = 0.0 !odu
-    bdys(:,:,5) = 0.15 !po4
-    fluxes(:,:,1) = 5.0_rk/86400.0_rk !fdet
-    fluxes(:,:,2) = 5.0_rk/86400.0_rk !sdet
-    fluxes(:,:,3) = 0.08/86400.0_rk !pdet
-#endif
+    do i=1,size(sed%model%info%state_variables)
+      varname = trim(only_var_name(sed%model%info%state_variables(i)%long_name))
+      if (trim(varname) == 'dissolved_nitrate') bdys(:,:,i+1)=2.5
+      if (trim(varname) == 'dissolved_ammonium') bdys(:,:,i+1)=2.5
+      if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=0.15
+      if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=250.
+      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0
+      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
+      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
+      if (trim(varname) == 'detritus-C') fluxes(:,:,i)=0.08_rk/86400.0_rk
+      !write(0,*) i,trim(only_var_name(sed%model%info%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
+    end do
+
     ! use Dirichlet boundary condition for pre-simulation
     sed%bcup_dissolved_variables = 2
     do tidx=1,int(presimulation_years*365*24/(dt/3600.0_rk),kind=ESMF_KIND_I8)
