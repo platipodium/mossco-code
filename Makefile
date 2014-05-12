@@ -69,7 +69,6 @@ else
 endif
 
 .PHONY: external fabm-git gotm-git getm-git erosed-svn
-
 external: fabm-git gotm-git getm-git #erosed-svn
 
 fabm-git:
