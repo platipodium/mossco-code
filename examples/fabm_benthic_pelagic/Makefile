@@ -22,7 +22,14 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LIBS := -lsediment -lconstant -lmossco_erosed -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
+ifeq ($(MOSSCO_EROSED),true)
+EROSED_DEP = libmossco_erosed
+EROSED_LIB = -lmossco_erosed
+else
+EROSED_DEP =
+EROSED_LIB =
+endif
+LIBS := -lsediment -lconstant $(EROSED_LIB) -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
@@ -32,10 +39,10 @@ LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
-.PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm libmossco_erosed
+.PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm $(EROSED_DEP)
 
 all: exec
-exec: libmossco_util libmossco_gotmfabm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler libmossco_erosed libmossco_netcdf fabm_benthic_pelagic
+exec: libmossco_util libmossco_gotmfabm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_netcdf fabm_benthic_pelagic
 
 fabm_benthic_pelagic: toplevel_component.o ../common/main.o  
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
