@@ -26,7 +26,7 @@ integer, public, parameter :: rk=selected_real_kind(12) !< real kind
 
 type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk),dimension(:,:,:),pointer :: zi,dz,zc,dzc
-   integer  :: knum,inum,jnum
+   integer  :: knum,inum=-1,jnum=-1
    real(rk) :: dzmin
    logical  :: use_ugrid=.false.
 contains
@@ -85,8 +85,9 @@ real(rk)             :: grid_fac=10
 integer              :: i,j,k
 real(rk)             :: self_fac
 
-self%inum = 1
-self%jnum = 1
+!! grid%inum and grid%jnum are set outside
+if ((self%inum == -1).or.(self%jnum == -1)) &
+  write(0,*) 'fabm_sediment_driver: grid size < 0'
 ! total depth = 18cm
 self_fac = 0.18_rk/((self%knum+1)/2.0_rk * self%dzmin) - 1.0_rk ! the last layer is 10x thicker than the first layer
 

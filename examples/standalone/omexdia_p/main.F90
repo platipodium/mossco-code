@@ -36,6 +36,8 @@ ode_method=_RK4_
 open(33,file='run.nml',action='read',status='old')
 read(33,nml=run_nml)
 tnum=numyears*365*86400/int(dt)
+sed%grid%inum=1
+sed%grid%jnum=1
 sed%grid%knum=numlayers
 sed%grid%dzmin=dzmin
 
