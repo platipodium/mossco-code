@@ -13,6 +13,7 @@ module pelagic_benthic_coupler
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP,DETP,vDETP
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2
 
   public SetServices
 
@@ -50,12 +51,12 @@ module pelagic_benthic_coupler
     !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
     call ESMF_ArraySpecSet(pelagic_bdy_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    pelagic_bdy_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), &
-      maxIndex=(/1,1,1/), &
-      regDecomp=(/1,1,1/), &
+    pelagic_bdy_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+      maxIndex=(/1,1/), &
+      regDecomp=(/1,1/), &
       coordSys=ESMF_COORDSYS_SPH_DEG, &
       indexflag=ESMF_INDEX_GLOBAL,  &
-      name="pelagic states grid", &
+      name="sediment_surface_boundary_grid", &
       coordTypeKind=ESMF_TYPEKIND_R8, &
       coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
@@ -94,6 +95,17 @@ module pelagic_benthic_coupler
     !> fdet = fac_fdet*det
     !> sdet = fac_sdet*det
 
+      ! water temperature:
+      call mossco_state_get(importState,(/'temperature_in_water'/),ptr_f3,rc=rc)
+      call mossco_state_get(exportState,(/'temperature_at_soil_surface'/),ptr_f2,rc=rc)
+      ptr_f2(1,1) = ptr_f3(1,1,1)
+
+      ! dissolved_oxygen:
+      call mossco_state_get(importState,(/'dissolved_oxygen'/),ptr_f3,rc=rc)
+      call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/),ptr_f2,rc=rc)
+      ptr_f2(1,1) = ptr_f3(1,1,1)
+
+
       !   Det flux:
       call mossco_state_get(importState,(/ &
             'detritus              ', &
@@ -114,60 +126,60 @@ module pelagic_benthic_coupler
       fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
       fac_sdet = (1.0_rk-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
-      call ESMF_StateGet(exportState,'fast_detritus_C',field,rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = fac_fdet * DETN(1,1,1)
-      call ESMF_StateGet(exportState,'slow_detritus_C',field,rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = fac_sdet * DETN(1,1,1)
+      call ESMF_StateGet(exportState,'fast_detritus_C_at_soil_surface',field,rc=rc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
+      ptr_f2(1,1) = fac_fdet * DETN(1,1,1)
+      call ESMF_StateGet(exportState,'slow_detritus_C_at_soil_surface',field,rc=rc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
+      ptr_f2(1,1) = fac_sdet * DETN(1,1,1)
 
-      call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity'/),ptr_f3,rc=rc)
-      if (rc==0) ptr_f3(1,1,1) = sinking_factor * vDETN(1,1,1)
-      call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity'/),ptr_f3,rc=rc)
-      if (rc==0) ptr_f3(1,1,1) = sinking_factor * vDETN(1,1,1)
+      call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=rc)
+      if (rc==0) ptr_f2(1,1) = sinking_factor * vDETN(1,1,1)
+      call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=rc)
+      if (rc==0) ptr_f2(1,1) = sinking_factor * vDETN(1,1,1)
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
-      call mossco_state_get(exportState,(/'detritus-P'/),ptr_f3,rc=rc)
+      call mossco_state_get(exportState,(/'detritus-P_at_soil_surface'/),ptr_f2,rc=rc)
       call mossco_state_get(importState,(/ &
           'detP                    ', &
           'Detritus_Phosphorus_detP'/),DETP,rc=rc)
       if (rc == 0) then
-        ptr_f3(1,1,1) = DETP(1,1,1)
+        ptr_f2(1,1) = DETP(1,1,1)
       else
-        ptr_f3(1,1,1) = 1.0d0/16.0d0 * DETN(1,1,1)
+        ptr_f2(1,1) = 1.0d0/16.0d0 * DETN(1,1,1)
       end if
 
-      call mossco_state_get(exportState,(/'detritus-P_z_velocity'/),ptr_f3,rc=rc)
+      call mossco_state_get(exportState,(/'detritus-P_z_velocity_at_soil_surface'/),ptr_f2,rc=rc)
       call mossco_state_get(importState,(/ &
               'detP_z_velocity                    ', &
               'Detritus_Phosphorus_detP_z_velocity'/),vDETP,rc=rc)
       if (rc==0) then
-        ptr_f3(1,1,1) = sinking_factor * vDETP(1,1,1)
+        ptr_f2(1,1) = sinking_factor * vDETP(1,1,1)
       else
-        ptr_f3(1,1,1) = sinking_factor * vDETN(1,1,1)
+        ptr_f2(1,1) = sinking_factor * vDETN(1,1,1)
       end if
 
       ! DIM concentrations:
       !  oxygen is coming from constant component
       !  set reduced substances to zero
-      call mossco_state_get(exportState,(/'dissolved_reduced_substances'/),ptr_f3,rc=rc)
-      ptr_f3(1,1,1) = 0.0d0
+      call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/),ptr_f2,rc=rc)
+      ptr_f2(1,1) = 0.0d0
 
       call mossco_state_get(importState,(/ &
               'nutrients                            ', &
               'DIN                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN'/),DIN,rc=rc)
-      call ESMF_StateGet(exportState,'mole_concentration_of_ammonium',field,rc=rc)
+      call ESMF_StateGet(exportState,'mole_concentration_of_ammonium_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
-      call ESMF_StateGet(exportState,'mole_concentration_of_nitrate',field,rc=rc)
+      ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
+      call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3(1,1,1) = 0.5d0 * DIN(1,1,1)
+      ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
 
       !> check for DIP, if present, take as is, if not calculate it N-based
       call mossco_state_get(importState,(/ &
@@ -177,11 +189,11 @@ module pelagic_benthic_coupler
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))
         DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
       end if
-      call ESMF_StateGet(exportState,'mole_concentration_of_phosphate',field,rc=rc)
+      call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3(1,1,1) = DIP(1,1,1)
+      ptr_f2(1,1) = DIP(1,1,1)
 
   end subroutine Run
 

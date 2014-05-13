@@ -28,6 +28,7 @@ type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk),dimension(:,:,:),pointer :: zi,dz,zc,dzc
    integer  :: knum,inum,jnum
    real(rk) :: dzmin
+   logical  :: use_ugrid=.false.
 contains
    procedure :: init_grid
 end type fabm_sed_grid
