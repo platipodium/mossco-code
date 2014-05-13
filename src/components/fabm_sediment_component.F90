@@ -173,6 +173,8 @@ module fabm_sediment_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       sed%grid%inum=numElements
       sed%grid%jnum=1
+      write(message,*) 'fabm_sediment_component: use unstructured grid, number of local elements:',numElements
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     else
       sed%grid%inum=1
       sed%grid%jnum=1
