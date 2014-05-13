@@ -79,8 +79,9 @@ class(type_rhs_driver)  ,intent(inout):: rhs_driver
 
 logical  :: first
 real(rk),dimension(:,:,:,:),pointer :: rhs
-real(rk),dimension(1:1,1:1,1:rhs_driver%knum,1:rhs_driver%nvar),target :: rhs0,rhs1,rhs2,rhs3
-real(rk),target :: c1(1:1,1:1,1:rhs_driver%knum,1:rhs_driver%nvar)
+#define _SHAPE3D_ 1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum
+real(rk),dimension(_SHAPE3D_,1:rhs_driver%nvar),target :: rhs0,rhs1,rhs2,rhs3
+real(rk),target :: c1(_SHAPE3D_,1:rhs_driver%nvar)
 real(rk),dimension(:,:,:,:),pointer :: c_pointer
 integer  :: i,ci
 real(rk) :: dt_red,dt_int,relative_change
