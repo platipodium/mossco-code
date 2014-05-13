@@ -71,21 +71,24 @@ contains
   !! an item's name in the importState
   subroutine set_item_flags(state,name,requiredFlag,optionalFlag,requiredRank)
     type(ESMF_State)           :: state
-    character(len=ESMF_MAXSTR) :: name
+    character(len=ESMF_MAXSTR) :: name,attname
     integer,optional           :: requiredRank
     logical,optional           :: requiredFlag,optionalFlag
     integer                    :: rc
-     
+    
     if (present(requiredFlag)) then
-      call ESMF_AttributeSet(state,name=trim(name)//':required',value=requiredFlag,rc=rc)
+      attname=trim(name)//':required'
+      call ESMF_AttributeSet(state,name=attname,value=requiredFlag,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (present(requiredRank)) then
-      call ESMF_AttributeSet(state,name=trim(name)//':required_rank',value=requiredRank,rc=rc)
+      attname=trim(name)//':required_rank'
+      call ESMF_AttributeSet(state,name=attname,value=requiredRank,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (present(optionalFlag)) then
-      call ESMF_AttributeSet(state,name=trim(name)//':optional',value=optionalFlag,rc=rc)
+      attname=trim(name)//':optional'
+      call ESMF_AttributeSet(state,name=attname,value=optionalFlag,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
   end subroutine set_item_flags
