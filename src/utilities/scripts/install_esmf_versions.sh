@@ -1,13 +1,15 @@
 #!/bin/bash
 
-export TAGS="ESMF_7_0_0_beta_snapshot_08"  ESMF_6_3_0r ESMF_6_3_0rp1_beta_snapshot_08 "ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
+export TAGS="ESMF_7_0_0_beta_snapshot_08"  # ESMF_6_3_0r ESMF_6_3_0rp1_beta_snapshot_08 "ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
 COMPS="gfortran" # intel pgi"
 COMMS="openmpi" #  mpiuni"
 
-test -n ${ESMF_DIR} || ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
+test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull
 
-export ESMF_INSTALL_PREFIX=/opt/esmf
+test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
+mkdir -p ${ESMF_INSTALL_PREFIX}/etc
+
 export ESMF_OS=$(${ESMF_DIR}/scripts/esmf_os)
 export ESMF_ABI=64
 
@@ -30,7 +32,7 @@ for C in $COMMS ; do
       ;;
     *)
       ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
-      ESMF_NETCDF_LIBPATh=${ESMF_NETCDF_INCLUDE%%include}lib
+      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
       ;;
     esac
     
@@ -42,10 +44,10 @@ for C in $COMMS ; do
       export PATH=$MPI_PATH/bin:$PATH
       NETCDF_PATH=/opt/intel/netcdf4
       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
-      ESMF_NETCDF_LIBPATh=${ESMF_NETCDF_INCLUDE%%include}lib
+      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
     else    
       ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
-      ESMF_NETCDF_LIBPATh=${ESMF_NETCDF_INCLUDE%%include}lib
+      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
     fi
 #    echo y  | module clear
 #    module load ${ESMF_COMPILER} || continue
@@ -62,7 +64,7 @@ for C in $COMMS ; do
        git checkout  -f $T
        
        
-       # Fix -lmpi_f77 on recent Darwins
+       # Fix -lmpi_f77 on recent Darwin/MacPorts
        sed -i tmp 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
        
        ln -sf ${ESMF_DIR}/build_config/Darwin.gfortran.default ${ESMF_DIR}/build_config/Darwin.gfortran.${ESMF_SITE}
