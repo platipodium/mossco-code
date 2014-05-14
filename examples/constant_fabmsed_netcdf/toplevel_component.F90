@@ -83,13 +83,19 @@ module toplevel_component
 
     call ESMF_GridCompInitialize(constantComp, importState=state, exportState=state,clock=parentClock,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
     call ESMF_GridCompInitialize(fabmsedComp, importState=state, exportState=state, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
+    !> stop and re-initialize constantComp, since fabmsed replaced
+    !! the boundary fields
+    call ESMF_GridCompFinalize(constantComp)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompInitialize(constantComp, importState=state, exportState=state,clock=parentClock,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
     call ESMF_GridCompInitialize(netcdfComp, importState=state, exportState=state, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-!    call ESMF_CplCompInitialize(pbCplComp, importState=state, exportState=state, clock=parentClock, rc=rc)
-!    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
 
