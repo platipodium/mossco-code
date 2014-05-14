@@ -64,7 +64,7 @@ module constant_component
     type(ESMF_Field), dimension(:), allocatable :: exportField
     type(ESMF_Grid)                             :: grid2, grid3
     type(ESMF_DistGrid)                         :: distgrid
-    type(ESMF_ArraySpec)                        :: arrayspec
+    type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
     real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:) 
     character(len=ESMF_MAXSTR)                  :: varname
     integer, parameter                          :: fileunit=21
@@ -74,7 +74,10 @@ module constant_component
     character(len=ESMF_MAXSTR)                  :: timeString
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
-    
+    integer(ESMF_KIND_I4), dimension(2)  :: totalCount2, totalUBound2, totalLBound2
+    integer(ESMF_KIND_I4), dimension(3)  :: totalCount3, totalUBound3, totalLBound3
+    integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
+   
     rc = ESMF_SUCCESS
      
     !! Check whether there is already a clock (it might have been set 
@@ -103,27 +106,52 @@ module constant_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     grid3 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="constants grid 1x1x1",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
-      coorddep2=(/2/),rc=rc)
+      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+      name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_GridAddCoord(grid3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+    call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (localDeCount3>0) then
+      call ESMF_GridGetCoord(grid3, coordDim=1, localDE=0, farrayPtr=farrayPtr3, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr3(:,:,:)=8.0D0
+    
+      call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=0, farrayPtr=farrayPtr3, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr3(:,:,:)=54.1D0
+    endif
+
     grid2 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="constants grid 1x1",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
-      coorddep2=(/2/),rc=rc)      
+      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+      name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)      
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_GridAddCoord(grid2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    ! Get information to generate the fields that store the pointers to variables
-    call ESMF_GridGetFieldBounds(grid=grid3,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
-      totalCount=farray_shape,rc=rc)
+    call ESMF_GridGet(grid2, localDeCount=localDeCount2, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (localDeCount2>0) then
+      call ESMF_GridGetCoord(grid2, coordDim=1, localDE=0, farrayPtr=farrayPtr2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr2(:,:)=8.0D0
+    
+      call ESMF_GridGetCoord(grid2, coordDim=2,  localDE=0, farrayPtr=farrayPtr2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr2(:,:)=54.1D0
+    endif
+
+		!> Create ArraySpecs for both grids
+		call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+		call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     clock=ESMF_ClockCreate(parentClock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -142,6 +170,7 @@ module constant_component
       file_readable=.false.
       write(message,'(A)') trim(name)//' could not open constant_component.dat'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      rc=0
     else
       do
         !> read constant_component.dat line by line, maybe add rank later
@@ -165,12 +194,14 @@ module constant_component
           start = index(cur_item%standard_name(start:),'_at_')+1
         enddo 
         
-        write(0,*) 'constant_component: create field ', &
-            trim(varname),' =',cur_item%value
-        write(message,'(A,I1,A,F4.2)') trim(name)//' created field '//trim(varname)// &
-          ' rank(',cur_item%rank,'), value ',cur_item%value
-        call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
-
+        if ((cur_item%rank == 3 .and. localDeCount3>0) &
+          .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
+          write(0,*) 'constant_component: create field ', &
+              trim(varname),' =',cur_item%value
+          write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
+            ' rank(',cur_item%rank,'), value ',cur_item%value
+          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
+        endif
         nullify(cur_item%next)
       end do
     close(fileunit)
@@ -183,22 +214,28 @@ module constant_component
     if (file_readable) then 
       do
         if (cur_item%rank==3) then 
-          cur_item%field = ESMF_FieldCreate(grid3, &
-              typekind=ESMF_TYPEKIND_R8, &
-              name=cur_item%standard_name, &
-              staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+          
+          cur_item%field = ESMF_FieldCreate(grid3, arraySpec3, &
+					  indexflag=ESMF_INDEX_DELOCAL, &
+						staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=rc)
+	          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
               
-          call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr3, rc=rc)     
-          farrayPtr3(:,:,:)=cur_item%value
-              
+            if (localDeCount3>0) then
+              call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, & 
+                totalLBound=totalLBound3, totalUBound=totalUBound3, totalCount=totalCount3, rc=rc)
+              farrayPtr3(:,:,:)=cur_item%value
+            endif              
         elseif (cur_item%rank==2) then
-          cur_item%field = ESMF_FieldCreate(grid2, &
-              typekind=ESMF_TYPEKIND_R8, &
-              name=cur_item%standard_name, &
-              staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-          call ESMF_FieldGet(cur_item%field, farrayPtr=farrayPtr2, rc=rc)     
-          farrayPtr2(:,:)=cur_item%value
-              
+          cur_item%field = ESMF_FieldCreate(grid2, arraySpec2, &
+					  indexflag=ESMF_INDEX_DELOCAL, &
+						staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=rc)
+	          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+            if (localDeCount2>0) then
+              call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, & 
+                totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
+              farrayPtr2(:,:)=cur_item%value
+            endif 
         else
           write(0,*) cur_item%rank, trim(varname), cur_item%rank
           write(message,'(A,I1,A)') trim(name)//' not implemented reading rank(', &

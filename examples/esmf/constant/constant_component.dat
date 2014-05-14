@@ -1,0 +1,10 @@
+dissolved_oxygen       280.0
+temperature_in_water   15.15
+salinity_in_water      25.25
+dissolved_phosphate    1.0
+wind_x_velocity_at_10m 7.8
+wind_y_velocity_at_10m 5.2
+water_depth_at_soil_surface 25.0
+#concentration_of_SPM 100.0
+#concentration_of_SPM_z_velocity 0.3
+radiation_in_water  100.0
