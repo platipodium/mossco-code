@@ -103,6 +103,8 @@ module netcdf_component
     integer(ESMF_KIND_I8)   :: advanceCount,  i, j
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii, petCount
+    integer(ESMF_KIND_I4)   :: localDeCount
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: totalUBound, totalLBound
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
@@ -125,7 +127,7 @@ module netcdf_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     ! This output routine only works on PET0
-    if (localPET>0) return
+    !if (localPET>0) return
     
     if (.not.clockIsPresent) then
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
@@ -153,6 +155,9 @@ module netcdf_component
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
       defaultValue='netcdf_component.nc', rc=rc)
+    if (petCount>0) then
+      write(fileName,'(A,I3.3,A)') filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
+    endif
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -197,7 +202,10 @@ module netcdf_component
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          call nc%put_variable(field)
+        
+        	call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        	if (localDeCount>0) call nc%put_variable(field)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
@@ -213,7 +221,10 @@ module netcdf_component
             call ESMF_FieldGet(fieldList(ii),name=fieldName,rc=rc)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
             write(numberstring,'(I0.3)') ii
-            call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
+            
+            call ESMF_FieldGet(field, localDeCount=localDeCount)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        	  if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
           end do
           deallocate(fieldList)
         else 

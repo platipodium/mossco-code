@@ -62,25 +62,45 @@ module mossco_netcdf
   
     integer                     :: ncStatus, varid, rc, esmfrc, rank
     integer                     :: nDims, nAtts, udimid, dimlen
-    character(len=ESMF_MAXSTR)  :: varname, message
+    character(len=ESMF_MAXSTR)  :: varname, message, fmt
     type(ESMF_Grid)             :: grid
+    
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, totalCount
+    integer(ESMF_KIND_I4)       :: localDeCount
     
     real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: farrayPtr4
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
-  
-  
-    call ESMF_FieldGet(field, name=varname, rank=rank, grid=grid, rc=rc)
+ 
+    call ESMF_FieldGet(field, name=varname, rank=rank, grid=grid, &
+      localDeCount=localDeCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+    
+    if (localDeCount==0) return 
+
+    allocate(lbnd(rank))
+    allocate(ubnd(rank))
+    allocate(totalCount(rank))
+    call ESMF_FieldGetBounds(field, localDe=0, exclusiveLBound=lbnd, &
+      exclusiveUBound=ubnd, totalCount=totalCount, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+
+    !write(fmt,'(A,I1,A,I1,A,I1,A)') '(A,I2.2,A,',rank, 'I2,A,', rank, 'I2,A,', rank, 'I2)'
+    !write(message,fmt) 'localDeCount=', localDeCount,' bounds ',lbnd,' : ', &
+    !  ubnd, ' totalCount ', totalCount
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, rc=rc)
+
+    if (any(totalCount==0)) return
+      
     if (present(name)) varname=trim(name)
 
     if (rank>4 .or. rank<1) then
-       write(message,'(A)')  'Writing of fields with rank<1 or rank>3 not supported.'
+       write(message,'(A)')  'Writing of fields with rank<1 or rank>4 not supported.'
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
        return
     endif
-    
+
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
       call self%create_variable(field, trim(varname), rc=rc)
@@ -127,6 +147,9 @@ module mossco_netcdf
     if (ncStatus /= NF90_NOERR) call & 
       ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+    if (allocated(totalCount)) deallocate(totalCount)
      
   end subroutine mossco_netcdf_variable_put
 
