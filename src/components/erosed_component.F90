@@ -365,8 +365,8 @@ end if
         open (unit = 707, file = 'delft_sediment_test.out', status = 'NEW', action = 'WRITE')
     end if
 
-    write (707, '(A4,2x,A8,2x, A5,3x,A10,3x,A11,4x,A5,6x,A7)') &
-        'Step','Fractions','layer','Sink(m/s)','Source(m/s)', 'nfrac', 'mudfrac'
+    write (707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
+        'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
 
 
     !> create grid
@@ -469,6 +469,7 @@ end if
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
     integer               :: external_index
+    real(kind=ESMF_KIND_R8):: vonkar, ustar, z0cur
 
 !#define DEBUG
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
@@ -632,9 +633,28 @@ end if
       h0=h1
 !      r0=r1
     end if
-     umod =umod * 1.2
-   !  umod = 1.0
-    ! h0 = 20
+
+    taub= 0.0_fp
+    z0cur=0.0_fp
+    ustar= 0.0_fp
+    vonkar = 0.4_fp
+  ! Loop over all cells
+    do nm = nmlb, nmub
+     do l = 1, nfrac
+      z0cur = 3.0 * sedd90(l)
+      !write (707,*) 'z0cur', z0cur
+      ustar = umod (nm)*vonkar/log(1. + h0(nm)/12.0/z0cur)
+      !write (707,*)'ustar',ustar
+      taub(nm) = taub(nm)+ rhow*ustar**2
+      !write (707,*) 'tau', taub(nm)
+     enddo
+     !write (707,*) 'nfrac', nfrac
+     taub(nm) = taub(nm)/(nfrac*1.0)
+     !write (*,*) 'tau', taub(nm)
+    enddo
+
+
+    umod =umod * 1.2
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
@@ -656,28 +676,27 @@ end if
 
 
 
-    ! Loop over all cells
-    do nm = nmlb, nmub
-      taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm))
-    enddo
+
 
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
-            do nm = nmlb, nmub
+      spm_concentration(1,1,l) = max (0.0_fp, spm_concentration(1,1,l) )
+     do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
-             write (707, '(I4,4x,I4,4x,I5,4(4x,F8.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(1,1,l), sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm)
-            enddo
+             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,1)*spm_concentration(1,1,l), sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+     enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
+
       size_classes_of_upward_flux_of_pim_at_bottom(1,1,l) = &
           sour(l,1) *1000.0_fp - sink(l,1)*spm_concentration(1,1,l)
 
 !          write (*,*) 'SPM',l,'=', spm_concentration(1,1,l)
     !      write (*,*) 'sour*1000.0', sour(l,1) *1000.0_fp
-    !      write (*,*) 'sink *concentration', sink(l,1)*spm_concentration(1,1,l)
+      !write (*,*) 'concentration', spm_concentration(1,1,l)
     enddo
 
         !
