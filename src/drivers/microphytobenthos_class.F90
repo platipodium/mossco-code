@@ -116,7 +116,7 @@ use Bio_erodibility
 
 
 implicit none
-
+!#define DEBUG
 class (Microphytobenthos) :: this
 
 this%TauEffect (1,1,1) =  Crit_shear_bioeffect(this%BioMass)
