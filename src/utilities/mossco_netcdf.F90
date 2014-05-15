@@ -172,6 +172,7 @@ module mossco_netcdf
     type(ESMF_Grid)                :: grid
     character(len=*),optional      :: name
     character(len=ESMF_MAXSTR)     :: varname,gridname,fieldname,coordinates=''
+    character(len=ESMF_MAXSTR)     :: units=''
     integer                        :: ncStatus,esmfrc,rc_,varid,dimcheck=0
     integer                        :: dimids_1d(2),dimids_2d(3),dimids_3d(4),rank
     integer, dimension(:),pointer  :: dimids
@@ -215,10 +216,13 @@ module mossco_netcdf
 
       ! write external index, that is used to e.g. communicate FABM variable index
       call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1,rc=rc)
-      ncStatus = nf90_put_att(self%ncid,varid,'external_index',external_index)
+      if (external_index > -1) &
+        ncStatus = nf90_put_att(self%ncid,varid,'external_index',external_index)
       call ESMF_AttributeGet(field,'mean_particle_diameter',mean_diameter,defaultvalue=-1.0d0,rc=rc)
-      ncStatus = nf90_put_att(self%ncid,varid,'mean_particle_diameter',mean_diameter)
-      !! @todo get unit from field attributes
+      if (mean_diameter > 0.0d0) &
+        ncStatus = nf90_put_att(self%ncid,varid,'mean_particle_diameter',mean_diameter)
+      call ESMF_AttributeGet(field,'units',units,defaultvalue='',rc=rc)
+      ncStatus = nf90_put_att(self%ncid,varid,'units',units)
 
       ncStatus = nf90_enddef(self%ncid)
     end if

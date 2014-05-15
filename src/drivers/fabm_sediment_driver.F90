@@ -468,18 +468,23 @@ subroutine get_all_export_states(self)
    allocate(self%export_states(self%nvar+5))
    self%export_states(1)%standard_name='porosity'
    self%export_states(1)%data => self%porosity
+   self%export_states(1)%unit='m3/m3'
 
    self%export_states(2)%standard_name='layer_height'
    self%export_states(2)%data => self%grid%dz
+   self%export_states(2)%unit='m'
 
    self%export_states(3)%standard_name='layer_center_depth'
    self%export_states(3)%data => self%grid%zc
+   self%export_states(3)%unit='m'
 
    self%export_states(4)%standard_name='temperature'
    self%export_states(4)%data => self%temp3d
+   self%export_states(4)%unit='degC'
 
    self%export_states(5)%standard_name='photosynthetically_available_radiation'
    self%export_states(5)%data => self%par
+   self%export_states(5)%unit='W/m2'
 
    do fabm_id=1,self%nvar
        self%export_states(5+fabm_id) = self%get_export_state_by_id(fabm_id)
