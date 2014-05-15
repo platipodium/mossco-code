@@ -397,7 +397,7 @@ module fabm_sediment_component
         field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
                    name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit))
+        call ESMF_AttributeSet(field,'units',trim(sed%model%info%diagnostic_variables(n)%units))
         
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

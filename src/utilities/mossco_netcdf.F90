@@ -222,7 +222,7 @@ module mossco_netcdf
       if (mean_diameter > 0.0d0) &
         ncStatus = nf90_put_att(self%ncid,varid,'mean_particle_diameter',mean_diameter)
       call ESMF_AttributeGet(field,'units',units,defaultvalue='',rc=rc)
-      ncStatus = nf90_put_att(self%ncid,varid,'units',units)
+      ncStatus = nf90_put_att(self%ncid,varid,'units',trim(units))
 
       ncStatus = nf90_enddef(self%ncid)
     end if
