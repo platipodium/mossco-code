@@ -60,7 +60,7 @@ end subroutine Macrofanua_set
 subroutine Macrofanua_run(Total_Bioturbation)
 
 implicit none
-
+!#ifdef DEBUG
 type (BioturbationEffect) ::Total_Bioturbation
 
 ! The run method of new species should be called here, to calculate the biological effect of
@@ -77,7 +77,10 @@ call run_Mbalthica(M_Balthica)
 
 Total_Bioturbation%ErodibilityEffect = M_Balthica%Bioturbation%ErodibilityEffect
 Total_Bioturbation%TauEffect = M_Balthica%Bioturbation%TauEffect
-
+#ifdef DEBUG
+Write (*,*) ' The macrofauna effect on the sediment erodibility is the factor:', Total_Bioturbation%ErodibilityEffect
+Write (*,*) ' The macrofauna effect on the critical bed shear stress is the factor:',Total_Bioturbation%TauEffect
+#endif
 end subroutine Macrofanua_run
 !*********************************************************************************
 subroutine Macrofanua_fin(Total_Bioturbation)
