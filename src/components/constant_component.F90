@@ -71,7 +71,7 @@ module constant_component
     logical                                     :: file_readable=.true., clockIsPresent
     integer(ESMF_KIND_I4)                       :: start
     
-    character(len=ESMF_MAXSTR)                  :: timeString
+    character(len=ESMF_MAXSTR)                  :: timeString, unitString
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
     integer(ESMF_KIND_I4), dimension(2)  :: totalCount2, totalUBound2, totalLBound2
@@ -176,7 +176,8 @@ module constant_component
         !> read constant_component.dat line by line, maybe add rank later
         !! format of each line is:
         !!   some_standard_name  12.345
-        read(fileunit,*, iostat=rc) varname,floatValue
+        unitString=""
+        read(fileunit,*, iostat=rc) varname,floatValue,unitString
         if (rc /= 0) exit
         if (varname(1:1) == '#') exit
         !> @todo this routine should exit if no values have been read (empty file, 
@@ -244,6 +245,10 @@ module constant_component
         endif
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           
+        if (len_trim(unitString)>0) then
+          call ESMF_AttributeSet(cur_item%field,'units',trim(unitString)) 
+        endif
+        
         call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 

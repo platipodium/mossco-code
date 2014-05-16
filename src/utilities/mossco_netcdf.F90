@@ -172,14 +172,19 @@ module mossco_netcdf
     type(ESMF_Grid)                :: grid
     character(len=*),optional      :: name
     character(len=ESMF_MAXSTR)     :: varname,gridname,fieldname,coordinates=''
-    character(len=ESMF_MAXSTR)     :: units=''
+    character(len=ESMF_MAXSTR)     :: units='', attributeName, string
     integer                        :: ncStatus,esmfrc,rc_,varid,dimcheck=0
     integer                        :: dimids_1d(2),dimids_2d(3),dimids_3d(4),rank
     integer, dimension(:),pointer  :: dimids
     integer, optional              :: rc
     character(len=1), dimension(3) :: coordNames = (/'x','y','z'/)
     integer                        :: external_index=-1
-    real(ESMF_KIND_R8)             :: mean_diameter
+    real(ESMF_KIND_R8)             :: mean_diameter, real8
+    real(ESMF_KIND_R4)             :: real4
+    integer(ESMF_KIND_I4)          :: i, attributeCount, int4
+    integer(ESMF_KIND_I8)          :: int8
+    type(ESMF_TypeKind_Flag)       :: typekind
+    
 
     call ESMF_FieldGet(field,name=fieldname,rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
@@ -214,6 +219,7 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
 
+      !@todo this paragraph has to be deleted once the next one (more generic) is working
       ! write external index, that is used to e.g. communicate FABM variable index
       call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1,rc=rc)
       if (external_index > -1) &
@@ -224,6 +230,29 @@ module mossco_netcdf
       call ESMF_AttributeGet(field,'units',units,defaultvalue='',rc=rc)
       ncStatus = nf90_put_att(self%ncid,varid,'units',trim(units))
 
+      call ESMF_AttributeGet(field, count=attributeCount, rc=rc)
+      do i=1, attributeCount
+         call ESMF_AttributeGet(field, attributeIndex=i, name=attributeName, &
+           typekind=typekind, rc=rc)
+         !write(0,*) name, attributeCount, i, attributeName, typekind 
+         if (typekind==ESMF_TYPEKIND_I4) then 
+           call ESMF_AttributeGet(field, attributeName, int4, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int4)
+         elseif (typekind==ESMF_TYPEKIND_I8) then
+           call ESMF_AttributeGet(field, attributeName, int8, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int8)
+         elseif (typekind==ESMF_TYPEKIND_R4) then 
+           call ESMF_AttributeGet(field, attributeName, real4, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real4)
+         elseif (typekind==ESMF_TYPEKIND_R8) then
+           call ESMF_AttributeGet(field, attributeName, real8, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real8)
+         else
+           call ESMF_AttributeGet(field, attributeName, string, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),trim(string))
+         endif
+      enddo
+      
       ncStatus = nf90_enddef(self%ncid)
     end if
    
