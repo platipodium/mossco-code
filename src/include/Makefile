@@ -52,7 +52,7 @@ all: $(TARGETS)
 clean: extraclean
 
 git-sha.h:
-	touch git-sha.h
+	@-touch git-sha.h
 
 mossco-sha: git-sha.h
 	@-if [  $(shell grep -c $(MOSSCO_SHA) $(SHA_FILE)) == 0 ] ; then \
@@ -89,7 +89,7 @@ getm-sha:
 erosed-rev:  git-sha.h
 	@-if [  $(shell grep -c $(EROSED_REV) $(SHA_FILE)) == 0 ] ; then \
 	  if [ $(shell grep -c EROSED_SVN_REVISION $(SHA_FILE)) > 0 ] ; then \
-	    sed -i .tmp '/FABM_GIT_SHA_KEY/d' $(SHA_FILE) ; \
+	    sed -i .tmp '/EROSED_SVN_REVISION/d' $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: EROSED_SVN_REVISION = "'$(EROSED_REV)'"'	 >> $(SHA_FILE) ; \
 	fi  
