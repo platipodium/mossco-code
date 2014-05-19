@@ -3,8 +3,12 @@
 This document describes how to install all the prerequisites for running ESMF and MOSSCO not
 with a package manager, but by a *manual install* of all required software packages.
 
-All of the software required is available as open source software, please search for the source
-code, often distributed as zipped archives on the internet and download the respective package.
+This script was tested on 
+
+- Linux 2.6.39-400.214.3.el5uek SMP x86_64 24 Intel(R) Xeon(R) CPU E5645 @ 2.40GHz
+- Linux 3.13.0-24-generic SMP x86_64 12 Intel(R) Xeon(R) CPU E5649  @ 2.53GHz
+- Linux 2.6.16.60-0.37_f594963d_lustre.1.8.0.1-smp  SMP x86_64  4 Dual Core AMD Opteron(tm) Processor 285
+
 
 ## Assumptions
 
@@ -13,12 +17,27 @@ already present.
 
 ## Installation directories
 
-These instructions install all the software in the directory `PREFIX=$HOME/opt`, i.e., the libraries in `$PREFIX/lib`, header files in `$PREFIX/include`, and binaries in `$PREFIX/bin`.
+These instructions install all the software in the directory `PREFIX=$HOME/opt`, i.e., the libraries in `$PREFIX/lib`, header files in `$PREFIX/include`, and binaries in `$PREFIX/bin`.  
+
+    export PREFIX=$HOME/opt
+
+If you have root access on your system, we recommend to set `PREFIX=/opt/gcc49` or similar, as the installed software will be compiler-specific.  To avoid having to use `sudo` privileges in your installation, you should make sure that the directory `$PREFIX` is owned by your local user.  If not, ensure this with
+
+    sudo chown -R your-user-name $PREFIX
 
 To use the software, please add the binary directory to your search path and the library directory to your library search path
 
 	export PATH=$PREFIX/bin:$PATH
 	export LD_LIBRARY_PATH=$PREFIX/lib:$LD_LIBRARY_PATH
+	
+	
+## Software versions
+In this tutorial, we chose a working set of software versions; by no means we intend to restrict you to using these specific versions.  You would have to adust download URLs and paths accordingly, if you chose alternate versions.
+	
+In this example, we chose to download the software to the directory `WORK=$HOME/Downloads`, unpack it there, build it there, and later install it to `$PREFIX`.
+
+   export WORK=$HOME/Downloads
+
 
 ## Installing the new GNU Compiler Collection
 
@@ -26,21 +45,26 @@ Because of insufficient support for the FORTRAN 2003 standard, and because of bu
 of GCC, MOSSCO requires GCC from version 4.8.0 onwards.  You can install this compiler yourself from
 source.
 
-GCC itself requires three software packages GMP, MPFR, and MPC to be installed (in this order).  So first go to the source directory for GMP and issue
+    cd $WORK
+    wget http://download.heise.de/software/f9cfb08c2f4cf5210863561e8a29c168/5379ee64/120272/gcc-4.9.0.tar.gz
+    tar xzf gcc-4.9.0.tar.gz
+    cd gcc-4.9.0
 
-	./configure --prefix=$PREFIX && make -j8 && make check && make install
+GCC itself requires three software packages GMP, MPFR, and MPC to be installed (in this order).  You can do this manually, but there's 
+a good chance to fail since the gcc `./configure` script is not smart enough yet.  Fortunately, gcc comes with a a script to take care 
+of its dependencies [see this discussion](http://gcc.gnu.org/wiki/FAQ#configure).
 
-Next, do the same in the MPFR directory, and point MPFR to your installation of GMP
+In the GCC source directory, run
 
-	./configure --prefix=$PREFIX --with-gmp=$PREFIX && make -j8 && make check && make install
+    ./contrib/download_prerequisites 
+    
+Create a directory next to the gcc source directory
+    
+    mkdir ../gcc-build ; cd ../gcc-build
+    
+From within this directory, run the `../gcc-4.9.0/configure` script and make
 
-Next, do the same in the MPC directory, and point to your installations of GMP and mpfr
-
-	./configure --prefix=$PREFIX --with-gmp=$PREFIX --with-mpfr=$PREFIX && make -j8 && make check && make install
-
-Finally, go to the source directory of gcc and install the compiler.  Make soure that your `LD_LIBRARY_PATH` (see above) is defined.
-
-	./configure --prefix=$PREFIX --with-gmp=$PREFIX --with-mpfr=$PREFIX --with-mpc=$PREFIX
+	../gcc-4.9.0/configure --prefix=$PREFIX --with-gmp=$PREFIX --with-mpfr=$PREFIX --with-mpc=$PREFIX
 	make -j8 && make check && make install
 
 Compiling the compiler takes a long time (go do something else for half an hour to several hours).  But once
@@ -48,29 +72,57 @@ you are done, you can use your new shiny gcc compiler (and also gfortran and oth
 
 ## Installing OpenMPI
 
-Change to your OpenMPI source directory, and issue the usual
+    cd $WORK
+    wget http://www.open-mpi.org/software/ompi/v1.8/downloads/openmpi-1.8.1.tar.gz
+    tar xzf openmpi-1.8.1.tar.gz
+    cd openmpi-1.8.1
+
+Issue the usual
 
 	./configure --prefix=$PREFIX && make -j8 && make check && make install
+
+From now on, *do not* use gcc/gfortran/g++ as your compilers, but *use mpifort/mpicc/mpiCC* as your compilers.  You can tell this to your system
+by setting
+    
+    export FC=mpifort
+    export CC=mpicc
+    export CXX=mpiCC
+    
+(or use equivalent `csh` syntax, e.g. `setenv FC mpifort`).  Note that with recent versions of OpenMPI, the commands `mpif90` and `mpif77` are deprecated.
 
 ## Installing netCDF
 
-The current netCDF comes in three packages, one for C, one for Fortran and one for C++.  As a further complication, ESMF cannot be installed with the recent C++ API (also called C++4), but needs the *legacy* version of the netcdf C++ library.  As a requirment for new features of the netCDF-4 standard, the HDF-5 library is required and must be installed first.
+The current netCDF comes in three packages, one for C, one for Fortran and one for C++.  As a further complication, ESMF cannot be installed with the recent C++ API (also called C++4), but needs the *legacy* version of the netcdf C++ library.  As a requirement for new features of the netCDF-4 standard, the HDF-5 library is required and must be installed first.
 
-So download HDF5, unzip, and change to the source directory
+To get all the software, issue the following:
 
-	./configure --prefix=$PREFIX && make -j8 && make check && make install
+    cd $WORK
+    wget http://www.hdfgroup.org/ftp/HDF5/current/src/hdf5-1.8.13.tar.gz
+    tar xzf hdf5-1.8.13.tar.gz
+    wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-4.3.2.tar.gz
+    tar xzf netcdf-4.3.2.tar.gz
+    wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.2.tar.gz
+    tar xzf netcdf-fortran-4.2.tar.gz
+    wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-cxx-4.2.tar.gz
+    tar xzf netcdf-cxx-4.2.tar.gz
+
+Change to the HDF source directory.  Add flags to enable the C++ and Fortran API to be built in your `configure` statement
+
+    cd $WORK/hdf5-1.8.13
+	./configure --prefix=$PREFIX --enable-fortran --enable-fortran2003 --enable-cxx --enable-parallel
+	make -j8 && make check && make install
 
 Then install the netcdf C library first
 
+    cd $WORK/netcdf-4.3.2
 	./configure --prefix=$PREFIX && make -j8 && make check && make install
 
-and later the fortran, C++4, and C++ legacy libraries. For each of these, issue
+and later the fortran,  and C++ legacy libraries. Issue
+    
+    cd $WORK/netcdf-fortran-4.2
+    ./configure --prefix=$PREFIX && make -j8 && make check && make install
+    cd $WORK/netcdf-cxx-4.2
+    ./configure --prefix=$PREFIX && make -j8 && make check && make install
 
-	./configure --prefix=$PREFIX && make -j8 && make check && make install
-
-
-
-
-
-
+You now have your system ready to be used with ESMF and recent Fortran 2003 requirements.
 
