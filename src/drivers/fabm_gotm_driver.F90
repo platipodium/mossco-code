@@ -910,6 +910,7 @@ end type
      export_state => export_states(n)
      export_state%conc => gotmfabm%conc(:,:,:,export_state%fabm_id)
      export_state%ws = wstmp(1,1,1,export_state%fabm_id)
+     export_state%units = trim(gotmfabm%model%state_variables(n)%units)
    end do
    deallocate(wstmp)
    !> @todo add benthic state variables

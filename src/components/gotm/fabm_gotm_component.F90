@@ -177,12 +177,18 @@ module fabm_gotm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
       !> add attributes relevant for MOSSCO
+      !! mean_particle_diameter and particle density given only,
+      !! if property persent
       attribute_name=trim('mean_particle_diameter')
       attribute_r8 = gotmfabm%model%info%state_variables(k)%properties%get_real('diameter',default=-99.d0)
-      call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
+      if (attribute_r8 > 0.0d0) &
+        call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
       attribute_name=trim('particle_density')
       attribute_r8 = gotmfabm%model%info%state_variables(k)%properties%get_real('density',default=-99.d0)
-      call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
+      if (attribute_r8 > 0.0d0) &
+        call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
+      !! always set units
+      call ESMF_AttributeSet(concfield,'units', trim(fabm_export_states(k)%units))
       !> add fabm index in concentration array as "external_index" to be used by other components
       call ESMF_AttributeSet(concfield,'external_index',fabm_export_states(k)%fabm_id)
 
@@ -192,6 +198,8 @@ module fabm_gotm_component
         name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       call ESMF_AttributeSet(wsfield,'external_index',fabm_export_states(k)%fabm_id)
+      !! always set units to m/s (fabm convention)
+      call ESMF_AttributeSet(wsfield,'units', 'm/s')
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateGet(exportState, &
