@@ -38,7 +38,7 @@ module fabm_sediment_component
 
   private
  
-  real(rk)  :: dzmin,dt
+  real(rk)  :: dzmin,dt,dt_spinup
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: t,tnum,funit,output=-1,k,n,numyears,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
@@ -214,7 +214,7 @@ module fabm_sediment_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     endif
     
-    dt=3600.0_rk
+    dt_spinup=3600.0_rk
     sed%bdys   => bdys
     sed%fluxes => fluxes
 
@@ -239,8 +239,8 @@ module fabm_sediment_component
 
     ! use Dirichlet boundary condition for pre-simulation
     sed%bcup_dissolved_variables = 2
-    do tidx=1,int(presimulation_years*365*24/(dt/3600.0_rk),kind=ESMF_KIND_I8)
-      call ode_solver(sed,dt,ode_method)
+    do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
+      call ode_solver(sed,dt_spinup,ode_method)
     end do
     !> use flux-boundary condition for dissolved variables as calculated in get_boundary_conditions
     !> after presimulation
