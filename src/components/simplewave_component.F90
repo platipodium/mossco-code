@@ -328,7 +328,7 @@ module simplewave_component
 
       Hrms = sqrthalf * waveH(i,j)
       omegam1 = oneovertwopi * waveT(i,j)
-!     wave orbital velocity amplitude at bottom (ubot in SWAN)
+!     peak wave orbital velocity (orbital velocity amplitude) at bottom (ubot in SWAN)
       uorb = 0.5d0 * Hrms / ( omegam1*sinh(waveK(i,j)*depth(i,j)) )
 !     wave orbital excursion
       aorb = omegam1 * uorb
