@@ -16,7 +16,7 @@
 if [ "x$1" == "x" ]; then
   FILTER="*.yaml"
 else
-  FILTER="$1.yaml"
+  FILTER="*$1*.yaml"
 fi
 
 MOSSCO_SETUPDIR=${MOSSCO_DIR%code}setups
@@ -29,6 +29,14 @@ H=$(uname -mns)
 D=$(date "+%Y%m%d %H:%M:00")
 V=$(grep ESMF_LIBSDIR $ESMFMKFILE)
 V=${V}
+N=3  # number of processors to use
+MPIRUN=$(which mpirun)
+
+if [ -n $MPIRUN ] ; then
+  CMD="mpirun -np $N "
+else
+  CMD=
+fi
 
 cat << EOT >> $L
 
@@ -67,7 +75,7 @@ cat << EOT > $S/job.sh
 #!/bin/sh
 
 #$ -N  $B
-#$ -pe orte 1
+#$ -pe orte $N
 #$ -cwd
 #$ -V
 
@@ -80,7 +88,8 @@ EOT
     done
 
   else
-    (cd $S ; rm -f PET* net*.nc ;  $G/coupling)
+    (cd $S ; rm -f PET* net*.nc )
+    (cd $S ; $CMD $G/coupling)
     if [ $? -ne 0 ]; then
       echo "$H | $B | $D | run failed" >> $L
       continue
