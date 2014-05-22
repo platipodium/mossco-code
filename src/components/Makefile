@@ -20,7 +20,10 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_clm libmossco_benthos libmossco_simplewave libmossco_netcdf libmossco_info
+TARGETS=libempty libconstant libmossco_clm libmossco_simplewave libmossco_netcdf libmossco_info
+ifeq (${MOSSCO_BENTHOS},true)
+  TARGETS+=libmossco_benthos
+endif
 
 ifeq ($(MOSSCO_EROSED),true)
 TARGETS += libmossco_erosed

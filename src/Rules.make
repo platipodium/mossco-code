@@ -286,34 +286,42 @@ export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 # determine the compiler used by FABM/GOTM/GETM
 ifdef FORTRAN_COMPILER
 
-ifeq (${MOSSCO_FABM},true)
-FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
-ifndef F90
-export F90=$(FABM_F90COMPILER)
-$(warning F90 automatically determined from FABM environment: F90=$(F90))
-endif
-endif
+  ifeq (${FORTRAN_COMPILER},PGF90)
+    # pgfortran 14.1-0 has a problem compiling benthos_component.F90 (UK 22.05.2014)
+    # see $MOSSCO_DIR/src/components/Makefile
+    export MOSSCO_BENTHOS=false
+  else
+    export MOSSCO_BENTHOS=true
+  endif
 
-ifeq (${MOSSCO_GETM},true)
-GETM_F90COMPILER=$(shell grep 'FC=' $(GETMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-GETM_F90COMPILER_VERSION:=$(shell $(GETM_F90COMPILER) --version | head -1)
-ifndef F90
-export F90=$(GETM_F90COMPILER)
-$(warning F90 automatically determined from GETM environment: F90=$(F90))
-endif
-endif
+  ifeq (${MOSSCO_FABM},true)
+    FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+    FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
+    ifndef F90
+      export F90=$(FABM_F90COMPILER)
+      $(warning F90 automatically determined from FABM environment: F90=$(F90))
+    endif
+  endif
 
-ifeq (${MOSSCO_GOTM},true)
-GOTM_F90COMPILER=$(shell grep 'FC=' $(GOTMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) --version | head -1)
-ifndef F90
-export F90=$(GOTM_F90COMPILER)
-$(warning F90 automatically determined from GOTM environment: F90=$(F90))
-endif
-endif
+  ifeq (${MOSSCO_GETM},true)
+    GETM_F90COMPILER=$(shell grep 'FC=' $(GETMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+    GETM_F90COMPILER_VERSION:=$(shell $(GETM_F90COMPILER) --version | head -1)
+    ifndef F90
+      export F90=$(GETM_F90COMPILER)
+      $(warning F90 automatically determined from GETM environment: F90=$(F90))
+    endif
+  endif
 
-export F90 ?= $(shell echo $(FORTRAN_COMPILER) | tr A-Z a-z)
+  ifeq (${MOSSCO_GOTM},true)
+    GOTM_F90COMPILER=$(shell grep 'FC=' $(GOTMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
+    GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) --version | head -1)
+    ifndef F90
+      export F90=$(GOTM_F90COMPILER)
+      $(warning F90 automatically determined from GOTM environment: F90=$(F90))
+    endif
+  endif
+
+  export F90 ?= $(shell echo $(FORTRAN_COMPILER) | tr A-Z a-z)
 
 endif
 
