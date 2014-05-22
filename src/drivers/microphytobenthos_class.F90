@@ -1,6 +1,6 @@
 module Microphytobenthos_class
 
-! The microphytobenthos class is a subclass of superclass Bethos_Effect. It comprises The effect of
+! The microphytobenthos class is a subclass of superclass Benthos_Effect. It comprises The effect of
 ! microphytobenthos on erodibility and crticial bed shear stress.
 
 use BenthosEffect_class
@@ -18,9 +18,9 @@ contains
  procedure, public, pass :: initialize=> init_microphyt
  procedure, public, pass :: set=> set_microphyt
  procedure, public, pass :: run=> run_microphyt
- procedure, public, pass :: finilize=> fin_micropyht
+ procedure, public, pass :: finalize=> fin_microphyt
 end type
-!private :: init_microphyt, set_microphyt, run_microphyt,fin_micropyht
+!private :: init_microphyt, set_microphyt, run_microphyt,fin_microphyt
 contains
 
 subroutine init_microphyt (this)
@@ -131,7 +131,7 @@ write (*,*)
 
 end subroutine run_microphyt
 
-subroutine fin_micropyht (this)
+subroutine fin_microphyt (this)
 
 implicit none
 
@@ -150,7 +150,7 @@ deallocate (this%ErodibilityEffect)
 inquire ( file = 'microphyt.nml', exist=exst , opened =opnd, Number = UnitNr )
 if (opnd) close (UnitNr)
 
-end subroutine fin_micropyht
+end subroutine fin_microphyt
 
 
 end module Microphytobenthos_class
