@@ -31,22 +31,23 @@ ifneq ($(wildcard $(MOSSCO_SETUPDIR)),)
   TARGETS += mossco-setup-sha
 endif
 endif
-ifdef MOSSCO_GOTM
+ifeq ($(MOSSCO_GOTM),true)
   GOTM_SHA=$(shell (cd $(GOTMDIR) ; git log) | head -1 | awk '{print $$2}')
   GOTM_SHA?=none
   TARGETS += gotm-sha
 endif
-ifdef MOSSCO_GETM
+ifeq ($(MOSSCO_GETM),true)
   GETM_SHA=$(shell (cd $(GETMDIR) ; git log) | head -1 | awk '{print $$2}')
   GETM_SHA?=none
   TARGETS += getm-sha
 endif
-ifdef MOSSCO_FABM
+ifeq ($(MOSSCO_FABM),true)
   FABM_SHA=$(shell (cd $(FABMDIR) ; git log) | head -1 | awk '{print $$2}')
   FABM_SHA?=none
   TARGETS += fabm-sha
+  $(info fabm-sha settings)
 endif
-ifdef MOSSCO_EROSED
+ifeq ($(MOSSCO_EROSED),true)
   EROSED_REV=$(shell (cd $(EROSED_DIR) ; svn log) | head -2 | tail -1 | awk '{print $$1}')
   EROSED_REV?=none
   TARGETS += erosed-rev
