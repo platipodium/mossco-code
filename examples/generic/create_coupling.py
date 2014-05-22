@@ -961,6 +961,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'grid_coupler' : ['gridcoupler'],
         'link_coupler' : ['linkcoupler'],
+        'redist_coupler' : ['redistcoupler'],
         'remtc_atmosphere' : ['remtc'],
         'remtc_atmosphere' : ['remtc'],
         'remtc_ocean' : ['remtc'],
@@ -984,6 +985,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'grid_coupler' : ['libgridcoupler'],
         'link_coupler' : ['liblinkcoupler'],
+        'redist_coupler' : ['libredistcoupler'],
         'remtc_atmosphere' : ['libremtc'],
         'remtc_ocean' : ['libremtc'],
         'getm' : ['libmossco_getm'],
@@ -1066,7 +1068,7 @@ libmossco_info:
 libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler libgridcoupler:
+libsurfacescoupler libaocoupler liblinkcoupler libgridcoupler libredistcoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:
