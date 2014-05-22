@@ -15,7 +15,7 @@ contains
  procedure, public, pass :: initialize=> init_Mbalthica
  procedure, public, pass :: set=> set_Mbalthica
  procedure, public, pass :: run=> run_Mbalthica
- procedure, public, pass :: finilize=> fin_Mbalthica
+ procedure, public, pass :: finalize=> fin_Mbalthica
 
 end type Mbalthica_Object
 

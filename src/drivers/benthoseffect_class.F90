@@ -19,7 +19,7 @@ type, abstract , public  :: BenthosEffect
  procedure (init)   ,public , deferred :: initialize    ! allocate and initialize variables, pointers
  procedure(setting) ,public , deferred :: set           ! read data, set variables, prove of validity of input data
  procedure(running) ,public , deferred :: run           ! run the calculations,set the result of calculation to the output and check for validity
- procedure(fin)     ,public , deferred :: finilize      ! deallocate arrays and pointers, close files
+ procedure(fin)     ,public , deferred :: finalize      ! deallocate arrays and pointers, close files
 
 end type BenthosEffect
 
