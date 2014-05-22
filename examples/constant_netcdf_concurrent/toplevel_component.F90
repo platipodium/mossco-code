@@ -18,7 +18,7 @@ module toplevel_component
 
   use constant_component, only : constant_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
-  use link_coupler, only : link_coupler_SetServices => SetServices 
+  use redist_coupler, only : redist_coupler_SetServices => SetServices 
 
   implicit none
 
@@ -34,7 +34,7 @@ module toplevel_component
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplNames
-  type(ESMF_CplComp), save  :: link_couplerComp
+  type(ESMF_CplComp), save  :: redist_couplerComp
   type(ESMF_GridComp), save :: constantComp
   type(ESMF_GridComp), save :: netcdfComp
   type(ESMF_State), save    :: constantExportState, constantImportState
@@ -176,21 +176,21 @@ module toplevel_component
     numCplComp = 1
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
-    cplCompNames(1) = 'link_coupler'
+    cplCompNames(1) = 'redist_coupler'
     
     do i = 1, numCplComp
       cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i))//'Comp', rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
     
-    call ESMF_CplCompSetServices(cplCompList(1), link_coupler_SetServices, rc=rc)
+    call ESMF_CplCompSetServices(cplCompList(1), redist_coupler_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Initialize all components, both cpl and grid components, do this
     !! in the order specified by dependencies/couplings
     !! Also, try to find coupling/dependency specific export/import states in
     !! the initialization
-    !! Initializing 0: link_coupler
+    !! Initializing 0: redist_coupler
     call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(1), &
       exportState=importStates(2), clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -213,7 +213,7 @@ module toplevel_component
     numCplAlarm = 1
     if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
     if (.not.allocated(cplNames)) allocate(cplNames(numCplAlarm))
-    cplNames(:) = 'link'
+    cplNames(:) = 'redist'
 
     !! Set the coupling alarm starting from start time of local clock
     call ESMF_ClockGet(clock,startTime=startTime, rc=rc)
@@ -450,7 +450,7 @@ module toplevel_component
           enddo
             
           write(message,'(A)') trim(timeString)//' '//trim(myName)//' ->'
-          if (trim(cplName) /= 'link') then
+          if (trim(cplName) /= 'redist') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
             write(message,'(A)') trim(message)//' ('//trim(cplName)//') ->'

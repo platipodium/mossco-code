@@ -21,7 +21,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LDFLAGS += $(LIBRARY_PATHS)
 LDFLAGS += -lconstant
-LDFLAGS += -llinkcoupler
+LDFLAGS += -lredistcoupler
 LDFLAGS += -lmossco_netcdf
 LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) 
 
@@ -29,12 +29,12 @@ LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
 
 all: exec
 
-exec: libmossco_util  libconstant liblinkcoupler libmossco_netcdf coupling
+exec: libmossco_util  libconstant libredistcoupler libmossco_netcdf coupling
 
 coupling: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 	@echo "Created example $(MOSSCO_DIR)/examples/generic/$@"
-toplevel_component.o : toplevel_component.F90 libconstant liblinkcoupler libmossco_netcdf
+toplevel_component.o : toplevel_component.F90 libconstant libredistcoupler libmossco_netcdf
 
 # Other subsidiary targets that might not be needed, these should evetually
 # end up in some global Rules.make 
@@ -54,7 +54,7 @@ libempty libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler libgridcoupler:
+libsurfacescoupler libaocoupler libredistcoupler libgridcoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:
