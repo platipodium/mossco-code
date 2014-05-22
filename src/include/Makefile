@@ -55,32 +55,32 @@ git-sha.h:
 	@-touch git-sha.h
 
 mossco-sha: git-sha.h
-	@-if [  $(shell grep -c $(MOSSCO_SHA) $(SHA_FILE)) == 0 ] ; then \
-	  if [ $(shell grep -c MOSSCO_GIT_SHA_KEY $(SHA_FILE)) > 0 ] ; then \
+	@-if [  $(shell grep -c $(MOSSCO_SHA) $(SHA_FILE))  -eq 0 ] ; then \
+	  if [ $(shell grep -c MOSSCO_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    sed -i .tmp '/MOSSCO_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = "'$(MOSSCO_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi  
 
 fabm-sha:  git-sha.h
-	@-if [  $(shell grep -c $(FABM_SHA) $(SHA_FILE)) == 0 ] ; then \
-	  if [ $(shell grep -c FABM_GIT_SHA_KEY $(SHA_FILE)) > 0 ] ; then \
+	@-if [  $(shell grep -c $(FABM_SHA) $(SHA_FILE)) -eq 0 ] ; then \
+	  if [ $(shell grep -c FABM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    sed -i .tmp '/FABM_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: FABM_GIT_SHA_KEY = "'$(FABM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi  
 
 gotm-sha:  git-sha.h
-	@-if [  $(shell grep -c $(GOTM_SHA) $(SHA_FILE)) == 0 ] ; then \
-	  if [ $(shell grep -c GOTM_GIT_SHA_KEY $(SHA_FILE)) > 0 ] ; then \
+	@-if [  $(shell grep -c $(GOTM_SHA) $(SHA_FILE)) -eq 0 ] ; then \
+	  if [ $(shell grep -c GOTM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    sed -i .tmp '/GOTM_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: GOTM_GIT_SHA_KEY = "'$(GOTM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi  
 
 getm-sha:
-	@-if [  $(shell grep -c $(GETM_SHA) $(SHA_FILE)) == 0 ] ; then \
-	  if [ $(shell grep -c GETM_GIT_SHA_KEY $(SHA_FILE)) > 0 ] ; then \
+	@-if [  $(shell grep -c $(GETM_SHA) $(SHA_FILE)) -eq 0 ] ; then \
+	  if [ $(shell grep -c GETM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
 	    sed -i .tmp '/GETM_GIT_SHA_KEY/d' $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: GETM_GIT_SHA_KEY = "'$(GETM_SHA)'"'	 >> $(SHA_FILE) ; \
