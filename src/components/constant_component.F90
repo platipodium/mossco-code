@@ -92,6 +92,7 @@ module constant_component
       clock = ESMF_ClockCreate(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
@@ -105,10 +106,12 @@ module constant_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    grid3 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
+    grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
       coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
       name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+    call ESMF_AttributeSet(grid3,'creator',trim(name))
 
     call ESMF_GridAddCoord(grid3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -126,11 +129,13 @@ module constant_component
       farrayPtr3(:,:,:)=54.1D0
     endif
 
-    grid2 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+    grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
       coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
       name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)      
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+    call ESMF_AttributeSet(grid2,'creator',trim(name))
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridAddCoord(grid2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -147,14 +152,11 @@ module constant_component
       farrayPtr2(:,:)=54.1D0
     endif
 
-		!> Create ArraySpecs for both grids
-		call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
+    !> Create ArraySpecs for both grids
+    call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-		call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
+    call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    clock=ESMF_ClockCreate(parentClock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> create list of export_variables, that will come from a function
     !> which reads a text file
