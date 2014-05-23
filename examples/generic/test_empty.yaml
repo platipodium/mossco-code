@@ -1,0 +1,5 @@
+coupling:
+  - components: 
+     - test
+     - empty
+    interval: 17 h

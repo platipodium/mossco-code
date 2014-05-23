@@ -1,0 +1,5 @@
+coupling:
+  - components: 
+     - test
+     - netcdf
+    interval: 30 d

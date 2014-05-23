@@ -1,0 +1,9 @@
+instances:
+  - test1: test
+  - test2: test
+
+coupling:
+  - components: 
+     - test1
+     - test2
+    interval: 17 h
