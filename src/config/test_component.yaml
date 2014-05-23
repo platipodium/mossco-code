@@ -1,0 +1,25 @@
+author: Carsten Lemmen, HZG 
+copyright: Copyright 2014, Helmholtz-Zentrum Geesthacht      
+test:
+  name: Test component 
+  description: A hypothetical  component used for testing
+  practical_salinity:
+      units: psu
+      short_name: salinity
+      internal_name: S
+      intent: in
+      standard_name: salinity_of_sea_water_as_practical_salinity
+      #module: fish_physics
+  population_density:
+      short_name: pop
+      units: km**-2
+      min_value: -10.0
+      max_value: 50.0
+      default_value: 15.0
+      other_names:
+        density
+        density_of_fish_population
+      module: meanflow
+  phytoplanktion:
+      units: mg l*-1
+      intent: both

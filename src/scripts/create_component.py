@@ -5,7 +5,7 @@ import os
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-    filename = 'fish_component.yaml'
+    filename = '../config/test_component.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -70,7 +70,7 @@ for item in variables:
       module_list.append('  use ' + item.values()[0]['module'] + ', only : ' 
                          + item.values()[0]['internal_name'])
        
-filename = component_name + '_component.F90'
+filename = '../components/' + component_name + '_component.F90'
 fid = file(filename,'w')
 
 fid.write('!> @brief Implementation of an ESMF component for ' + component_name)
@@ -94,19 +94,16 @@ fid.write('''
 fid.write('module ' + component_name + '_component\n') 
 fid.write('''
   use esmf
-  use mossco_variable_types\n
+  use mossco_variable_types
 ''')
 
 for line in module_list:
     fid.write(line + '\n')
 
-fid.write('\n  implicit none\n  private\n')
 fid.write('''
-  type(ESMF_Clock)  :: clock 
-  real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
-''')
-
-fid.write('''
+  implicit none
+  
+  private
   public :: SetServices
   
   contains
@@ -131,7 +128,6 @@ fid.write('''
 
   !> Initialize the component
   !!
-  !! Allocate memory, create ESMF fields and add them to export State
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
@@ -140,84 +136,123 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19) :: timestring
-    type(ESMF_Time)   :: clockTime
-    type(ESMF_TimeInterval) :: timeInterval
-    real(ESMF_KIND_R8) :: dt
+    character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime
+    logical               :: clockIsPresent
+    
+    type(ESMF_Grid)       :: grid2, grid3
+    type(ESMF_Mesh)       :: mesh
+    integer               :: nimport,nexport
+    type(ESMF_DistGrid)   :: distgrid
+    type(ESMF_ArraySpec)  :: arrayspec
+    type(ESMF_Field)      :: field
+
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
-    integer                     :: nimport,nexport
-    type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_Grid)      :: grid
-    type(ESMF_ArraySpec) :: arrayspec
-    
-    type(ESMF_Field), dimension(:), allocatable  :: exportFields, importFields
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3  
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr2 
 
-    ! Create a local clock, set its parameters to those of the parent clock
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-''')
-
-fid.write('    call ESMF_ClockSet(clock, name=\'' + component_name + ' clock\', rc=rc)')
-fid.write('''
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//'_clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-''')
 
-fid.write('''
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    !> @todo
-    ! Insert here your initialization code, e.g. fish_init()
-    !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-''')
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-fid.write('''
-    !> Create the grid and coordinates
+    !> Here comes your own time initialization code
+    !! In particular, this should contain
+    !! 1. Setting your internal timestep and adding it to your clock, this could
+    !!    be a timestep read from an external file
+    !!    ESMF_TimeIntervalSet(timeStep)
+    !!    ESMF_ClockSet(Clock, timeStep=timeStep)
+    !!    The default behaviour is to take the parent's time step
+
+    !> Create grids
     !> This example grid is a 1 x 1 x 1 grid, you need to adjust this 
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL, &
-''')
-fid.write('      name=\'' + component_name + ' grid\', rc=rc)')
-fid.write('''
+    grid3 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
+      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
-    ! Get information to generate the fields that store the pointers to variables
-    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+    call ESMF_AttributeSet(grid3,'creator',trim(name), rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+    grid2 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_AttributeSet(grid3,'creator',trim(name), rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+''')
+
+nimport = len(import_variables)
+if nimport > 0:
+    fid.write('    nimport = ' + str(nimport) + '\n')
+
+for i in range(0,nimport):
+    if variables[i].values()[0].has_key('standard_name'): 
+        variable_name = variables[i].values()[0]['standard_name']
+    else:
+        variable_name = variables[i].keys()[0]
+    fid.write('    !---- Import variable ' + str(i+1) + ': ' + variable_name + '\n')
+    fid.write('''
+    call ESMF_GridGet(grid3,distgrid=distgrid,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_GridGetFieldBounds(grid=grid3,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !> Create export fields and add them to export state, allocate the space for these
-    !> that will be filled later with data
-''')
+    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n
+    ''')      
+    fid.write('    field = ESMF_FieldCreate(grid3, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &\n')
+    fid.write('       name=\'' + variable_name + '\', rc=rc)')
+    fid.write('''
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_AttributeSet(field,'creator',trim(name), rc=rc)    
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_StateAddReplace(importState,(/field/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+    ''')
+    
 nexport = len(export_variables)
 if nexport > 0:
     fid.write('    nexport = ' + str(nexport))
-    fid.write('''
-    !allocate(export_variables(nexport)) 
-    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
-    
-    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n
- ''')
     for k in range(nexport):
         if variables[k].values()[0].has_key('standard_name'): 
             variable_name = variables[k].values()[0]['standard_name']
         else:
             variable_name = variables[k].keys()[0]
         fid.write('   !---- Export variable ' + str(k+1) + ': ' + variable_name + '\n')
-        fid.write('    exportField = ESMF_FieldCreate(grid, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &\n')
+        fid.write('    field = ESMF_FieldCreate(grid3, arrayspec, staggerloc=ESMF_STAGGERLOC_CENTER, &\n')
         fid.write('      name=\'' + variable_name + '\', rc=rc)')
         fid.write('''
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
+    call ESMF_AttributeSet(field,'creator',trim(name), rc=rc)    
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_FieldGet(field=exportField, localDe=0, farrayPtr=farrayPtr, &
+    call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_FieldGet(field, localDe=0, farrayPtr=farrayPtr3, &
                        totalLBound=lbnd,totalUBound=ubnd, rc=rc) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -226,14 +261,20 @@ if nexport > 0:
             if variables[k].values()[0].has_key('default_value'): 
                 fid.write('    ' + variables[k].values()[0]['internal_name'] + ' =  ' 
                       + str(variables[k].values()[0]['default_value']) + '\n')
-            fid.write('    variables(:,:,:,' + str(k+1) + ') =  ' 
+            fid.write('!    variables(:,:,:,' + str(k+1) + ') =  ' 
                      + variables[k].values()[0]['internal_name'] + '\n')
         elif variables[k].values()[0].has_key('default_value'): 
-            fid.write('    variables(:,:,:,' + str(k+1) + ') =  ' 
+            fid.write('!    variables(:,:,:,' + str(k+1) + ') =  ' 
                       + str(variables[k].values()[0]['default_value']) + '\n')              
-        fid.write('    farrayPtr=variables(:,:,:,' + str(k+1) + ')\n\n')        
-    fid.write('    call ESMF_LogWrite(\'' + component_name + '  component initialized.\',ESMF_LOGMSG_INFO)')
-    fid.write('''
+        fid.write('!    farrayPtr3=variables(:,:,:,' + str(k+1) + ')\n\n')        
+
+    fid.write('''    
+    !! Finally, log the successful completion of this function
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -243,15 +284,19 @@ if nexport > 0:
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=19)       :: timestring
+    character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime
+    logical               :: clockIsPresent
+
     type(ESMF_Time)         :: clockTime
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: n,k
     integer                 :: itemcount,nvar
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
-    type(ESMF_Field)        :: Field
-    character(len=ESMF_MAXSTR) :: string,varname,message
+    type(ESMF_Field)        :: field
+    character(len=ESMF_MAXSTR) :: string,varname
 
     call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, &
                        advanceCount=n, rc=rc)
@@ -298,7 +343,7 @@ if nexport > 0:
 
 ''')
     for k in range(nexport):
-      fid.write('      variables(:,:,:,' + str(k+1) + ') = internal_name\n')
+      fid.write('!      variables(:,:,:,' + str(k+1) + ') = internal_name\n')
     fid.write('''       
  
       call ESMF_ClockAdvance(clock,rc=rc)
@@ -313,29 +358,10 @@ if nexport > 0:
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer                     :: lbnd(3), ubnd(3), k
-    real(ESMF_KIND_R8),pointer :: farrayPtr(:,:,:)
-    type(ESMF_Field)     :: field
-
-    do k=1,size(export_variables)
-      call ESMF_StateGet(exportState,trim(export_variables(k)%standard_name), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-#if ESMF_VERSION_MAJOR > 5
-      call ESMF_StateRemove(exportState,(/ trim(export_variables(k)%standard_name) /),rc=rc)
-#else
-      call ESMF_StateRemove(exportState,trim(export_variables(k)%standard_name),rc=rc)
-#endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_FieldDestroy(field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    enddo
-
-    if (allocated(variables)) deallocate(variables)
-
-    call ESMF_ClockDestroy(clock,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime
+    logical               :: clockIsPresent
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !> @todo 
@@ -348,4 +374,33 @@ if nexport > 0:
 
 fid.write('end module ' + component_name + '_component') 
 fid.close()
+
+filename='../components/' + component_name + '_component.mk'
+fid=open(filename,'w')
+fid.write('''
+# This Makefile is part of MOSSCO
+#
+# Do not edit this file, it is automatically generated by
+''')
+fid.write('# the call python @todo @todo')
+fid.write('''
+#
+# @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, <carsten.lemmen@hzg.de>
+
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+#
+''')
+fid.write('TARGETS += libmossco_' + component_name + '\n')
+fid.write('LIBS_TO_CLEAN += libmossco_' + component_name + '.a\n\n')
+fid.write('libmossco_' + component_name + ': libmossco_' + component_name + '_component\n')
+fid.write('libmossco_' + component_name + '_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_')
+fid.write(component_name + '.a(' + component_name + '_component.o)\n')
+
+fid.close()
+
 
