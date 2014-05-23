@@ -148,9 +148,11 @@ fid.write('''
     type(ESMF_DistGrid)   :: distgrid
     type(ESMF_ArraySpec)  :: arrayspec
     type(ESMF_Field)      :: field
+    integer(ESMF_KIND_I4) :: localPet, petCount
+    type(ESMF_VM)         :: vm
 
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
-    integer                     :: myrank,i,j,k
+    integer                     :: i,j,k
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3  
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr2 
     real(ESMF_KIND_R8)    :: h_r8
@@ -180,6 +182,16 @@ fid.write('''
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+    !! Log processor information
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
+    call ESMF_VmGet(vm, petCount=petCount, rc=rc)      
+    write(message,'(A,I6,A)') trim(timestring)//' '//trim(name)//' uses ',petCount
+    call ESMF_VmGetGlobal(vm=vm, rc=rc)
+    call ESMF_VmGet(vm, petCount=petCount, rc=rc)  
+    write(message,'(A,I6,A)') trim(message)//' of ', petCount,' PETs'
+
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     !! Log clock information 
     call ESMF_ClockGet(clock, startTime=time, rc=rc)
     call ESMF_TimeGet(time,timeStringISOFrac=string)
@@ -188,7 +200,7 @@ fid.write('''
     !call ESMF_TimeIntervalGet(timeInterval,timeStringISOFrac=string)
     !write(message,'(A)') trim(message)//'--'//trim(string)
     call ESMF_TimeIntervalGet(timeInterval,h_r8=h_r8)
-    write(message,'(A,F6.2,A)') trim(message)//'--',h_r8,' h'
+    write(message,'(A,F8.2,A)') trim(message)//'--',h_r8,' h'
     call ESMF_ClockGet(clock, stopTime=time, rc=rc)
     call ESMF_TimeGet(time,timeStringISOFrac=string)
     write(message,'(A)') trim(message)//'--'//trim(string)
@@ -331,17 +343,13 @@ if nexport > 0:
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
+    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' run ',advanceCount
     call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(20X,A,F6.2,A)') 'to '//trim(timeString)//' at ',h_r8,' h'
+    write(message,'(A,I8)') trim(message)//' to '//trim(timeString)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !> Here comes your code for reading the import states
 
-#if 0
     do while (.not.ESMF_ClockIsStopTime(clock))
 
       call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
@@ -360,8 +368,6 @@ if nexport > 0:
       call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)      
 
-
-      write(0,*) advanceCount, timeString
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !> @todo 
       ! Insert here your time step/run code
@@ -370,15 +376,7 @@ if nexport > 0:
       call ESMF_ClockAdvance(clock,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end do
-#endif
-    
-    !! This component has no do loop over an internal timestep, it is advance with the
-    !! timestep written into its local clock from a parent component
-    call ESMF_TimeIntervalGet(timeInterval, h_r8=h_r8, rc=rc)
-    write(0,*) advanceCount, timeString, h_r8
-    
-    call ESMF_ClockAdvance(clock, timeStep=timeInterval, rc=rc)
-    
+        
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)

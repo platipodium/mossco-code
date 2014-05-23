@@ -1,6 +1,9 @@
 instances:
-  - test1: test
-  - test2: test
+  test1: 
+    component: test
+  test2: 
+    component: test
+    petList: 2,1    
 
 coupling:
   - components: 

@@ -13,7 +13,7 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'empty_empty.yaml'
+     filename = 'test_test.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
      #filename = 'constant_empty_netcdf.yaml'
@@ -56,6 +56,7 @@ componentList=[]
 gridCompList=[]
 cplCompList=[]
 couplingList=[]
+petList=[]
 
 intervals =[]
 directions = []
@@ -115,14 +116,19 @@ if 'link_coupler' in componentList:
 
 instanceDict={}
 for i in range(0,len(instances)):
-   instanceDict[instances[i].keys()[0]]=instances[i].values()[0]
+   instanceDict[instances.keys()[i]]=instances.values()[i]['component']
 
 print 'Components to process:', componentList
 cplCompList=[]
 gridCompList=[]
+petList=[]
 for item in componentList:
     if item in gridCompSet:
         gridCompList.append(item)
+        if instanceDict.has_key(item) and instances[item].has_key('petList'):
+            petList.append(str(instances[item]['petList']))
+        else:
+            petList.append('all')
     else:
         cplCompList.append(item)
 
@@ -230,7 +236,7 @@ fid.write('''
     type(ESMF_TimeInterval) :: timeInterval, timeStep, alarmInterval
     real(ESMF_KIND_R8)      :: dt
      
-    integer(ESMF_KIND_I4)  :: numGridComp, numCplComp
+    integer(ESMF_KIND_I4)  :: numGridComp, numCplComp, petCount
     integer(ESMF_KIND_I4)  :: alarmCount, numCplAlarm, i
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList !> @todo shoudl this be a pointer?
     character(ESMF_MAXSTR) :: name, message
@@ -238,6 +244,8 @@ fid.write('''
     type(ESMF_Clock)       :: childClock
     type(ESMF_Clock)       :: clock !> This component's internal clock
     logical                :: clockIsPresent
+    integer(ESMF_KIND_I4), allocatable :: petList(:)
+    type(ESMF_VM)          :: vm
      
     rc = ESMF_SUCCESS
      
@@ -282,12 +290,29 @@ for i in range(0, len(gridCompList)):
     
 fid.write('''
     !! Create all gridded components, and create import and export states for these
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_VmGet(vm, petCount=petCount, rc=rc)
+    allocate(petList(petCount))
+    do i=1,petCount
+      petList(i)=i-1
+    enddo
+
     do i = 1, numGridComp
       gridCompClockList(i) = ESMF_ClockCreate(clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      gridCompList(i) = ESMF_GridCompCreate(name=trim(gridCompNames(i))//'Comp',  &
-        clock=gridCompClockList(i), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+
+''')
+for i in range(0, len(gridCompList)):
+    fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + '))//\'Comp\',  &\n')
+    if (petList[i]=='all'):
+        fid.write('      petList=petList, clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
+    else:
+        fid.write('      petList=(/' + petList[i] + '/), clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+fid.write('''
+    do i=1, numGridComp
       exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNames(i))//'ExportState')
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
