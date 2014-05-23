@@ -16,8 +16,9 @@
 if [ "x$1" == "x" ]; then
   FILTER="*.yaml"
 else
-  FILTER="*$1*.yaml"
+  FILTER="*${1%.yaml}*.yaml"
 fi
+
 
 MOSSCO_SETUPDIR=${MOSSCO_DIR%code}setups
 S=$MOSSCO_SETUPDIR/helgoland
