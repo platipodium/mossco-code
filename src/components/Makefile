@@ -146,3 +146,10 @@ subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	$(MAKE) -C $@
 
+
+ifneq ($(wildcard *.make),)
+  include *.make
+endif
+ifneq ($(wildcard *.mk),)
+  include *mk
+endif
