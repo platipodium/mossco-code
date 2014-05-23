@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /src/drivers$,,$(PWD))
+  export MOSSCO_DIR=$(subst /src/drivers$,,$(PWD))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -19,25 +19,25 @@ EXTRA_DIST=README
 
 TARGETS = libmossco_benthos
 ifeq ($(MOSSCO_NETCDF),true)
-TARGETS+=libmossco_clm
+  TARGETS+=libmossco_clm
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-TARGETS+=libmossco_sediment libmossco_fabmpelagic libmossco_fabm0d
-ifeq ($(MOSSCO_GOTM),true)
-ifeq ($(MOSSCO_NETCDF),true)
-TARGETS+=libmossco_gotmfabm
-endif
-endif
+  TARGETS+=libmossco_sediment libmossco_fabmpelagic libmossco_fabm0d
+  ifeq ($(MOSSCO_GOTM),true)
+    ifeq ($(MOSSCO_NETCDF),true)
+      TARGETS+=libmossco_gotmfabm
+    endif
+  endif
 endif
 
-ifeq ($MOSSCO_GETM),true)
-TARGETS+=libmossco_getm_driver
+ifeq ($(MOSSCO_GETM),true)
+  TARGETS+=libmossco_getm_driver
 endif
 
 ifeq ($(MOSSCO_EROSED),true)
-TARGETS += libmossco_erosed
-CPPFLAGS += -I$(EROSED_DIR)/include 
+  TARGETS += libmossco_erosed
+  CPPFLAGS += -I$(EROSED_DIR)/include 
 endif
 
 .PHONY: $(TARGETS)
@@ -64,13 +64,13 @@ getm_driver.o: getm_driver.F90
 
 # Benthos section
 libmossco_benthos: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
 
 microphytobenthos_class.o: criticalsheareffect.o benthoseffect_class.o biotypes.o erodibilityeffect.o
 mbalthica_class.o: macrofauna_class.o
@@ -86,25 +86,25 @@ libmossco_util libsolver:
 
 # EROSED section
 EROSED_OBJS= \
-	$(EROSED_DIR)/modules/precision_basics.o	\
-	$(EROSED_DIR)/modules/precision.o		\
-	$(EROSED_DIR)/source/erosand.o			\
-	$(EROSED_DIR)/source/eromud.o			\
-	$(EROSED_DIR)/source/vanRijn84.o		\
-	$(EROSED_DIR)/source/shld.o			\
-	$(EROSED_DIR)/source/sand_mud.o
+  $(EROSED_DIR)/modules/precision_basics.o  \
+  $(EROSED_DIR)/modules/precision.o    \
+  $(EROSED_DIR)/source/erosand.o      \
+  $(EROSED_DIR)/source/eromud.o      \
+  $(EROSED_DIR)/source/vanRijn84.o    \
+  $(EROSED_DIR)/source/shld.o      \
+  $(EROSED_DIR)/source/sand_mud.o
 
-libmossco_erosed_dependencies: prefix							\
+libmossco_erosed_dependencies: prefix              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision_basics.o)	\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision.o)		\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/erosand.o)		\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/eromud.o)		\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/vanRijn84.o)		\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/shld.o)		\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision_basics.o)  \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision.o)    \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/erosand.o)    \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/eromud.o)    \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/vanRijn84.o)    \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/shld.o)    \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/sand_mud.o)
 
-libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies 			\
+libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies       \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosed_driver.o)
 
 # Generic section
@@ -112,6 +112,9 @@ libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies 			\
 
 clean: extraclean
 extraclean:
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
