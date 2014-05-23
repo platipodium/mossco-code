@@ -582,6 +582,10 @@ fid.write('''
   
         call ESMF_ClockGet(childClock,currTime=time, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        ! write(message,'(A)') trim(compName)//' now at '//trim(timestring)
+        !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+
         if (time>currTime) cycle
 
         !! Find all the alarms in this child and call all the couplers that
@@ -598,6 +602,7 @@ fid.write('''
                 
         if (alarmCount==0) then
           timeInterval=stopTime-currTime
+          !call ESMF_LogWrite(trim(compName)//' has not ringing alarm at '//trim(timestring),ESMF_LOGMSG_WARNING)
         else                 
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
              alarmList=alarmList, rc=rc)
@@ -697,9 +702,23 @@ fid.write('''
   
         call ESMF_ClockGet(childClock,currTime=time, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_TimeGet(time,timeStringISOFrac=timeString)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+  
+        if (time>currTime) then
+          call ESMF_TimeGet(time,timeStringISOFrac=timeString)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          write(message,'(A)') trim(compName)//' now at '//trim(timestring)//', but'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          
+          call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          write(message,'(A)') trim(name)//' now at '//trim(timestring)//', cycling ...'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
-        if (time>currTime) cycle
-        
+          cycle
+        endif
+ 
         !! Find the child's alarm list, get the interval to the next ringing alarm
         !! and run the component for the interval until that alarm
    
@@ -733,10 +752,17 @@ fid.write('''
           if (time<ringTime) ringTime=time
         enddo 
 
-        timeInterval=ringTime-currTime
-        
         call ESMF_ClockSet(childClock, stopTime=ringTime, rc=rc) 
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        call ESMF_ClockGet(childClock, timeStep=timeInterval, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc) 
+        if (timeInterval>ringTime-currTime) then
+          call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc) 
+        endif
+
+        timeInterval=ringTime-currTime
 
         call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -755,6 +781,8 @@ fid.write('''
         if (time == currTime) then
           !! This child component did not advance its clock in its Run() routine
           !! We do that here
+          call ESMF_LogWrite(trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
+
           call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         endif
