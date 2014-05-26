@@ -13,7 +13,6 @@
 module redist_coupler
     
   use esmf
-  use mossco_state
 
   implicit none
 
@@ -30,13 +29,13 @@ module redist_coupler
 
     call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_INITIALIZE, Initialize  &
                                       , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_RUN,    Run   &
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_RUN,    Run   &
                                       , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_FINALIZE, Finalize &
-                                      , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_FINALIZE, Finalize &
+                                  , rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine SetServices
 
@@ -50,14 +49,18 @@ module redist_coupler
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)       :: petCount, localPet
-    integer(ESMF_KIND_I4)       :: i, itemCount, count
+    integer(ESMF_KIND_I4)       :: petCount, localPet, dimCount, localDeCount
+    integer(ESMF_KIND_I4)       :: rank
+    integer(ESMF_KIND_I4), allocatable :: totalUBound(:), totalLBound(:)
+    integer(ESMF_KIND_I4)       :: i, itemCount, count, j, k
     character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
     type(ESMF_Field)            :: srcField, dstField
     type(ESMF_RouteHandle)      :: routeHandle
+    
+    
 
     !! Set default SUCCESS return value and log the call to this 
     !! function into the log
@@ -98,16 +101,61 @@ module redist_coupler
           itemCount=count, rc=rc)
         if (count>0) then
           write(message,'(A)') 'Redist existing field '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          
+          call ESMF_FieldGet(srcField, localDeCount=localDeCount, rank=rank, rc=rc)
+          if (allocated(totalLBound)) deallocate(totalLBound)
+          if (allocated(totalUBound)) deallocate(totalUbound)
+          allocate(totalLBound(rank),totalUBound(rank))
+          do k=0,localDeCount-1
+            call ESMF_FieldGetBounds(srcField, localDe=k, totalLBound=totalLBound, totalUBound=totalUbound, rc=rc)
+            write(message,'(A,I3,A,I3)') 'Source field DE=',k,' lbounds (',totalLBound(1)
+            do j=2,rank
+              write(message,'(A,I3)') trim(message)//',', totalLBound(j)     
+            enddo
+            write(message,'(A,I3)') trim(message)//') ubounds (', totalUBound(1)     
+            do j=2,rank
+              write(message,'(A,I3)') trim(message)//',', totalUBound(j)     
+            enddo
+            write(message,'(A)') trim(message)//')'     
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          enddo          
+          deallocate(totalLBound,totalUBound)
+            
+                      
           call ESMF_StateGet(exportState, trim(itemNameList(i)), field=dstField, &
             rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+          call ESMF_FieldGet(dstField, localDeCount=localDeCount, rank=rank, rc=rc)
+          if (allocated(totalLBound)) deallocate(totalLBound)
+          if (allocated(totalUBound)) deallocate(totalUbound)
+          allocate(totalLBound(rank),totalUBound(rank))
+          do k=0,localDeCount-1
+            call ESMF_FieldGetBounds(dstField, localDe=k, totalLBound=totalLBound, totalUBound=totalUbound, rc=rc)
+            write(message,'(A,I3,A,I3)') 'Source field DE=',k,' lbounds (',totalLBound(1)
+            do j=2,rank
+              write(message,'(A,I3)') trim(message)//',', totalLBound(j)     
+            enddo
+            write(message,'(A,I3)') trim(message)//') ubounds (', totalUBound(1)     
+            do j=2,rank
+              write(message,'(A,I3)') trim(message)//',', totalUBound(j)     
+            enddo
+            write(message,'(A)') trim(message)//')'     
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          enddo          
+          deallocate(totalLBound,totalUBound)
+
+
+
+!#if 0
           call ESMF_FieldRedistStore(srcField, dstField, routeHandle=routeHandle, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_FieldRedist(srcField,dstField, routeHandle, rc=rc)                  
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_FieldRedistRelease(routeHandle, rc=rc)                  
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!#endif
  
         else        
           write(message,'(A)') 'Did not redist non-matching field '//trim(itemNameList(i))
