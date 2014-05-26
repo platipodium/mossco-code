@@ -45,6 +45,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk)                     :: k_par
    real(rk),dimension(:,:,:),pointer :: fluxes,bdys
    integer                      :: bcup_dissolved_variables=2
+   integer                      :: bcup_particulate_variables=1
    integer                      :: ndiag=0
    logical                      :: do_output=.true.
    type(export_state_type),dimension(:),allocatable :: export_states
@@ -55,6 +56,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    real(rk),dimension(:,:,:),pointer     :: temp3d
    real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
    real(rk),dimension(:,:),allocatable     :: zeros2d
+   real(rk),dimension(:,:,:),pointer     :: flux_cap
 
 contains
    procedure :: initialize
@@ -118,19 +120,28 @@ end subroutine init_grid
 !! Assumes to have a grid, either created by e.g. init_sed_grid. Parameters are
 !! read from namelist sed_nml, FABM is initialised and necessary arrays are
 !! allocated. Porosity is set here.
+!! The bioturbation profile can have different shapes:
+!! bioturbation_profile:
+!!   0 - constant
+!!   1 - linear decrease over bioturbation_depth towards bioturbation_min
+!!   2 - exponential descrease bioturbation*exp(-depth/bioturbation_depth) 
 
 subroutine initialize(sed)
 implicit none
 
 class(type_sed),intent(inout) :: sed
 integer :: i,j,k,n
+integer :: bioturbation_profile
+logical :: distributed_pom_flux=.false.
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
 real(rk) :: k_par,bioturbation_depth,bioturbation_min
-namelist /sed_nml/ diffusivity,bioturbation,porosity_max,porosity_fac,k_par, &
+namelist /sed_nml/ diffusivity,bioturbation_profile,bioturbation, &
+        porosity_max,porosity_fac,k_par, distributed_pom_flux, &
         bioturbation_depth,bioturbation_min
 
 ! read parameters
+bioturbation_profile = 1
 diffusivity   = 0.9 ! cm2/d
 bioturbation  = 0.9 ! cm2/d
 bioturbation_depth = 5.0 ! cm
@@ -144,6 +155,11 @@ read(33,nml=sed_nml)
 sed%bioturbation = bioturbation
 sed%diffusivity  = diffusivity
 sed%k_par        = k_par
+if (distributed_pom_flux) then
+  sed%bcup_particulate_variables=4
+else
+  sed%bcup_particulate_variables=1
+end if
 
 if (.not.(associated(sed%grid%dz))) call sed%grid%init_grid()
 sed%inum = sed%grid%inum
@@ -156,12 +172,24 @@ allocate(sed%intf_porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%bioturbation_factor(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
+allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
 do k=1,_KNUM_
    sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
-   sed%bioturbation_factor(:,:,k) = &
+   sed%flux_cap(:,:,k) = 2.d4 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dzc(:,:,k)
+   if (k .gt. 2) then
+     if (sed%flux_cap(1,1,k) .gt. sed%flux_cap(1,1,k-1)) sed%flux_cap(:,:,k) = sed%flux_cap(:,:,k-1)
+   end if
+   select case (bioturbation_profile)
+   case (1) ! linear decrease
+     sed%bioturbation_factor(:,:,k) = &
        max(bioturbation_min, &
        max(bioturbation_depth-100.0d0*sum(sed%grid%dzc(:,:,1:k)),0.0d0)/bioturbation_depth)
+   case (2) ! exponential decrease
+     sed%bioturbation_factor(:,:,k) = &
+       exp(-100.0d0*sum(sed%grid%dzc(:,:,1:k))/bioturbation_depth)
+   case default
+   end select
 end do
 sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
 sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
@@ -274,7 +302,7 @@ call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosy
 f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
 do n=1,size(rhs_driver%model%info%state_variables)
    if (rhs_driver%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
-      bcup = 1
+      bcup = rhs_driver%bcup_particulate_variables
       rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
               (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
       !write(0,*) rhs_driver%diff(1,1,:),'fac',rhs_driver%bioturbation_factor(1,1,:)
@@ -285,7 +313,7 @@ do n=1,size(rhs_driver%model%info%state_variables)
               rhs_driver%zeros2d, rhs_driver%fluxes(:,:,n), rhs_driver%zeros2d, &
               bcup, bcdown, rhs_driver%diff, &
               rhs_driver%ones3d - rhs_driver%porosity, intFlux, &
-              rhs_driver%transport(:,:,:,n))
+              rhs_driver%transport(:,:,:,n),flux_cap=rhs_driver%flux_cap)
       rhs_driver%transport(:,:,:,n) = rhs_driver%transport(:,:,:,n) * &
               (rhs_driver%ones3d - rhs_driver%porosity)/rhs_driver%porosity
    else
@@ -337,7 +365,7 @@ end subroutine finalize
 !! Vertical diffusion in a porous sediment grid.
 
 subroutine diff3d (grid, C, Cup, Cdown, fluxup, fluxdown,        &
-                       BcUp, BcDown, D, VF, Flux, dC)
+                       BcUp, BcDown, D, VF, Flux, dC, flux_cap)
 !! the code originates in the original omexdia module by Karline Soetaert
 !! authors: Kai Wirtz & Richard Hofmeister
 
@@ -362,7 +390,7 @@ real(rk), dimension(grid%inum,grid%jnum,grid%knum),intent(out) :: dC
 ! locals 
 integer  :: i,j,k
 real(rk),dimension(grid%inum,grid%jnum)   :: AVF,restflux
-real(rk),dimension(grid%inum,grid%jnum,grid%knum) :: flux_cap
+real(rk),dimension(grid%inum,grid%jnum,grid%knum),optional :: flux_cap
 
 ! -------------------------------------------------------------------------------
 
