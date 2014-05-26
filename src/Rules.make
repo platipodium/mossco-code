@@ -405,11 +405,12 @@ endif # End of MAKELEVEL 1 preamble
 default: prefix all
 
 clean:
-	@rm -f *.o *.mod
+	@rm -f *.o *.mod *.swp
 	@rm -f PET?.*
 
+# changed behaviour: distclean should clean all mossco code regardless of where you call it from
 distclean: clean
-	@rm -f *.swp
+	$(MAKE) -C $(MOSSCO_DIR) distclean
 
 prefix:
 	@mkdir -p $(MOSSCO_LIBRARY_PATH)
