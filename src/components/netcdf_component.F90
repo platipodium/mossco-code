@@ -222,7 +222,7 @@ module netcdf_component
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
             write(numberstring,'(I0.3)') ii
             
-            call ESMF_FieldGet(field, localDeCount=localDeCount)
+            call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         	  if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
           end do
