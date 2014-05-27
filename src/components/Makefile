@@ -41,7 +41,7 @@ ifeq ($(MOSSCO_GETM),true)
 TARGETS += libmossco_getm
 endif
 
-.PHONY: $(TARGETS) subdirs utilities
+.PHONY: $(TARGETS) $(SUBDIRS) subdirs utilities
 
 #--------------------------------------
 # Make targets
