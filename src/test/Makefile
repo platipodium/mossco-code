@@ -64,6 +64,9 @@ libmossco_empty libmossco_info libmossco_constant:
 test_Clock: test_Clock.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
 
+test_DerivedTypes: test_DerivedTypes.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
+
 test_Netcdf: test_Netcdf.o 
 	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
 
