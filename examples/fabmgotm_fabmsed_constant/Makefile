@@ -25,13 +25,13 @@ LIBS := -lsediment -lconstant -lsurfacescoupler -lmossco_sediment -lesmf  $(LIBS
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lgotm -lmossco_gotmfabm -lsolver -lmossco_util
+LDFLAGS += -lgotm -lmossco_fabmgotm -lsolver -lmossco_util
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
 
-.PHONY: all exec libsediment libmossco_gotmfabm libmossco_sediment libconstant libgotm libsurfacescoupler
+.PHONY: all exec libsediment libmossco_fabmgotm libmossco_sediment libconstant libgotm libsurfacescoupler
 
 all: exec
 exec: fabmgotm_fabmsed_constant
@@ -41,7 +41,7 @@ fabmgotm_fabmsed_constant: toplevel_component.o main.o
 	@echo "Created example binary $@ in $(PWD)" 
 	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
 
-libmossco_gotmfabm libgotm:
+libmossco_fabmgotm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util:
@@ -60,7 +60,7 @@ main.o: toplevel_component.o main.F90 libmossco_util
 main.F90: ../common/main.F90
 	ln -f $< $@
 
-toplevel_component.o: toplevel_component.F90 libmossco_gotmfabm libmossco_util libsediment libmossco_sediment libsolver libconstant libgotm libsurfacescoupler
+toplevel_component.o: toplevel_component.F90 libmossco_fabmgotm libmossco_util libsediment libmossco_sediment libsolver libconstant libgotm libsurfacescoupler
 
 clean: extraclean
 
