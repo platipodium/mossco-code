@@ -60,18 +60,18 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.70710678"
-     inkscape:cx="202.93594"
-     inkscape:cy="354.38875"
+     inkscape:zoom="1.4142136"
+     inkscape:cx="429.21011"
+     inkscape:cy="212.96739"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
-     inkscape:window-width="1384"
-     inkscape:window-height="943"
-     inkscape:window-x="72"
-     inkscape:window-y="56"
+     inkscape:window-width="1845"
+     inkscape:window-height="1061"
+     inkscape:window-x="78"
+     inkscape:window-y="0"
      inkscape:window-maximized="0"
      fit-margin-top="0"
      fit-margin-left="0"
@@ -94,7 +94,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -152,14 +152,6 @@
        y="626.29712"
        ry="13.294698" />
     <rect
-       style="fill:#00ffff;stroke:#0000ff;stroke-width:0.75041181"
-       id="rect3113"
-       width="81.867287"
-       height="89.447586"
-       x="280.34271"
-       y="626.29712"
-       ry="13.294698" />
-    <rect
        style="opacity:0.5;fill:#e9afaf;stroke:#c83737;stroke-width:0.70969427;stroke-miterlimit:4;stroke-dasharray:2.1290828, 0.70969427;stroke-dashoffset:0"
        id="rect3115"
        width="77.425148"
@@ -194,13 +186,13 @@
     <rect
        ry="12.573324"
        y="516.39478"
-       x="280.60492"
+       x="279.1907"
        height="84.594131"
        width="77.425148"
        id="rect3123"
        style="fill:#e9afaf;stroke:#c83737;stroke-width:0.70969427" />
     <rect
-       style="fill:#00ff00;stroke:#008000;stroke-width:0.70969427"
+       style="fill:#ccffaa;stroke:#338000;stroke-width:0.70969426999999996"
        id="rect3146"
        width="194.69687"
        height="84.594124"
@@ -214,7 +206,7 @@
        height="84.594116"
        width="244.52075"
        id="rect3209"
-       style="fill:#00ff00;stroke:#008000;stroke-width:0.70969427" />
+       style="fill:#ccffaa;stroke:#338000;stroke-width:0.70969426999999996" />
     <text
        xml:space="preserve"
        style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
@@ -301,14 +293,16 @@
          style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">./src/components</tspan></text>
     <path
        style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       d="m 29.937866,725.08296 657.000004,0"
+       d="m 29.937866,725.08296 710.740124,0"
        id="path3282"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
     <path
        inkscape:connector-curvature="0"
        id="path3284"
-       d="m 30,357.36218 657,0"
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+       d="m 28,373.36218 713.56854,0"
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       sodipodi:nodetypes="cc" />
     <text
        sodipodi:linespacing="125%"
        id="text3286"
@@ -316,35 +310,28 @@
        x="302.34271"
        style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#008000;fill-opacity:1;stroke:none;font-family:Sans"
        xml:space="preserve"><tspan
-         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:American Typewriter;-inkscape-font-specification:American Typewriter"
+         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:American Typewriter;-inkscape-font-specification:American Typewriter;stroke:none"
          y="455.6759"
          x="302.34271"
          id="tspan3288"
          sodipodi:role="line">fabm_benthic_pelagic</tspan></text>
     <text
        xml:space="preserve"
-       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#800000;fill-opacity:1;stroke:none;font-family:Sans"
-       x="298.34271"
-       y="563.6759"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#800000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="316.35516"
+       y="552.36218"
        id="text3326"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3328"
-         x="298.34271"
-         y="563.6759"
-         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#800000;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">fabm</tspan></text>
-    <text
-       sodipodi:linespacing="125%"
-       id="text3330"
-       y="674.85101"
-       x="301.02509"
-       style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000080;fill-opacity:1;stroke:none;font-family:Sans"
-       xml:space="preserve"><tspan
-         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#000080;font-family:American Typewriter;-inkscape-font-specification:American Typewriter"
-         y="674.85101"
-         x="301.02509"
-         id="tspan3332"
-         sodipodi:role="line">fabm</tspan></text>
+         x="316.35516"
+         y="552.36218"
+         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;fill:#800000;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">fabm</tspan><tspan
+         sodipodi:role="line"
+         x="316.35516"
+         y="569.86218"
+         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;fill:#800000;font-family:American Typewriter;-inkscape-font-specification:American Typewriter"
+         id="tspan3077">sediment</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
@@ -368,7 +355,7 @@
          y="560.14038"
          x="496.68616"
          id="tspan3340"
-         sodipodi:role="line">gotm</tspan></text>
+         sodipodi:role="line">erosed</tspan></text>
     <text
        sodipodi:linespacing="125%"
        id="text3342"
@@ -396,15 +383,15 @@
     <text
        xml:space="preserve"
        style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000080;fill-opacity:1;stroke:none;font-family:Sans"
-       x="491.94391"
+       x="487.94391"
        y="674.85101"
        id="text3350"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan3352"
-         x="491.94391"
+         x="487.94391"
          y="674.85101"
-         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#000080;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">gotm</tspan></text>
+         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#000080;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">erosed</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:14px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000080;fill-opacity:1;stroke:none;font-family:Sans"
@@ -428,7 +415,7 @@
          id="tspan4128"
          x="549.83008"
          y="452.84747"
-         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">constant_netcdf</tspan></text>
+         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;fill:#008000;font-family:American Typewriter;-inkscape-font-specification:American Typewriter;stroke:none">constant_netcdf</tspan></text>
     <text
        sodipodi:linespacing="125%"
        id="text4130"
@@ -513,7 +500,7 @@
          y="980.43219"
          x="415.04767"
          id="tspan4180"
-         sodipodi:role="line">gotm</tspan></text>
+         sodipodi:role="line">erosed</tspan></text>
     <text
        xml:space="preserve"
        style="font-size:40px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:#333333;font-family:Sans"
@@ -568,7 +555,7 @@
            height="182.43355"
            x="-93.338097"
            y="15.743642" /></flowRegion><flowPara
-         id="flowPara4223"></flowPara></flowRoot>    <flowRoot
+         id="flowPara4223" /></flowRoot>    <flowRoot
        xml:space="preserve"
        id="flowRoot4225"
        style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"><flowRegion
@@ -578,5 +565,30 @@
            height="193.74725"
            x="-253.14423"
            y="19.986282" /></flowRegion><flowPara
-         id="flowPara4231"></flowPara></flowRoot>  </g>
+         id="flowPara4231" /></flowRoot>    <rect
+       ry="13.294698"
+       y="619.46869"
+       x="277.45541"
+       height="89.447586"
+       width="81.867287"
+       id="rect3069"
+       style="fill:#00ffff;stroke:#0000ff;stroke-width:0.75041181" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000080;fill-opacity:1;stroke:none;font-family:Sans"
+       x="317.56445"
+       y="658.8302"
+       id="text3071"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3073"
+         x="317.56445"
+         y="658.8302"
+         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;fill:#000080;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">fabm</tspan><tspan
+         id="tspan3075"
+         sodipodi:role="line"
+         x="317.56445"
+         y="676.3302"
+         style="font-size:14px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;text-anchor:middle;fill:#000080;font-family:American Typewriter;-inkscape-font-specification:American Typewriter">sediment</tspan></text>
+  </g>
 </svg>
