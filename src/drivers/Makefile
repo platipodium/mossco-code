@@ -26,7 +26,7 @@ ifeq ($(MOSSCO_FABM),true)
   TARGETS+=libmossco_sediment libmossco_fabmpelagic libmossco_fabm0d
   ifeq ($(MOSSCO_GOTM),true)
     ifeq ($(MOSSCO_NETCDF),true)
-      TARGETS+=libmossco_gotmfabm
+      TARGETS+=libmossco_fabmgotm
     endif
   endif
 endif
@@ -50,7 +50,7 @@ all: $(TARGETS)
 
 libmossco_sediment: prefix libmossco_util libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
 libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
-libmossco_gotmfabm: prefix libmossco_util libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_driver.o)
+libmossco_fabmgotm: prefix libmossco_util libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_driver.o)
 libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
@@ -119,7 +119,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_driver.mod
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_driver.mod
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_gotm_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/erosed_driver.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/clm_driver.mod

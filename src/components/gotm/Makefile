@@ -37,10 +37,10 @@ all: $(TARGETS)
 libgotm: prefix libgotm_external libmossco_util $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
 libmossco_fabmgotm: prefix fabmgotm_drv				\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_component.o)
-libmossco_gotmfabm: prefix fabmgotm_drv				\
+libmossco_gotmfabm: prefix libgotm libmossco_fabmgotm \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(gotmfabm_component.o)
 fabmgotm_drv:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_gotmfabm
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmgotm
 libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:

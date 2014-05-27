@@ -147,7 +147,7 @@ module fabm_gotm_component
      
     !> Create the grid from existing grid of temperature_in_water field
     varname="temperature_in_water"
-    call ESMF_StateGet(importState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
+    call ESMF_StateGet(exportState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
     if (itemcount==0) then
       call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
                     ' without this variable.',ESMF_LOGMSG_ERROR)
