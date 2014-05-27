@@ -28,7 +28,7 @@ clean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 	@rm -rf modules lib bin
 
-distclean: clean
+distclean_all: clean
 ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
 	$(MAKE) -C $(MOSSCO_DIR)/external/fabm-git/src $@
 endif

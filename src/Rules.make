@@ -410,7 +410,7 @@ clean:
 
 # changed behaviour: distclean should clean all mossco code regardless of where you call it from
 distclean: clean
-	$(MAKE) -C $(MOSSCO_DIR) distclean
+	$(MAKE) -C $(MOSSCO_DIR) distclean_all
 
 prefix:
 	@mkdir -p $(MOSSCO_LIBRARY_PATH)
