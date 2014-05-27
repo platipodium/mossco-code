@@ -1,12 +1,13 @@
 instances:
   test1: 
     component: test
+    petList: 0,1,2
   test2: 
     component: test
-    petList: 2,1    
-
+    petList: 0
 coupling:
   - components: 
      - test1
+     - redist_coupler
      - test2
     interval: 17 h

@@ -20,6 +20,11 @@ test:
         density
         density_of_fish_population
       module: meanflow
-  phytoplanktion:
+  phytoplankton:
       units: mg l*-1
       intent: both
+  wind_y_velocity_at_10m:
+      units: m s-1
+      intent: both
+      short_name: wind_y
+      location: 10_m_above_water_surface

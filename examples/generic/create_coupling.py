@@ -13,7 +13,7 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'test_test.yaml'
+     filename = 'constant_test_netcdf.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
      #filename = 'constant_empty_netcdf.yaml'
@@ -116,7 +116,8 @@ if 'link_coupler' in componentList:
 
 instanceDict={}
 for i in range(0,len(instances)):
-   instanceDict[instances.keys()[i]]=instances.values()[i]['component']
+    if instances.values()[i].has_key('component'):
+        instanceDict[instances.keys()[i]]=instances.values()[i]['component']
 
 print 'Components to process:', componentList
 cplCompList=[]
@@ -406,7 +407,8 @@ for j in range(0, len(couplingList)):
     jtem=couplingList[j]
     ifrom=gridCompList.index(jtem[0])
     ito=gridCompList.index(jtem[2])
-    fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(j+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
+    icpl=cplCompList.index(jtem[1])
+    fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
     fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
