@@ -21,11 +21,12 @@ EXTRA_DIST=README
 ifeq ($(MOSSCO_GOTM),true)
 TARGETS += libgotm
 ifeq ($(MOSSCO_FABM),true)
+TARGETS += libmossco_fabmgotm
 TARGETS += libmossco_gotmfabm
 endif
 endif
 
-.PHONY: $(TARGETS) libgotm_external libmossco_util libmossco_gotmfabm libgotm
+.PHONY: $(TARGETS) libgotm_external libmossco_util 
 
 #--------------------------------------
 # Make targets
@@ -34,9 +35,11 @@ endif
 all: $(TARGETS)
 
 libgotm: prefix libgotm_external libmossco_util $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
-libmossco_gotmfabm: prefix gotmfabm_drv				\
-	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(fabm_gotm_component.o)
-gotmfabm_drv:
+libmossco_fabmgotm: prefix fabmgotm_drv				\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_component.o)
+libmossco_gotmfabm: prefix fabmgotm_drv				\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(gotmfabm_component.o)
+fabmgotm_drv:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_gotmfabm
 libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
@@ -46,4 +49,5 @@ $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 clean: extraclean
 extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
