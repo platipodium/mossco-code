@@ -1,6 +1,6 @@
 #!/bin/bash
 
-export TAGS="ESMF_7_0_0_beta_snapshot_08"  # ESMF_6_3_0r ESMF_6_3_0rp1_beta_snapshot_08 "ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
+export TAGS="ESMF_7_0_0_beta_snapshot_10"  # ESMF_6_3_0r ESMF_6_3_0rp1_beta_snapshot_09 "ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
 COMPS="gfortran" # intel pgi"
 COMMS="openmpi" #  mpiuni"
 
@@ -36,7 +36,7 @@ for C in $COMMS ; do
       ;;
     esac
     
-    if [ $G == intel ]; then
+    if [ $G = intel ]; then
       source /opt/intel/bin/ifortvars.sh intel64
       source /opt/intel/bin/iccvars.sh intel64
 
@@ -54,6 +54,7 @@ for C in $COMMS ; do
 #    module load openmpi_ib || continue
 #    module load netcdf/3.6.2 || continue
 #    module list
+
 
     for T in $TAGS; do
        echo "Iterating for Tag $T ============================================="
@@ -83,7 +84,7 @@ export ESMF_LAPACK=internal
 export ESMF_NETCDF=split
 export ESMF_NETCDF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_LIBPATH}
-unset ESMF_XERCES
+export ESMF_XERCES=standard
 unset ESMF_PIO
 export ESMF_SITE=$T
 export ESMF_COMPILER=$G
