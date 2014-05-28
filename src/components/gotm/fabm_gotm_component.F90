@@ -114,16 +114,69 @@ module fabm_gotm_component
     character(len=ESMF_MAXSTR) :: attribute_name
     namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
     namelist /station/ name,latitude,longitude,depth
+    
+    logical                     :: clockIsPresent, fileIsPresent
+    type(ESMF_Time)             :: currTime
+    character(len=ESMF_MAXSTR)  :: message
+    character(len=ESMF_MAXSTR)  :: configFileName
       
-    call ESMF_LogWrite("FABM/GOTM component initializing.",ESMF_LOGMSG_INFO)
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+    !> Read the GOTM configuration file
+    configFileName = 'gotmrun.nml'
+    inquire(file=trim(configFileName), exist=fileIsPresent)
+    if (.not.fileIsPresent) then
+      write(message,'(A)') trim(name)//' could not read config file '//trim(configFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
 
     ! read model_setup namelist
-    open(921,file='gotmrun.nml',status='old',action='read')
+    open(921,file=trim(configFileName),status='old',action='read')
     read(921,nml=model_setup)
     read(921,nml=station)
     close(921)
 
-    call init_gotm_mossco_fabm(nlev,'gotm_fabm.nml',dt)
+    ! Update the time interval of the local clock from the gotmrun namelist timestep
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    ! Read the GOTMFABM configuration file
+    configFileName = 'gotm_fabm.nml'
+    inquire(file=trim(configFileName), exist=fileIsPresent)
+    if (.not.fileIsPresent) then
+      write(message,'(A)') trim(name)//' could not read config file '//trim(configFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+
+    call init_gotm_mossco_fabm(nlev,trim(configFileName),dt)
     call init_gotm_mossco_fabm_output()
     call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr, &
                           t(1:nlev),s(1:nlev),rho(1:nlev), &
@@ -131,16 +184,6 @@ module fabm_gotm_component
                           A,g1,g2,yearday,secondsofday,SRelaxTau(1:nlev),sProf(1:nlev), &
                           bio_albedo,bio_drag_scale)
 
-    ! Create a local clock, set its parameters to those of the parent clock, then
-    ! copy start and stop time from clock to gotm's time parameters
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_ClockSet(clock, name='FABM/GOTM clock',timeStep=timeInterval, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> set required, required_rank and optional flags in the importState
     call set_import_flags(importState)
@@ -151,6 +194,8 @@ module fabm_gotm_component
     if (itemcount==0) then
       call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
                     ' without this variable.',ESMF_LOGMSG_ERROR)
+      call ESMF_StatePrint(importState)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     else
       call ESMF_StateGet(importState,trim(varname),field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

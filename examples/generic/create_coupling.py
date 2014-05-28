@@ -1011,7 +1011,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 # Place conditionals for building this coupled system
 conditionals = {'gotm' : 'GOTM', 'fabm' : 'FABM', 'erosed' : 'EROSED',
-                'fabm_gotm' : 'GOTM_FABM', 'getm' : 'GETM'}
+                'fabm_gotm' : 'GOTM_FABM', 'getm' : 'GETM', 'gotmfabm' : 'GOTM_FABM'}
 for item in gridCompSet.union(cplCompSet):
     if conditionals.has_key(item):
         fid.write('ifneq ($(MOSSCO_' + conditionals[item] + '),true)\n')
@@ -1020,7 +1020,10 @@ for item in gridCompSet.union(cplCompSet):
 
 libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                    'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'] ,
-        'fabm_gotm'       : ['gotm', 'mossco_gotmfabm', 'solver', 'fabm_prod', 
+        'gotmfabm'       : ['mossco_fabmgotm', 'gotm', 'mossco_gotmfabm', 'solver', 'fabm_prod', 
+                  'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
+                  'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
+        'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver', 'fabm_prod', 
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver', 'fabm_prod'], 
@@ -1059,7 +1062,8 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'empty'      : ['libempty'],
         'constant'   : ['libconstant'],
         'gotm'       : ['libgotm', 'libsolver'],
-        'fabm_gotm'       : ['libmossco_gotmfabm', 'libsolver', 'libgotm'],
+        'fabm_gotm'       : ['libmossco_fabmgotm', 'libsolver', 'libgotm'],
+        'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'grid_coupler' : ['libgridcoupler'],
@@ -1086,6 +1090,8 @@ for item in gridCompSet.union(cplCompSet):
         if item=='fabm':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm_gotm':
+            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
+        if item=='gotmfabm':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm0d':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
