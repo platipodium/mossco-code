@@ -136,8 +136,9 @@ logical :: distributed_pom_flux=.false.
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
 real(rk) :: k_par,bioturbation_depth,bioturbation_min
+real(rk) :: pom_flux_max
 namelist /sed_nml/ diffusivity,bioturbation_profile,bioturbation, &
-        porosity_max,porosity_fac,k_par, distributed_pom_flux, &
+        porosity_max,porosity_fac,k_par, distributed_pom_flux, pom_flux_max, &
         bioturbation_depth,bioturbation_min
 
 ! read parameters
@@ -149,6 +150,7 @@ bioturbation_min = 0.2 ! cm2/d
 porosity_max  = 0.7
 porosity_fac  = 0.9 ! per m
 k_par         = 2.0d-3 ! 1/m
+pom_flux_max  = 2.0d4  ! so far mmol/m2/d
 
 read(33,nml=sed_nml)
 
@@ -176,7 +178,9 @@ allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
 do k=1,_KNUM_
    sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
-   sed%flux_cap(:,:,k) = 2.d4/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dzc(:,:,k)
+   ! pom_flux_max units have to be unified - need to come in mg/m2/d and then scaled in
+   ! transport routine with the molar mass
+   sed%flux_cap(:,:,k) = pom_flux_max/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dzc(:,:,k)
    if (k .gt. 2) then
      if (sed%flux_cap(1,1,k) .gt. sed%flux_cap(1,1,k-1)) sed%flux_cap(:,:,k) = sed%flux_cap(:,:,k-1)
    end if
@@ -421,7 +425,7 @@ do j=1,grid%jnum
         restflux(i,j) = Flux(i,j,1) - flux_cap(i,j,1)
         do while ((restflux(i,j) .gt. 0) .and. (k .le. grid%knum))
            Flux(i,j,k) = Flux(i,j,k) + restflux(i,j)
-           restflux(i,j) = restflux(i,j) - flux_cap(i,j,k)*Flux(i,j,1)
+           restflux(i,j) = restflux(i,j) - flux_cap(i,j,k)
            k = k + 1
         end do
         if (k .gt. grid%knum) then 
