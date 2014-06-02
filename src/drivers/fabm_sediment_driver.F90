@@ -176,7 +176,7 @@ allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
 do k=1,_KNUM_
    sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
-   sed%flux_cap(:,:,k) = 2.d4 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dzc(:,:,k)
+   sed%flux_cap(:,:,k) = 2.d4/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dzc(:,:,k)
    if (k .gt. 2) then
      if (sed%flux_cap(1,1,k) .gt. sed%flux_cap(1,1,k-1)) sed%flux_cap(:,:,k) = sed%flux_cap(:,:,k-1)
    end if
@@ -308,6 +308,7 @@ do n=1,size(rhs_driver%model%info%state_variables)
       !write(0,*) rhs_driver%diff(1,1,:),'fac',rhs_driver%bioturbation_factor(1,1,:)
       !stop
       conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity!/ &
+! differing from original code: bioturbation mixes bulk concentrations
 !              (rhs_driver%ones3d - rhs_driver%porosity)
       call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), &
               rhs_driver%zeros2d, rhs_driver%fluxes(:,:,n), rhs_driver%zeros2d, &
@@ -417,7 +418,7 @@ do j=1,grid%jnum
       ELSE IF (BcUp .EQ. 4) THEN
         Flux(i,j,1) = fluxup(i,j) 
         k = 2
-        restflux(i,j) = Flux(i,j,1) - flux_cap(i,j,1)*Flux(i,j,1)
+        restflux(i,j) = Flux(i,j,1) - flux_cap(i,j,1)
         do while ((restflux(i,j) .gt. 0) .and. (k .le. grid%knum))
            Flux(i,j,k) = Flux(i,j,k) + restflux(i,j)
            restflux(i,j) = restflux(i,j) - flux_cap(i,j,k)*Flux(i,j,1)
