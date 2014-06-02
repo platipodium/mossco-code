@@ -58,10 +58,6 @@ module copy_coupler
     type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
     type(ESMF_Field)            :: field
 
-    !! Set default SUCCESS return value and log the call to this 
-    !! function into the log
-    rc = ESMF_SUCCESS
-    
     call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -75,25 +71,21 @@ module copy_coupler
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 !#endif
 
-    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
-      rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
     if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
 
-    call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
+    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
       itemNameList=itemNameList, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     do i=1, itemCount
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=rc)
+        call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-        call ESMF_StateAddReplace(importState,(/field/), rc=rc)        
+        call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
       else
@@ -149,25 +141,22 @@ module copy_coupler
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 !#endif
 
-    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
-      rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
     if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
 
-    call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
+    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
       itemNameList=itemNameList, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     do i=1, itemCount
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=rc)
+        call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-        call ESMF_StateAddReplace(importState,(/field/), rc=rc)        
+        call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
       else
