@@ -190,7 +190,7 @@ module netcdf_component
       if (currTime == startTime) then
         nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, rc=rc)
       else
-        nc = mossco_netcdfOpen(fileName, rc=rc)
+        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, rc=rc)
       end if
 
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -294,8 +294,8 @@ module netcdf_component
     !! 3. Destroy your clock
 
 
-    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
