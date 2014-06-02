@@ -219,26 +219,26 @@ module constant_component
         if (cur_item%rank==3) then 
           
           cur_item%field = ESMF_FieldCreate(grid3, arraySpec3, &
-					  indexflag=ESMF_INDEX_DELOCAL, &
-						staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=rc)
-	          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+            indexflag=ESMF_INDEX_DELOCAL, &
+            staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
               
-            if (localDeCount3>0) then
-              call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, & 
-                totalLBound=totalLBound3, totalUBound=totalUBound3, totalCount=totalCount3, rc=rc)
-              farrayPtr3(:,:,:)=cur_item%value
-            endif              
+          if (localDeCount3>0) then
+            call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, & 
+              totalLBound=totalLBound3, totalUBound=totalUBound3, totalCount=totalCount3, rc=rc)
+            farrayPtr3(:,:,:)=cur_item%value
+          endif              
         elseif (cur_item%rank==2) then
           cur_item%field = ESMF_FieldCreate(grid2, arraySpec2, &
-					  indexflag=ESMF_INDEX_DELOCAL, &
-						staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=rc)
-	          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+            indexflag=ESMF_INDEX_DELOCAL, &
+            staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-            if (localDeCount2>0) then
-              call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, & 
-                totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
-              farrayPtr2(:,:)=cur_item%value
-            endif 
+          if (localDeCount2>0) then
+            call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, & 
+              totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
+            farrayPtr2(:,:)=cur_item%value
+          endif 
         else
           write(0,*) cur_item%rank, trim(varname), cur_item%rank
           write(message,'(A,I1,A)') trim(name)//' not implemented reading rank(', &
@@ -379,8 +379,8 @@ module constant_component
     !! 3. Destroy your clock
 
 
-    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
