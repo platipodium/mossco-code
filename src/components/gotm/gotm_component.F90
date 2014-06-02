@@ -384,8 +384,11 @@ module gotm_component
 	  if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(variables)) deallocate(variables)
 
-    call ESMF_ClockDestroy(clock,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! previously, thus, we comment the clock destruction code while this has not
+    !! been fixed by ESMF
+    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call clean_up()
 

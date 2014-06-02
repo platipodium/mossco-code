@@ -787,8 +787,11 @@ end if
     !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
     !             & tcrdep,  tcrero, tcrfluff)
 
-    call ESMF_ClockDestroy(clock, rc=rc)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! previously, thus, we comment the clock destruction code while this has not
+    !! been fixed by ESMF
+    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
