@@ -314,7 +314,7 @@ module fabm_sediment_component
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+      call ESMF_StateAddReplace(importState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       do n=1,size(sed%export_states)
         if (sed%export_states(n)%fabm_id/=-1) then
@@ -322,7 +322,7 @@ module fabm_sediment_component
                    name=trim(sed%export_states(n)%standard_name)//'_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+          call ESMF_StateAddReplace(importState,(/field/),rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           if (sed%model%info%state_variables(sed%export_states(i)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
@@ -330,7 +330,7 @@ module fabm_sediment_component
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-            call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+            call ESMF_StateAddReplace(importState,(/field/),rc=rc)
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           end if
         end if
@@ -409,7 +409,7 @@ module fabm_sediment_component
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_AttributeSet(field,'units','degC')
-      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+      call ESMF_StateAddReplace(importState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       do n=1,size(sed%export_states)
         if (sed%export_states(n)%fabm_id/=-1) then
@@ -418,7 +418,7 @@ module fabm_sediment_component
                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit))
-          call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+          call ESMF_StateAddReplace(importState,(/field/),rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           if (sed%model%info%state_variables(sed%export_states(i)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
@@ -433,13 +433,15 @@ module fabm_sediment_component
         end if
       end do  
     endif ! self%use_ugrid
-    !call ESMF_StatePrint(exportState)
+    !call ESMF_StatePrint(importState)
 
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+
 
   end subroutine Initialize
 
