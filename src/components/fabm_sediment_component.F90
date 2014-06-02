@@ -420,7 +420,7 @@ module fabm_sediment_component
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit))
           call ESMF_StateAddReplace(importState,(/field/),rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          if (sed%model%info%state_variables(sed%export_states(i)%fabm_id)%properties%get_logical( &
+          if (sed%model%info%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
             field = ESMF_FieldCreate(flux_grid, &
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
