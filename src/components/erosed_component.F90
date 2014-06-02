@@ -692,7 +692,7 @@ end if
       !! sediment density.
 
       size_classes_of_upward_flux_of_pim_at_bottom(1,1,l) = &
-          sour(l,1) *1000.0_fp - sink(l,1)*spm_concentration(1,1,l)
+          sour(l,1) *1000.0_fp - min(-ws(l,1),sink(l,1))*spm_concentration(1,1,l)
 
 !          write (*,*) 'SPM',l,'=', spm_concentration(1,1,l)
     !      write (*,*) 'sour*1000.0', sour(l,1) *1000.0_fp
