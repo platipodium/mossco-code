@@ -1,0 +1,18 @@
+instances:
+  constant:
+    petList: 1,2
+  netcdf: 
+    petList: 0,1
+  test: 
+    petList: 0,1
+coupling:
+  - components: 
+     - constant
+     - redist_coupler
+     - test
+    interval: 17 h
+  - components: 
+     - test
+     - link_coupler
+     - netcdf
+    interval: 30 d
