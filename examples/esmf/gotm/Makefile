@@ -17,16 +17,24 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS := -lgotm -lesmf $(LIBS) -lmossco_util
-NC_LIBS += $(shell nf-config --flibs)
+LIBS:= $(ESMF_F90LINKOPTS) -L$(MOSSCO_LIBRARY_PATH)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
 ifeq ($(MOSSCO_GOTM_FABM),true)
-LDFLAGS += -lmossco_gotmfabm -lsolver
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+  LIBS += -lmossco_gotmfabm -lsolver
 endif
-LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
+
+LIBS += -lgotm -lmossco_util
+
+ifeq ($(MOSSCO_GOTM),true)
+  LIBS += -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
+endif
+ifeq ($(MOSSCO_GOTM_FABM),true)
+  LIBS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
+endif
+ifeq ($(MOSSCO_ESMF),true)
+  LIBS += -L$(ESMF_LIBSDIR) $(ESMF_LIBRARY_PATH) $(ESMF_LIBS)
+endif
+
 
 .PHONY: all exec gotm libgotm libmossco_util
 
@@ -40,11 +48,11 @@ libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 gotm: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
+	$(F90) $(F90FLAGS) $^ -o $@ $(LIBS) -lhdf5
 	@echo "Created example binary $(PWD)/$@"
 
 clean: extraclean
 
 extraclean: 
-	@rm -f esmf_gotm_example main.F90
+	@rm -f gotm main.F90
 	@rm -f PET*.*

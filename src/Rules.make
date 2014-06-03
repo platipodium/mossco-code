@@ -180,19 +180,23 @@ ifneq (,$(filter $(MOSSCO_GOTM),$(MOSSCO_FABM),$(MOSSCO_GETM) true))
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-export FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
-export FABM_INCLUDE_PATH=$(FABMDIR)/include
-export FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
+  export FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
+  export FABM_INCLUDE_PATH=$(FABMDIR)/include
+  export FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
+  export FABM_LIBS=-lfabm_prod
 endif
 
 ifeq ($(MOSSCO_GOTM),true)
-export GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
-export GOTM_INCLUDE_PATH=$(GOTMDIR)/include
-export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
-ifeq ($(MOSSCO_FABM),true)
-DEFINES += -D_GOTM_MOSSCO_FABM_
-export MOSSCO_GOTM_FABM=true
-endif
+  export GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
+  export GOTM_INCLUDE_PATH=$(GOTMDIR)/include
+  export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
+  GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
+  GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
+  export GOTM_LIBS
+  ifeq ($(MOSSCO_FABM),true)
+    DEFINES += -D_GOTM_MOSSCO_FABM_
+    export MOSSCO_GOTM_FABM=true
+  endif
 endif
 
 ifeq ($(MOSSCO_GETM),true)
@@ -200,7 +204,7 @@ ifeq ($(MOSSCO_GETM),true)
   GETM_INCLUDE_PATH=$(GETMDIR)/include
   GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
   GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
-  GETM_LIBS = -lgetm_prod	-loutput_prod -lmeteo_prod
+  GETM_LIBS := -lgetm_prod  -loutput_prod -lmeteo_prod
   ifneq ($(GETM_NO_3D),true)
     GETM_LIBS += -l3d_prod
   endif
@@ -368,22 +372,24 @@ endif
 export F90FLAGS
 
 ifndef HAVE_LD_FORCE_LOAD
-HAVE_LD_FORCE_LOAD=$(shell ld -v 2>&1 | grep -c LLVM)
-ifeq ($(HAVE_LD_FORCE_LOAD),1)
-HAVE_LD_FORCE_LOAD=true
-else
-HAVE_LD_FORCE_LOAD=false
-endif
-export HAVE_LD_FORCE_LOAD
+  HAVE_LD_FORCE_LOAD=$(shell ld -v 2>&1 | grep -c LLVM)
+  ifeq ($(HAVE_LD_FORCE_LOAD),1)
+    HAVE_LD_FORCE_LOAD=true
+  else
+    HAVE_LD_FORCE_LOAD=false
+  endif
+  export HAVE_LD_FORCE_LOAD
 endif 
+
+export ESMF_LIBRARY_PATH=$(ESMF_F90LINKPATHS)
+export ESMF_LINKOPTS=$(ESMF_F90LINKRPATHS)
+export ESMF_LIBS=$(ESMF_F90ESMFLINKLIBS)
 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
 export LIBRARY_PATHS
 
-LIBS += $(ESMF_F90ESMFLINKLIBS)
-LIBS += $(MOSSCO_NETCDF_LIBS)
-export LIBS
+export LIBS := $(ESMF_F90ESMFLINKLIBS)
 
 CPPFLAGS = $(DEFINES)  
 CPPFLAGS += -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
