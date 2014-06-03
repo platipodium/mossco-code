@@ -48,7 +48,7 @@ libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 gotm: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ -o $@ $(LIBS) -lhdf5
+	$(F90) $(F90FLAGS) $^ -o $@ $(LIBS)
 	@echo "Created example binary $(PWD)/$@"
 
 clean: extraclean
