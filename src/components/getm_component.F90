@@ -1,454 +1,297 @@
-#define DEBUG
 !> @brief Implementation of a GETM ocean component
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
-!> @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
+!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
+!> @author Knut Klingbeil, IOW
+!> @author Carsten Lemmen, HZG
+
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
+!> @todo, get rid of include file here
 #include "cppdefs.h"
-!-----------------------------------------------------------------------
-!BOP
-!
-! !MODULE:  getm_component - 
-!
-! !INTERFACE:
-   module getm_component
-!
-! !DESCRIPTION:
-!  Example for GriddedComponent can be found in
-!  ESMFDIR/src/Superstructure/Component/examples/ESMF_GCompEx.F90.
-!
-! !USES:
-   use esmf
-   use getm_driver
 
-   IMPLICIT NONE
-   private
-!
-! !PUBLIC DATA MEMBERS:
-   public SetServices ! must be public
-   !public getm_esmf_SetVM     ! optional
-!
-! !PRIVATE DATA MEMBERS:
-   type(ESMF_Clock) :: getmClock
-!
-! !REVISION HISTORY:
-!  Original author(s): Knut Klingbeil
-!
-!EOP
-!-----------------------------------------------------------------------
+module getm_component
 
-    contains
+  use esmf
+  use getm_driver
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !ROUTINE: getmCmp_SetServices - register GriddedComponent GETM
-!
-! !INTERFACE:
-   subroutine SetServices(getmCmp,rc)
-!
-! !DESCRIPTION:
-!  The toplevel component requires this sub for its mandatory call to
-!  ESMF_GridCompSetServices(getmCmp,userRoutine=getmCmp_SetServices).
-!  For interface see ESMFDIR/src/Superstructure/Component/src/ESMF_GridComp.F90.
-!  For the NUOPC Layer this routine must be named SetServices().
-!  The toplevel component can inquire rc via optional keyword argument
-!  userRc to ESMF_GridCompSetServices().
-!
-! !USES:
-   IMPLICIT NONE
-!
-! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
-!
-! !OUTPUT PARAMETERS:
-   integer,intent(out) :: rc
-!
-! !REVISION HISTORY:
-!
-! !LOCAL VARIABLES
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'getmCmp_SetServices() # ',Ncall
-#endif
+  implicit none
+  private
 
-!  Register user-code subroutines.
-!  Set the entry points for standard ESMF Component methods
-!  ESMF_GridComp[Initialize|Run|Finalize](), called by toplevel component.
-!  Optional keyword argument "phase" (default: 1) promotes multi-phase user-code.
+  public SetServices
+   
+  contains
 
-   call ESMF_GridCompSetEntryPoint(getmCmp,ESMF_METHOD_INITIALIZE,     &
-                                   userRoutine=getmCmp_init,rc=rc)
-   call ESMF_GridCompSetEntryPoint(getmCmp,ESMF_METHOD_RUN,            &
-                                   userRoutine=getmCmp_run,rc=rc)
-   call ESMF_GridCompSetEntryPoint(getmCmp,ESMF_METHOD_FINALIZE,       &
-                                   userRoutine=getmCmp_finalize,rc=rc)
+  subroutine SetServices(gridcomp, rc)
 
-!  Optional registration of additional routines for checkpoint and
-!  restart functions (ESMF_METHOD_[WRITE|READ]RESTART).
-!  ...
+    implicit none
+  
+    type(ESMF_GridComp)  :: gridcomp
+    integer, intent(out) :: rc
 
-#ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_SetServices()'
-   write(debug,*)
-#endif
-   return
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+  end subroutine SetServices
 
-   end subroutine SetServices
-!EOC
-!-----------------------------------------------------------------------
-#if 0
-!BOP
-!
-! !ROUTINE: getmCmp_SetVM - 
-!
-! !INTERFACE:
-   subroutine getmCmp_SetVM(getmCmp,rc)
-!
-! !DESCRIPTION:
-!  The toplevel component requires this sub for the optional call to
-!  ESMF_GridCompSetVM(getmCmp,userRoutine=getmCmp_SetVM).
-!  For interface see ESMFDIR/src/Superstructure/Component/src/ESMF_GridComp.F90.
-!  The toplevel component can inquire rc via optional keyword argument
-!  userRc to ESMF_GridCompSetVM().
-!
-! !USES:
-   IMPLICIT NONE
-!
-! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
-!
-! !OUTPUT PARAMETERS:
-   integer,intent(out) :: rc
-!
-! !REVISION HISTORY:
-!
-! !LOCAL VARIABLES
-   type(ESMF_VM) :: gVM
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'getmCmp_SetVM() # ',Ncall
-#endif
+  subroutine Initialize(gridComp,importState,exportState,parentClock,rc)
 
-   call ESMF_VMGetGlobal(gVM,rc=rc)
-!  Calls to ESMF_VMGet, ESMF_GridCompSetVMMaxPEs,
-!  ESMF_GridCompSetVM[Min|Max]Threads to modify VM of component
+    use time, only : getm_time_start => start, getm_time_stop => stop
+    use time, only : getm_time_timestep => timestep
+    use initialise,  only: init_model
+    use integration, only: MinN,MaxN
 
-#ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_SetVM()'
-   write(debug,*)
-#endif
-   return
+    implicit none
+    
+    type(ESMF_GridComp) :: gridComp
+    type(ESMF_State)    :: importState,exportState ! may be uninitialized
+    type(ESMF_Clock)    :: parentClock        ! may be uninitialized
+    integer,intent(out) :: rc
 
-   end subroutine getmCmp_SetVM
-!EOC
-#endif
-!-----------------------------------------------------------------------
-!BOP
-!
-! !ROUTINE: getmCmp_init - 
-!
-! !INTERFACE:
-   subroutine getmCmp_init(getmCmp,iState,eState,pClock,rc)
-!
-! !DESCRIPTION:
-!  Note: [i|e]state and pClock are uninitialized if the toplevel
-!        component did not provide corresponding arguments to
-!        ESMF_GridCompInitialize(getmCmp).
-!  The toplevel component can inquire rc via optional keyword argument
-!  userRc to ESMF_GridCompInitialize().
-!
-! !USES:
-   use time       ,only: start,stop,timestep
-   use initialise ,only: init_model
-   use integration,only: MinN,MaxN
-   IMPLICIT NONE
-!
-! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
-   type(ESMF_State)    :: iState,eState ! may be uninitialized
-   type(ESMF_Clock)    :: pClock        ! may be uninitialized
-!
-! !OUTPUT PARAMETERS:
-   integer,intent(out) :: rc
-!
-! !REVISION HISTORY:
-!
-! !LOCAL VARIABLES
-   type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
-   type(ESMF_TimeInterval) :: getmTimeStep
-   logical                 :: ClockIsPresent
-   integer                 :: getmRunTimeStepCount
-   character(len=8)        :: datestr
-   character(len=10)       :: timestr
-   character(len=19)       :: TimeStrISOFrac,start_external,stop_external
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'getmCmp_init() # ',Ncall
-#endif
+    character(ESMF_MAXSTR):: name, message, timeString, string
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime, startTime, stopTime
+    logical               :: clockIsPresent
+    type(ESMF_TimeInterval) :: timeInterval
+    integer(ESMF_KIND_I4) :: localPet, petCount
+    type(ESMF_VM)         :: vm
+    real(ESMF_KIND_R8)    :: h_r8
 
-   call ESMF_LogWrite("getm component initializing ... ",ESMF_LOGMSG_TRACE)
+    type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
+    integer                 :: getmRunTimeStepCount
+    character(len=8)        :: datestr
+    character(len=10)       :: timestr
+    character(len=19)       :: TimeStrISOFrac,start_external,stop_external
 
-!  Optional creation of child components
-!  (Create, SetServices, Initialize)
-!  ...
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-!  This is where the model specific setup code goes
-!  (allocation, open files, initial conditions).
-   call date_and_time(datestr,timestr)
-
-!  Check whether toplevel component called ESMF_GridCompCreate() with clock. 
-   call ESMF_GridCompGet(getmCmp,clockIsPresent=ClockIsPresent)
-
-   if (ClockIsPresent) then
-
-!     Use startTime and stopTime from already initialised getmClock.
-      call ESMF_GridCompGet(getmCmp,clock=getmClock)
-      call ESMF_ClockGet(getmClock, &
-                         startTime=getmStartTime,stopTime=getmStopTime)
-      call ESMF_TimeGet(getmStartTime,timeStringISOFrac=start_external)
-      call ESMF_TimeGet(getmStopTime,timeStringISOFrac=stop_external)
+    call date_and_time(datestr,timestr)
+    if (clockIsPresent) then
+      ! Use startTime and stopTime from already initialised clock.
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+      call ESMF_ClockGet(clock, startTime=startTime, stopTime=stopTime, &
+        timeStep=timeInterval, rc=rc)
+      call ESMF_TimeGet(startTime,timeStringISOFrac=start_external)
+      call ESMF_TimeGet(stopTime,timeStringISOFrac=stop_external)
 
       call preinit_model(datestr,timestr)
       call init_time(MinN,MaxN,start_external=start_external, &
                      stop_external=stop_external)
       call postinit_model()
-
-!     use internal GETM time step
-      call ESMF_TimeIntervalSet(getmTimeStep,s_r8=timestep)
-      call ESMF_ClockSet(getmClock,timeStep=getmTimeStep)
-!     KK-TODO: does the getmCmp::clock point to getmClock???
-
-   else
+    else
+      ! set up clock based on internal GETM specifications
 
       call init_model(datestr,timestr)
-
-!     reference time
-      TimeStrISOFrac=start(1:10)//"T"//start(12:19)
-      !call ESMF_TimeSet(getmRefTime,timeStringISOFrac=TimeStrISOFrac)
+      TimeStrISOFrac=getm_time_start(1:10)//"T"//getm_time_start(12:19)
       call TimeStringISOFrac2ESMFtime(TimeStrISOFrac,getmRefTime)
+      call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep)
 
-!     time step
-      call ESMF_TimeIntervalSet(getmTimeStep,s_r8=timestep)
-
-!     start time
-      getmStartTime = getmRefTime + (MinN-1)*getmTimeStep
-
-!     stop time
-      getmStopTime = getmRefTime + MaxN*getmTimeStep
+      getmStartTime = getmRefTime + (MinN-1)*timeInterval
+      getmStopTime  = getmRefTime + MaxN*timeInterval
       getmRunTimeStepCount = MaxN - MinN + 1
 
-!     set up clock based on internal GETM specifications
-      getmClock = ESMF_ClockCreate(getmTimeStep,getmStartTime,            &
+      clock = ESMF_ClockCreate(timeInterval,getmStartTime,            &
                                    runTimeStepCount=getmRunTimeStepCount, &
                                    refTime=getmRefTime,                   &
-                                   name='getmClock')
-      call ESMF_GridCompSet(getmCmp,clock=getmClock)
+                                   name=trim(name)//' clock', rc=rc)
+      call ESMF_GridCompSet(gridComp,clock=clock)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
 
-   end if
+    ! Set the internal time step
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep)
+    call ESMF_ClockSet(clock,timeStep=timeInterval)
 
-!  If the initial Export state needs to be filled, do it here.
-   !call ESMF_StateAdd(eState,field,rc)
-   !call ESMF_StateAdd(eState,bundle,rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//'_clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-   call ESMF_LogWrite("getm component initialized",ESMF_LOGMSG_TRACE)
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-   rc = ESMF_SUCCESS
+    !! Log processor information
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
+    call ESMF_VmGet(vm, petCount=petCount, rc=rc)      
+    write(message,'(A,I6,A)') trim(timestring)//' '//trim(name)//' uses ',petCount
+    call ESMF_VmGetGlobal(vm=vm, rc=rc)
+    call ESMF_VmGet(vm, petCount=petCount, rc=rc)  
+    write(message,'(A,I6,A)') trim(message)//' of ', petCount,' PETs'
 
-#ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_init()'
-   write(debug,*)
-#endif
-   return
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-   end subroutine getmCmp_init
-!EOC
-!-----------------------------------------------------------------------
-!BOP
-!
-! !ROUTINE: getmCmp_run - 
-!
-! !INTERFACE:
-   subroutine getmCmp_run(getmCmp,iState,eState,pClock,rc)
-!
-! !DESCRIPTION:
-!  Note: [i|e]state and pClock are uninitialized if the toplevel
-!        component did not provide corresponding arguments to
-!        ESMF_GridCompRun(getmCmp).
-!  The toplevel component can inquire rc via optional keyword argument
-!  userRc to ESMF_GridCompRun().
-!
-! !USES:
-   use initialise ,only: runtype
-   use integration,only: MinN
-   IMPLICIT NONE
-!
-! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
-   type(ESMF_State)    :: iState,eState ! may be uninitialized
-   type(ESMF_Clock)    :: pClock        ! may be uninitialized
-!
-! !OUTPUT PARAMETERS:
-   integer,intent(out) :: rc
-!
-! !REVISION HISTORY:
-!
-! !LOCAL VARIABLES
-   type(ESMF_Time)         :: getmTime,NextTime
-   type(ESMF_TimeInterval) :: getmTimeStep
-   integer(ESMF_KIND_I8)   :: loop
-   integer                 :: localrc
-   integer                 :: n
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'getmCmp_run() # ',Ncall
-#endif
+    !! Log clock information 
+    call ESMF_ClockGet(clock, startTime=startTime, rc=rc)
+    call ESMF_TimeGet(startTime,timeStringISOFrac=string)
+    write(message,'(A)') trim(timeString)//' '//trim(string)
+    call ESMF_ClockGet(clock, timeStep=timeInterval, rc=rc)
+    call ESMF_TimeIntervalGet(timeInterval,h_r8=h_r8)
+    write(message,'(A,F8.2,A)') trim(message)//'--',h_r8,' h'
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=string)
+    write(message,'(A)') trim(message)//'--'//trim(string)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-   call ESMF_LogWrite("getm component running ... ",ESMF_LOGMSG_TRACE)
+    !> Here comes your own time initialization code
+    !! In particular, this should contain
+    !! 1. Setting your internal timestep and adding it to your clock, this could
+    !!    be a timestep read from an external file
+    !!    ESMF_TimeIntervalSet(timeStep)
+    !!    ESMF_ClockSet(Clock, timeStep=timeStep)
+    !!    The default behaviour is to take the parent's time step
 
-!  call ESMF_StateGet(), etc to get fields, bundles, arrays from import state
+    !! Finally, log the successful completion of this function
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-   call ESMF_ClockGet(getmClock,timeStep=getmTimeStep,currtime=getmTime,advanceCount=loop)
+  end subroutine Initialize
 
-!  use pClock to do determine time of calling routine
-   call ESMF_ClockGetNextTime(pClock,NextTime,rc=localrc)
-   if (localrc .ne. ESMF_SUCCESS) then
+  subroutine Run(gridComp,importState,exportState,parentClock,rc)
+
+    use initialise ,only: runtype
+    use integration,only: MinN
+
+    implicit none
+
+    type(ESMF_GridComp) :: gridComp
+    type(ESMF_State)    :: importState,exportState ! may be uninitialized
+    type(ESMF_Clock)    :: parentClock        ! may be uninitialized
+    integer,intent(out) :: rc
+    
+    character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime, stopTime
+    logical               :: clockIsPresent
+    type(ESMF_TimeInterval) :: timeInterval
+
+    integer(ESMF_KIND_I4) :: petCount, localPet, rank
+    integer(ESMF_KIND_I8) :: advanceCount
+    real(ESMF_KIND_R8)    :: h_r8
+
+
+    type(ESMF_Time)         :: nextTime
+    integer                 :: localrc
+    integer                 :: n
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet, &
+      name=name, clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
+      timeStep=timeInterval, stopTime=stopTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' run ',advanceCount
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
+    write(message,'(A,I8)') trim(message)//' to '//trim(timeString)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+    !> Here comes your code for reading the import states
+
+    !  use parentClock to do determine time of calling routine
+    call ESMF_ClockGetNextTime(parentClock,nextTime,rc=localrc)
+    if (localrc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
-                         line=__LINE__,file=__FILE__,method='getmCmp_run()')
-      call ESMF_ClockGet(getmClock,stopTime=NextTime)
-   end if
+       line=__LINE__,file=__FILE__,method='Run()')
+      call ESMF_ClockGet(clock,stopTime=NextTime)
+    end if
 
 
-   do while (getmTime + 0.5d0*getmTimeStep <= NextTime)
+    do while (currTime + 0.5d0*timeInterval <= nextTime)
 
-      if (ESMF_ClockIsStopTime(getmClock)) then
-         call ESMF_LogWrite('already exceeded stopTime',ESMF_LOGMSG_ERROR, &
-                            line=__LINE__,file=__FILE__,method='getmCmp_run()')
-         call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_ClockIsStopTime(clock)) then
+        call ESMF_LogWrite('already exceeded stopTime',ESMF_LOGMSG_ERROR, &
+                            line=__LINE__,file=__FILE__,method='Run()')
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
 
-!     optional Run of child components
-
 !     This is where the model specific computation goes.
-      n = int(loop,kind=kind(MinN))+MinN
+      n = int(advanceCount,kind=kind(MinN))+MinN
       call time_step(runtype,n)
 
-      call ESMF_ClockAdvance(getmClock)
-      call ESMF_ClockGet(getmClock,currtime=getmTime,advanceCount=loop)
-
-   end do
+      call ESMF_ClockAdvance(clock)
+      call ESMF_ClockGet(clock,currtime=currTime,advanceCount=advanceCount)
+    end do
 
 !  Fill export state here using ESMF_StateAdd(), etc
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finished running.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
-   call ESMF_LogWrite("getm component finished running. ",ESMF_LOGMSG_TRACE)
 
-   rc = ESMF_SUCCESS
+  end subroutine Run
 
-#ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_run()'
-   write(debug,*)
-#endif
-   return
+  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
-   end subroutine getmCmp_run
-!EOC
-!-----------------------------------------------------------------------
-!BOP
-!
-! !ROUTINE: getmCmp_finalize - 
-!
-! !INTERFACE:
-   subroutine getmCmp_finalize(getmCmp,iState,eState,pClock,rc)
-!
-! !DESCRIPTION:
-!  Note: [i|e]state and pClock are uninitialized if the toplevel
-!        component did not provide corresponding arguments to
-!        ESMF_GridCompFinalize(getmCmp).
-!  The toplevel component can inquire rc via optional keyword argument
-!  userRc to ESMF_GridCompFinalize().
-!
-! !USES:
-   use initialise ,only: runtype,dryrun
-   use integration,only: MaxN
-   use output     ,only: meanout
-   IMPLICIT NONE
-!
-! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
-   type(ESMF_State)    :: iState,eState ! may be uninitialized
-   type(ESMF_Clock)    :: pClock        ! may be uninitialized
-!
-! !OUTPUT PARAMETERS:
-   integer,intent(out) :: rc
-!
-! !REVISION HISTORY:
-!
-! !LOCAL VARIABLES
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'getmCmp_finalize() # ',Ncall
-#endif
+    use initialise ,only: runtype,dryrun
+    use integration,only: MaxN
+    use output     ,only: meanout
+    
+    implicit none
 
-   call ESMF_LogWrite("getm component finalizing ... ",ESMF_LOGMSG_TRACE)
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
 
-!  optional Finalize of child components
-!  Add whatever code here needed (deallocation,close files,flush results)
+    character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime
+    logical               :: clockIsPresent
+
 #ifndef NO_3D
-   if (meanout .eq. 0) then
+    if (meanout .eq. 0) then
       call calc_mean_fields(MaxN,MaxN)
-   end if
+    end if
 #endif
-   call clean_up(dryrun,runtype,MaxN)
+    call clean_up(dryrun,runtype,MaxN)
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized.'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
 
-   call ESMF_LogWrite("getm component finalized",ESMF_LOGMSG_TRACE)
+   end subroutine Finalize
 
-   rc = ESMF_SUCCESS
 
-#ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_finalize()'
-   write(debug,*)
-#endif
-   return
-
-   end subroutine getmCmp_finalize
-!EOC
 !-----------------------------------------------------------------------
 !BOP
 !
