@@ -469,7 +469,7 @@ end if
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
     integer               :: external_index
-    real(kind=ESMF_KIND_R8):: vonkar, ustar, z0cur
+    real(kind=ESMF_KIND_R8):: vonkar, ustar, z0cur, cdr, cds, sum, rhowat,vicmol, reynold
 
 !#define DEBUG
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
@@ -634,27 +634,78 @@ end if
 !      r0=r1
     end if
 
-    taub= 0.0_fp
-    z0cur=0.0_fp
-    ustar= 0.0_fp
-    vonkar = 0.4_fp
-  ! Loop over all cells
+    umod =umod * 1.2
+
+!    taub= 0.0_fp
+!    z0cur=0.0_fp
+!    ustar= 0.0_fp
+!    vonkar = 0.4_fp
+!  ! Loop over all cells
+!    do nm = nmlb, nmub
+!     do l = 1, nfrac
+!  !   write (*,*) 'l', l
+!      z0cur = 3.0 * sedd90(l)
+!!      write (*,*) 'z0cur', z0cur
+!      ustar = umod (nm)*vonkar/log(1. + h0(nm)*30.0/z0cur)
+! !     write (*,*)'ustar',ustar
+!      taub(nm) = taub(nm)+ rhow*ustar**2
+!      !write (*,*) 'tau', taub(nm)
+!     enddo
+!     !write (*,*) 'nfrac', nfrac
+!     taub(nm) = taub(nm)/(nfrac*1.0)
+!     write (*,*) 'tau', taub(nm)
+!    enddo
+
+
+    sum = 0.0_fp
+    rhowat = 1000.0_fp
+    vicmol     = 1e-6_fp
+ !  Loop over all cells
     do nm = nmlb, nmub
      do l = 1, nfrac
-      z0cur = 3.0 * sedd90(l)
-      !write (707,*) 'z0cur', z0cur
-      ustar = umod (nm)*vonkar/log(1. + h0(nm)/12.0/z0cur)
-      !write (707,*)'ustar',ustar
-      taub(nm) = taub(nm)+ rhow*ustar**2
-      !write (707,*) 'tau', taub(nm)
-     enddo
-     !write (707,*) 'nfrac', nfrac
-     taub(nm) = taub(nm)/(nfrac*1.0)
-     !write (*,*) 'tau', taub(nm)
+ !     write (*,*) 'l', l
+      z0cur = sedd50(l)/12.0
+
+      reynold    = umod(nm) * h0(nm) / vicmol
+      cds    = 1.615e-4 * exp(6.0 * reynold**(-0.08))
+      cdr    = ( 0.40 / (log(h0(nm)/z0cur)-1.0) )**2
+!      write (*,*) 'cdr', cdr
+!      write (*,*) 'cds', cds
+!      write (*,*) ' umod', umod(nm)
+!      write (*,*) ' h0', h0(nm)
+
+  !   Determine flow regime
+
+   !     Flow only
+
+       if (reynold <= 2000.) then
+          taub(nm)   = 3.0 * rhowat * vicmol * umod(nm) / h0(nm)
+
+       else
+          if (cdr >= cds) then
+             taub(nm) = rhowat * cdr * umod(nm) * umod(nm)
+          else
+             taub(nm) = rhowat * cds * umod (nm)* umod(nm)
+          endif
+
+       endif
+    !  write (*,*)'reynold', reynold
+!      write (*,*) 'z0cur2', z0cur
+!
+!      write (*,*)'ustar',ustar
+
+
+       sum = sum + taub(nm) * frac(l,nm)
+
+ !      if (l==2) write (*,*) 'tau_mix', sum
     enddo
 
+     taub(nm) = sum
+     sum = 0.0_fp
 
-    umod =umod * 1.2
+   enddo
+
+
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
@@ -787,7 +838,7 @@ end if
     !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
     !             & tcrdep,  tcrero, tcrfluff)
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
