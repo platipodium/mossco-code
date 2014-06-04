@@ -20,25 +20,25 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_clm libmossco_simplewave libmossco_netcdf libmossco_info
-ifeq (${MOSSCO_BENTHOS},true)
+TARGETS=libempty libconstant  ibmossco_simplewave libmossco_info
+
+ifeq ($(MOSSCO_NETCDF),true)
+  TARGETS += libmossco_netcdf libmossco_clm
+endif
+ifeq ($(MOSSCO_BENTHOS),true)
   TARGETS+=libmossco_benthos
 endif
-
 ifeq ($(MOSSCO_EROSED),true)
-TARGETS += libmossco_erosed
+  TARGETS += libmossco_erosed
 endif
-
 ifeq ($(MOSSCO_FABM),true)
-TARGETS +=  libsediment
-
+  TARGETS +=  libsediment
 ifeq ($(MOSSCO_GOTM),true)
-TARGETS += libmossco_fabm0d
+  TARGETS += libmossco_fabm0d
 endif
 endif
-
 ifeq ($(MOSSCO_GETM),true)
-TARGETS += libmossco_getm
+  TARGETS += libmossco_getm
 endif
 
 .PHONY: $(TARGETS) $(SUBDIRS) subdirs utilities
@@ -60,7 +60,9 @@ libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_drive
 libmossco_benthos_drivers: prefix  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o)
 libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 libmossco_simplewave: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
-libmossco_netcdf: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o)
+libmossco_netcdf: prefix libmossco_util \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_input_component.o)
 libmossco_erosed: erosed_driver erosed_component
 .PHONY: erosed_driver
 erosed_driver:
