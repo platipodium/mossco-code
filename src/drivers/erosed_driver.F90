@@ -231,7 +231,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     integer                                     , intent(in)   :: nmlb          ! first cell number
     integer                                     , intent(in)   :: nmub          ! last cell number
     integer     , dimension(nfrac)              , intent(in)   :: sedtyp        ! sediment type
-    real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: chezy         ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
+    real(fp)    , dimension(nmlb:nmub)          , intent(inout):: chezy         ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: h             ! water depth [m]
     real(fp)    , dimension(nfrac)              , intent(in)   :: rhosol        ! specific sediment density [kg/m3]
    ! real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: sedd50        ! 50% diameter sediment fraction [m]
@@ -264,6 +264,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nfrac          )    :: E            ! erosion velocity [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: fixfac       ! reduction factor in case of limited sediment availability [-]
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: rsedeq       ! equilibrium concentration [kg/m3]
+    real(fp)                                    :: fc           ! Skin friction coefficient (Darcy-Weisbach)
 !
 !! executable statements ------------------
 !
@@ -360,8 +361,9 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !
                 !   Apply sediment transport formula ( in this case vanRijn (1984) )
                 !
-                rksc = 3.0 * sedd90(l)    ! note that this ks-value is only applicable for grain related roughness
+!                rksc = min(max(3.0 * sedd90(l),0.01 * h(nm)),0.2 * h(nm))    ! note that this ks-value is only applicable for grain related roughness
                                         ! for wave-related roughness it should be modified.
+                rksc = 3.0_fp * sedd90(l)
 
                 call vanrijn84_arguments%set ( umod(nm)  ,sedd50(l),sedd90(l),h(nm) ,ws(l,nm), &
                              & rhosol(l) ,alf1      ,rksc ,smfac )
@@ -380,6 +382,10 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                     rsedeq(l,nm) = frac(l,nm) * ssus / (umod(nm)*h(nm))
 
                 endif
+            !    write (*,*)'rsedeq', rsedeq(l,nm)
+                fc = .24*(log10(12.*h(nm)/rksc))**( - 2)
+                chezy (nm) = sqrt(9.81_fp *8.0_fp / fc)  
+           !     write (*,*) 'rksc',rksc, 'fc', fc, 'chezy', chezy(nm)
                 !
                 !   Compute suspended sediment fluxes for non-cohesive sediment (sand)
                 !
