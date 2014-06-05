@@ -572,6 +572,7 @@ module fabm_sediment_component
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         ptr_f3 = sed%export_states(n)%data
+#endif
         if (sed%export_states(n)%fabm_id /= -1) then
           call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_upward_flux', &
@@ -581,7 +582,6 @@ module fabm_sediment_component
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
         end if
-#endif
       else
         call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_in_soil', &
