@@ -1,0 +1,15 @@
+Index: source/vanRijn84.f90
+===================================================================
+--- source/vanRijn84.f90	(revision 10691)
++++ source/vanRijn84.f90	(working copy)
+@@ -94,7 +94,9 @@
+        return
+     endif
+     !
+-    a = rksc
++    !a = rksc
++    a=min(max(rksc,0.01*h),0.2*h)
++    
+     dstar = d50*(del*ag/rnu/rnu)**(1./3.)
+     !
+     rmuc = (log10(12.*h/rksc)/log10(12.*h/3./d90))**2
