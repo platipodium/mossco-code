@@ -363,7 +363,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 !
 !                rksc = min(max(3.0 * sedd90(l),0.01 * h(nm)),0.2 * h(nm))    ! note that this ks-value is only applicable for grain related roughness
                                         ! for wave-related roughness it should be modified.
-                rksc = 3.0_fp * sedd90(l)
+                !rksc = 3.0_fp * sedd90(l)
 
                 call vanrijn84_arguments%set ( umod(nm)  ,sedd50(l),sedd90(l),h(nm) ,ws(l,nm), &
                              & rhosol(l) ,alf1      ,rksc ,smfac )
@@ -384,7 +384,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 endif
             !    write (*,*)'rsedeq', rsedeq(l,nm)
                 fc = .24*(log10(12.*h(nm)/rksc))**( - 2)
-                chezy (nm) = sqrt(9.81_fp *8.0_fp / fc)  
+                chezy (nm) = sqrt(9.81_fp *8.0_fp / fc)
            !     write (*,*) 'rksc',rksc, 'fc', fc, 'chezy', chezy(nm)
                 !
                 !   Compute suspended sediment fluxes for non-cohesive sediment (sand)
