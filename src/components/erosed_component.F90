@@ -118,7 +118,7 @@ contains
     type(ESMF_ArraySpec) :: arrayspec
     type(ESMF_Array)     :: array
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, ptr2_f2
     type(ESMF_FieldBundle) :: upward_flux_bundle,downward_flux_bundle,fieldBundle
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
 
@@ -449,8 +449,8 @@ end if
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
-    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
-    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration
+    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, u_mean
+    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration,grid_height
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
     &                            Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
@@ -469,9 +469,11 @@ end if
     type(ESMF_Time)       :: currTime
     type(ESMF_Clock)      :: clock
     integer               :: external_index
-    real(kind=ESMF_KIND_R8):: vonkar, ustar, z0cur, cdr, cds, sum, rhowat,vicmol, reynold
+    real(kind=ESMF_KIND_R8):: vonkar, ustar, z0cur, cdr, cds, summ, rhowat,vicmol, reynold
 
 !#define DEBUG
+
+    allocate (u_mean(1,1))
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -508,11 +510,20 @@ end if
         h0=h1
       endif
 
+     ! call ESMF_StatePrint(importState)
+
       !> get u,v and use bottom layer value
       call mossco_state_get(importState,(/'x_velocity_in_water'/),u,rc)
       call mossco_state_get(importState,(/'y_velocity_in_water'/),v,rc)
+      call mossco_state_get(importState,(/'grid_height_in_water'/),grid_height,rc)
+
       if (rc == 0) then
-        umod = sqrt( u(1,1,1)**2 + v(1,1,1)**2 )
+
+      u_mean(:,:) = sum (grid_height*sqrt(u**2+v**2),3)/sum(grid_height,3)
+      !umod = sqrt( u(1,1,:)**2 + v(1,1,:)**2)
+
+      umod=u_mean(1,:)
+
       else
         umod = 0.2
       end if
@@ -634,45 +645,19 @@ end if
 !      r0=r1
     end if
 
-    umod =umod * 1.2
 
-!    taub= 0.0_fp
-!    z0cur=0.0_fp
-!    ustar= 0.0_fp
-!    vonkar = 0.4_fp
-!  ! Loop over all cells
-!    do nm = nmlb, nmub
-!     do l = 1, nfrac
-!  !   write (*,*) 'l', l
-!      z0cur = 3.0 * sedd90(l)
-!!      write (*,*) 'z0cur', z0cur
-!      ustar = umod (nm)*vonkar/log(1. + h0(nm)*30.0/z0cur)
-! !     write (*,*)'ustar',ustar
-!      taub(nm) = taub(nm)+ rhow*ustar**2
-!      !write (*,*) 'tau', taub(nm)
-!     enddo
-!     !write (*,*) 'nfrac', nfrac
-!     taub(nm) = taub(nm)/(nfrac*1.0)
-!     write (*,*) 'tau', taub(nm)
-!    enddo
-
-
-    sum = 0.0_fp
+    summ = 0.0_fp
     rhowat = 1000.0_fp
     vicmol     = 1e-6_fp
  !  Loop over all cells
     do nm = nmlb, nmub
      do l = 1, nfrac
- !     write (*,*) 'l', l
+
       z0cur = sedd50(l)/12.0
 
       reynold    = umod(nm) * h0(nm) / vicmol
       cds    = 1.615e-4 * exp(6.0 * reynold**(-0.08))
       cdr    = ( 0.40 / (log(h0(nm)/z0cur)-1.0) )**2
-!      write (*,*) 'cdr', cdr
-!      write (*,*) 'cds', cds
-!      write (*,*) ' umod', umod(nm)
-!      write (*,*) ' h0', h0(nm)
 
   !   Determine flow regime
 
@@ -689,19 +674,13 @@ end if
           endif
 
        endif
-    !  write (*,*)'reynold', reynold
-!      write (*,*) 'z0cur2', z0cur
-!
-!      write (*,*)'ustar',ustar
 
+       summ = summ + taub(nm) * frac(l,nm)
 
-       sum = sum + taub(nm) * frac(l,nm)
-
- !      if (l==2) write (*,*) 'tau_mix', sum
     enddo
 
-     taub(nm) = sum
-     sum = 0.0_fp
+     taub(nm) = summ
+     summ = 0.0_fp
 
    enddo
 
@@ -724,10 +703,6 @@ end if
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
                 & sink      , sinkf   , sour     , sourf  , anymud, BioEffects )
     end if
-
-
-
-
 
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
