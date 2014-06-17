@@ -12,6 +12,8 @@ module pelagic_benthic_coupler
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN,DIN,vDETN
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP,DETP,vDETP
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
+  real(ESMF_KIND_R8),dimension(1:1,1:1,1:1)    :: oxy,odu
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2
 
@@ -77,6 +79,7 @@ module pelagic_benthic_coupler
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer, intent(out) :: rc
+    integer              :: ammrc,nitrc
 
     integer                     :: myrank
     type(ESMF_Time)             :: localtime
@@ -101,9 +104,13 @@ module pelagic_benthic_coupler
       ptr_f2(1,1) = ptr_f3(1,1,1)
 
       ! dissolved_oxygen:
-      call mossco_state_get(importState,(/'dissolved_oxygen'/),ptr_f3,rc=rc)
+      call mossco_state_get(importState,(/ &
+        'oxygen          ', &
+        'dissolved_oxygen'/),ptr_f3,rc=rc)
       call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/),ptr_f2,rc=rc)
-      ptr_f2(1,1) = ptr_f3(1,1,1)
+      oxy = max(0.0d0,ptr_f3(1,1,1))
+      odu = max(0.0d0,-ptr_f3(1,1,1))
+      ptr_f2(1,1) = oxy(1,1,1)
 
 
       !   Det flux:
@@ -164,26 +171,40 @@ module pelagic_benthic_coupler
       !  oxygen is coming from constant component
       !  set reduced substances to zero
       call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/),ptr_f2,rc=rc)
-      ptr_f2(1,1) = 0.0d0
+      ptr_f2(1,1) = odu(1,1,1)
 
-      call mossco_state_get(importState,(/ &
+      call mossco_state_get(importState,(/'nitrate'/),nit,rc=nitrc)
+      if (nitrc /= 0) then
+        call mossco_state_get(importState,(/ &
               'nutrients                            ', &
               'DIN                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN'/),DIN,rc=rc)
+      end if
+      call mossco_state_get(importState,(/'ammonium'/),amm,rc=ammrc)
+      
       call ESMF_StateGet(exportState,'mole_concentration_of_ammonium_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
+      if (ammrc == 0) then
+        ptr_f2(1,1) = amm(1,1,1)
+      else
+        ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
+      end if
       call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
+      if (nitrc == 0) then
+        ptr_f2(1,1) = nit(1,1,1)
+      else
+        ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
+      end if
 
       !> check for DIP, if present, take as is, if not calculate it N-based
       call mossco_state_get(importState,(/ &
           'DIP                                    ', &
+          'phosphate                              ', &
           'Dissolved_Inorganic_Phosphorus_DIP_nutP'/),DIP,rc=rc)
       if (rc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))

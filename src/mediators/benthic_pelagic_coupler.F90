@@ -14,8 +14,9 @@ module benthic_pelagic_coupler
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2,val1_f2,val2_f2
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux,DETPflux,DETCflux,DINflux,DIPflux
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux,DETPflux,DETCflux,DINflux,DIPflux,OXYflux
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux,fDETCflux,omexDETPflux
+  real(ESMF_KIND_R8) :: dinflux_const
   public SetServices
 
   contains
@@ -45,8 +46,15 @@ module benthic_pelagic_coupler
     type(ESMF_Clock)     :: externalclock
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
+    integer              :: nmlunit=127
+    namelist /benthic_pelagic_coupler/ dinflux_const
 
     call ESMF_LogWrite("benthic-pelagic coupler initializing", ESMF_LOGMSG_INFO)
+
+    !read namelist
+    open(nmlunit,file='benthic_pelagic_coupler.nml',action='read',status='old')
+    read(nmlunit,benthic_pelagic_coupler)
+    close(nmlunit)
 
     ! create exchange fields
     !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
@@ -66,6 +74,11 @@ module benthic_pelagic_coupler
     ! create coupler fields
     call create_optional_fields_from_names(exportState, (/&
            "nutrients_upward_flux                              ", &
+           "nitrate_upward_flux                                ", &
+           "ammonium_upward_flux                               ", &
+           "phosphate_upward_flux                              ", &
+           "oxygen_upward_flux                                 ", &
+           "phosphate_upward_flux                              ", &
            "DIN_upward_flux                                    ", &
            "DIP_upward_flux                                    ", &
            "detN_upward_flux                                   ", &
@@ -93,6 +106,7 @@ module benthic_pelagic_coupler
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer, intent(out) :: rc
+    integer              :: ammrc,nitrc,oxyrc
 
     integer                     :: myrank
     type(ESMF_Time)             :: localtime
@@ -112,18 +126,27 @@ module benthic_pelagic_coupler
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call mossco_state_get(exportState,(/ &
+      call mossco_state_get(exportState,(/'nitrate_upward_flux'/),DINflux,rc=nitrc)
+      if (nitrc == 0) DINflux(1,1) = val2_f2(1,1)
+      call mossco_state_get(exportState,(/'ammonium_upward_flux'/),DINflux,rc=nitrc)
+      if (nitrc == 0) DINflux(1,1) = val1_f2(1,1)
+
+      !RH: weak check, needs to be replaced:
+      if (nitrc /= 0) then
+        call mossco_state_get(exportState,(/ &
               'nutrients_upward_flux                            ', &
               'DIN_upward_flux                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux'/),DINflux,rc=rc)
-      if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
-      ! add constant boundary flux of DIN (through groundwater, advection, rain
-      DINflux(1,1) = DINflux(1,1) + 50.0/(86400.0*365.0)
+        if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
+        ! add constant boundary flux of DIN (through groundwater, advection, rain
+        DINflux(1,1) = DINflux(1,1) + dinflux_const/(86400.0*365.0)
+      end if
 
       !   DIP flux:
       call mossco_state_get(exportState,(/ &
               'DIP_upward_flux                                    ', &
+              'phosphate_upward_flux                              ', &
               'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux'/),DIPflux,rc=rc)
       if (rc == 0)  then
         call mossco_state_get(importState,(/ &
@@ -157,6 +180,14 @@ module benthic_pelagic_coupler
           'Detritus_Phosphorus_detP_upward_flux'/),DETPflux,rc=rc)
       if (rc == 0) then
         DETPflux(1,1) = omexDETPflux(1,1)
+      end if
+
+      !> oxygen and odu fluxes
+      call mossco_state_get(exportState,(/'oxygen_upward_flux'/),OXYflux,rc=rc)
+      if (rc == 0) then
+        call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux'/),val1_f2,rc=rc)
+        call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux'/),val2_f2,rc=rc)
+        OXYflux(1,1) = val1_f2(1,1) - val2_f2(1,1)
       end if
 
   end subroutine Run
