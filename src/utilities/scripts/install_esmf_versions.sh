@@ -1,6 +1,7 @@
 #!/bin/bash
 
-export TAGS="ESMF_7_0_0_beta_snapshot_10"  # ESMF_6_3_0r ESMF_6_3_0rp1_beta_snapshot_09 "ESMF_5_2_0rp3 ESMF_5_3_1_beta_snapshot_18"
+#export TAGS="ESMF_7_0_0_beta_snapshot_10 ESMF_6_3_0rp1_beta_snapshot_09  ESMF_5_3_1_beta_snapshot_18"
+export TAGS="EESMF_6_3_0rp1_beta_snapshot_09 ESMF_4_0_1_beta_snapshot_01 ESMF_3_1_2_beta_snapshot_12"
 COMPS="gfortran" # intel pgi"
 COMMS="openmpi" #  mpiuni"
 
@@ -95,9 +96,8 @@ EOT
        cat $HOME/.esmf_${ESMF_STRING}
        echo $PATH
 
-       #make distclean && make && make -j 8 check && make install
-       test -f $ESMFMKFILE || make distclean 
-       test -f $ESMFMKFILE || (make -j12 lib && make install)
+       #test -f $ESMFMKFILE || (make distclean && make -j12 lib && make install)
+       (make distclean && make -j12 lib && make install)
        
        test -f $ESMFMKFILE || continue
        test -f ${ESMF_INSTALL_PREFIX}/lib/libg/${ESMF_STRING}/libesmf.a || continue 
