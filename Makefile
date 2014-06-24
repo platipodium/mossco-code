@@ -18,17 +18,20 @@ export MOSSCO_DATE=$(shell date "+%Y%m%d")
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-.PHONY: default doc src info examples all clean subdirs $(SUBDIRS)
+.PHONY: default doc src examples all extraclean subdirs $(SUBDIRS)
 
 default: src
 all:  examples doc
 examples: src
 
-clean:
+clean: extraclean
+
+extraclean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 	@rm -rf modules lib bin
 
-distclean_all: clean
+distclean_all: extraclean
+
 ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
 	$(MAKE) -C $(MOSSCO_DIR)/external/fabm-git/src $@
 endif
@@ -52,8 +55,6 @@ check:
 update:
 	git pull 
 
-info:
-	make -C src info
 
 run: examples
 	(cd examples/omexdia_p && ./omexdia_p_test)

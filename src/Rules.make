@@ -415,8 +415,7 @@ clean:
 	@rm -f PET?.*
 
 # changed behaviour: distclean should clean all mossco code regardless of where you call it from
-distclean: clean
-	$(MAKE) -C $(MOSSCO_DIR) distclean_all
+distclean: clean mossco_clean
 
 prefix:
 	@mkdir -p $(MOSSCO_LIBRARY_PATH)
@@ -513,7 +512,7 @@ endif
 ifdef MOSSCO_GETMDIR
 	$(MAKE) -C $(MOSSCO_GETMDIR) distclean
 endif
-	$(MAKE) -C $(MOSSCO_DIR) distclean
+	$(MAKE) -C $(MOSSCO_DIR) clean
 
 # Common rules
 #ifndef EXTRA_CPP
