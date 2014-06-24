@@ -203,7 +203,6 @@ module fabm_sediment_component
     fluxes(_IRANGE_,_JRANGE_,1:8) = 0.0_rk
 
     call set_boundary_flags(sed,importState)
-    call get_boundary_conditions(sed,importState,bdys,fluxes)
     !> create list of state variables for export
     call sed%get_all_export_states()
 
@@ -314,22 +313,37 @@ module fabm_sediment_component
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      fluxmesh_ptr(1:numElements)=bdys(1:numElements,1,1)
       call ESMF_StateAddReplace(importState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
       do n=1,size(sed%export_states)
         if (sed%export_states(n)%fabm_id/=-1) then
           field = ESMF_FieldCreate(surface_mesh, &
                    name=trim(sed%export_states(n)%standard_name)//'_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          fluxmesh_ptr(1:numElements)=bdys(:,1,sed%export_states(n)%fabm_id+1)
           call ESMF_StateAddReplace(importState,(/field/),rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          if (sed%model%info%state_variables(sed%export_states(i)%fabm_id)%properties%get_logical( &
+          if (sed%model%info%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
+            ! overwrite states with fluxes and set z_velocity to -1.0
+            call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
+            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            fluxmesh_ptr(1:numElements)=fluxes(:,1,sed%export_states(n)%fabm_id)
+
             field = ESMF_FieldCreate(surface_mesh, &
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
+            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            fluxmesh_ptr(1:numElements)=-1.0_rk
             call ESMF_StateAddReplace(importState,(/field/),rc=rc)
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           end if
@@ -433,6 +447,7 @@ module fabm_sediment_component
         end if
       end do  
     endif ! self%use_ugrid
+    call get_boundary_conditions(sed,importState,bdys,fluxes)
     !call ESMF_StatePrint(importState)
 
     !! Finally, log the successful completion of this function
