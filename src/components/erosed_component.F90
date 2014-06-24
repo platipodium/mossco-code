@@ -706,6 +706,7 @@ end if
 
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
+      !> @todo add warning about negative spm concentrations
       spm_concentration(1,1,l) = max (0.0_fp, spm_concentration(1,1,l) )
      do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
