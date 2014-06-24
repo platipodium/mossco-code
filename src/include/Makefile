@@ -48,7 +48,7 @@ ifeq ($(MOSSCO_FABM),true)
   $(info fabm-sha settings)
 endif
 ifeq ($(MOSSCO_EROSED),true)
-  EROSED_REV=$(shell (cd $(EROSED_DIR) ; svn log) | head -2 | tail -1 | awk '{print $$1}')
+  #EROSED_REV=$(shell (cd $(EROSED_DIR) ; svn log) | head -2 | tail -1 | awk '{print $$1}')
   EROSED_REV?=none
   TARGETS += erosed-rev
 endif
