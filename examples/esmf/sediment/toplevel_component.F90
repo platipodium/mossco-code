@@ -72,6 +72,7 @@ module toplevel_component
     fluxes(1,1,3) = 0.08/86400.0_rk !pdet
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
+    call ESMF_LogFlush()
 
   end subroutine Initialize
 
