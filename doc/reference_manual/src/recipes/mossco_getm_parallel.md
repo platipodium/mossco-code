@@ -7,7 +7,7 @@ This recipe describes the the run of a parallel GETM test case from $MOSSCO_DIR/
 - have GETM downloaded in $GETMDIR
 - have GOTM downloaded in $GOTMDIR
 
-## GETM setupsyy
+## GETM setups
 GETM setups are available from a separate repository.  It is not required to define the environment varialbe GETM_SETUPDIR, however, we do this for convenience here.
 
 .  git clone git://git.code.sf.net/p/getm/getm-setups
