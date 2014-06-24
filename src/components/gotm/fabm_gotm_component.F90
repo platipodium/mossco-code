@@ -197,7 +197,7 @@ module fabm_gotm_component
       call ESMF_StatePrint(importState)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     else
-      call ESMF_StateGet(importState,trim(varname),field,rc=rc)
+      call ESMF_StateGet(exportState,trim(varname),field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
       call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
