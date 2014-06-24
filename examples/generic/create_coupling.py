@@ -1020,7 +1020,7 @@ for item in gridCompSet.union(cplCompSet):
 
 libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                    'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'] ,
-        'gotmfabm'       : ['mossco_fabmgotm', 'gotm', 'mossco_gotmfabm', 'solver', 'fabm_prod', 
+        'gotmfabm'       : ['mossco_gotmfabm','mossco_fabmgotm', 'gotm', 'solver', 'fabm_prod', 
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
         'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver', 'fabm_prod', 
