@@ -402,15 +402,15 @@ module fabm_gotm_component
 #ifdef DEBUG
                write(0,*) 'use external_index',fabm_idx,'for variable',nvar
 #endif
+               gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
+#ifdef DEBUG
+               write(0,*) 'flux:',ptr_f2(1,1)
+#endif
                exit
              else
                cycle
              end if
            end do
-           gotm_fabm_bottom_flux(1,1,nvar) = ptr_f2(1,1)
-#ifdef DEBUG
-           write(0,*) 'flux:',ptr_f2(1,1)
-#endif
          end if
        end do
 
