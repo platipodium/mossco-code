@@ -34,7 +34,6 @@ module gotm_component
 
   private
  
-  type(ESMF_Clock)  :: clock 
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   real(ESMF_KIND_R8),dimension(1:1,1:1),target   :: H_2d
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
@@ -87,8 +86,9 @@ module gotm_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    type(ESMF_Clock)  :: clock 
     character(len=19) :: timestring
-    type(ESMF_Time)   :: wallTime, clockTime
+    type(ESMF_Time)   :: wallTime, currTime, stopTime
     type(ESMF_TimeInterval) :: timeInterval
     real(ESMF_KIND_R8) :: dt
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
@@ -96,6 +96,12 @@ module gotm_component
     integer                     :: nimport,nexport
     real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
+    
+    logical                    :: clockIsPresent
+    integer(ESMF_KIND_I8)      :: advanceCount
+    integer(ESMF_KIND_I4)      :: localPet, petCount
+    integer(ESMF_KIND_I4)      :: hours, minutes, seconds
+    character(len=ESMF_MAXSTR) :: message
 
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid,grid2d
@@ -119,31 +125,41 @@ module gotm_component
     close(921)
 
 
-    ! Create a local clock, set its parameters to those of the parent clock, then
-    ! copy start and stop time from clock to gotm's time parameters
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
+    !! Check whether there is already a clock (it might have been set 
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! a local clock as a clone of the parent clock, and associate it
+    !! with this component.  Finally, set the name of the local clock
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+
+    ! copy start and stop time from clock to gotm's time parameters
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    call ESMF_ClockSet(clock, name='GOTM clock',timeStep=timeInterval, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-     
-    call ESMF_TimeSet(clockTime,rc=rc) 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_ClockGet(clock,startTime=clockTime,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring,rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     gotm_time_start=timestring(1:10)//" "//timestring(12:19)
 
-    call ESMF_ClockGet(parentClock,stopTime=clockTime)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
 
@@ -152,7 +168,7 @@ module gotm_component
 
     !! The output timestep is used to create an alarm in the parent Clock
     !> @todo implement this also driven by the parent clock
-    call ESMF_ClockGet(clock,startTime=clockTime) 
+    call ESMF_ClockGet(clock,startTime=currTime) 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_output_nsave*gotm_time_timestep,rc=rc)
@@ -160,11 +176,11 @@ module gotm_component
 
     ! Introduced dependency to FABM component, which use the same name for the alarm
     outputAlarm = ESMF_AlarmCreate(clock=parentclock,name="GOTM output Alarm", &
-      ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
+      ringTime=currTime+timeInterval,ringInterval=timeInterval,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     outputAlarm = ESMF_AlarmCreate(clock=clock,name="GOTM output Alarm", &
-      ringTime=clockTime+timeInterval,ringInterval=timeInterval,rc=rc)
+      ringTime=currTime+timeInterval,ringInterval=timeInterval,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Create the grid and coordinates
@@ -269,39 +285,55 @@ module gotm_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    type(ESMF_Clock)  :: clock 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: wallTime, clockTime
+    type(ESMF_Time)         :: wallTime, currTime, stopTime
     type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8)   :: n,k
+    integer(ESMF_KIND_I8)   :: n,k, advanceCount
     integer                 :: itemcount,nvar
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     type(ESMF_Field)        :: Field
     character(len=ESMF_MAXSTR) :: string,varname,message
+    
+    logical                 :: clockIsPresent
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    integer(ESMF_KIND_I4)   :: seconds, hours
 
-    call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, advanceCount=n, rc=rc)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime,  timeStep=timeInterval, &
+      stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-   
-#ifdef DEBUG
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running with dt='
+    call ESMF_TimeIntervalGet(timeInterval,s=seconds)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,I5,A)') trim(message),seconds,' s to '
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    write(message,'(A)') trim(timestring)//" GOTM run called"
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-#endif
-
-    ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
-    call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
-    ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
     do while (.not.ESMF_ClockIsStopTime(clock))
 
-       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
+       call ESMF_ClockGet(clock,currTime=currTime, advanceCount=n, &
+         timeStep=timeInterval, rc=rc)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
-       call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
+       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
        write(message,'(A,I5)') trim(timestring)//" GOTM iteration ", n
@@ -330,7 +362,9 @@ module gotm_component
          call do_output(n,nlev)
        endif
 
-       call ESMF_ClockAdvance(clock,rc=rc)
+       
+       if (timeInterval > stopTime-currTime) timeInterval = stopTime-currTime
+       call ESMF_ClockAdvance(clock, timeStep=timeInterval, rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end do
 
@@ -342,6 +376,7 @@ module gotm_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    type(ESMF_Clock)  :: clock 
     integer                      :: lbnd(3), ubnd(3), k
     real(ESMF_KIND_R8),pointer   :: farrayPtr(:,:,:)
     type(ESMF_Field)             :: field

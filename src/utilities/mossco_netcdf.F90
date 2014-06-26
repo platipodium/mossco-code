@@ -90,6 +90,7 @@ module mossco_netcdf
     !write(message,fmt) 'localDeCount=', localDeCount,' bounds ',lbnd,' : ', &
     !  ubnd, ' totalCount ', totalCount
     !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, rc=rc)
+    !call ESMF_LogFlush( rc=rc)
 
     if (any(totalCount==0)) return
       
@@ -106,7 +107,7 @@ module mossco_netcdf
       call self%create_variable(field, trim(varname), rc=rc)
     endif
     !> @todo what happens if variable exists but on different grid?
-    
+ 
     ncStatus = nf90_inq_varid(self%ncid, trim(varname), varid)
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
     

@@ -780,6 +780,12 @@ fid.write('''
           if (time<ringTime) ringTime=time
         enddo 
 
+        !call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
+        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        !write(message,'(A)') 'Setting child''s stopTime to'//trim(timeString)
+        !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
+
+
         call ESMF_ClockSet(childClock, stopTime=ringTime, rc=rc) 
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
@@ -795,7 +801,7 @@ fid.write('''
         call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-        write(message,'(A,A,I5,A,I2,A,I2,A)') trim(timeString)//' calling '//trim(compName), &
+        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(timeString)//' calling '//trim(compName), &
           ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
         

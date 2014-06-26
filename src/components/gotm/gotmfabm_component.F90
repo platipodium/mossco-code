@@ -77,8 +77,6 @@ module gotmfabm_component
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
      
-    rc = ESMF_SUCCESS
-     
     !! Check whether there is already a clock (it might have been set 
     !! with a prior ESMF_gridCompCreate() call.  If not, then create 
     !! a local clock as a clone of the parent clock, and associate it
@@ -166,7 +164,7 @@ module gotmfabm_component
     type(ESMF_TimeInterval)    :: timeInterval
     integer(ESMF_KIND_I8)      :: advanceCount,  i, j, k, l
     integer(ESMF_KIND_I4)      :: petCount, localPet
-    integer(ESMF_KIND_I4)      :: numGridComp, hours
+    integer(ESMF_KIND_I4)      :: numGridComp, hours, seconds, minutes
     
     type(ESMF_Clock)        :: childClock, clock
     logical                 :: clockIsPresent
@@ -192,12 +190,18 @@ module gotmfabm_component
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockGet(clock,currTime=currTime,  timeStep=timeInterval, rc=rc)
+    call ESMF_ClockGet(clock,currTime=currTime,  timeStep=timeInterval, &
+      stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running with dt='
+    call ESMF_TimeIntervalGet(timeInterval,s=seconds)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,I5,A)') trim(message),seconds,' s to '
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
@@ -241,25 +245,24 @@ module gotmfabm_component
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(name)//' now at '//trim(timestring)//', cycling ...'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          call ESMF_LogFlush(rc=rc)
 
           cycle
         endif
+
+        !call ESMF_TimeGet(currTime + timeInterval,timeStringISOFrac=timestring, rc=rc)
+        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        !write(message,'(A)') 'Setting child''s stopTime to'//trim(timeString)
+        !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
  
         call ESMF_ClockSet(childClock, stopTime=currTime + timeInterval, rc=rc) 
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-        call ESMF_ClockGet(childClock, timeStep=timeInterval, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc) 
-        !if (timeInterval>ringTime-currTime) then
-        !  call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=rc)
-        !  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc) 
-        !endif
-
-        call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
+ 
+        call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-        write(message,'(A,A,G6.2,A)') trim(timeString)//' calling '//trim(compName), &
-          ' to run for ', hours, ' h'
+        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(timeString)//' calling '//trim(compName), &
+          ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
         
         call ESMF_GridCompRun(gridCompList(i),importState=importState,&
@@ -312,11 +315,9 @@ module gotmfabm_component
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-!#ifdef DEBUG 
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
-!#endif
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
 
   end subroutine Run
 

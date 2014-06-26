@@ -311,7 +311,7 @@ module fabm_gotm_component
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: wallTime, clockTime
+    type(ESMF_Time)         :: wallTime, clockTime, stopTime, currTime
     type(ESMF_TimeInterval) :: timeInterval, timeStep
     integer(ESMF_KIND_I8)   :: n,k
     integer                 :: nvar,ii,fabm_idx
@@ -323,21 +323,35 @@ module fabm_gotm_component
     type(ESMF_Field),dimension(:),allocatable ::fieldlist
     type(ESMF_StateItem_Flag)  :: itemType
     character(len=ESMF_MAXSTR) :: string,varname,message
-
-    call ESMF_ClockGet(parentClock,currTime=clockTime, timestep=timeInterval, advanceCount=n, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
-    call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
-#ifdef DEBUG
-    write(message,'(A)') trim(timestring)//" FABM/GOTM run called"
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-#endif
+    integer(ESMF_KIND_I4)    :: localPet, petCount, hours, seconds, minutes
+    logical                  :: clockIsPresent
 
-    ! From parent clock get current time and time interval, calculate new stop time for local clock as currTime+timeInterval
-    call ESMF_ClockSet(clock,stopTime=clockTime + timeInterval, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      clockIsPresent=clockIsPresent, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (.not.clockIsPresent) then
+      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_ClockGet(clock,currTime=currTime,  timeStep=timeInterval, &
+      stopTime=stopTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' running with dt='
+    call ESMF_TimeIntervalGet(timeInterval,s=seconds)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,I5,A)') trim(message),seconds,' s to '
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     ! set environment from GOTM arrays
     call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr, &
