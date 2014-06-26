@@ -13,7 +13,7 @@ except:
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = 'constant_test_netcdf.yaml'
+     filename = 'fabm_benthic_pelagic+wave.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      #filename = 'constant_constant_constant.yaml'
      #filename = 'constant_empty_netcdf.yaml'
@@ -360,6 +360,7 @@ fid.write('''
     !! the initialization
 ''')
 
+
 for item in gridCompList:
     fid.write('    !! Initializing ' + item + '\n')
     ifrom=gridCompList.index(item)
@@ -372,42 +373,16 @@ for item in gridCompList:
     fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
     fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')        
-
-#for i in range(0,len(componentList)):
-#    item=componentList[i]
-#    fid.write('    !! Initializing ' + str(i) + ': ' + componentList[i] +'\n')
-#    if item in gridCompList:
-#        ifrom=gridCompList.index(item)
-#        ito=ifrom
-        #for j in range(0, len(couplingList)):
-        #    jtem=couplingList[j]
-        #    if jtem[-1]==item:
-        #        ifrom=gridCompList.index(jtem[0])
-        #        fid.write('    !! which couples from ' + gridCompList[ifrom] + '\n')
-        #        #print 'Run cplCompList ', cplCompList[0],': ', ifrom, '-->', ito
-        #        fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
-        #        fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')            
-        #        fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
-#        j=gridCompList.index(item)
-#        fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
-#        fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
-#        fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')        
-#    else:
-#        for j in range(0, len(couplingList)):
-#            jtem=couplingList[j]
-#            if jtem[1]==item:
-#                ifrom=gridCompList.index(jtem[0])
-#                ito=gridCompList.index(jtem[2])
-#        j=cplCompList.index(item)
-#        fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(j+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
-#        fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
-#        fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
  
-for j in range(0, len(couplingList)):
-    jtem=couplingList[j]
-    ifrom=gridCompList.index(jtem[0])
-    ito=gridCompList.index(jtem[2])
-    icpl=cplCompList.index(jtem[1])
+for icpl in range(0,len(cplCompList)):
+    item=cplCompList[icpl]
+    for i in range(0, len(couplingList)):
+        jtem=couplingList[i]
+        if item==jtem[1]:
+          ifrom=gridCompList.index(jtem[0])
+          ito  =gridCompList.index(jtem[2])
+          break
+    fid.write('    !! Initializing ' + jtem[1] + '\n')
     fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
     fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
@@ -535,6 +510,9 @@ fid.write('''
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
+    !! Flush the log at the end of Initialize()
+    call ESMF_LogFlush(rc=rc)
 
   end subroutine Initialize
 
@@ -550,7 +528,8 @@ fid.write('''
     type(ESMF_TimeInterval)    :: timeInterval, ringInterval
     integer(ESMF_KIND_I8)      :: advanceCount,  i, j, k, l
     integer(ESMF_KIND_I4)      :: alarmCount, petCount, localPet
-    integer(ESMF_KIND_I4)      :: numGridComp, numCplComp, hours
+    integer(ESMF_KIND_I4)      :: numGridComp, numCplComp
+    integer(ESMF_KIND_I4)      :: hours, minutes, seconds
     
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     type(ESMF_Alarm)        :: childAlarm
@@ -813,11 +792,11 @@ fid.write('''
 
         timeInterval=ringTime-currTime
 
-        call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
+        call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-        write(message,'(A,A,G6.2,A)') trim(timeString)//' calling '//trim(compName), &
-          ' to run for ', hours, ' h'
+        write(message,'(A,A,I5,A,I2,A,I2,A)') trim(timeString)//' calling '//trim(compName), &
+          ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
         
         call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
