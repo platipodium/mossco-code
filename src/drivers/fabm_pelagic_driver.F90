@@ -2,6 +2,13 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !!
 !! @author Richard Hofmeister
+!!
+!! This class provides a routine to create a pelagic FABM instance (called "pf" here),
+!! which initialises FABM and allocates memory for the state variable. The pf instance
+!! then has three main methods:
+!!   * set_environment - set the environment forcing
+!!   * get_rhs - get the temporal rates
+!!   * update_export_states - renew pointers and data (incl. sinking velocities) for export
 
   module mossco_fabm_pelagic
 
@@ -16,6 +23,7 @@
 
   type, extends(type_rhs_driver), public :: type_mossco_fabm_pelagic
     type(type_model),pointer           :: model
+    type(export_state_type),dimension(:),pointer :: export_states
     real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
     real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf
     real(rk)                           :: decimal_yearday
@@ -60,6 +68,9 @@
   pf%nvar = size(pf%model%info%state_variables)
   pf%ndiag = size(pf%model%info%diagnostic_variables)
   allocate(pf%conc(1:inum,1:jnum,1:knum,1:pf%nvar))
+
+  ! initialise the export states
+  call pf%get_all_export_states()
 
   end function mossco_create_fabm_pelagic
 
@@ -143,23 +154,21 @@
 
 
   !> create a list of export states from FABM state_variables
-  subroutine get_all_export_states(pf,export_states)
+  subroutine get_all_export_states(pf)
   class(type_mossco_fabm_pelagic) :: pf
-  type(export_state_type),dimension(:),allocatable :: export_states
   integer  :: n,fabm_id
 
-  allocate(export_states(pf%nvar))
+  allocate(pf%export_states(pf%nvar))
   do fabm_id=1,pf%nvar
-    export_states(fabm_id) = pf%get_export_state_by_id(fabm_id)
+    pf%export_states(fabm_id) = pf%get_export_state_by_id(fabm_id)
   end do
   !> @todo: add benthic state variables
   end subroutine get_all_export_states
 
   !> update pelagic FABM export states pointers and sinking velocities using a list of export states
 
-  subroutine update_export_states(pf,export_states)
+  subroutine update_export_states(pf)
   class(type_mossco_fabm_pelagic) :: pf
-  type(export_state_type), target :: export_states(:)
   real(rk),allocatable :: wstmp(:,:,:,:)
   type(export_state_type),pointer :: export_state
   integer :: n,i,j,k
@@ -172,8 +181,8 @@
       end do
     end do
   end do
-  do n=1,size(export_states)
-    export_state => export_states(n)
+  do n=1,size(pf%export_states)
+    export_state => pf%export_states(n)
     export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
     export_state%ws = wstmp(:,:,:,export_state%fabm_id)
   end do
