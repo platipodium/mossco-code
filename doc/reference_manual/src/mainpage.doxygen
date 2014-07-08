@@ -112,13 +112,13 @@ ESMF_DIR | $HOME/opt/src/esmf
 ESMF_COMM | mpich2
 ESMF_NETCDF | split
 ESMF_NETCDF_INCLUDE | $HOME/opt/include
-ESMF_NETCDF_LIBPATH | /opt/gcc47/netcdf4/all_libs
+ESMF_NETCDF_LIBPATH | /opt/gcc48/netcdf4/all_libs
 ESMF_LAPACK | netlib
 ESMF_PIO | internal
 
 See the ESMF manual for a complete list of ESMF environment variables and their relevance.
 
-- build ESMF (no need to install it) by issuing @c make
+- build and install ESMF by issuing @c make
 - for MOSSCO to work, you need to define the environment variable @c $ESMFMKFKILE, e.g.
 
 Environment variable | value
@@ -205,6 +205,23 @@ To clean everything and start anew, type
 ~~~~
 make distclean
 ~~~~
+
+
+@subsection sum Summary settings
+
+It may be convenient for you to assemble all variable settings in a shell resource file or add variable settings to your shell's login commands.  Only very few environment variables should be set after your first installation.  
+
+Sample setting for `bash` could look as follows
+
+	export MOSSCO_DIR=${HOME}/opt/mossco/code
+    export NETCDF_VERSION=NETCDF4
+    export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
+
+For `csh` you would, in a similar fashion, say
+
+	setenv MOSSCO_DIR ${HOME}/opt/mossco/code
+    setenv NETCDF_VERSION NETCDF4
+    setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
 
 @section reporting Reporting errors
 
