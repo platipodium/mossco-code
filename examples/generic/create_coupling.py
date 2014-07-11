@@ -308,7 +308,7 @@ fid.write('''
 for i in range(0, len(gridCompList)):
     
     if (petList[i]=='all'):
-        fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + '))//\'Comp\',  &\n')
+        fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + ')),  &\n')
         fid.write('      petList=petList, clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
     else:
        fid.write('    if (petCount<=' + str(max(petList[i])) + ') then\n')
@@ -317,7 +317,7 @@ for i in range(0, len(gridCompList)):
        fid.write('      write(0,\'(A)\') trim(message)\n')
        fid.write('      call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
        fid.write('    endif\n')
-       fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + '))//\'Comp\',  &\n')
+       fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + ')),  &\n')
        fid.write('      petList=(/' + petList[i] + '/), clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 fid.write('''
@@ -352,7 +352,7 @@ for i in range(0, len(cplCompList)):
     fid.write('    cplCompNames(' + str(i+1) + ') = \'' + cplCompList[i] + '\'\n') 
 fid.write('''    
     do i = 1, numCplComp
-      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i))//'Comp', rc=rc)
+      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
     
@@ -442,7 +442,7 @@ for i in range(0,len(couplingList)):
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
     ''')
-    fid.write('  if (trim(name)==\'' + str(couplingList[i][0]) + 'Comp\' .or. trim(name)==\'' + str(couplingList[i][-1]) + 'Comp\') then')
+    fid.write('  if (trim(name)==\'' + str(couplingList[i][0]) + '\' .or. trim(name)==\'' + str(couplingList[i][-1]) + '\') then')
     fid.write('''
         call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -653,7 +653,7 @@ fid.write('''
           if (index(trim(alarmName),'cplAlarm') < 1) cycle
   
           !! Skip this alarm if it is inbound of this component
-          if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName(1:index(compName,'Comp')-1))) cycle
+          if (trim(alarmName(1:index(alarmName,'--')-1))/=trim(compName)) cycle
             
           !! Skip this alarm if it is not ringing now
           !if (ringTime > currTime) cycle
@@ -691,10 +691,10 @@ fid.write('''
           do k=1, ubound(gridCompList,1)
               call ESMF_GridCompGet(gridCompList(k), name=name, rc=rc)
               if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)              
-              if (trim(name)==trim(otherName)//'Comp') exit
+              if (trim(name)==trim(otherName)) exit
           enddo
 
-          if (trim(name) /= trim(otherName)//'Comp') then
+          if (trim(name) /= trim(otherName)) then
             write(message,'(A)') 'Did not find component '//trim(otherName)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)  
             call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)          
