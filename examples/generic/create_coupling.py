@@ -15,7 +15,7 @@ if len(sys.argv) > 1:
 else:
      filename = 'fabm_benthic_pelagic+wave.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
-     #filename = 'constant_constant_constant.yaml'
+     filename = 'constant_constant_netcdf.yaml'
      #filename = 'constant_empty_netcdf.yaml'
 
 print sys.argv, len(sys.argv)
@@ -306,11 +306,19 @@ fid.write('''
 
 ''')
 for i in range(0, len(gridCompList)):
-    fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + '))//\'Comp\',  &\n')
+    
     if (petList[i]=='all'):
+        fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + '))//\'Comp\',  &\n')
         fid.write('      petList=petList, clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
     else:
-        fid.write('      petList=(/' + petList[i] + '/), clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
+       fid.write('    if (petCount<=' + str(max(petList[i])) + ') then\n')
+       fid.write('      write(message,\'(A,I4)\') \'This configuration requires more than ' + max(petList[i]) + ' PET, I got only \',petCount\n')
+       fid.write('      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)\n')
+       fid.write('      write(0,\'(A)\') trim(message)\n')
+       fid.write('      call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+       fid.write('    endif\n')
+       fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + '))//\'Comp\',  &\n')
+       fid.write('      petList=(/' + petList[i] + '/), clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 fid.write('''
     do i=1, numGridComp
