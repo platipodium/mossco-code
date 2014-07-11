@@ -167,13 +167,29 @@ module constant_component
 
     !> open constant_component.dat
     !! @todo: read filename from configuration namelist/yaml
-    open(fileunit,file='constant_component.dat',iostat=rc, action='read', status='old')
-    if (rc /= 0) then
-      file_readable=.false.
-      write(message,'(A)') trim(name)//' could not open constant_component.dat'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-      rc=0
+    open(fileunit,file=trim(name)//'.dat',iostat=rc, action='read', status='old')
+    if (rc == 0) then
+      write(message,'(A)') trim(name)//' reads from file '//trim(name)//'.dat'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     else
+      open(fileunit,file='constant.dat',iostat=rc, action='read', status='old')
+      if (rc == 0) then
+        write(message,'(A)') trim(name)//' reads from file constant.dat'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      else
+        open(fileunit,file='constant_component.dat',iostat=rc, action='read', status='old')
+        if (rc == 0) then
+          write(message,'(A)') trim(name)//' reads from file constant_component.dat.  This feature is deprecated.'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        else
+          write(message,'(A)') trim(name)//' could not open file for reading.'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          file_readable=.false.
+        endif
+      endif
+    endif
+
+    if (rc ==0 ) then 
       do
         !> read constant_component.dat line by line, maybe add rank later
         !! format of each line is:
