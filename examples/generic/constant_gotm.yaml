@@ -1,5 +1,14 @@
+instances:
+  constant:
+    component: constant
+    petList: 1
+  gotm:
+    component: gotm
+    petList: 0
+
 coupling:
   - components: 
      - constant
+     - regrid_coupler
      - gotm
     interval: 24 h
