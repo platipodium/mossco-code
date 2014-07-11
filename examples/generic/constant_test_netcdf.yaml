@@ -8,7 +8,7 @@ instances:
 coupling:
   - components: 
      - constant
-     - redist_coupler
+     - regrid_coupler
      - test
     interval: 17 h
   - components: 

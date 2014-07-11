@@ -18,7 +18,7 @@ EXTRA_DIST=README
 
 TARGETS=
 ifeq ($(MOSSCO_ESMF),true)
-TARGETS += libremtc liblinkcoupler libgridcoupler libredistcoupler libcopycoupler
+TARGETS += libremtc liblinkcoupler libgridcoupler libredistcoupler libcopycoupler libregridcoupler
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
