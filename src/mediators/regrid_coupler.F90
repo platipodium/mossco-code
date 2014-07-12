@@ -49,7 +49,7 @@ module regrid_coupler
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)       :: petCount, localPet
+    integer(ESMF_KIND_I4)       :: petCount, localPet, dstDeCount, srcDeCount
     integer(ESMF_KIND_I4)       :: i, itemCount, srcRank, dstRank, dstItemCount
     character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
@@ -117,9 +117,9 @@ module regrid_coupler
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_StateGet(importState, trim(itemNameList(i)), dstField, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(srcField, grid=srcGrid, rank=srcRank, rc=rc)
+        call ESMF_FieldGet(srcField, grid=srcGrid, rank=srcRank, localDeCount=srcDeCount, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(dstField, grid=dstGrid, rank=dstRank, rc=rc)
+        call ESMF_FieldGet(dstField, grid=dstGrid, rank=dstRank, localDeCount=dstDeCount, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         
         !! Check whether ranks agree
@@ -137,6 +137,14 @@ module regrid_coupler
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
           cycle
         endif
+        
+        if (dstDeCount < 2 .or. srcDeCount < 2) then
+           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+            ' in import state; xgrid not implemented for deCount=1'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
+          cycle
+        endif
+        
        
         xgrid = ESMF_XGridCreate(sideAGrid=(/srcGrid/), sideBGrid=(/dstGrid/), rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
