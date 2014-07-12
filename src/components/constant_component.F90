@@ -53,7 +53,7 @@ module constant_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(ESMF_MAXSTR)     :: name, message
+    character(len=ESMF_MAXSTR)     :: name, message, line
     type(ESMF_Alarm)      :: alarm
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: time
@@ -178,13 +178,29 @@ module constant_component
         !> read constant_component.dat line by line, maybe add rank later
         !! format of each line is:
         !!   some_standard_name  12.345
-        unitString=""
-        read(fileunit,*, iostat=rc) varname,floatValue,unitString
+        read(fileunit,'(A)', iostat=rc) line
         if (rc /= 0) exit
-        if (varname(1:1) == '#') exit
-        !> @todo this routine should exit if no values have been read (empty file, 
-        !! or empty lines
-
+        line=adjustl(line)
+        if (len_trim(line)==0) cycle
+        if (line(1:1)=='#' .or. line(1:1)=='%' .or. line(1:1)=='#') cycle
+       
+        read(line,*,iostat=rc) varname
+        if (rc /= 0) cycle
+        line=adjustl(line(len_trim(varname)+1:))
+        if (len_trim(line)>0) then
+          read(line,*,iostat=rc) floatValue
+          if (rc /= 0) cycle
+        else
+          floatValue=0.0D0
+        endif
+        line=adjustl(line(len_trim(varname)+1:))
+        if (len_trim(line)>0) then
+          read(line,*,iostat=rc) unitString
+          if (rc /= 0) cycle
+        else
+          unitString=''
+        endif
+  
         !> add item to list of constants
         allocate(cur_item%next)
         cur_item => cur_item%next
@@ -196,6 +212,10 @@ module constant_component
           cur_item%rank=cur_item%rank - 1
           start = index(cur_item%standard_name(start:),'_at_')+1
         enddo 
+        
+        write(0,*) 'constant_component: read ', &
+              trim(varname),' =',cur_item%value,'(',unitString,')'
+        
         
         if ((cur_item%rank == 3 .and. localDeCount3>0) &
           .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
