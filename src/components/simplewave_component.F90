@@ -15,18 +15,16 @@ module simplewave_component
 
   use esmf
   use mossco_variable_types
+  use mossco_state
 
   implicit none
   private
 
-  type(ESMF_Grid)   :: grid 
-
   public :: SetServices
-
-  integer                      :: farray_shape(2)
-  real(ESMF_KIND_R8),dimension(:,:),allocatable,target,public :: waveH,waveT,waveDir,waveK,taubw
-  real(ESMF_KIND_R8),parameter :: gravity=9.81d0
   
+  real(ESMF_KIND_R8),dimension(:,:),allocatable,target :: waveH,waveT,waveDir,waveK,taubw
+  real(ESMF_KIND_R8),parameter :: gravity=9.81d0
+
   contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
@@ -70,10 +68,13 @@ module simplewave_component
     integer                     :: myrank,i,j
     integer                     :: nimport,nexport
     type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_Field)     :: exportField
+    type(ESMF_Field)     :: exportField, field
+    type(ESMF_Grid)      :: grid
     
     type(ESMF_Field), dimension(:), allocatable  :: exportFields, importFields
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
+
+    integer                      :: farray_shape(2)
 
     !! Check whether there is already a clock (it might have been set 
     !! with a prior ESMF_gridCompCreate() call.  If not, then create 
@@ -115,7 +116,6 @@ module simplewave_component
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-!   create export state to be used in toplevel component
     !> Create export fields and add them to export state, allocate the space for these
     !> that will be filled later with data
     nexport = 4
@@ -165,6 +165,28 @@ module simplewave_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_StateAddReplace(exportState,(/exportField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+
+  
+    field=ESMF_FieldEmptyCreate(name='water_depth_at_soil_surface');
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_StateAddReplace(importState,(/field/), rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call set_item_flags(importState,name,requiredFlag=.true.,requiredRank=2)
+
+    field=ESMF_FieldEmptyCreate(name='wind_x_velocity_at_10m');
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_StateAddReplace(importState,(/field/), rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call set_item_flags(importState,name,requiredFlag=.true.,requiredRank=2)
+
+    field=ESMF_FieldEmptyCreate(name='wind_y_velocity_at_10m');
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_StateAddReplace(importState,(/field/), rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call set_item_flags(importState,name,requiredFlag=.true.,requiredRank=2)
+
+    !> @todo add optional fields (see Run method)
 
      !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -216,6 +238,11 @@ module simplewave_component
     logical,save                 :: taubw_ready=.false.
     integer                      :: i,j
 
+    integer                      :: farray_shape(2)
+    type(ESMF_Grid)      :: grid
+    type(ESMF_FieldStatus_Flag)  :: fieldStatus
+
+
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -236,7 +263,8 @@ module simplewave_component
     write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    ! associate local pointers with import data
+    !! associate local pointers with import data, check that all fields are complete
+    !! before using them
     call ESMF_StateGet(importState, itemSearch='water_depth_at_soil_surface', &
       itemCount=itemCount, rc = rc)
     if (itemCount == 0) then
@@ -244,10 +272,20 @@ module simplewave_component
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
        call ESMF_StatePrint(importState)
        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    endif      
-          
+    endif
     call ESMF_StateGet(importState, "water_depth_at_soil_surface", field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+    call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+       write(message,'(A)') trim(name)//' required import field water_depth_at_soil_surface not complete.' 
+       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+       call ESMF_StatePrint(importState)
+       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
     call ESMF_FieldGet(field, farrayPtr=depth, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(importState, "wind_speed", itemType)
     if (itemType .eq. ESMF_STATEITEM_NOTFOUND) then
@@ -255,8 +293,16 @@ module simplewave_component
     else
        calc_wind = .false.
        call ESMF_StateGet(importState, "wind_speed", Field)
-       call ESMF_FieldGet(field, farrayPtr=wind)
-    end if
+       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
+       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+         calc_wind=.true.
+       else
+         call ESMF_FieldGet(field, farrayPtr=wind)
+         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       endif
+    endif
 
     call ESMF_StateGet(importState, "wind_direction", itemType)
     if (itemType .eq. ESMF_STATEITEM_NOTFOUND) then
@@ -264,8 +310,16 @@ module simplewave_component
     else
        calc_windDir = .false.
        call ESMF_StateGet(importState, "wind_direction", Field)
-       call ESMF_FieldGet(field, farrayPtr=windDir)
-    end if
+       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
+       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+         calc_windDir=.true.
+       else
+         call ESMF_FieldGet(field, farrayPtr=windDir)
+         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+       endif
+    endif
 
     call ESMF_StateGet(importState, "bottom_roughness_length", itemType)
     if (itemType .eq. ESMF_STATEITEM_NOTFOUND) then
@@ -290,19 +344,48 @@ module simplewave_component
        end if
     end if
 
-    if (calc_wind .or. calc_windDir) then
-       call ESMF_StateGet(importState, "wind_x_velocity_at_10m", Field, rc=rc)
-       if (rc /= ESMF_SUCCESS) then
-          call ESMF_LogWrite("wind_x_velocity_at_10m field not found",ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       end if
-       call ESMF_FieldGet(field, farrayPtr=windx, rc=rc)
-       call ESMF_StateGet(importState, "wind_y_velocity_at_10m", Field, rc=rc)
-       if (rc /= ESMF_SUCCESS) then
-          call ESMF_LogWrite("wind_y_velocity_at_10m field not found",ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       end if
-       call ESMF_FieldGet(field, farrayPtr=windy, rc=rc)
+    if (calc_wind .or. calc_windDir) then    
+      call ESMF_StateGet(importState, itemSearch='wind_x_velocity_at_10m', &
+        itemCount=itemCount, rc = rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (itemCount == 0) then
+        write(message,'(A)') trim(name)//' required import field wind_x_velocity_at_10m not found.' 
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_StatePrint(importState)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+      call ESMF_StateGet(importState, "wind_x_velocity_at_10m", field, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+        write(message,'(A)') trim(name)//' required import field wind_x_velocity_at_10m not complete.' 
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+      call ESMF_FieldGet(field, farrayPtr=windx, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(importState, itemSearch='wind_y_velocity_at_10m', &
+        itemCount=itemCount, rc = rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (itemCount == 0) then
+        write(message,'(A)') trim(name)//' required import field wind_y_velocity_at_10m not found.' 
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_StatePrint(importState)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+      call ESMF_StateGet(importState, "wind_y_velocity_at_10m", field, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+        write(message,'(A)') trim(name)//' required import field wind_y_velocity_at_10m not complete.' 
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+      call ESMF_FieldGet(field, farrayPtr=windy, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end if
 
     if (calc_wind) then
@@ -451,6 +534,7 @@ module simplewave_component
    real(ESMF_KIND_R8),parameter :: k3 = 0.343d0
    real(ESMF_KIND_R8),parameter :: m3 = 1.14d0
    real(ESMF_KIND_R8),parameter :: p  = 0.572d0
+    integer                      :: farray_shape(2)
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -497,7 +581,7 @@ module simplewave_component
    real(ESMF_KIND_R8),parameter :: k4 = 0.10d0
    real(ESMF_KIND_R8),parameter :: m4 = 2.01d0
    real(ESMF_KIND_R8),parameter :: q  = 0.187d0
-!
+ !
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -551,6 +635,8 @@ module simplewave_component
    real(ESMF_KIND_R8),parameter :: slopestar1_rec = 1.0d0/0.77572d0
    real(ESMF_KIND_R8),parameter :: one5th = 1.0d0/5
    real(ESMF_KIND_R8),parameter :: pi=3.1415926535897932384626433832795029d0
+
+
 !
 !EOP
 !-----------------------------------------------------------------------
