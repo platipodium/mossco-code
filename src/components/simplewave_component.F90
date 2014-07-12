@@ -211,7 +211,7 @@ module simplewave_component
     type(ESMF_Clock)        :: clock
     type(ESMF_TimeInterval) :: timeInterval
 
-    type(ESMF_Time)         :: clockTime
+    type(ESMF_Time)         :: clockTime, stopTime
     type(ESMF_StateItem_Flag) :: itemType
     integer(ESMF_KIND_I4)   :: itemCount
     integer(ESMF_KIND_I8)   :: n
@@ -255,7 +255,7 @@ module simplewave_component
     endif
     
     call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
-      timeStep=timeInterval, rc=rc)
+      timeStep=timeInterval, stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -443,6 +443,8 @@ module simplewave_component
       end if
 
     end if
+ 
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)
  
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
