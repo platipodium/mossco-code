@@ -19,18 +19,13 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS:= $(ESMF_F90LINKOPTS) -L$(MOSSCO_LIBRARY_PATH)
+LDFLAGS:= $(ESMF_F90LINKOPTS) -L$(MOSSCO_LIBRARY_PATH)
 
-LIBS += -lmossco_getm -lmossco_util
+LDFLAGS += -lmossco_getm -lmossco_util
+LDFLAGS += $(GETM_LDFLAGS)
 
-ifeq ($(MOSSCO_GETM),true)
-  LIBS += -L$(GETM_LIBRARY_PATH) $(GETM_LIBS)
-endif
-ifeq ($(MOSSCO_GOTM),true)
-  LIBS += -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
-endif
 ifeq ($(MOSSCO_ESMF),true)
-  LIBS += -L$(ESMF_LIBSDIR) $(ESMF_LIBRARY_PATH) $(ESMF_LIBS)
+  LDFLAGS += -L$(ESMF_LIBSDIR) $(ESMF_LIBRARY_PATH) $(ESMF_LIBS)
 endif
 
 .PHONY: all exec getm libmossco_getm libmossco_util
@@ -42,7 +37,7 @@ libmossco_getm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 getm: toplevel_component.o ../../common/main.o
-	$(F90) $^ -o $@ $(LIBS)
+	$(F90) $^ $(LDFLAGS) -o $@
 	@echo "Created example binary $(PWD)/$@"
 
 libmossco_util:

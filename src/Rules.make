@@ -223,6 +223,7 @@ ifeq ($(MOSSCO_GETM),true)
   export GETM_LIBRARY_PATH
   export GETM_LINKDIRS
   export GETM_LIBS
+  export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
 endif
 export MOSSCO_GETM
 

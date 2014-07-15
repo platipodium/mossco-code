@@ -1032,7 +1032,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'remtc_atmosphere' : ['remtc'],
         'remtc_atmosphere' : ['remtc'],
         'remtc_ocean' : ['remtc'],
-        'getm' : ['mossco_getm $(GETM_LINKDIRS) $(GETM_LIBS)'],
+        'getm' : ['mossco_getm'],
 }
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
@@ -1071,7 +1071,7 @@ for item in gridCompSet.union(cplCompSet):
         if item=='gotm':
             fid.write(' -L$(GOTM_LIBRARY_PATH)')
         if item=='getm':
-            fid.write(' -L$(GETM_LIBRARY_PATH)')
+            fid.write(' -L$(GETM_LDFLAGS)')
         if item=='fabm_sediment':
             fid.write(' -L$(FABM_LIBRARY_PATH)')
         if item=='fabm':
