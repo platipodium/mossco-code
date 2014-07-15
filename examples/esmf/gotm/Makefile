@@ -24,10 +24,7 @@ ifeq ($(MOSSCO_GOTM_FABM),true)
 endif
 
 LIBS += -lgotm -lmossco_util
-
-ifeq ($(MOSSCO_GOTM),true)
-  LIBS += -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
-endif
+LIBS += $(GOTM_LDFLAGS)
 ifeq ($(MOSSCO_GOTM_FABM),true)
   LIBS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 endif

@@ -1003,8 +1003,7 @@ for item in gridCompSet.union(cplCompSet):
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
 
-libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
-                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'] ,
+libs = {'gotm'       : ['solver', 'gotm'] ,
         'gotmfabm'       : ['mossco_gotmfabm','mossco_fabmgotm', 'gotm', 'solver', 'fabm_prod', 
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
@@ -1071,7 +1070,7 @@ for item in gridCompSet.union(cplCompSet):
         for lib in libs[item]:
             fid.write(' -l' + lib)
         if item=='gotm':
-            fid.write(' -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(GOTM_LDFLAGS)')
         if item=='getm':
             fid.write(' $(GETM_LDFLAGS)')
         if item=='fabm_sediment':
