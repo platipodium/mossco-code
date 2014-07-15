@@ -26,16 +26,16 @@ LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += $(ESMF_LDFLAGS)
 
-.PHONY: all exec gotmfabm libmossco_gotmfabm libgotm
+.PHONY: all exec gotmfabm libmossco_gotmfabm
 
 all: exec
-exec: libmossco_util libsolver libmossco_gotmfabm libgotm gotmfabm
+exec: libmossco_util libsolver libmossco_gotmfabm gotmfabm
 
 gotmfabm: toplevel_component.o ../../common/main.o  
 	$(F90) $^ $(F90FLAGS) $(LDFLAGS) -o $@
 	@echo "Created example binary $(PWD)/$@"
 
-libmossco_gotmfabm libgotm:
+libmossco_gotmfabm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util libsolver:

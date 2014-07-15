@@ -34,12 +34,12 @@ endif
 .PHONY: all exec gotm libgotm libmossco_util
 
 all: exec
-exec: libmossco_util libsolver libmossco_gotmfabm libgotm gotm
+exec: libmossco_util libsolver libmossco_gotmfabm gotm
 
 libsolver libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libmossco_gotmfabm libgotm:
+libmossco_gotmfabm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 gotm: toplevel_component.o ../../common/main.o
