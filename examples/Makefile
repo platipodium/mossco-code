@@ -41,9 +41,7 @@ endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS) test report
 
-default: all report
-
-all: subdirs
+all: subdirs report
 
 subdirs:
 	@for dir in $(SUBDIRS) ; do make -C $$dir ; done

@@ -27,8 +27,6 @@ LIBS += lmossco_util
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS) libmossco_util
 
-default: all
-
 all: exec
 
 exec: toplevel_component.o main.o

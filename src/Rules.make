@@ -408,7 +408,10 @@ endif # End of MAKELEVEL 1 preamble
 # Make targets
 .PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external
 
-default: prefix all
+# Following GNU standards, "all" should be the default target in every Makefile.
+# Therefore we need to define it as a dependency for the first target in this file,
+# which is included in the beginning of each Makefile.
+default: all
 
 clean:
 	@rm -f *.o *.mod *.swp

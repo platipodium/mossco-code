@@ -18,19 +18,15 @@ export MOSSCO_DATE=$(shell date "+%Y%m%d")
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-.PHONY: default doc src examples all extraclean subdirs $(SUBDIRS)
+.PHONY: all extraclean subdirs $(SUBDIRS)
 
-default: src
-all:  examples doc
-examples: src
+all: src
 
 clean: extraclean
 
 extraclean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 	@rm -rf modules lib bin
-
-all: subdirs
 
 subdirs: $(SUBDIRS)
 

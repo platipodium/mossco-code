@@ -28,8 +28,6 @@ endif
 
 .PHONY: all clean extraclean subdirs test
 
-default: all
-
 all: subdirs
 
 subdirs:
