@@ -18,11 +18,11 @@ include $(MOSSCO_DIR)/src/Rules.make
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_simplewave -lmossco_util
 LDFLAGS += $(ESMF_LDFLAGS)
 
-.PHONY: all exec simplewave
+.PHONY: all exec simplewave libmossco_simplewave libmossco_util
 
 all: exec
 
-exec: libmossco_simplewave simplewave
+exec: libmossco_util libmossco_simplewave simplewave
 
 simplewave: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
@@ -30,6 +30,9 @@ simplewave: toplevel_component.o ../../common/main.o
 
 libmossco_simplewave:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
+
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 
 clean: extraclean
