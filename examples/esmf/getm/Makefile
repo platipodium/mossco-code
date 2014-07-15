@@ -19,14 +19,9 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LDFLAGS:= $(ESMF_F90LINKOPTS) -L$(MOSSCO_LIBRARY_PATH)
-
-LDFLAGS += -lmossco_getm -lmossco_util
+LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_getm -lmossco_util
 LDFLAGS += $(GETM_LDFLAGS)
-
-ifeq ($(MOSSCO_ESMF),true)
-  LDFLAGS += -L$(ESMF_LIBSDIR) $(ESMF_LIBRARY_PATH) $(ESMF_LIBS)
-endif
+LDFLAGS += $(ESMF_LDFLAGS)
 
 .PHONY: all exec getm libmossco_getm libmossco_util
 
