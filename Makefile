@@ -37,7 +37,8 @@ check:
 	make -C src check
 
 update:
-	git pull 
+	git pull
+	$(MAKE) -C external $@
 
 
 run: examples

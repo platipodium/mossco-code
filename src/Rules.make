@@ -410,6 +410,7 @@ endif # End of MAKELEVEL 1 preamble
 
 # Make targets
 .PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external
+.PHONY: distclean distupdate
 
 # Following GNU standards, "all" should be the default target in every Makefile.
 # Therefore we need to define it as a dependency for the first target in this file,
@@ -423,6 +424,9 @@ clean:
 # changed behaviour: distclean should clean all mossco code regardless of where you call it from
 distclean:
 	$(MAKE) -C $(MOSSCO_DIR) clean
+
+distupdate:
+	$(MAKE) -C $(MOSSCO_DIR) update
 
 prefix:
 	@mkdir -p $(MOSSCO_LIBRARY_PATH)
