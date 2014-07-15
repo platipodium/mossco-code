@@ -17,20 +17,18 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS:= $(ESMF_F90LINKOPTS) -L$(MOSSCO_LIBRARY_PATH)
+LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)
 
 ifeq ($(MOSSCO_GOTM_FABM),true)
-  LIBS += -lmossco_gotmfabm -lsolver
+  LDFLAGS += -lmossco_gotmfabm -lsolver
 endif
 
-LIBS += -lgotm -lmossco_util
-LIBS += $(GOTM_LDFLAGS)
+LDFLAGS += -lgotm -lmossco_util
+LDFLAGS += $(GOTM_LDFLAGS)
 ifeq ($(MOSSCO_GOTM_FABM),true)
-  LIBS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
+  LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LDFLAGS)
 endif
-ifeq ($(MOSSCO_ESMF),true)
-  LIBS += -L$(ESMF_LIBSDIR) $(ESMF_LIBRARY_PATH) $(ESMF_LIBS)
-endif
+  LDFLAGS += -L$(ESMF_LDFLAGS)
 
 
 .PHONY: all exec gotm libgotm libmossco_util
@@ -45,7 +43,7 @@ libmossco_gotmfabm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 gotm: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ -o $@ $(LIBS)
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
 	@echo "Created example binary $(PWD)/$@"
 
 clean: extraclean
