@@ -1004,9 +1004,7 @@ for item in gridCompSet.union(cplCompSet):
         fid.write('endif\n')
 
 libs = {'gotm'       : ['solver', 'gotm'] ,
-        'gotmfabm'       : ['mossco_gotmfabm','mossco_fabmgotm', 'gotm', 'solver', 'fabm_prod', 
-                  'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
-                  'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
+        'gotmfabm'   : ['mossco_gotmfabm','mossco_fabmgotm', 'gotm', 'solver', 'fabm_prod'],
         'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver', 'fabm_prod', 
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
@@ -1080,7 +1078,7 @@ for item in gridCompSet.union(cplCompSet):
         if item=='fabm_gotm':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='gotmfabm':
-            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(GOTM_LDFLAGS) -L$(FABM_LIBRARY_PATH)')
         if item=='fabm0d':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         fid.write('\n')
