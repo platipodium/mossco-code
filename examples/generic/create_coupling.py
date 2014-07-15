@@ -1068,10 +1068,12 @@ for item in gridCompSet.union(cplCompSet):
         item=instanceDict[item]
     if libs.has_key(item):
         fid.write('LDFLAGS +=')
+        for lib in libs[item]:
+            fid.write(' -l' + lib)
         if item=='gotm':
             fid.write(' -L$(GOTM_LIBRARY_PATH)')
         if item=='getm':
-            fid.write(' -L$(GETM_LDFLAGS)')
+            fid.write(' $(GETM_LDFLAGS)')
         if item=='fabm_sediment':
             fid.write(' -L$(FABM_LIBRARY_PATH)')
         if item=='fabm':
@@ -1082,8 +1084,6 @@ for item in gridCompSet.union(cplCompSet):
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm0d':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
-        for lib in libs[item]:
-            fid.write(' -l' + lib)
         fid.write('\n')
 
 #fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
