@@ -15,9 +15,8 @@ endif
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-LIBS := -lmossco_simplewave -lmossco_util -lesmf $(LIBS)
-
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_simplewave -lmossco_util
+LDFLAGS += $(ESMF_LDFLAGS)
 
 .PHONY: all exec simplewave
 
@@ -26,11 +25,8 @@ all: exec
 exec: libmossco_simplewave simplewave
 
 simplewave: toplevel_component.o ../../common/main.o
-	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
 	@echo "Created example binary $(PWD)/$@" 
-
-libmossco_util:
-	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 libmossco_simplewave:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
