@@ -1062,7 +1062,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
-fid.write('LDFLAGS += $(LIBRARY_PATHS)\n')
+fid.write('LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)\n')
 for item in gridCompSet.union(cplCompSet):
     if instanceDict.has_key(item): 
         item=instanceDict[item]

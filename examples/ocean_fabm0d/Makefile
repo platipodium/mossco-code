@@ -24,7 +24,7 @@ LIBS :=  -lgotm -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 else
 LIBS := -lremtc -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 endif
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 ifeq ($(OCEAN),GOTM)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod -lairsea_prod -lmeanflow_prod -lturbulence_prod -lseagrass_prod -lobservations_prod -lutil_prod -linput_prod -loutput_prod
 else
