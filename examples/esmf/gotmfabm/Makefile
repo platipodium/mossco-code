@@ -25,7 +25,7 @@ LIBS := -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lgotm -lmossco_gotmfabm -lesmf -lsolver -lmossco_util
+LDFLAGS += -lgotm -lmossco_gotmfabm -lmossco_fabmgotm -lesmf -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += $(NC_LIBS)
