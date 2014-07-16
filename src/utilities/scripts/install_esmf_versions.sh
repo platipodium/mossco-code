@@ -1,7 +1,8 @@
 #!/bin/bash
 
-#export TAGS="ESMF_7_0_0_beta_snapshot_10 ESMF_6_3_0rp1_beta_snapshot_09  ESMF_5_3_1_beta_snapshot_18"
-export TAGS="EESMF_6_3_0rp1_beta_snapshot_09 ESMF_4_0_1_beta_snapshot_01 ESMF_3_1_2_beta_snapshot_12"
+TAGS="ESMF_7_0_0_beta_snapshot_11" 
+#TAGS = "ESMF_6_3_0rp1 ESMF_6_3_0rp1_beta_snapshot_10  ESMF_5_3_1_beta_snapshot_18 ESMF_4_0_1_beta_snapshot_01"
+#export TAGS="ESMF_6_3_0rp1_beta_snapshot_09  ESMF_3_1_2_beta_snapshot_12"
 COMPS="gfortran" # intel pgi"
 COMMS="openmpi" #  mpiuni"
 
@@ -86,6 +87,7 @@ export ESMF_NETCDF=split
 export ESMF_NETCDF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_LIBPATH}
 export ESMF_XERCES=standard
+export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
 unset ESMF_PIO
 export ESMF_SITE=$T
 export ESMF_COMPILER=$G
