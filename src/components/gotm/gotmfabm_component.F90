@@ -180,7 +180,7 @@ module gotmfabm_component
     
     !! Get a component's clock and write some diagnostics if TRACE is enabled
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, advanceCount=advanceCount, rc=rc)
+      clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (.not.clockIsPresent) then
@@ -191,7 +191,7 @@ module gotmfabm_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_ClockGet(clock,currTime=currTime,  timeStep=timeInterval, &
-      stopTime=stopTime, rc=rc)
+      stopTime=stopTime,  advanceCount=advanceCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
