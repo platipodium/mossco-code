@@ -178,15 +178,15 @@ module gotmfabm_component
     
     character(len=ESMF_MAXSTR) :: message, compName, name, otherName   
     
+    !! Get a component's clock and write some diagnostics if TRACE is enabled
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
+      clockIsPresent=clockIsPresent, advanceCount=advanceCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (.not.clockIsPresent) then
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
+    endif  
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 

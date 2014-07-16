@@ -228,11 +228,7 @@ module constant_component
           cur_item%rank=cur_item%rank - 1
           start = index(cur_item%standard_name(start:),'_at_')+1
         enddo 
-        
-        write(0,*) 'constant_component: read ', &
-              trim(varname),' =',cur_item%value,'(',unitString,')'
-        
-        
+                
         if ((cur_item%rank == 3 .and. localDeCount3>0) &
           .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
           write(0,*) 'constant_component: create field ', &
