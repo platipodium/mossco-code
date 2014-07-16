@@ -25,9 +25,9 @@ SUBDIRS =
 
 LIBS += lmossco_util
 
-.PHONY: all clean extraclean subdirs $(SUBDIRS) libmossco_util
+LDFLAGS += $(MOSSCO_LDFLAGS)
 
-default: all
+.PHONY: all clean extraclean subdirs $(SUBDIRS) libmossco_util
 
 all: exec
 

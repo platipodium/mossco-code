@@ -11,38 +11,22 @@
 #
 
 EXTRA_DIST = README ACKNOWLEDGEMENTS AUTHORS .gitignore
-SUBDIRS = doc src examples
+SUBDIRS = doc src examples external
 
 export MOSSCO_DIR=$(CURDIR)
 export MOSSCO_DATE=$(shell date "+%Y%m%d")
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-.PHONY: default doc src examples all extraclean subdirs $(SUBDIRS)
+.PHONY: all extraclean subdirs $(SUBDIRS)
 
-default: src
-all:  examples doc
-examples: src
+all: src
 
 clean: extraclean
 
 extraclean:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
 	@rm -rf modules lib bin
-
-distclean_all: extraclean
-
-ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-	$(MAKE) -C $(MOSSCO_DIR)/external/fabm-git/src $@
-endif
-ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
-	$(MAKE) -C $(MOSSCO_DIR)/external/gotm-git $@
-endif
-ifneq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
-	$(MAKE) -C $(MOSSCO_DIR)/external/getm-git $@
-endif
-
-all: subdirs
 
 subdirs: $(SUBDIRS)
 
@@ -53,7 +37,8 @@ check:
 	make -C src check
 
 update:
-	git pull 
+	git pull
+	$(MAKE) -C external $@
 
 
 run: examples
@@ -68,35 +53,3 @@ ifdef MOSSCO_SF_USER
 else
 	@echo "Please set the environment variable MOSSCO_SF_USER to your sourceforge user name."
 endif
-
-.PHONY: external fabm-git gotm-git getm-git erosed-svn
-external: fabm-git gotm-git getm-git #erosed-svn
-
-fabm-git:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-	git clone git://git.code.sf.net/p/fabm/code $(MOSSCO_DIR)/external/fabm-git
-else
-	(cd $(MOSSCO_DIR)/external/fabm-git ; git pull)
-endif
-
-gotm-git:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
-	git clone git://git.code.sf.net/p/gotm/code $(MOSSCO_DIR)/external/gotm-git
-else
-	(cd $(MOSSCO_DIR)/external/gotm-git ; git pull)
-endif
-
-getm-git:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
-	git clone git://git.code.sf.net/p/getm/code $(MOSSCO_DIR)/external/getm-git
-else
-	(cd $(MOSSCO_DIR)/external/getm-git ; git pull)
-endif
-
-erosed-svn:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
-	svn co --depth empty https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $(MOSSCO_DIR)/external/erosed-svn
-endif
-	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/include
-	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/modules
-	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/source

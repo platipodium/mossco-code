@@ -17,7 +17,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lesmf  $(LIBS)
-LDFLAGS += $(LIBRARY_PATHS) 
+LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) 
 TEST_SRC = $(shell ls  *.c *.F90)
 TEST_OBJ = ${TEST_SRC%.}.o
 

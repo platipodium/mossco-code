@@ -25,12 +25,11 @@ endif
 LIBS := -lconstant -lmossco_erosed -lmossco_benthos -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lgotm -lmossco_fabmgotm -lsolver -lmossco_util
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lgotm_prod
+LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
-LDFLAGS += -lmossco_util -lesmf
-LDFLAGS += -lairsea_prod -lmeanflow_prod -lseagrass_prod -lturbulence_prod -lutil_prod -loutput_prod -lobservations_prod  -linput_prod $(NC_LIBS) 
+LDFLAGS += -lmossco_util -lesmf $(NC_LIBS)
 
 .PHONY: all exec libmossco_fabmgotm libconstant libgotm libmossco_erosed libmossco_benthos
 

@@ -1,7 +1,6 @@
 bin/
 lib/
 modules/
-external/
 *.o
 *.so
 *.a

@@ -19,7 +19,7 @@ EXTRA_DIST=README
 LIBS :=  -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf -lmossco_util $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod 
 

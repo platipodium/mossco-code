@@ -193,6 +193,7 @@ ifeq ($(MOSSCO_GOTM),true)
   GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
   GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
   export GOTM_LIBS
+  export GOTM_LDFLAGS = -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
   ifeq ($(MOSSCO_FABM),true)
     DEFINES += -D_GOTM_MOSSCO_FABM_
     export MOSSCO_GOTM_FABM=true
@@ -223,6 +224,7 @@ ifeq ($(MOSSCO_GETM),true)
   export GETM_LIBRARY_PATH
   export GETM_LINKDIRS
   export GETM_LIBS
+  export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
 endif
 export MOSSCO_GETM
 
@@ -384,6 +386,7 @@ endif
 export ESMF_LIBRARY_PATH=$(ESMF_F90LINKPATHS)
 export ESMF_LINKOPTS=$(ESMF_F90LINKRPATHS)
 export ESMF_LIBS=$(ESMF_F90ESMFLINKLIBS)
+export ESMF_LDFLAGS = $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) $(ESMF_F90ESMFLINKLIBS)
 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
@@ -398,24 +401,32 @@ CPPFLAGS += -DMOSSCO_MPI
 endif
 export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 
-LDFLAGS += $(ESMF_F90LINKOPTS)
-LDFLAGS += $(LIBRARY_PATHS)
-export LDFLAGS
+MOSSCO_LDFLAGS += $(ESMF_F90LINKOPTS)
+MOSSCO_LDFLAGS += $(LIBRARY_PATHS)
+export MOSSCO_LDFLAGS
 
 endif # End of MAKELEVEL 1 preamble
 
 
 # Make targets
 .PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external
+.PHONY: distclean distupdate
 
-default: prefix all
+# Following GNU standards, "all" should be the default target in every Makefile.
+# Therefore we need to define it as a dependency for the first target in this file,
+# which is included in the beginning of each Makefile.
+default: all
 
 clean:
 	@rm -f *.o *.mod *.swp
 	@rm -f PET?.*
 
 # changed behaviour: distclean should clean all mossco code regardless of where you call it from
-distclean: clean mossco_clean
+distclean:
+	$(MAKE) -C $(MOSSCO_DIR) clean
+
+distupdate:
+	$(MAKE) -C $(MOSSCO_DIR) update
 
 prefix:
 	@mkdir -p $(MOSSCO_LIBRARY_PATH)
@@ -502,7 +513,8 @@ endif
 #	@cp $(MOSSCO_MODULE_PATH)/*.mod  $(MOSSCO_INSTALL_PREFIX)/include
 
 .PHONY: mossco_clean
-mossco_clean:
+mossco_clean: distclean
+# Note (KK): These distcleans might be redundant, but might also operate outside MOSSCO_DIR.
 ifdef MOSSCO_FABMDIR
 	$(MAKE) -C $(MOSSCO_FABMDIR)/src distclean
 endif
@@ -512,7 +524,6 @@ endif
 ifdef MOSSCO_GETMDIR
 	$(MAKE) -C $(MOSSCO_GETMDIR) distclean
 endif
-	$(MAKE) -C $(MOSSCO_DIR) clean
 
 # Common rules
 #ifndef EXTRA_CPP

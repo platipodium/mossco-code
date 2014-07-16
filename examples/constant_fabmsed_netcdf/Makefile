@@ -21,7 +21,7 @@ EXTRA_DIST=README
 LIBS := -lsediment -lconstant -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lpelagicbenthiccoupler -lsolver -lmossco_util
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lmossco_util -lesmf

@@ -1011,11 +1011,8 @@ for item in gridCompSet.union(cplCompSet):
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
 
-libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
-                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'] ,
-        'gotmfabm'       : ['mossco_gotmfabm','mossco_fabmgotm', 'gotm', 'solver', 'fabm_prod', 
-                  'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
-                  'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
+libs = {'gotm'       : ['solver', 'gotm'] ,
+        'gotmfabm'   : ['mossco_gotmfabm','mossco_fabmgotm', 'gotm', 'solver', 'fabm_prod'],
         'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver', 'fabm_prod', 
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
@@ -1040,7 +1037,7 @@ libs = {'gotm'       : ['solver', 'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_
         'remtc_atmosphere' : ['remtc'],
         'remtc_atmosphere' : ['remtc'],
         'remtc_ocean' : ['remtc'],
-        'getm' : ['mossco_getm $(GETM_LINKDIRS) $(GETM_LIBS)'],
+        'getm' : ['mossco_getm'],
 }
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
@@ -1070,16 +1067,18 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
-fid.write('LDFLAGS += $(LIBRARY_PATHS)\n')
+fid.write('LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)\n')
 for item in gridCompSet.union(cplCompSet):
     if instanceDict.has_key(item): 
         item=instanceDict[item]
     if libs.has_key(item):
         fid.write('LDFLAGS +=')
+        for lib in libs[item]:
+            fid.write(' -l' + lib)
         if item=='gotm':
-            fid.write(' -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(GOTM_LDFLAGS)')
         if item=='getm':
-            fid.write(' -L$(GETM_LIBRARY_PATH)')
+            fid.write(' $(GETM_LDFLAGS)')
         if item=='fabm_sediment':
             fid.write(' -L$(FABM_LIBRARY_PATH)')
         if item=='fabm':
@@ -1087,11 +1086,9 @@ for item in gridCompSet.union(cplCompSet):
         if item=='fabm_gotm':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='gotmfabm':
-            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(GOTM_LDFLAGS) -L$(FABM_LIBRARY_PATH)')
         if item=='fabm0d':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
-        for lib in libs[item]:
-            fid.write(' -l' + lib)
         fid.write('\n')
 
 #fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')

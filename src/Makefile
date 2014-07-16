@@ -24,7 +24,6 @@ endif
 
 .PHONY: subdirs $(SUBDIRS)
 
-default: all
 all: subdirs
 
 components: drivers

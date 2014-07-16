@@ -36,8 +36,6 @@ endif
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS)
 
-default: all 
-
 all: subdirs
 
 subdirs:

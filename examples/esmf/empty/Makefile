@@ -15,6 +15,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS :=  -lempty -lmossco_util -lesmf $(LIBS)
+LDFLAGS += $(MOSSCO_LDFLAGS)
 
 .PHONY: all exec
 
