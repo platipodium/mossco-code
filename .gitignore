@@ -50,3 +50,4 @@ examples/esmf/clm/atmos*.nc
 examples/standalone/erosed/delft_sediment_test.out
 examples/standalone/erosed/erosed
 examples/standalone/omexdia_p/omexdia_p
+.DS_Store
