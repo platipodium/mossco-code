@@ -1,7 +1,7 @@
 #!/bin/bash
 
-#export TAGS="ESMF_7_0_0_beta_snapshot_10 ESMF_6_3_0rp1_beta_snapshot_09  ESMF_5_3_1_beta_snapshot_18"
-export TAGS="EESMF_6_3_0rp1_beta_snapshot_09 ESMF_4_0_1_beta_snapshot_01 ESMF_3_1_2_beta_snapshot_12"
+export TAGS="ESMF_7_0_0_beta_snapshot_13 ESMF_6_3_0rp1_beta_snapshot_09  ESMF_5_3_1_beta_snapshot_18"
+#export TAGS="ESMF_4_0_1_beta_snapshot_01 ESMF_3_1_2_beta_snapshot_12"
 COMPS="gfortran" # intel pgi"
 COMMS="openmpi" #  mpiuni"
 
