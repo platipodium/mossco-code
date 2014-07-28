@@ -1,0 +1,11 @@
+# This generic example is trying to reproduce the manually coded example in $MOSSCO_DIR/examples/constant_fabmsed_netcdf
+# Created for Frank Bockelmann (NOAH project) by Carsten Lemmen 2014-07-28
+coupling:
+  - components:
+     - constant
+     - fabm_sediment
+    interval: 1 yy
+  - components:
+     - fabm_sediment
+     - netcdf
+    interval: 1 d

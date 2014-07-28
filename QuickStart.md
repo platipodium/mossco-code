@@ -50,14 +50,16 @@ First, define the directories where MOSSCO should be located on your system, and
 For those not already working with their own FABM and GOTM codes, the easiest way to obtain and use them within MOSSCO is:
 
     cd $MOSSCO_DIR
-    make fabm-git gotm-git
+    make external
 
-This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system. Alternatively, MOSSCO checks for the environment variables `MOSSCO_FABMDIR`, `MOSSCO_GOTMDIR`, `FABMDIR` and `GOTMDIR`, the latter ones usually already set for the individual work with these models. `MOSSCO_FABMDIR` and `MOSSCO_GOTMDIR` (which can be different from `FABMDIR` and `GOTMDIR`) indicate that MOSSCO is allowed to initiate compilations within these model directories. If only `FABMDIR` and `GOTMDIR` are available, the user is responsible for the proper compilation of the models.
+This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system. 
+
+[Alternatively, MOSSCO checks for the environment variables `MOSSCO_FABMDIR`, `MOSSCO_GOTMDIR`, `FABMDIR` and `GOTMDIR`, the latter ones usually already set for the individual work with these models. `MOSSCO_FABMDIR` and `MOSSCO_GOTMDIR` (which can be different from `FABMDIR` and `GOTMDIR`) indicate that MOSSCO is allowed to initiate compilations within these model directories. If only `FABMDIR` and `GOTMDIR` are available, the user is responsible for the proper compilation of the models.]
 	
 Next, define all environment variables that are needed for FABM, GOTM and MOSSCO (these may vary on your system), e.g.:
 
-	export FORTRAN_COMPILER=GFORTRAN
-	export NETCDF_VERSION=NETCDF4
+	export FORTRAN_COMPILER=GFORTRAN # for FABM/GETM/GOTM
+	export NETCDF_VERSION=NETCDF4    # for GETM
 
 Finally, build the MOSSCO infrastructure
 

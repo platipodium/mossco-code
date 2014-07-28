@@ -1,10 +1,16 @@
 #!/bin/bash
 
-TAGS="ESMF_7_0_0_beta_snapshot_11" 
-#TAGS = "ESMF_6_3_0rp1 ESMF_6_3_0rp1_beta_snapshot_10  ESMF_5_3_1_beta_snapshot_18 ESMF_4_0_1_beta_snapshot_01"
-#export TAGS="ESMF_6_3_0rp1_beta_snapshot_09  ESMF_3_1_2_beta_snapshot_12"
-COMPS="gfortran" # intel pgi"
-COMMS="openmpi" #  mpiuni"
+TAGS=""
+
+#TAGS=ESMF_7_0_0_beta_snapshot_14
+TAGS="ESMF_6_3_0rp1_beta_snapshot_10 ${TAGS}" 
+TAGS="ESMF_5_3_1_beta_snapshot_18 ${TAGS}"
+#TAGS=ESMF_4_0_1_beta_snapshot_01 ${TAGS} 
+#TAGS=ESMF_3_1_2_beta_snapshot_12 ${TAGS} 
+export TAGS
+
+COMPS="gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+COMMS="openmpi" #  mpiuni mpich2
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull
@@ -68,9 +74,9 @@ for C in $COMMS ; do
        
        
        # Fix -lmpi_f77 on recent Darwin/MacPorts
-       sed -i tmp 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
+       sed -i 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
        
-       ln -sf ${ESMF_DIR}/build_config/Darwin.gfortran.default ${ESMF_DIR}/build_config/Darwin.gfortran.${ESMF_SITE}
+       ln -sf ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.default ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}
        
        echo ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/$ESMF_STRING/esmf.mk
        #test -f $ESMFMKFILE && continue 
