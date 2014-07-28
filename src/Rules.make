@@ -33,6 +33,9 @@ MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 MOSSCO_ESMF=false
 ifndef ESMFMKFILE
   export FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
+  ifeq ("$(FORTRAN_COMPILER)","F77")
+    $(error MOSSCO needs a F2003 fortran compiler, your environment says $$FC=$(FC))
+  endif
   #$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
 else
   include $(ESMFMKFILE)
@@ -367,7 +370,7 @@ ifeq ($(FORTRAN_COMPILER),PGF90)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP=
 else
-$(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER))
+$(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER).)
 endif
 endif
 endif
