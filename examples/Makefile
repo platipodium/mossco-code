@@ -50,6 +50,7 @@ clean: extraclean
 
 extraclean:
 	@for dir in $(SUBDIRS) ; do make -C $$dir clean; done
+	$(MAKE) -C common clean
 
 test:
 	$(MAKE) -C standalone test

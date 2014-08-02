@@ -63,6 +63,7 @@ clean: extraclean
 
 extraclean:
 	@for dir in $(SUBDIRS) ; do make -C $$dir clean; done
+	$(RM) main.o toplevel_component.o coupling_system.o
 
 
 
