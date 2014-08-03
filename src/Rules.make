@@ -155,6 +155,11 @@ endif
 
 ifdef GETMDIR
   MOSSCO_GETM=true
+  ifeq ($(MOSSCO_MPI),true)
+    export GETM_PARALLEL=true
+  else
+    unexport GETM_PARALLEL
+  endif
   # use static allocation of GETM arrays
   # later dynamic allocation should take over -> Knut?
   ifneq ($(wildcard $(GETMDIR)/include/dimensions.h),)
