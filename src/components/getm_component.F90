@@ -279,7 +279,7 @@ module getm_component
 #endif
     call clean_up(dryrun,runtype,MaxN)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    call ESMF_GridCompGet(gridComp, name=name, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
