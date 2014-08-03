@@ -47,7 +47,7 @@ module getm_component
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
-    use initialise,  only: init_model
+    use initialise,  only: init_model,dryrun
     use integration, only: MinN,MaxN
 
     implicit none
@@ -112,6 +112,12 @@ module getm_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
 
+    if (.not.dryrun) then
+      STDERR LINE
+      LEVEL1 'integrating....'
+      STDERR LINE
+    end if
+
     ! Set the internal time step
     call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep)
     call ESMF_ClockSet(clock,timeStep=timeInterval)
@@ -168,7 +174,7 @@ module getm_component
 
   subroutine Run(gridComp,importState,exportState,parentClock,rc)
 
-    use initialise ,only: runtype
+    use initialise ,only: runtype,dryrun
     use integration,only: MinN
 
     implicit none
@@ -235,8 +241,10 @@ module getm_component
       end if
 
 !     This is where the model specific computation goes.
-      n = int(advanceCount,kind=kind(MinN))+MinN
-      call time_step(runtype,n)
+      if (.not.dryrun) then
+        n = int(advanceCount,kind=kind(MinN))+MinN
+        call time_step(runtype,n)
+      end if
 
       call ESMF_ClockAdvance(clock)
       call ESMF_ClockGet(clock,currtime=currTime,advanceCount=advanceCount)
