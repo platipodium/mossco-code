@@ -160,6 +160,7 @@ ifdef GETMDIR
   else
     unexport GETM_PARALLEL
   endif
+  ifneq ($(MOSSCO_GETM_NEW),true)
   # use static allocation of GETM arrays
   # later dynamic allocation should take over -> Knut?
   ifneq ($(wildcard $(GETMDIR)/include/dimensions.h),)
@@ -168,6 +169,7 @@ ifdef GETMDIR
     $(warning GETM will be built with dynamic array allocation and *not* parallel)
     export STATIC=
     export GETM_PARALLEL=false
+  endif
   endif
 endif
 
