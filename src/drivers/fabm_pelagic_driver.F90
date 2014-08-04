@@ -104,6 +104,17 @@
   subroutine set_environment(pf)
   class(type_mossco_fabm_pelagic) :: pf
 
+  ! type (type_bulk_variable_id)            :: bulk_id
+  ! type (type_horizontal_variable_id)      :: horizontal_id
+  ! type (type_scalar_variable_id)          :: scalar_id
+
+  ! read name of import state and get FABM's id by
+  ! id = fabm_get_bulk_variable_id(model,variable_name)
+  ! check if variable is used by
+  ! fabm_is_variable_used(bulk_id)
+  ! or alternatively
+  ! fabm_is_variable_used(horizontal_id), fabm_is_variable_used(scalar_id)
+
   end subroutine set_environment
 
 
