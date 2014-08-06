@@ -268,18 +268,19 @@ module fabm_sediment_component
 
       !! create state and flux fields
       do n=1,size(sed%export_states)
-#if 0
-        field = ESMF_FieldCreate(state_mesh, &
+        field = ESMF_FieldCreate(surface_mesh, &
                   name=trim(sed%export_states(n)%standard_name)//'_in_soil', &
-                  typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT,rc=rc)
+                  typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, &
+                  ungriddedLBound=(/1/), ungriddedUBound=(/sed%grid%knum/), &
+                  gridToFieldMap=(/2/), rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=statemesh_ptr, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        !TODO: so far use upper layer only
-        statemesh_ptr = sed%export_states(n)%data(:,1,:)
+        do k=1,sed%grid%knum
+          statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
+        end do
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-#endif
 
         if (sed%export_states(n)%fabm_id/=-1) then
           !> add boundary upward fluxes
@@ -579,23 +580,23 @@ module fabm_sediment_component
 
     do n=1,size(sed%export_states)
       if (sed%grid%use_ugrid) then
-#if 0
         call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_in_soil', &
              field,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
+        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=statemesh_ptr, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f3 = sed%export_states(n)%data
-#endif
+        do k=1,sed%grid%knum
+          statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
+        end do
         if (sed%export_states(n)%fabm_id /= -1) then
           call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_upward_flux', &
              field,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
+          call ESMF_FieldGet(field=field, localDe=0, farrayPtr=fluxmesh_ptr, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
+          fluxmesh_ptr = -fluxes(:,1,sed%export_states(n)%fabm_id)
         end if
       else
         call ESMF_StateGet(exportState, &
