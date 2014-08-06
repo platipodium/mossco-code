@@ -24,6 +24,7 @@ module getm_component
   private
 
   public SetServices
+  private getmCmp_init_grid
    
   contains
 
@@ -60,7 +61,7 @@ module getm_component
     character(ESMF_MAXSTR):: name, message, timeString, string
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime, startTime, stopTime
-    logical               :: clockIsPresent
+    logical               :: vmIsPresent,clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I4) :: localPet, petCount
     type(ESMF_VM)         :: vm
@@ -76,8 +77,17 @@ module getm_component
     !! with a prior ESMF_gridCompCreate() call.  If not, then create 
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
-    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    call ESMF_GridCompGet(gridComp, name=name,                     &
+                                    vmIsPresent=vmIsPresent,       &
+                                    clockIsPresent=clockIsPresent, &
+                                    rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (.not.vmIsPresent) then
+      call ESMF_LogWrite('no VM present',ESMF_LOGMSG_ERROR, &
+                         line=__LINE__,file=__FILE__,method='getmCmp_init()')
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    end if
 
     call date_and_time(datestr,timestr)
     if (clockIsPresent) then
@@ -111,6 +121,8 @@ module getm_component
       call ESMF_GridCompSet(gridComp,clock=clock)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
+
+    call getmCmp_init_grid(gridComp)
 
     if (.not.dryrun) then
       STDERR LINE
@@ -276,9 +288,11 @@ module getm_component
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR):: name, message, timeString
+    type(ESMF_Grid)       :: getmGrid
     type(ESMF_Clock)      :: clock
+    type(ESMF_DistGrid)   :: getmDistGrid
     type(ESMF_Time)       :: currTime
-    logical               :: clockIsPresent
+    logical               :: ClockIsPresent,GridIsPresent
 
 #ifndef NO_3D
     if (meanout .eq. 0) then
@@ -287,19 +301,142 @@ module getm_component
 #endif
     call clean_up(dryrun,runtype,MaxN)
 
-    call ESMF_GridCompGet(gridComp, name=name, clock=clock, rc=rc)
+    call ESMF_GridCompGet(gridComp,name=name,                     &
+                                   clockIsPresent=ClockIsPresent, &
+                                   gridIsPresent=GridIsPresent,   &
+                                   rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
+
+    if (ClockIsPresent) then
+      call ESMF_GridCompGet(gridComp,clock=clock,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ClockDestroy(clock)
+      call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+            ' finalized.'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
+    end if
+
+    if (GridIsPresent) then
+      call ESMF_GridCompGet(gridComp,grid=getmGrid)
+      call ESMF_GridGet(getmGrid,distgrid=getmDistGrid)
+      call ESMF_DistGridDestroy(getmDistGrid)
+      call ESMF_GridDestroy(getmGrid)
+    end if
 
    end subroutine Finalize
 
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_init_grid - Creates Grid
+!
+! !INTERFACE:
+   subroutine getmCmp_init_grid(getmCmp)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain, only: ioff,joff,imin,jmin,imax,jmax
+   use domain, only: grid_type
+   IMPLICIT NONE
+!
+! !INPUT/OUTPUT PARAMETERS:
+   type(ESMF_GridComp) :: getmCmp
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   type(ESMF_VM)            :: getmVM
+   type(ESMF_DistGrid)      :: getmDistGrid
+   type(ESMF_Grid)          :: getmGrid
+   type(ESMF_CoordSys_Flag) :: coordSys
+   integer(ESMF_KIND_I4),dimension(:),allocatable,target :: alledges
+   integer(ESMF_KIND_I4),dimension(4),target             :: myedges
+   integer                  :: getmPetCount
+   integer                  :: pet,i0,j0,ilen,jlen
+   integer,dimension(2)     :: coordDimCount,gridAlign
+   integer,dimension(:,:,:),allocatable                  :: deBlockList
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_init_grid() # ',Ncall
+#endif
 
+   call ESMF_GridCompGet(getmCmp,vm=getmVM,petCount=getmPetCount)
+
+   myedges = (/ ioff , joff , imax , jmax /)
+   allocate(alledges(4*getmPetCount))
+!  default syncflag=ESMF_SYNC_BLOCKING
+   call ESMF_VMAllGather(getmVM,myedges,alledges,4)
+
+   allocate(deBlockList(2,2,getmPetCount))
+   do pet = 0,getmPetCount-1
+      i0   = 1 + alledges(1+4*pet)
+      j0   = 1 + alledges(2+4*pet)
+      ilen =     alledges(3+4*pet)
+      jlen =     alledges(4+4*pet)
+      deBlockList(:,1,1+pet) = (/ i0        , j0        /)
+      deBlockList(:,2,1+pet) = (/ i0+ilen-1 , j0+jlen-1 /)
+   end do
+
+!  indexflag=ESMF_INDEX_DELOCAL (default) starting at 1
+!  (for ESMF_INDEX_USER [grid|stagger]MemLBound can be set)
+#if 1
+!  Single-tile DistGrid (1 subdomain = 1 DE)
+   getmDistGrid = ESMF_DistGridCreate(minval(deBlockList(:,1,:),2), &
+                                      maxval(deBlockList(:,2,:),2), &
+                                      deBlockList)
+#else
+!  Multi-tile DistGrid (1 subdomain = 1 tile = 1 DE)
+!  Note (KK): int() intrinsic routines are needed, because ESMF does not
+!             accept subarrays as arguments
+   getmDistGrid = ESMF_DistGridCreate(int(deBlockList(:,1,:)),int(deBlockList(:,2,:)))
+#endif
+
+   select case (grid_type)
+      case(1)
+         coordSys = ESMF_COORDSYS_CART
+         coordDimCount = (/ 1 , 1 /)      ! equidistant/rectilinear coordinates
+      case(2)
+         coordSys = ESMF_COORDSYS_SPH_DEG ! (default)
+         coordDimCount = (/ 1 , 1 /)      ! (default)
+      case(3)
+         coordSys = ESMF_COORDSYS_CART
+         coordDimCount = (/ 2 , 2 /)      ! curvilinear coordinates
+      case(4)
+         coordSys = ESMF_COORDSYS_SPH_DEG ! (default)
+         coordDimCount = (/ 2 , 2 /)      ! curvilinear coordinates
+   end select
+
+!  Note (KK): gridAlign specifies which corner point in a grid cell
+!             shares the center indices [ default=(/-1,-1/) ].
+!             gridEdge[L|U]Width only affect DE's at the edge of tiles
+!             (thus it matters whether a single- or multi-tile DistGrid
+!              was created). If gridEdgeWidth's are not set, they are set
+!             automatically based on gridAlign.
+   getmGrid = ESMF_GridCreate(getmDistGrid,name="getmGrid",            &
+                                           gridAlign=(/1,1/),          &
+                                           coordSys=coordSys,          &
+                                           coordDimCount=coordDimCount)
+   call ESMF_GridCompSet(getmCmp,grid=getmGrid)
+
+#ifdef DEBUG
+   write(debug,*) 'getmCmp_init_grid()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_init_grid
+!EOC
 !-----------------------------------------------------------------------
 !BOP
 !
