@@ -2,14 +2,14 @@
 
 TAGS=""
 
-#TAGS=ESMF_7_0_0_beta_snapshot_14
-TAGS="ESMF_6_3_0rp1_beta_snapshot_10 ${TAGS}" 
-TAGS="ESMF_5_3_1_beta_snapshot_18 ${TAGS}"
-#TAGS=ESMF_4_0_1_beta_snapshot_01 ${TAGS} 
-#TAGS=ESMF_3_1_2_beta_snapshot_12 ${TAGS} 
+TAGS=ESMF_7_0_0_beta_snapshot_15
+#TAGS="ESMF_6_3_0rp2_beta_snapshot_01 ${TAGS}" 
+#TAGS="ESMF_5_3_1_beta_snapshot_18
+#TAGS=ESMF_4_0_1_beta_snapshot_01
+#TAGS=ESMF_3_1_0rp5
 export TAGS
 
-COMPS="gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+COMPS="gfortran" # gfortran intel pgi gfortranclang pgigcc intelgcc
 COMMS="openmpi" #  mpiuni mpich2
 
 export TAGS
