@@ -47,9 +47,17 @@ else
     export MOSSCO_MPI ?= true
     ifeq ($(ESMF_COMM),openmpi)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
-    else
-      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ifeq ($(ESMF_FC),)
+        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
+      endif
     endif
+    ifeq ($(ESMF_COMM),mpich2)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+      ifeq ($(ESMF_FC),)
+        $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
+      endif
+    endif
+    ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
   endif
   ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
