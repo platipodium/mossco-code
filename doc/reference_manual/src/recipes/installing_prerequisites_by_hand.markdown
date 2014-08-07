@@ -64,7 +64,7 @@ Create a directory next to the gcc source directory
     
 From within this directory, run the `../gcc-4.9.0/configure` script and make
 
-	../gcc-4.9.0/configure --prefix=$PREFIX --with-gmp=$PREFIX --with-mpfr=$PREFIX --with-mpc=$PREFIX
+	../gcc-4.9.0/configure --prefix=$PREFIX
 	make -j8 && make check && make install
 
 Compiling the compiler takes a long time (go do something else for half an hour to several hours).  But once
@@ -92,7 +92,7 @@ by setting
 
 ## Installing netCDF
 
-The current netCDF comes in three packages, one for C, one for Fortran and one for C++.  As a further complication, ESMF cannot be installed with the recent C++ API (also called C++4), but needs the *legacy* version of the netcdf C++ library.  As a requirement for new features of the netCDF-4 standard, the HDF-5 library is required and must be installed first.
+The current netCDF comes in three packages, one for C, one for Fortran (and one for C++, which is not needed in recent versions of ESMF).  As a requirement for new features of the netCDF-4 standard, the HDF-5 library is required and must be installed first.
 
 To get all the software, issue the following:
 
@@ -103,8 +103,6 @@ To get all the software, issue the following:
     tar xzf netcdf-4.3.2.tar.gz
     wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-fortran-4.2.tar.gz
     tar xzf netcdf-fortran-4.2.tar.gz
-    wget ftp://ftp.unidata.ucar.edu/pub/netcdf/netcdf-cxx-4.2.tar.gz
-    tar xzf netcdf-cxx-4.2.tar.gz
 
 Change to the HDF source directory.  Add flags to enable the C++ and Fortran API to be built in your `configure` statement
 
@@ -117,11 +115,9 @@ Then install the netcdf C library first
     cd $WORK/netcdf-4.3.2
 	./configure --prefix=$PREFIX && make -j8 && make check && make install
 
-and later the fortran,  and C++ legacy libraries. Issue
+and later the fortran library. Issue
     
     cd $WORK/netcdf-fortran-4.2
-    ./configure --prefix=$PREFIX && make -j8 && make check && make install
-    cd $WORK/netcdf-cxx-4.2
     ./configure --prefix=$PREFIX && make -j8 && make check && make install
 
 You now have your system ready to be used with ESMF and recent Fortran 2003 requirements.
