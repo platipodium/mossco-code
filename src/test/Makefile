@@ -24,14 +24,14 @@ TEST_OBJ = ${TEST_SRC%.}.o
 
 .PHONY: libmossco_empty libmossco_constant libmossco_info
 
-all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency test_FieldBounds
+all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency test_FieldBounds test_ESMF_Initialize
 
 tests:
 	echo TEST_SRC=$(TEST_SRC)
 	echo TEST_OBJ=$(TEST_OBJ)
 
 
-esmf_initialize_test: ESMF_Initialize_test.o
+test_ESMF_Initialize: test_ESMF_Initialize.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)  $(LIBS)
 
 test_Concurrency: test_Concurrency.o libmossco_constant libmossco_info
