@@ -74,10 +74,14 @@ else
       endif
     endif
     export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
-    MOSSCO_F03VERSION==$(shell $(F90) --version | head -1)
+    MOSSCO_F03VERSION=$(shell $(F90) --version | head -1)
   endif
 endif
 export MOSSCO_ESMF
+
+#ifeq ($(ESMF_FC),)
+  $(error  Your compiler $(F90)'s version could not be determined ($(MOSSCO_F03VERSION)))
+#endif
 
 # 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
