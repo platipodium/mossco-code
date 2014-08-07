@@ -63,7 +63,7 @@ else
     export FC  = $(ESMF_F90COMPILER)
     export F77 = $(ESMF_F77COMPILER)
     ifeq ($(ESMF_FC),)
-      ESMF_FC:=$(ESMF_F90COMPILER)
+      $(error Your compiler was not recognized. Did you confuse mpich2/openmpi?)
     endif
     ESMF_FORTRAN_COMPILER = $(shell echo $(notdir $(ESMF_FC)) | tr a-z A-Z | cut -d"-" -f1)
     ifdef FORTRAN_COMPILER
