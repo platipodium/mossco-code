@@ -70,6 +70,9 @@ test_DerivedTypes: test_DerivedTypes.o
 test_Netcdf: test_Netcdf.o 
 	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
 
+test_Solver: test_Solver.o 
+	$(F90) $(F90FLAGS) -o $@  $^ -lsolver $(LDFLAGS) $(LIBS)
+
 test_Dictionary: test_Dictionary.o 
 	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
 
