@@ -18,7 +18,7 @@ ifndef MOSSCO_PREFIX
 # 1. Checking that we're using GNU make 
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
-$(error GNU make is required)
+  $(error GNU make is required)
 endif 
 
 MOSSCO_INSTALL_PREFIX ?= /opt/mossco
@@ -30,13 +30,13 @@ MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 
 # 2. ESMF stuff, only if ESMFMKFILE is declared. 
 #
-MOSSCO_ESMF=false
 ifndef ESMFMKFILE
   export FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
   ifeq ("$(FORTRAN_COMPILER)","F77")
     $(error MOSSCO needs a F2003 fortran compiler, your environment says $$FC=$(FC))
   endif
   #$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
+  MOSSCO_ESMF=false
 else
   include $(ESMFMKFILE)
   MOSSCO_ESMF=true
@@ -58,12 +58,21 @@ else
     export FC  = $(ESMF_F90COMPILER)
     export F77 = $(ESMF_F77COMPILER)
 #   Test against some mpi wrappers first
-#   1) mpich2
-    ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
-    ifeq ($(ESMF_FC),)
-#     2) open-mpi
-      ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null )
-    endif
+    ifeq ($ESMF_COMM),mpiuni)
+      ESMF_FC=$(F90)
+    else
+      ifeq ($ESMF_COMM),openmpi)
+        ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
+      else
+        ifeq ($(ESMF_COMM),mpich2)      
+          ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+        else
+          $(warning Makefile not yet tested for ESMF_COMM=$(ESMF_COMM), expect trouble ...)
+          ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)          
+        endif
+      endif
+    endif 
+
     ifeq ($(ESMF_FC),)
       ESMF_FC:=$(ESMF_F90COMPILER)
     endif
