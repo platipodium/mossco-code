@@ -58,10 +58,10 @@ else
     export FC  = $(ESMF_F90COMPILER)
     export F77 = $(ESMF_F77COMPILER)
 #   Test against some mpi wrappers first
-    ifeq ($ESMF_COMM),mpiuni)
+    ifeq ($(ESMF_COMM),mpiuni)
       ESMF_FC=$(F90)
     else
-      ifeq ($ESMF_COMM),openmpi)
+      ifeq ($(ESMF_COMM),openmpi)
         ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
       else
         ifeq ($(ESMF_COMM),mpich2)      
