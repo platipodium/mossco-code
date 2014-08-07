@@ -87,4 +87,4 @@ libmossco_util:
 clean: extraclean
 
 extraclean:
-	@- rm -f test_FieldGet test_ArrayGet test_Clock test_GridCreate PET* test_Grid test_ClockDestroy
+	@- rm -f test_FieldGet test_ArrayGet test_Clock test_GridCreate PET* test_Grid test_ClockDestroy test_Concurrency test_ESMF_Initialize test_FieldBounds test_Netcdf test_Solver
