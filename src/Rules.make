@@ -41,10 +41,15 @@ else
   include $(ESMFMKFILE)
   MOSSCO_ESMF=true
   ESMF_COMM = $(strip $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
-  ifneq ("$(ESMF_COMM)","mpiuni")
-    export MOSSCO_MPI ?= true
-  else
+  ifeq ("$(ESMF_COMM)","mpiuni")
     export MOSSCO_MPI ?= false
+  else
+    export MOSSCO_MPI ?= true
+    ifeq ($(ESMF_COMM),openmpi)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
+    else
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+    endif
   endif
   ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
@@ -57,22 +62,6 @@ else
     export F90 = $(ESMF_F90COMPILER)
     export FC  = $(ESMF_F90COMPILER)
     export F77 = $(ESMF_F77COMPILER)
-#   Test against some mpi wrappers first
-    ifeq ($(ESMF_COMM),mpiuni)
-      ESMF_FC=$(F90)
-    else
-      ifeq ($(ESMF_COMM),openmpi)
-        ESMF_FC:=$(shell $(ESMF_F90COMPILER) --showme:command 2> /dev/null)
-      else
-        ifeq ($(ESMF_COMM),mpich2)      
-          ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
-        else
-          $(warning Makefile not yet tested for ESMF_COMM=$(ESMF_COMM), expect trouble ...)
-          ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)          
-        endif
-      endif
-    endif 
-
     ifeq ($(ESMF_FC),)
       ESMF_FC:=$(ESMF_F90COMPILER)
     endif
