@@ -167,20 +167,24 @@ endif
 
 ifdef GETMDIR
   MOSSCO_GETM=true
-  ifeq ($(MOSSCO_MPI),true)
-    export GETM_PARALLEL=true
-  else
-    unexport GETM_PARALLEL
-  endif
+  ifdef MOSSCO_GETMDIR
+    # We have full control over GETM compilation
+    ifeq ($(MOSSCO_MPI),true)
+      export GETM_PARALLEL=true
+    else
+      unexport GETM_PARALLEL
+    endif
   ifneq ($(MOSSCO_GETM_NEW),true)
+  ifeq ($(GETM_PARALLEL),true)
   # use static allocation of GETM arrays
   # later dynamic allocation should take over -> Knut?
   ifneq ($(wildcard $(GETMDIR)/include/dimensions.h),)
-    export STATIC=-DSTATIC
+    export STATIC+=-DSTATIC
   else
     $(warning GETM will be built with dynamic array allocation and *not* parallel)
-    export STATIC=
     export GETM_PARALLEL=false
+  endif
+  endif
   endif
   endif
 endif
@@ -500,7 +504,6 @@ ifdef MOSSCO_GOTMDIR
 endif
 
 libgetm_external: prefix
-ifdef MOSSCO_GETMDIR
 ifeq ($(MOSSCO_GETM_FABM),true)
 ifdef MOSSCO_FABMDIR
 	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
@@ -511,14 +514,17 @@ ifdef MOSSCO_GOTMDIR
 	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
 	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
 endif
+ifdef MOSSCO_GETMDIR
 	@echo Recreating the GETM library in $(GETM_LIBRARY_PATH)
 	(export FABM=true ; $(MAKE) -C $(GETMDIR)/src)
+endif
 else
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
 endif
+ifdef MOSSCO_GETMDIR
 	@echo Recreating the GETM library without FABM in $(GETM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)
 endif
