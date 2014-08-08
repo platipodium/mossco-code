@@ -57,7 +57,9 @@ else
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
     endif
-    ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+    ifeq ($(ESMF_FC),)
+      ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+    endif
   endif
   ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
