@@ -203,9 +203,9 @@ module netcdf_component
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-        	call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
+          call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        	if (localDeCount>0) call nc%put_variable(field)
+          if (localDeCount>0) call nc%put_variable(field)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
@@ -224,7 +224,7 @@ module netcdf_component
             
             call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        	  if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
+            if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
           end do
           deallocate(fieldList)
         else 

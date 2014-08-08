@@ -539,6 +539,7 @@ module fabm_sediment_component
       ! reset concentrations to mininum_value
       do n=1,sed%nvar
         do k=1,sed%grid%knum
+!!@todo This has to be adjusted for inum, jnum longer than 1
           if (sed%conc(1,1,k,n) .lt. sed%model%info%state_variables(n)%minimum) then
             sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%info%state_variables(n)%minimum
           end if
