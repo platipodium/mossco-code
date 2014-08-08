@@ -24,12 +24,14 @@ TEST_OBJ = ${TEST_SRC%.}.o
 
 .PHONY: libmossco_empty libmossco_constant libmossco_info
 
-all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency test_FieldBounds test_ESMF_Initialize
+all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency test_FieldBounds test_ESMF_Initialize test_MPI_Initialize
 
 tests:
 	echo TEST_SRC=$(TEST_SRC)
 	echo TEST_OBJ=$(TEST_OBJ)
 
+test_MPI_Initialize: test_MPI_Initialize.o
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)  $(LIBS)
 
 test_ESMF_Initialize: test_ESMF_Initialize.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)  $(LIBS)
@@ -87,4 +89,4 @@ libmossco_util:
 clean: extraclean
 
 extraclean:
-	@- rm -f test_FieldGet test_ArrayGet test_Clock test_GridCreate PET* test_Grid test_ClockDestroy test_Concurrency test_ESMF_Initialize test_FieldBounds test_Netcdf test_Solver
+	@- rm -f test_FieldGet test_ArrayGet test_Clock test_GridCreate PET* test_Grid test_ClockDestroy test_Concurrency test_ESMF_Initialize test_FieldBounds test_Netcdf test_Solver test_MPI_Initialize
