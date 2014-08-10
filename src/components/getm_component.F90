@@ -1,7 +1,7 @@
 !> @brief Implementation of a GETM ocean component
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 !> @author Knut Klingbeil, IOW
 !> @author Carsten Lemmen, HZG
 
@@ -24,14 +24,22 @@ module getm_component
   private
 
   public SetServices
+  private getmCmp_init_variables,getmCmp_finalize_variables
   private getmCmp_init_grid
-   
+
+! The following objects are treated differently, depending on whether
+! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
+  logical                    :: noKindMatch
+  real(ESMF_KIND_R8),pointer :: xcord_(:)  =>NULL(),ycord_(:)  =>NULL()
+  real(ESMF_KIND_R8),pointer :: xx_   (:,:)=>NULL(),yx_   (:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: lonx_ (:,:)=>NULL(),latx_ (:,:)=>NULL()
+
   contains
 
   subroutine SetServices(gridcomp, rc)
 
     implicit none
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
@@ -41,7 +49,7 @@ module getm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
   end subroutine SetServices
 
   subroutine Initialize(gridComp,importState,exportState,parentClock,rc)
@@ -52,7 +60,7 @@ module getm_component
     use integration, only: MinN,MaxN
 
     implicit none
-    
+
     type(ESMF_GridComp) :: gridComp
     type(ESMF_State)    :: importState,exportState ! may be uninitialized
     type(ESMF_Clock)    :: parentClock        ! may be uninitialized
@@ -73,8 +81,8 @@ module getm_component
     character(len=10)       :: timestr
     character(len=19)       :: TimeStrISOFrac,start_external,stop_external
 
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+    !! Check whether there is already a clock (it might have been set
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
     call ESMF_GridCompGet(gridComp, name=name,                     &
@@ -92,7 +100,7 @@ module getm_component
     call date_and_time(datestr,timestr)
     if (clockIsPresent) then
       ! Use startTime and stopTime from already initialised clock.
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       call ESMF_ClockGet(clock, startTime=startTime, stopTime=stopTime, &
         timeStep=timeInterval, rc=rc)
       call ESMF_TimeGet(startTime,timeStringISOFrac=start_external)
@@ -122,6 +130,7 @@ module getm_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
 
+    call getmCmp_init_variables()
     call getmCmp_init_grid(gridComp)
 
     if (.not.dryrun) then
@@ -148,15 +157,15 @@ module getm_component
 
     !! Log processor information
     call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
-    call ESMF_VmGet(vm, petCount=petCount, rc=rc)      
+    call ESMF_VmGet(vm, petCount=petCount, rc=rc)
     write(message,'(A,I6,A)') trim(timestring)//' '//trim(name)//' uses ',petCount
     call ESMF_VmGetGlobal(vm=vm, rc=rc)
-    call ESMF_VmGet(vm, petCount=petCount, rc=rc)  
+    call ESMF_VmGet(vm, petCount=petCount, rc=rc)
     write(message,'(A,I6,A)') trim(message)//' of ', petCount,' PETs'
 
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    !! Log clock information 
+    !! Log clock information
     call ESMF_ClockGet(clock, startTime=startTime, rc=rc)
     call ESMF_TimeGet(startTime,timeStringISOFrac=string)
     write(message,'(A)') trim(timeString)//' '//trim(string)
@@ -195,7 +204,7 @@ module getm_component
     type(ESMF_State)    :: importState,exportState ! may be uninitialized
     type(ESMF_Clock)    :: parentClock        ! may be uninitialized
     integer,intent(out) :: rc
-    
+
     character(ESMF_MAXSTR):: name, message, timeString
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime, stopTime
@@ -218,7 +227,7 @@ module getm_component
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -279,7 +288,7 @@ module getm_component
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
     use output     ,only: meanout
-    
+
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -327,8 +336,117 @@ module getm_component
       call ESMF_GridDestroy(getmGrid)
     end if
 
+    call getmCmp_finalize_variables()
+
    end subroutine Finalize
 
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_init_variables
+!
+! !INTERFACE:
+   subroutine getmCmp_init_variables()
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain, only: imin,jmin,imax,jmax
+   use domain, only: xcord,ycord,xx,yx,lonx,latx
+   use domain, only: grid_type
+   IMPLICIT NONE
+!
+! !INPUT/OUTPUT PARAMETERS:
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   REALTYPE :: getmreal
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_init_variables() # ',Ncall
+#endif
+
+   noKindMatch = ( kind(getmreal) .ne. ESMF_KIND_R8 )
+!  KK-TODO: as long as coordinate arrays in GETM do not hold the target
+!           attribute we have to copy the data.
+   noKindMatch = .true.
+
+   if (noKindMatch) then
+      select case (grid_type)
+         case(1,2)
+            allocate(xcord_(_IRANGE_HALO_)) ; xcord_ = xcord
+            allocate(ycord_(_JRANGE_HALO_)) ; ycord_ = ycord
+         case(3,4)
+            allocate(xx_(E2DXFIELD)) ; xx_ = xx
+            allocate(yx_(E2DXFIELD)) ; yx_ = yx
+      end select
+   else
+      !xcord_ => xcord ; ycord_ => ycord
+      !xx_    => xx    ; yx_    => yx
+      !lonx_  => lonx  ; latx_  => latx
+   end if
+
+#ifdef DEBUG
+   write(debug,*) 'getmCmp_init_variables()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_init_variables
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_finalize_variables
+!
+! !INTERFACE:
+   subroutine getmCmp_finalize_variables()
+!
+! !DESCRIPTION:
+!
+! !USES:
+   IMPLICIT NONE
+!
+! !INPUT/OUTPUT PARAMETERS:
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_finalize_variables() # ',Ncall
+#endif
+
+   if (noKindMatch) then
+      if(associated(xcord_)) deallocate(xcord_)
+      if(associated(ycord_)) deallocate(ycord_)
+      if(associated(xx_   )) deallocate(xx_   )
+      if(associated(yx_   )) deallocate(yx_   )
+      if(associated(lonx_ )) deallocate(lonx_ )
+      if(associated(latx_ )) deallocate(latx_ )
+   end if
+
+#ifdef DEBUG
+   write(debug,*) 'getmCmp_finalize_variables()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_finalize_variables
+!EOC
 !-----------------------------------------------------------------------
 !BOP
 !
@@ -340,7 +458,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain, only: ioff,joff,imin,jmin,imax,jmax
+   use domain, only: ioff,joff,imax,jmax
    use domain, only: grid_type
    IMPLICIT NONE
 !
@@ -355,11 +473,14 @@ module getm_component
    type(ESMF_DistGrid)      :: getmDistGrid
    type(ESMF_Grid)          :: getmGrid
    type(ESMF_CoordSys_Flag) :: coordSys
+   type(ESMF_StaggerLoc)    :: StaggerLoc
+   type(ESMF_ARRAY)         :: xArray,yArray
    integer(ESMF_KIND_I4),dimension(:),allocatable,target :: alledges
    integer(ESMF_KIND_I4),dimension(4),target             :: myedges
    integer                  :: getmPetCount
    integer                  :: pet,i0,j0,ilen,jlen
-   integer,dimension(2)     :: coordDimCount,gridAlign
+   integer,dimension(2)     :: coordDimCount
+   integer,dimension(2,2)   :: coordDimMap
    integer,dimension(:,:,:),allocatable                  :: deBlockList
 !
 !EOP
@@ -375,7 +496,7 @@ module getm_component
 
    myedges = (/ ioff , joff , imax , jmax /)
    allocate(alledges(4*getmPetCount))
-!  default syncflag=ESMF_SYNC_BLOCKING
+!  syncflag=ESMF_SYNC_BLOCKING (default)
    call ESMF_VMAllGather(getmVM,myedges,alledges,4)
 
    allocate(deBlockList(2,2,getmPetCount))
@@ -396,7 +517,8 @@ module getm_component
                                       maxval(deBlockList(:,2,:),2), &
                                       deBlockList)
 #else
-!  Multi-tile DistGrid (1 subdomain = 1 tile = 1 DE)
+!  Multi-tile DistGrid (1 subdomain = 1 tile = 1 DE) by specification of
+!  [min|max]IndexPTile.
 !  Note (KK): int() intrinsic routines are needed, because ESMF does not
 !             accept subarrays as arguments
    getmDistGrid = ESMF_DistGridCreate(int(deBlockList(:,1,:)),int(deBlockList(:,2,:)))
@@ -405,16 +527,56 @@ module getm_component
    select case (grid_type)
       case(1)
          coordSys = ESMF_COORDSYS_CART
-         coordDimCount = (/ 1 , 1 /)      ! equidistant/rectilinear coordinates
+         coordDimCount = (/ 1 , 1 /)         ! rectilinear coordinates
+         coordDimMap = reshape( (/1,2,0,0/) , (/2,2/) )
+         StaggerLoc = ESMF_STAGGERLOC_CENTER ! (default)
+!        1D xcord is replicated automatically along 2nd DistGrid dimension
+!        1D ycord is replicated along 1st DistGrid dimension as specified
+!        by distgridToArrayMap.
+!        total[L|U]Width are automatically determined from shape of [x|y]cord
+!        datacopyflag = ESMF_DATACOPY_REFERENCE (default)
+!        Note (KK): These ArrayCreate()'s only work for 1DE per PET!!!
+!                   Automatically determined coordDimMap for rectilinear
+!                   coordinates is incorrect!
+         xArray = ESMF_ArrayCreate(getmDistGrid,xcord_,indexflag=ESMF_INDEX_DELOCAL)
+         yArray = ESMF_ArrayCreate(getmDistGrid,ycord_,indexflag=ESMF_INDEX_DELOCAL, &
+                                   distgridToArrayMap=(/0,1/))
       case(2)
-         coordSys = ESMF_COORDSYS_SPH_DEG ! (default)
-         coordDimCount = (/ 1 , 1 /)      ! (default)
+         coordSys = ESMF_COORDSYS_SPH_DEG    ! (default)
+         coordDimCount = (/ 1 , 1 /)         ! rectilinear coordinates
+         coordDimMap = reshape( (/1,2,0,0/) , (/2,2/) )
+         StaggerLoc = ESMF_STAGGERLOC_CENTER ! (default)
+         xArray = ESMF_ArrayCreate(getmDistGrid,xcord_,indexflag=ESMF_INDEX_DELOCAL)
+         yArray = ESMF_ArrayCreate(getmDistGrid,ycord_,indexflag=ESMF_INDEX_DELOCAL, &
+                                   distgridToArrayMap=(/0,1/))
       case(3)
          coordSys = ESMF_COORDSYS_CART
-         coordDimCount = (/ 2 , 2 /)      ! curvilinear coordinates
+         coordDimCount = (/ 2 , 2 /)                    ! (default for 2D Grid)
+         coordDimMap = reshape( (/1,1,2,2/) , (/2,2/) ) ! (default for 2D Grid)
+         StaggerLoc = ESMF_STAGGERLOC_CORNER
+!        Note (KK): automatically determined total[L|U]Width are not consistent
+!                   with gridAlign specified later
+         xArray = ESMF_ArrayCreate(getmDistGrid,xx_,              &
+                                   indexflag=ESMF_INDEX_DELOCAL,  &
+                                   totalLWidth=(/HALO+1,HALO+1/), &
+                                   totalUWidth=(/HALO,HALO/))
+         yArray = ESMF_ArrayCreate(getmDistGrid,yx_,              &
+                                   indexflag=ESMF_INDEX_DELOCAL,  &
+                                   totalLWidth=(/HALO+1,HALO+1/), &
+                                   totalUWidth=(/HALO,HALO/))
       case(4)
-         coordSys = ESMF_COORDSYS_SPH_DEG ! (default)
-         coordDimCount = (/ 2 , 2 /)      ! curvilinear coordinates
+         coordSys = ESMF_COORDSYS_SPH_DEG               ! (default)
+         coordDimCount = (/ 2 , 2 /)                    ! (default for 2D Grid)
+         coordDimMap = reshape( (/1,1,2,2/) , (/2,2/) ) ! (default for 2D Grid)
+         StaggerLoc = ESMF_STAGGERLOC_CORNER
+         xArray = ESMF_ArrayCreate(getmDistGrid,lonx_,            &
+                                   indexflag=ESMF_INDEX_DELOCAL,  &
+                                   totalLWidth=(/HALO+1,HALO+1/), &
+                                   totalUWidth=(/HALO,HALO/))
+         yArray = ESMF_ArrayCreate(getmDistGrid,latx_,            &
+                                   indexflag=ESMF_INDEX_DELOCAL,  &
+                                   totalLWidth=(/HALO+1,HALO+1/), &
+                                   totalUWidth=(/HALO,HALO/))
    end select
 
 !  Note (KK): gridAlign specifies which corner point in a grid cell
@@ -423,11 +585,19 @@ module getm_component
 !             (thus it matters whether a single- or multi-tile DistGrid
 !              was created). If gridEdgeWidth's are not set, they are set
 !             automatically based on gridAlign.
-   getmGrid = ESMF_GridCreate(getmDistGrid,name="getmGrid",            &
-                                           gridAlign=(/1,1/),          &
-                                           coordSys=coordSys,          &
-                                           coordDimCount=coordDimCount)
+   getmGrid = ESMF_GridCreate(getmDistGrid,name="getmGrid",             &
+                                           gridAlign=(/1,1/),           &
+                                           coordSys=coordSys,           &
+                                           coordDimCount=coordDimCount, &
+                                           coordDimMap=coordDimMap)
+   call ESMF_GridSetCoord(getmGrid,1,array=xArray,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid,2,array=yArray,staggerloc=StaggerLoc)
+
    call ESMF_GridCompSet(getmCmp,grid=getmGrid)
+
+   deallocate(alledges)
+   deallocate(deBlockList)
+
 
 #ifdef DEBUG
    write(debug,*) 'getmCmp_init_grid()'
