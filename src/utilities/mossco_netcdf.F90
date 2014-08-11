@@ -205,13 +205,14 @@ module mossco_netcdf
         if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
         dimids => self%grid_dimensions(grid)
       elseif (geomType==ESMF_GEOMTYPE_MESH) then
-        call ESMF_FieldGet(field,mesh=mesh,rc=esmfrc)
-        if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+        !call ESMF_FieldGet(field,mesh=mesh,rc=esmfrc)
+        !if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
         write(geomname,'(A)') 'mesh'
-        dimids => self%mesh_dimensions(mesh)
-        write(message,'(A)')  'Geometry type MESH cannot be handled sufficiently yet'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        return
+        dimids => self%mesh_dimensions(field)
+        !write(0,*) 'mesh write, dimids:',dimids
+        !write(message,'(A)')  'Geometry type MESH cannot be handled sufficiently yet'
+        !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        !return
       elseif (geomType==ESMF_GEOMTYPE_LOCSTREAM) then
         write(message,'(A)')  'Geometry type LOCSTREAM cannot be handled yet'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
@@ -394,11 +395,12 @@ module mossco_netcdf
     end do
   end subroutine mossco_netcdf_update_variables
 
-  function mossco_netcdf_mesh_dimensions(self,mesh) result(dimids)
+  function mossco_netcdf_mesh_dimensions(self,field) result(dimids)
 
     implicit none
 
     class(type_mossco_netcdf)     :: self
+    type(ESMF_Field)              :: field
     type(ESMF_Mesh)               :: mesh
     integer                       :: ncStatus,rc_,esmfrc,dimcheck
     character(len=ESMF_MAXSTR)    :: geomName, name
@@ -412,31 +414,27 @@ module mossco_netcdf
 
     rc_ = MOSSCO_NC_NOERR
     dimcheck=0
+    call ESMF_FieldGet(field,mesh=mesh,dimCount=dimCount,rank=rank,rc=esmfrc)
+    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
     call ESMF_MeshGet(mesh,parametricDim=parametricDim, &
       spatialDim=spatialDim,numOwnedElements=numOwnedElements,rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
 
     !!@todo get the name by ESMF_MeshGet once this is implemented by ESMF
     write(geomname,'(A)') 'mesh'
-    allocate(gridToFieldMap(spatialDim))
-    allocate(totalubound(spatialDim))
-    allocate(totallbound(spatialDim))
-    allocate(ungriddedubound(spatialDim))
-    allocate(ungriddedlbound(spatialDim))
+    allocate(totalubound(rank))
+    allocate(totallbound(rank))
+    !! if ungridded rank > 1, then assume ungridded dimension in field and define extended mesh
+    if (rank > 1) write(geomname,'(A)') 'ext_'//trim(geomName)
 
     allocate(dimids(rank+1))
     
     dimids(:)=-1
     dimids(rank+1)=self%timeDimId
 
-    !!@ todo continue work from here
-    return
-    call ESMF_MeshGetFieldBounds(mesh, localDe=0, totalUBound=totalUBound, rc=esmfrc)
-    write(0,*) totalUBound, parametricDim, spatialDim, numOwnedElements
-
-    !call ESMF_MeshGetFieldBounds(mesh, localDe=0, &!gridToFieldMap=gridToFieldMap, &
-    !  ungriddedLBound=ungriddedLBound, ungriddedUBound=ungriddedUBound,&
-    !  totalLBound=totalLBound, totalUBound=totalUBound, rc=esmfrc)
+    !!@ todo check gridToFieldMap for order of dimensions
+    call ESMF_FieldGetBounds(field, totalUBound=totalUBound, totalLBound=totalLBound, rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
 
     ! get grid dimension-ids
@@ -449,11 +447,12 @@ module mossco_netcdf
         endif
     enddo
 
-    !! if grid not present, create grid
+    !! if mesh not present, create mesh
     if (dimcheck == -1) then
       ncStatus = nf90_redef(self%ncid)
       do i=1,rank
         write(name,'(A,I1)') trim(geomName)//'_',i
+        !write(0,*) 'define dimension ',trim(name),' of size',totalubound(i)-totallbound(i)+1
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
           totalubound(i)-totallbound(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
@@ -468,7 +467,11 @@ module mossco_netcdf
     end if
    
    !! if grid not present, also create the coordinate variables
-    if (dimcheck == -1) call self%create_mesh_coordinate(mesh)
+   ! if (dimcheck == -1) call self%create_mesh_coordinate(mesh)
+
+   !! deallocate memory
+   deallocate(totalubound)
+   deallocate(totallbound)
 
   end function mossco_netcdf_mesh_dimensions
 
@@ -560,7 +563,7 @@ module mossco_netcdf
       rc=esmfrc)
     call replace_character(geomName, ' ', '_')
     !if (dimCount<1) return
-    write(*,*) parametricDim, spatialDim, numOwnedNodes
+    write(0,*) parametricDim, spatialDim, numOwnedNodes
       
     !if (coordSys == ESMF_COORDSYS_CART) then
     !  coordnames=(/'lon   ','lat   ','radius'/)
@@ -576,7 +579,7 @@ module mossco_netcdf
     allocate(ownedNodeCoords(numOwnedNodes))
     call ESMF_MeshGet(mesh, ownedNodeCoords=ownedNodeCoords, rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-    dimids => self%mesh_dimensions(mesh)
+    !dimids => self%mesh_dimensions(mesh)
 #if 0
    do i=1,dimCount
       
