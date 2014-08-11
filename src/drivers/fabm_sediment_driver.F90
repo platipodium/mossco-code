@@ -195,6 +195,14 @@ do k=1,_KNUM_
    case default
    end select
 end do
+
+#if 0
+!! reduce porosity by 2% for each mesh element for testing purposes
+do i=1,_INUM_
+  sed%porosity(i,:,:) = sed%porosity(1,:,:)* (0.98**i)
+end do
+#endif
+
 sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
 sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
 
