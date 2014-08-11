@@ -141,7 +141,7 @@ module mossco_netcdf
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2, start=(/1,1,dimlen/))
-    elseif (rank==2) then
+    elseif (rank==1) then
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1, start=(/1,dimlen/))
