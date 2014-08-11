@@ -232,7 +232,7 @@ module fabm_sediment_component
       if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0
       if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
       if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
-      if (trim(varname) == 'detritus-C') fluxes(:,:,i)=0.08_rk/86400.0_rk
+      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=0.08_rk/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%info%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
     end do
 
