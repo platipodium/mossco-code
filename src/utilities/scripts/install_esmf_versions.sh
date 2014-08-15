@@ -2,7 +2,7 @@
 
 TAGS=""
 
-TAGS=ESMF_7_0_0_beta_snapshot_15
+TAGS=ESMF_7_0_0_beta_snapshot_17
 #TAGS="ESMF_6_3_0rp2_beta_snapshot_01 ${TAGS}" 
 #TAGS="ESMF_5_3_1_beta_snapshot_18
 #TAGS=ESMF_4_0_1_beta_snapshot_01
@@ -11,8 +11,6 @@ export TAGS
 
 COMPS="gfortran" # gfortran intel pgi gfortranclang pgigcc intelgcc
 COMMS="openmpi" #  mpiuni mpich2
-
-export TAGS
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull
@@ -98,6 +96,7 @@ export ESMF_NETCDF=split
 export ESMF_NETCDF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_LIBPATH}
 export ESMF_XERCES=standard
+export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
 unset ESMF_PIO
 export ESMF_SITE=$T
 export ESMF_COMPILER=$G

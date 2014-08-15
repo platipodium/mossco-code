@@ -16,6 +16,19 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
+
+#ifndef GOTM_REALTYPE
+#define GOTM_REALTYPE real(kind=selected_real_kind(13))
+#endif
+
+#ifndef _ZERO_
+#define _ZERO_ 0.0d0
+#endif
+
+#ifndef _ONE_
+#define _ONE_  1.0d0
+#endif
+
 module gotm_component
 
   use esmf
@@ -41,9 +54,6 @@ module gotm_component
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
 
-#define GOTM_REALTYPE real(kind=selected_real_kind(13))
-#define _ZERO_ 0.0d0
-#define _ONE_  1.0d0
 
   !> local variables for the setup control
   character(len=80)         :: title,name

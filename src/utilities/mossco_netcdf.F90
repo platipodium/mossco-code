@@ -699,8 +699,12 @@ module mossco_netcdf
     
       if (coordDimCount(i) == 1) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, rc=esmfrc)
-        if (esmfrc == ESMF_SUCCESS) &
+        if (esmfrc == ESMF_SUCCESS) then
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1)
+        else
+          write(message,'(A)')  'This error will be fixed in the future, disregard for now'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
       elseif (coordDimCount(i) == 2) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, rc=esmfrc)
         if (esmfrc == ESMF_SUCCESS) &

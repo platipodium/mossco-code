@@ -56,7 +56,8 @@ module link_coupler
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
-    type(ESMF_Field)            :: field
+    type(ESMF_Field)            :: field, otherField
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
 
     !! Set default SUCCESS return value and log the call to this 
     !! function into the log
@@ -96,10 +97,19 @@ module link_coupler
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=count, rc=rc)
         if (count>0) then
-          write(message,'(A)') 'Did not link existing field '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
-          
-          !call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
+          call ESMF_StateGet(exportState, trim(itemNameList(i)), otherField, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_FieldGet(otherField, status=fieldStatus, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then 
+            write(message,'(A)') 'Did not link existing field '//trim(itemNameList(i))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
+          else
+            call ESMF_StateAddReplace(exportState,(/field/), rc=rc)        
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            write(message,'(A)') 'Overwrote incomplete field '//trim(itemNameList(i))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)            
+          endif
         else        
           call ESMF_StateAddReplace(exportState,(/field/), rc=rc)  
         endif      
@@ -141,6 +151,7 @@ module link_coupler
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_Field)            :: field, otherField
     type(ESMF_FieldBundle)      :: fieldBundle
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
 
     call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
       rc=rc)
