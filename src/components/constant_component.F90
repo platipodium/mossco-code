@@ -68,27 +68,23 @@ module constant_component
     real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:) 
     character(len=ESMF_MAXSTR)                  :: varname
     integer, parameter                          :: fileunit=21
-    logical                                     :: file_readable=.true., clockIsPresent, fileIsPresent
+    logical                                     :: file_readable=.true., clockIsPresent
     integer(ESMF_KIND_I4)                       :: start
     
     character(len=ESMF_MAXSTR)                  :: timeString, unitString
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
-    integer(ESMF_KIND_I4), dimension(2)  :: totalCount2
-    integer(ESMF_KIND_I4), dimension(2)  :: tUBound2, tLBound2, eUBound2, eLBound2, cUBound2, cLBound2
-    integer(ESMF_KIND_I4), dimension(3)  :: tUBound3, tLBound3, eUBound3, eLBound3, cUBound3, cLBound3
-    integer(ESMF_KIND_I4), dimension(3)  :: totalCount3
-    integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3, localDe
+    integer(ESMF_KIND_I4), dimension(2)  :: totalCount2, totalUBound2, totalLBound2
+    integer(ESMF_KIND_I4), dimension(3)  :: totalCount3, totalUBound3, totalLBound3
+    integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
    
-    type(ESMF_Mesh)          :: mesh2, mesh3
-    integer(ESMF_KIND_I4)    :: localPet, petCount
-    type(ESMF_VM)            :: vm
+    rc = ESMF_SUCCESS
      
     !! Check whether there is already a clock (it might have been set 
     !! with a prior ESMF_gridCompCreate() call.  If not, then create 
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
-    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, vm=vm, rc=rc)
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (clockIsPresent) then
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
@@ -102,9 +98,6 @@ module constant_component
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    call ESMF_VmGet(vm, localPet=localPet, petCount=petCount, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
     !! Log the call to this function
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -113,99 +106,58 @@ module constant_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    !! Look for a matching gridspec/scrip/ugrid file
-	  inquire ( file = trim(name)//'_ugrid.nc', exist=fileIsPresent)
-    if (fileIsPresent) then
-      write(message,'(A)') trim(timestring)//' '//trim(name)//' creates mesh from file '//trim(name)//'_ugrid.nc'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
+      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+      name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+    call ESMF_AttributeSet(grid3,'creator',trim(name))
 
-      mesh2 = ESMF_MeshCreate(filename=trim(name)//'_ugrid.nc', filetypeflag=ESMF_FILEFORMAT_UGRID, &
-        meshname='sediment_surface_mesh',rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      !!call ESMF_AttributeSet(mesh2,'creator',trim(name))
-      !!if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!!      call ESMF_MeshGet(mesh2,numOwnedElements=numElements,numOwnedNodes=numNodes)
-!!      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      !! @todo: Promote to manifold 3D mesh for 3D variables.  ESMF_UGRID currently only reads 2D grids 
-      !! from files.
-    else
-      write(message,'(A)') trim(timestring)//' '//trim(name)//' creates 2x2x2 default 3d grid.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-      grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
-        coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-        name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_AttributeSet(grid3,'creator',trim(name))
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(grid3, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_GridAddCoord(grid3, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc) 
+    if (localDeCount3>0) then
+      call ESMF_GridGetCoord(grid3, coordDim=1, localDE=0, farrayPtr=farrayPtr3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      if (localDeCount3>0) then
-        localDe=0
-!      do localDe=0,localDeCount3-1
-!        write(0,'(4(X,I3))') localDe, localDecount3, localPet, petCount
-!        call ESMF_GridGetCoordBounds(grid3, coordDim=1, localDE=localDe, &
-!          exclusiveLBound=elbound3, exclusiveUBound=eubound3, &
-!          computationalLBound=clbound3, computationalUBound=cubound3, & 
-!          totalLBound=tlbound3, totalUBound=tubound3, rc=rc)
-!        write(0,'(13(X,I3))') localDe, elbound3, eubound3, clbound3, cubound3, tlbound3, tubound3
-        !!write(message,'(13(X,I3))') localDe, elbound3, eubound3, clbound3, cubound3, tlbound3, tubound3
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-        call ESMF_LogFlush()
-      
-        call ESMF_GridGetCoord(grid3, coordDim=1, localDE=localDe, farrayPtr=farrayPtr3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        farrayPtr3(1,:,:)=7.0D0
-        farrayPtr3(2,:,:)=9.0D0
+      farrayPtr3(:,:,:)=8.0D0
     
-        call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=localDe, farrayPtr=farrayPtr3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        farrayPtr3(:,1,:)=53.0D0
-        farrayPtr3(:,2,:)=55.0D0
-
-        call ESMF_GridGetCoord(grid3, coordDim=3,  localDE=localDe, farrayPtr=farrayPtr3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        farrayPtr3(:,:,1)=0.0D0
-        farrayPtr3(:,:,2)=1.0D0
-
-      endif
-
-      grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/2,2/), &
-        coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-        name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)      
+      call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=0, farrayPtr=farrayPtr3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_AttributeSet(grid2,'creator',trim(name))
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridAddCoord(grid2, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_GridGet(grid2, localDeCount=localDeCount2, rc=rc) 
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      if (localDeCount2>0) then
-        call ESMF_GridGetCoord(grid2, coordDim=1, localDE=0, farrayPtr=farrayPtr2, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        farrayPtr2(1,:)=7.0D0
-        farrayPtr2(2,:)=9.0D0
-    
-        call ESMF_GridGetCoord(grid2, coordDim=2,  localDE=0, farrayPtr=farrayPtr2, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        farrayPtr2(:,1)=53.1D0
-        farrayPtr2(:,2)=55.1D0
-      endif
-
-      !> Create ArraySpecs for both grids
-      call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      farrayPtr3(:,:,:)=54.1D0
     endif
+
+    grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+      name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)      
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_AttributeSet(grid2,'creator',trim(name))
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(grid2, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_GridGet(grid2, localDeCount=localDeCount2, rc=rc) 
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (localDeCount2>0) then
+      call ESMF_GridGetCoord(grid2, coordDim=1, localDE=0, farrayPtr=farrayPtr2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr2(:,:)=8.0D0
     
+      call ESMF_GridGetCoord(grid2, coordDim=2,  localDE=0, farrayPtr=farrayPtr2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farrayPtr2(:,:)=54.1D0
+    endif
+
+    !> Create ArraySpecs for both grids
+    call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     !> create list of export_variables, that will come from a function
     !> which reads a text file
 
@@ -228,8 +180,6 @@ module constant_component
         open(fileunit,file='constant_component.dat',iostat=rc, action='read', status='old')
         if (rc == 0) then
           write(message,'(A)') trim(name)//' reads from file constant_component.dat.  This feature is deprecated.'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-          write(message,'(A)') 'Use '//trim(name)//'.dat as an input file to this component.'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         else
           write(message,'(A)') trim(name)//' could not open file for reading.'
@@ -279,11 +229,9 @@ module constant_component
           start = index(cur_item%standard_name(start:),'_at_')+1
         enddo 
                 
-        write(0,*) 'constant_component: read ', &
-              trim(varname),' =',cur_item%value,'(',unitString,')'
         if ((cur_item%rank == 3 .and. localDeCount3>0) &
           .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
-          write(0,*) trim(name)//' component: create field ', &
+          write(0,*) 'constant_component: create field ', &
               trim(varname),' =',cur_item%value
           write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
             ' rank(',cur_item%rank,'), value ',cur_item%value
@@ -309,7 +257,7 @@ module constant_component
               
           if (localDeCount3>0) then
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, & 
-              totalLBound=tlBound3, totalUBound=tuBound3, totalCount=totalCount3, rc=rc)
+              totalLBound=totalLBound3, totalUBound=totalUBound3, totalCount=totalCount3, rc=rc)
             farrayPtr3(:,:,:)=cur_item%value
           endif              
         elseif (cur_item%rank==2) then
@@ -320,7 +268,7 @@ module constant_component
 
           if (localDeCount2>0) then
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, & 
-              totalLBound=tLBound2, totalUBound=tUBound2, totalCount=totalCount2, rc=rc)
+              totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
             farrayPtr2(:,:)=cur_item%value
           endif 
         else
