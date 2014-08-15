@@ -23,6 +23,9 @@ mkdir -p ${ESMF_INSTALL_PREFIX}/etc
 export ESMF_OS=$(${ESMF_DIR}/scripts/esmf_os)
 export ESMF_ABI=64
 
+`which sed` && export SED=$(which sed)
+`which gsed` && export SED=$(which gsed)
+
 #echo y        | module clear
 
 for C in $COMMS ; do
@@ -76,7 +79,7 @@ for C in $COMMS ; do
        
        
        # Fix -lmpi_f77 on recent Darwin/MacPorts
-       sed -i 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
+       ${SED} -i 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
        
        ln -sf ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.default ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}
        
