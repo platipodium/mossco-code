@@ -3,9 +3,10 @@
 coupling:
   - components:
      - constant
+     - regrid_coupler
      - fabm_sediment
-    interval: 1 yy
+    interval: 1 d 
   - components:
      - fabm_sediment
      - netcdf
-    interval: 1 d
+    interval: 10 d

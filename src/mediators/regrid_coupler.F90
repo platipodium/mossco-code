@@ -138,13 +138,18 @@ module regrid_coupler
           cycle
         endif
         
-        if (dstDeCount < 2 .or. srcDeCount < 2) then
+        if (dstDeCount < 2) then
+           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+            ' in export state; xgrid not implemented for deCount=1'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
+          cycle
+        endif
+        if (srcDeCount < 2) then
            write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
             ' in import state; xgrid not implemented for deCount=1'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
           cycle
         endif
-        
        
         xgrid = ESMF_XGridCreate(sideAGrid=(/srcGrid/), sideBGrid=(/dstGrid/), rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -167,7 +172,7 @@ module regrid_coupler
            farrayPtr3(:,:,:)=0.0
         endif
 
-	      call ESMF_FieldRegridStore(xgrid, srcField, field, &
+        call ESMF_FieldRegridStore(xgrid, srcField, field, &
           routehandle=rhList(1), rc=rc)
         call ESMF_RoutehandleSet(rhList(1), name='f2x:://trim(itemNameList(i))', rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

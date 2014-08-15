@@ -106,8 +106,8 @@ module constant_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/2,2,2/), &
-      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+    grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
+      regDecomp=(/2,2,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
       name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
@@ -129,9 +129,9 @@ module constant_component
       farrayPtr3(:,:,:)=54.1D0
     endif
 
-    grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+    grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/4,4/), &
       coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-      name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)      
+      regDeComp=(/2,2/),name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)      
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_AttributeSet(grid2,'creator',trim(name))
