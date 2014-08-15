@@ -2,7 +2,7 @@
 """
 Created on Fri Jun 20 10:49:26 2014
 
-@author: Carsten Lemmen
+@author: Carsten Lemmen and Richard Hofmeister
 
 This python script creates from a Triangle set of node and element files (.node and .ele)
 a CF-convention unstructured grid (UGRID)
@@ -10,6 +10,7 @@ a CF-convention unstructured grid (UGRID)
 
 from pylab import *
 import netCDF4
+import sys
 
 
 def read_elements(basename):
@@ -59,7 +60,10 @@ def read_nodes(basename):
        
 if __name__ == '__main__':
 
-  basename = '/Users/lemmen/devel/GIS/Triangle/topo.1'
+  if len(sys.argv)>1:
+    basename=sys.argv[1]
+  else:
+    basename = '/Users/lemmen/devel/GIS/Triangle/topo.1'
   elements,max_node_per_element = read_elements(basename)  
   start_index=elements["id"][0]
   nodes = read_nodes(basename)  
