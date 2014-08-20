@@ -30,6 +30,7 @@
     integer                            :: ndiag
     contains
     procedure :: get_rhs
+    procedure :: get_dependencies
     procedure :: set_environment
     procedure :: get_export_state_by_id
     procedure :: get_all_export_states
@@ -100,20 +101,49 @@
 
   end subroutine get_rhs
 
+
+  !> get list of external dependencies
+  function get_dependencies(pf) result(dependencies)
+  class(type_mossco_fabm_pelagic) :: pf
+  character(len=1024),dimension(:), pointer :: dependencies
+
+  ! get number of external dependencies in FABM
+  ! allocate list of dependencies names
+  ! and set the names
+
+  end function
+
+
   !> set environment forcing for FABM
-  subroutine set_environment(pf)
+  subroutine set_environment(pf,varname,ptr_bulk,ptr_horizontal,ptr_scalar)
   class(type_mossco_fabm_pelagic) :: pf
 
-  ! type (type_bulk_variable_id)            :: bulk_id
-  ! type (type_horizontal_variable_id)      :: horizontal_id
-  ! type (type_scalar_variable_id)          :: scalar_id
+  character(len=*), intent(in)                  :: varname
+  real(rk), dimension(:,:,:), optional, pointer :: ptr_bulk
+  real(rk), dimension(:,:), optional, pointer   :: ptr_horizontal
+  real(rk), optional, pointer                   :: ptr_scalar
 
-  ! read name of import state and get FABM's id by
-  ! id = fabm_get_bulk_variable_id(model,variable_name)
-  ! check if variable is used by
-  ! fabm_is_variable_used(bulk_id)
-  ! or alternatively
-  ! fabm_is_variable_used(horizontal_id), fabm_is_variable_used(scalar_id)
+  type (type_bulk_variable_id)            :: bulk_id
+  type (type_horizontal_variable_id)      :: horizontal_id
+  type (type_scalar_variable_id)          :: scalar_id
+
+  ! read name of import state and get FABM's id
+  if (present(ptr_bulk)) then
+    bulk_id = fabm_get_bulk_variable_id(pf%model,varname)
+    ! link data if variable is used
+    if (fabm_is_variable_used(bulk_id)) call fabm_link_bulk_data(pf%model,bulk_id,ptr_bulk)
+
+  else if (present(ptr_horizontal)) then
+    horizontal_id = fabm_get_horizontal_variable_id(pf%model,varname)
+    ! link data if variable is used
+    if (fabm_is_variable_used(horizontal_id)) call fabm_link_horizontal_data(pf%model,horizontal_id,ptr_horizontal)
+
+  else if (present(ptr_scalar)) then
+    scalar_id = fabm_get_scalar_variable_id(pf%model,varname)
+    ! link data if variable is used
+    if (fabm_is_variable_used(scalar_id)) call fabm_link_scalar_data(pf%model,scalar_id,ptr_scalar)
+
+  end if
 
   end subroutine set_environment
 
