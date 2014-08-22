@@ -332,6 +332,8 @@ module getm_component
     if (GridIsPresent) then
       call ESMF_GridCompGet(gridComp,grid=getmGrid)
       call ESMF_GridGet(getmGrid,distgrid=getmDistGrid)
+      !call ESMF_GridGetCoord(getmGrid,coordDim=...,staggerloc=...,array=array)
+      !call ESMF_ArrayDestroy(array)
       call ESMF_DistGridDestroy(getmDistGrid)
       call ESMF_GridDestroy(getmGrid)
     end if
@@ -475,6 +477,8 @@ module getm_component
    type(ESMF_CoordSys_Flag) :: coordSys
    type(ESMF_StaggerLoc)    :: StaggerLoc
    type(ESMF_ARRAY)         :: xArray,yArray
+!  Note (KK): ESMF_ARRAY's are deep classes, that persist after return.
+!             (even without save attribute).
    integer(ESMF_KIND_I4),dimension(:),allocatable,target :: alledges
    integer(ESMF_KIND_I4),dimension(4),target             :: myedges
    integer                  :: getmPetCount
