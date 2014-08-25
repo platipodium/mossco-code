@@ -16,6 +16,7 @@
   use mossco_strings
   use fabm
   use fabm_types
+  use fabm_standard_variables
   implicit none
   private
 
@@ -28,6 +29,7 @@
     real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf
     real(rk)                           :: decimal_yearday
     integer                            :: ndiag
+    type(type_bulk_standard_variable),dimension(:), pointer :: bulk_dependencies
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
@@ -35,6 +37,7 @@
     procedure :: get_export_state_by_id
     procedure :: get_all_export_states
     procedure :: update_export_states
+    procedure :: diagnostic_variables
   end type
 
   type,public :: export_state_type !< pelagic FABM driver type for export states
@@ -70,8 +73,9 @@
   pf%ndiag = size(pf%model%info%diagnostic_variables)
   allocate(pf%conc(1:inum,1:jnum,1:knum,1:pf%nvar))
 
-  ! initialise the export states
+  ! initialise the export states and dependencies
   call pf%get_all_export_states()
+  call pf%get_dependencies()
 
   end function mossco_create_fabm_pelagic
 
@@ -103,15 +107,19 @@
 
 
   !> get list of external dependencies
-  function get_dependencies(pf) result(dependencies)
+  subroutine get_dependencies(pf)
   class(type_mossco_fabm_pelagic) :: pf
-  character(len=1024),dimension(:), pointer :: dependencies
 
-  ! get number of external dependencies in FABM
+  ! get number of external dependencies in FABM,
+  ! as intermediate solution keep a hardcoded list of standard dependencies
   ! allocate list of dependencies names
+  allocate(pf%bulk_dependencies(2))
+  
   ! and set the names
+  pf%bulk_dependencies(1)=standard_variables%temperature
+  pf%bulk_dependencies(2)=standard_variables%downwelling_photosynthetic_radiative_flux
 
-  end function
+  end subroutine
 
 
   !> set environment forcing for FABM
@@ -230,6 +238,22 @@
   deallocate(wstmp)
   !> @todo add benthic state variables
   end subroutine update_export_states
+
+  !> fabm_pelagic_diagnostic_variables
+  !!
+  !! The function returns a pointer to the 3d diagnostic variables.
+  !! So far, only bulk diagnostic variables are supported. The function is a
+  !! wrapper of the related FABM function.
+
+  function diagnostic_variables(pf,n) result(diag)
+  implicit none
+
+  class(type_mossco_fabm_pelagic)    :: pf
+  integer,intent(in)                 :: n
+  real(rk),dimension(:,:,:),pointer  :: diag
+
+  diag => fabm_get_bulk_diagnostic_data(pf%model,n)
+  end function diagnostic_variables
 
   end module mossco_fabm_pelagic
 

@@ -22,7 +22,8 @@ module fabm_pelagic_component
 
   use esmf
   use fabm
-  use fabm_pelagic_driver
+  use fabm_types
+  use mossco_fabm_pelagic
   use solver_library
   use mossco_strings
   use mossco_state
@@ -158,11 +159,11 @@ module fabm_pelagic_component
                          name=trim(pel%export_states(n)%standard_name)//'_in_water', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(pel%export_states(n)%unit))
+        call ESMF_AttributeSet(field,'units',trim(pel%export_states(n)%units))
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
                        totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f3 = pel%export_states(n)%data ! initialize with 0.0
+        ptr_f3 = pel%export_states(n)%conc ! initialize with 0.0
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -189,14 +190,22 @@ module fabm_pelagic_component
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       end do
 
-      !! create boundary fields in import State
-      field = ESMF_FieldCreate(states_grid, &
-               name='temperature_in_water', &
+      !! create forcing fields in import State
+      do n=1,size(pel%bulk_dependencies)
+        field = ESMF_FieldCreate(state_grid, &
+               name=trim(pel%bulk_dependencies(n)%name)//'in_water', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_AttributeSet(field,'units','degC')
-      call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+        !! set FABM's pointers to dependencies data,
+        !! this probably has to be done only once (here) and not in Run
+        call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_f3)
+
+        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end do
     !call ESMF_StatePrint(importState)
 
     !! Finally, log the successful completion of this function
@@ -223,7 +232,7 @@ module fabm_pelagic_component
     type(ESMF_Field)  :: field
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
-    integer           :: fieldcount, i
+    integer           :: fieldcount, i,j
     integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: string
     type(ESMF_Alarm)           :: outputAlarm
@@ -260,8 +269,17 @@ module fabm_pelagic_component
     write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    !> link environment forcing from importState
-    call pel%set_environment()
+#if 0
+    !> link environment forcing from importState,
+    !! maybe necessary although done in Initialize already
+    do n=1,size(pel%bulk_dependencies)
+      call ESMF_StateGet(importState,trim(pel%bulk_dependencies(n)%name)//'_in_water',field,rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_f3)
+    end do
+#endif
 
     do while (.not.ESMF_ClockIsStopTime(clock))
       call ode_solver(pel,dt,ode_method)
@@ -269,9 +287,13 @@ module fabm_pelagic_component
       ! reset concentrations to mininum_value
       do n=1,pel%nvar
         do k=1,pel%knum
-          if (pel%conc(1,1,k,n) .lt. pel%model%info%state_variables(n)%minimum) then
-            pel%conc(_IRANGE_,_JRANGE_,k,n) = pel%model%info%state_variables(n)%minimum
+        do j=1,pel%jnum
+        do i=1,pel%inum
+          if (pel%conc(i,j,k,n) .lt. pel%model%info%state_variables(n)%minimum) then
+            pel%conc(i,j,k,n) = pel%model%info%state_variables(n)%minimum
           end if
+        end do
+        end do
         end do
       end do
 
@@ -291,7 +313,7 @@ module fabm_pelagic_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = pel%export_states(n)%data
+      ptr_f3 = pel%export_states(n)%conc
       if (pel%export_states(n)%fabm_id /= -1) then
         call ESMF_StateGet(exportState, &
            trim(pel%export_states(n)%standard_name)//'_vertical_velocity', &
@@ -299,7 +321,7 @@ module fabm_pelagic_component
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f2 = pel%export_states(n)%ws
+        ptr_f3 = pel%export_states(n)%ws
       end if
     end do
  
@@ -352,7 +374,6 @@ module fabm_pelagic_component
    
     close(funit)
 
-    if (allocated(conc)) deallocate(conc)
     if (allocated(bdys)) deallocate(bdys)
     if (allocated(fluxes)) deallocate(fluxes)
 
