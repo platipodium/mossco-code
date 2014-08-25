@@ -34,12 +34,23 @@ module fabm_pelagic_component
  
   real(rk)  :: dt
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
+  integer   :: inum=1,jnum=1
   integer   :: t,tnum,funit,k,n,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
+
+  type :: type_2d_pointer
+    real(rk),dimension(:,:), pointer :: p
+  end type
+
+  type :: type_3d_pointer
+    real(rk),dimension(:,:,:), pointer :: p
+  end type
+
   real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
   real(rk),dimension(:,:),pointer   :: fptr2d
   real(rk),dimension(:,:), pointer  :: statemesh_ptr
+  type(type_2d_pointer), dimension(:), pointer :: bfl
  
   type(type_mossco_fabm_pelagic),save :: pel
 
@@ -131,26 +142,26 @@ module fabm_pelagic_component
     !! Set the time step end stop time
     call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
     call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
+
+    !! Initialize FABM
+    pel = mossco_create_fabm_pelagic(inum,jnum,numlayers,dt)
+
+    !! allocate local arrays
+    allocate(bfl(pel%nvar))
  
     ! set solver_settings:
     pel%dt_min=dt_min
     pel%relative_change_min=relative_change_min
 
-      distGrid_3d =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,numlayers/), &
-                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-      distGrid_2d =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
-                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,numlayers/), &
-        regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+    call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/inum,jnum,numlayers/), &
+    regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
         name="pelagic states grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
         coorddep2=(/2/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridAddCoord(state_grid, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(state_grid, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       ! put concentration array and vertical velocity into export state
       ! it might be enough to do this once in initialize(?)
@@ -193,7 +204,7 @@ module fabm_pelagic_component
       !! create forcing fields in import State
       do n=1,size(pel%bulk_dependencies)
         field = ESMF_FieldCreate(state_grid, &
-               name=trim(pel%bulk_dependencies(n)%name)//'in_water', &
+               name=trim(pel%bulk_dependencies(n)%name)//'_in_water', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
@@ -205,7 +216,25 @@ module fabm_pelagic_component
 
         call ESMF_StateAddReplace(importState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name)//'in_water',requiredFlag=.true.,requiredRank=3)
       end do
+
+      !! prepare upward_flux forcing
+      do n=1,size(pel%model%state_variables)
+        varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux'
+        field = ESMF_FieldCreate(flux_grid, &
+               name=varname, &
+               typekind=ESMF_TYPEKIND_R8, &
+               staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_AttributeSet(field,'units',trim(pel%model%state_variables(n)%units))
+        !! initialise with zeros
+        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=bfl(n)%p, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        bfl(n)%p = 0.0_rk
+        call set_item_flags(importState,trim(varname),requiredFlag=.false.,requiredRank=3)
+      end do
+
     !call ESMF_StatePrint(importState)
 
     !! Finally, log the successful completion of this function
@@ -282,7 +311,13 @@ module fabm_pelagic_component
 #endif
 
     do while (.not.ESMF_ClockIsStopTime(clock))
+      ! integrate rates
       call ode_solver(pel,dt,ode_method)
+
+      ! integrate bottom upward fluxes
+      do n=1,pel%nvar
+        pel%conc(:,:,1,n) = pel%conc(:,:,1,n) + bfl(n)%p*dt
+      end do
 
       ! reset concentrations to mininum_value
       do n=1,pel%nvar
