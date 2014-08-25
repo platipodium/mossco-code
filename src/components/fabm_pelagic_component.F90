@@ -143,6 +143,24 @@ module fabm_pelagic_component
     call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
     call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
 
+    !! get/set grid:
+    !! possibly rely on temperature_in_water field in importState
+    !! and just take the same grid&distgrid.
+    !! so far, this is hardcoded to 1,1,numlayers
+    call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), &
+                   maxIndex=(/inum,jnum,numlayers/), &
+                   regDecomp=(/1,1,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="pelagic states grid", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(state_grid, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic(inum,jnum,numlayers,dt)
 
@@ -153,19 +171,9 @@ module fabm_pelagic_component
     pel%dt_min=dt_min
     pel%relative_change_min=relative_change_min
 
-    call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/inum,jnum,numlayers/), &
-    regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-        name="pelagic states grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
-        coorddep2=(/2/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridAddCoord(state_grid, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      ! put concentration array and vertical velocity into export state
-      ! it might be enough to do this once in initialize(?)
-      do n=1,size(pel%export_states)
+    ! put concentration array and vertical velocity into export state
+    ! it might be enough to do this once in initialize(?)
+    do n=1,size(pel%export_states)
         field = ESMF_FieldCreate(state_grid,state_array, &
                          name=trim(pel%export_states(n)%standard_name)//'_in_water', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
@@ -189,8 +197,8 @@ module fabm_pelagic_component
         ptr_f3 = pel%export_states(n)%ws ! initialize with 0.0
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      end do
-      do n=1,size(pel%model%info%diagnostic_variables)
+    end do
+    do n=1,size(pel%model%info%diagnostic_variables)
         diag => pel%diagnostic_variables(n)
         field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
                    name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', rc=rc)
@@ -199,10 +207,10 @@ module fabm_pelagic_component
         
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      end do
+    end do
 
-      !! create forcing fields in import State
-      do n=1,size(pel%bulk_dependencies)
+    !! create forcing fields in import State
+    do n=1,size(pel%bulk_dependencies)
         field = ESMF_FieldCreate(state_grid, &
                name=trim(pel%bulk_dependencies(n)%name)//'_in_water', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
@@ -217,10 +225,10 @@ module fabm_pelagic_component
         call ESMF_StateAddReplace(importState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name)//'in_water',requiredFlag=.true.,requiredRank=3)
-      end do
+    end do
 
-      !! prepare upward_flux forcing
-      do n=1,size(pel%model%state_variables)
+    !! prepare upward_flux forcing
+    do n=1,size(pel%model%state_variables)
         varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux'
         field = ESMF_FieldCreate(flux_grid, &
                name=varname, &
@@ -233,7 +241,7 @@ module fabm_pelagic_component
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         bfl(n)%p = 0.0_rk
         call set_item_flags(importState,trim(varname),requiredFlag=.false.,requiredRank=3)
-      end do
+    end do
 
     !call ESMF_StatePrint(importState)
 
