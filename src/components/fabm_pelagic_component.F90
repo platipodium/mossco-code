@@ -86,14 +86,17 @@ module fabm_pelagic_component
 
     type(ESMF_TimeInterval) :: timeInterval,alarmInterval
     character(len=ESMF_MAXSTR) :: string,fileName,varname
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName
     type(ESMF_Config)     :: config
     type(ESMF_FieldBundle) :: fieldBundle(3)
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Field)     :: field
     type(ESMF_Array)     :: array
     integer              :: i
+    integer              :: rank
+    integer, allocatable :: maxIndex(:)
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
-    type(ESMF_Grid)      :: state_grid,flux_grid
+    type(ESMF_Grid)      :: state_grid,flux_grid,foreign_grid
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
     type(ESMF_ArraySpec) :: flux_array,state_array
 
@@ -144,12 +147,18 @@ module fabm_pelagic_component
     call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
 
     !! get/set grid:
-    !! possibly rely on temperature_in_water field in importState
+    !! rely on field with name foreignGridFieldName given as attribute and field
+    !! in importState
     !! and just take the same grid&distgrid.
     !! so far, this is hardcoded to 1,1,numlayers
-    call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), &
+    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+           value=foreignGridFieldName, defaultValue='none',rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (trim(foreignGridFieldName)=='none') then
+      call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), &
                    maxIndex=(/inum,jnum,numlayers/), &
                    regDecomp=(/1,1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
@@ -157,10 +166,31 @@ module fabm_pelagic_component
                    name="pelagic states grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridAddCoord(state_grid, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridAddCoord(state_grid, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    else
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      state_grid = ESMF_GridCreate(foreign_grid,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (rank == 3) then
+        allocate(maxIndex(rank))
+        call ESMF_GridGet(state_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
+               computationalCount=maxIndex,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        inum=maxIndex(1)
+        jnum=maxIndex(2)
+        numlayers=maxIndex(3)
+        deallocate(maxIndex)
+      else
+        write(message,*) 'foreign grid must be of rank = 3'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      end if
+    end if
+     
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic(inum,jnum,numlayers,dt)
 
@@ -237,7 +267,7 @@ module fabm_pelagic_component
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(pel%model%state_variables(n)%units))
         !! initialise with zeros
-        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=bfl(n)%p, rc=rc)
+        call ESMF_FieldGet(field=field, farrayPtr=bfl(n)%p, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         bfl(n)%p = 0.0_rk
         call set_item_flags(importState,trim(varname),requiredFlag=.false.,requiredRank=3)
