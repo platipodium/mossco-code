@@ -32,7 +32,7 @@ ifeq ($(MOSSCO_EROSED),true)
   TARGETS += libmossco_erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
-  TARGETS +=  libsediment libfabm_pelagic
+  TARGETS +=  libsediment libmossco_fabmpelagic
 ifeq ($(MOSSCO_GOTM),true)
   TARGETS += libmossco_fabm0d
 endif
@@ -76,12 +76,15 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
 
+$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_pelagic_driver.o):
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmpelagic
+
 # Why these next two lines???
 #libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 #libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
 libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o) $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 
-libmossco_fabmpelagic: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o) $(MOSSCO_MODULE_PATH)/fabm_pelagic_component.mod
+libmossco_fabmpelagic: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_pelagic_driver.o) $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o) $(MOSSCO_MODULE_PATH)/fabm_pelagic_component.mod
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
 libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
