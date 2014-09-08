@@ -189,7 +189,12 @@ module fabm_gotm_component
     call set_import_flags(importState)
      
     !> Create the grid from existing grid of temperature_in_water field
-    varname="temperature_in_water"
+    !! or any other field specified in foreign_grid_field_name. In general, the importState
+    !! should be used. In the present configuration of GOTM/FABM components, the exportState
+    !! unusually serves the purpose.
+    call ESMF_AttributeGet(exportState, name='foreign_grid_field_name', &
+           value=varname, defaultValue='temperature_in_water', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_StateGet(exportState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
     if (itemcount==0) then
       call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
