@@ -344,13 +344,30 @@ module mossco_netcdf
     integer, intent(out),optional :: rc
     integer                       :: ncStatus
     character(len=*),optional     :: timeUnit
+ 
+    character(len=255)            :: string
+
     ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
     if (present(rc)) rc=ncStatus
     if (present(timeUnit)) call nc%init_time(timeUnit)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
+
     !> @todo check cross-platform compatibility of the iso_fortran_env calls
-    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compiler_version',compiler_version())
-    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compiler_options',compiler_options())
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_version',compiler_version())
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_options',compiler_options())
+
+    call get_command(string)
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_command_line',trim(string))
+    call getcwd(string)
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_working_directory',trim(string))
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_process_id',getpid())
+    !> @todo check cross-platform compatibility of these gnu extensions
+    call getlog(string)
+    write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_user',trim(string))
+    call hostnm(string)
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_hostname',trim(string))
+     
     ncStatus = nf90_enddef(nc%ncid)
   
   end function mossco_netcdfCreate
