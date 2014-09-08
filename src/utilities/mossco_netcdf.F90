@@ -336,6 +336,9 @@ module mossco_netcdf
 
   function mossco_netcdfCreate(filename,timeUnit,rc) result(nc)
 
+    use iso_fortran_env
+    implicit none
+    
     character(len=ESMF_MAXSTR)    :: filename
     type(type_mossco_netcdf)      :: nc
     integer, intent(out),optional :: rc
@@ -345,6 +348,9 @@ module mossco_netcdf
     if (present(rc)) rc=ncStatus
     if (present(timeUnit)) call nc%init_time(timeUnit)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
+    !> @todo check cross-platform compatibility of the iso_fortran_env calls
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compiler_version',compiler_version())
+    ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compiler_options',compiler_options())
     ncStatus = nf90_enddef(nc%ncid)
   
   end function mossco_netcdfCreate
