@@ -719,7 +719,7 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
       ncStatus = nf90_enddef(self%ncid)  
-    
+      
       if (coordDimCount(i) == 1) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, rc=esmfrc)
         if (esmfrc == ESMF_SUCCESS) then
@@ -730,12 +730,20 @@ module mossco_netcdf
         endif
       elseif (coordDimCount(i) == 2) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, rc=esmfrc)
-        if (esmfrc == ESMF_SUCCESS) &
+        if (esmfrc == ESMF_SUCCESS) then
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2)
+        else
+          write(message,'(A)')  'This error will be fixed in the future, disregard for now'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
       elseif (coordDimCount(i) == 3) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, rc=esmfrc)
-        if (esmfrc == ESMF_SUCCESS) &
+        if (esmfrc == ESMF_SUCCESS) then 
           ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3)
+        else
+          write(message,'(A)')  'This error will be fixed in the future, disregard for now'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
       endif
       esmfrc = 0 ! reset esmfrc after checking its status above
     enddo
