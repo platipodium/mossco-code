@@ -2,15 +2,16 @@
 
 TAGS=""
 
-TAGS=ESMF_7_0_0_beta_snapshot_17
-#TAGS="ESMF_6_3_0rp2_beta_snapshot_01 ${TAGS}" 
+TAGS=ESMF_7_0_0_beta_snapshot_19
+#TAGS=ESMF_6_3_0rp2_beta_snapshot_02
+TAGS=ESMF_6_3_0rp1
 #TAGS="ESMF_5_3_1_beta_snapshot_18
 #TAGS=ESMF_4_0_1_beta_snapshot_01
 #TAGS=ESMF_3_1_0rp5
 export TAGS
 
-COMPS="gfortran" # gfortran intel pgi gfortranclang pgigcc intelgcc
-COMMS="openmpi" #  mpiuni mpich2
+COMPS="gfortran gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+COMMS="mpich2" #"openmpi" #  mpiuni mpich2
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull
@@ -23,6 +24,11 @@ export ESMF_ABI=64
 
 `which sed` && export SED=$(which sed)
 `which gsed` && export SED=$(which gsed)
+#export SED=$(which sed)
+
+echo Using SED=${SED}
+echo Using ESMF_OS=${ESMF_OS}
+echo Using ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 
 #echo y        | module clear
 
