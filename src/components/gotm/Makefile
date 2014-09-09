@@ -34,7 +34,7 @@ endif
 
 all: $(TARGETS)
 
-libgotm: prefix libgotm_external libmossco_util $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o)
+libgotm: prefix libgotm_external libmossco_util $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o) $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_transport_component.o)
 libmossco_fabmgotm: prefix fabmgotm_drv				\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_component.o)
 libmossco_gotmfabm: prefix libgotm libmossco_fabmgotm \
