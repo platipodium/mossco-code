@@ -31,7 +31,7 @@ LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
 LDFLAGS += -lmossco_util -lesmf $(NC_LIBS)
 
-.PHONY: all exec libmossco_fabmgotm libconstant libgotm libmossco_erosed libmossco_benthos
+.PHONY: all exec benthic_geoecology libmossco_fabmgotm libconstant libgotm libmossco_erosed libmossco_benthos
 
 all: exec
 exec: libmossco_util libmossco_fabmgotm libconstant libgotm libmossco_erosed libmossco_benthos libmossco_netcdf benthic_geoecology
