@@ -1,10 +1,10 @@
 !> @brief Implementation of an ESMF component that delivers constant data fields
 !
-!> @import 
+!> @import
 !> @export water_temperature, salinity
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -46,7 +46,7 @@ module constant_component
   end subroutine SetServices
 
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -65,39 +65,39 @@ module constant_component
     type(ESMF_Grid)                             :: grid2, grid3
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
-    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:) 
+    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:)
     character(len=ESMF_MAXSTR)                  :: varname
     integer, parameter                          :: fileunit=21
     logical                                     :: file_readable=.true., clockIsPresent
     integer(ESMF_KIND_I4)                       :: start
-    
+
     character(len=ESMF_MAXSTR)                  :: timeString, unitString
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
     integer(ESMF_KIND_I4), dimension(2)  :: totalCount2, totalUBound2, totalLBound2
     integer(ESMF_KIND_I4), dimension(3)  :: totalCount3, totalUBound3, totalLBound3
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
-   
+
     rc = ESMF_SUCCESS
-     
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+
+    !! Check whether there is already a clock (it might have been set
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
     call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     else
       clock = ESMF_ClockCreate(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     !! Log the call to this function
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -107,23 +107,23 @@ module constant_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
-      regDecomp=(/2,2,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
       name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
+
     call ESMF_AttributeSet(grid3,'creator',trim(name))
 
     call ESMF_GridAddCoord(grid3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc) 
+    call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (localDeCount3>0) then
       call ESMF_GridGetCoord(grid3, coordDim=1, localDE=0, farrayPtr=farrayPtr3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       farrayPtr3(:,:,:)=8.0D0
-    
+
       call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=0, farrayPtr=farrayPtr3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       farrayPtr3(:,:,:)=54.1D0
@@ -131,7 +131,7 @@ module constant_component
 
     grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/4,4/), &
       coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-      regDeComp=(/2,2/),name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)      
+      regDeComp=(/1,1/),name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_AttributeSet(grid2,'creator',trim(name))
@@ -139,14 +139,14 @@ module constant_component
     call ESMF_GridAddCoord(grid2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridGet(grid2, localDeCount=localDeCount2, rc=rc) 
+    call ESMF_GridGet(grid2, localDeCount=localDeCount2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (localDeCount2>0) then
       call ESMF_GridGetCoord(grid2, coordDim=1, localDE=0, farrayPtr=farrayPtr2, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       farrayPtr2(:,:)=8.0D0
-    
+
       call ESMF_GridGetCoord(grid2, coordDim=2,  localDE=0, farrayPtr=farrayPtr2, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       farrayPtr2(:,:)=54.1D0
@@ -189,7 +189,7 @@ module constant_component
       endif
     endif
 
-    if (rc ==0 ) then 
+    if (rc ==0 ) then
       do
         !> read constant_component.dat line by line, maybe add rank later
         !! format of each line is:
@@ -199,7 +199,7 @@ module constant_component
         line=adjustl(line)
         if (len_trim(line)==0) cycle
         if (line(1:1)=='#' .or. line(1:1)=='%' .or. line(1:1)=='#') cycle
-       
+
         read(line,*,iostat=rc) varname
         if (rc /= 0) cycle
         line=adjustl(line(len_trim(varname)+1:))
@@ -216,7 +216,7 @@ module constant_component
         else
           unitString=''
         endif
-  
+
         !> add item to list of constants
         allocate(cur_item%next)
         cur_item => cur_item%next
@@ -227,39 +227,39 @@ module constant_component
         do while (index(cur_item%standard_name(start:),'_at_')>0)
           cur_item%rank=cur_item%rank - 1
           start = index(cur_item%standard_name(start:),'_at_')+1
-        enddo 
-                
+        enddo
+
         if ((cur_item%rank == 3 .and. localDeCount3>0) &
           .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
           write(0,*) 'constant_component: create field ', &
               trim(varname),' =',cur_item%value
           write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
             ' rank(',cur_item%rank,'), value ',cur_item%value
-          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
+          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
         endif
         nullify(cur_item%next)
       end do
     close(fileunit)
     end if
-!5   continue    
+!5   continue
 
 
     !> now go through list, create fields and add to exportState
     cur_item => variable_items%next
-    if (file_readable) then 
+    if (file_readable) then
       do
-        if (cur_item%rank==3) then 
-          
+        if (cur_item%rank==3) then
+
           cur_item%field = ESMF_FieldCreate(grid3, arraySpec3, &
             indexflag=ESMF_INDEX_DELOCAL, &
             staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-              
+
           if (localDeCount3>0) then
-            call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, & 
+            call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, &
               totalLBound=totalLBound3, totalUBound=totalUBound3, totalCount=totalCount3, rc=rc)
             farrayPtr3(:,:,:)=cur_item%value
-          endif              
+          endif
         elseif (cur_item%rank==2) then
           cur_item%field = ESMF_FieldCreate(grid2, arraySpec2, &
             indexflag=ESMF_INDEX_DELOCAL, &
@@ -267,22 +267,22 @@ module constant_component
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
           if (localDeCount2>0) then
-            call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, & 
+            call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, &
               totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
             farrayPtr2(:,:)=cur_item%value
-          endif 
+          endif
         else
           write(0,*) cur_item%rank, trim(varname), cur_item%rank
           write(message,'(A,I1,A)') trim(name)//' not implemented reading rank(', &
             cur_item%rank,') variable '//trim(varname)
-          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO) 
+          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
         endif
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          
+
         if (len_trim(unitString)>0) then
-          call ESMF_AttributeSet(cur_item%field,'units',trim(unitString)) 
+          call ESMF_AttributeSet(cur_item%field,'units',trim(unitString))
         endif
-        
+
         call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -293,7 +293,7 @@ module constant_component
         end if
       end do
     endif
-        
+
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -303,7 +303,7 @@ module constant_component
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)     :: gridComp
     type(ESMF_State)        :: importState, exportState
     type(ESMF_Clock)        :: parentClock
@@ -316,7 +316,7 @@ module constant_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
     type(ESMF_TimeInterval) :: timeInterval
-     
+
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -327,7 +327,7 @@ module constant_component
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -343,19 +343,19 @@ module constant_component
     !!    in these import fields to your model's internal data.  Be aware that
     !!    oftentimes the import state you get here is an export from an entirely different
     !!    ESMF component.  In particular, you cannot rely on your import state to be
-    !!    the same as your Initialize() routines import state. 
+    !!    the same as your Initialize() routines import state.
 
-    if (clockIsPresent) then 
+    if (clockIsPresent) then
       do while (.not. ESMF_ClockIsStopTime(clock, rc=rc))
 
       !! Your own code continued:
       !! 2. Calling a single (or even multiple) internal of your model
-       
+
         call ESMF_ClockAdvance(clock, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      enddo       
+      enddo
     endif
-    
+
     !! 3. You should not have to do anything with the export state, because the mapping
     !!    between your internal model's data and the exported fields has already been
     !!    done in the Initialize() routine.  In MOSSCO, this is recommended practices, but
@@ -372,7 +372,7 @@ module constant_component
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -391,11 +391,11 @@ module constant_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.clockIsPresent) then
       clock=parentClock
-    else 
+    else
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     !> Get the time and log it
     call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -403,15 +403,15 @@ module constant_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-   
+
     !! Here comes your own finalization code
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Deallocate all your model's internal allocated memory    
+    !! 2. Deallocate all your model's internal allocated memory
     !! 3. Destroy your clock
 
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
