@@ -33,6 +33,7 @@ module gotm_transport_component
   end type
 
   type(type_data_ptr),dimension(:),pointer :: tracer
+  type(ESMF_Clock) :: clock
 
 #define GOTM_REALTYPE real(kind=selected_real_kind(13))
 #define _ZERO_ 0.0d0
@@ -77,7 +78,7 @@ module gotm_transport_component
 
     type(ESMF_GridComp)         :: gridComp
     type(ESMF_State)            :: importState, exportState
-    type(ESMF_Clock)            :: parentClock, clock
+    type(ESMF_Clock)            :: parentClock
     integer, intent(out)        :: rc
 
     character(len=19)           :: timestring
@@ -147,26 +148,26 @@ module gotm_transport_component
           call ESMF_StateGet(importState, varname, field, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-          if (varname((namelen-11):namelen)=='_z_velocity') continue
+          if (varname((namelen-11):namelen)=='_z_velocity') cycle
          call ESMF_StateGet(importState, trim(varname)//'_z_velocity', field, rc=rc)
           ! go to next item, if no *_z_velocity is present
-          if (rc /= ESMF_SUCCESS) continue
+          if (rc /= ESMF_SUCCESS) cycle
 
           call ESMF_FieldGet(field, farrayPtr=tracer_ptr%conc, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
           call ESMF_FieldGet(field, farrayPtr=tracer_ptr%ws, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          tracer = tracer_append(tracer,tracer_ptr)
+          call tracer_append(tracer,tracer_ptr)
 
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           varname=trim(itemNameList(i))
           namelen=len_trim(varname)
 
-          if (varname((namelen-11):namelen)=='_z_velocity') continue
+          if (varname((namelen-10):namelen)=='_z_velocity') cycle
           call ESMF_StateGet(importState, trim(varname)//'_z_velocity', wsFieldBundle, rc=rc)
           ! go to next item, if no *_z_velocity is present
-          if (rc /= ESMF_SUCCESS) continue
+          if (rc /= ESMF_SUCCESS) cycle
 
           call ESMF_StateGet(importState, varname, fieldBundle, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -185,8 +186,10 @@ module gotm_transport_component
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
             call ESMF_FieldGet(wsFieldList(ii), farrayPtr=tracer_ptr%ws, rc=rc)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-            tracer = tracer_append(tracer, tracer_ptr)
+            call tracer_append(tracer, tracer_ptr)
           end do
+          deallocate(fieldList)
+          deallocate(wsFieldList)
         end if
       end do
 
@@ -241,10 +244,9 @@ module gotm_transport_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' running with dt='
     
-    call ESMF_TimeIntervalGet(timeInterval,s_r8 = dt)
+    call ESMF_TimeIntervalGet(timeInterval, s_r8=dt, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    write(message,'(A,I5,A)') trim(message),seconds,' s to '
+    write(message,'(A,F6.1,A)') trim(message),dt,' s to '
     call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
@@ -253,11 +255,7 @@ module gotm_transport_component
     ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
      do while (.not.ESMF_ClockIsStopTime(clock))
 
-       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, &
-         timestep=timeStep, rc=rc)
-       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-       call ESMF_TimeIntervalGet(timeStep,s_r8=dt, rc=rc)
+       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
        ! Vertical advection and residual movement (sinking/floating)
@@ -298,21 +296,26 @@ module gotm_transport_component
   end subroutine Finalize
 
 
-  function tracer_append(oldTracer, tracerPtr) result (newTracer)
-  type(type_data_ptr),dimension(:),pointer :: oldTracer,newTracer
+  subroutine tracer_append(tracer, tracerPtr)
+  type(type_data_ptr),dimension(:),pointer,intent(inout) :: tracer
+  type(type_data_ptr),dimension(:),pointer :: t_
   type(type_data_ptr)                      :: tracerPtr
   integer                                  :: n
 
-  if (.not. associated(oldTracer)) then
+  if (.not. associated(tracer)) then
     n = 1
-    allocate(newTracer(n))
+    allocate(tracer(n))
   else
-    n = size(oldTracer)
-    allocate(newTracer(n+1))
-    newTracer(1:n) = oldTracer
-    deallocate(oldTracer)
+    n = size(tracer)
+    allocate(t_(n))
+    t_=tracer
+    deallocate(tracer)
+    allocate(tracer(n+1))
+    tracer(1:n) = t_
+    deallocate(t_)
+    n=n+1
   end if
-  newTracer(n)=tracerPtr
-  end function
+  tracer(n)=tracerPtr
+  end subroutine
 
 end module gotm_transport_component
