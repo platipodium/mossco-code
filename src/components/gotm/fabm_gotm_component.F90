@@ -52,9 +52,7 @@ module fabm_gotm_component
   !> local variables for the setup control
   character(len=80)         :: title,name
   integer                   :: nlev
-  GOTM_REALTYPE             :: cnpar,latitude,longitude,depth
-  GOTM_REALTYPE             :: T0,S0,p0,dtr0,dsr0
-  integer                   :: buoy_method,eq_state_mode,eq_state_method
+  GOTM_REALTYPE             :: latitude,longitude,depth
 
     
   public :: SetServices
@@ -112,7 +110,6 @@ module fabm_gotm_component
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr,wsPtr
     real(ESMF_KIND_R8)   :: attribute_r8
     character(len=ESMF_MAXSTR) :: attribute_name
-    namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
     namelist /station/ name,latitude,longitude,depth
     
     logical                     :: clockIsPresent, fileIsPresent
@@ -145,6 +142,36 @@ module fabm_gotm_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+    !> Create the grid from existing grid of temperature_in_water field
+    !! or any other field specified in foreign_grid_field_name. In general, the importState
+    !! should be used. In the present configuration of GOTM/FABM components, the exportState
+    !! unusually serves the purpose.
+    call ESMF_AttributeGet(exportState, name='foreign_grid_field_name', &
+           value=varname, defaultValue='temperature_in_water', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_StateGet(exportState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
+    if (itemcount==0) then
+      call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
+                    ' without this variable.',ESMF_LOGMSG_ERROR)
+      call ESMF_StatePrint(importState)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    else
+      call ESMF_StateGet(exportState,trim(varname),field,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+      call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+
+    ! Get information to generate the fields that store the pointers to variables
+    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
+      totalCount=farray_shape,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    nlev = farray_shape(3)
+
     !> Read the GOTM configuration file
     configFileName = 'gotmrun.nml'
     inquire(file=trim(configFileName), exist=fileIsPresent)
@@ -156,7 +183,6 @@ module fabm_gotm_component
 
     ! read model_setup namelist
     open(921,file=trim(configFileName),status='old',action='read')
-    read(921,nml=model_setup)
     read(921,nml=station)
     close(921)
 
@@ -187,35 +213,6 @@ module fabm_gotm_component
 
     !> set required, required_rank and optional flags in the importState
     call set_import_flags(importState)
-     
-    !> Create the grid from existing grid of temperature_in_water field
-    !! or any other field specified in foreign_grid_field_name. In general, the importState
-    !! should be used. In the present configuration of GOTM/FABM components, the exportState
-    !! unusually serves the purpose.
-    call ESMF_AttributeGet(exportState, name='foreign_grid_field_name', &
-           value=varname, defaultValue='temperature_in_water', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_StateGet(exportState, itemSearch=trim(varname), itemCount=itemcount,rc=rc)
-    if (itemcount==0) then
-      call ESMF_LogWrite(trim(varname)//' not found. Cannot initialize '// &
-                    ' without this variable.',ESMF_LOGMSG_ERROR)
-      call ESMF_StatePrint(importState)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    else
-      call ESMF_StateGet(exportState,trim(varname),field,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-      call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-
-    ! Get information to generate the fields that store the pointers to variables
-    call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
-      totalCount=farray_shape,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call get_all_export_states(fabm_export_states)
 
