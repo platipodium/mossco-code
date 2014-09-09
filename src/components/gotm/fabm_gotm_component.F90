@@ -350,9 +350,9 @@ module fabm_gotm_component
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' running with dt='
-    call ESMF_TimeIntervalGet(timeInterval,s=seconds)
+    call ESMF_TimeIntervalGet(timeInterval,s_r8=dt)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,I5,A)') trim(message),seconds,' s to '
+    write(message,'(A,F6.1,A)') trim(message),dt,' s to '
     call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
@@ -422,11 +422,7 @@ module fabm_gotm_component
     ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
      do while (.not.ESMF_ClockIsStopTime(clock))
 
-       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, &
-         timestep=timeStep, rc=rc)
-       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-       call ESMF_TimeIntervalGet(timeStep,s_r8=dt, rc=rc)
+       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
