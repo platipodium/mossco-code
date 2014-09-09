@@ -164,6 +164,8 @@ module gotm_component
     ! copy start and stop time from clock to gotm's time parameters
     call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
