@@ -231,9 +231,13 @@ contains
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     else
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if(rc /= ESMF_SUCCESS) then 
+       call ESMF_StatePrint (importstate)
+       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end if
       call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
       if (rank<2) then
         write(message,*) 'foreign grid must be of at least rank >= 2'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -623,11 +627,11 @@ end if
                                                     Microphytobenthos_erodibility,rc=rc)
       if (rc==0) then
 
-       if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(1,1,1))
+       if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
 
-       call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f3, rc=rc)
+       call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=rc)
 
-        BioEffects%ErodibilityEffect = ptr_f3
+        BioEffects%ErodibilityEffect = ptr_f2
 #ifdef DEBUG
         write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
 #endif
@@ -639,15 +643,15 @@ end if
 
         if (.not. associated (BioEffects%ErodibilityEffect)) then
 
-            allocate (BioEffects%ErodibilityEffect(1,1,1))
+            allocate (BioEffects%ErodibilityEffect(inum, jnum))
 
             BioEffects%ErodibilityEffect = 1.0
 
         end if
 
-        call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f3, rc=rc)
+        call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f2, rc=rc)
 
-        BioEffects%ErodibilityEffect = ptr_f3 * BioEffects%ErodibilityEffect
+        BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
 #ifdef DEBUG
         write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
 #endif
@@ -658,11 +662,11 @@ end if
                                       Microphytobenthos_critical_bed_shearstress ,rc=rc)
       if (rc==0) then
 
-         if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(1,1,1))
+         if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(inum,jnum))
 
-         call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f3, rc=rc)
+         call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f2, rc=rc)
 
-         BioEffects%TauEffect = ptr_f3
+         BioEffects%TauEffect = ptr_f2
 
       endif
 
@@ -671,15 +675,15 @@ end if
       if (rc==0) then
          if (.not.associated(BioEffects%TauEffect)) then
 
-            allocate (BioEffects%TauEffect(1,1,1))
+            allocate (BioEffects%TauEffect(inum,jnum))
 
             BioEffects%TauEffect =1.0
 
           end if
 
-         call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f3, rc=rc)
+         call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f2, rc=rc)
 
-         BioEffects%TauEffect = ptr_f3 * BioEffects%TauEffect
+         BioEffects%TauEffect = ptr_f2 * BioEffects%TauEffect
 
       endif
 
