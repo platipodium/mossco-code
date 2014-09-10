@@ -31,17 +31,12 @@ module toplevel_component
 
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    type(ESMF_Grid)       :: grid
-    type(ESMF_Field)      :: temperatureField, field, newfield
-    type(ESMF_FieldBundle) :: fieldBundle
-    integer               :: petCount, localPet
-    real(ESMF_KIND_R8),dimension(:,:),allocatable :: farray
+    type(ESMF_GridComp)     :: gridComp
+    type(ESMF_State)        :: importState
+    type(ESMF_State)        :: exportState
+    type(ESMF_Clock)        :: parentClock, childClock
+    type(ESMF_TimeInterval) :: timeStep
+    integer, intent(out)    :: rc
 
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
 
@@ -61,6 +56,15 @@ module toplevel_component
 
     call ESMF_GridCompInitialize(gotmComp, exportState=state, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ! set parentClock time step to gotmComp timestep
+    call ESMF_GridCompGet(gotmComp, clock=childClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(childClock, timeStep=timeStep, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockSet(parentCLock, timeStep=timeStep, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompInitialize(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -70,17 +74,30 @@ module toplevel_component
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-    type(ESMF_Field)      :: field
+    type(ESMF_GridComp)     :: gridComp
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Clock)        :: parentClock, childClock
+    type(ESMF_Time)         :: currTime
+    type(ESMF_TimeInterval) :: timeStep
+    integer, intent(out)    :: rc
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
+      
+      call ESMF_ClockGet(parentClock, currTime=currTime, timeStep=timeStep, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+      call ESMF_GridCompGet(gotmComp,clock=childClock)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(childClock,stopTime=currTime+timeStep)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       call ESMF_GridCompRun(gotmComp, exportState=state, clock=parentClock, rc=rc)
+
+      call ESMF_GridCompGet(fabmgotmComp,clock=childClock)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(childClock,stopTime=currTime+timeStep)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       call ESMF_GridCompRun(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
