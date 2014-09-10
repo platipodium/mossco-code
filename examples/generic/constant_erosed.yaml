@@ -1,7 +1,9 @@
 dependencies:
-  - erosed : constant
+  erosed :
+    component: constant
+    grid: concentration_of_SPM
 coupling:
   - components: 
-     - erosed
      - constant
+     - erosed
     interval: 24 h

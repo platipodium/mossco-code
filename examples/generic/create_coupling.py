@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import sys
 import os
 
@@ -9,14 +8,13 @@ except:
     sys.path.append('/home/lemmen/opt/lib64/python2.6/site-packages/')
     import yaml
 
-
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
      filename = 'fabm_benthic_pelagic+wave.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
-     #filename = 'constant_empty_netcdf.yaml'
+     filename = 'benthic_geoecology.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -57,6 +55,7 @@ gridCompList=[]
 cplCompList=[]
 couplingList=[]
 petList=[]
+foreignGrid={}
 
 intervals =[]
 directions = []
@@ -99,14 +98,19 @@ if len(intervals) == 0:
 # and sort this list
 for component in componentSet:
     for item in dependencies:
-        if item.has_key(component):
+        if type(item) is str:
+          if dependencies[item].has_key('component'):
+              compdeps = dependencies[item]['component']
+          if dependencies[item].has_key('grid'):
+              foreignGrid[item]=dependencies[item]['grid']
+        elif type(item) is dict:
           compdeps = item.values()[0]
-          if type(compdeps) is list:
+        if type(compdeps) is list:
               for compdep in compdeps:
                  if componentList.index(component)< componentList.index(compdep):
                    c=componentList.pop(componentList.index(compdep))
                    componentList.insert(componentList.index(component),c) 
-          elif componentList.index(component)< componentList.index(compdeps):
+        elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
 
@@ -378,6 +382,12 @@ for item in gridCompList:
         if jtem[-1]==item:
             ifrom=gridCompList.index(jtem[0])
     j=gridCompList.index(item)
+    if foreignGrid.has_key(item):
+
+#call ESMF_AttributeSet(pelagicstate, name='foreign_grid_field_name', value='temperature_in_water', rc=rc)
+      fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
+      fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')        
+
     fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
     fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')        
