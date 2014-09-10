@@ -145,17 +145,17 @@ module gotm_transport_component
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           varname=trim(itemNameList(i))
           namelen=len_trim(varname)
-          call ESMF_StateGet(importState, varname, field, rc=rc) 
+          call ESMF_StateGet(importState, varname, concfield, rc=rc) 
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
           if (varname((namelen-11):namelen)=='_z_velocity') cycle
-         call ESMF_StateGet(importState, trim(varname)//'_z_velocity', field, rc=rc)
+         call ESMF_StateGet(importState, trim(varname)//'_z_velocity', wsfield, rc=rc)
           ! go to next item, if no *_z_velocity is present
           if (rc /= ESMF_SUCCESS) cycle
 
-          call ESMF_FieldGet(field, farrayPtr=tracer_ptr%conc, rc=rc)
+          call ESMF_FieldGet(concfield, farrayPtr=tracer_ptr%conc, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-          call ESMF_FieldGet(field, farrayPtr=tracer_ptr%ws, rc=rc)
+          call ESMF_FieldGet(wsfield, farrayPtr=tracer_ptr%ws, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
           call tracer_append(tracer,tracer_ptr)
 
@@ -219,7 +219,8 @@ module gotm_transport_component
     real(ESMF_KIND_R8)      :: dt
     character(len=ESMF_MAXSTR) :: string,varname,message
     integer                 :: w_adv_method=1, w_adv_discr=6, w_adv_ctr=1
-    integer                 :: adv_mode_0=4, adv_mode_1=4, cnpar=1.0
+    integer                 :: adv_mode_0=0, adv_mode_1=1
+    GOTM_REALTYPE           :: cnpar=1.0
     integer                 :: posconc=0 ! allow for negative concentrations
     
     integer(ESMF_KIND_I4)   :: localPet, petCount, hours, seconds, minutes
