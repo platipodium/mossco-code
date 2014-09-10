@@ -892,6 +892,7 @@ end type
    do fabm_id=1,gotmfabm%nvar_pel
        export_states(fabm_id) = get_export_state_by_id(fabm_id)
    end do
+   call update_export_states(export_states)
    !> @todo: add benthic state variables
 
    end subroutine get_all_export_states
