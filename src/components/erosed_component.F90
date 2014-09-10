@@ -45,6 +45,7 @@ module erosed_component
 
    integer                                     :: nmlb           ! first cell number
    integer                                     :: nmub           ! last cell number
+   integer                                     :: inum, jnum     ! number of elements in x and y directions , inum * jnum== nmub - nmlb + 1
    integer                                     :: flufflyr       ! switch for fluff layer concept
    integer                                     :: iunderlyr      ! Underlayer mechanism
    integer                                     :: nfrac          ! number of sediment fractions
@@ -113,14 +114,19 @@ contains
     type(ESMF_Clock)    :: parentClock
     integer, intent(out)     :: rc
 
-    type(ESMF_Grid)      :: grid
+    type(ESMF_Grid)      :: grid, foreign_grid
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_ArraySpec) :: arrayspec
     type(ESMF_Array)     :: array
+    type(ESMF_Field)     :: field
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, ptr2_f2
     type(ESMF_FieldBundle) :: upward_flux_bundle,downward_flux_bundle,fieldBundle
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName
+    
+    integer , allocatable :: maxIndex(:)
+    integer               :: rank
 
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
@@ -196,7 +202,89 @@ contains
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
+    
+
+ !! get/set grid:
+    !! rely on field with name foreignGridFieldName given as attribute and field
+    !! in importState
+    !! and just take the same grid&distgrid.
+    
+    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+           value=foreignGridFieldName, defaultValue='none',rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (trim(foreignGridFieldName)=='none') then
+     inum=1
+     jnum = 1
+     ! call ESMF_ArraySpecSet(array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+                   maxIndex=(/inum,jnum/), &
+                   regDecomp=(/1,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="erosed grid", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridAddCoord(grid, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    else
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (rank<2) then
+        write(message,*) 'foreign grid must be of at least rank >= 2'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end if 
+      
+      allocate(maxIndex(rank))
+        inum=maxIndex(1)
+        jnum=maxIndex(2)
+      if (rank ==2) then 
+        !grid = foreign_Grid    !> ToDO discuss copy or link for grid 
+        grid = ESMF_GridCreate(foreign_grid,rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      elseif (rank == 3) then
+ 
+        call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
+               computationalCount=maxIndex,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+                   maxIndex=maxIndex(1:2), &
+                   regDecomp=(/1,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="erosed grid", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=rc)
+        inum=maxIndex(1)
+        jnum=maxIndex(2)
+      !  numlayers=maxIndex(3)
+        call ESMF_GridAddCoord(grid, rc=rc)   !> ToDO we need to copy the coordiane from foreign Grid.
+        deallocate(maxIndex)
+      else
+        write(message,*) 'foreign grid must be of rank = 3'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      end if
+    end if
+
+    !> create grid
+
+!     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
+!           coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
+!            name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
+ !    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!
+  !   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+
+
+
+
+inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
     !write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
 if (exst.and.(.not.opnd)) then
@@ -239,9 +327,10 @@ end if
 !                                !  0: no fluff layer (default)
 !                                !  1: all mud to fluff layer, burial to bed layers
 !                                !  2: part mud to fluff layer, other part to bed layers (no burial)
-    nlev=nmub-nmlb+1
+ !   nlev=nmub-nmlb+1
 
-
+    nmlb=1
+    nmub = inum * jnum  
     call initerosed( nmlb, nmub, nfrac)
 
 
@@ -368,18 +457,13 @@ end if
     write (707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
         'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
 
-
-    !> create grid
-
-     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
-           coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
-            name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
-     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-     call ESMF_GridAddCoord(grid, rc=rc)
-     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    allocate (size_classes_of_upward_flux_of_pim_at_bottom(1,1,nfrac))
-    size_classes_of_upward_flux_of_pim_at_bottom(1,1,:) = sink(:,1)-sour(:,1)
+    allocate (size_classes_of_upward_flux_of_pim_at_bottom(inum, jnum,nfrac))
+     
+     do j=1,jnum
+       do i= 1, inum
+          size_classes_of_upward_flux_of_pim_at_bottom(i,j,:) = sink(:,inum*(j -1)+i)-sour(:,inum*(j -1)+i)
+       end do    
+     end do
 
 !> not used fo export State, since sink,sour are used by bed module
 !    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
@@ -454,7 +538,7 @@ end if
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
     &                            Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
-    integer                  :: n
+    integer                  :: n, i, j 
     type(ESMF_Field)         :: field
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
@@ -473,7 +557,7 @@ end if
 
 !#define DEBUG
 
-    allocate (u_mean(1,1))
+    allocate (u_mean(inum,jnum))
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -497,7 +581,7 @@ end if
 
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=rc)
 
-    if (.not.associated(spm_concentration)) allocate(spm_concentration(1,1,nfrac))
+    if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
 
     !> get import state
     if (forcing_from_coupler) then
@@ -521,8 +605,13 @@ end if
 
       u_mean(:,:) = sum (grid_height*sqrt(u**2+v**2),3)/sum(grid_height,3)
       !umod = sqrt( u(1,1,:)**2 + v(1,1,:)**2)
-
-      umod=u_mean(1,:)
+      
+     do j=1,jnum
+       do i= 1, inum
+           umod (inum*(j -1)+i) = u_mean(i,j) 
+       end do    
+     end do
+     
 
       else
         umod = 0.2
@@ -618,7 +707,7 @@ end if
           sedd90(n) = d90_from_d50(sedd50(nfrac_by_external_idx(external_index)))
 
           if (rc == ESMF_SUCCESS) then
-            spm_concentration(1,1,nfrac_by_external_idx(external_index)) = ptr_f3(1,1,1)
+            spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(:,:,1)
           else
             write(0,*) 'cannot find SPM fraction',n
           end if
@@ -635,7 +724,12 @@ end if
         do n=1,size(fieldlist)
           call ESMF_FieldGet(fieldlist(n),farrayPtr=ptr_f3,rc=rc)
           call ESMF_AttributeGet(fieldlist(n),'external_index',external_index,defaultvalue=-1)
-          ws(nfrac_by_external_idx(external_index),nmub) = ptr_f3(1,1,1)
+         do j=1,jnum
+          do i= 1, inum
+           ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1) 
+          end do    
+         end do
+
         end do
       end if
 
@@ -707,19 +801,22 @@ end if
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
       !> @todo add warning about negative spm concentrations
-      spm_concentration(1,1,l) = max (0.0_fp, spm_concentration(1,1,l) )
+      spm_concentration(:,:,l) = max (0.0_fp, spm_concentration(:,:,l) )
      do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
-             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,1)*spm_concentration(1,1,l), sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
-     enddo
+             j= 1+ mod(nm,inum)
+             i= nm - inum*(j -1)
+             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,1)*spm_concentration(i,j,l), sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+      size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
+          sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)
+    enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
 
-      size_classes_of_upward_flux_of_pim_at_bottom(1,1,l) = &
-          sour(l,1) *1000.0_fp - min(-ws(l,1),sink(l,1))*spm_concentration(1,1,l)
+     
 
 !          write (*,*) 'SPM',l,'=', spm_concentration(1,1,l)
     !      write (*,*) 'sour*1000.0', sour(l,1) *1000.0_fp
