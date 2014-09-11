@@ -265,6 +265,10 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: fixfac       ! reduction factor in case of limited sediment availability [-]
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: rsedeq       ! equilibrium concentration [kg/m3]
     real(fp)                                    :: fc           ! Skin friction coefficient (Darcy-Weisbach)
+
+    integer                                     :: inum, jnum, i, j
+    
+
 !
 !! executable statements ------------------
 !
@@ -288,7 +292,14 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     call erosand_arguments%initialize()
     call vanrijn84_arguments%initialize()
     call sandmud_arguments%initialize(nfrac)
-
+           
+     if (present (Bioeffects)) then
+       inum = Size(Bioeffects%ErodibilityEffect,1)
+       jnum = Size(Bioeffects%ErodibilityEffect,2)
+     else
+       inum = 1
+       jnum = 1
+     endif 
 
     do nm = nmlb, nmub
         mfltot = 0.0_fp
@@ -305,23 +316,25 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 !                write (*,*) 'cohesive ..'
                 fracf   = 0.0_fp
                 if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
-                !
+                 j= 1+ mod(nm,inum)
+                 i= nm - inum*(j -1)
+                  !
 !
                 if (present (Bioeffects)) then
 #ifdef DEBUG
-                 write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (1,1,1)
+                 write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (i,j)
 
-                 write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
+                 write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (i,j)
 
                  write (*,*) 'eropar(l,nm)= in erosed',  eropar(l,nm)
                  write (*,*) 'tcrero(l,nm)=', tcrero(l,nm)
 
-                 write (*,*) 'Bio eropar(l,nm)=', eropar(l,nm)* Bioeffects%ErodibilityEffect (1,1,1)
-                 write (*,*) 'Bio tcrero(l,nm)=', tcrero(l,nm)* Bioeffects%TauEffect (1,1,1)
+                 write (*,*) 'Bio eropar(l,nm)=', eropar(l,nm)* Bioeffects%ErodibilityEffect (i,j)
+                 write (*,*) 'Bio tcrero(l,nm)=', tcrero(l,nm)* Bioeffects%TauEffect (i,j)
 #endif
-
+            
                 call  eromud_arguments%set ( ws(l,nm)      , fixfac(l,nm)  , taub(nm)      , frac(l,nm)     , fracf  , &
-                          & tcrdep(l,nm)  , tcrero(l,nm) * Bioeffects%TauEffect (1,1,1) , eropar(l,nm)* Bioeffects%ErodibilityEffect (1,1,1)  ,  &
+                          & tcrdep(l,nm)  , tcrero(l,nm) * Bioeffects%TauEffect (i,j) , eropar(l,nm)* Bioeffects%ErodibilityEffect (i,j)  ,  &
                          & flufflyr       , mfltot , tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
 
                 else
@@ -353,7 +366,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 #ifdef DEBUG
 !                    write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
 #endif
-                    smfac =smfac * Bioeffects%TauEffect(1,1,1)
+                    smfac =smfac * Bioeffects%TauEffect(i,j)
 #ifdef DEBUG
 !                    write (*,*) 'Bio smfac= ', smfac
 #endif
