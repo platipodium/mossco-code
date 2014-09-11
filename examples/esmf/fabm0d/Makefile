@@ -27,7 +27,7 @@ NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS) -lmossco_fabm0d -lsolver -lmossco_util
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)
 #LDFLAGS += -Wl,-force_load
 #endif

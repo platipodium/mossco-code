@@ -23,7 +23,7 @@ endif
 
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_gotmfabm -lmossco_fabmgotm -lgotm -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 LDFLAGS += $(ESMF_LDFLAGS)
 
 .PHONY: all exec gotmfabm libmossco_gotmfabm

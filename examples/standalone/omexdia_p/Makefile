@@ -18,7 +18,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lmossco_sediment -lsolver -lmossco_util $(LIBS)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBS)
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 
 .PHONY: exec libmossco_sediment
 

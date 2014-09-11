@@ -20,7 +20,7 @@ LIBS :=  -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf -lmossco_u
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod 
 
 .PHONY: all exec libsediment

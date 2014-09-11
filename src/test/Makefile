@@ -79,7 +79,7 @@ test_Dictionary: test_Dictionary.o
 	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
 
 test_FabmDependencies: test_FabmDependencies.o 
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) -L$(FABM_LIBRARY_PATH) -lfabm_prod $(LIBS)
+	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) -L$(FABM_LIBRARY_PATH) $(FABM_LIBS) $(LIBS)
 
 test_Netcdf.o test_Dictionary.o: libmossco_util
 

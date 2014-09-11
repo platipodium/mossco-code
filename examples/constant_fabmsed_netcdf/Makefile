@@ -23,7 +23,7 @@ NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lpelagicbenthiccoupler -lsolver -lmossco_util
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += $(NC_LIBS) 
 

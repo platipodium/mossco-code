@@ -30,7 +30,7 @@ LDFLAGS += $(GOTM_LDFLAGS)
 else
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 endif
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 #LDFLAGS += -Wl,-force_load
 endif

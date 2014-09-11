@@ -238,7 +238,7 @@ ifeq ($(MOSSCO_GETM),true)
   GETM_LIBS += -l2d_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
   ifeq ($(MOSSCO_GETM_FABM),true)
     GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
-    GETM_LIBS += -lgotm_fabm_prod -lfabm_prod
+    GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
   endif
   GETM_LIBS += -lturbulence_prod -lutil_prod
 

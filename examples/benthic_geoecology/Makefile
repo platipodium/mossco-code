@@ -28,7 +28,7 @@ NC_LIBS += $(shell nf-config --flibs)
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lgotm -lmossco_fabmgotm -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
-LDFLAGS += -L$(FABM_LIBRARY_PATH) -lfabm_prod
+LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 LDFLAGS += -lmossco_util -lesmf $(NC_LIBS)
 
 .PHONY: all exec benthic_geoecology libmossco_fabmgotm libconstant libgotm libmossco_erosed libmossco_benthos
