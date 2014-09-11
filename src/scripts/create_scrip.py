@@ -43,7 +43,7 @@ if __name__ == '__main__':
   if len(sys.argv)>1:
     basename=sys.argv[1]
   else:
-    basename = 'create_scrip_example.nc'
+    basename = 'scrip_example.nc'
 
 
   nc=netCDF4.Dataset(basename,'w',format='NETCDF3_CLASSIC')
