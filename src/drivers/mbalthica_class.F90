@@ -21,12 +21,13 @@ end type Mbalthica_Object
 
 contains
 
-subroutine  init_Mbalthica(this)
+subroutine  init_Mbalthica(this, inum, jnum)
 
 implicit none
 
 
 class (Mbalthica_Object) :: this
+integer, intent (in)     :: inum, jnum ! dimesions of grid in x and y directions
 !integer :: istatus
 
 !allocate (character (9) :: this%Species)
@@ -35,14 +36,17 @@ allocate (this%StateVar)
 !allocate (This%StateVar%amount)
 !allocate (This%BioMass%Unitt)
 allocate (this%Bioturbation)
-allocate (this%Bioturbation%TauEffect(1,1,1))
-allocate (this%Bioturbation%ErodibilityEffect(1,1,1))
+allocate (this%Bioturbation%TauEffect(inum,jnum))
+allocate (this%Bioturbation%ErodibilityEffect(inum,jnum))
 !allocate (this%Bioturbation%ErodibilityEffect,stat= istatus)
 !if (istatus == 0) then
 !    write (*,*) 'allocation of ErodibilityEffect was successfull'
 !else
 !    write (*,*) 'Error , allocation of ErodibilityEffect was NOT successfull'
 !end if
+
+  this%inum      = inum
+  this%jnum      = jnum
 
 end subroutine init_Mbalthica
 
@@ -123,6 +127,7 @@ end if
 end subroutine set_Mbalthica
 
 subroutine run_Mbalthica(this)
+
 use Bio_critical_shear_stress
 use Bio_erodibility
 
@@ -131,9 +136,14 @@ implicit none
 
 class (Mbalthica_Object) :: this
 
+integer                  :: i,j
+do i = 1, this%jnum
+ do j = 1, this%inum
+    this%Bioturbation%TauEffect(i,j)         =  Crit_shear_bioeffect(this%StateVar)
+    this%Bioturbation%ErodibilityEffect(i,j) = erodibility_bioeffect(this%StateVar) 
+ end do
+end do
 
-this%Bioturbation%TauEffect(1,1,1) =  Crit_shear_bioeffect(this%StateVar)
-this%Bioturbation%ErodibilityEffect(1,1,1) = erodibility_bioeffect(this%StateVar)
 
 #ifdef DEBUG
 write (*,*)

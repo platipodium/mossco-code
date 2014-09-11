@@ -32,21 +32,23 @@ type (Mbalthica_Object),save   :: M_Balthica
 
 contains
 
-subroutine Macrofanua_init(Total_Bioturbation)
+subroutine Macrofanua_init(Total_Bioturbation, inum, jnum)
 ! All macrofauna species are initialized here.
 ! In case feuther features of macrofauna effect have been added, the corresponding pointers should be
 ! deallocated here.
 implicit none
 
 type (BioturbationEffect) :: Total_Bioturbation
+integer , intent (in)     :: inum, jnum  ! dimesions of grid in x and y directions
 
-allocate (Total_Bioturbation%ErodibilityEffect(1,1,1), Total_Bioturbation%TauEffect(1,1,1))
+allocate (Total_Bioturbation%ErodibilityEffect(inum,jnum), Total_Bioturbation%TauEffect(inum,jnum))
+
 
 Total_Bioturbation%ErodibilityEffect= 1.0_fp
 Total_Bioturbation%TauEffect=1.0_fp
 
 ! The initilize method of new species should be called here
-call init_Mbalthica(M_Balthica)
+call init_Mbalthica(M_Balthica, inum, jnum)
 
 end subroutine Macrofanua_init
 !*********************************************************************************
@@ -63,6 +65,7 @@ implicit none
 !#ifdef DEBUG
 type (BioturbationEffect) ::Total_Bioturbation
 
+
 ! The run method of new species should be called here, to calculate the biological effect of
 ! macrofauna on sediment flux.
 
@@ -76,9 +79,9 @@ call run_Mbalthica(M_Balthica)
 !Total_Bioturbation%TauEffect = M_Balthica%Bioturbation%TauEffect * T_fabula%Taueffect * ...
 
 Total_Bioturbation%ErodibilityEffect = M_Balthica%Bioturbation%ErodibilityEffect
-Total_Bioturbation%TauEffect = M_Balthica%Bioturbation%TauEffect
+Total_Bioturbation%TauEffect         = M_Balthica%Bioturbation%TauEffect
 #ifdef DEBUG
-Write (*,*) ' The macrofauna effect on the sediment erodibility is the factor:', Total_Bioturbation%ErodibilityEffect
+Write (*,*) ' The macrofauna effect on the sediment erodibility is the factor:'     , Total_Bioturbation%ErodibilityEffect
 Write (*,*) ' The macrofauna effect on the critical bed shear stress is the factor:',Total_Bioturbation%TauEffect
 #endif
 end subroutine Macrofanua_run
