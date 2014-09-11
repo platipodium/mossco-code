@@ -6,14 +6,14 @@ use BioTypes
 
 implicit none
 
-type, abstract , public  :: BenthosEffect
+type, abstract , public                :: BenthosEffect
 
 ! Species could be microphytobenthos, Macrofauna or Macrophytes, or
 ! the specific name of individual biota, such as Macoma balthica.
 
- character (50), pointer  :: Species=> null()           ! Name of the species
- integer                 :: UnitNr                     ! the file unit number of input data describing biomass or intensity of the species
-
+ character (50), pointer               :: Species=> null()           ! Name of the species
+ integer                               :: UnitNr                     ! the file unit number of input data describing biomass or intensity of the species
+ integer                               :: inum, jnum    ! inum and jnum are the number of elementes in x and y directions
  contains
 
  procedure (init)   ,public , deferred :: initialize    ! allocate and initialize variables, pointers
@@ -25,13 +25,13 @@ end type BenthosEffect
 
 abstract interface
 
-subroutine init (this)
+subroutine init (this, inum, jnum)
 import :: BenthosEffect
 
 implicit none
 
 class (BenthosEffect)  :: this
-
+integer, intent (in) :: inum, jnum
 end subroutine init
 
 
