@@ -21,41 +21,41 @@ module BioTypes
 !Hamburg 19.11.2013
 
 !use precision
-integer , parameter :: fp= selected_real_kind (8)
+integer , parameter          :: fp= selected_real_kind (8)
 
 ! data type use for defining state varaible of microphytobenthos
 type statevariable
  character (len=10), pointer :: Unitt  => null()
- real (fp)    , pointer :: amount => null()
+ real (fp)         , pointer :: amount => null()
 end type statevariable
 
 ! basic data type demonstraing the effect of macrofauna on sediment properties
 type SedEffect
- real (fp), pointer :: Darcy=> null()               !roughness effect
- real (fp), pointer :: Chezy=> null()               !roughness effect
- real (fp), pointer :: Manning=> null()             !roughness effect
- real (fp), pointer :: z0=> null()                  !roughness effect
- real (fp), pointer :: Rippleheight=> null()        !effect on sand waves height (ripples)
+ real (fp), pointer          :: Darcy=> null()               !roughness effect
+ real (fp), pointer          :: Chezy=> null()               !roughness effect
+ real (fp), pointer          :: Manning=> null()             !roughness effect
+ real (fp), pointer          :: z0=> null()                  !roughness effect
+ real (fp), pointer          :: Rippleheight=> null()        !effect on sand waves height (ripples)
 end type SedEffect
 
 ! basic data type demonstraing the effect of macrofauna and/ or Macrophytes on near bed flow field
 type NearBedEffect
- real (fp), pointer :: BedShearStress=> null()              !effect on bed shera stress
- real (fp), pointer :: NearBedVelocity=> null()             !effect on near bed velocity
+ real (fp), pointer          :: BedShearStress=> null()              !effect on bed shera stress
+ real (fp), pointer          :: NearBedVelocity=> null()             !effect on near bed velocity
 end type NearBedEffect
 
 ! data type for demonstrating the effect of biogenic structures on flow and roughness
 type BiogenicStrctures
- type (SedEffect)    , pointer :: roughness=> null()
- type (NearBedEffect), pointer :: FlowEffect=> null()
+ type (SedEffect)    , pointer:: roughness=> null()
+ type (NearBedEffect), pointer:: FlowEffect=> null()
 end type BiogenicStrctures
 !
 ! the principal data type used for demonstarting of macrofauna effect on eroion
 type BioturbationEffect
- real (fp),dimension(:,:,:), pointer  :: TauEffect => null()          !effect on critical bed shear stress
- real (fp),dimension(:,:,:), pointer  :: ErodibilityEffect => null()  !effect on erodibility parameter
- real (fp)          , pointer  :: d50=> null()                 !effect on changing sediment grain distribution
- real (fp)          , pointer  :: MudContent=> null()          !effect on changing mud content on the upper soil layers
+ real (fp),dimension(:,:), pointer  :: TauEffect => null()          !effect on critical bed shear stress
+ real (fp),dimension(:,:), pointer  :: ErodibilityEffect => null()  !effect on erodibility parameter
+ real (fp)               , pointer  :: d50=> null()                 !effect on changing sediment grain distribution
+ real (fp)               , pointer  :: MudContent=> null()          !effect on changing mud content on the upper soil layers
 end type BioturbationEffect
 
 ! data type used to demonstrate the direct biological effect of macrofauna on seidment flux
