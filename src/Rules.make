@@ -94,6 +94,9 @@ endif
 # 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
 MOSSCO_FABM=false
+export FABM_PREFIX=$(MOSSCO_DIR)/external/fabm-install
+export FABM_BUILD_DIR=$(MOSSCO_DIR)/external/fabm-build
+
 ifndef MOSSCO_FABMDIR
   external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
   ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
@@ -107,7 +110,6 @@ ifdef MOSSCO_FABMDIR
 else
   ifdef FABMDIR
     MOSSCO_FABM=true
-    $(warning Assuming you have a working FABM in ${FABMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_FABMDIR  explicitly to enable the build system to take  care of the FABM build) 
   endif
 endif
 export MOSSCO_FABM
@@ -206,10 +208,10 @@ ifneq (,$(filter $(MOSSCO_GOTM),$(MOSSCO_FABM),$(MOSSCO_GETM) true))
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-  export FABM_MODULE_PATH=$(FABMDIR)/modules/$(FABMHOST)/$(FORTRAN_COMPILER)
-  export FABM_INCLUDE_PATH=$(FABMDIR)/include
-  export FABM_LIBRARY_PATH=$(FABMDIR)/lib/$(FABMHOST)/$(FORTRAN_COMPILER)
-  export FABM_LIBS=-lfabm_prod
+  export FABM_MODULE_PATH=$(FABM_PREFIX)/include
+  export FABM_INCLUDE_PATH=$(FABM_PREFIX)/include
+  export FABM_LIBRARY_PATH=$(FABM_PREFIX)/lib
+  export FABM_LIBS=-lfabm
 endif
 
 ifeq ($(MOSSCO_GOTM),true)
@@ -486,15 +488,15 @@ endif
 
 # External libraries
 
-libfabm_external: 
-ifdef MOSSCO_FABMDIR
+libfabm_libs:
+	@mkdir -p $(FABM_BUILD_DIR)
+	@mkdir -p $(FABM_PREFIX)
+	(cd $(FABM_BUILD_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST))
+
+libfabm_external: libfabm_libs 
 	@echo Recreating the FABM library in $(FABM_LIBRARY_PATH)
-	$(MAKE) -C $(FABMDIR)/src
-#	$(MAKE) -C $(FABMDIR)/src makedirs models
-#	$(MAKE) -C $(FABMDIR)/src $(FABM_LIBRARY_PATH)/libfabm_prod.a
-#	$(MAKE) -C $(FABMDIR)/src/config 
-#	$(MAKE) -C $(FABMDIR)/src $(FABM_LIBRARY_PATH)/libfabm_prod.a
-endif
+	$(MAKE) -C $(FABM_BUILD_DIR)
+	$(MAKE) -C $(FABM_BUILD_DIR) install
 
 libgotm_external:
 ifdef MOSSCO_GOTMDIR

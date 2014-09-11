@@ -32,7 +32,7 @@ clean: extraclean
 
 extraclean:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-	$(MAKE) -C $(MOSSCO_DIR)/external/fabm-git/src distclean
+	$(RM) -rf $(FABM_PREFIX)
 endif
 ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
 	$(MAKE) -C $(MOSSCO_DIR)/external/gotm-git distclean
