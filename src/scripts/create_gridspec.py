@@ -22,7 +22,7 @@ ll_lon = -4.		#lower left of cell corner 4°W
 ll_lat = 50.
 ur_lon = 15.
 ur_lat = 61.
-delta_lon = 0.0176		#delta lon in dezimalgrad
+delta_lon = 0.035		#delta lon in dezimalgrad
 delta_lat = 0.02
     
 if __name__ == '__main__':
