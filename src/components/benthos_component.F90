@@ -16,10 +16,10 @@ module benthos_component
   !! @todo hn: read CF documnetation for correct name
 
   ! Dimensions (x,y,z)
-  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: Effect_of_MPB_on_sediment_erodibility_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: Effect_of_MPB_on_critical_bed_shearstress
-  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: Effect_of_Mbalthica_on_critical_bed_shearstress
+  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_MPB_on_sediment_erodibility_at_bottom
+  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_MPB_on_critical_bed_shearstress
+  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
+  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_Mbalthica_on_critical_bed_shearstress
 
   type(ESMF_Field), save      :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
     &                            Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
@@ -30,7 +30,7 @@ module benthos_component
   type (BioturbationEffect),save :: Total_Bioturb
   real (fp)    :: tau
   real (fp)    :: Erod
-
+  integer      :: inum, jnum
 
 contains
 
@@ -60,11 +60,17 @@ contains
     type(ESMF_Clock)    :: parentClock
     integer, intent(out)     :: rc
 
-    type(ESMF_Grid)      :: grid
+    type(ESMF_Grid)      :: grid, foreign_grid
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_ArraySpec) :: arrayspec
     type(ESMF_Array)     :: array
+    type(ESMF_Field)     :: field
+    
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName
+    
+    integer , allocatable :: maxIndex(:)
+    integer               :: rank
 
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
@@ -105,12 +111,100 @@ contains
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+
+
+    !! get/set grid:
+    !! rely on field with name foreignGridFieldName given as attribute and field
+    !! in importState
+    !! and just take the same grid&distgrid.
+    
+    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+           value=foreignGridFieldName, defaultValue='none',rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (trim(foreignGridFieldName)=='none') then
+     inum=1
+     jnum = 1
+     ! call ESMF_ArraySpecSet(array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+                   maxIndex=(/inum,jnum/), &
+                   regDecomp=(/1,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="benthos grid", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridAddCoord(grid, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    else
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (rank<2) then
+        write(message,*) 'foreign grid must be of at least rank >= 2'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end if 
+      
+      allocate(maxIndex(rank))
+        inum=maxIndex(1)
+        jnum=maxIndex(2)
+      if (rank ==2) then 
+        !grid = foreign_Grid    !> ToDO discuss copy or link for grid 
+        grid = ESMF_GridCreate(foreign_grid,rc=rc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      elseif (rank == 3) then
+ 
+        call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
+               computationalCount=maxIndex,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+                   maxIndex=maxIndex(1:2), &
+                   regDecomp=(/1,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="benthos grid", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=rc)
+        inum=maxIndex(1)
+        jnum=maxIndex(2)
+      !  numlayers=maxIndex(3)
+        call ESMF_GridAddCoord(grid, rc=rc)   !> ToDO we need to copy the coordiane from foreign Grid.
+        deallocate(maxIndex)
+      else
+        write(message,*) 'foreign grid must be of rank = 2 or 3'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      end if
+    end if
+
+
+    !> create grid
+   ! grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
+ !     regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+   !   name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
+   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   ! call ESMF_GridAddCoord(grid, rc=rc)
+   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+
+    !> Create distgrid for arrays
+   !   distgrid =  ESMF_DistGridCreate(minIndex=(/inum,jnum/), maxIndex=(/inum,jnum/), &
+   !   indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+       call ESMF_GridGet (grid, DistGrid= DistGrid, rc=rc)
+
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+ 
+
     nlev=1
 
-    call init_microphyt(Micro)
+    call init_microphyt(Micro,inum, jnum)
     call set_microphyt(Micro)
 
-    call Macrofanua_init(Total_Bioturb)
+    call Macrofanua_init(Total_Bioturb, inum, jnum)
     call Macrofanua_set()
 
     ! Test parameters (they are not needed here for real calculations)
@@ -122,23 +216,9 @@ contains
     write (*,*)
 #endif
 
-    !> create grid
-    grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridAddCoord(grid, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-
-    !> Create distgrid for arrays
-    distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
-      indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    !> create export fields
-    allocate(Effect_of_MPB_on_sediment_erodibility_at_bottom(1,1,1))
+   !> create export fields
+    allocate(Effect_of_MPB_on_sediment_erodibility_at_bottom(inum,jnum))
     Effect_of_MPB_on_sediment_erodibility_at_bottom => Micro%ErodibilityEffect
 
 #ifdef DEBUG
@@ -157,7 +237,7 @@ contains
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    allocate(Effect_of_MPB_on_critical_bed_shearstress(1,1,1))
+    allocate(Effect_of_MPB_on_critical_bed_shearstress(inum,jnum))
 
     Effect_of_MPB_on_critical_bed_shearstress => Micro%TauEffect
 
@@ -176,7 +256,7 @@ contains
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    allocate( Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(1,1,1))
+    allocate( Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(inum,jnum))
 
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom => Total_Bioturb%ErodibilityEffect
 
@@ -195,7 +275,7 @@ contains
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    allocate(Effect_of_Mbalthica_on_critical_bed_shearstress(1,1,1))
+    allocate(Effect_of_Mbalthica_on_critical_bed_shearstress(inum,jnum))
 
     Effect_of_Mbalthica_on_critical_bed_shearstress => Total_Bioturb%TauEffect
 
