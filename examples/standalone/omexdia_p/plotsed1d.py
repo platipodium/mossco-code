@@ -1,7 +1,8 @@
 from pylab import *
 
 f=open('output.dat','r')
-f.readline()
+vars = f.readline().split()
+idxdenit = vars.index('hzg_omexdia_p_denit')
 
 fluxes=[]
 time=[]
@@ -21,7 +22,7 @@ for line in f.readlines():
         denit=[]
     else:
         dz.append(float(dat[2]))
-        denit.append(float(dat[-1]))
+        denit.append(float(dat[idxdenit]))
 fluxes[-1][-1] = sum(asarray(dz)*asarray(denit))
 
 fluxes=asarray(fluxes)
