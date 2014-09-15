@@ -58,7 +58,7 @@
 
   !> creates instance of pelagic fabm class
   function mossco_create_fabm_pelagic(inum,jnum,knum,dt) result(pf)
-  integer  :: inum,jnum,knum
+  integer  :: inum,jnum,knum,n
   integer  :: namlst=123
   real(rk) :: dt
   type(type_mossco_fabm_pelagic), allocatable :: pf
@@ -77,6 +77,11 @@
   pf%nvar = size(pf%model%info%state_variables)
   pf%ndiag = size(pf%model%info%diagnostic_variables)
   allocate(pf%conc(1:inum,1:jnum,1:knum,1:pf%nvar))
+
+  do n=1,size(pf%model%info%state_variables)
+    pf%conc(:,:,:,n) = pf%model%info%state_variables(n)%initial_value
+    call fabm_link_bulk_state_data(pf%model,n,pf%conc(:,:,:,n))
+  end do
 
   ! Allocate array for photosynthetically active radiation (PAR).
   allocate(pf%par(1:inum,1:jnum,1:knum))
