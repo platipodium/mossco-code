@@ -219,9 +219,7 @@ module gotm_transport_component
     real(ESMF_KIND_R8)      :: dt
     character(len=ESMF_MAXSTR) :: string,varname,message
     integer                 :: w_adv_method=1, w_adv_discr=6, w_adv_ctr=1
-    integer                 :: adv_mode_0=0, adv_mode_1=1
     GOTM_REALTYPE           :: cnpar=1.0
-    integer                 :: posconc=0 ! allow for negative concentrations
     
     integer(ESMF_KIND_I4)   :: localPet, petCount, hours, seconds, minutes
     logical                 :: clockIsPresent
@@ -266,19 +264,18 @@ module gotm_transport_component
          knum = ubound(tracer(i)%conc,3)
 
          ! Do advection step due to settling or rising
-         call adv_center(knum,dt,gotm_heights,gotm_heights,tracer(i)%ws,flux, &
-           flux,_ZERO_,_ZERO_,w_adv_discr,adv_mode_1,tracer(i)%conc)
+         call mossco_adv_center(knum,dt,gotm_heights,gotm_heights, &
+           tracer(i)%ws, w_adv_discr,tracer(i)%conc)
 
          ! Do advection step due to vertical velocity
-         if (w_adv_method/=0) call adv_center(knum,dt,gotm_heights,gotm_heights,w,flux, &
-           flux,_ZERO_,_ZERO_,w_adv_ctr,adv_mode_0,tracer(i)%conc)
+         if (w_adv_method/=0) call mossco_adv_center(knum,dt,gotm_heights, &
+                                gotm_heights,w, w_adv_ctr,tracer(i)%conc)
        end do
 
        ! Vertical diffusion
        do i=1,size(tracer)
-         call diff_center(knum,dt,cnpar,posconc,gotm_heights,Neumann,Neumann, &
-            _ZERO_,_ZERO_,diffusivity,_ZERO_,_ZERO_,1.d15, &
-            tracer(i)%conc,tracer(i)%conc)
+         call mossco_diff_center(knum,dt,cnpar,gotm_heights, &
+            diffusivity,tracer(i)%conc(1,1,:))
        end do
 
       call ESMF_ClockAdvance(clock,rc=rc)
@@ -318,5 +315,232 @@ module gotm_transport_component
   end if
   tracer(n)=tracerPtr
   end subroutine
+
+
+
+   subroutine mossco_diff_center(N,dt,cnpar,h,nuY,Y)
+   use util,          only  : Dirichlet, Neumann
+   use mtridiagonal
+
+!  number of vertical layers
+   integer,  intent(in)                :: N
+
+!  time step (s)
+   GOTM_REALTYPE, intent(in)           :: dt
+
+!  "implicitness" parameter
+   GOTM_REALTYPE, intent(in)           :: cnpar
+
+!  layer thickness (m)
+   GOTM_REALTYPE, intent(in)           :: h(0:N)
+
+!  diffusivity of Y
+   GOTM_REALTYPE, intent(in)           :: nuY(0:N)
+
+! !INPUT/OUTPUT PARAMETERS:
+   GOTM_REALTYPE                       :: Y(1:N)
+
+!  Original author(s): Lars Umlauf
+   integer                        :: i
+   GOTM_REALTYPE                  :: YY(0:N)
+   GOTM_REALTYPE                  :: a,c,l
+
+   YY(1:N) = Y
+
+   !  set up matrix
+   do i=2,N-1
+      c     = 2.0*dt*nuY(i)  /(h(i)+h(i+1))/h(i)
+      a     = 2.0*dt*nuY(i-1)/(h(i)+h(i-1))/h(i)
+
+      cu(i) =-cnpar*c
+      au(i) =-cnpar*a
+      bu(i) = _ONE_ + cnpar*(a + c)
+      du(i) = (_ONE_ - (_ONE_-cnpar)*(a + c))*Y(i)                  &
+            + (_ONE_ - cnpar)*( a*Y(i-1) + c*Y(i+1) )
+   end do
+
+   ! upper boundary
+      a     = 2.0*dt*nuY(N-1)/(h(N)+h(N-1))/h(N)
+      au(N) =-cnpar*a
+      bu(N) =  _ONE_ - au(N)
+      du(N) = Y(N) + (_ONE_ - cnpar)*a*(Y(N-1)-Y(N))
+
+   ! lower boundary
+      c     = 2.0*dt*nuY(1)/(h(1)+h(2))/h(1)
+      cu(1) =-cnpar*c
+      bu(1) = _ONE_ - cu(1)
+      du(1) = Y(1) + (_ONE_ - cnpar)*c*(Y(2)-Y(1))
+
+!  solve linear system
+   call tridiagonal(N,1,N,YY)
+   Y=YY(1:N)
+   
+   return
+   end subroutine mossco_diff_center
+
+
+   subroutine mossco_adv_center(N,dt,h,ho,ww,method,Y)
+      use util
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+
+!  number of vertical layers
+   integer,  intent(in)                :: N
+
+!  time step (s)
+   GOTM_REALTYPE, intent(in)                :: dt
+
+!  layer thickness (m)
+   GOTM_REALTYPE, intent(in)                :: h(0:N)
+
+!  old layer thickness (m)
+   GOTM_REALTYPE, intent(in)                :: ho(0:N)
+
+!  vertical advection speed
+   GOTM_REALTYPE, intent(in)                :: ww(0:N)
+
+   !  type of advection scheme
+   integer,  intent(in)                :: method
+!
+! !INPUT/OUTPUT PARAMETERS:
+   GOTM_REALTYPE                            :: Y(1:N)
+!
+! !DEFINED PARAMETERS:
+   GOTM_REALTYPE,     parameter             :: one6th=1.0d0/6.0d0
+   integer,      parameter             :: itmax=100
+!
+! !REVISION HISTORY:
+!  Original author(s): Lars Umlauf
+!
+!EOP
+!
+! !LOCAL VARIABLES:
+   integer                              :: i,k,it
+   GOTM_REALTYPE                             :: x,r,Phi,limit
+   GOTM_REALTYPE                             :: Yu,Yc,Yd
+   GOTM_REALTYPE                             :: c,cmax
+   GOTM_REALTYPE                             :: cu(0:N)
+!
+!-----------------------------------------------------------------------
+!BOC
+
+!  initialize interface fluxes with zero
+   cu   = _ZERO_
+
+!  initialize maximum Courant number
+   cmax = _ZERO_
+
+!  compute maximum Courant number
+   do k=1,N-1
+      c=abs(ww(k))*dt/(0.5*(h(k)+h(k+1)))
+      if (c.gt.cmax) cmax=c
+   enddo
+
+   it=min(itmax,int(cmax)+1)
+
+#define STDERR write(0,*)
+!#ifdef DEBUG
+   if (it .gt. 1) then
+      STDERR 'In adv_center():'
+      STDERR 'Maximum Courant number is ',cmax
+      STDERR it,' iterations used for vertical advection'
+   endif
+!#endif
+
+!  splitting loop
+   do i=1,it
+
+!     vertical loop
+      do k=1,N-1
+
+!        compute the slope ration
+         if (ww(k) .gt. _ZERO_) then
+
+!           compute Courant number
+            c=ww(k)/float(it)*dt/(0.5*(h(k)+h(k+1)))
+
+            if (k .gt. 1) then
+               Yu=Y(k-1)                              ! upstream value
+            else
+               Yu=Y(k)
+            end if
+            Yc=Y(k  )                                 ! central value
+            Yd=Y(k+1)                                 ! downstream value
+
+!           compute slope ration
+            if (abs(Yd-Yc) .gt. 1e-10) then
+               r=(Yc-Yu)/(Yd-Yc)
+            else
+               r=(Yc-Yu)*1.e10
+            end if
+
+!        negative speed
+         else
+
+!           compute Courant number
+            c=-ww(k)/float(it)*dt/(0.5*(h(k)+h(k+1)))
+
+            if (k .lt. N-1) then
+               Yu=Y(k+2)                              ! upstream value
+            else
+               Yu=Y(k+1)
+            end if
+            Yc=Y(k+1)                                 ! central value
+            Yd=Y(k  )                                 ! downstream value
+
+
+!           compute slope ratio
+            if (abs(Yc-Yd) .gt. 1e-10) then
+               r=(Yu-Yc)/(Yc-Yd)
+            else
+               r=(Yu-Yc)*1.e10
+            end if
+
+         end if
+
+!        compute the flux-factor phi
+         x    =  one6th*(1.-2.0*c)
+         Phi  =  (0.5+x)+(0.5-x)*r
+
+!        limit the flux according to different suggestions
+         select case (method)
+            case (UPSTREAM)
+               limit=_ZERO_
+            case (P1)
+               STDERR "P1 advection method not yet implemented, choose other method"
+               stop  "adv_center.F90"
+            case ((P2),(P2_PDM))
+               if (method.eq.P2) then
+                  limit=Phi
+               else
+                  limit=max(_ZERO_,min(Phi,2./(1.-c),2.*r/(c+1.e-10)))
+               end if
+            case (Superbee)
+               limit=max(_ZERO_, min(_ONE_, 2.0*r), min(r,2.*_ONE_) )
+            case (MUSCL)
+               limit=max(_ZERO_,min(2.*_ONE_,2.0*r,0.5*(1.0+r)))
+            case default
+               STDERR method
+               STDERR 'unkown advection method in adv_center()'
+               stop
+          end select
+
+!        compute the limited flux
+         cu(k)=ww(k)*(Yc+0.5*limit*(1-c)*(Yd-Yc))
+
+      end do
+
+
+!     do the vertical advection step which will be used for prescribed
+!     vertical flow velocity and for settling of suspended matter.
+      do k=1,N
+         Y(k)=Y(k)-1./float(it)*dt*((cu(k)-cu(k-1))/h(k))
+      enddo
+
+   end do ! end of the iteration loop
+
+   return
+   end subroutine mossco_adv_center
 
 end module gotm_transport_component
