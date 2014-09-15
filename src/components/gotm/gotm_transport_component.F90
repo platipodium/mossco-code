@@ -264,12 +264,12 @@ module gotm_transport_component
          knum = ubound(tracer(i)%conc,3)
 
          ! Do advection step due to settling or rising
-         call mossco_adv_center(knum,dt,gotm_heights,gotm_heights, &
-           tracer(i)%ws, w_adv_discr,tracer(i)%conc)
+         call mossco_adv_center(knum,dt,gotm_heights, &
+           tracer(i)%ws, w_adv_discr,tracer(i)%conc(1,1,:))
 
          ! Do advection step due to vertical velocity
          if (w_adv_method/=0) call mossco_adv_center(knum,dt,gotm_heights, &
-                                gotm_heights,w, w_adv_ctr,tracer(i)%conc)
+                                w(1:knum), w_adv_ctr,tracer(i)%conc(1,1,:))
        end do
 
        ! Vertical diffusion
@@ -381,7 +381,7 @@ module gotm_transport_component
    end subroutine mossco_diff_center
 
 
-   subroutine mossco_adv_center(N,dt,h,ho,ww,method,Y)
+   subroutine mossco_adv_center(N,dt,h,ww,method,Y)
       use util
    IMPLICIT NONE
 !
@@ -396,11 +396,8 @@ module gotm_transport_component
 !  layer thickness (m)
    GOTM_REALTYPE, intent(in)                :: h(0:N)
 
-!  old layer thickness (m)
-   GOTM_REALTYPE, intent(in)                :: ho(0:N)
-
 !  vertical advection speed
-   GOTM_REALTYPE, intent(in)                :: ww(0:N)
+   GOTM_REALTYPE, intent(in)                :: ww(1:N)
 
    !  type of advection scheme
    integer,  intent(in)                :: method
