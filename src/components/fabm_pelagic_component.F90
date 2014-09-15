@@ -96,7 +96,7 @@ module fabm_pelagic_component
     integer              :: rank
     integer, allocatable :: maxIndex(:)
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
-    type(ESMF_Grid)      :: state_grid,flux_grid,foreign_grid
+    type(ESMF_Grid)      :: state_grid,horizontal_grid,foreign_grid
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
     type(ESMF_ArraySpec) :: flux_array,state_array
 
@@ -190,6 +190,17 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       end if
     end if
+    horizontal_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+                   maxIndex=(/inum,jnum/), &
+                   regDecomp=(/1,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="pelagic horizontal grid", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(horizontal_grid, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
      
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic(inum,jnum,numlayers,dt)
@@ -217,7 +228,7 @@ module fabm_pelagic_component
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
         field = ESMF_FieldCreate(state_grid,state_array, &
-                         name=trim(pel%export_states(n)%standard_name)//'_vertical_velocity', &
+                         name=trim(pel%export_states(n)%standard_name)//'_in_water_z_velocity', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units','m/s')
@@ -260,7 +271,7 @@ module fabm_pelagic_component
     end do
 
     do n=1,size(pel%horizontal_dependencies)
-        field = ESMF_FieldCreate(state_grid, &
+        field = ESMF_FieldCreate(horizontal_grid, &
                name=trim(pel%horizontal_dependencies(n)%name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -281,7 +292,7 @@ module fabm_pelagic_component
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
         varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux'
-        field = ESMF_FieldCreate(flux_grid, &
+        field = ESMF_FieldCreate(horizontal_grid, &
                name=varname, &
                typekind=ESMF_TYPEKIND_R8, &
                staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
@@ -401,7 +412,7 @@ module fabm_pelagic_component
       ptr_f3 = pel%export_states(n)%conc
       if (pel%export_states(n)%fabm_id /= -1) then
         call ESMF_StateGet(exportState, &
-           trim(pel%export_states(n)%standard_name)//'_vertical_velocity', &
+           trim(pel%export_states(n)%standard_name)//'_in_water_z_velocity', &
            field,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
