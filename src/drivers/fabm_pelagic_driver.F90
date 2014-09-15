@@ -140,14 +140,16 @@
   ! get number of external dependencies in FABM,
   ! as intermediate solution keep a hardcoded list of standard dependencies
   ! allocate list of dependencies names
-  allocate(pf%bulk_dependencies(2))
+  allocate(pf%bulk_dependencies(3))
   
   ! and set the names
   pf%bulk_dependencies(1)=standard_variables%temperature
   pf%bulk_dependencies(2)=standard_variables%cell_thickness
+  pf%bulk_dependencies(3)=standard_variables%density
 
-  allocate(pf%horizontal_dependencies(1))
+  allocate(pf%horizontal_dependencies(2))
   pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
+  pf%horizontal_dependencies(2)=standard_variables%bottom_stress
 
   end subroutine
 

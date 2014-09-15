@@ -24,6 +24,7 @@ module gotmfabm_component
   use gotm_transport_component, only : gotm_transp_SetServices => SetServices
   use airsea, only : I_0 ! surface radiation in GOTM
   use observations, only : A ! Albedo in GOTM
+  use meanflow, only : taub, rho
 
   implicit none
 
@@ -33,8 +34,8 @@ module gotmfabm_component
 
   type(ESMF_GridComp), save :: gotmComp, fabmComp, gotmTranspComp
   type(ESMF_State), save :: state
-  real(ESMF_KIND_R8), dimension(:,:), pointer :: surface_radiation
-  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: layer_height, gotm_layer_height
+  real(ESMF_KIND_R8), dimension(:,:), pointer :: surface_radiation, bottom_stress
+  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: layer_height, gotm_layer_height, density
 
   contains
 
@@ -114,6 +115,10 @@ module gotmfabm_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(field, farrayPtr=surface_radiation, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(state, 'bottom_stress', field=field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=bottom_stress, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_StateGet(state, 'cell_thickness_in_water', field=field, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(field, farrayPtr=layer_height, rc=rc)
@@ -121,6 +126,10 @@ module gotmfabm_component
     call ESMF_StateGet(state, 'grid_height_in_water', field=field, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(field, farrayPtr=gotm_layer_height, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(state, 'density_in_water', field=field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=density, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
    call ESMF_LogWrite("GOTM/FABM component initialized",ESMF_LOGMSG_INFO)
@@ -159,6 +168,8 @@ module gotmfabm_component
       ! copy GOTM's surface radiation and layer height into state
       surface_radiation = I_0*(1.0d0 - A)
       layer_height(1,1,:) = gotm_layer_height(1,1,:)
+      bottom_stress = taub
+      density(1,1,:) = rho(1:ubound(layer_height,3))
 
       call ESMF_GridCompGet(fabmComp,clock=childClock)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
