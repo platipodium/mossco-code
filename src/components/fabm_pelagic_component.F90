@@ -250,11 +250,27 @@ module fabm_pelagic_component
         !! this probably has to be done only once (here) and not in Run
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_f3)
+        call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
 
         call ESMF_StateAddReplace(importState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name)//'in_water',requiredFlag=.true.,requiredRank=3)
+    end do
+    do n=1,size(pel%horizontal_dependencies)
+        field = ESMF_FieldCreate(state_grid, &
+               name=trim(pel%bulk_dependencies(n)%name), &
+               typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+        !! set FABM's pointers to dependencies data,
+        !! this probably has to be done only once (here) and not in Run
+        call ESMF_FieldGet(field=field, farrayPtr=ptr_f2, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
+
+        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name),requiredFlag=.true.,requiredRank=2)
     end do
 
     !! prepare upward_flux forcing
@@ -336,17 +352,8 @@ module fabm_pelagic_component
     write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-#if 0
-    !> link environment forcing from importState,
-    !! maybe necessary although done in Initialize already
-    do n=1,size(pel%bulk_dependencies)
-      call ESMF_StateGet(importState,trim(pel%bulk_dependencies(n)%name)//'_in_water',field,rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_f3)
-    end do
-#endif
+    ! calculate PAR
+    call pel%light()
 
     do while (.not.ESMF_ClockIsStopTime(clock))
       ! integrate rates
@@ -354,7 +361,7 @@ module fabm_pelagic_component
 
       ! integrate bottom upward fluxes
       do n=1,pel%nvar
-        pel%conc(:,:,1,n) = pel%conc(:,:,1,n) + bfl(n)%p*dt
+        pel%conc(:,:,1,n) = pel%conc(:,:,1,n) + bfl(n)%p*dt/pel%layer_height(:,:,1)
       end do
 
       ! reset concentrations to mininum_value

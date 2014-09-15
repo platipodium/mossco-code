@@ -26,14 +26,18 @@
     type(type_model),pointer           :: model
     type(export_state_type),dimension(:),pointer :: export_states
     real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
-    real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf
+    real(rk),dimension(:,:,:),pointer  :: layer_height
+    real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0
     real(rk)                           :: decimal_yearday
+    real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
     integer                            :: ndiag
     type(type_bulk_standard_variable),dimension(:), pointer :: bulk_dependencies
+    type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
     procedure :: set_environment
+    procedure :: light
     procedure :: get_export_state_by_id
     procedure :: get_all_export_states
     procedure :: update_export_states
@@ -72,6 +76,10 @@
   pf%nvar = size(pf%model%info%state_variables)
   pf%ndiag = size(pf%model%info%diagnostic_variables)
   allocate(pf%conc(1:inum,1:jnum,1:knum,1:pf%nvar))
+
+  ! Allocate array for photosynthetically active radiation (PAR).
+  allocate(pf%par(1:inum,1:jnum,1:knum))
+  call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
 
   ! initialise the export states and dependencies
   call pf%get_all_export_states()
@@ -117,7 +125,10 @@
   
   ! and set the names
   pf%bulk_dependencies(1)=standard_variables%temperature
-  pf%bulk_dependencies(2)=standard_variables%downwelling_photosynthetic_radiative_flux
+  pf%bulk_dependencies(2)=standard_variables%cell_thickness
+
+  allocate(pf%horizontal_dependencies(1))
+  pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
 
   end subroutine
 
@@ -140,11 +151,14 @@
     bulk_id = fabm_get_bulk_variable_id(pf%model,varname)
     ! link data if variable is used
     if (fabm_is_variable_used(bulk_id)) call fabm_link_bulk_data(pf%model,bulk_id,ptr_bulk)
+    if (varname == 'cell_thickness') pf%layer_height => ptr_bulk
 
   else if (present(ptr_horizontal)) then
     horizontal_id = fabm_get_horizontal_variable_id(pf%model,varname)
     ! link data if variable is used
     if (fabm_is_variable_used(horizontal_id)) call fabm_link_horizontal_data(pf%model,horizontal_id,ptr_horizontal)
+    ! keep link to necessary surface radiation
+    if (varname == 'surface_downwelling_photosynthetic_radiative_flux') pf%I_0 => ptr_horizontal
 
   else if (present(ptr_scalar)) then
     scalar_id = fabm_get_scalar_variable_id(pf%model,varname)
@@ -254,6 +268,43 @@
 
   diag => fabm_get_bulk_diagnostic_data(pf%model,n)
   end function diagnostic_variables
+
+
+   !> Calculate photosynthetically active radiation (PAR) and short wave
+   !! radiation (SWR) over entire column, using surface short wave radiation,
+   !! and background and biotic extinction.
+   subroutine light(pf)
+
+   class(type_mossco_fabm_pelagic)     :: pf
+   integer  :: i,j,k
+   real(rk) :: bioext(1:pf%inum,1:pf%jnum,1:pf%knum),localext
+
+   bioext = 0.0_rk
+
+   do i=1,pf%inum
+     do j=1,pf%jnum
+       do k=pf%knum,2,-1
+         call fabm_get_light_extinction(pf%model,i,j,k,localext)
+
+         ! Add the extinction of the first half of the grid box.
+         bioext(i,j,k) = bioext(i,j,k) + &
+           (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+
+         ! Add the extinction of the second half of the grid box.
+         bioext(i,j,k-1) = bioext(i,j,k) + &
+           (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+       end do
+       ! Add te extinction of the upper, last layer
+       call fabm_get_light_extinction(pf%model,i,j,1,localext)
+       bioext(i,j,1) = bioext(i,j,1) + &
+         (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
+
+       pf%par(i,j,:) = pf%I_0(i,j) * exp(-bioext(i,j,:))
+     end do
+   end do
+
+   end subroutine light
+
 
   end module mossco_fabm_pelagic
 
