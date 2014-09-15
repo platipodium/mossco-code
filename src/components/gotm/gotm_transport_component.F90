@@ -291,6 +291,8 @@ module gotm_transport_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
+    rc = ESMF_SUCCESS
+
   end subroutine Finalize
 
 

@@ -438,6 +438,7 @@ module gotm_component
     !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call clean_up()
+    rc = ESMF_SUCCESS
 
   end subroutine Finalize
 

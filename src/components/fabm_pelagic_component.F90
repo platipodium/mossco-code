@@ -35,7 +35,7 @@ module fabm_pelagic_component
   real(rk)  :: dt
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: inum=1,jnum=1
-  integer   :: t,tnum,funit,k,n,numlayers
+  integer   :: t,tnum,k,n,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
 
   type :: type_2d_pointer
@@ -46,15 +46,12 @@ module fabm_pelagic_component
     real(rk),dimension(:,:,:), pointer :: p
   end type
 
-  real(rk),dimension(:,:,:),pointer              :: diag
-  real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
-  real(rk),dimension(:,:),pointer   :: fptr2d
-  real(rk),dimension(:,:), pointer  :: statemesh_ptr
+  real(rk),dimension(:,:,:),pointer            :: diag
   type(type_2d_pointer), dimension(:), pointer :: bfl
  
   type(type_mossco_fabm_pelagic),save :: pel
 
-  public :: SetServices,bdys,fluxes,rk
+  public :: SetServices,rk
   
   contains
 
@@ -446,42 +443,9 @@ module fabm_pelagic_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-   
-    close(funit)
+    if (associated(bfl)) deallocate(bfl)
 
-    if (allocated(bdys)) deallocate(bdys)
-    if (allocated(fluxes)) deallocate(fluxes)
-
-
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+    rc = ESMF_SUCCESS
 
   end subroutine Finalize
 
