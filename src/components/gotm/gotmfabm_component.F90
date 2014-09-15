@@ -92,6 +92,9 @@ module gotmfabm_component
     call ESMF_GridCompInitialize(gotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+    call ESMF_AttributeSet(state, 'foreign_grid_field_name', 'temperature_in_water',rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     ! set parentClock time step to gotmComp timestep
     call ESMF_GridCompGet(gotmComp, clock=childClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
