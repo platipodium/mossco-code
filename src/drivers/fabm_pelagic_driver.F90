@@ -5,9 +5,10 @@
 !!
 !! This class provides a routine to create a pelagic FABM instance (called "pf" here),
 !! which initialises FABM and allocates memory for the state variable. The pf instance
-!! then has three main methods:
+!! then these methods:
 !!   * set_environment - set the environment forcing
 !!   * get_rhs - get the temporal rates
+!!   * light - calculate 3d PAR based on radiation at water surface and FABM's extinction
 !!   * update_export_states - renew pointers and data (incl. sinking velocities) for export
 
   module mossco_fabm_pelagic
