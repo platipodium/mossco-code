@@ -246,31 +246,36 @@ module fabm_pelagic_component
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+        ! add field to state, if not present
+        call ESMF_StateAdd(importState,(/field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) write(0,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
+        call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name)//'_in_water',requiredFlag=.true.,requiredRank=3)
         !! set FABM's pointers to dependencies data,
         !! this probably has to be done only once (here) and not in Run
+        call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
-
-        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name)//'in_water',requiredFlag=.true.,requiredRank=3)
     end do
+
     do n=1,size(pel%horizontal_dependencies)
         field = ESMF_FieldCreate(state_grid, &
-               name=trim(pel%bulk_dependencies(n)%name), &
+               name=trim(pel%horizontal_dependencies(n)%name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+        !! add field to state, if not present
+        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) write(0,*) 'use existing field: ',trim(pel%horizontal_dependencies(n)%name)
+        call set_item_flags(importState,trim(pel%horizontal_dependencies(n)%name),requiredFlag=.true.,requiredRank=2)
         !! set FABM's pointers to dependencies data,
         !! this probably has to be done only once (here) and not in Run
+        call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), field=field, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f2, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
-
-        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name),requiredFlag=.true.,requiredRank=2)
     end do
 
     !! prepare upward_flux forcing
