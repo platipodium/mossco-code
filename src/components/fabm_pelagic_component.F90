@@ -36,7 +36,7 @@ module fabm_pelagic_component
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: inum=1,jnum=1
   integer   :: t,tnum,k,n,numlayers
-  integer   :: ode_method=_ADAPTIVE_EULER_
+  integer   :: ode_method=1
 
   type :: type_2d_pointer
     real(rk),dimension(:,:), pointer :: p
@@ -132,16 +132,15 @@ module fabm_pelagic_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     !! Log the call to this function
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    !! Set the time step end stop time
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
-    call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
+    !! Get the time step
+    call ESMF_TimeIntervalGet(timeInterval,s_r8=dt,rc=rc)
 
     !! get/set grid:
     !! rely on field with name foreignGridFieldName given as attribute and field
@@ -210,7 +209,7 @@ module fabm_pelagic_component
     ! put concentration array and vertical velocity into export state
     ! it might be enough to do this once in initialize(?)
     do n=1,size(pel%export_states)
-        field = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
+        field = ESMF_FieldCreate(state_grid,farrayPtr=pel%export_states(n)%conc, &
                          name=trim(pel%export_states(n)%standard_name)//'_in_water', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -399,7 +398,9 @@ module fabm_pelagic_component
     !> prepare component's export   
     call pel%update_export_states()
 
+    !> write updated sinking velocity into exportState
     do n=1,size(pel%export_states)
+#if 0
       call ESMF_StateGet(exportState, &
            trim(pel%export_states(n)%standard_name)//'_in_water', &
            field,rc=rc)
@@ -407,6 +408,7 @@ module fabm_pelagic_component
       call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f3 = pel%export_states(n)%conc
+#endif
       if (pel%export_states(n)%fabm_id /= -1) then
         call ESMF_StateGet(exportState, &
            trim(pel%export_states(n)%standard_name)//'_in_water_z_velocity', &
