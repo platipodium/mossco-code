@@ -181,23 +181,25 @@ module gotmfabm_component
 
     call ESMF_LogWrite("GOTM/FABM component finalizing",ESMF_LOGMSG_INFO)
 
-    call ESMF_GridCompFinalize(fabmComp, exportState=state, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompDestroy(fabmComp, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_GridCompFinalize(gotmTranspComp, exportState=state, rc=rc)
+#if 0
+    call ESMF_GridCompFinalize(gotmTranspComp, importState=state, exportState=state, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(gotmTranspComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompFinalize(gotmComp, exportState=state, rc=rc)
+    call ESMF_GridCompFinalize(fabmComp, importState=state, exportState=state, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompDestroy(fabmComp, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompFinalize(gotmComp, importState=state, exportState=state, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompDestroy(gotmComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_StateDestroy(state,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
 
     call ESMF_LogWrite("GOTM/FABM component finalized",ESMF_LOGMSG_INFO)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
