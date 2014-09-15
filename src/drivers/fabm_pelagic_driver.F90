@@ -32,6 +32,7 @@
     real(rk)                           :: decimal_yearday
     real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
     integer                            :: ndiag
+    logical                            :: fabm_ready
     type(type_bulk_standard_variable),dimension(:), pointer :: bulk_dependencies
     type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies
     contains
@@ -39,6 +40,7 @@
     procedure :: get_dependencies
     procedure :: set_environment
     procedure :: light
+    procedure :: check_ready
     procedure :: get_export_state_by_id
     procedure :: get_all_export_states
     procedure :: update_export_states
@@ -64,6 +66,7 @@
   type(type_mossco_fabm_pelagic), allocatable :: pf
 
   allocate(pf)
+  pf%fabm_ready=.false.
   pf%inum=inum
   pf%jnum=jnum
   pf%knum=knum
@@ -78,7 +81,7 @@
   pf%ndiag = size(pf%model%info%diagnostic_variables)
   allocate(pf%conc(1:inum,1:jnum,1:knum,1:pf%nvar))
 
-  do n=1,size(pf%model%info%state_variables)
+  do n=1,pf%nvar
     pf%conc(:,:,:,n) = pf%model%info%state_variables(n)%initial_value
     call fabm_link_bulk_state_data(pf%model,n,pf%conc(:,:,:,n))
   end do
@@ -92,6 +95,16 @@
   call pf%get_dependencies()
 
   end function mossco_create_fabm_pelagic
+
+
+  subroutine check_ready(pf)
+    class(type_mossco_fabm_pelagic) :: pf
+
+    if (.not.pf%fabm_ready) then
+      call fabm_check_ready(pf%model)
+      pf%fabm_ready = .true.
+    end if
+  end subroutine check_ready
 
 
   subroutine get_rhs(rhs_driver,rhs)

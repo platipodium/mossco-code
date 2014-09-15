@@ -301,6 +301,8 @@ module fabm_pelagic_component
     end do
 
     !call ESMF_StatePrint(importState)
+    !call ESMF_StatePrint(exportState)
+    call pel%check_ready()
 
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
