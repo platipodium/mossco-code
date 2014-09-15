@@ -172,9 +172,7 @@ module fabm_pelagic_component
     else
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      state_grid = ESMF_GridCreate(foreign_grid,rc=rc)
+      call ESMF_FieldGet(field, grid=state_grid, rank=rank, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (rank == 3) then
         allocate(maxIndex(rank))
@@ -215,7 +213,7 @@ module fabm_pelagic_component
     ! put concentration array and vertical velocity into export state
     ! it might be enough to do this once in initialize(?)
     do n=1,size(pel%export_states)
-        field = ESMF_FieldCreate(state_grid,state_array, &
+        field = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
                          name=trim(pel%export_states(n)%standard_name)//'_in_water', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -227,7 +225,7 @@ module fabm_pelagic_component
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-        field = ESMF_FieldCreate(state_grid,state_array, &
+        field = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
                          name=trim(pel%export_states(n)%standard_name)//'_in_water_z_velocity', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
