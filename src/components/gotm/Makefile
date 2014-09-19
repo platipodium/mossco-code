@@ -1,14 +1,14 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
-# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde  
+# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /src/components/gotm$,,$(PWD))
@@ -26,7 +26,7 @@ TARGETS += libmossco_gotmfabm
 endif
 endif
 
-.PHONY: $(TARGETS) libgotm_external libmossco_util 
+.PHONY: $(TARGETS) libgotm_external libmossco_util
 
 #--------------------------------------
 # Make targets
@@ -37,8 +37,11 @@ all: $(TARGETS)
 libgotm: prefix libgotm_external libmossco_util $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o) $(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_transport_component.o)
 libmossco_fabmgotm: prefix fabmgotm_drv				\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_component.o)
-libmossco_gotmfabm: prefix libgotm libmossco_fabmgotm \
+libmossco_gotmfabm: prefix libmossco_fabmpelagic libgotm libmossco_fabmgotm \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(gotmfabm_component.o)
+
+libmossco_fabmpelagic:
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 fabmgotm_drv:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmgotm
 libmossco_util: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
