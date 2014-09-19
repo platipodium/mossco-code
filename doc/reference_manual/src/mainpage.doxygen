@@ -119,7 +119,7 @@ ESMF_PIO | internal
 See the ESMF manual for a complete list of ESMF environment variables and their relevance.
 
 - build and install ESMF by issuing @c make
-- for MOSSCO to work, you need to define the environment variable @c $ESMFMKFKILE, e.g.
+- for MOSSCO and the ESMF tools to work, you need to define the environment variable @c $ESMFMKFKILE, e.g.
 
 Environment variable | value
 ---|---
@@ -214,7 +214,7 @@ It may be convenient for you to assemble all variable settings in a shell resour
 Sample setting for `bash` could look as follows
 
 	export MOSSCO_DIR=${HOME}/opt/mossco/code
-    export NETCDF_VERSION=NETCDF4
+	export NETCDF_VERSION=NETCDF4
     export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
 
 For `csh` you would, in a similar fashion, say
