@@ -24,15 +24,31 @@ module getm_component
   private
 
   public SetServices
-  private getmCmp_init_variables,getmCmp_finalize_variables
-  private getmCmp_init_grid
+
+  private getmCmp_init_variables
+  private getmCmp_init_grid,getmCmp_update_grid
+
+! the following objects point to deep objects and do not need to be
+! requested everytime again
+! Note (KK): the save attribute can be deleted for F2008 standard
+  type(ESMF_Clock)   ,save :: getmClock
+  type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
+  type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
 
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
   logical                    :: noKindMatch
-  real(ESMF_KIND_R8),pointer :: xcord_(:)  =>NULL(),ycord_(:)  =>NULL()
-  real(ESMF_KIND_R8),pointer :: xx_   (:,:)=>NULL(),yx_   (:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: lonx_ (:,:)=>NULL(),latx_ (:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: xc1D(:)  =>NULL(),yc1D(:)  =>NULL()
+  real(ESMF_KIND_R8),pointer :: xx1D(:)  =>NULL(),yx1D(:)  =>NULL()
+  real(ESMF_KIND_R8),pointer :: xc2D(:,:)=>NULL(),yc2D(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: xx2D(:,:)=>NULL(),yx2D(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: lonc1D(:)  =>NULL(),latc1D(:)  =>NULL()
+  real(ESMF_KIND_R8),pointer :: lonx1D(:)  =>NULL(),latx1D(:)  =>NULL()
+  real(ESMF_KIND_R8),pointer :: lonc2D(:,:)=>NULL(),latc2D(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: lonx2D(:,:)=>NULL(),latx2D(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: zw(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
 
   contains
 
@@ -271,6 +287,8 @@ module getm_component
       call ESMF_ClockGet(clock,currtime=currTime,advanceCount=advanceCount)
     end do
 
+    call getmCmp_update_grid(gridComp)
+
 !  Fill export state here using ESMF_StateAdd(), etc
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -299,7 +317,6 @@ module getm_component
     character(ESMF_MAXSTR):: name, message, timeString
     type(ESMF_Grid)       :: getmGrid
     type(ESMF_Clock)      :: clock
-    type(ESMF_DistGrid)   :: getmDistGrid
     type(ESMF_Time)       :: currTime
     logical               :: ClockIsPresent,GridIsPresent
 
@@ -331,16 +348,15 @@ module getm_component
 
     if (GridIsPresent) then
       call ESMF_GridCompGet(gridComp,grid=getmGrid)
-      call ESMF_GridGet(getmGrid,distgrid=getmDistGrid)
+      !call ESMF_GridGet(getmGrid,distgrid=getmDistGrid)
       !call ESMF_GridGetCoord(getmGrid,coordDim=...,staggerloc=...,array=array)
       !call ESMF_ArrayDestroy(array)
-      call ESMF_DistGridDestroy(getmDistGrid)
+      call ESMF_DistGridDestroy(getmDistGrid2D)
+      call ESMF_DistGridDestroy(getmDistGrid3D)
       call ESMF_GridDestroy(getmGrid)
     end if
 
-    call getmCmp_finalize_variables()
-
-   end subroutine Finalize
+  end subroutine Finalize
 
 !-----------------------------------------------------------------------
 !BOP
@@ -353,8 +369,9 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain, only: imin,jmin,imax,jmax
+   use domain, only: imin,jmin,imax,jmax,kmax
    use domain, only: xcord,ycord,xx,yx,lonx,latx
+   use domain, only: xxcord,yxcord,xc,yc,lonc,latc
    use domain, only: grid_type
    IMPLICIT NONE
 !
@@ -382,18 +399,64 @@ module getm_component
 
    if (noKindMatch) then
       select case (grid_type)
-         case(1,2)
-            allocate(xcord_(_IRANGE_HALO_)) ; xcord_ = xcord
-            allocate(ycord_(_JRANGE_HALO_)) ; ycord_ = ycord
-         case(3,4)
-            allocate(xx_(E2DXFIELD)) ; xx_ = xx
-            allocate(yx_(E2DXFIELD)) ; yx_ = yx
+         case(1)
+            allocate(xc1D(   _IRANGE_HALO_)) ; xc1D = xcord
+            allocate(yc1D(   _JRANGE_HALO_)) ; yc1D = ycord
+            allocate(xx1D(-1+_IRANGE_HALO_))
+            allocate(yx1D(-1+_JRANGE_HALO_))
+         case(2)
+            allocate(lonc1D(   _IRANGE_HALO_)) ; lonc1D = xcord
+            allocate(latc1D(   _JRANGE_HALO_)) ; latc1D = ycord
+            allocate(lonx1D(-1+_IRANGE_HALO_))
+            allocate(latx1D(-1+_JRANGE_HALO_))
+         case(3)
+            allocate(xx2D(E2DXFIELD)) ; xx2D = xx
+            allocate(yx2D(E2DXFIELD)) ; yx2D = yx
+            allocate(xc2D(E2DFIELD )) ; xc2D = xc
+            allocate(yc2D(E2DFIELD )) ; yc2D = yc
+         case(4)
+            allocate(lonx2D(E2DXFIELD)) ; lonx2D = lonx
+            allocate(latx2D(E2DXFIELD)) ; latx2D = latx
+            allocate(lonc2D(E2DFIELD )) ; lonc2D = lonc
+            allocate(latc2D(E2DFIELD )) ; latc2D = latc
       end select
-   else
-      !xcord_ => xcord ; ycord_ => ycord
-      !xx_    => xx    ; yx_    => yx
-      !lonx_  => lonx  ; latx_  => latx
+!    else
+!       select case (grid_type)
+!          case(1)
+!             xc1D => xcord
+!             yc1D => ycord
+!             xx1D => xxcord
+!             yx1D => yxcord
+!          case(2)
+!             lonc1D => xcord
+!             latc1D => ycord
+!             lonx1D => xxcord
+!             latx1D => yxcord
+!          case(3)
+!             xx2D => xx
+!             yx2D => yx
+!             xc2D => xc
+!             yc2D => yc
+!          case(4)
+!             lonx2D => lonx
+!             latx2D => latx
+!             lonc2D => lonc
+!             latc2D => latc
+!       end select
    end if
+
+   select case (grid_type)
+      case(1)
+         xx1D(imin-HALO:imax+HALO-1) = _HALF_ * ( xc1D(imin-HALO:imax+HALO-1) + xc1D(imin-HALO+1:imax+HALO) )
+         yx1D(jmin-HALO:jmax+HALO-1) = _HALF_ * ( yc1D(jmin-HALO:jmax+HALO-1) + yc1D(jmin-HALO+1:jmax+HALO) )
+      case(2)
+         lonx1D(imin-HALO:imax+HALO-1) = _HALF_ * ( lonc1D(imin-HALO:imax+HALO-1) + lonc1D(imin-HALO+1:imax+HALO) )
+         latx1D(:) = latx(imin,:)
+   end select
+
+   allocate(zw(I3DFIELD))
+   allocate(zc(E2DFIELD ,1:kmax))
+   allocate(zx(E2DXFIELD,0:kmax))
 
 #ifdef DEBUG
    write(debug,*) 'getmCmp_init_variables()'
@@ -406,52 +469,6 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOP
 !
-! !ROUTINE: getmCmp_finalize_variables
-!
-! !INTERFACE:
-   subroutine getmCmp_finalize_variables()
-!
-! !DESCRIPTION:
-!
-! !USES:
-   IMPLICIT NONE
-!
-! !INPUT/OUTPUT PARAMETERS:
-!
-! !REVISION HISTORY:
-!  Original Author(s): Knut Klingbeil
-!
-! !LOCAL VARIABLES
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'getmCmp_finalize_variables() # ',Ncall
-#endif
-
-   if (noKindMatch) then
-      if(associated(xcord_)) deallocate(xcord_)
-      if(associated(ycord_)) deallocate(ycord_)
-      if(associated(xx_   )) deallocate(xx_   )
-      if(associated(yx_   )) deallocate(yx_   )
-      if(associated(lonx_ )) deallocate(lonx_ )
-      if(associated(latx_ )) deallocate(latx_ )
-   end if
-
-#ifdef DEBUG
-   write(debug,*) 'getmCmp_finalize_variables()'
-   write(debug,*)
-#endif
-   return
-
-   end subroutine getmCmp_finalize_variables
-!EOC
-!-----------------------------------------------------------------------
-!BOP
-!
 ! !ROUTINE: getmCmp_init_grid - Creates Grid
 !
 ! !INTERFACE:
@@ -460,8 +477,9 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain, only: ioff,joff,imax,jmax
-   use domain, only: grid_type
+   use initialise, only: runtype
+   use domain    , only: ioff,joff,imax,jmax,kmax
+   use domain    , only: grid_type
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -472,19 +490,19 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    type(ESMF_VM)            :: getmVM
-   type(ESMF_DistGrid)      :: getmDistGrid
-   type(ESMF_Grid)          :: getmGrid
    type(ESMF_CoordSys_Flag) :: coordSys
    type(ESMF_StaggerLoc)    :: StaggerLoc
-   type(ESMF_ARRAY)         :: xArray,yArray
+   type(ESMF_Array)         :: xcArray2D,ycArray2D,xxArray2D,yxArray2D
+   type(ESMF_Array)         :: xcArray3D,ycArray3D,xxArray3D,yxArray3D
+   type(ESMF_Array)         :: zwArray,zcArray,zxArray
 !  Note (KK): ESMF_ARRAY's are deep classes, that persist after return.
 !             (even without save attribute).
    integer(ESMF_KIND_I4),dimension(:),allocatable,target :: alledges
    integer(ESMF_KIND_I4),dimension(4),target             :: myedges
    integer                  :: getmPetCount
-   integer                  :: pet,i0,j0,ilen,jlen
-   integer,dimension(2)     :: coordDimCount
-   integer,dimension(2,2)   :: coordDimMap
+   integer                  :: pet,i0,j0,ilen,jlen,klen
+   integer,dimension(3)     :: coordDimCount
+   integer,dimension(3,3)   :: coordDimMap
    integer,dimension(:,:,:),allocatable                  :: deBlockList
 !
 !EOP
@@ -503,101 +521,211 @@ module getm_component
 !  syncflag=ESMF_SYNC_BLOCKING (default)
    call ESMF_VMAllGather(getmVM,myedges,alledges,4)
 
-   allocate(deBlockList(2,2,getmPetCount))
+   if (runtype .eq. 1) then
+      klen = 1
+   else
+      klen = kmax
+   end if
+
+   allocate(deBlockList(3,2,getmPetCount))
    do pet = 0,getmPetCount-1
       i0   = 1 + alledges(1+4*pet)
       j0   = 1 + alledges(2+4*pet)
       ilen =     alledges(3+4*pet)
       jlen =     alledges(4+4*pet)
-      deBlockList(:,1,1+pet) = (/ i0        , j0        /)
-      deBlockList(:,2,1+pet) = (/ i0+ilen-1 , j0+jlen-1 /)
+      deBlockList(:,1,1+pet) = (/ i0        , j0        , 1        /)
+      deBlockList(:,2,1+pet) = (/ i0+ilen-1 , j0+jlen-1 , 1+klen-1 /)
    end do
 
 !  indexflag=ESMF_INDEX_DELOCAL (default) starting at 1
 !  (for ESMF_INDEX_USER [grid|stagger]MemLBound can be set)
 #if 1
 !  Single-tile DistGrid (1 subdomain = 1 DE)
-   getmDistGrid = ESMF_DistGridCreate(minval(deBlockList(:,1,:),2), &
-                                      maxval(deBlockList(:,2,:),2), &
-                                      deBlockList)
+!  internal call to ESMF_DistGridCreateDB()
+   getmDistGrid2D = ESMF_DistGridCreate(minval(deBlockList(1:2,1,:),2), &
+                                        maxval(deBlockList(1:2,2,:),2), &
+                                        int(deBlockList(1:2,:,:)))
+   getmDistGrid3D = ESMF_DistGridCreate(minval(deBlockList(:,1,:),2), &
+                                        maxval(deBlockList(:,2,:),2), &
+                                        deBlockList)
 #else
 !  Multi-tile DistGrid (1 subdomain = 1 tile = 1 DE) by specification of
 !  [min|max]IndexPTile.
 !  Note (KK): int() intrinsic routines are needed, because ESMF does not
 !             accept subarrays as arguments
-   getmDistGrid = ESMF_DistGridCreate(int(deBlockList(:,1,:)),int(deBlockList(:,2,:)))
+!  internal call to ESMF_DistGridCreateRDT()
+   getmDistGrid2D = ESMF_DistGridCreate(int(deBlockList(1:2,1,:)), &
+                                        int(deBlockList(1:2,2,:)))
+   getmDistGrid3D = ESMF_DistGridCreate(int(deBlockList(:,1,:)), &
+                                        int(deBlockList(:,2,:)))
 #endif
 
    select case (grid_type)
       case(1)
          coordSys = ESMF_COORDSYS_CART
-         coordDimCount = (/ 1 , 1 /)         ! rectilinear coordinates
-         coordDimMap = reshape( (/1,2,0,0/) , (/2,2/) )
-         StaggerLoc = ESMF_STAGGERLOC_CENTER ! (default)
+         coordDimCount = (/ 1 , 1 , 3 /)     ! rectilinear horizontal coordinates
+         coordDimMap = reshape( (/1,2,1,0,0,2,0,0,3/) , (/3,3/) )
 !        1D xcord is replicated automatically along 2nd DistGrid dimension
 !        1D ycord is replicated along 1st DistGrid dimension as specified
 !        by distgridToArrayMap.
 !        total[L|U]Width are automatically determined from shape of [x|y]cord
 !        datacopyflag = ESMF_DATACOPY_REFERENCE (default)
+!        internal call to ESMF_ArrayCreateAssmdShape<rank><type><kind>()
+!        (because of required indexflag)
 !        Note (KK): These ArrayCreate()'s only work for 1DE per PET!!!
 !                   Automatically determined coordDimMap for rectilinear
 !                   coordinates is incorrect!
-         xArray = ESMF_ArrayCreate(getmDistGrid,xcord_,indexflag=ESMF_INDEX_DELOCAL)
-         yArray = ESMF_ArrayCreate(getmDistGrid,ycord_,indexflag=ESMF_INDEX_DELOCAL, &
-                                   distgridToArrayMap=(/0,1/))
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,xc1D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,yc1D,indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1/))
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,xc1D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,yc1D,indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1,0/))
+         xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,xx1D,          &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
+         yxArray2D = ESMF_ArrayCreate(getmDistGrid2D,yx1D,          &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1/),   &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
+         xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,xx1D,          &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
+         yxArray3D = ESMF_ArrayCreate(getmDistGrid3D,yx1D,          &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1,0/), &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
       case(2)
          coordSys = ESMF_COORDSYS_SPH_DEG    ! (default)
-         coordDimCount = (/ 1 , 1 /)         ! rectilinear coordinates
-         coordDimMap = reshape( (/1,2,0,0/) , (/2,2/) )
-         StaggerLoc = ESMF_STAGGERLOC_CENTER ! (default)
-         xArray = ESMF_ArrayCreate(getmDistGrid,xcord_,indexflag=ESMF_INDEX_DELOCAL)
-         yArray = ESMF_ArrayCreate(getmDistGrid,ycord_,indexflag=ESMF_INDEX_DELOCAL, &
-                                   distgridToArrayMap=(/0,1/))
+         coordDimCount = (/ 1 , 1 , 3 /)     ! rectilinear horizontal coordinates
+         coordDimMap = reshape( (/1,2,1,0,0,2,0,0,3/) , (/3,3/) )
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonc1D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,latc1D,indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1/))
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc1D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc1D,indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1,0/))
+         xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonx1D,        &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
+         yxArray2D = ESMF_ArrayCreate(getmDistGrid2D,latx1D,        &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1/),   &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
+         xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonx1D,        &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
+         yxArray3D = ESMF_ArrayCreate(getmDistGrid3D,latx1D,        &
+                                      indexflag=ESMF_INDEX_DELOCAL, &
+                                      distgridToArrayMap=(/0,1,0/), &
+                                      totalLWidth=(/HALO+1/),       &
+                                      totalUWidth=(/HALO/))
       case(3)
          coordSys = ESMF_COORDSYS_CART
-         coordDimCount = (/ 2 , 2 /)                    ! (default for 2D Grid)
-         coordDimMap = reshape( (/1,1,2,2/) , (/2,2/) ) ! (default for 2D Grid)
-         StaggerLoc = ESMF_STAGGERLOC_CORNER
+         coordDimCount = (/ 2 , 2 , 3 /)
+         coordDimMap = reshape( (/1,1,1,2,2,2,0,0,3/) , (/3,3/) ) ! (default)
 !        Note (KK): automatically determined total[L|U]Width are not consistent
 !                   with gridAlign specified later
-         xArray = ESMF_ArrayCreate(getmDistGrid,xx_,              &
-                                   indexflag=ESMF_INDEX_DELOCAL,  &
-                                   totalLWidth=(/HALO+1,HALO+1/), &
-                                   totalUWidth=(/HALO,HALO/))
-         yArray = ESMF_ArrayCreate(getmDistGrid,yx_,              &
-                                   indexflag=ESMF_INDEX_DELOCAL,  &
-                                   totalLWidth=(/HALO+1,HALO+1/), &
-                                   totalUWidth=(/HALO,HALO/))
+         xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,xx2D,           &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         yxArray2D = ESMF_ArrayCreate(getmDistGrid2D,yx2D,           &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,xx2D,           &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         yxArray3D = ESMF_ArrayCreate(getmDistGrid3D,yx2D,           &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,xc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,yc2D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,xc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,yc2D,indexflag=ESMF_INDEX_DELOCAL)
       case(4)
-         coordSys = ESMF_COORDSYS_SPH_DEG               ! (default)
-         coordDimCount = (/ 2 , 2 /)                    ! (default for 2D Grid)
-         coordDimMap = reshape( (/1,1,2,2/) , (/2,2/) ) ! (default for 2D Grid)
-         StaggerLoc = ESMF_STAGGERLOC_CORNER
-         xArray = ESMF_ArrayCreate(getmDistGrid,lonx_,            &
-                                   indexflag=ESMF_INDEX_DELOCAL,  &
-                                   totalLWidth=(/HALO+1,HALO+1/), &
-                                   totalUWidth=(/HALO,HALO/))
-         yArray = ESMF_ArrayCreate(getmDistGrid,latx_,            &
-                                   indexflag=ESMF_INDEX_DELOCAL,  &
-                                   totalLWidth=(/HALO+1,HALO+1/), &
-                                   totalUWidth=(/HALO,HALO/))
+         coordSys = ESMF_COORDSYS_SPH_DEG                         ! (default)
+         coordDimCount = (/ 2 , 2 , 3 /)
+         coordDimMap = reshape( (/1,1,1,2,2,2,0,0,3/) , (/3,3/) ) ! (default)
+         xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         yxArray2D = ESMF_ArrayCreate(getmDistGrid2D,latx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         yxArray3D = ESMF_ArrayCreate(getmDistGrid3D,latx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/))
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,latc2D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc2D,indexflag=ESMF_INDEX_DELOCAL)
    end select
 
+   zwArray = ESMF_ArrayCreate(getmDistGrid3D,zw,            &
+                              indexflag=ESMF_INDEX_DELOCAL, &
+                              totalLWidth=(/HALO,HALO,1/),  &
+                              totalUWidth=(/HALO,HALO,0/))
+   zcArray = ESMF_ArrayCreate(getmDistGrid3D,zc,            &
+                              indexflag=ESMF_INDEX_DELOCAL)
+   zxArray = ESMF_ArrayCreate(getmDistGrid3D,zx,               &
+                              indexflag=ESMF_INDEX_DELOCAL,    &
+                              totalLWidth=(/HALO+1,HALO+1,1/), &
+                              totalUWidth=(/HALO,HALO,0/))
+
 !  Note (KK): gridAlign specifies which corner point in a grid cell
-!             shares the center indices [ default=(/-1,-1/) ].
+!             shares the center indices [ default=(/-1,...,-1/) ].
 !             gridEdge[L|U]Width only affect DE's at the edge of tiles
 !             (thus it matters whether a single- or multi-tile DistGrid
 !              was created). If gridEdgeWidth's are not set, they are set
 !             automatically based on gridAlign.
-   getmGrid = ESMF_GridCreate(getmDistGrid,name="getmGrid",             &
-                                           gridAlign=(/1,1/),           &
-                                           coordSys=coordSys,           &
-                                           coordDimCount=coordDimCount, &
-                                           coordDimMap=coordDimMap)
-   call ESMF_GridSetCoord(getmGrid,1,array=xArray,staggerloc=StaggerLoc)
-   call ESMF_GridSetCoord(getmGrid,2,array=yArray,staggerloc=StaggerLoc)
+!  internal call to ESMF_GridCreateFrmDistGrid()
+   getmGrid2D = ESMF_GridCreate(getmDistGrid2D,name="getmGrid2D",      &
+                                gridAlign=(/1,1/),                     &
+                                coordSys=coordSys,                     &
+                                coordDimCount=int(coordDimCount(1:2)), &
+                                coordDimMap=int(coordDimMap(1:2,1:2)))
+   getmGrid3D = ESMF_GridCreate(getmDistGrid3D,name="getmGrid3D", &
+                                gridAlign=(/1,1,1/),              &
+                                coordSys=coordSys,                &
+                                coordDimCount=coordDimCount,      &
+                                coordDimMap=coordDimMap)
 
-   call ESMF_GridCompSet(getmCmp,grid=getmGrid)
+   StaggerLoc = ESMF_STAGGERLOC_CENTER ! (default)
+   call ESMF_GridSetCoord(getmGrid2D,1,array=xcArray2D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid2D,2,array=ycArray2D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid3D,1,array=xcArray3D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid3D,2,array=ycArray3D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid3D,3,array=zcArray  ,staggerloc=StaggerLoc)
+
+   StaggerLoc = ESMF_STAGGERLOC_CORNER
+   call ESMF_GridSetCoord(getmGrid2D,1,array=xxArray2D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid2D,2,array=yxArray2D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid3D,1,array=xxArray3D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid3D,2,array=yxArray3D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid3D,3,array=zxArray  ,staggerloc=StaggerLoc)
+
+   call ESMF_GridSetCoord(getmGrid3D,3,array=zwArray,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE)
+
+   call ESMF_GridCompSet(getmCmp,grid=getmGrid3D)
+   call getmCmp_update_grid(getmCmp)
 
    deallocate(alledges)
    deallocate(deBlockList)
@@ -610,6 +738,93 @@ module getm_component
    return
 
    end subroutine getmCmp_init_grid
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_update_grid -
+!
+! !INTERFACE:
+   subroutine getmCmp_update_grid(getmCmp)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use initialise  , only: runtype
+   use domain      , only: imin,imax,jmin,jmax,kmax,az,au,av,H
+   use variables_2d, only: z
+   use variables_3d, only: ssen,hn
+   IMPLICIT NONE
+!
+! !INPUT/OUTPUT PARAMETERS:
+   type(ESMF_GridComp) :: getmCmp
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   REALTYPE,dimension(E2DFIELD) :: zwu
+   integer :: i,j,k,klen
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_update_grid() # ',Ncall
+#endif
+
+   zw(:,:,0) = -H
+   if (runtype .eq. 1) then
+      klen = 1
+      zw(:,:,1) = z
+   else
+      klen = kmax
+      do k=1,kmax-1
+         zw(:,:,k) = zw(:,:,k-1) + hn(:,:,k)
+         zc(:,:,k) = _HALF_ * ( zw(:,:,k-1) + zw(:,:,k) )
+      end do
+      zw(:,:,kmax) = ssen
+   end if
+   zc(:,:,klen) = _HALF_ * ( zw(:,:,klen-1) + zw(:,:,klen) )
+
+   do k=0,klen
+      do j=jmin-HALO,jmax+HALO
+         do i=imin-HALO,imax+HALO-1
+            if (au(i,j) .ne. 0) then
+               zwu(i,j) = _HALF_ * ( zw(i,j,k) + zw(i+1,j,k) )
+            else
+               if (az(i,j) .ne. 0) then
+                  zwu(i,j) = zw(i,j,k)
+               else if (az(i+1,j) .ne. 0) then
+                  zwu(i,j) = zw(i+1,j,k)
+               end if
+            end if
+         end do
+      end do
+      do j=jmin-HALO,jmax+HALO-1
+         do i=imin-HALO,imax+HALO-1
+            if (av(i,j).ne.0 .or. av(i+1,j).ne.0) then
+               zx(i,j,k) = _HALF_ * ( zwu(i,j) + zwu(i,j+1) )
+            else
+               if (az(i,j).ne.0 .or. az(i+1,j).ne.0) then
+                  zx(i,j,k) = zwu(i,j)
+               else if (az(i,j+1).ne.0 .or. az(i+1,j+1).ne.0) then
+                  zx(i,j,k) = zwu(i,j+1)
+               end if
+            end if
+         end do
+      end do
+   end do
+
+#ifdef DEBUG
+   write(debug,*) 'getmCmp_update_grid()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_update_grid
 !EOC
 !-----------------------------------------------------------------------
 !BOP
