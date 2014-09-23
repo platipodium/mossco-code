@@ -57,7 +57,7 @@ endif
 
 fabm-git-update:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-	(cd $(MOSSCO_DIR)/external/fabm-git ; git pull)
+	(cd $(MOSSCO_DIR)/external/fabm-git ; git pull origin master)
 endif
 
 gotm-git-clone:
@@ -69,7 +69,7 @@ endif
 
 gotm-git-update:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
-	(cd $(MOSSCO_DIR)/external/gotm-git ; git pull)
+	(cd $(MOSSCO_DIR)/external/gotm-git ; git pull origin master)
 endif
 
 getm-git-clone:
@@ -81,7 +81,7 @@ endif
 
 getm-git-update:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
-	(cd $(MOSSCO_DIR)/external/getm-git ; git pull)
+	(cd $(MOSSCO_DIR)/external/getm-git ; git pull origin master)
 endif
 
 erosed-svn-clone:
