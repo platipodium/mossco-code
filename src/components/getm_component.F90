@@ -25,6 +25,9 @@ module getm_component
 
   public SetServices
 
+! this probably violates general ESMF rules :-)
+  public do_transport,do_transport_3d
+
   private getmCmp_init_variables
   private getmCmp_init_grid,getmCmp_update_grid
 
@@ -825,6 +828,179 @@ module getm_component
    return
 
    end subroutine getmCmp_update_grid
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: do_transport() - do transport of 2D fields
+!
+! !INTERFACE:
+   subroutine do_transport(getmCmp,dt,field,AH)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain      , only: imin,imax,jmin,jmax,az,H
+   use advection   , only: do_advection
+   use advection   , only: HALFSPLIT,P2_PDM
+   use m2d         , only: Uint,Vint
+   use variables_3d, only: Dn,Dun,Dvn,sseo
+   use halo_zones  , only: update_2d_halo,wait_halo
+   use halo_zones  , only: H_TAG
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   type(ESMF_GridComp) :: getmCmp
+   REALTYPE,intent(in) :: dt,AH
+!
+! !INPUT/OUPUT PARAMETERS:
+   type(ESMF_Field)    :: field
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   REALTYPE,dimension(E2DFIELD)              :: Dold
+   REALTYPE,dimension(E2DFIELD),target       :: f
+   REALTYPE,dimension(:,:),pointer           :: pf
+   real(ESMF_KIND_R8),dimension(:,:),pointer :: farrayPtr
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'do_transport() # ',Ncall
+#endif
+
+!  KK-TODO: VMIsPetLocal() ???
+   if (.not. ESMF_GridCompIsPetLocal(getmCmp)) return
+
+   call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+
+   if (noKindMatch) then
+      pf => f
+      f = farrayPtr
+   else
+      pf => farrayPtr
+   end if
+
+!  Cannot extract layer heights from grid coordinates, because these are
+!  already updated.
+!  For several timesteps we need to store Dires and calculate new
+!  D[old|[u|v]n] based on Dires.
+!  For several timesteps [U|V]int is inconsistent.
+   Dold = sseo + H
+   call update_2d_halo(pf,pf,az,imin,jmin,imax,jmax,H_TAG)
+   call wait_halo(H_TAG)
+   call do_advection(dt,pf,Uint,Vint,Dun,Dvn,Dold,Dn,HALFSPLIT,P2_PDM,AH,H_TAG)
+
+   if (noKindMatch) farrayPtr = f
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving do_transport()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine do_transport
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: do_transport_3d() - do transport of 3D fields
+!
+! !INTERFACE:
+   subroutine do_transport_3d(getmCmp,dt,field,AH,wsfield)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain      , only: imin,imax,jmin,jmax,kmax,az
+   use advection_3d, only: do_advection_3d
+   use advection   , only: HALFSPLIT,P2_PDM
+   use variables_3d, only: uu,vv,ww,hun,hvn,ho,hn,nuh
+   use halo_zones  , only: update_3d_halo,wait_halo
+   use halo_zones  , only: H_TAG
+   use util        , only: NEUMANN,FLUX
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   type(ESMF_GridComp)                  :: getmCmp
+   REALTYPE,intent(in)                  :: dt,AH
+   type(ESMF_Field),intent(in),optional :: wsfield
+!
+! !INPUT/OUPUT PARAMETERS:
+   type(ESMF_Field)                     :: field
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   REALTYPE,dimension(I3DFIELD),target         :: f
+   REALTYPE,dimension(:,:,:),pointer           :: pf
+   real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farrayPtrf,farrayPtrws
+   REALTYPE,dimension(0:kmax)                  :: sour,Taur,ws
+   integer                                     :: i,j
+   logical                                     :: ws_present
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'do_transport_3d() # ',Ncall
+#endif
+
+!  KK-TODO: VMIsPetLocal() ???
+   if (.not. ESMF_GridCompIsPetLocal(getmCmp)) return
+
+   ws_present = present(wsfield)
+
+   call ESMF_FieldGet(field,farrayPtr=farrayPtrf)
+   if (ws_present) call ESMF_FieldGet(wsfield,farrayPtr=farrayPtrws)
+
+   if (noKindMatch) then
+      pf => f
+      f = farrayPtrf
+   else
+      pf => farrayPtrf
+   end if
+
+!  see comments in do_transport()
+   call update_3d_halo(pf,pf,az,imin,jmin,imax,jmax,kmax,H_TAG)
+   call wait_halo(H_TAG)
+   call do_advection_3d(dt,pf,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,AH,H_TAG)
+
+   sour = _ZERO_
+   Taur = 1.d15
+   do j=jmin,jmax
+      do i=imin,imax
+         if (az(i,j) .eq. 1) then
+            if (ws_present) then
+!              Do advection step due to settling or rising
+               ws = farrayPtrws(i,j,:)
+               call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws,FLUX,FLUX, &
+                               _ZERO_,_ZERO_,6,1,pf(i,j,:))
+            end if
+            call diff_center(kmax,dt,_ONE_,1,hn(i,j,:),NEUMANN,NEUMANN, &
+                             _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &
+                             pf(i,j,:),pf(i,j,:))
+         end if
+      end do
+   end do
+
+   if (noKindMatch) farrayPtrf = f
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving do_transport_3d()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine do_transport_3d
 !EOC
 !-----------------------------------------------------------------------
 !BOP
