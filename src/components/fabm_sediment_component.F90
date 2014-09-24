@@ -43,6 +43,7 @@ module fabm_sediment_component
   integer   :: t,tnum,funit,output=-1,k,n,numyears,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
   integer   :: presimulation_years=-1
+  integer   :: bcup_dissolved_variables=2
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
@@ -55,7 +56,8 @@ module fabm_sediment_component
   type(type_sed),save :: sed
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
-                     dt_min,relative_change_min,ugrid_name
+                     dt_min,relative_change_min,ugrid_name, &
+                     bcup_dissolved_variables
  
   public :: SetServices,bdys,fluxes,rk
   
@@ -241,9 +243,10 @@ module fabm_sediment_component
     do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
       call ode_solver(sed,dt_spinup,ode_method)
     end do
-    !> use flux-boundary condition for dissolved variables as calculated in get_boundary_conditions
-    !> after presimulation
-    sed%bcup_dissolved_variables = 1
+    !> it is possible to use flux-boundary condition for dissolved variables
+    !> as calculated in get_boundary_conditions after presimulation,
+    !> Dirichlet boundary conditions are numerically more stable.
+    sed%bcup_dissolved_variables = bcup_dissolved_variables
 
     !! define an output unit for tsv output
     if (sed%do_output) then
@@ -573,6 +576,10 @@ module fabm_sediment_component
         end if
       end if
 
+#ifdef WRITE_PROGRESS
+      if (mod(t*dt,(365.*86400.)).eq.0) write(0,*) '  elapsed [d]',dt*t/86400.
+#endif
+
       call ESMF_ClockAdvance(clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
@@ -786,8 +793,14 @@ module fabm_sediment_component
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
             bdys(:,:,i+1) = ptr_f2(:,:)
           end if
-          fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))/ &
-            sed%grid%dz(:,:,1)*(sed%diffusivity+bdys(:,:,1)*0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
+          if (sed%bcup_dissolved_variables .eq. 1) then
+            fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))/ &
+              sed%grid%dz(:,:,1)*(sed%diffusivity+bdys(:,:,1) * &
+              0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
+          else
+            !> reset fluxes to zero
+            fluxes(_IRANGE_,_JRANGE_,i) = 0.0d0
+          end if
         end if
       endif
  
