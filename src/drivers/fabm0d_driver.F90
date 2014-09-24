@@ -246,9 +246,9 @@
    LEVEL2 'Reading local environment data from:'
    LEVEL3 trim(env_file)
    call init_input()
-   if (par_from_file)  call register_input_0d(env_file,1,par_sf)
-   if (temp_from_file) call register_input_0d(env_file,2,temp)
-   if (salt_from_file) call register_input_0d(env_file,3,salt)
+   if (par_from_file)  call register_input_0d(env_file,1,par_sf,'par_at_surface')
+   if (temp_from_file) call register_input_0d(env_file,2,temp,'temperature')
+   if (salt_from_file) call register_input_0d(env_file,3,salt,'salinity')
 
    ! Build FABM model tree.
    zerod%model => fabm_create_model_from_file(namlst)
