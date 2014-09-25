@@ -27,10 +27,20 @@ LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += $(NC_LIBS) 
 
-.PHONY: all exec libsediment libmossco_sediment libconstant libmossco_netcdf
+.PHONY: all exec libsediment libmossco_sediment libconstant libmossco_netcdf 
 
 all: exec
 exec: constant_fabmsed_netcdf
+
+deprecation:
+	@-echo This hardcoded example is deprecated and will be removed in the near future.
+	@-echo You can obtain the same simulation with the generic example found in 
+	@-echo $(MOSSCO_DIR)/examples/generic
+	@-echo and the configuration constant--fabm_sediment--netcdf.yaml.
+	@-echo In that directory, execute the following:
+	@-echo     python ./create_coupling.py constant--fabm_sediment--netcdf.yaml && make
+	@-echo In your setups directory, execute the generated program
+	@-echo     $(MOSSCO_DIR)/examples/generic/coupling
 
 constant_fabmsed_netcdf: toplevel_component.o main.o  
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
