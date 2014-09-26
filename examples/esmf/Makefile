@@ -31,6 +31,7 @@ endif
 ifeq ($(MOSSCO_GOTM),true)
 SUBDIRS += gotm fabm0d
 SUBDIRS += gotmfabm
+SUBDIRS += pelagicfabm1d
 endif
 endif
 

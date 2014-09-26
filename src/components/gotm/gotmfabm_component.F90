@@ -1,4 +1,9 @@
-!> @brief Implementation of an ESMF intermediate coupling
+!> @brief GOTM/FABM component
+!
+!> This component is a modular, ESMF-based alternative to GOTM using its
+!! FABM driver. Internally, the component uses the generic fabm_pelagic
+!! infrastructure together with the gotm_component and the
+!! gotm_transport_component for transport of fabm_pelagic's state variables
 !>
 !> This computer program is part of MOSSCO. 
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
@@ -13,11 +18,13 @@
 module gotmfabm_component
 
   use esmf
-  use mossco_variable_types
-  use mossco_state
 
   use gotm_component, only : gotm_SetServices => SetServices 
-  use fabm_gotm_component, only : fabm_gotm_SetServices => SetServices 
+  use fabm_pelagic_component, only : fabm_SetServices => SetServices
+  use gotm_transport_component, only : gotm_transp_SetServices => SetServices
+  use airsea, only : I_0 ! surface radiation in GOTM
+  use observations, only : A ! Albedo in GOTM
+  use meanflow, only : taub, rho
 
   implicit none
 
@@ -25,11 +32,10 @@ module gotmfabm_component
 
   public SetServices
 
-  type(ESMF_GridComp),dimension(:),save, allocatable :: gridCompList
-  type(ESMF_Clock), dimension(:),  save, allocatable :: gridCompClockList 
-  character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames
-  type(ESMF_GridComp), save :: gotmComp
-  type(ESMF_GridComp), save :: fabm_gotmComp
+  type(ESMF_GridComp), save :: gotmComp, fabmComp, gotmTranspComp
+  type(ESMF_State), save :: state
+  real(ESMF_KIND_R8), dimension(:,:), pointer :: surface_radiation, bottom_stress
+  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: layer_height, gotm_layer_height, density
 
   contains
 
@@ -55,328 +61,164 @@ module gotmfabm_component
   !!
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
 
-    implicit none
+    type(ESMF_GridComp)     :: gridComp
+    type(ESMF_State)        :: importState
+    type(ESMF_State)        :: exportState
+    type(ESMF_Clock)        :: parentClock, childClock
+    type(ESMF_TimeInterval) :: timeStep
+    type(ESMF_Field)        :: field
+    integer, intent(out)    :: rc
 
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
+    call ESMF_LogWrite("GOTM/FABM component initializing ... ",ESMF_LOGMSG_INFO)
 
-    character(len=19)       :: timestring
-    type(ESMF_Time)         :: clockTime, startTime, stopTime, currTime
-    type(ESMF_Time)         :: time
-    type(ESMF_TimeInterval) :: timeInterval, timeStep
-    real(ESMF_KIND_R8)      :: dt
-     
-    integer(ESMF_KIND_I4)  :: numGridComp, petCount
-    integer(ESMF_KIND_I4)  :: i
-    character(ESMF_MAXSTR) :: name, message
-    type(ESMF_Clock)       :: childClock
-    type(ESMF_Clock)       :: clock !> This component's internal clock
-    logical                :: clockIsPresent
-    integer(ESMF_KIND_I4), allocatable :: petList(:)
-    type(ESMF_VM)          :: vm
-     
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
-    !! a local clock as a clone of the parent clock, and associate it
-    !! with this component.  Finally, set the name of the local clock
-    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
-    else
-      clock = ESMF_ClockCreate(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
-    endif
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    !! Log the call to this function
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    ! Create component, call setservices, and create states
+    gotmComp = ESMF_GridCompCreate(name="gotmComp", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
-    !! Allocate the fields for all gridded components and their names
-    numGridComp = 2
-    allocate(gridCompList(numGridComp))
-    allocate(gridCompClockList(numGridComp))
-    allocate(gridCompNames(numGridComp))
-    
-    gridCompNames(1) = 'gotm'
-    gridCompNames(2) = 'fabm_gotm'
-
-    !! Create all gridded components, and create import and export states for these
-    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
+    call ESMF_GridCompSetServices(gotmComp,gotm_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_VmGet(vm, petCount=petCount, rc=rc)
-    allocate(petList(petCount))
-    do i=1,petCount
-      petList(i)=i-1
-    enddo
 
-    do i = 1, numGridComp
-      gridCompClockList(i) = ESMF_ClockCreate(clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      gridCompList(i) = ESMF_GridCompCreate(name=trim(gridCompNames(i))//'Comp',  &
-        petList=petList, clock=gridCompClockList(i), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    enddo
+    fabmComp = ESMF_GridCompCreate(name="fabmComp", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetServices(fabmComp,fabm_SetServices, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    gotmTranspComp = ESMF_GridCompCreate(name="gotmTranspComp", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetServices(gotmTranspComp,gotm_transp_SetServices, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
    
-    !! Now register all setServices routines for the gridded components
-    call ESMF_GridCompSetServices(gridCompList(1), gotm_SetServices, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(2), fabm_gotm_SetServices, rc=rc)
+    state = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Exchange state")
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Initializing gotm
-    call ESMF_GridCompInitialize(gridCompList(1), importState=importState, &
-      exportState=exportState, clock=clock, rc=rc)
+    call ESMF_GridCompInitialize(gotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Initializing fabm_gotm
-    call ESMF_GridCompInitialize(gridCompList(2), importState=importState, &
-      exportState=exportState, clock=clock, rc=rc)
+    call ESMF_AttributeSet(state, 'foreign_grid_field_name', 'temperature_in_water',rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-    !! Log the successful completion of this function
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+
+    ! set parentClock time step to gotmComp timestep
+    call ESMF_GridCompGet(gotmComp, clock=childClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_ClockGet(childClock, timeStep=timeStep, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockSet(parentCLock, timeStep=timeStep, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompInitialize(fabmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompInitialize(gotmTranspComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    ! get surface radiation and layer_height pointer
+    call ESMF_StateGet(state, 'surface_downwelling_photosynthetic_radiative_flux', field=field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=surface_radiation, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(state, 'bottom_stress', field=field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=bottom_stress, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(state, 'cell_thickness_in_water', field=field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=layer_height, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(state, 'grid_height_in_water', field=field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=gotm_layer_height, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(state, 'density_in_water', field=field, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=density, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+   call ESMF_LogWrite("GOTM/FABM component initialized",ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
-
-    character(len=ESMF_MAXSTR) :: timestring
-    type(ESMF_Time)            :: stopTime, currTime, time
-    type(ESMF_TimeInterval)    :: timeInterval
-    integer(ESMF_KIND_I8)      :: advanceCount,  i, j, k, l
-    integer(ESMF_KIND_I4)      :: petCount, localPet
-    integer(ESMF_KIND_I4)      :: numGridComp, hours, seconds, minutes
     
-    type(ESMF_Clock)        :: childClock, clock
-    logical                 :: clockIsPresent
+    type(ESMF_GridComp)     :: gridComp
+    type(ESMF_State)        :: importState, exportState
+    type(ESMF_Clock)        :: parentClock, childClock
+    type(ESMF_Time)         :: currTime
+    type(ESMF_TimeInterval) :: timeStep
     type(ESMF_Field)        :: field
-    type(ESMF_FieldBundle)  :: fieldBundle
-    type(ESMF_Array)        :: array
-    type(ESMF_ArrayBundle)  :: arrayBundle
-    type(ESMF_StateItem_Flag), dimension(:), allocatable :: itemTypeList
-    character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
-    integer                  :: itemCount
-    
-    character(len=ESMF_MAXSTR) :: message, compName, name, otherName   
-    
-    !! Get a component's clock and write some diagnostics if TRACE is enabled
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    integer, intent(out)    :: rc
 
-    if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif  
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_LogWrite("GOTM/FABM component running ... ",ESMF_LOGMSG_INFO)
 
-    call ESMF_ClockGet(clock,currTime=currTime,  timeStep=timeInterval, &
-      stopTime=stopTime,  advanceCount=advanceCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running with dt='
-    call ESMF_TimeIntervalGet(timeInterval,s=seconds)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,I5,A)') trim(message),seconds,' s to '
-    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(message)//' '//trim(timeString)//' ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
+      
+      call ESMF_ClockGet(parentClock, currTime=currTime, timeStep=timeStep, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
-       
-    !! Run until the clock's stoptime is reached
-    do 
+      call ESMF_GridCompGet(gotmComp,clock=childClock)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(childClock,stopTime=currTime+timeStep)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_GridCompRun(gotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
 
-      call ESMF_ClockGet(clock,currTime=currTime, stopTime=stopTime, rc=rc)
+      call ESMF_GridCompGet(gotmTranspComp,clock=childClock)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(childClock,stopTime=currTime+timeStep)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_GridCompRun(gotmTranspComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+
+      ! copy GOTM's surface radiation and layer height into state
+      surface_radiation = I_0*(1.0d0 - A)
+      layer_height(1,1,:) = gotm_layer_height(1,1,:)
+      bottom_stress = taub
+      density(1,1,:) = rho(1:ubound(layer_height,3))
+
+      call ESMF_GridCompGet(fabmComp,clock=childClock)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(childClock,stopTime=currTime+timeStep)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_GridCompRun(fabmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+
+      call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       
-      if (currTime>stopTime) then
-        call ESMF_LogWrite('Clock out of scope in '//trim(compName), ESMF_LOGMSG_ERROR)
-        call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
-      endif
+    enddo 
 
-      do i=1,numGridComp
-        !! Determine for each child the clock    
-        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-        if (.not.clockIsPresent) then
-          call ESMF_LogWrite('Required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
-          call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
-        endif
-
-        call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  
-        call ESMF_ClockGet(childClock,currTime=time, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
-        if (time>currTime) then
-          call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(compName)//' now at '//trim(timestring)//', but'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-          
-          call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(name)//' now at '//trim(timestring)//', cycling ...'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-          call ESMF_LogFlush(rc=rc)
-
-          cycle
-        endif
-
-        !call ESMF_TimeGet(currTime + timeInterval,timeStringISOFrac=timestring, rc=rc)
-        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        !write(message,'(A)') 'Setting child''s stopTime to'//trim(timeString)
-        !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
- 
-        call ESMF_ClockSet(childClock, stopTime=currTime + timeInterval, rc=rc) 
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
- 
-        call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(timeString)//' calling '//trim(compName), &
-          ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
-        
-        call ESMF_GridCompRun(gridCompList(i),importState=importState,&
-          exportState=exportState, clock=clock, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-        call ESMF_ClockGet(childClock, currTime=time, rc=rc) 
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-        if (time == currTime) then
-          !! This child component did not advance its clock in its Run() routine
-          !! We do that here
-          call ESMF_LogWrite(trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
-
-          call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=rc) 
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        endif
-      enddo
-
-      !! Now that all child components have been started, find out the minimum time
-      !! to the next coupling and use this as a time step for my own clock Advance
-      call ESMF_GridCompGet(gridComp, name=name, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)      
-      
-      
-      !> Log current and next ring time 
-      call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeInterval, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      write(message,'(A)') trim(timeString)//' '//trim(name)//' stepping to'
-      call ESMF_TimeGet(currTime+timeInterval,timeStringISOFrac=timestring, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      write(message,'(A)') trim(message)//' '//trim(timeString)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
-
-      !> Set new time interval and advance clock, stop if end of 
-      !! simulation reached
-      call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc) 
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call ESMF_ClockAdvance(clock, rc=rc) 
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)           
-    enddo
-
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
+    call ESMF_LogWrite("GOTM/FABM component finished running. ",ESMF_LOGMSG_INFO)
 
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
-
-    integer(ESMF_KIND_I8)   :: i
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
-    type(ESMF_Time)         :: currTime
-    type(ESMF_Clock)        :: clock
-
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
     
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
 
-    do i=1,ubound(gridCompList,1)
-      call ESMF_GridCompFinalize(gridCompList(i), clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    enddo
-    
-    call ESMF_GridCompDestroy(gridCompList(1), rc=rc)
+    call ESMF_LogWrite("GOTM/FABM component finalizing",ESMF_LOGMSG_INFO)
+
+#if 0
+    call ESMF_GridCompFinalize(gotmTranspComp, importState=state, exportState=state, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompDestroy(gridCompList(2), rc=rc)
+    call ESMF_GridCompDestroy(gotmTranspComp, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    if (allocated(gridCompClockList)) deallocate(gridCompClockList) 
-    if (allocated(gridCompList)) deallocate(gridCompList) 
-  
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    call ESMF_GridCompFinalize(fabmComp, importState=state, exportState=state, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE) 
+    call ESMF_GridCompDestroy(fabmComp, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompFinalize(gotmComp, importState=state, exportState=state, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompDestroy(gotmComp, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_StateDestroy(state,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+#endif
+
+    call ESMF_LogWrite("GOTM/FABM component finalized",ESMF_LOGMSG_INFO)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+   
+    rc=ESMF_SUCCESS
   
   end subroutine Finalize
 

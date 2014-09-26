@@ -38,6 +38,9 @@ ifndef ESMFMKFILE
   #$(error Compiling without ESMF support. Comment this line in Rules.make if you want to proceed at your own risk)
   MOSSCO_ESMF=false
 else
+  ifeq ($(wildcard $(ESMFMKFILE)),)
+    $(error The file you specified as ESMFMKFILE=$(ESMFMKFILE) does not exist)
+  endif
   include $(ESMFMKFILE)
   MOSSCO_ESMF=true
   ESMF_COMM = $(strip $(shell grep "\# ESMF_COMM:" $(ESMFMKFILE) | cut -d':' -f2-))
@@ -173,6 +176,11 @@ ifdef GETMDIR
     # We have full control over GETM compilation
     ifeq ($(MOSSCO_MPI),true)
       export GETM_PARALLEL=true
+      ifeq ($(ESMF_COMM),openmpi)
+        export MPI=OPENMPI
+      else
+        export MPI=MPICH2
+      endif
     else
       unexport GETM_PARALLEL
     endif

@@ -35,8 +35,8 @@ module fabm_pelagic_component
   real(rk)  :: dt
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: inum=1,jnum=1
-  integer   :: t,tnum,funit,k,n,numlayers
-  integer   :: ode_method=_ADAPTIVE_EULER_
+  integer   :: t,tnum,k,n,numlayers
+  integer   :: ode_method=1
 
   type :: type_2d_pointer
     real(rk),dimension(:,:), pointer :: p
@@ -46,15 +46,12 @@ module fabm_pelagic_component
     real(rk),dimension(:,:,:), pointer :: p
   end type
 
-  real(rk),dimension(:,:,:),pointer              :: diag
-  real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
-  real(rk),dimension(:,:),pointer   :: fptr2d
-  real(rk),dimension(:,:), pointer  :: statemesh_ptr
+  real(rk),dimension(:,:,:),pointer            :: diag
   type(type_2d_pointer), dimension(:), pointer :: bfl
  
   type(type_mossco_fabm_pelagic),save :: pel
 
-  public :: SetServices,bdys,fluxes,rk
+  public :: SetServices,rk
   
   contains
 
@@ -87,22 +84,26 @@ module fabm_pelagic_component
     type(ESMF_TimeInterval) :: timeInterval,alarmInterval
     character(len=ESMF_MAXSTR) :: string,fileName,varname
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
+    character(len=ESMF_MAXSTR) :: attribute_name
     type(ESMF_Config)     :: config
-    type(ESMF_FieldBundle) :: fieldBundle(3)
+    type(ESMF_FieldBundle) :: fieldBundle
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
-    type(ESMF_Field)     :: field
+    type(ESMF_Field)     :: field,wsfield,concfield,tmpField
     type(ESMF_Array)     :: array
     integer              :: i
     integer              :: rank
     integer, allocatable :: maxIndex(:)
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
-    type(ESMF_Grid)      :: state_grid,flux_grid,foreign_grid
+    type(ESMF_Grid)      :: state_grid,horizontal_grid,foreign_grid
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
     type(ESMF_ArraySpec) :: flux_array,state_array
+    type(ESMF_StateItem_Flag) :: itemType
+
 
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
+    real(ESMF_KIND_R8)    :: attribute_r8
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I8) :: tidx
@@ -135,16 +136,15 @@ module fabm_pelagic_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     !! Log the call to this function
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    !! Set the time step end stop time
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
-    call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
+    !! Get the time step
+    call ESMF_TimeIntervalGet(timeInterval,s_r8=dt,rc=rc)
 
     !! get/set grid:
     !! rely on field with name foreignGridFieldName given as attribute and field
@@ -172,9 +172,7 @@ module fabm_pelagic_component
     else
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      state_grid = ESMF_GridCreate(foreign_grid,rc=rc)
+      call ESMF_FieldGet(field, grid=state_grid, rank=rank, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (rank == 3) then
         allocate(maxIndex(rank))
@@ -190,6 +188,17 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       end if
     end if
+    horizontal_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+                   maxIndex=(/inum,jnum/), &
+                   regDecomp=(/1,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="pelagic horizontal grid", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(horizontal_grid, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
      
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic(inum,jnum,numlayers,dt)
@@ -204,30 +213,68 @@ module fabm_pelagic_component
     ! put concentration array and vertical velocity into export state
     ! it might be enough to do this once in initialize(?)
     do n=1,size(pel%export_states)
-        field = ESMF_FieldCreate(state_grid,state_array, &
-                         name=trim(pel%export_states(n)%standard_name)//'_in_water', &
-                         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(pel%export_states(n)%units))
-        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
-                       totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f3 = pel%export_states(n)%conc ! initialize with 0.0
-        call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      varname = trim(pel%export_states(n)%standard_name)//'_in_water'
+      concfield = ESMF_FieldCreate(state_grid,farrayPtr=pel%export_states(n)%conc, &
+                       name=trim(varname), &
+                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(concfield,'units',trim(pel%export_states(n)%units))
+      !> add attributes relevant for MOSSCO
+      !! mean_particle_diameter and particle density given only,
+      !! if property persent
+      attribute_name=trim('mean_particle_diameter')
+      attribute_r8 = pel%model%info%state_variables(n)%properties%get_real('diameter',default=-99.d0)
+      if (attribute_r8 > 0.0d0) &
+        call ESMF_AttributeSet(field,attribute_name, attribute_r8)
+      attribute_name=trim('particle_density')
+      attribute_r8 = pel%model%info%state_variables(n)%properties%get_real('density',default=-99.d0)
+      if (attribute_r8 > 0.0d0) &
+        call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
+      !> add fabm index in concentration array as "external_index" to be used by other components
+      call ESMF_AttributeSet(concfield,'external_index',pel%export_states(n)%fabm_id)
 
-        field = ESMF_FieldCreate(state_grid,state_array, &
-                         name=trim(pel%export_states(n)%standard_name)//'_vertical_velocity', &
-                         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      wsfield = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
+                       name=trim(varname)//'_z_velocity', &
+                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(wsfield,'units','m/s')
+      call ESMF_FieldGet(field=wsfield, localDe=0, farrayPtr=pel%export_states(n)%ws, &
+                     totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      !> add to state depending on existing items
+      call ESMF_StateGet(exportState, trim(varname), itemType, rc=rc)
+
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
+        call ESMF_StateAddReplace(exportState,(/concfield,wsfield/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units','m/s')
-        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
-                       totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f3 = pel%export_states(n)%ws ! initialize with 0.0
-        call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      else if (itemType ==ESMF_STATEITEM_FIELD) then
+      !> if field present, remove from state, create bundle, add fields
+        call ESMF_StateGet(exportState,trim(varname),field,rc=rc)
+        call ESMF_StateRemove(exportState,(/ trim(varname) /),rc=rc)
+        fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,concfield/), &
+                name=trim(varname),   &
+                multiflag=.true.,rc=rc)
+        call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
+
+        call ESMF_StateGet(exportState, &
+                trim(varname)//'_z_velocity',field,rc=rc)
+        call ESMF_StateRemove(exportState, &
+                (/ trim(varname)//'_z_velocity' /),rc=rc)
+        fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,wsfield/), &
+                name=trim(varname)//'_z_velocity',   &
+                multiflag=.true.,rc=rc)
+        call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
+
+      else if(itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      !> if fieldBundle, get the bundle and add field
+        call ESMF_StateGet(exportState,trim(varname),fieldBundle,rc=rc)
+        call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=rc)
+        call ESMF_StateGet(exportState,trim(varname)//'_z_velocity',fieldBundle,rc=rc)
+        call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=rc)
+      end if
     end do
+
     do n=1,size(pel%model%info%diagnostic_variables)
         diag => pel%diagnostic_variables(n)
         field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
@@ -246,34 +293,79 @@ module fabm_pelagic_component
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+        ! add field to state, if not present
+        call ESMF_StateAdd(importState,(/field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) write(0,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
+        attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
+        call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
         !! set FABM's pointers to dependencies data,
         !! this probably has to be done only once (here) and not in Run
+        call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_f3)
+        call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
+    end do
 
-        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
+    do n=1,size(pel%horizontal_dependencies)
+        field = ESMF_FieldCreate(horizontal_grid, &
+               name=trim(pel%horizontal_dependencies(n)%name), &
+               typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call set_item_flags(importState,trim(pel%bulk_dependencies(n)%name)//'in_water',requiredFlag=.true.,requiredRank=3)
+        call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+        !! add field to state, if not present
+        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) write(0,*) 'use existing field: ',trim(pel%horizontal_dependencies(n)%name)
+        attribute_name=trim(pel%horizontal_dependencies(n)%name)
+        call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=2)
+        !! set FABM's pointers to dependencies data,
+        !! this probably has to be done only once (here) and not in Run
+        call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), field=field, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(field=field, farrayPtr=ptr_f2, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
     end do
 
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
-        varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux'
-        field = ESMF_FieldCreate(flux_grid, &
-               name=varname, &
-               typekind=ESMF_TYPEKIND_R8, &
-               staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+      varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux'
+      field = ESMF_FieldCreate(horizontal_grid, &
+             name=varname, &
+             typekind=ESMF_TYPEKIND_R8, &
+             staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !! initialise with zeros
+      call ESMF_FieldGet(field=field, farrayPtr=bfl(n)%p, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      bfl(n)%p = 0.0_rk
+      attribute_name=trim(varname)
+      call set_item_flags(importState,attribute_name,requiredFlag=.false.,optionalFlag=.true.,requiredRank=3)
+
+      !> add to importState
+      call ESMF_StateGet(importState, trim(varname), itemType,rc=rc)
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
+        !> is not present, just add field
+        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(pel%model%state_variables(n)%units))
-        !! initialise with zeros
-        call ESMF_FieldGet(field=field, farrayPtr=bfl(n)%p, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        bfl(n)%p = 0.0_rk
-        call set_item_flags(importState,trim(varname),requiredFlag=.false.,requiredRank=3)
+      else if (itemType ==ESMF_STATEITEM_FIELD) then
+        !> if field present, remove from state, create bundle, add fields
+        call ESMF_StateGet(importState,trim(varname),tmpField,rc=rc)
+        call ESMF_StateRemove(importState,(/ trim(varname) /),rc=rc)
+        fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/tmpField,field/), &
+                name=trim(varname),   &
+                multiflag=.true.,rc=rc)
+        call ESMF_StateAddReplace(importState,(/fieldBundle/),rc=rc)
+      else if(itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+        !> if fieldBundle, get the bundle and add field
+        call ESMF_StateGet(importState,trim(varname),fieldBundle,rc=rc)
+        call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=rc)
+      end if
     end do
 
     !call ESMF_StatePrint(importState)
+    !call ESMF_StatePrint(exportState)
+    call pel%check_ready()
 
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -336,17 +428,8 @@ module fabm_pelagic_component
     write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-#if 0
-    !> link environment forcing from importState,
-    !! maybe necessary although done in Initialize already
-    do n=1,size(pel%bulk_dependencies)
-      call ESMF_StateGet(importState,trim(pel%bulk_dependencies(n)%name)//'_in_water',field,rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_f3)
-    end do
-#endif
+    ! calculate PAR
+    call pel%light()
 
     do while (.not.ESMF_ClockIsStopTime(clock))
       ! integrate rates
@@ -354,7 +437,7 @@ module fabm_pelagic_component
 
       ! integrate bottom upward fluxes
       do n=1,pel%nvar
-        pel%conc(:,:,1,n) = pel%conc(:,:,1,n) + bfl(n)%p*dt
+        pel%conc(:,:,1,n) = pel%conc(:,:,1,n) + bfl(n)%p*dt/pel%layer_height(:,:,1)
       end do
 
       ! reset concentrations to mininum_value
@@ -378,29 +461,7 @@ module fabm_pelagic_component
 
     !> prepare component's export   
     call pel%update_export_states()
-
-    do n=1,size(pel%export_states)
-      call ESMF_StateGet(exportState, &
-           trim(pel%export_states(n)%standard_name)//'_in_water', &
-           field,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f3 = pel%export_states(n)%conc
-      if (pel%export_states(n)%fabm_id /= -1) then
-        call ESMF_StateGet(exportState, &
-           trim(pel%export_states(n)%standard_name)//'_vertical_velocity', &
-           field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f3 = pel%export_states(n)%ws
-      end if
-    end do
  
-    if (allocated(fieldList)) deallocate(fieldlist)
-    
-    
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
@@ -425,42 +486,9 @@ module fabm_pelagic_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-   
-    close(funit)
+    if (associated(bfl)) deallocate(bfl)
 
-    if (allocated(bdys)) deallocate(bdys)
-    if (allocated(fluxes)) deallocate(fluxes)
-
-
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+    rc = ESMF_SUCCESS
 
   end subroutine Finalize
 
