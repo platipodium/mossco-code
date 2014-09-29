@@ -980,6 +980,7 @@ fid.write('''
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finalized'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+    call ESMF_LogFlush(rc=rc)
 
   end subroutine Finalize
 

@@ -1,10 +1,9 @@
 coupling:
   - components: 
      - constant
-     - copy_coupler
      - fabm_sediment
     interval: none
   - components: 
      - fabm_sediment
      - netcdf
-    interval: 48 h
+    interval: 24 h

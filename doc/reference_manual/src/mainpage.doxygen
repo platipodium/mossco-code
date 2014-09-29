@@ -76,10 +76,11 @@ For help and hints on installing ESMF, MPI, and NetCDF, see the appropriate sect
 
 Program | Minimum version and alternatives
 -------|-----------
-GOTM | most recent
-GETM | most recent
-FABM | most recent
-EROSED | most recent
+GOTM | > 13 August 2014 
+FABM | < 19 May 2014, sha 62ce4a5
+
+[GOTM's interface changed on 13 August 2014.  If you use an earlier version of GOTM, the 0D driver will not compile.  FABM's iow_spm model changed from May 19, and from August its build system changed.]
+
 
 @subsubsection doc-prereqs Documentation prerequisites
 
