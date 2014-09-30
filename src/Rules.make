@@ -548,10 +548,6 @@ endif
 
 libgetm_external: prefix
 ifeq ($(MOSSCO_GETM_FABM),true)
-ifdef MOSSCO_FABMDIR
-	@echo Recreating the FABM library in $(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
-	$(MAKE) -C $(FABMDIR)/src gotm
-endif
 ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
 	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
@@ -586,9 +582,6 @@ endif
 .PHONY: mossco_clean
 mossco_clean: distclean
 # Note (KK): These distcleans might be redundant, but might also operate outside MOSSCO_DIR.
-ifdef MOSSCO_FABMDIR
-	$(MAKE) -C $(MOSSCO_FABMDIR)/src distclean
-endif
 ifdef MOSSCO_GOTMDIR
 	$(MAKE) -C $(MOSSCO_GOTMDIR) distclean
 endif
