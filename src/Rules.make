@@ -97,23 +97,36 @@ endif
 # 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
 MOSSCO_FABM=false
-export FABM_PREFIX=$(MOSSCO_DIR)/external/fabm-install
-export FABM_BUILD_DIR=$(MOSSCO_DIR)/external/fabm-build
+unexport FABM_PREFIX
 
-ifndef MOSSCO_FABMDIR
-  external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
-  ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
-    export MOSSCO_FABMDIR=$(external_FABMDIR)
+ifdef MOSSCO_FABM_PREFIX
+  export FABM_PREFIX=$(MOSSCO_FABM_PREFIX)
+endif
+
+ifdef MOSSCO_FABM_BINARY_DIR
+  export FABM_BINARY_DIR=$(MOSSCO_FABM_BINARY_DIR)
+  export FABM_PREFIX=$(shell grep CMAKE_INSTALL_PREFIX $(MOSSCO_FABM_BINARY_DIR)/CMakeCache.txt | cut -d "=" -f2)
+  #export FABMDIR=$(shell grep fabm_SOURCE_DIR $(MOSSCO_FABM_BINARY_DIR)/CMakeCache.txt | cut -d "=" -f2)
+endif
+
+ifndef FABM_PREFIX
+  ifndef MOSSCO_FABMDIR
+    external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
+    ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+      export MOSSCO_FABMDIR=$(external_FABMDIR)
+    endif
+  endif
+  ifdef MOSSCO_FABMDIR
+    export FABMDIR=$(MOSSCO_FABMDIR)
+  endif
+  ifdef FABMDIR
+    export FABM_BINARY_DIR=$(MOSSCO_DIR)/external/fabm-build
+    export FABM_PREFIX=$(MOSSCO_DIR)/external/fabm-install
   endif
 endif
 
-ifdef MOSSCO_FABMDIR
-  export FABMDIR=$(MOSSCO_FABMDIR)
+ifdef FABM_PREFIX
   MOSSCO_FABM=true
-else
-  ifdef FABMDIR
-    MOSSCO_FABM=true
-  endif
 endif
 export MOSSCO_FABM
 
@@ -495,23 +508,36 @@ endif
 
 
 # External libraries
+
+ifeq ($(MOSSCO_FABM),true)
+
 $(FABM_PREFIX)/lib/libfabm.a:
 	$(MAKE) -C $(MOSSCO_DIR) libfabm_external
 
-libfabm_libs:
-	@mkdir -p $(FABM_BUILD_DIR)
-	@mkdir -p $(FABM_PREFIX)
-	(cd $(FABM_BUILD_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST))
+libfabm_external: fabm_build fabm_install
 
-libfabm_external: libfabm_libs 
-	@echo Creating the FABM library in $(FABM_PREFIX)
-	$(MAKE) -C $(FABM_BUILD_DIR)
-	$(MAKE) -C $(FABM_BUILD_DIR) install
+fabm_build:
+ifndef MOSSCO_FABM_BINARY_DIR
+	@mkdir -p $(FABM_BINARY_DIR)
+	(cd $(FABM_BINARY_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST))
+endif
+
+fabm_install:
+ifdef FABM_BINARY_DIR
+	@echo Recreating the FABM library in $(FABM_PREFIX)
+	$(MAKE) -C $(FABM_BINARY_DIR) install
+endif
 
 libfabm_clean:
 	@echo Cleaning the FABM library in $(FABM_PREFIX)
-	$(RM) -rf $(FABM_BUILD_DIR)
+ifndef MOSSCO_FABM_BINARY_DIR
+	$(RM) -rf $(FABM_BINARY_DIR)
+endif
+ifndef MOSSCO_FABM_PREFIX
 	$(RM) -rf $(FABM_PREFIX)
+endif
+
+endif
 
 libgotm_external:
 ifdef MOSSCO_GOTMDIR
