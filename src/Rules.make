@@ -349,15 +349,6 @@ ifdef FORTRAN_COMPILER
     export MOSSCO_BENTHOS=true
   endif
 
-  ifeq (${MOSSCO_FABM},true)
-    FABM_F90COMPILER=$(shell grep 'FC=' $(FABMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-    FABM_F90COMPILER_VERSION:=$(shell $(FABM_F90COMPILER) --version | head -1)
-    ifndef F90
-      export F90=$(FABM_F90COMPILER)
-      $(warning F90 automatically determined from FABM environment: F90=$(F90))
-    endif
-  endif
-
   ifeq (${MOSSCO_GETM},true)
     GETM_F90COMPILER=$(shell grep 'FC=' $(GETMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
     GETM_F90COMPILER_VERSION:=$(shell $(GETM_F90COMPILER) --version | head -1)
@@ -393,12 +384,6 @@ endif
 ifeq ($(MOSSCO_GETM),true)
 INCLUDES += -I$(GETM_MODULE_PATH) -I$(GETM_INCLUDE_PATH)
 endif
-
-#ifeq (${MOSSCO_FABM},true)
-#ifneq ($(F90_VERSION),$(FABM_F90COMPILER_VERSION))
-#MPICH_F90COMPILER_VERSION:=$(shell $(MPICH_F90COMPILER) --version | head -1)
-#ifneq ($(MPICH_F90COMPILER_VERSION),$(FABM_F90COMPILER_VERSION))
-
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
 F90FLAGS = $(ESMF_F90COMPILEOPTS)
