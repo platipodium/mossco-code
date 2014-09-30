@@ -525,7 +525,7 @@ endif
 fabm_install:
 ifdef FABM_BINARY_DIR
 	@echo Recreating the FABM library in $(FABM_PREFIX)
-	$(MAKE) -C $(FABM_BINARY_DIR) install
+	$(MAKE) -sC $(FABM_BINARY_DIR) install
 endif
 
 libfabm_clean:
