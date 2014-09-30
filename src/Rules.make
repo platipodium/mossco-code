@@ -97,7 +97,9 @@ endif
 # 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
 MOSSCO_FABM=false
-unexport FABM_PREFIX
+
+#Note (KK): undefine does not work for gnu make <3.8.2
+FABM_PREFIX=
 
 ifdef MOSSCO_FABM_PREFIX
   export FABM_PREFIX=$(MOSSCO_FABM_PREFIX)
@@ -109,7 +111,7 @@ ifdef MOSSCO_FABM_BINARY_DIR
   #export FABMDIR=$(shell grep fabm_SOURCE_DIR $(MOSSCO_FABM_BINARY_DIR)/CMakeCache.txt | cut -d "=" -f2)
 endif
 
-ifndef FABM_PREFIX
+ifeq ($(FABM_PREFIX),)
   ifndef MOSSCO_FABMDIR
     external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
     ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
@@ -125,7 +127,7 @@ ifndef FABM_PREFIX
   endif
 endif
 
-ifdef FABM_PREFIX
+ifneq ($(FABM_PREFIX),)
   MOSSCO_FABM=true
 endif
 export MOSSCO_FABM
