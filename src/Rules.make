@@ -495,6 +495,8 @@ endif
 
 
 # External libraries
+$(FABM_PREFIX)/lib/libfabm.a:
+	$(MAKE) -C $(MOSSCO_DIR) libfabm_external
 
 libfabm_libs:
 	@mkdir -p $(FABM_BUILD_DIR)
@@ -502,9 +504,14 @@ libfabm_libs:
 	(cd $(FABM_BUILD_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST))
 
 libfabm_external: libfabm_libs 
-	@echo Recreating the FABM library in $(FABM_LIBRARY_PATH)
+	@echo Creating the FABM library in $(FABM_PREFIX)
 	$(MAKE) -C $(FABM_BUILD_DIR)
 	$(MAKE) -C $(FABM_BUILD_DIR) install
+
+libfabm_clean:
+	@echo Cleaning the FABM library in $(FABM_PREFIX)
+	$(RM) -rf $(FABM_BUILD_DIR)
+	$(RM) -rf $(FABM_PREFIX)
 
 libgotm_external:
 ifdef MOSSCO_GOTMDIR

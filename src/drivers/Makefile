@@ -48,14 +48,14 @@ all: $(TARGETS)
 
 # FABM/sediment section
 
-libmossco_sediment: prefix libmossco_util libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
-libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
-libmossco_fabmgotm: prefix libmossco_util libsolver libfabm_external libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_driver.o)
+libmossco_sediment: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
+libmossco_fabm0d: prefix libsolver $(FABM_PREFIX)/lib/libfabm.a libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
+libmossco_fabmgotm: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_driver.o)
 libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_getm_driver: prefix libgetm_external $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
-libmossco_fabmpelagic: prefix libmossco_util libsolver libfabm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
+libmossco_fabmpelagic: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
 # A really, really dirty hack for now...
 # ...and automatic rm of .o also does not work because of this.
 getm_driver.o: getm_driver.F90
