@@ -556,6 +556,13 @@ end type
 
       ! Repair state
       !  call do_repair_state(gotmfabm%knum,'gotm_mossco_fabm::do_gotm_mossco_fabm, after time integration')
+      do i=1,gotmfabm%nvar
+        do k=1,gotmfabm%knum
+          if (gotmfabm%conc(1,1,k,i) .lt. gotmfabm%model%info%state_variables(i)%minimum) then
+            gotmfabm%conc(1,1,k,i) = gotmfabm%model%info%state_variables(i)%minimum
+          end if
+        end do
+      end do
 
       ! Time-integrate diagnostic variables defined on horizontal slices, where needed.
       do i=1,size(gotmfabm%model%info%diagnostic_variables_hz)
