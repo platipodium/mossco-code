@@ -17,6 +17,7 @@ module benthic_pelagic_coupler
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux,DETPflux,DETCflux,DINflux,DIPflux,OXYflux
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux,fDETCflux,omexDETPflux
   real(ESMF_KIND_R8) :: dinflux_const
+  real(ESMF_KIND_R8) :: dipflux_const=-1.
   public SetServices
 
   contains
@@ -47,7 +48,7 @@ module benthic_pelagic_coupler
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
     integer              :: nmlunit=127
-    namelist /benthic_pelagic_coupler/ dinflux_const
+    namelist /benthic_pelagic_coupler/ dinflux_const,dipflux_const
 
     call ESMF_LogWrite("benthic-pelagic coupler initializing", ESMF_LOGMSG_INFO)
 
@@ -55,6 +56,7 @@ module benthic_pelagic_coupler
     open(nmlunit,file='benthic_pelagic_coupler.nml',action='read',status='old')
     read(nmlunit,benthic_pelagic_coupler)
     close(nmlunit)
+    if (dipflux_const < 0.0) dipflux_const=dinflux_const/16.0_rk
 
     ! create exchange fields
     !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
@@ -151,7 +153,7 @@ module benthic_pelagic_coupler
       if (rc == 0)  then
         call mossco_state_get(importState,(/ &
               'mole_concentration_of_phosphate_upward_flux'/),val1_f2,rc=rc)
-         DIPflux(1,1) = val1_f2(1,1)
+         DIPflux(1,1) = val1_f2(1,1) + dipflux_const/(86400.0*365.0)
       end if
 
       !   Det flux:
