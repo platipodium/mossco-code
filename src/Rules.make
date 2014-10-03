@@ -90,8 +90,10 @@ else
 endif
 export MOSSCO_ESMF
 
-ifeq ($(ESMF_FC),)
-  $(error  Your compiler $(F90)'s version could not be determined ($(MOSSCO_F03VERSION)))
+ifeq ($(MOSSCO_ESMF),true)
+  ifeq ($(ESMF_FC),)
+    $(error  Your compiler $(F90)'s version could not be determined ($(MOSSCO_F03VERSION)))
+  endif
 endif
 
 # 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
