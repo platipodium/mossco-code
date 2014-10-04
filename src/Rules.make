@@ -31,7 +31,8 @@ MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 # 2. ESMF stuff, only if ESMFMKFILE is declared. 
 #
 ifndef ESMFMKFILE
-  export FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
+  FORTRAN_COMPILER ?= $(shell echo $(F90) | tr a-z A-Z)
+  FORTRAN_COMPILER ?= $(shell echo $(FC) | tr a-z A-Z)
   ifeq ("$(FORTRAN_COMPILER)","F77")
     $(error MOSSCO needs a F2003 fortran compiler, your environment says $$FC=$(FC))
   endif
