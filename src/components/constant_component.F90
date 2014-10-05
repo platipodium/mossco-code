@@ -83,6 +83,8 @@ module constant_component
     character(ESMF_MAXPATHLEN)  :: configFileName, fileName
     type(ESMF_Config)           :: config
     logical                     :: fileIsPresent, labelIsPresent
+    integer(ESMF_KIND_I4)       :: numNodes=0, numElements=0
+    integer(ESMF_KIND_I4)       :: localDeCount, localDe
 
     rc = ESMF_SUCCESS
 
@@ -125,69 +127,78 @@ module constant_component
 
       call ESMF_ConfigFindLabel(config, label='ugrid:', isPresent=labelIsPresent, rc = rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default='none')
+      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default='constant_ugrid.nc')
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
-      if (trim(fileName) /= 'none') then
-        inquire(file=trim(fileName), exist=fileIsPresent)
-        if (fileIsPresent) then
-          ! @todo Deal with reading this ugrid file
-        endif
+      inquire(file=trim(fileName), exist=fileIsPresent)
+      if (fileIsPresent) then
+        
+        mesh = ESMF_MeshCreate(meshname=trim(name),filename=trim(fileName), &
+          filetypeflag=ESMF_FILEFORMAT_UGRID,rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        call ESMF_MeshGet(mesh,numOwnedElements=numElements,numOwnedNodes=numNodes)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        !> @todo check correctness
+        localDeCount=1
+
       endif
     endif
 
-
-    grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
-      regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-      name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_AttributeSet(grid3,'creator',trim(name))
-
-    call ESMF_GridAddCoord(grid3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    if (localDeCount3>0) then
-      call ESMF_GridGetCoord(grid3, coordDim=1, localDE=0, farrayPtr=farrayPtr3, rc=rc)
+	  if (numNodes==0) then
+      grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
+        regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+        name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr3(:,:,:)=8.0D0
 
-      call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=0, farrayPtr=farrayPtr3, rc=rc)
+      call ESMF_AttributeSet(grid3,'creator',trim(name))
+
+      call ESMF_GridAddCoord(grid3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr3(:,:,:)=54.1D0
+
+      call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      if (localDeCount3>0) then
+        call ESMF_GridGetCoord(grid3, coordDim=1, localDE=0, farrayPtr=farrayPtr3, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        farrayPtr3(:,:,:)=8.0D0
+
+        call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=0, farrayPtr=farrayPtr3, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        farrayPtr3(:,:,:)=54.1D0
+      endif
+
+      grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/4,4/), &
+        coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+        regDeComp=(/1,1/),name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_AttributeSet(grid2,'creator',trim(name))
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridAddCoord(grid2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_GridGet(grid2, localDeCount=localDeCount2, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      if (localDeCount2>0) then
+        call ESMF_GridGetCoord(grid2, coordDim=1, localDE=0, farrayPtr=farrayPtr2, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        farrayPtr2(:,:)=8.0D0
+
+        call ESMF_GridGetCoord(grid2, coordDim=2,  localDE=0, farrayPtr=farrayPtr2, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        farrayPtr2(:,:)=54.1D0
+      endif
+
+      !> Create ArraySpecs for both grids
+      call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
-
-    grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/4,4/), &
-      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-      regDeComp=(/1,1/),name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_AttributeSet(grid2,'creator',trim(name))
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridAddCoord(grid2, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_GridGet(grid2, localDeCount=localDeCount2, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    if (localDeCount2>0) then
-      call ESMF_GridGetCoord(grid2, coordDim=1, localDE=0, farrayPtr=farrayPtr2, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr2(:,:)=8.0D0
-
-      call ESMF_GridGetCoord(grid2, coordDim=2,  localDE=0, farrayPtr=farrayPtr2, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      farrayPtr2(:,:)=54.1D0
-    endif
-
-    !> Create ArraySpecs for both grids
-    call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !> create list of export_variables, that will come from a function
     !> which reads a text file
@@ -277,7 +288,7 @@ module constant_component
 
     !> now go through list, create fields and add to exportState
     cur_item => variable_items%next
-    if (file_readable) then
+    if (file_readable .and. numNodes==0) then
       do
         if (cur_item%rank==3) then
 
@@ -323,6 +334,31 @@ module constant_component
           exit
         end if
       end do
+    else
+      do 
+        cur_item%field = ESMF_FieldCreate(mesh, typekind=ESMF_TYPEKIND_R8, &
+          meshloc=ESMF_MESHLOC_NODE, name=trim(cur_item%standard_name), rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+				do localDe=0,localDeCount-1
+          call ESMF_FieldGet(cur_item%field, localDe=localDe, farrayPtr=farrayPtr2, &
+              totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
+          farrayPtr2(:,:)=cur_item%value
+        enddo
+          
+        if (len_trim(unitString)>0) then
+            call ESMF_AttributeSet(cur_item%field,'units',trim(unitString))
+        endif
+
+        call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+        if (associated(cur_item%next)) then
+            cur_item => cur_item%next
+        else
+          exit
+        end if
+      enddo       
     endif
 
     !! Finally, log the successful completion of this function
