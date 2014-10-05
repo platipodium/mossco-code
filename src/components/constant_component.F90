@@ -63,6 +63,7 @@ module constant_component
     integer(ESMF_KIND_I4) :: i,j,k
     type(ESMF_Field), dimension(:), allocatable :: exportField
     type(ESMF_Grid)                             :: grid2, grid3
+    type(ESMF_Mesh)                             :: mesh
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
     real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:)
@@ -77,6 +78,11 @@ module constant_component
     integer(ESMF_KIND_I4), dimension(2)  :: totalCount2, totalUBound2, totalLBound2
     integer(ESMF_KIND_I4), dimension(3)  :: totalCount3, totalUBound3, totalLBound3
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
+    type(ESMF_VM)                        :: vm
+    
+    character(ESMF_MAXPATHLEN)  :: configFileName, fileName
+    type(ESMF_Config)           :: config
+    logical                     :: fileIsPresent, labelIsPresent
 
     rc = ESMF_SUCCESS
 
@@ -84,7 +90,7 @@ module constant_component
     !! with a prior ESMF_gridCompCreate() call.  If not, then create
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
-    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
+    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, vm=vm, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (clockIsPresent) then
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
@@ -105,6 +111,31 @@ module constant_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+    !! Check whether there is a config file with the same name as this component
+    !! If yes, load it. 
+    configfilename=trim(name)//'.cfg'
+    inquire(FILE=trim(configfilename), exist=fileIsPresent)   
+    if (fileIsPresent) then 
+      config = ESMF_ConfigCreate(rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+	    call ESMF_ConfigLoadFile(config, configfilename, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_ConfigFindLabel(config, label='ugrid:', isPresent=labelIsPresent, rc = rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default='none')
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+      if (trim(fileName) /= 'none') then
+        inquire(file=trim(fileName), exist=fileIsPresent)
+        if (fileIsPresent) then
+          ! @todo Deal with reading this ugrid file
+        endif
+      endif
+    endif
+
 
     grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
