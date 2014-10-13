@@ -37,6 +37,7 @@ module getm_component
   type(ESMF_Clock)   ,save :: getmClock
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
+  type(ESMF_Field)   ,save :: TbotField
 
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
@@ -52,6 +53,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zw(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
 
   contains
 
@@ -151,6 +153,13 @@ module getm_component
 
     call getmCmp_init_variables()
     call getmCmp_init_grid(gridComp)
+
+!   internal call to ESMF_FieldCreateGridDataPtr<rank><type><kind>()
+    TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call getmCmp_update_eState()
 
     if (.not.dryrun) then
       STDERR LINE
@@ -291,6 +300,7 @@ module getm_component
     end do
 
     call getmCmp_update_grid(gridComp)
+    call getmCmp_update_eState()
 
 !  Fill export state here using ESMF_StateAdd(), etc
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
@@ -372,11 +382,14 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain    ,only: imin,jmin,imax,jmax,kmax
-   use domain    ,only: xcord,ycord,xx,yx,lonx,latx
-   use domain    ,only: xxcord,yxcord,xc,yc,lonc,latc
-   use domain    ,only: grid_type
-   use initialise,only: runtype
+   use domain      ,only: imin,jmin,imax,jmax,kmax
+   use domain      ,only: xcord,ycord,xx,yx,lonx,latx
+   use domain      ,only: xxcord,yxcord,xc,yc,lonc,latc
+   use domain      ,only: grid_type
+   use initialise  ,only: runtype
+#ifndef NO_BAROCLINIC
+   use variables_3d,only: T
+#endif
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -425,7 +438,12 @@ module getm_component
             allocate(lonc2D(E2DFIELD )) ; lonc2D = lonc
             allocate(latc2D(E2DFIELD )) ; latc2D = latc
       end select
-!    else
+      if (runtype .gt. 2) then
+#ifndef NO_BAROCLINIC
+         allocate(Tbot(I2DFIELD))
+#endif
+      end if
+    else
 !       select case (grid_type)
 !          case(1)
 !             xc1D => xcord
@@ -448,6 +466,11 @@ module getm_component
 !             lonc2D => lonc
 !             latc2D => latc
 !       end select
+       if (runtype .gt. 2) then
+#ifndef NO_BAROCLINIC
+          Tbot(imin-HALO:,imax-HALO:) => T(:,:,1)
+#endif
+       end if
    end if
 
    select case (grid_type)
@@ -836,6 +859,55 @@ module getm_component
    return
 
    end subroutine getmCmp_update_grid
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_update_eState -
+!
+! !INTERFACE:
+   subroutine getmCmp_update_eState()
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use initialise  , only: runtype
+#ifndef NO_BAROCLINIC
+   use variables_3d, only: T
+#endif
+   IMPLICIT NONE
+!
+! !INPUT/OUTPUT PARAMETERS:
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_update_eState() # ',Ncall
+#endif
+
+   if (noKindMatch) then
+      if (runtype .gt. 2) then
+#ifndef NO_BAROCLINIC
+         Tbot = T(:,:,1)
+#endif
+      end if
+   end if
+
+#ifdef DEBUG
+   write(debug,*) 'getmCmp_update_eState()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_update_eState
 !EOC
 !-----------------------------------------------------------------------
 !BOP

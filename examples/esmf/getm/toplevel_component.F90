@@ -9,6 +9,7 @@ module toplevel_component
 
   type(ESMF_Clock)    :: topClock
   type(ESMF_GridComp) :: getmCmp
+  type(ESMF_State)    :: getmEState
 
   contains
 
@@ -61,7 +62,8 @@ module toplevel_component
       getmCmp = ESMF_GridCompCreate(name="getmCmp")
     end if
     call ESMF_GridCompSetServices(getmCmp,SetServices)
-    call ESMF_GridCompInitialize(getmCmp,clock=topClock)
+    getmEState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="getmEState")
+    call ESMF_GridCompInitialize(getmCmp,clock=topClock,exportState=getmEState)
 
     if (.not. ClockIsPresent) then
       call ESMF_GridCompGet(getmCmp,clockIsPresent=ClockIsPresent)
@@ -85,7 +87,7 @@ module toplevel_component
   subroutine topCmp_run(topCmp,iState,eState,pClock,rc)
 
     IMPLICIT NONE
-    
+
     type(ESMF_GridComp) :: topCmp
     type(ESMF_State)    :: iState,eState
     type(ESMF_Clock)    :: pClock
@@ -124,13 +126,13 @@ module toplevel_component
     end do
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_TRACE)
- 
+
   end subroutine topCmp_run
 
   subroutine topCmp_finalize(topCmp,iState,eState,pClock,rc)
 
     IMPLICIT NONE
-    
+
     type(ESMF_GridComp) :: topCmp
     type(ESMF_State)    :: iState,eState
     type(ESMF_Clock)    :: pClock
@@ -144,10 +146,12 @@ module toplevel_component
 !   Destruction of child components
     call ESMF_GridCompDestroy(getmCmp)
 
+    call ESMF_StateDestroy(getmEState)
+
     call ESMF_ClockDestroy(topClock)
 
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_TRACE)
-   
+
     rc=ESMF_SUCCESS
 
   end subroutine topCmp_finalize
