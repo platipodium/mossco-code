@@ -173,20 +173,20 @@ module remtc_ocean_component
     variables(:,:,:,3)=100.0
     farrayPtr=variables(:,:,:,3)        
 
-    !> For debugging and I/O testing purposes, write out all the export fields to netcdf
-#ifndef ESMF_MPIUNI 
-    !! ESMF_FieldWrite is not supported in ESMF_MPIUNI mode     
-    do k=1,3
-#if ESMF_VERSION_MAJOR > 5
-      call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
-        overwrite=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
-#else
-      call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
-        append=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
-#endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   enddo
-#endif
+!    !> For debugging and I/O testing purposes, write out all the export fields to netcdf
+!#ifndef ESMF_MPIUNI 
+!    !! ESMF_FieldWrite is not supported in ESMF_MPIUNI mode     
+!    do k=1,3
+!#if ESMF_VERSION_MAJOR > 5
+!      call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
+!        overwrite=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
+!#else
+!      call ESMF_FieldWrite(exportField(k), "remtc_ocean_export_"//export_variables(i)%standard_name, & 
+!        append=.true.,timeslice=0,iofmt=ESMF_IOFMT_NETCDF, rc = rc)
+!#endif
+!      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!   enddo
+!#endif
 
     import_variables(1)%standard_name="air_temperature"
 
