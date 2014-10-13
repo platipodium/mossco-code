@@ -372,10 +372,11 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain, only: imin,jmin,imax,jmax,kmax
-   use domain, only: xcord,ycord,xx,yx,lonx,latx
-   use domain, only: xxcord,yxcord,xc,yc,lonc,latc
-   use domain, only: grid_type
+   use domain    ,only: imin,jmin,imax,jmax,kmax
+   use domain    ,only: xcord,ycord,xx,yx,lonx,latx
+   use domain    ,only: xxcord,yxcord,xc,yc,lonc,latc
+   use domain    ,only: grid_type
+   use initialise,only: runtype
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -385,6 +386,7 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    REALTYPE :: getmreal
+   integer  :: klen
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -457,9 +459,15 @@ module getm_component
          latx1D(:) = latx(imin,:)
    end select
 
-   allocate(zw(I3DFIELD))
-   allocate(zc(E2DFIELD ,1:kmax))
-   allocate(zx(E2DXFIELD,0:kmax))
+   if (runtype .eq. 1) then
+      klen = 1
+   else
+      klen = kmax
+   end if
+
+   allocate(zw(E2DFIELD ,0:klen))
+   allocate(zc(E2DFIELD ,1:klen))
+   allocate(zx(E2DXFIELD,0:klen))
 
 #ifdef DEBUG
    write(debug,*) 'getmCmp_init_variables()'
