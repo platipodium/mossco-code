@@ -1,130 +1,149 @@
-!> @file test_Redist.F90
-!! @brief explores Redist capability on concurrent PET performance
+!> @file test_Regrid.F90
+!! @brief explores Regrid capability on one PET
 !! @author Carsten Lemmen
 !!
-!! runs 1e6 times the ESMF routine FieldGet to retrieve the
-!! array pointer from an ESMF_Field. The performance is much
-!! improved in ESMF v.6.3beta4+
 
-program test_redist
+program test_Regrid
 
-use ESMF
-use test_component, only : SetServices
+use esmf
 
 implicit none
 
-type(ESMF_GridComp)  :: gridComp1, gridComp2
-type(ESMF_State)     :: importState, exportState, state
-type(ESMF_Grid)      :: grid
-type(ESMF_Field)     :: srcField, dstField, field
+type(ESMF_Grid)      :: srcGrid, dstGrid
+type(ESMF_Field)     :: srcField, dstField
 type(ESMF_VM)        :: vm
 type(ESMF_RouteHandle) :: routeHandle
-type(ESMF_Clock)     :: clock
-type(ESMF_Time)      :: startTime
-type(ESMF_TimeInterval) :: timeInterval
+type(ESMF_ArraySpec) :: arraySpec
 
 integer(ESMF_KIND_I4)  :: petCount, localPet
-integer(ESMF_KIND_I4), pointer, dimension(:,:) :: farrayPtr
-
-integer              :: rc
+real(ESMF_KIND_R8), dimension(:,:) , pointer:: farrayPtr2
+integer              :: i, j, rc,  counts(2), cLBound(2), cUBound(2)
+real(ESMF_KIND_R8)   :: min(2), max(2), dx, dy
+real(ESMF_KIND_R8), dimension(:,:), pointer :: coordX, coordY
 
 call ESMF_Initialize(vm=vm, defaultCalKind=ESMF_CALKIND_GREGORIAN, rc=rc)
 call ESMF_VmGet(vm, petCount=petCount, localPet=localPet, rc=rc)
-call ESMF_TimeSet(startTime, yy=2001, rc=rc)
-if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-call ESMF_TimeIntervalSet(timeInterval, d=1, rc=rc)
-if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-clock = ESMF_ClockCreate(startTime=startTime,timeStep=timeInterval, &
-  stopTime=startTime+100*timeInterval, rc=rc)
-if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-gridComp1 = ESMF_GridCompCreate(name='Comp 1', petList=(/0/), clock=clock, rc=rc)
-gridComp2 = ESMF_GridCompCreate(name='Comp 2', petList=(/petCount-1/), clock=clock, rc=rc)
-if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+call ESMF_LogFlush(rc=rc)
+! Create the first grid, 60 x 40 indices between 0..60 deg E and 0..50 deg N
+call ESMF_LogWrite('Creating first 60 x 40 grid', ESMF_LOGMSG_INFO, rc=rc)
 
-importState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
-  name='ImportState', rc=rc)
-exportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
-  name='ExportState', rc=rc)
+counts(1) = 60
+counts(2) = 40
+min(1) = 0.0
+max(1) = 60.0
+min(2) = 0.0
+max(2) = 50.0
+  
+dx = (max(1)-min(1))/(counts(1)-1)
+dy = (max(2)-min(2))/(counts(2)-1)
+
+    
+srcGrid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=counts, &
+    gridEdgeLWidth=(/0,0/), gridEdgeUWidth=(/0,0/), rc=rc, &
+    indexflag=ESMF_INDEX_GLOBAL, regDecomp=(/1,1/), name="source grid")
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-   
-call ESMF_GridCompSetServices(gridComp1, SetServices, rc=rc)
-!call ESMF_GridCompSetServices(gridComp1, SetServices, rc=rc)
-!call ESMF_GridCompSetServices(gridComp1, SetServices, rc=rc)
-call ESMF_GridCompSetServices(gridComp2, SetServices, rc=rc)
-!call ESMF_GridCompSetServices(gridComp2, SetServices, rc=rc)
-!call ESMF_GridCompSetServices(gridComp2, SetServices, rc=rc)
+    
+call ESMF_GridAddCoord(srcGrid, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-call ESMF_GridCompInitialize(gridComp1, importState=importState, &
-  exportState=exportState,rc=rc)
-call ESMF_GridCompInitialize(gridComp2, importState=exportState, &
-  exportState=importState,rc=rc)
+call ESMF_GridGetCoord(srcGrid, coordDim=1, farrayPtr=coordX, localDE=0,  &
+  computationalLBound=cLBound, computationalUBound=cUBound, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-! Emulate behaviour of component 1 running on PET 0
-if (localPet==0) then
-  call ESMF_GridCompGet(gridComp1, exportState=state, rc=rc)
-  grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=(/10,20/), &
-  regDecomp=(/2,2/), name="grid", rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_I4, name='pet+1', rc=rc) 
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  call ESMF_FieldGet(field, farrayPtr=farrayPtr, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  farrayPtr(:,:)=1
-  call ESMF_StateAdd(state, (/field/), rc=rc)  
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-endif
+call ESMF_GridGetCoord(srcGrid, localDE=0, coordDim=2, &
+  farrayPtr=coordY, computationalLBound=cLBound, computationalUBound=cUBound, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-if (localPet==petCount-1) then
-  call ESMF_GridCompGet(gridComp2, exportState=state, rc=rc)
-  grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=(/10,20/), &
-  regDecomp=(/2,2/), name="grid", rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_I4, name='pet+1', rc=rc) 
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  call ESMF_FieldGet(field, farrayPtr=farrayPtr, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  farrayPtr(:,:)=2
-  call ESMF_StateAdd(state, (/field/), rc=rc)  
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-endif
+do j = cLBound(2), cUBound(2)
+  do i = cLBound(1), cUbound(1)
+    coordX(i,j) = (i-1)*dx
+    coordY(i,j) = (j-1)*dy
+  enddo
+enddo
 
+! Create the second grid, 80 x 30 indices, same domain as srcGrid
+call ESMF_LogWrite('Creating second 80 x 30 grid', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
 
-if (localPet==petCount-1) then
-  call ESMF_GridCompGet(gridComp2, exportState=state, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  call ESMF_StateGet(state, 'pet+1', field=field, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  call ESMF_FieldGet(field, farrayPtr=farrayPtr, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  write(0,'(10I1)') farrayPtr(1:10,1)
-endif
+counts(1) = 80
+counts(2) = 30
+dx = (max(1)-min(1))/(counts(1)-1)
+dy = (max(2)-min(2))/(counts(2)-1)
 
+dstGrid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=counts, &
+    gridEdgeLWidth=(/0,0/), gridEdgeUWidth=(/0,0/), &
+    indexflag=ESMF_INDEX_GLOBAL, &
+    regDecomp=(/1,1/), name="destination grid", rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
+call ESMF_GridAddCoord(dstGrid, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-call ESMF_StateReconcile(exportState)
-call ESMF_StateReconcile(importState)
+call ESMF_GridGetCoord(dstGrid, localDE=0, coordDim=1, &
+  farrayPtr=coordX, computationalLBound=cLBound, computationalUBound=cUBound, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-! Redist the data from one onto two
-call ESMF_StateGet(exportState, 'pet+1', field=srcField, rc=rc)
-call ESMF_StateGet(importState, 'pet+1', field=dstField, rc=rc)
+call ESMF_GridGetCoord(dstGrid, localDE=0, coordDim=2, &
+  farrayPtr=coordY, computationalLBound=cLBound, computationalUBound=cUBound, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-call ESMF_FieldRedistStore(srcField, dstField, routeHandle=routeHandle, rc=rc)
-call ESMF_FieldRedist(srcField, dstField, routeHandle=routeHandle, rc=rc)
-call ESMF_FieldRedistRelease(routeHandle=routeHandle, rc=rc)
+do j = cLBound(2), cUBound(2)
+  do i = cLBound(1), cUbound(1)
+    coordX(i,j) = (i-1)*dx
+    coordY(i,j) = (j-1)*dy
+  enddo
+enddo
 
-if (localPet==petCount-1) then
-  call ESMF_GridCompGet(gridComp2, exportState=state, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  call ESMF_StateGet(state, 'pet+1', field=field, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  call ESMF_FieldGet(field, farrayPtr=farrayPtr, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
-  write(0,'(10I1)') farrayPtr(1:10,1)
-endif
+! Create Array spec and fields for both grids
+call ESMF_LogWrite('Create fields', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
 
+call ESMF_ArraySpecSet(arrayspec, rank=2,typekind=ESMF_TYPEKIND_R8)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+srcField = ESMF_FieldCreate(srcGrid, arrayspec, &
+  totalLWidth=(/0,0/), totalUWidth=(/0,0/), name="srcField", rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+call ESMF_FieldGet(srcField, farrayPtr=farrayPtr2, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+farrayPtr2(:,:)=1.0
+
+dstField = ESMF_FieldCreate(dstGrid, arrayspec, &
+  totalLWidth=(/0,0/), totalUWidth=(/0,0/), name="dstField", rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+call ESMF_FieldGet(dstField, farrayPtr=farrayPtr2, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+farrayPtr2(:,:)=2.0
+
+call ESMF_FieldPrint(srcField)
+call ESMF_FieldPrint(dstField)
+
+call ESMF_LogWrite('Create regrid store', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
+call ESMF_FieldRegridStore(srcField, dstField, routeHandle=routeHandle, &
+  regridmethod=ESMF_REGRIDMETHOD_BILINEAR, rc=rc)
+
+call ESMF_LogWrite('Perform Regridding', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
+call ESMF_FieldRegrid(srcField, dstField, routeHandle=routeHandle, rc=rc)
+
+call ESMF_LogWrite('Release handle', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
+call ESMF_FieldRegridRelease(routeHandle=routeHandle, rc=rc)
+
+call ESMF_LogWrite('Cleanup', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
+
+call ESMF_FieldDestroy(srcField, rc=rc)
+call ESMF_FieldDestroy(dstField, rc=rc)
+
+call ESMF_GridDestroy(srcGrid, rc=rc)
+call ESMF_GridDestroy(dstGrid, rc=rc)
+
+call ESMF_LogFlush(rc=rc)
 call ESMF_Finalize()
 
 end program
