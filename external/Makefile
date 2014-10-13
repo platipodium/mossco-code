@@ -59,6 +59,7 @@ fabm-git-update:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
 	(cd $(MOSSCO_DIR)/external/fabm-git ; git pull origin master)
 endif
+	(cd $(MOSSCO_DIR)/external/fabm-git ; git checkout)
 
 gotm-git-clone:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
