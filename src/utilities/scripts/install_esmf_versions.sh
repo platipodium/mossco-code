@@ -40,18 +40,8 @@ for C in $COMMS ; do
     echo "Iterating for Compiler $G ============================================="
     ESMF_COMPILER=$G
 
-    case $(hostname) in
-    KSEZ8002) 
-      LOCAL_PATH=/opt/gcc48
-      ESMF_NETCDF_INCLUDE=${LOCAL_PATH}/include
-      ESMF_NETCDF_LIBPATH=${LOCAL_PATH}/lib
-      export PATH=${LOCAL_PATH}/bin:$PATH
-      ;;
-    *)
-      ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
-      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
-      ;;
-    esac
+    ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
+    ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
     
     if [ $G = intel ]; then
       source /opt/intel/bin/ifortvars.sh intel64
@@ -80,7 +70,6 @@ for C in $COMMS ; do
        git stash
        git stash drop
        git checkout  -f $T
-       
        
        # Fix -lmpi_f77 on recent Darwin/MacPorts
        ${SED} -i 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
