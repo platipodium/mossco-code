@@ -18,81 +18,45 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) 
-TEST_SRC = $(shell ls  *.c *.F90)
-TEST_OBJ = ${TEST_SRC%.}.o
-
+TEST_SRC = $(shell ls test_*.F90)
+TEST_OBJ = ${TEST_SRC:.F90=.o}
+TEST_BIN = ${TEST_SRC:.F90=}
 
 .PHONY: libmossco_empty libmossco_constant libmossco_info
 
-all: test_FieldGet test_ArrayGet test_Clock test_Netcdf test_Grid test_ClockDestroy test_Concurrency test_Concurrency test_FieldBounds test_ESMF_Initialize test_MPI_Initialize test_Redist test_Regrid
+.PHONY: all $(TEST_BIN)
+all: $(TEST_BIN)
 
 tests:
-	echo TEST_SRC=$(TEST_SRC)
-	echo TEST_OBJ=$(TEST_OBJ)
+	@echo TEST_SRC=$(TEST_SRC)
+	@echo TEST_OBJ=$(TEST_OBJ)
+	@echo TEST_BIN=$(TEST_BIN)
 
-test_MPI_Initialize: test_MPI_Initialize.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)  $(LIBS)
+test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize test_FieldBounds test_FieldGet test_Grid test_GridCreate test_MPI_Initialize test_Redist test_Regrid test_Ugrid:
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@  $(LDFLAGS)  $(LIBS)
 
-test_ESMF_Initialize: test_ESMF_Initialize.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)  $(LIBS)
+test_Concurrency: libmossco_constant libmossco_info
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lconstant -lmossco_info $(LIBS)
 
-test_Concurrency: test_Concurrency.o libmossco_constant libmossco_info
-	$(F90) $(F90FLAGS) -o $@  $< $(LDFLAGS) -lconstant -lmossco_info $(LIBS)
+test_ClockDestroy: libmossco_empty 
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lempty $(LIBS)
 
-test_FieldBounds: test_FieldBounds.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
+test_Dictionary test_Netcdf: libmossco_util
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
-test_Grid: test_Grid.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
+test_Solver: libsolver
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lsolver $(LIBS)
 
-test_Regrid: test_Regrid.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
+test_FabmDependencies:
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -L$(FABM_LIBRARY_PATH) $(FABM_LIBS) $(LIBS)
 
-test_Redist: test_Redist.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
-
-test_Ugrid: test_Ugrid.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
-
-test_ArrayGet: test_ArrayGet.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
-
-test_FieldGet: test_FieldGet.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
-
-test_GridCreate: test_GridCreate.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
-
-test_ClockDestroy:  test_ClockDestroy.o libmossco_empty 
-	$(F90) $(F90FLAGS) -o $@  $<  $(LDFLAGS) -lempty $(LIBS)
+libsolver libmossco_util:
+	make -C $(MOSSCO_DIR)/src/utilities $@
 
 libmossco_empty libmossco_info libmossco_constant:
 	$(MAKE) -C ../components $@
 
-test_Clock: test_Clock.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
-
-test_DerivedTypes: test_DerivedTypes.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) $(LIBS)
-
-test_Netcdf: test_Netcdf.o 
-	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
-
-test_Solver: test_Solver.o 
-	$(F90) $(F90FLAGS) -o $@  $^ -lsolver $(LDFLAGS) $(LIBS)
-
-test_Dictionary: test_Dictionary.o 
-	$(F90) $(F90FLAGS) -o $@  $^ -lmossco_util $(LDFLAGS) $(LIBS)
-
-test_FabmDependencies: test_FabmDependencies.o 
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) -L$(FABM_LIBRARY_PATH) $(FABM_LIBS) $(LIBS)
-
-test_Netcdf.o test_Dictionary.o: libmossco_util
-
-libmossco_util:
-	make -C $(MOSSCO_DIR)/src/utilities libmossco_util
-
 clean: extraclean
 
 extraclean:
-	@- rm -f test_FieldGet test_ArrayGet test_Clock test_GridCreate PET* test_Grid test_ClockDestroy test_Concurrency test_ESMF_Initialize test_FieldBounds test_Netcdf test_Solver test_MPI_Initialize
+	@- rm -f $(TEST_BIN) PET*
