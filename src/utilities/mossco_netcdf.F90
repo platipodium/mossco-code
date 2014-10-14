@@ -130,21 +130,23 @@ module mossco_netcdf
     if (rank==4) then
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr4, &
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)), &
         start=(/1,1,1,1,dimlen/))
     elseif (rank==3) then
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3, &
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), &
         start=(/1,1,1,dimlen/))
     elseif (rank==2) then
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2, start=(/1,1,dimlen/))
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
+        start=(/1,1,dimlen/))
     elseif (rank==1) then
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1, start=(/1,dimlen/))
+      ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(lbnd(1):ubnd(1)), &
+        start=(/1,dimlen/))
     endif
     if (ncStatus /= NF90_NOERR) call &
       ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
@@ -523,8 +525,7 @@ module mossco_netcdf
     dimids(:)=-1
     dimids(rank+1)=self%timeDimId
 
-    call ESMF_GridGetFieldBounds(grid=grid, localDe=0, &
-      staggerloc=ESMF_STAGGERLOC_CENTER, totalCount=ubounds, rc=esmfrc)
+    call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,exclusiveCount=ubounds,rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     ! get grid dimension-ids
@@ -667,6 +668,8 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
     integer, pointer, dimension(:)     :: dimids
     integer, dimension(:), allocatable :: coordDimids
+    integer :: eLBound1(1),eLBound2(2),eLBound3(3),eLBound4(4)
+    integer :: eUBound1(1),eUBound2(2),eUBound3(3),eUBound4(4)
     type(ESMF_CoordSys_Flag)                         :: coordSys
     integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, totalCount
     integer(ESMF_KIND_I4)                            :: dimCount
@@ -731,25 +734,25 @@ module mossco_netcdf
       ncStatus = nf90_enddef(self%ncid)
 
       if (coordDimCount(i) == 1) then
-        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, rc=esmfrc)
+        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, exclusiveLBound=eLBound1, exclusiveUBound=eUBound1,rc=esmfrc)
         if (esmfrc == ESMF_SUCCESS) then
-          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1)
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(eLBound1(1):eUBound1(1)))
         else
           write(message,'(A)')  'This error will be fixed in the future, disregard for now'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
       elseif (coordDimCount(i) == 2) then
-        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, rc=esmfrc)
+        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, exclusiveLBound=eLBound2, exclusiveUBound=eUBound2,rc=esmfrc)
         if (esmfrc == ESMF_SUCCESS) then
-          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2)
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(eLBound2(1):eUBound2(1),eLBound2(2):eUBound2(2)))
         else
           write(message,'(A)')  'This error will be fixed in the future, disregard for now'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
       elseif (coordDimCount(i) == 3) then
-        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, rc=esmfrc)
+        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, exclusiveLBound=eLBound3, exclusiveUBound=eUBound3,rc=esmfrc)
         if (esmfrc == ESMF_SUCCESS) then
-          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3)
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(eLBound3(1):eUBound3(1),eLBound3(2):eUBound3(2),eLBound3(3):eUBound3(3)))
         else
           write(message,'(A)')  'This error will be fixed in the future, disregard for now'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
