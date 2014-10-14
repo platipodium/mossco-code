@@ -200,20 +200,13 @@ ifdef GETMDIR
         export MPI=MPICH2
       endif
     else
-      unexport GETM_PARALLEL
+      export GETM_PARALLEL=false
     endif
-  ifneq ($(MOSSCO_GETM_NEW),true)
-  ifeq ($(GETM_PARALLEL),true)
-  # use static allocation of GETM arrays
-  # later dynamic allocation should take over -> Knut?
-  ifneq ($(wildcard $(GETMDIR)/include/dimensions.h),)
-    export STATIC+=-DSTATIC
-  else
-    $(warning GETM will be built with dynamic array allocation and *not* parallel)
-    export GETM_PARALLEL=false
-  endif
-  endif
-  endif
+    ifneq ($(MOSSCO_GETM_NEW),true)
+#     Note (KK): The official GETM code does not support dynamic memory allocation
+#                together with mpi. Here we always go for dynamic memory allocation.
+      export GETM_PARALLEL=false
+    endif
   endif
 endif
 
