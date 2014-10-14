@@ -199,6 +199,8 @@ ifdef GETMDIR
       else
         export MPI=MPICH2
       endif
+    else
+      export GETM_PARALLEL=false
     endif
   endif
 endif
