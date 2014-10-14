@@ -37,7 +37,7 @@ module getm_component
   type(ESMF_Clock)   ,save :: getmClock
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
-  type(ESMF_Field)   ,save :: TbotField
+  type(ESMF_Field)   ,save :: TbotField,T3DField
 
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
@@ -54,6 +54,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
 
   contains
 
@@ -155,10 +156,17 @@ module getm_component
     call getmCmp_init_grid(gridComp)
 
 !   internal call to ESMF_FieldCreateGridDataPtr<rank><type><kind>()
+!   in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
     TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    T3DField = ESMF_FieldCreate(getmGrid3D,T3D,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_StateAdd(exportState,(/T3DField/),rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call getmCmp_update_eState()
 
     if (.not.dryrun) then
@@ -441,6 +449,7 @@ module getm_component
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          allocate(Tbot(I2DFIELD))
+         allocate(T3D(I2DFIELD,1:kmax))
 #endif
       end if
     else
@@ -469,6 +478,7 @@ module getm_component
        if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
           Tbot(imin-HALO:,imax-HALO:) => T(:,:,1)
+          T3D(imin-HALO:,imax-HALO:,1:) => T(:,:,1:)
 #endif
        end if
    end if
@@ -897,6 +907,7 @@ module getm_component
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          Tbot = T(:,:,1)
+         T3D = T(:,:,1:)
 #endif
       end if
    end if
@@ -1018,8 +1029,7 @@ module getm_component
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES
-   REALTYPE,dimension(I3DFIELD),target         :: f
-   REALTYPE,dimension(:,:,:),pointer           :: pf
+   REALTYPE,dimension(I3DFIELD)                :: f
    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farrayPtrf,farrayPtrws
    REALTYPE,dimension(0:kmax)                  :: sour,Taur,ws
    integer                                     :: i,j
@@ -1042,17 +1052,12 @@ module getm_component
    call ESMF_FieldGet(field,farrayPtr=farrayPtrf)
    if (ws_present) call ESMF_FieldGet(wsfield,farrayPtr=farrayPtrws)
 
-   if (noKindMatch) then
-      pf => f
-      f = farrayPtrf
-   else
-      pf => farrayPtrf
-   end if
+   f(:,:,1:) = farrayPtrf
 
 !  see comments in do_transport()
-   call update_3d_halo(pf,pf,az,imin,jmin,imax,jmax,kmax,H_TAG)
+   call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
    call wait_halo(H_TAG)
-   call do_advection_3d(dt,pf,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,AH,H_TAG)
+   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,AH,H_TAG)
 
    sour = _ZERO_
    Taur = 1.d15
@@ -1063,16 +1068,16 @@ module getm_component
 !              Do advection step due to settling or rising
                ws = farrayPtrws(i,j,:)
                call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws,FLUX,FLUX, &
-                               _ZERO_,_ZERO_,6,1,pf(i,j,:))
+                               _ZERO_,_ZERO_,6,1,f(i,j,:))
             end if
             call diff_center(kmax,dt,_ONE_,1,hn(i,j,:),NEUMANN,NEUMANN, &
                              _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &
-                             pf(i,j,:),pf(i,j,:))
+                             f(i,j,:),f(i,j,:))
          end if
       end do
    end do
 
-   if (noKindMatch) farrayPtrf = f
+   farrayPtrf = f(:,:,1:)
 
 #ifdef DEBUG
    write(debug,*) 'Leaving do_transport_3d()'
