@@ -57,7 +57,7 @@ model => fabm_create_model_from_file(namlst)
      id = fabm_get_bulk_variable_id(model,model%dependencies(i))
      ! list, if the variable is not a state variable
      ! and the data pointer is associated:
-     if ((id%state_index == -1).and.associated(id%p)) LEVEL3 trim(model%dependencies(i)),size(id%alldata),id%variable%presence
+     if ((id%state_index == -1).and.(associated(id%variable))) LEVEL3 trim(model%dependencies(i)),id%variable%presence
   end do
 
   ! Report bulk dependencies descriptions
@@ -65,8 +65,8 @@ model => fabm_create_model_from_file(namlst)
   do i=1,size(model%dependencies_hz)
      id_hz = fabm_get_horizontal_variable_id(model,model%dependencies(i))
      ! list, if the variable is not a state variable
-     if (id_hz%state_index == -1) &
-       LEVEL3 trim(model%dependencies_hz(i)),size(id_hz%alldata)
+     if ((id_hz%state_index == -1).and.(associated(id%variable))) &
+       LEVEL3 trim(model%dependencies_hz(i)),id%variable%presence
   end do
 
   ! Report bulk dependencies descriptions
@@ -75,6 +75,6 @@ model => fabm_create_model_from_file(namlst)
      LEVEL3 trim(model%dependencies_scalar(i))
   end do
 
-  call fabm_check_ready(model)
+  !call fabm_check_ready(model)
 
 end program
