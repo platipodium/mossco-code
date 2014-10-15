@@ -12,15 +12,18 @@ program test_FabmDependencies
 use fabm
 use fabm_driver
 use fabm_config
+use fabm_types
 
 type(type_model),pointer         :: model
 integer                          :: namlst=55
 type (type_bulk_variable_id)     :: id
 type (type_horizontal_variable_id) :: id_hz
+type (type_link),       pointer :: link
 
 allocate(driver)
 model => fabm_create_model_from_file(namlst)
 
+#if 0
   ! Report prognostic variable descriptions
   LEVEL2 'FABM pelagic state variables:'
   do i=1,size(model%state_variables)
@@ -50,29 +53,46 @@ model => fabm_create_model_from_file(namlst)
             trim(model%diagnostic_variables_hz(i)%units),'  ',&
             trim(model%diagnostic_variables_hz(i)%long_name)
   end do
+#endif
 
-  ! Report bulk dependencies descriptions
-  LEVEL2 'FABM bulk dependencies:'
-  do i=1,size(model%dependencies)
-     id = fabm_get_bulk_variable_id(model,model%dependencies(i))
-     ! list, if the variable is not a state variable
-     ! and the data pointer is associated:
-     if ((id%state_index == -1).and.(associated(id%variable))) LEVEL3 trim(model%dependencies(i)),id%variable%presence
-  end do
-
-  ! Report bulk dependencies descriptions
-  LEVEL2 'FABM horizontal dependencies:'
-  do i=1,size(model%dependencies_hz)
-     id_hz = fabm_get_horizontal_variable_id(model,model%dependencies(i))
-     ! list, if the variable is not a state variable
-     if ((id_hz%state_index == -1).and.(associated(id%variable))) &
-       LEVEL3 trim(model%dependencies_hz(i)),id%variable%presence
-  end do
-
-  ! Report bulk dependencies descriptions
-  LEVEL2 'FABM scalar dependencies:'
-  do i=1,size(model%dependencies_scalar)
-     LEVEL3 trim(model%dependencies_scalar(i))
+  !> taken from helper.F90 in pyfabm
+  !! todo: discuss, if this should go into fabm.F90:
+  LEVEL2 ''
+  LEVEL2 'FABM environmental dependencies'
+  link => model%links_postcoupling%first
+  do while (associated(link))
+    if (.not.link%target%read_indices%is_empty().and.link%target%state_indices%is_empty()) then
+      select case (link%target%domain)
+        case (domain_bulk)
+          if (.not.associated(model%environment%data(link%target%read_indices%pointers(1)%p)%p) &
+              .and..not.(link%target%presence==presence_internal)) then
+            if (.not.associated(link%target%standard_variable)) then
+              LEVEL3 '      bulk: ',trim(link%name),' [',trim(link%target%units),']'
+            else
+              LEVEL3 '      bulk: ',trim(link%target%standard_variable%name),' [',trim(link%target%standard_variable%units),']'
+            end if
+          end if
+        case (domain_bottom,domain_surface)
+          if (.not.associated(model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
+              .and..not.(link%target%presence==presence_internal)) then
+            if (.not.associated(link%target%standard_variable)) then
+              LEVEL3 'horizontal: ',trim(link%name),' [',trim(link%target%units),']'
+            else
+              LEVEL3 'horizontal: ',trim(link%target%standard_variable%name),' [',trim(link%target%standard_variable%units),']'
+            end if
+          end if
+        case (domain_scalar)
+          if (.not.associated(model%environment%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
+              .and..not.(link%target%presence==presence_internal)) then
+            if (.not.associated(link%target%standard_variable)) then
+              LEVEL3 '    global: ',trim(link%name),' [',trim(link%target%units),']'
+            else
+              LEVEL3 '    global: ',trim(link%target%standard_variable%name),' [',trim(link%target%standard_variable%units),']'
+            end if
+          end if
+      end select
+    end if
+    link => link%next
   end do
 
   !call fabm_check_ready(model)
