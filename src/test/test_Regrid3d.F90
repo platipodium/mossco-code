@@ -18,7 +18,7 @@ type(ESMF_ArraySpec) :: arraySpec
 integer(ESMF_KIND_I4)  :: petCount, localPet
 real(ESMF_KIND_R8), dimension(:,:,:) , pointer:: farrayPtr3
 integer              :: i, j, k, rc,  counts(3), cLBound(3), cUBound(3)
-real(ESMF_KIND_R8)   :: min(3), max(3), dx, dy, dz
+real(ESMF_KIND_R8)   :: amin(3), amax(3), dx, dy, dz
 real(ESMF_KIND_R8), dimension(:,:,:), pointer :: coordX, coordY, coordZ
 
 call ESMF_Initialize(vm=vm, defaultCalKind=ESMF_CALKIND_GREGORIAN, rc=rc)
@@ -32,21 +32,21 @@ call ESMF_LogWrite('Creating first 60 x 40 x 10 grid', ESMF_LOGMSG_INFO, rc=rc)
 counts(1) = 60
 counts(2) = 40
 counts(3) = 10
-min(1) = 0.0
-max(1) = 60.0
-min(2) = 0.0
-max(2) = 50.0
-min(3) = 0.0
-max(3) = 1500.
+amin(1) = 0.0
+amax(1) = 60.0
+amin(2) = 0.0
+amax(2) = 50.0
+amin(3) = 0.0
+amax(3) = 1500.
   
-dx = (max(1)-min(1))/(counts(1)-1)
-dy = (max(2)-min(2))/(counts(2)-1)
-dz = (max(3)-min(3))/(counts(3)-1)
+dx = (amax(1)-amin(1))/(counts(1)-1)
+dy = (amax(2)-amin(2))/(counts(2)-1)
+dz = (amax(3)-amin(3))/(counts(3)-1)
 
     
 srcGrid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), maxIndex=counts, &
     gridEdgeLWidth=(/0,0,0/), gridEdgeUWidth=(/0,0,0/), rc=rc, &
-    indexflag=ESMF_INDEX_GLOBAL, regDecomp=(/1,1,1/), name="source grid")
+    indexflag=ESMF_INDEX_GLOBAL, regDecomp=(/1,1,1/), name="source grid", coordsys=ESMF_COORDSYS_CART)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
 call ESMF_GridAddCoord(srcGrid, rc=rc)
@@ -67,12 +67,14 @@ if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 do k = cLBound(3), cUBound(3)
   do j = cLBound(2), cUBound(2)
     do i = cLBound(1), cUbound(1)
-      coordX(i,j,k) = (i-1)*dx
-      coordY(i,j,k) = (j-1)*dy
-      coordZ(i,j,k) = (k-1)*dz
+      coordX(i,j,k) = amin(1)+(i-1)*dx
+      coordY(i,j,k) = amin(2)+(j-1)*dy
+      coordZ(i,j,k) = amin(3)+(k-1)*dz
     enddo
   enddo
 enddo
+write(0,*) 'src coordmin',coordX(1,1,1),coordY(1,1,1),coordZ(1,1,1)
+write(0,*) 'src coordmax',coordX(60,40,10),coordY(60,40,10),coordZ(60,40,10)
 
 ! Create the second grid, 80 x 30 x 20 indices, same domain as srcGrid
 call ESMF_LogWrite('Creating second 80 x 30 x 20 grid', ESMF_LOGMSG_INFO, rc=rc)
@@ -81,14 +83,14 @@ call ESMF_LogFlush(rc=rc)
 counts(1) = 80
 counts(2) = 30
 counts(3) = 20
-dx = (max(1)-min(1))/(counts(1)-1)
-dy = (max(2)-min(2))/(counts(2)-1)
-dz = (max(3)-min(3))/(counts(3)-1)
+dx = (amax(1)-amin(1))/(counts(1)+1)
+dy = (amax(2)-amin(2))/(counts(2)+1)
+dz = (amax(3)-amin(3))/(counts(3)+1)
 
 dstGrid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/), maxIndex=counts, &
     gridEdgeLWidth=(/0,0,0/), gridEdgeUWidth=(/0,0,0/), &
     indexflag=ESMF_INDEX_GLOBAL, &
-    regDecomp=(/1,1,1/), name="destination grid", rc=rc)
+    regDecomp=(/1,1,1/), name="destination grid", rc=rc, coordsys=ESMF_COORDSYS_CART)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
 call ESMF_GridAddCoord(dstGrid, rc=rc)
@@ -102,19 +104,22 @@ call ESMF_GridGetCoord(dstGrid, localDE=0, coordDim=2, &
   farrayPtr=coordY, computationalLBound=cLBound, computationalUBound=cUBound, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-call ESMF_GridGetCoord(srcGrid, localDE=0, coordDim=3, &
+call ESMF_GridGetCoord(dstGrid, localDE=0, coordDim=3, &
   farrayPtr=coordZ, computationalLBound=cLBound, computationalUBound=cUBound, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 do k = cLBound(3), cUBound(3)
   do j = cLBound(2), cUBound(2)
     do i = cLBound(1), cUbound(1)
-      coordX(i,j,k) = (i-1)*dx
-      coordY(i,j,k) = (j-1)*dy
-      coordZ(i,j,k) = (k-1)*dz
+      coordX(i,j,k) = amin(1)+i*dx
+      coordY(i,j,k) = amin(2)+j*dy
+      coordZ(i,j,k) = amin(3)+k*dz
     end do
   enddo
 enddo
+
+write(0,*) 'dst coordmin',coordX(1,1,1),coordY(1,1,1),coordZ(1,1,1)
+write(0,*) 'dst coordmax',coordX(80,30,20),coordY(80,30,20),coordZ(80,30,20)
 
 ! Create Array spec and fields for both grids
 call ESMF_LogWrite('Create fields', ESMF_LOGMSG_INFO, rc=rc)
