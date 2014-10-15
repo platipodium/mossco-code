@@ -92,10 +92,11 @@ dz = (amax(3)-amin(3))/(counts(1)-1)
 
 allocate(lon(counts(1)))
 allocate(lat(counts(1)))
+allocate(depth(counts(1)))
 do i=1,counts(1)
    lon(i)=amin(1) + (amax(1)-amin(1))*dx
-   lat(i)=amin(2) + (amax(2)-amin(2))*dx
-   depth(i)=amin(3) + (amax(3)-amin(3))*dx
+   lat(i)=amin(2) + (amax(2)-amin(2))*dy
+   depth(i)=amin(3) + (amax(3)-amin(3))*dz
 enddo
 
 call ESMF_LocStreamAddKey(locstream, keyName="Lat", farray=lat, keyUnits="Degrees", keyLongName="Latitude", rc=rc)
