@@ -33,7 +33,7 @@
     real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
     integer                            :: ndiag
     logical                            :: fabm_ready
-    type(type_bulk_standard_variable),dimension(:), pointer :: bulk_dependencies
+    type(type_bulk_standard_variable),dimension(:),pointer :: bulk_dependencies
     type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies
     contains
     procedure :: get_rhs
@@ -132,24 +132,94 @@
 
   end subroutine get_rhs
 
+  !> append external bulk dependency
+  subroutine add_bulk_dependency(deps, var)
+  type(type_bulk_standard_variable),dimension(:), pointer :: deps
+  type(type_bulk_standard_variable),dimension(:), pointer :: deps_tmp
+  type(type_standard_variable),target                     :: var
+  integer :: n_bulk  
+
+  if (associated(deps)) then
+    n_bulk = size(deps)
+    allocate(deps_tmp(n_bulk))
+    deps_tmp = deps
+    deallocate(deps)
+    allocate(deps(n_bulk+1))
+    deps(1:n_bulk)=deps_tmp
+    deallocate(deps_tmp)
+  else
+    n_bulk=0
+    allocate(deps(1))
+  end if
+
+  deps(n_bulk+1)%units = var%units
+  deps(n_bulk+1)%name = var%name
+
+  end subroutine
+
+  !> append external horizontal dependency
+  subroutine add_horizontal_dependency(deps, var)
+  type(type_horizontal_standard_variable),dimension(:), pointer :: deps
+  type(type_horizontal_standard_variable),dimension(:), pointer :: deps_tmp
+  type(type_standard_variable),target                           :: var
+  integer :: n_hor  
+
+  if (associated(deps)) then
+    n_hor = size(deps)
+    allocate(deps_tmp(n_hor))
+    deps_tmp = deps
+    deallocate(deps)
+    allocate(deps(n_hor+1))
+    deps(1:n_hor)=deps_tmp
+    deallocate(deps_tmp)
+  else
+    n_hor=0
+    allocate(deps(1))
+  end if
+
+  deps(n_hor+1)%units = var%units
+  deps(n_hor+1)%name = var%name
+
+  end subroutine
+
 
   !> get list of external dependencies
   subroutine get_dependencies(pf)
   class(type_mossco_fabm_pelagic) :: pf
+  type(type_link), pointer        :: link
 
   ! get number of external dependencies in FABM,
-  ! as intermediate solution keep a hardcoded list of standard dependencies
-  ! allocate list of dependencies names
-  allocate(pf%bulk_dependencies(3))
+  ! allocate list of dependencies names (here: required by the driver)
+  allocate(pf%bulk_dependencies(1))
+  pf%bulk_dependencies(1)=standard_variables%cell_thickness
   
-  ! and set the names
-  pf%bulk_dependencies(1)=standard_variables%temperature
-  pf%bulk_dependencies(2)=standard_variables%cell_thickness
-  pf%bulk_dependencies(3)=standard_variables%density
-
-  allocate(pf%horizontal_dependencies(2))
-  pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
-  pf%horizontal_dependencies(2)=standard_variables%bottom_stress
+  !> add required dependencies
+  link => pf%model%links_postcoupling%first
+  do while (associated(link))
+    if (.not.link%target%read_indices%is_empty().and.link%target%state_indices%is_empty()) then
+      select case (link%target%domain)
+        case (domain_bulk)
+          if (.not.associated(pf%model%environment%data(link%target%read_indices%pointers(1)%p)%p) &
+              .and..not.(link%target%presence==presence_internal) &
+              .and.associated(link%target%standard_variable)) then
+            call add_bulk_dependency(pf%bulk_dependencies,link%target%standard_variable)
+          end if
+        case (domain_bottom,domain_surface)
+          if (.not.associated(pf%model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
+              .and..not.(link%target%presence==presence_internal) &
+              .and.associated(link%target%standard_variable)) then
+            call add_horizontal_dependency(pf%horizontal_dependencies,link%target%standard_variable)
+          end if
+        case (domain_scalar)
+          if (.not.associated(pf%model%environment%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
+              .and..not.(link%target%presence==presence_internal) &
+              .and.associated(link%target%standard_variable)) then
+            write(0,*) 'global dependencies not implemented yet'
+          end if
+      end select
+    end if
+    link => link%next
+  end do
 
   end subroutine
 
