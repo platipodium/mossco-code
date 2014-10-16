@@ -383,9 +383,11 @@ fid.write('''
     !! the initialization
 ''')
 
+maxPhases=1
 
-for item in gridCompList:
-    fid.write('    !! Initializing ' + item + '\n')
+for phase in range(1,maxPhases+1,2):
+  for item in gridCompList:
+    fid.write('    !! Initializing phase '  + str(phase) + ' of ' + item + '\n')
     ifrom=gridCompList.index(item)
     ito=ifrom
     for j in range(0, len(couplingList)):
@@ -393,15 +395,15 @@ for item in gridCompList:
         if jtem[-1]==item:
             ifrom=gridCompList.index(jtem[0])
     j=gridCompList.index(item)
-    if foreignGrid.has_key(item):
+    if (phase == 1) and (foreignGrid.has_key(item)):
       fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
       fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
     fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
-    fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
+    fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
-for icpl in range(0,len(cplCompList)):
+  for icpl in range(0,len(cplCompList)):
     item=cplCompList[icpl]
     for i in range(0, len(couplingList)):
         jtem=couplingList[i]
@@ -411,7 +413,7 @@ for icpl in range(0,len(cplCompList)):
           break
     fid.write('    !! Initializing ' + jtem[1] + '\n')
     fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, rc=rc)\n')
+    fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
 
