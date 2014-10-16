@@ -261,6 +261,7 @@ fid.write('''
     type(ESMF_Clock)       :: clock !> This component's internal clock
     logical                :: clockIsPresent
     integer(ESMF_KIND_I4), allocatable :: petList(:)
+    integer(ESMF_KIND_I4)  :: phase
     type(ESMF_VM)          :: vm
 
     rc = ESMF_SUCCESS
@@ -383,7 +384,7 @@ fid.write('''
     !! the initialization
 ''')
 
-maxPhases=1
+maxPhases=5
 
 for phase in range(1,maxPhases+1,2):
   for item in gridCompList:
@@ -401,8 +402,20 @@ for phase in range(1,maxPhases+1,2):
 
     fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
     fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
-
+    fid.write('''
+    if (rc /= ESMF_SUCCESS) then
+      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase 
+        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      else        
+        write(message,'(A,I4)') 'Initializing failed with error code ', rc
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogFlush()
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    endif
+''')
   for icpl in range(0,len(cplCompList)):
     item=cplCompList[icpl]
     for i in range(0, len(couplingList)):
@@ -414,7 +427,20 @@ for phase in range(1,maxPhases+1,2):
     fid.write('    !! Initializing ' + jtem[1] + '\n')
     fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
     fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+    fid.write('''
+    if (rc /= ESMF_SUCCESS) then
+      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase 
+        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      else        
+        write(message,'(A,I4)') 'Initializing failed with error code ', rc
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogFlush()
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    endif
+''')
 
 
 fid.write('    numCplAlarm = ' + str(len(couplingList)))
