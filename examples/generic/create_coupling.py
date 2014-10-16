@@ -37,7 +37,7 @@ config = yaml.load(fid)
 fid.close()
 
 # Search for the key with name "coupling".  If part of the filename is the word "coupling" then assume that the first item on the list read is the name of the coupling
-coupling_name = 'coupling'
+coupling_name = os.path.splitext(os.path.basename(filename))[0]
 variables = []
 coupling_properties = []
 
@@ -405,10 +405,10 @@ for phase in range(1,maxPhases+1,2):
     fid.write('''
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase 
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
         write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else        
+      else
         write(message,'(A,I4)') 'Initializing failed with error code ', rc
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_LogFlush()
@@ -430,10 +430,10 @@ for phase in range(1,maxPhases+1,2):
     fid.write('''
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase 
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
         write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else        
+      else
         write(message,'(A,I4)') 'Initializing failed with error code ', rc
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_LogFlush()
@@ -1155,7 +1155,7 @@ fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) \n\n')
 
 
 
-fid.write('.PHONY: all exec coupling\n\n')
+fid.write('.PHONY: all exec ' + coupling_name + '\n\n')
 fid.write('all: exec\n\n')
 fid.write('exec: libmossco_util ')
 for item in gridCompSet.union(cplCompSet):
@@ -1212,9 +1212,9 @@ atmos.nc:
 
 clean: extraclean
 extraclean:
-	@-rm -f coupling
+	@-rm -f %s
 
-''')
+'''%coupling_name)
 fid.close()
 
 
