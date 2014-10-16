@@ -1102,6 +1102,8 @@ for item in gridCompSet.union(cplCompSet):
             fid.write(' $(GETM_LDFLAGS)')
         if item=='fabm_sediment':
             fid.write(' -L$(FABM_LIBRARY_PATH)')
+        if item=='fabm_pelagic':
+            fid.write(' -L$(FABM_LIBRARY_PATH)')
         if item=='fabm':
             fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm_gotm':
@@ -1154,7 +1156,7 @@ libmossco_gotmfabm libgotm libmossco_fabmgotm:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libmossco_clm libmossco_erosed libmossco_fabm0d:
+libsediment libconstant libmossco_clm libmossco_erosed libmossco_fabm0d libmossco_fabmpelagic:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libempty libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
