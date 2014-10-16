@@ -261,9 +261,13 @@ fid.write('''
     type(ESMF_Clock)       :: clock !> This component's internal clock
     logical                :: clockIsPresent
     integer(ESMF_KIND_I4), allocatable :: petList(:)
-    integer(ESMF_KIND_I4)  :: phase
     type(ESMF_VM)          :: vm
-
+    
+    integer(ESMF_KIND_I4)  :: phase, phaseCount
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: phaseCountList
+    logical, allocatable   :: hasPhaseZeroList(:)  
+    logical                :: hasPhaseZero
+    
     rc = ESMF_SUCCESS
 
     !! Check whether there is already a clock (it might have been set
@@ -382,11 +386,41 @@ fid.write('''
     !! in the order specified by dependencies/couplings
     !! Also, try to find coupling/dependency specific export/import states in
     !! the initialization
+
+    !! Establish number of phases and zero phase for all components
+    !! @> todo this interface will likely change in the future and will
+    !! be integrated with GridCompGet
+    
+    allocate(hasPhaseZeroList(numGridComp))
+    allocate(phaseCountList(numGridComp))
+    
+    do i = 1, numGridComp
+      call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_INITIALIZE, &
+        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      phaseCountList(i)=phaseCount
+      hasPhaseZeroList(i)=hasPhaseZero
+    enddo
+    
+    !! Go through all phase 0 if components have it
+    do i = 1,numGridcomp
+      if (.not.hasPhaseZeroList(i)) cycle
+      call ESMF_GridCompInitialize(gridCompList(i), exportState=exportStates(i), phase=0, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
+      !! contains information on the phases defined in the component.
+    enddo
+
+    !! Go through all phases:
+    !! IPDv00p1 = phase 1: Advertise Fields in import and export States. These can be
+    !!   empty fields that are later completed with FieldEmptyComplete
+    !! IPDv00p2 = phase 2: Realize Fields (that have not been completed in phase 1)
+         
 ''')
 
-maxPhases=5
+maxPhases=2
 
-for phase in range(1,maxPhases+1,2):
+for phase in range(1,maxPhases+1):
   for item in gridCompList:
     fid.write('    !! Initializing phase '  + str(phase) + ' of ' + item + '\n')
     ifrom=gridCompList.index(item)
@@ -400,8 +434,10 @@ for phase in range(1,maxPhases+1,2):
       fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
       fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
-    fid.write('    call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
-    fid.write('      exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
+    fid.write('    if (phaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
+    fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
+    fid.write('        exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
+    fid.write('    endif\n')
     fid.write('''
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
