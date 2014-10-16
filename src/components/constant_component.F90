@@ -75,8 +75,8 @@ module constant_component
     character(len=ESMF_MAXSTR)                  :: timeString, unitString
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
-    integer(ESMF_KIND_I4), dimension(2)  :: totalCount2, totalUBound2, totalLBound2
-    integer(ESMF_KIND_I4), dimension(3)  :: totalCount3, totalUBound3, totalLBound3
+    integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2
+    integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
     type(ESMF_VM)                        :: vm
     
@@ -299,7 +299,7 @@ module constant_component
 
           if (localDeCount3>0) then
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, &
-              totalLBound=totalLBound3, totalUBound=totalUBound3, totalCount=totalCount3, rc=rc)
+              computationalLBound=computationalLBound3, computationalUBound=computationalUBound3, rc=rc)
             farrayPtr3(:,:,:)=cur_item%value
           endif
         elseif (cur_item%rank==2) then
@@ -310,7 +310,7 @@ module constant_component
 
           if (localDeCount2>0) then
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, &
-              totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
+              computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=rc)
             farrayPtr2(:,:)=cur_item%value
           endif
         else
@@ -342,7 +342,7 @@ module constant_component
 
 				do localDe=0,localDeCount-1
           call ESMF_FieldGet(cur_item%field, localDe=localDe, farrayPtr=farrayPtr2, &
-              totalLBound=totalLBound2, totalUBound=totalUBound2, totalCount=totalCount2, rc=rc)
+              computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=rc)
           farrayPtr2(:,:)=cur_item%value
         enddo
           

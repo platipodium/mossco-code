@@ -6,7 +6,6 @@ type(ESMF_Field)     :: field
 real(ESMF_KIND_R8),pointer,dimension(:) :: farrayptr 
 integer              :: rc
 integer              :: numOwnedElements=-1,numNodes
-integer              :: totalCount(2)
 type(ESMF_FileFormat_Flag) :: fileformat=ESMF_FILEFORMAT_UGRID
 
 call esmf_initialize()
