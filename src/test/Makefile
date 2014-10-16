@@ -60,3 +60,5 @@ clean: extraclean
 
 extraclean:
 	@- rm -f $(TEST_BIN) PET*
+	@- rm -rf *.dSYM
+

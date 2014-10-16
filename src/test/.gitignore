@@ -12,8 +12,9 @@ test_Grid
 test_MPI_Initialize
 test_Netcdf
 test_Redist
+test_Solver
+test_Ugrid
 test_Regrid2d
 test_Regrid3d
 test_RegridLocStream
-test_Solver
-test_Ugrid
+*dSYM

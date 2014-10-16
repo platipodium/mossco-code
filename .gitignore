@@ -1,6 +1,10 @@
 bin/
 lib/
 modules/
+*.aux
+*.toc
+*.blg
+*.nav
 *.o
 *.so
 *.a
