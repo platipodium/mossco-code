@@ -2,4 +2,4 @@ coupling:
   - components: 
      - getm
      - netcdf
-    interval: 12 h
+    interval: 2 h
