@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+# This script is is part of MOSSCO. It creates from YAML descriptions of
+# couplings a toplevel_component.F90 source file
+#
+# @copyright (C) 2014 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+
 import sys
 import os
 
@@ -14,7 +23,7 @@ else:
      filename = 'fabm_benthic_pelagic+wave.yaml'
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
-     filename = 'benthic_geoecology.yaml'
+     filename = 'getm--fabm_pelagic--netcdf.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -98,16 +107,18 @@ if len(intervals) == 0:
 # and sort this list
 for component in componentSet:
     for item in dependencies:
-        if type(item) is str:
-          if dependencies[item].has_key('component'):
-              compdeps = dependencies[item]['component']
-          if dependencies[item].has_key('grid'):
-              foreignGrid[item]=dependencies[item]['grid']
-        elif type(item) is dict:
-          compdeps = item.values()[0]
+        compdeps=[]
+        if type(item) is dict:
+          for jtem in item.values()[0]:
+              if type(jtem) is str:
+                 compdeps.append(jtem)
+              elif (type(jtem) is dict) and jtem.has_key('component'):
+                 compdeps.append(jtem['component'])
+                 if jtem.has_key('grid'):
+                    foreignGrid[item.keys()[0]]=jtem['grid']
         if type(compdeps) is list:
-              for compdep in compdeps:
-                 if componentList.index(component)< componentList.index(compdep):
+          for compdep in compdeps:
+            if componentList.index(component)< componentList.index(compdep):
                    c=componentList.pop(componentList.index(compdep))
                    componentList.insert(componentList.index(component),c)
         elif componentList.index(component)< componentList.index(compdeps):
@@ -383,8 +394,6 @@ for item in gridCompList:
             ifrom=gridCompList.index(jtem[0])
     j=gridCompList.index(item)
     if foreignGrid.has_key(item):
-
-#call ESMF_AttributeSet(pelagicstate, name='foreign_grid_field_name', value='temperature_in_water', rc=rc)
       fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
       fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
 
@@ -1028,6 +1037,7 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver', 'fabm'],
+        'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver', 'fabm'],
         'constant'   : ['constant'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
@@ -1056,6 +1066,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'erosed'     : ['libmossco_erosed'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm_sediment' : ['libsediment', 'libmossco_sediment', 'libsolver'],
+        'fabm_pelagic' : ['libmossco_fabmpelagic', 'libmossco_util', 'libsolver'],
         'simplewave' : ['libmossco_simplewave'],
         'netcdf'      : ['libmossco_netcdf'],
         'test'       : ['libmossco_test'],
