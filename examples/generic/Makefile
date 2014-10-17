@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-YAMLS = $(shell ls *.yaml)
+YAMLS = $(shell cat YAMLS)
 EXAMPLES = ${YAMLS:.yaml=}
 
 .PHONY: all examples exec clean
