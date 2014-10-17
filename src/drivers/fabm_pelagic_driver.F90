@@ -190,6 +190,8 @@
 
   ! get number of external dependencies in FABM,
   ! allocate list of dependencies names (here: required by the driver)
+  nullify(pf%horizontal_dependencies)
+  nullify(pf%bulk_dependencies)
   allocate(pf%bulk_dependencies(1))
   pf%bulk_dependencies(1)=standard_variables%cell_thickness
   
