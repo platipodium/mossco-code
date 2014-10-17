@@ -27,7 +27,7 @@ all: exec
 examples:
 	set -e; for i in $(YAMLS); do python create_coupling.py $$i && $(MAKE) -f Makefile.coupling; done
 
-Makefile.coupling: create_coupling.py coupling_system.yaml
+Makefile.coupling: create_coupling.py
 	python $<
 
 exec: Makefile.coupling
