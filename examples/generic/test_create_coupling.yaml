@@ -1,6 +1,6 @@
 dependencies:
   - fabm_pelagic:
-    - component: getm
+    - component: gotm
       grid: temperature_in_water
     - gotm
     - erosed
@@ -9,7 +9,7 @@ dependencies:
 
 coupling:
   - components: 
-     - getm
+     - gotm
      - fabm_pelagic
     interval: 30 m
   - components: 
