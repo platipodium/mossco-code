@@ -65,6 +65,11 @@ module getm_component
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
+    call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
+                                    userRoutine=getmCmp_init_phases, &
+                                    phase=0,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
@@ -73,6 +78,92 @@ module getm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine SetServices
+
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_init_phases -
+!
+! !INTERFACE:
+   subroutine getmCmp_init_phases(getmCmp,iState,eState,pClock,rc)
+!
+! !DESCRIPTION:
+!  Note: [i|e]state and pClock are uninitialized if the toplevel
+!        component did not provide corresponding arguments to
+!        ESMF_GridCompInitialize(getmCmp).
+!  The toplevel component can inquire rc via optional keyword argument
+!  userRc to ESMF_GridCompInitialize().
+!
+! !USES:
+   use NUOPC
+   IMPLICIT NONE
+!
+! !INPUT/OUTPUT PARAMETERS:
+   type(ESMF_GridComp) :: getmCmp
+   type(ESMF_State)    :: iState,eState ! may be uninitialized
+   type(ESMF_Clock)    :: pClock        ! may be uninitialized
+!
+! !OUTPUT PARAMETERS:
+   integer,intent(out) :: rc
+!
+! !REVISION HISTORY:
+!
+! !LOCAL VARIABLES
+   character(len=NUOPC_PhaseMapStringLength) :: InitializePhaseMap(1)
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_init_phases() # ',Ncall
+#endif
+
+   call ESMF_LogWrite("getmCmp initializing phases ... ",ESMF_LOGMSG_TRACE)
+
+!  Note (KK): NUOPC initialises all components in various phases. By
+!             default NUOPC assumes IPDv00 and thus requires userRoutines
+!             for init phases 1 and 2 (other phases are added/executed by
+!             NUOPC). If the userCode provides different phases, this
+!             needs to be communicated to NUOPC via InitializePhaseMap
+!             in an init phase 0.
+!
+!                                             | IPDv00 | IPDv01 | IPDv02
+!=============================================|========|========|========
+! add InitializePhaseMap attribute            | 0 (*?) | 0 (*?) | 0 (*?)
+!=============================================|========|========|========
+! advertise import and export fields          | p1 (!) | p1     | p1
+!=============================================|========|========|========
+! realize import and export fields (allocate) | p2 (!) | p3     | p3
+!=============================================|========|========|========
+! check field' Connected status               | p3     | p4     | p4
+! set internal clock to other than pClock (*) |        |        |
+!=============================================|========|========|========
+! initialize fields (*)                       | p4     | p5     | p5
+!=============================================|========|========|========
+!
+! (!) has to be done by the user, (*) optional by the user
+
+!  KK-TODO: Not sure whether we can communicate that no phase 2 is available...
+   InitializePhaseMap(1) = "IPDv00p1=1"
+
+   call NUOPC_GridCompAttributeAdd(getmCmp)
+   call ESMF_AttributeSet(getmCmp,name="InitializePhaseMap",           &
+                                  valueList=InitializePhaseMap,        &
+                                  convention="NUOPC",purpose="General",rc=rc)
+
+   call ESMF_LogWrite("getmCmp initialized phases",ESMF_LOGMSG_TRACE)
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving getmCmp_init_phases()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_init_phases
+!EOC
+!-----------------------------------------------------------------------
 
   subroutine Initialize(gridComp,importState,exportState,parentClock,rc)
 
