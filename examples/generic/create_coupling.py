@@ -1217,7 +1217,7 @@ fid.write('''
 libmossco_gotmfabm libgotm libmossco_fabmgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
-libmossco_util:
+libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 libsediment libconstant libmossco_clm libmossco_erosed libmossco_fabm0d libmossco_fabmpelagic:
@@ -1229,7 +1229,7 @@ libempty libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 libmossco_info libmossco_test:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libmossco_sediment libsolver:
+libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
 libsurfacescoupler libaocoupler liblinkcoupler libgridcoupler libregridcoupler libcopycoupler:
