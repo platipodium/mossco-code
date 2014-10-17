@@ -109,7 +109,7 @@ for component in componentSet:
     for item in dependencies:
         compdeps=[]
         if type(item) is dict:
-          for jtem in item.values()[0]:
+          for jtem in item.values():
               if type(jtem) is str:
                  compdeps.append(jtem)
               elif (type(jtem) is dict) and jtem.has_key('component'):
@@ -262,12 +262,12 @@ fid.write('''
     logical                :: clockIsPresent
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
-    
+
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: phaseCountList
-    logical, allocatable   :: hasPhaseZeroList(:)  
+    logical, allocatable   :: hasPhaseZeroList(:)
     logical                :: hasPhaseZero
-    
+
     rc = ESMF_SUCCESS
 
     !! Check whether there is already a clock (it might have been set
@@ -390,10 +390,10 @@ fid.write('''
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
     !! be integrated with GridCompGet
-    
+
     allocate(hasPhaseZeroList(numGridComp))
     allocate(phaseCountList(numGridComp))
-    
+
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_INITIALIZE, &
         phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=rc)
@@ -401,7 +401,7 @@ fid.write('''
       phaseCountList(i)=phaseCount
       hasPhaseZeroList(i)=hasPhaseZero
     enddo
-    
+
     !! Go through all phase 0 if components have it
     do i = 1,numGridcomp
       if (.not.hasPhaseZeroList(i)) cycle
@@ -415,7 +415,7 @@ fid.write('''
     !! IPDv00p1 = phase 1: Advertise Fields in import and export States. These can be
     !!   empty fields that are later completed with FieldEmptyComplete
     !! IPDv00p2 = phase 2: Realize Fields (that have not been completed in phase 1)
-         
+
 ''')
 
 maxPhases=2
