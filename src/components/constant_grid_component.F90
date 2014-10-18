@@ -26,6 +26,7 @@ module constant_component
     type(ESMF_Field)                      :: field
     integer :: rank
     real(ESMF_KIND_R4) :: value
+    character(ESMF_MAXSTR) :: units
   end type
 
   type(variable_item_type), pointer :: cur_item,variable_items
@@ -134,6 +135,123 @@ module constant_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing phase 1 ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+    allocate(variable_items)
+    cur_item => variable_items
+    cur_item%next => variable_items
+
+    !> open constant_grid.dat
+    !! @todo: read filename from configuration namelist/yaml
+    open(fileunit,file=trim(name)//'.dat',iostat=rc, action='read', status='old')
+    if (rc == 0) then
+      write(message,'(A)') trim(name)//' reads from file '//trim(name)//'.dat'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    else
+      open(fileunit,file='constant_grid.dat',iostat=rc, action='read', status='old')
+      if (rc == 0) then
+        write(message,'(A)') trim(name)//' reads from file constant_grid.dat'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      else
+        open(fileunit,file='constant_grid_component.dat',iostat=rc, action='read', status='old')
+        if (rc == 0) then
+          write(message,'(A)') trim(name)//' reads from file constant_grid_component.dat.  This feature is deprecated.'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        else
+          write(message,'(A)') trim(name)//' could not open file for reading.'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          file_readable=.false.
+        endif
+      endif
+    endif
+
+    if (rc ==0 ) then
+      do
+        !> read constant_grid.dat line by line, maybe add rank later
+        !! format of each line is:
+        !!   some_standard_name  12.345
+        read(fileunit,'(A)', iostat=rc) line
+        if (rc /= 0) exit
+        line=adjustl(line)
+        if (len_trim(line)==0) cycle
+        if (line(1:1)=='#' .or. line(1:1)=='%' .or. line(1:1)=='#') cycle
+
+        read(line,*,iostat=rc) varname
+        if (rc /= 0) cycle
+        line=adjustl(line(len_trim(varname)+1:))
+        if (len_trim(line)>0) then
+          read(line,*,iostat=rc) floatValue
+          if (rc /= 0) cycle
+        else
+          floatValue=0.0D0
+        endif
+        line=adjustl(line(len_trim(varname)+1:))
+        if (len_trim(line)>0) then
+          read(line,*,iostat=rc) unitString
+          if (rc /= 0) cycle
+        else
+          unitString=''
+        endif
+
+        !> add item to list of constants
+        allocate(cur_item%next)
+        cur_item => cur_item%next
+        cur_item%standard_name=trim(varname)
+        cur_item%rank = 3
+        cur_item%value = floatValue
+        cur_item%units = unitString
+        start=1
+        do while (index(cur_item%standard_name(start:),'_at_')>0)
+          cur_item%rank=cur_item%rank - 1
+          start = index(cur_item%standard_name(start:),'_at_')+1
+        enddo
+
+        if ((cur_item%rank == 3 .and. localDeCount3>0) &
+          .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
+          write(0,*) 'constant_grid_component: create field ', &
+              trim(varname),' =',cur_item%value
+          write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
+            ' rank(',cur_item%rank,'), value ',cur_item%value
+          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
+        endif
+        nullify(cur_item%next)
+      end do
+    close(fileunit)
+    end if
+!5   continue
+
+
+    !> now go through list, create empty fields and add to exportState
+    cur_item => variable_items%next
+    if (file_readable) then
+      do
+        cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        if (len_trim(cur_item%units)>0) then
+          call ESMF_AttributeSet(cur_item%field,'units',trim(cur_item%units))
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        endif
+
+        call ESMF_AttributeSet(cur_item%field,'rank',cur_item%rank)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+        call ESMF_AttributeSet(cur_item%field,'default_value',cur_item%value)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      
+        call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+
+        if (associated(cur_item%next)) then
+          cur_item => cur_item%next
+        else
+          exit
+        end if
+      end do
+    endif
+
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized phase 1.'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
   end subroutine InitializeP1
 
   subroutine InitializeP2(gridComp, importState, exportState, parentClock, rc)
@@ -180,6 +298,9 @@ module constant_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+
+    ! In phase 2, the fields are complemented with their grids
 
     grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
@@ -233,91 +354,6 @@ module constant_component
     call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !> create list of export_variables, that will come from a function
-    !> which reads a text file
-
-    allocate(variable_items)
-    cur_item => variable_items
-    cur_item%next => variable_items
-
-    !> open constant_component.dat
-    !! @todo: read filename from configuration namelist/yaml
-    open(fileunit,file=trim(name)//'.dat',iostat=rc, action='read', status='old')
-    if (rc == 0) then
-      write(message,'(A)') trim(name)//' reads from file '//trim(name)//'.dat'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    else
-      open(fileunit,file='constant.dat',iostat=rc, action='read', status='old')
-      if (rc == 0) then
-        write(message,'(A)') trim(name)//' reads from file constant.dat'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-      else
-        open(fileunit,file='constant_component.dat',iostat=rc, action='read', status='old')
-        if (rc == 0) then
-          write(message,'(A)') trim(name)//' reads from file constant_component.dat.  This feature is deprecated.'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        else
-          write(message,'(A)') trim(name)//' could not open file for reading.'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-          file_readable=.false.
-        endif
-      endif
-    endif
-
-    if (rc ==0 ) then
-      do
-        !> read constant_component.dat line by line, maybe add rank later
-        !! format of each line is:
-        !!   some_standard_name  12.345
-        read(fileunit,'(A)', iostat=rc) line
-        if (rc /= 0) exit
-        line=adjustl(line)
-        if (len_trim(line)==0) cycle
-        if (line(1:1)=='#' .or. line(1:1)=='%' .or. line(1:1)=='#') cycle
-
-        read(line,*,iostat=rc) varname
-        if (rc /= 0) cycle
-        line=adjustl(line(len_trim(varname)+1:))
-        if (len_trim(line)>0) then
-          read(line,*,iostat=rc) floatValue
-          if (rc /= 0) cycle
-        else
-          floatValue=0.0D0
-        endif
-        line=adjustl(line(len_trim(varname)+1:))
-        if (len_trim(line)>0) then
-          read(line,*,iostat=rc) unitString
-          if (rc /= 0) cycle
-        else
-          unitString=''
-        endif
-
-        !> add item to list of constants
-        allocate(cur_item%next)
-        cur_item => cur_item%next
-        cur_item%standard_name=trim(varname)
-        cur_item%rank = 3
-        cur_item%value = floatValue
-        start=1
-        do while (index(cur_item%standard_name(start:),'_at_')>0)
-          cur_item%rank=cur_item%rank - 1
-          start = index(cur_item%standard_name(start:),'_at_')+1
-        enddo
-
-        if ((cur_item%rank == 3 .and. localDeCount3>0) &
-          .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
-          write(0,*) 'constant_component: create field ', &
-              trim(varname),' =',cur_item%value
-          write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
-            ' rank(',cur_item%rank,'), value ',cur_item%value
-          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
-        endif
-        nullify(cur_item%next)
-      end do
-    close(fileunit)
-    end if
-!5   continue
-
 
     !> now go through list, create fields and add to exportState
     cur_item => variable_items%next
@@ -368,6 +404,8 @@ module constant_component
         end if
       end do
     endif
+
+
 
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
