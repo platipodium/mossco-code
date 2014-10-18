@@ -289,7 +289,7 @@ module constant_component
     
     character(ESMF_MAXSTR)               :: foreignGridFieldName, attributeName
     integer(ESMF_KIND_I4)                :: localDe, coordDim
-    integer(ESMF_KIND_I8), allocatable, target   :: maxIndex(:)
+    integer(ESMF_KIND_I4), allocatable   :: maxIndex(:)
     
     type(ESMF_FieldStatus_Flag)          :: fieldStatus
     type(ESMF_StateItem_Flag)            :: itemType
@@ -298,7 +298,8 @@ module constant_component
     character(ESMF_MAXSTR), allocatable  :: itemNameList(:)
     
     integer(ESMF_KIND_I4)                :: fieldRank, itemCount, rank
-    real(ESMF_KIND_R8)                   :: defaultValue
+    integer                              :: intValue
+    real(ESMF_KIND_R8)                   :: real8value
     type(ESMF_Field)                     :: field
     
     rc = ESMF_SUCCESS
@@ -328,23 +329,17 @@ module constant_component
     call ESMF_FieldGet(field, grid=grid, rank=rank, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    allocate(maxIndex(rank))
-    if (rank == 3) then
-      call ESMF_GridGet(grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-               computationalCount=maxIndex,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    else 
-      if (rank == 2) then
-        call ESMF_GridGet(grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-             computationalCount=maxIndex,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      else 
-        write(message,'(A)') 'Foreign grid must be of rank = 3'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      endif
+    if (rank<2 .or. rank>3) then
+      write(message,'(A)') 'Foreign grid must be of rank = 2 or 3'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-  
+    
+    allocate(maxIndex(rank))
+    call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDE=0, &
+        computationalCount=maxIndex, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     if (rank==3) then
       grid3=ESMF_GridCreate(grid, name="constant_grid_3d", rc=rc)
 	    grid2=ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=(/maxIndex(1),maxIndex(2)/), &
@@ -404,12 +399,6 @@ module constant_component
       enddo
     enddo
       
-    !> Create ArraySpecs for both grids
-    call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
     allocate(itemTypeList(itemCount))
     allocate(itemNameList(itemCount))
@@ -423,7 +412,7 @@ module constant_component
       call ESMF_FieldGet(field, status=fieldStatus, rc=rc)    
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-			call ESMF_AttributeGet(field,'rank',fieldRank,default=1, rc=rc)
+			call ESMF_AttributeGet(field, name='rank',value=fieldRank, defaultValue=1, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       if (fieldRank==1) then
@@ -432,7 +421,7 @@ module constant_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       endif
 
-			call ESMF_AttributeGet(field,'default_value',defaultValue,default=-99.0, rc=rc)
+			call ESMF_AttributeGet(field, name='default_value', value=intValue, defaultValue=-99, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 			if (fieldStatus==ESMF_FIELDSTATUS_EMPTY) then
@@ -461,10 +450,10 @@ module constant_component
 
       if (rank==2) then
         call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=rc)
-			  farrayPtr2(:,:) = defaultValue
+			  farrayPtr2(:,:) = real(intValue,kind=ESMF_KIND_R8)
       else
         call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=rc)
-			  farrayPtr3(:,:,:) = defaultValue
+			  farrayPtr3(:,:,:) = real(intValue,kind=ESMF_KIND_R8)
       endif
     
     enddo

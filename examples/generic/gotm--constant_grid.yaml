@@ -1,0 +1,17 @@
+instances:
+  constant: constant_grid
+
+dependencies:
+  - constant:
+    - component: gotm
+      grid: temperature_in_water
+
+coupling:
+  - components: 
+     - constant
+     - getm
+    interval: 30 m
+  - components: 
+     - getm
+     - netcdf
+    interval: 12 h
