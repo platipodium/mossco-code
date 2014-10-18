@@ -421,6 +421,7 @@ fid.write('''
 maxPhases=2
 
 for phase in range(1,maxPhases+1):
+  fid.write('    phase = %i \n'%phase)
   for item in gridCompList:
     fid.write('    !! Initializing phase '  + str(phase) + ' of ' + item + '\n')
     ifrom=gridCompList.index(item)
