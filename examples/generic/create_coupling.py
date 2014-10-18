@@ -11,6 +11,10 @@
 import sys
 import os
 
+# Define a generic iterable ver list or dict
+def sequential_iterator(obj):
+  return obj if isinstance(obj, dict) else xrange(len(obj))
+
 try:
     import yaml
 except:
@@ -24,6 +28,7 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
+     filename='test_test.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -130,9 +135,29 @@ if 'link_coupler' in componentList:
     componentList.insert(0,c)
 
 instanceDict={}
-for i in range(0,len(instances)):
-    if instances.values()[i].has_key('component'):
-        instanceDict[instances.keys()[i]]=instances.values()[i]['component']
+instancePetDict={}
+
+if type(instances) is list:
+  for i in range(0,len(instances)):
+    item=instances[i]
+    if item.has_key('component'):
+       instanceDict[item.keys()[0]]=item['component']
+    else:
+      instanceDict[item.keys()[0]]=item.values()[0]
+
+    if item.has_key('petList'):
+      instancePetDict[item.keys()[0]]=item['petList']
+    if item.has_key('petlist'):
+      instancePetDict[item.keys()[0]]=item['petlist']
+else:
+  for key,value in instances.iteritems():
+    if type(value) is str:
+      instanceDict[key] = value
+    elif type(value) is dict and value.has_key('component'):
+      instanceDict[key] = value['component']
+      if value.has_key('petList'):
+          instancePetDict[key]=value['petList']
+    
 
 print 'Components to process:', componentList
 cplCompList=[]
@@ -141,8 +166,8 @@ petList=[]
 for item in componentList:
     if item in gridCompSet:
         gridCompList.append(item)
-        if instanceDict.has_key(item) and instances[item].has_key('petList'):
-            petList.append(str(instances[item]['petList']))
+        if instanceDict.has_key(item) and instancePetDict.has_key(item):
+            petList.append(str(instancePetDict[item]))
         else:
             petList.append('all')
     else:
