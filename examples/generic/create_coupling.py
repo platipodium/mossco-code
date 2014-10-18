@@ -112,6 +112,8 @@ if len(intervals) == 0:
 
 # if there are any dependencies specified, go through the list of components
 # and sort this list
+
+dependencyDict={}
 for component in componentSet:
   if type(dependencies) is dict:
     for item in dependencies:
@@ -132,6 +134,8 @@ for component in componentSet:
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
+    dependencyDict[item]=compdeps  
+
   elif type(dependencies) is list:
     for i in range(0,len(dependencies)):
         item=dependencies[i]
@@ -154,10 +158,10 @@ for component in componentSet:
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
-    
+        dependencyDict[item.keys()[0]]=compdeps  
+
   else:
     print 'The dependencies specification must be list or dictionary'
-    
 
 if 'link_coupler' in componentList:
     c=componentList.pop(componentList.index('link_coupler'))
@@ -192,12 +196,20 @@ else:
           instancePetDict[key]=value['petList']
     
 print 'Components to process:', componentList
-if len(instanceDict)>1:
+if len(instanceDict)>0:
   for key,value in instanceDict.iteritems():
     sys.stdout.write(key + ' is running as an instance of ' + value)
     if instancePetDict.has_key(key):
       sys.stdout.write(' on PET ' + str(instancePetDict[key]))
     sys.stdout.write('\n')
+if len(dependencyDict)>0:
+  for key,value in dependencyDict.iteritems():
+    sys.stdout.write(key + ' depends on ')
+    print value
+
+if len(foreignGrid)>0:
+  for key,value in foreignGrid.iteritems():
+    print(key + ' obtains grid information from ' + value + ' field')
 
 cplCompList=[]
 gridCompList=[]
