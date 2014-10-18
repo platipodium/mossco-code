@@ -39,13 +39,41 @@ module constant_component
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP1, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP2, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
   end subroutine SetServices
 
-  subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+  subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+  
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character(len=10)           :: InitializePhaseMap(2)
+    character(len=ESMF_MAXSTR)  :: name, message
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+    InitializePhaseMap(2) = "IPDv00p1=2"
+
+    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=rc)
+
+    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
+    write(message,'(A)') trim(name)//' initialized phase 0'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+  end subroutine InitializeP0
+
+  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
@@ -99,6 +127,53 @@ module constant_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Log the call to this function
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing phase 1 ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+  end subroutine InitializeP1
+
+  subroutine InitializeP2(gridComp, importState, exportState, parentClock, rc)
+
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character(len=ESMF_MAXSTR)     :: name, message, line
+    type(ESMF_Alarm)      :: alarm
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: time
+    type(ESMF_TimeInterval) :: timeInterval, alarmInterval
+
+    integer(ESMF_KIND_I4) :: nexport,lbnd(3),ubnd(3),farray_shape(3)
+    integer(ESMF_KIND_I4) :: i,j,k
+    type(ESMF_Field), dimension(:), allocatable :: exportField
+    type(ESMF_Grid)                             :: grid2, grid3
+    type(ESMF_DistGrid)                         :: distgrid
+    type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
+    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:)
+    character(len=ESMF_MAXSTR)                  :: varname
+    integer, parameter                          :: fileunit=21
+    logical                                     :: file_readable=.true., clockIsPresent
+    integer(ESMF_KIND_I4)                       :: start
+
+    character(len=ESMF_MAXSTR)                  :: timeString, unitString
+    type(ESMF_Time)                             :: currTime
+    real(ESMF_KIND_R8)                          :: floatValue
+    integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2
+    integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
+    integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
+
+    rc = ESMF_SUCCESS
+
+    !! Log the call to this function
+    call ESMF_GridCompGet(gridComp, name=name, clock=clock, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -300,7 +375,7 @@ module constant_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-  end subroutine Initialize
+  end subroutine InitializeP2
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
