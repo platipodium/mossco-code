@@ -28,7 +28,7 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
-     filename='test_test.yaml'
+#     filename='test_test.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -56,13 +56,15 @@ if config.has_key('copyright'):
 else:
     copyright = 'Copyright (C) 2014, Helmholtz-Zentrum Geesthacht'
 
-dependencies=[]
 if config.has_key('dependencies'):
-    dependencies = config.pop('dependencies');
+  dependencies = config.pop('dependencies')
+else:
+  dependencies=[]
 
-instances=[]
 if config.has_key('instances'):
-    instances = config.pop('instances')
+  instances = config.pop('instances')
+else:
+  instances=[]
 
 componentList=[]
 gridCompList=[]
@@ -111,6 +113,7 @@ if len(intervals) == 0:
 # if there are any dependencies specified, go through the list of components
 # and sort this list
 for component in componentSet:
+  if type(dependencies) is dict:
     for item in dependencies:
         compdeps=[]
         if type(item) is dict:
@@ -129,11 +132,41 @@ for component in componentSet:
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
+  elif type(dependencies) is list:
+    for i in range(0,len(dependencies)):
+        item=dependencies[i]
+        compdeps=[]
+        if type(item) is dict:
+          for jtem in item.values():
+              if type(jtem) is list and len(jtem) == 1:
+                  jtem=jtem[0]
+              if type(jtem) is str:
+                 compdeps.append(jtem)
+              elif (type(jtem) is dict) and jtem.has_key('component'):
+                 compdeps.append(jtem['component'])
+                 if jtem.has_key('grid'):
+                    foreignGrid[item.keys()[0]]=jtem['grid']
+        if type(compdeps) is list:
+          for compdep in compdeps:
+            if componentList.index(component)< componentList.index(compdep):
+                   c=componentList.pop(componentList.index(compdep))
+                   componentList.insert(componentList.index(component),c)
+        elif componentList.index(component)< componentList.index(compdeps):
+              c=componentList.pop(componentList.index(compdeps))
+              componentList.insert(componentList.index(component),c)
+    
+  else:
+    print 'The dependencies specification must be list or dictionary'
+    
 
 if 'link_coupler' in componentList:
     c=componentList.pop(componentList.index('link_coupler'))
     componentList.insert(0,c)
 
+
+# Create dictionary for component names (instanceDict) and for petLists that
+# instances of these components run on.  Get this information from the 
+# yaml 'instances' dictionary/list
 instanceDict={}
 instancePetDict={}
 
@@ -158,8 +191,14 @@ else:
       if value.has_key('petList'):
           instancePetDict[key]=value['petList']
     
-
 print 'Components to process:', componentList
+if len(instanceDict)>1:
+  for key,value in instanceDict.iteritems():
+    sys.stdout.write(key + ' is running as an instance of ' + value)
+    if instancePetDict.has_key(key):
+      sys.stdout.write(' on PET ' + str(instancePetDict[key]))
+    sys.stdout.write('\n')
+
 cplCompList=[]
 gridCompList=[]
 petList=[]
