@@ -21,6 +21,7 @@ constant_simplewave
 constant_simplewave_netcdf
 coupling_system
 empty_coupling
+empty_empty
 erosed_benthos
 erosed_benthos_netcdf
 fabm_benthic_pelagic+wave
