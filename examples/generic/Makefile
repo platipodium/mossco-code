@@ -17,15 +17,14 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-YAMLS = $(shell cat YAMLS)
-EXAMPLES = ${YAMLS:.yaml=}
+EXAMPLES = $(shell cat EXAMPLES)
 
 .PHONY: all examples exec clean
 
 all: exec
 
 examples:
-	set -e; for i in $(YAMLS); do python create_coupling.py $$i && $(MAKE) -f Makefile.coupling; done
+	set -e; for i in $(EXAMPLES); do python create_coupling.py $$i.yaml && $(MAKE) -f Makefile.coupling; done
 
 Makefile.coupling: create_coupling.py
 	python $<
