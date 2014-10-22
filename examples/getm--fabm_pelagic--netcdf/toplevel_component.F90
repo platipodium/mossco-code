@@ -91,6 +91,10 @@ module toplevel_component
     logical                :: clockIsPresent
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
+    
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=4
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    
 
     rc = ESMF_SUCCESS
 
@@ -186,27 +190,38 @@ module toplevel_component
     call ESMF_CplCompSetServices(cplCompList(1), link_coupler_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+    !! Get phase count information from all components
+    allocate(phaseCountList(numGridComp))
+    
+    do i = 1, numGridComp
+      call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_INITIALIZE, &
+        phaseCount=phaseCountList(i), rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
+    
     !! Initialize all components, both cpl and grid components, do this
     !! in the order specified by dependencies/couplings
     !! Also, try to find coupling/dependency specific export/import states in
     !! the initialization
-    !! Initializing getm
-    call ESMF_GridCompInitialize(gridCompList(1), importState=importStates(1), &
-      exportState=exportStates(1), clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
+    do phase = 1,maxPhaseCount
+      !! Initializing getm
+      if (phase <= phaseCountList(1)) call ESMF_GridCompInitialize(gridCompList(1), &
+        importState=importStates(1), exportState=exportStates(1), phase=phase, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Initializing netcdf
-    call ESMF_GridCompInitialize(gridCompList(2), importState=importStates(2), &
-      exportState=exportStates(2), clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      !! Initializing netcdf
+      if (phase <= phaseCountList(2)) call ESMF_GridCompInitialize(gridCompList(2), &
+        importState=importStates(2), exportState=exportStates(2), phase=phase, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Initializing fabm_pelagic
-    call ESMF_AttributeSet(exportStates(1), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_GridCompInitialize(gridCompList(3), importState=exportStates(1), &
-      exportState=exportStates(3), clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      !! Initializing fabm_pelagic
+      call ESMF_AttributeSet(exportStates(1), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (phase <= phaseCountList(3)) call ESMF_GridCompInitialize(gridCompList(3), &
+        importState=exportStates(1), exportState=exportStates(3), clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    enddo
 
     !! Initializing link_coupler
     call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(1), &
