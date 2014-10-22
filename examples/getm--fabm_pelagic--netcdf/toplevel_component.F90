@@ -222,7 +222,7 @@ module toplevel_component
     call ESMF_ClockGet(clock,startTime=startTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeIntervalSet(alarmInterval, startTime, m=30 ,rc=rc)
+    call ESMF_TimeIntervalSet(alarmInterval, startTime, d=1 ,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     cplAlarmList(1)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
@@ -258,7 +258,7 @@ module toplevel_component
 
       endif
     enddo
-        call ESMF_TimeIntervalSet(alarmInterval, startTime, h=12 ,rc=rc)
+        call ESMF_TimeIntervalSet(alarmInterval, startTime, d=2 ,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     cplAlarmList(2)=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &
