@@ -166,3 +166,27 @@ for counter in counters:
   pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '_by_time_and_author.pdf',transparent=True,format='pdf')
 
+  fig=pylab.figure(5, figsize=(12,6))
+  fig.clf()
+
+  ax = pylab.axes([0.1, 0.2, 0.8, 0.7])
+  labels = authorfields.keys()
+
+  fracs=numpy.zeros((pylab.size(labels),time.size))
+  for i in range(0,pylab.size(labels)):
+    fracs[i,:]=contrib[labels[i]]
+
+  pyplot.plot(fds,numpy.sum(fracs,0),'k-',linewidth=3)  
+ 
+  ax=pylab.gca()
+  ax.xaxis.set_major_formatter(hfmt)
+  ax.xaxis.set_major_locator(dates.MonthLocator())
+  ax.set_ylim(bottom = 0)
+  pyplot.xticks(rotation=45)
+
+  pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
+  pylab.show()
+  pylab.savefig(titles[counter].replace(' ','_') + '.pdf',transparent=True,format='pdf')
+
+
+
