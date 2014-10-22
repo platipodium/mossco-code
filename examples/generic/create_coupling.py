@@ -28,7 +28,7 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
-#     filename='test_test.yaml'
+     filename='benthic_geoecology.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
@@ -343,6 +343,7 @@ fid.write('''
     integer(ESMF_KIND_I4), dimension(:), allocatable :: phaseCountList
     logical, allocatable   :: hasPhaseZeroList(:)
     logical                :: hasPhaseZero
+    integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
     rc = ESMF_SUCCESS
 
@@ -714,6 +715,12 @@ fid.write('''
 
     character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName
 
+    integer(ESMF_KIND_I4)  :: phase, phaseCount
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: phaseCountList
+    logical, allocatable   :: hasPhaseZeroList(:)
+    logical                :: hasPhaseZero
+    integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
+
     if (.not.allocated(alarmList)) allocate(alarmList(20))
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
@@ -737,7 +744,22 @@ fid.write('''
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
+    
+    !! Establish number of phases and zero phase for all components
+    !! @> todo this interface will likely change in the future and will
+    !! be integrated with GridCompGet
 
+    allocate(hasPhaseZeroList(numGridComp))
+    allocate(phaseCountList(numGridComp))
+
+    do i = 1, numGridComp
+      call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_RUN, &
+        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      phaseCountList(i)=phaseCount
+      hasPhaseZeroList(i)=hasPhaseZero
+    enddo
+    
     call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=rc)
 
@@ -973,9 +995,13 @@ fid.write('''
           ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
 
-        call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
-          exportState=exportStates(i), clock=clock, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        !! Loop over all run phases, disregarding any action that could be taken between
+        !! phases
+        do phase=1,phaseCountList(i)
+          call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
+            exportState=exportStates(i), clock=clock, phase=phase, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        enddo
 
         call ESMF_ClockGet(childClock, currTime=time, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1060,11 +1086,17 @@ fid.write('''
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I8)   :: i
-    integer(ESMF_KIND_I4)   :: petCount, localPet
+    integer(ESMF_KIND_I4)   :: petCount, localPet,numGridComp, numCplComp
     character(ESMF_MAXSTR)  :: name, message, timeString
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+
+    integer(ESMF_KIND_I4)  :: phase, phaseCount
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: phaseCountList
+    logical, allocatable   :: hasPhaseZeroList(:)
+    logical                :: hasPhaseZero
+    integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
     !> Obtain information on the component, especially whether there is a local
     !! clock to obtain the time from and to later destroy
@@ -1086,13 +1118,32 @@ fid.write('''
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+    !! Establish number of phases and zero phase for all components
+    !! @> todo this interface will likely change in the future and will
+    !! be integrated with GridCompGet
+
+    numGridComp=size(gridCompList)
+
+    allocate(hasPhaseZeroList(numGridComp))
+    allocate(phaseCountList(numGridComp))
+
+    do i = 1, numGridComp
+      call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_FINALIZE, &
+        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      phaseCountList(i)=phaseCount
+      hasPhaseZeroList(i)=hasPhaseZero
+    enddo
+
     do i=1,ubound(cplCompList,1)
       call ESMF_CplCompFinalize(cplCompList(i), clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
     do i=1,ubound(gridCompList,1)
-      call ESMF_GridCompFinalize(gridCompList(i), clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      do phase=1,phaseCountList(i)
+        call ESMF_GridCompFinalize(gridCompList(i), clock=clock, phase=phase, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      enddo
     enddo
     do i=1,ubound(gridCompList,1)
       !!@todo destroy any remaining fields/arrays in states
