@@ -94,7 +94,7 @@ module toplevel_component
     
     integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=4
     integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
-    
+    logical                :: hasPhaseZero
 
     rc = ESMF_SUCCESS
 
@@ -195,7 +195,7 @@ module toplevel_component
     
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_INITIALIZE, &
-        phaseCount=phaseCountList(i), rc=rc)
+        phaseCount=phaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
     
