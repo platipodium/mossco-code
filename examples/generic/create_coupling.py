@@ -88,10 +88,18 @@ if not config.has_key('coupling'):
 
 coupling = config.pop("coupling")
 
-if not type(coupling) is dict:
-  print 'File ' + filename + ' contains an empty coupling dictionary.'
+# Make it a list in any case
+if not (type(coupling) is list):
+  coupling=[coupling]
+  
+if len(coupling)<1:
+  print 'File ' + filename + ' contains an empty coupling list.'
+  print coupling
   exit(1)
 
+# Loop over the list of couuplings.  Each entry in this list is a dictionary
+# that has at least the key 'components:'
+# todo: we could shortcut this by allowing comp1:comp2 to 
 for item in coupling:
     if type(item) is dict:
         if item.has_key("components"):
@@ -110,6 +118,13 @@ for item in coupling:
                 intervals.append("6 m")
             if item.has_key("direction"):
                 directions.append(item["direction"])
+        else: 
+          gridComplist.extend(item.keys())
+          gridCompList.extend(item.values())
+          for key,value in item.iteritems():
+             couplingList.append(key, "link_coupler",value)
+          cplCompList.append("link_coupler")
+          
     else:
         print 'Warning, dictionary expected for item ' + item + ', it is of type ',  type(item)
 
