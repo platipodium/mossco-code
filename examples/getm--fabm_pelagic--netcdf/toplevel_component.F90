@@ -92,7 +92,7 @@ module toplevel_component
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
     
-    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=4
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
     integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
     logical                :: hasPhaseZero
 

@@ -90,6 +90,10 @@ module toplevel_component
     integer(ESMF_KIND_I4)  :: localPet, petCount
     integer(ESMF_KIND_I4), allocatable  :: petList(:)
      
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
+
     rc = ESMF_SUCCESS
      
     !! Check whether there is already a clock (it might have been set 
@@ -333,6 +337,10 @@ module toplevel_component
     
     character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName   
     
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
+
     if (.not.allocated(alarmList)) allocate(alarmList(20))
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
@@ -650,6 +658,10 @@ module toplevel_component
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
 
     !> Obtain information on the component, especially whether there is a local
     !! clock to obtain the time from and to later destroy

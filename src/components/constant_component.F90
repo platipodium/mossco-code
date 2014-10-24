@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component that delivers constant data fields
 !
-!> @import
-!> @export water_temperature, salinity
+!> @import none
+!> @export all variables that are located in a file read by this component
 !
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
@@ -39,13 +39,39 @@ module constant_component
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
   end subroutine SetServices
 
-  subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+  subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+  
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=rc)
+
+    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
+    write(message,'(A)') trim(name)//' initialized phase 0'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+
+  end subroutine InitializeP0
+
+
+  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
@@ -367,7 +393,7 @@ module constant_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-  end subroutine Initialize
+  end subroutine InitializeP1
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 

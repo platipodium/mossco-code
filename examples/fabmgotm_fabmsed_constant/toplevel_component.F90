@@ -68,6 +68,10 @@ module toplevel_component
     integer               :: petCount, localPet
     real(ESMF_KIND_R8),dimension(:,:),allocatable :: farray
 
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
+
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
 
     ! Create component, call setservices, and create states
@@ -287,6 +291,11 @@ module toplevel_component
     !> fdet = fac_fdet*det
     !> sdet = fac_sdet*det
 
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
+
+
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
@@ -446,6 +455,11 @@ module toplevel_component
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
+
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
+
 
     call ESMF_LogWrite("Toplevel component finalizing",ESMF_LOGMSG_INFO)
 

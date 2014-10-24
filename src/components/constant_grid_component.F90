@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component that delivers constant data fields
 !
-!> @import
-!> @export water_temperature, salinity
+!> @import none
+!> @export all variables that are located in a file read by this component
 !
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
@@ -42,9 +42,9 @@ module constant_component
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
       userRoutine=InitializeP2, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)

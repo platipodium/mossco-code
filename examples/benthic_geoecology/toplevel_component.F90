@@ -62,6 +62,10 @@ module toplevel_component
     real(ESMF_KIND_R8),dimension(:,:),allocatable :: farray
     type(ESMF_TimeInterval) :: cplInterval
 
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
+
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
 
     call ESMF_TimeIntervalSet(cplInterval,s_r8=360.0d0)
@@ -132,6 +136,10 @@ module toplevel_component
     logical :: clockIsPresent
     integer(ESMF_KIND_I8) :: advanceCount
 
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
+
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
@@ -195,6 +203,10 @@ module toplevel_component
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
+
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
+    logical                :: hasPhaseZero
 
     call ESMF_LogWrite("Toplevel component finalizing",ESMF_LOGMSG_INFO)
 
