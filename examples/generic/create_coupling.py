@@ -46,6 +46,11 @@ coupling_name = os.path.splitext(os.path.basename(filename))[0]
 variables = []
 coupling_properties = []
 
+if not type(config) is dict:
+  print 'File ' + filename + ' does not contain data or does not contain a'
+  print 'dictionary.'
+  exit(1)
+
 if config.has_key('author'):
     author = config.pop('author')
 else:
@@ -76,7 +81,16 @@ foreignGrid={}
 intervals =[]
 directions = []
 
+if not config.has_key('coupling'):
+  print 'File ' + filename + ' must contain a coupling dictionary.'
+  print 'Try adding a first line consisting only of the word "coupling:".'
+  exit(1)
+
 coupling = config.pop("coupling")
+
+if not type(coupling) is dict:
+  print 'File ' + filename + ' contains an empty coupling dictionary.'
+  exit(1)
 
 for item in coupling:
     if type(item) is dict:
@@ -97,7 +111,7 @@ for item in coupling:
             if item.has_key("direction"):
                 directions.append(item["direction"])
     else:
-        print 'Warning, dictionary expected for item ' + item
+        print 'Warning, dictionary expected for item ' + item + ', it is of type ',  type(item)
 
 gridCompSet=set(gridCompList)
 gridCompList=list(gridCompSet)

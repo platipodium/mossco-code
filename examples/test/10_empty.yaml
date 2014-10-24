@@ -1,0 +1,5 @@
+# This file contains no dictionary
+# It is used to test the reaction of the create_coupling script
+# to such yaml files
+coupling: 
+  components: empty
