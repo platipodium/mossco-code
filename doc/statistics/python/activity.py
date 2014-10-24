@@ -5,6 +5,7 @@ import datetime
 import pylab
 import numpy
 import csv
+import sys
 from matplotlib import pyplot
 
 # Map of author names to columns
@@ -22,7 +23,7 @@ authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
 # Get committer names from one of the output gnuplot files
 with open('../gitstats/lines_of_code_by_author.plot', 'r') as fid:
   for line in fid:
-    print line
+    sys.stdout.write('.')
   line=line.split('"')
   authornames=line[1:-1:2]
 
@@ -45,7 +46,7 @@ for counter in counters:
 
   authorfields={}
   for author in pylab.unique(authoralias.values()):
-    print author
+    #print author
     af=[]
     for i in range(1,numpy.size(fieldnames)):
       if authoralias.has_key(fieldnames[i]):
@@ -55,7 +56,7 @@ for counter in counters:
  
   institutefields={}
   for institute in pylab.unique(authorinstitute.values()):
-    print institute
+    #print institute
     af=[]
     for i in range(0,numpy.size(fieldnames)):
       if fieldnames[i]=='time':
@@ -92,7 +93,7 @@ for counter in counters:
     fracs.append(contrib[author][-1])
   pylab.pie(fracs, labels=labels, autopct='%1.1f%%', shadow=True, startangle=90)
   pylab.title(titles[counter].capitalize() + ' by author', bbox={'facecolor':'0.8', 'pad':15})
-  pylab.show()
+  #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '_by_author.pdf',transparent=True,format='pdf')
 
   # make a  a piechart 
@@ -105,7 +106,7 @@ for counter in counters:
     fracs.append(contrib[institute][-1])
   pylab.pie(fracs, labels=labels, autopct='%1.1f%%', shadow=True, startangle=90)
   pylab.title(titles[counter].capitalize() + ' by institute', bbox={'facecolor':'0.8', 'pad':15})
-  pylab.show()
+  #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '_by_institute.pdf',transparent=True,format='pdf')
 
   fig=pylab.figure(3, figsize=(12,6))
@@ -134,7 +135,7 @@ for counter in counters:
   ax.legend(p, labels, loc='upper left')
 
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
-  pylab.show()
+  #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '_by_time_and_institute.pdf',transparent=True,format='pdf')
 
 
@@ -163,9 +164,9 @@ for counter in counters:
   ax.legend(p, labels, loc='upper left')
 
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
-  pylab.show()
+  #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '_by_time_and_author.pdf',transparent=True,format='pdf')
-
+ 
   fig=pylab.figure(5, figsize=(12,6))
   fig.clf()
 
@@ -185,8 +186,8 @@ for counter in counters:
   pyplot.xticks(rotation=45)
 
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
-  pylab.show()
+  #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '.pdf',transparent=True,format='pdf')
-
+  
 
 

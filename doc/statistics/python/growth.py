@@ -46,5 +46,5 @@ for counter in counters:
   pyplot.xticks(rotation=45)
 
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
-  pylab.show()
+  #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '.pdf',transparent=True,format='pdf')

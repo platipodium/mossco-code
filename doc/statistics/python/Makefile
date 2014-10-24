@@ -9,6 +9,10 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 
+ifndef MOSSCO_DIR
+export MOSSCO_DIR=$(subst /doc/statistics/python$,,$(PWD))
+endif
+
 include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README.md
@@ -19,10 +23,10 @@ SUBDIRS =
 
 all: subdirs plots
 
-SCRIPTS=$(shell *.py)
+SCRIPTS=$(wildcard *.py)
 
 plots:
-	@for P in $(SCRIPTS); do python python $$(P); done
+	@for P in $(SCRIPTS); do python $$P; done
 
 subdirs:
 	@for dir in $(SUBDIRS) ; do make -C $$dir ; done
