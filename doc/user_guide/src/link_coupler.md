@@ -24,4 +24,5 @@ This coupler searches the list of ESMF Fields and ESMF FieldBundles in its impor
 
 ## Further considerations
 - Attributes should be transferred between the import and export states
+- Should the `replace` operation depend on the field status?
 
