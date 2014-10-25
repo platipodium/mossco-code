@@ -16,6 +16,7 @@ module netcdf_component
   use mossco_variable_types
   use mossco_netcdf
   use mossco_strings
+  use mossco_component
 
   implicit none
   private
@@ -26,27 +27,52 @@ module netcdf_component
 
   contains
 
-  !> Provide an ESMF compliant SetServices routine, which defines
-  !! entry points for Init/Run/Finalize
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    rc=ESMF_SUCCESS
-    
   end subroutine SetServices
 
-  !> Initialize the component
-  !!
-  subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+  subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+ 
+    implicit none
+  
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)       :: currTime
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=rc)
+    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=rc)
+
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+  end subroutine InitializeP0
+
+
+  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
+
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -54,41 +80,16 @@ module netcdf_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timestring, message, name
-    type(ESMF_Time)            :: currTime, stopTime, startTime
-    type(ESMF_TimeInterval)    :: timeInterval, timeStep
-    integer(ESMF_KIND_I4)      :: petCount, localPet
-    integer(ESMF_KIND_I8)      :: advanceCount
-    type(ESMF_Clock)           :: clock
-
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    character(len=ESMF_MAXSTR) :: name
+    type(ESMF_Time)            :: currTime
  
-    call ESMF_ClockGet(clock,startTime=startTime, currTime=currTime, &
-      stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    ! This routine is mostly empty, as everything is done during Run()
-
-    !! Finally, log the successful completion of this function
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
-  end subroutine Initialize
+  end subroutine InitializeP1
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
  
@@ -115,43 +116,14 @@ module netcdf_component
     character(len=ESMF_MAXSTR) :: fieldName
     character(len=3)        :: numberstring
     type(ESMF_Clock)        :: clock
-    logical                    :: clockIsPresent
-
+    logical                 :: clockIsPresent
        
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    ! This output routine only works on PET0
-    !if (localPET>0) return
-    
-    if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    !! Get the local clock and adjust its time step to the parent clock's time steop
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(clock,startTime=startTime, &
-      advanceCount=advanceCount, refTime=refTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_ClockGet(parentClock, currTime=currTime,  &
-      timeStep=timeInterval, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
-    !! Synchronize local clock with parent clock
-    call ESMF_ClockSet(clock, currTime=currTime, timeStep=timeInterval, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
       defaultValue='netcdf_component.nc', rc=rc)
@@ -166,6 +138,12 @@ module netcdf_component
     !write(message,'(A)') 'Found '//trim(numstring)//' items in '//trim(name)
     !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(clock, advanceCount=advanceCount, refTime=refTime, startTime=startTime, &
+      rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    
     if (advanceCount<huge(timeSlice)) then
       timeSlice=int(advanceCount, ESMF_KIND_I4)
     else
@@ -242,20 +220,16 @@ module netcdf_component
     
     !! This component has no do loop over an internal timestep, it is advance with the
     !! timestep written into its local clock from a parent component
-    call ESMF_ClockAdvance(clock, rc=rc)
-    
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    call ESMF_ClockAdvance(clock, rc=rc)    
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+
+    call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
  
   end subroutine Run
 
-  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -267,45 +241,26 @@ module netcdf_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-     clock=parentClock
-    else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-   
+
     !! Here comes your own finalization code
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Deallocate all your model's internal allocated memory    
+    !! 2. Deallocate all your model's internal allocated memory
     !! 3. Destroy your clock
 
-
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+		call ESMF_ClockDestroy(clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize
-
 
 end module netcdf_component

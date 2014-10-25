@@ -120,8 +120,6 @@ module constant_component
     integer(ESMF_KIND_I4)       :: numNodes=0, numElements=0
     integer(ESMF_KIND_I4)       :: localDeCount, localDe
 
-    rc = ESMF_SUCCESS
-
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
