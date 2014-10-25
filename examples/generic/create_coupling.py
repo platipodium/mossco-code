@@ -28,7 +28,10 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
-     filename='benthic_geoecology.yaml'
+     filename='benthic_geoecology'
+
+if not filename.endswith('yaml'):
+  filename = filename + '.yaml'
 
 print sys.argv, len(sys.argv)
 if not os.path.exists(filename):
