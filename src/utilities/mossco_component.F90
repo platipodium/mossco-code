@@ -102,6 +102,8 @@ contains
     type(ESMF_Method_Flag)  :: method
     type(ESMF_Context_Flag) :: context
     type(ESMF_Config)       :: config
+    type(ESMF_TimeInterval) :: timeStep
+    integer(ESMF_KIND_I8)   :: advanceCount
     
     call ESMF_GridCompGet(GridComp, name=name, clockIsPresent=clockIsPresent, &
       configIsPresent=configIsPresent, vmIsPresent=vmIsPresent, localPet=localPet, &
@@ -138,7 +140,8 @@ contains
     endif
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    call ESMF_ClockGet(clock, currTime=currTime, advanceCount=advanceCount, &
+      timeStep=timeStep, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -152,8 +155,16 @@ contains
       write(message,'(A)') trim(message)//' finalizing'
     endif
 
-		write(message,'(A,I1,A)') trim(message)//' phase ',phase,' ...'
+		write(message,'(A,I1)') trim(message)//' phase ',phase
+    
+    if (method == ESMF_METHOD_RUN) then
+      write(message,'(A,I8.8,A)') trim(message)//' step ',advanceCount,' ...'
+    else
+      write(message,'(A)') trim(message)//' ...'
+    endif    
+    
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
   end subroutine MOSSCO_GridCompEntry
 

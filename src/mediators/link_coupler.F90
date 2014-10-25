@@ -48,13 +48,19 @@ module link_coupler
 
     character(len=10)           :: InitializePhaseMap(1)
     character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)       :: currTime
+
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
+    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=rc)
     call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=rc)
 
-    call MOSSCO_CplCompExit(cplComp, rc)
+    call MOSSCO_CompExit(cplComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine InitializeP0
