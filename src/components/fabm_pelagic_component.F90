@@ -27,6 +27,7 @@ module fabm_pelagic_component
   use solver_library
   use mossco_strings
   use mossco_state
+  use mossco_component
 
   implicit none
 
@@ -55,25 +56,55 @@ module fabm_pelagic_component
   
   contains
 
-  !> Provide an ESMF compliant SetServices routine, which defines
-  !! the entry points for Init/Run/Finalize
-
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
   end subroutine SetServices
+  
+    subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+ 
+    implicit none
+  
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
 
-  !> Initialize the component
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)       :: currTime
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=rc)
+    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=rc)
+
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+  end subroutine InitializeP0
+
+  
+  !> Initialize phase 1
   !!
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
-  subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -118,33 +149,16 @@ module fabm_pelagic_component
     logical                    :: clockIsPresent
     integer                    :: numElements,numNodes
 
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
-    !! a local clock as a clone of the parent clock, and associate it
-    !! with this component.  Finally, set the name of the local clock
-    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
-    else
-      clock = ESMF_ClockCreate(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
-    endif
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    !! Log the call to this function
-    call ESMF_ClockGet(clock, currTime=currTime, timeStep=timeInterval, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !! Get the time step
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock, timeStep=timeInterval, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeIntervalGet(timeInterval,s_r8=dt,rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! get/set grid:
     !! rely on field with name foreignGridFieldName given as attribute and field
@@ -367,13 +381,10 @@ module fabm_pelagic_component
     !call ESMF_StatePrint(exportState)
     call pel%check_ready()
 
-    !! Finally, log the successful completion of this function
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-  end subroutine Initialize
+  end subroutine InitializeP1
 
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -382,54 +393,23 @@ module fabm_pelagic_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
  
-    character(len=19) :: timestring1,timestring2
-    type(ESMF_Time)   :: wallTime, clockTime
-    type(ESMF_TimeInterval) :: timeInterval
-    type(ESMF_Grid)   :: grid
-    type(ESMF_FieldBundle) :: fieldBundle
-    type(ESMF_Field), allocatable, dimension(:) :: fieldlist
-    type(ESMF_Field)  :: field
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
-    integer           :: fieldcount, i,j
+    integer           :: i,j
     integer(8)     :: t
-    character(len=ESMF_MAXSTR)  :: string
-    type(ESMF_Alarm)           :: outputAlarm
  
-    character(len=ESMF_MAXSTR) :: timestring, name, message
-    integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
+    character(len=ESMF_MAXSTR) :: name
     type(ESMF_Clock)           :: clock
-    type(ESMF_Time)            :: currTime, startTime, stopTime
-    integer(ESMF_KIND_I8)      :: seconds, advanceCount
-    type(ESMF_TimeInterval)    :: timeStep
-    logical                    :: clockIsPresent
+    type(ESMF_Time)            :: currTime
     
-    type(ESMF_Alarm), allocatable :: alarmList(:)
-    integer(ESMF_KIND_I4)      :: alarmCount
-    character(len=ESMF_MAXSTR) :: alarmName
-
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
-      timeStep=timeInterval, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     ! calculate PAR
     call pel%light()
+
+	  call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     do while (.not.ESMF_ClockIsStopTime(clock))
       ! integrate rates
@@ -462,35 +442,44 @@ module fabm_pelagic_component
     !> prepare component's export   
     call pel%update_export_states()
  
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
-    
-  
+      
   end subroutine Run
 
-   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
+    character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !! Here comes your own finalization code
+    !! 1. Destroy all fields that you created, be aware that other components
+    !!    might have interfered with your fields, e.g., moved them into a fieldBundle
+    !! 2. Deallocate all your model's internal allocated memory
+    !! 3. Destroy your clock
+
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
+    !! previously, thus, we comment the clock destruction code while this has not
+    !! been fixed by ESMF
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+		call ESMF_ClockDestroy(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     if (associated(bfl)) deallocate(bfl)
 
-    rc = ESMF_SUCCESS
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize
-
 
 end module fabm_pelagic_component
