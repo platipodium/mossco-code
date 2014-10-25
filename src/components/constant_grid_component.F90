@@ -65,6 +65,8 @@ module constant_component
     InitializePhaseMap(1) = "IPDv00p1=1"
     InitializePhaseMap(2) = "IPDv00p1=2"
 
+    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=rc)
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=rc)
 

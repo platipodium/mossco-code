@@ -49,6 +49,8 @@ module constant_component
   end subroutine SetServices
 
   subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+ 
+    implicit none
   
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
@@ -61,6 +63,8 @@ module constant_component
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
+    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=rc)
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=rc)
 
