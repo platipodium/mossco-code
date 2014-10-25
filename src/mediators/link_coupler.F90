@@ -156,28 +156,12 @@ module link_coupler
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
+    call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else 
-      call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
    
     if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
@@ -301,6 +285,121 @@ module link_coupler
       endif   
     enddo
   end subroutine link_fields_and_fieldbundles_in_states
+
+  subroutine MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, rc)
+  
+    type(ESMF_CplComp), intent(inout)    :: cplComp
+    type(ESMF_Clock), intent(in)         :: parentClock
+    character(ESMF_MAXSTR), intent(out)  :: name
+    type(ESMF_Time), intent(out)         :: currTime
+    integer, intent(out)                 :: rc
+
+    integer(ESMF_KIND_I4)   :: petCount, localPet, phase
+    character(ESMF_MAXSTR)  :: message, timeString
+    logical                 :: clockIsPresent, configIsPresent, vmIsPresent
+    type(ESMF_Clock)        :: clock
+    type(ESMF_Vm)           :: vm
+    type(ESMF_Method_Flag)  :: method
+    type(ESMF_Context_Flag) :: context
+    type(ESMF_Config)       :: config
+    
+    call ESMF_CplCompGet(cplComp, name=name, clockIsPresent=clockIsPresent, &
+      configIsPresent=configIsPresent, vmIsPresent=vmIsPresent, localPet=localPet, &
+      petCount=petCount, currentMethod=method, currentPhase=phase, contextFlag=context, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !! Check for clock presence and add if necessary
+    if (clockIsPresent) then
+      call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
+    else
+      clock = ESMF_ClockCreate(parentClock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_CplCompSet(cplComp, clock=clock, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !! Check for config presence
+    if (configIsPresent) then
+      call ESMF_CplCompGet(cplcomp, config=config, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !!> @todo: what todo with this information?
+    endif
+    
+    !! Check for vm presence
+    if (vmIsPresent) then
+      call ESMF_CplCompGet(cplComp, vm=vm, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_VmGet(vm, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !!> @todo: what todo with this information?
+    endif
+
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(timestring)//' '//trim(name)
+    
+    if (method == ESMF_METHOD_RUN) then
+      write(message,'(A)') trim(message)//' running'
+    elseif (method == ESMF_METHOD_INITIALIZE) then
+      write(message,'(A)') trim(message)//' initializing'
+    elseif (method == ESMF_METHOD_FINALIZE) then
+      write(message,'(A)') trim(message)//' finalizing'
+    endif
+
+		write(message,'(A,I1,A)') trim(message)//' phase ',phase,' ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
+
+  end subroutine MOSSCO_CplCompEntry
+
+  subroutine MOSSCO_CplCompExit(cplComp, rc)
+  
+    type(ESMF_CplComp), intent(inout)    :: cplComp
+    integer, intent(out)                 :: rc
+
+    integer(ESMF_KIND_I4)   :: phase
+    character(ESMF_MAXSTR)  :: message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Clock)        :: clock
+    type(ESMF_Method_Flag)  :: method
+    character(ESMF_MAXSTR)  :: name
+    type(ESMF_Time)         :: currTime
+    
+    call ESMF_CplCompGet(cplComp, name=name, clockIsPresent=clockIsPresent, &
+      currentMethod=method, currentPhase=phase, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    !! Check for clock presence
+    if (clockIsPresent) then
+      call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      write(message,'(A)') trim(timestring)
+    endif
+    
+    write(message,'(A)') trim(message)//' '//trim(name)
+    
+    if (method == ESMF_METHOD_RUN) then
+      write(message,'(A)') trim(message)//' ran'
+    elseif (method == ESMF_METHOD_INITIALIZE) then
+      write(message,'(A)') trim(message)//' initialized'
+    elseif (method == ESMF_METHOD_FINALIZE) then
+      write(message,'(A)') trim(message)//' finalized'
+    endif
+
+		write(message,'(A,I1)') trim(message)//' phase ',phase
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
+  
+  end subroutine MOSSCO_CplCompExit
+
 
 end module link_coupler
 
