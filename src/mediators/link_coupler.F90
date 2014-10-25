@@ -53,9 +53,8 @@ module link_coupler
     call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=rc)
 
-    call ESMF_CplCompGet(cplComp, name=name, rc=rc)
-    write(message,'(A)') trim(name)//' initialized phase 0'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    call MOSSCO_CplCompExit(cplComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine InitializeP0
 
@@ -68,35 +67,17 @@ module link_coupler
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)       :: petCount, localPet
-    character (len=ESMF_MAXSTR) :: timeString, message, name
+    character (len=ESMF_MAXSTR) :: name
     type(ESMF_Time)             :: currTime
 
-    call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
-      rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
-    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
-      rc=rc)
+    call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+   
     call  link_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)    
 
-    !! Return with logging 
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    call MOSSCO_CplCompExit(cplComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine InitializeP1
 
@@ -111,62 +92,47 @@ module link_coupler
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)       :: petCount, localPet
-    character (len=ESMF_MAXSTR) :: timeString, message, name
+    character (len=ESMF_MAXSTR) :: name
     type(ESMF_Time)             :: currTime
-
-    call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
-      rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
-    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
-      rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call  link_fields_and_fieldbundles_in_states(importState, exportState, rc)
-    
-    !! Return with logging 
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
-  end subroutine Run
-
-  !> The Finalize() routine of this coupler is empty
-  subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
-    
-    type(ESMF_CplComp)   :: cplComp
-    type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
-    type(ESMF_Time)         :: currTime
-    type(ESMF_Clock)        :: clock
+    type(ESMF_Clock)            :: clock
 
     call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
-    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    call link_fields_and_fieldbundles_in_states(importState, exportState, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !!> @todo the following call creates a problem:
+    !!call ESMF_ClockAdvance(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call MOSSCO_CplCompExit(cplComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+  end subroutine Run
+
+  subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
+    
+    type(ESMF_CplComp)    :: cplComp
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character (len=ESMF_MAXSTR) :: name
+    type(ESMF_Time)             :: currTime
+    type(ESMF_Clock)            :: clock
+
+    call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+    call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockDestroy(clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+    call MOSSCO_CplCompExit(cplComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize
 
@@ -359,8 +325,8 @@ module link_coupler
 
   subroutine MOSSCO_CplCompExit(cplComp, rc)
   
-    type(ESMF_CplComp), intent(inout)    :: cplComp
-    integer, intent(out)                 :: rc
+    type(ESMF_CplComp), intent(in)    :: cplComp
+    integer, intent(out)              :: rc
 
     integer(ESMF_KIND_I4)   :: phase
     character(ESMF_MAXSTR)  :: message, timeString
@@ -382,10 +348,10 @@ module link_coupler
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      write(message,'(A)') trim(timestring)
+      write(message,'(A)') trim(timestring)//' '//trim(name)
+    else
+      write(message,'(A)') '------------------- '//trim(name)
     endif
-    
-    write(message,'(A)') trim(message)//' '//trim(name)
     
     if (method == ESMF_METHOD_RUN) then
       write(message,'(A)') trim(message)//' ran'
