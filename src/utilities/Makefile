@@ -24,6 +24,7 @@ LIBMOSSCO_UTIL_OBJS=							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
 ifeq ($(MOSSCO_ESMF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_component.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o)
@@ -62,4 +63,5 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
 
