@@ -1291,7 +1291,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'erosed'     : ['libmossco_erosed'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm_sediment' : ['libsediment', 'libmossco_sediment', 'libsolver'],
-        'fabm_pelagic' : ['libmossco_fabmpelagic', 'libmossco_util', 'libsolver'],
+        'fabm_pelagic' : ['libmossco_fabmpelagic', 'libsolver'],
         'simplewave' : ['libmossco_simplewave'],
         'netcdf'      : ['libmossco_netcdf'],
         'test'       : ['libmossco_test'],
@@ -1349,8 +1349,6 @@ fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) \n\n')
 #            fid.write(' $(NC_LIBS)\n\n')
 #        if item=='fabm_gotm':
 #            fid.write(' $(NC_LIBS)\n\n')
-
-
 
 
 fid.write('.PHONY: all exec ' + coupling_name + '\n\n')
