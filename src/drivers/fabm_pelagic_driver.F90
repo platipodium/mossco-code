@@ -13,6 +13,8 @@
 
   module mossco_fabm_pelagic
 
+#define RANGE3D 1:pf%inum,1:pf%jnum,1:pf%knum
+#define RANGE2D 1:pf%inum,1:pf%jnum
   use solver_library
   use mossco_strings
   use fabm
@@ -83,7 +85,7 @@
 
   do n=1,pf%nvar
     pf%conc(:,:,:,n) = pf%model%info%state_variables(n)%initial_value
-    call fabm_link_bulk_state_data(pf%model,n,pf%conc(:,:,:,n))
+    call fabm_link_bulk_state_data(pf%model,n,pf%conc(RANGE3D,n))
   end do
 
   ! Allocate array for photosynthetically active radiation (PAR).
@@ -118,8 +120,9 @@
 
   rhs=0.0_rk
   !   link state variables
+#define RHSRANGE3D 1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum
   do n=1,size(rhs_driver%model%info%state_variables)
-    call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(:,:,:,n))
+    call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(RHSRANGE3D,n))
   end do
 
   do k=1,rhs_driver%knum
@@ -243,13 +246,13 @@
   if (present(ptr_bulk)) then
     bulk_id = fabm_get_bulk_variable_id(pf%model,varname)
     ! link data if variable is used
-    if (fabm_is_variable_used(bulk_id)) call fabm_link_bulk_data(pf%model,bulk_id,ptr_bulk)
+    if (fabm_is_variable_used(bulk_id)) call fabm_link_bulk_data(pf%model,bulk_id,ptr_bulk(RANGE3D))
     if (varname == 'cell_thickness') pf%layer_height => ptr_bulk
 
   else if (present(ptr_horizontal)) then
     horizontal_id = fabm_get_horizontal_variable_id(pf%model,varname)
     ! link data if variable is used
-    if (fabm_is_variable_used(horizontal_id)) call fabm_link_horizontal_data(pf%model,horizontal_id,ptr_horizontal)
+    if (fabm_is_variable_used(horizontal_id)) call fabm_link_horizontal_data(pf%model,horizontal_id,ptr_horizontal(RANGE2D))
     ! keep link to necessary surface radiation
     if (varname == 'surface_downwelling_photosynthetic_radiative_flux') pf%I_0 => ptr_horizontal
 

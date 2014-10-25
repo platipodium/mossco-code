@@ -18,6 +18,9 @@
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 
+#define RANGE2D 1:pel%inum,i:pel%jnum
+#define RANGE3D RANGE2D,1:pel%knum
+
 module fabm_pelagic_component
 
   use esmf
@@ -424,7 +427,7 @@ module fabm_pelagic_component
 
       ! integrate bottom upward fluxes
       do n=1,pel%nvar
-        pel%conc(:,:,1,n) = pel%conc(:,:,1,n) + bfl(n)%p*dt/pel%layer_height(:,:,1)
+        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p*dt/pel%layer_height(RANGE2D,1)
       end do
 
       ! reset concentrations to mininum_value
