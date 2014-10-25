@@ -217,6 +217,13 @@ module fabm_pelagic_component
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic(inum,jnum,numlayers,dt)
 
+    !! re-allocate state variables
+    !! todo: re-set initial values
+    if (associated(pel%conc)) deallocate(pel%conc)
+    call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=rc)
+    allocate(pel%conc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3),1:pel%nvar))
+    call pel%update_export_states()
+
     !! allocate local arrays
     allocate(bfl(pel%nvar))
  
