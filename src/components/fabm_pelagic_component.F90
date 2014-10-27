@@ -241,7 +241,8 @@ module fabm_pelagic_component
                       1-totalLWidth3(2):jnum+totalUWidth3(2), &
                       1-totalLWidth3(3):jnum+totalUWidth3(3), &
                       1:pel%nvar))
-    call pel%update_export_states()
+    call pel%initialize_concentrations()
+    call pel%update_export_states(update_sinking=.false.)
 
     !! allocate local arrays
     allocate(bfl(pel%nvar))
@@ -351,6 +352,7 @@ module fabm_pelagic_component
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        ptr_f3 = 0.0_rk
         call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
     end do
 
@@ -372,6 +374,7 @@ module fabm_pelagic_component
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f2, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        ptr_f2 = 0.0_rk
         call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
       end do
     end if

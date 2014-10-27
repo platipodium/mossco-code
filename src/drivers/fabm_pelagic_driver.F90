@@ -47,6 +47,7 @@
     procedure :: get_all_export_states
     procedure :: update_export_states
     procedure :: diagnostic_variables
+    procedure :: initialize_concentrations
   end type
 
   type,public :: export_state_type !< pelagic FABM driver type for export states
@@ -97,6 +98,15 @@
   call pf%get_dependencies()
 
   end function mossco_create_fabm_pelagic
+
+  
+  subroutine initialize_concentrations(pf)
+    class(type_mossco_fabm_pelagic) :: pf
+    integer :: n
+    do n=1,pf%nvar
+      pf%conc(:,:,:,n) = pf%model%info%state_variables(n)%initial_value
+    end do
+  end subroutine
 
 
   subroutine check_ready(pf)
@@ -327,21 +337,26 @@
 
   !> update pelagic FABM export states pointers and sinking velocities using a list of export states
 
-  subroutine update_export_states(pf)
+  subroutine update_export_states(pf,update_sinking)
   class(type_mossco_fabm_pelagic) :: pf
   real(rk),allocatable :: wstmp(:,:,:,:)
   type(export_state_type),pointer :: export_state
   integer :: n,i,j,k
+  logical,optional :: update_sinking
+  logical :: update_sinking_eff=.false.
 
   allocate(wstmp(pf%inum,pf%jnum,pf%knum,pf%nvar))
   wstmp=0.0_rk
-  do i=1,pf%inum
-    do j=1,pf%jnum
-      do k=1,pf%knum
-        !call fabm_get_vertical_movement(pf%model,i,j,k,wstmp(i,j,k,:))
+  if (present(update_sinking)) update_sinking_eff=update_sinking
+  if (update_sinking_eff) then
+    do i=1,pf%inum
+      do j=1,pf%jnum
+        do k=1,pf%knum
+          call fabm_get_vertical_movement(pf%model,i,j,k,wstmp(i,j,k,:))
+        end do
       end do
     end do
-  end do
+  end if
   do n=1,size(pf%export_states)
     export_state => pf%export_states(n)
     export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
