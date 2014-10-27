@@ -87,12 +87,11 @@ integer  :: i,ci
 real(rk) :: dt_red,dt_int,relative_change
 real(rk),parameter :: third=1.0_rk/3.0_rk
 
-
 select case (method)
 case(EULER)
    rhs => rhs0
    call rhs_driver%get_rhs(rhs)
-   rhs_driver%conc = rhs_driver%conc + dt*rhs
+   rhs_driver%conc(_SHAPE3D_,:) = rhs_driver%conc(_SHAPE3D_,:) + dt*rhs
 
 case(ADAPTIVE_EULER)
    rhs => rhs0
@@ -101,15 +100,14 @@ case(ADAPTIVE_EULER)
    do while (dt_int .lt. dt)
       c_pointer => rhs_driver%conc
       call rhs_driver%get_rhs(rhs)
-      c1 = rhs_driver%conc + dt_red*rhs
+      c1 = rhs_driver%conc(_SHAPE3D_,:) + dt_red*rhs
 
-      relative_change = minval((c1-c_pointer)/c_pointer)
+      relative_change = minval((c1-c_pointer(_SHAPE3D_,:))/c_pointer(_SHAPE3D_,:))
       if ((relative_change < rhs_driver%relative_change_min) &
               .and. (dt_red> rhs_driver%dt_min)) then 
          dt_red = dt_red/4
       else
-         c_pointer = c1
-         rhs_driver%conc => c_pointer
+         rhs_driver%conc(_SHAPE3D_,:) = c1
          dt_int = dt_int + dt_red
       end if
    end do
@@ -119,20 +117,20 @@ case(RUNGE_KUTTA_4)
    c_pointer => rhs_driver%conc
    rhs => rhs0
    call rhs_driver%get_rhs(rhs)
-   c1 = c_pointer + 0.5_rk*dt*rhs
+   c1 = c_pointer(_SHAPE3D_,:) + 0.5_rk*dt*rhs
 
    rhs_driver%conc => c1
    rhs => rhs1
    call rhs_driver%get_rhs(rhs)
-   c1 = c_pointer + 0.5_rk*dt*rhs
+   c1 = c_pointer(_SHAPE3D_,:) + 0.5_rk*dt*rhs
 
    rhs => rhs2
    call rhs_driver%get_rhs(rhs)
-   c1 = c_pointer + dt*rhs
+   c1 = c_pointer(_SHAPE3D_,:) + dt*rhs
 
    rhs => rhs3
    call rhs_driver%get_rhs(rhs)
-   c_pointer = c_pointer + dt*third*(0.5_rk*rhs0 + rhs1 + rhs2 + 0.5_rk*rhs3)
+   c_pointer(_SHAPE3D_,:) = c_pointer(_SHAPE3D_,:) + dt*third*(0.5_rk*rhs0 + rhs1 + rhs2 + 0.5_rk*rhs3)
 
    rhs_driver%conc => c_pointer
    nullify(c_pointer)
@@ -141,20 +139,20 @@ case(RUNGE_KUTTA_4_38)
    c_pointer => rhs_driver%conc
    rhs => rhs0
    call rhs_driver%get_rhs(rhs)
-   c1 = c_pointer + third*dt*rhs0
+   c1 = c_pointer(_SHAPE3D_,:) + third*dt*rhs0
 
    rhs_driver%conc => c1
    rhs => rhs1
    call rhs_driver%get_rhs(rhs)
-   c1 = c_pointer + dt*(rhs1 - third*rhs0)
+   c1 = c_pointer(_SHAPE3D_,:) + dt*(rhs1 - third*rhs0)
 
    rhs => rhs2
    call rhs_driver%get_rhs(rhs)
-   c1 = c_pointer + dt* (rhs0 - rhs1 + rhs2)
+   c1 = c_pointer(_SHAPE3D_,:) + dt* (rhs0 - rhs1 + rhs2)
 
    rhs => rhs3
    call rhs_driver%get_rhs(rhs)
-   c_pointer = c_pointer + dt*1.0_rk/8.0_rk*(rhs0 + 3.0_rk*rhs1 + 3.0_rk*rhs2 + rhs3)
+   c_pointer(_SHAPE3D_,:) = c_pointer(_SHAPE3D_,:) + dt*1.0_rk/8.0_rk*(rhs0 + 3.0_rk*rhs1 + 3.0_rk*rhs2 + rhs3)
 
    rhs_driver%conc => c_pointer
    nullify(c_pointer)
