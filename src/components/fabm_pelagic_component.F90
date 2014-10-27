@@ -446,7 +446,7 @@ module fabm_pelagic_component
     ! calculate PAR
     call pel%light()
 
-	  call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     do while (.not.ESMF_ClockIsStopTime(clock))
@@ -470,6 +470,9 @@ module fabm_pelagic_component
         end do
         end do
       end do
+
+      ! link fabm state
+      call pel%update_pointers()
 
       call ESMF_ClockGet(clock, advanceCount=t, rc=rc)
 

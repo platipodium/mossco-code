@@ -48,6 +48,7 @@
     procedure :: update_export_states
     procedure :: diagnostic_variables
     procedure :: initialize_concentrations
+    procedure :: update_pointers
   end type
 
   type,public :: export_state_type !< pelagic FABM driver type for export states
@@ -107,6 +108,16 @@
       pf%conc(:,:,:,n) = pf%model%info%state_variables(n)%initial_value
     end do
   end subroutine
+
+
+  subroutine update_pointers(pf)
+    class(type_mossco_fabm_pelagic) :: pf
+    integer :: n
+    do n=1,pf%nvar
+      call fabm_link_bulk_state_data(pf%model,n,pf%conc(RANGE3D,n))
+    end do
+  end subroutine
+
 
 
   subroutine check_ready(pf)
