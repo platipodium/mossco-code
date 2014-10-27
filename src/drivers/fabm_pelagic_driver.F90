@@ -354,10 +354,11 @@
   type(export_state_type),pointer :: export_state
   integer :: n,i,j,k
   logical,optional :: update_sinking
-  logical :: update_sinking_eff=.false.
+  logical :: update_sinking_eff
 
   allocate(wstmp(pf%inum,pf%jnum,pf%knum,pf%nvar))
   wstmp=0.0_rk
+  update_sinking_eff=.true.
   if (present(update_sinking)) update_sinking_eff=update_sinking
   if (update_sinking_eff) then
     do i=1,pf%inum

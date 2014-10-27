@@ -40,7 +40,7 @@ module fabm_pelagic_component
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: inum=1,jnum=1
   integer   :: t,tnum,k,n,numlayers
-  integer   :: ode_method=0
+  integer   :: ode_method=1
 
   type :: type_2d_pointer
     real(rk),dimension(:,:), pointer :: p
@@ -320,9 +320,6 @@ module fabm_pelagic_component
       end if
     end do
 
-    !> now initialise state variables for allocated memory:
-    ! call pel%initialise_concentrations()
-
     !> this will not work, is state_grid contains halo zones
     do n=1,size(pel%model%info%diagnostic_variables)
         diag => pel%diagnostic_variables(n)
@@ -419,6 +416,12 @@ module fabm_pelagic_component
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
     call pel%check_ready()
+    !> also update export states again with sinking velocities
+    !! todo: this has to go into a second init phase, 
+    !!       when real forcing is linked. Also diagnostic variables could
+    !!       be initialised, while doing a 0-timestep based on initial fields
+    !!       and forcing
+    call pel%update_export_states(update_sinking=.true.)
 
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
