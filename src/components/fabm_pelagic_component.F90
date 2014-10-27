@@ -242,6 +242,8 @@ module fabm_pelagic_component
                        name=trim(varname), &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      !! when memory is allocated, set pel%export_states(n)%conc to the values?
+
       call ESMF_AttributeSet(concfield,'units',trim(pel%export_states(n)%units))
       !> add attributes relevant for MOSSCO
       !! mean_particle_diameter and particle density given only,
@@ -299,6 +301,10 @@ module fabm_pelagic_component
       end if
     end do
 
+    !> now initialise state variables for allocated memory:
+    ! call pel%initialise_concentrations()
+
+    !> this will not work, is state_grid contains halo zones
     do n=1,size(pel%model%info%diagnostic_variables)
         diag => pel%diagnostic_variables(n)
         field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &

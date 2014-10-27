@@ -274,6 +274,7 @@
   integer                 :: n
 
   export_state%fabm_id=fabm_id
+  !! memory handling should be shifted to component, which has total grid layout
   export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
   allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
   export_state%ws = 0.0d0
@@ -343,7 +344,7 @@
   do n=1,size(pf%export_states)
     export_state => pf%export_states(n)
     export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
-    export_state%ws = wstmp(:,:,:,export_state%fabm_id)
+    export_state%ws(RANGE3D) = wstmp(:,:,:,export_state%fabm_id)
   end do
   deallocate(wstmp)
   !> @todo add benthic state variables
