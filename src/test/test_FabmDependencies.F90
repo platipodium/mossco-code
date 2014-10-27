@@ -72,7 +72,7 @@ model => fabm_create_model_from_file(namlst)
               LEVEL3 '      bulk: ',trim(link%target%standard_variable%name),' [',trim(link%target%standard_variable%units),']'
             end if
           end if
-        case (domain_bottom,domain_surface)
+  case (domain_horizontal,domain_bottom,domain_surface)
           if (.not.associated(model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal)) then
             if (.not.associated(link%target%standard_variable)) then

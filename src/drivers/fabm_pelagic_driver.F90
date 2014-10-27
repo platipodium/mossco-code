@@ -209,7 +209,7 @@
               .and.associated(link%target%standard_variable)) then
             call add_bulk_dependency(pf%bulk_dependencies,link%target%standard_variable)
           end if
-        case (domain_bottom,domain_surface)
+  case (domain_horizontal,domain_bottom,domain_surface)
           if (.not.associated(pf%model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal) &
               .and.associated(link%target%standard_variable)) then
