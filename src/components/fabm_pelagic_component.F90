@@ -140,6 +140,9 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8)    :: attribute_r8
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
+    integer(ESMF_KIND_I4) :: totallwidth3(3), totaluwidth3(3)
+    integer(ESMF_KIND_I4) :: totallwidth2(2), totaluwidth2(2)
+    integer(ESMF_KIND_I4) :: totallwidth(3,1), totaluwidth(3,1)
     integer(ESMF_KIND_I8) :: tidx
     type(ESMF_Alarm)      :: outputAlarm
   
@@ -186,6 +189,10 @@ module fabm_pelagic_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_GridAddCoord(state_grid, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      totalLWidth3(:)=0
+      totalUWidth3(:)=0
+      totalLWidth2(:)=0
+      totalUWidth2(:)=0
     else
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -194,12 +201,18 @@ module fabm_pelagic_component
       if (rank == 3) then
         allocate(maxIndex(rank))
         call ESMF_GridGet(state_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-               computationalCount=maxIndex,rc=rc)
+               exclusiveCount=maxIndex,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field, totalLWidth=totalLWidth, totalUWidth=totalUWidth, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         inum=maxIndex(1)
         jnum=maxIndex(2)
         numlayers=maxIndex(3)
         deallocate(maxIndex)
+        totalLWidth3(:)=totalLWidth(:,1)
+        totalUWidth3(:)=totalUWidth(:,1)
+        totalLWidth2(:)=totalLWidth(1:2,1)
+        totalUWidth2(:)=totalUWidth(1:2,1)
       else
         write(message,*) 'foreign grid must be of rank = 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -224,7 +237,10 @@ module fabm_pelagic_component
     !! todo: re-set initial values
     if (associated(pel%conc)) deallocate(pel%conc)
     call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=rc)
-    allocate(pel%conc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3),1:pel%nvar))
+    allocate(pel%conc(1-totalLWidth3(1):inum+totalUWidth3(1), &
+                      1-totalLWidth3(2):jnum+totalUWidth3(2), &
+                      1-totalLWidth3(3):jnum+totalUWidth3(3), &
+                      1:pel%nvar))
     call pel%update_export_states()
 
     !! allocate local arrays
@@ -240,6 +256,7 @@ module fabm_pelagic_component
       varname = trim(pel%export_states(n)%standard_name)//'_in_water'
       concfield = ESMF_FieldCreate(state_grid,farrayPtr=pel%export_states(n)%conc, &
                        name=trim(varname), &
+                       totalLWidth=totalLWidth3,totalUWidth=totalUWidth3, &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       !! when memory is allocated, set pel%export_states(n)%conc to the values?
@@ -337,7 +354,8 @@ module fabm_pelagic_component
         call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
     end do
 
-    do n=1,size(pel%horizontal_dependencies)
+    if (associated(pel%horizontal_dependencies)) then
+      do n=1,size(pel%horizontal_dependencies)
         field = ESMF_FieldCreate(horizontal_grid, &
                name=trim(pel%horizontal_dependencies(n)%name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
@@ -355,7 +373,8 @@ module fabm_pelagic_component
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f2, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
-    end do
+      end do
+    end if
 
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)

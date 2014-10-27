@@ -334,10 +334,11 @@
   integer :: n,i,j,k
 
   allocate(wstmp(pf%inum,pf%jnum,pf%knum,pf%nvar))
+  wstmp=0.0_rk
   do i=1,pf%inum
     do j=1,pf%jnum
       do k=1,pf%knum
-        call fabm_get_vertical_movement(pf%model,i,j,k,wstmp(i,j,k,:))
+        !call fabm_get_vertical_movement(pf%model,i,j,k,wstmp(i,j,k,:))
       end do
     end do
   end do
