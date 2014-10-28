@@ -155,15 +155,23 @@ module fabm_pelagic_component
     logical                    :: clockIsPresent
     integer                    :: numElements,numNodes
 
+    namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min
+
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Get the time step
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(clock, timeStep=timeInterval, rc=rc)
+
+    !! read namelist input for control of timestepping  
+    open(33,file='fabm_pelagic.nml',action='read',status='old')
+    read(33,nml=fabm_pelagic)
+    close(33)
+
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeIntervalGet(timeInterval,s_r8=dt,rc=rc)
+    call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! get/set grid:
@@ -452,7 +460,7 @@ module fabm_pelagic_component
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+    
     do while (.not.ESMF_ClockIsStopTime(clock))
       ! integrate rates
       call ode_solver(pel,dt,ode_method)
