@@ -72,7 +72,8 @@
 
   allocate(pf)
   pf%fabm_ready=.false.
-  nullify(pf%conc)
+  pf%conc => null()
+  pf%par => null()
   ! Build FABM model tree.
   pf%model => fabm_create_model_from_file(namlst)
 
@@ -131,6 +132,7 @@
     do n=1,pf%nvar
       call fabm_link_bulk_state_data(pf%model,n,pf%conc(RANGE3D,n))
     end do
+    call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
   end subroutine
 
 
