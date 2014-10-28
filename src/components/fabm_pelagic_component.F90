@@ -185,6 +185,7 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
     real(ESMF_KIND_R8)    :: attribute_r8
+    real(ESMF_KIND_R8)    :: background_extinction
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I4) :: totallwidth3(3), totaluwidth3(3)
@@ -202,7 +203,7 @@ module fabm_pelagic_component
     logical                    :: clockIsPresent
     integer                    :: numElements,numNodes
 
-    namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min
+    namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -287,6 +288,9 @@ module fabm_pelagic_component
  
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
+
+    ! set background extinction
+    pel%background_extinction=background_extinction
 
     !! re-allocate state variables
     call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=rc)
