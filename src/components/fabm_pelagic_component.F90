@@ -43,15 +43,15 @@ module fabm_pelagic_component
   integer   :: ode_method=1
 
   type :: type_2d_pointer
-    real(rk),dimension(:,:), pointer :: p
+    real(rk),dimension(:,:), pointer :: p=>null()
   end type
 
   type :: type_3d_pointer
-    real(rk),dimension(:,:,:), pointer :: p
+    real(rk),dimension(:,:,:), pointer :: p=>null()
   end type
 
-  real(rk),dimension(:,:,:),pointer            :: diag
-  type(type_2d_pointer), dimension(:), pointer :: bfl
+  real(rk),dimension(:,:,:),pointer            :: diag=>null()
+  type(type_2d_pointer), dimension(:), pointer :: bfl=>null()
  
   type(type_mossco_fabm_pelagic),save :: pel
 
@@ -528,9 +528,9 @@ module fabm_pelagic_component
 
       ! integrate bottom upward fluxes
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
-      !       have to be updated from importState here in Run 
+      !       have to be updated from importState here in Run
       do n=1,pel%nvar
-        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) !+ bfl(n)%p*dt/pel%layer_height(RANGE2D,1)
+        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p*dt/pel%layer_height(RANGE2D,1)
       end do
 
       ! reset concentrations to mininum_value
