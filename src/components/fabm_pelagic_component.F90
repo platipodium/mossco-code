@@ -349,7 +349,10 @@ module fabm_pelagic_component
         call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
         ! add field to state, if not present
         call ESMF_StateAdd(importState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) write(0,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
+        if(rc /= ESMF_SUCCESS) then
+          write(message,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,rc=rc)
+        end if
         attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
         !! set FABM's pointers to dependencies data,
@@ -371,7 +374,10 @@ module fabm_pelagic_component
         call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
         !! add field to state, if not present
         call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) write(0,*) 'use existing field: ',trim(pel%horizontal_dependencies(n)%name)
+        if(rc /= ESMF_SUCCESS) then
+          write(message,*) 'use existing field: ',trim(pel%horizontal_dependencies(n)%name)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,rc=rc)
+        end if
         attribute_name=trim(pel%horizontal_dependencies(n)%name)
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=2)
         !! set FABM's pointers to dependencies data,
