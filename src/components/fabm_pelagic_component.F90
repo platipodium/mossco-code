@@ -281,7 +281,6 @@ module fabm_pelagic_component
     pel = mossco_create_fabm_pelagic()
 
     !! re-allocate state variables
-    if (associated(pel%conc)) deallocate(pel%conc)
     call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=rc)
     allocate(pel%conc(1-totalLWidth3(1):inum+totalUWidth3(1), &
                       1-totalLWidth3(2):jnum+totalUWidth3(2), &

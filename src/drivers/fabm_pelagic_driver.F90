@@ -91,6 +91,7 @@
   class(type_mossco_fabm_pelagic) :: pf
   integer  :: inum,jnum,knum,n
   real(rk) :: dt
+  type(export_state_type), pointer :: export_state
 
   pf%fabm_ready=.false.
   pf%inum=inum
@@ -103,6 +104,15 @@
   ! Allocate array for photosynthetically active radiation (PAR).
   allocate(pf%par(1:inum,1:jnum,1:knum))
   call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
+
+  do n=1,size(pf%export_states)
+    export_state => pf%export_states(n)
+    !! memory handling should be shifted to component, which has total grid layout
+    if (.not.associated(export_state%ws)) then
+      allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
+      export_state%ws = 0.0d0
+    end if
+  end do
 
   end subroutine initialize_domain
 
@@ -300,10 +310,12 @@
   integer                 :: n
 
   export_state%fabm_id=fabm_id
-  !! memory handling should be shifted to component, which has total grid layout
-  export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
-  allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
-  export_state%ws = 0.0d0
+  export_state%conc => null()
+  export_state%ws => null()
+!  !! memory handling should be shifted to component, which has total grid layout
+!  export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
+!  allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
+!  export_state%ws = 0.0d0
   !> first check for present standard name
   if (pf%model%info%state_variables(fabm_id)%standard_variable%name/='') then
     export_state%standard_name = &
