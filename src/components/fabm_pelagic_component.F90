@@ -237,18 +237,18 @@ module fabm_pelagic_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridAddCoord(horizontal_grid, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-     
+ 
     !! Initialize FABM
-    pel = mossco_create_fabm_pelagic(inum,jnum,numlayers,dt)
+    pel = mossco_create_fabm_pelagic()
 
     !! re-allocate state variables
-    !! todo: re-set initial values
     if (associated(pel%conc)) deallocate(pel%conc)
     call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=rc)
     allocate(pel%conc(1-totalLWidth3(1):inum+totalUWidth3(1), &
                       1-totalLWidth3(2):jnum+totalUWidth3(2), &
                       1-totalLWidth3(3):numlayers+totalUWidth3(3), &
                       1:pel%nvar))
+    call pel%initialize_domain(inum,jnum,numlayers,dt)
     call pel%update_pointers()
     call pel%initialize_concentrations()
     call pel%update_export_states(update_sinking=.false.)

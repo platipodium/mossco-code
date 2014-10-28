@@ -49,6 +49,7 @@
     procedure :: diagnostic_variables
     procedure :: initialize_concentrations
     procedure :: update_pointers
+    procedure :: initialize_domain
   end type
 
   type,public :: export_state_type !< pelagic FABM driver type for export states
@@ -63,36 +64,20 @@
   contains
 
   !> creates instance of pelagic fabm class
-  function mossco_create_fabm_pelagic(inum,jnum,knum,dt) result(pf)
-  integer  :: inum,jnum,knum,n
+  function mossco_create_fabm_pelagic() result(pf)
+  integer  :: n
   integer  :: namlst=123
   real(rk) :: dt
   type(type_mossco_fabm_pelagic), allocatable :: pf
 
   allocate(pf)
   pf%fabm_ready=.false.
-  pf%inum=inum
-  pf%jnum=jnum
-  pf%knum=knum
+  nullify(pf%conc)
   ! Build FABM model tree.
   pf%model => fabm_create_model_from_file(namlst)
 
-  ! Send information on spatial domain
-  call fabm_set_domain(pf%model,inum,jnum,knum)
-
-  ! allocate memory
   pf%nvar = size(pf%model%info%state_variables)
   pf%ndiag = size(pf%model%info%diagnostic_variables)
-  allocate(pf%conc(1:inum,1:jnum,1:knum,1:pf%nvar))
-
-  do n=1,pf%nvar
-    pf%conc(:,:,:,n) = pf%model%info%state_variables(n)%initial_value
-    call fabm_link_bulk_state_data(pf%model,n,pf%conc(RANGE3D,n))
-  end do
-
-  ! Allocate array for photosynthetically active radiation (PAR).
-  allocate(pf%par(1:inum,1:jnum,1:knum))
-  call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
 
   ! initialise the export states and dependencies
   call pf%get_all_export_states()
@@ -101,6 +86,26 @@
   end function mossco_create_fabm_pelagic
 
   
+  !> initialize domain of pelagic fabm class
+  subroutine initialize_domain(pf,inum,jnum,knum,dt)
+  class(type_mossco_fabm_pelagic) :: pf
+  integer  :: inum,jnum,knum,n
+  real(rk) :: dt
+
+  pf%fabm_ready=.false.
+  pf%inum=inum
+  pf%jnum=jnum
+  pf%knum=knum
+
+  ! Send information on spatial domain
+  call fabm_set_domain(pf%model,inum,jnum,knum)
+
+  ! Allocate array for photosynthetically active radiation (PAR).
+  allocate(pf%par(1:inum,1:jnum,1:knum))
+  call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
+
+  end subroutine initialize_domain
+
   subroutine initialize_concentrations(pf)
     class(type_mossco_fabm_pelagic) :: pf
     integer :: n
