@@ -107,6 +107,7 @@ module fabm_pelagic_component
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
+    type(ESMF_Field)     :: field
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min
 
