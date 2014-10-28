@@ -125,6 +125,13 @@ module fabm_pelagic_component
 
     !> this will not work, is state_grid contains halo zones
     do n=1,size(pel%model%info%diagnostic_variables)
+      field = ESMF_FieldEmptyCreate( &
+        name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(field,'units',trim(pel%model%info%diagnostic_variables(n)%units))
+        
+      call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
 
     !! create forcing fields in import State
@@ -369,6 +376,11 @@ module fabm_pelagic_component
     !> this will not work, is state_grid contains halo zones
     do n=1,size(pel%model%info%diagnostic_variables)
         diag => pel%diagnostic_variables(n)
+        !call ESMF_StateGet(exportState, &
+        !  name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', &
+        !  field, rc=rc)
+
+        !call ESMF_FieldEmptyComplete(field,grid=state_grid,farrayPtr=diag, &
         field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
                    name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
