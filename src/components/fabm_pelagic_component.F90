@@ -247,7 +247,7 @@ module fabm_pelagic_component
     call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=rc)
     allocate(pel%conc(1-totalLWidth3(1):inum+totalUWidth3(1), &
                       1-totalLWidth3(2):jnum+totalUWidth3(2), &
-                      1-totalLWidth3(3):jnum+totalUWidth3(3), &
+                      1-totalLWidth3(3):numlayers+totalUWidth3(3), &
                       1:pel%nvar))
     call pel%update_pointers()
     call pel%initialize_concentrations()
@@ -460,7 +460,7 @@ module fabm_pelagic_component
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     do while (.not.ESMF_ClockIsStopTime(clock))
       ! integrate rates
       call ode_solver(pel,dt,ode_method)
