@@ -102,6 +102,45 @@ module fabm_pelagic_component
 
   end subroutine InitializeP0
 
+  subroutine Initialise_Advertise(gridComp, importState, exportState, parentClock, rc)
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
+
+    namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min
+
+    !! read namelist input for control of timestepping  
+    open(33,file='fabm_pelagic.nml',action='read',status='old')
+    read(33,nml=fabm_pelagic)
+    close(33)
+  
+    !! Initialize FABM
+    pel = mossco_create_fabm_pelagic()
+
+    ! put concentration array and vertical velocity into export state
+    ! it might be enough to do this once in initialize(?)
+    do n=1,size(pel%export_states)
+    end do
+
+    !> this will not work, is state_grid contains halo zones
+    do n=1,size(pel%model%info%diagnostic_variables)
+    end do
+
+    !! create forcing fields in import State
+    do n=1,size(pel%bulk_dependencies)
+    end do
+
+    !! create forcing fields in import State
+    do n=1,size(pel%horizontal_dependencies)
+    end do
+
+    !! prepare upward_flux forcing
+    do n=1,size(pel%model%state_variables)
+    end do
+
+  end subroutine Initialise_Advertise
+
   
   !> Initialize phase 1
   !!
