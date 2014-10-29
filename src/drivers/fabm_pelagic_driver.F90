@@ -139,11 +139,24 @@
 
   subroutine check_ready(pf)
     class(type_mossco_fabm_pelagic) :: pf
+    integer  :: i,j,k
+    real(rk) :: rhs(1:pf%nvar),bottom_flux(1:0)
 
     if (.not.pf%fabm_ready) then
       call fabm_check_ready(pf%model)
       pf%fabm_ready = .true.
     end if
+   ! call fabm_do to fill diagnostic variables and pre-fetch data
+   do i=1,pf%inum
+     do j=1,pf%jnum
+       call fabm_do_surface(pf%model,1,1,pf%knum,rhs(:))
+       call fabm_do_bottom(pf%model,1,1,1,rhs(:),bottom_flux(:))
+       rhs=0.0_rk
+       do k=1,pf%knum
+         call fabm_do(pf%model,1,1,k,rhs(:))
+       end do
+     end do
+   end do
   end subroutine check_ready
 
 
