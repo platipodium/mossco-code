@@ -229,7 +229,9 @@ end type
    subroutine init_var_gotm_mossco_fabm()
 
    !  Original author(s): Jorn Bruggeman
-   integer                   :: i,rc
+   integer   :: i,k,rc
+   REALTYPE  :: rhs(1,1,1,1:size(gotmfabm%model%info%state_variables))
+   REALTYPE  :: bottom_flux(1,1,1:gotmfabm%nvar_ben)
 
    ! Allocate state variable array for pelagic and benthos combined and provide initial values.
    ! In terms of memory use, it is a waste to allocate storage for benthic variables across the entire
@@ -284,6 +286,7 @@ end type
       ! Allocate array for photosynthetically active radiation (PAR).
    ! This will be calculated internally during each time step.
    allocate(par(1,1,1:gotmfabm%knum),stat=rc)
+   par=_ZERO_
    if (rc /= 0) stop 'allocate_memory(): Error allocating (par)'
    call fabm_link_bulk_data(gotmfabm%model,standard_variables%downwelling_photosynthetic_radiative_flux,par)
 
@@ -331,6 +334,14 @@ end type
    allocate(curnuh(0:gotmfabm%knum),stat=rc)
    if (rc /= 0) stop 'allocate_memory(): Error allocating (curnuh)'
    curnuh = _ZERO_
+
+   ! call fabm_do to fill diagnostic variables and pre-fetch data
+   call fabm_do_surface(gotmfabm%model,1,1,gotmfabm%knum,rhs(1,1,1,:))
+   call fabm_do_bottom(gotmfabm%model,1,1,1,rhs(1,1,1,:),bottom_flux(1,1,:))
+   rhs=0.0_rk
+   do k=1,gotmfabm%knum
+     call fabm_do(gotmfabm%model,1,1,k,rhs(1,1,1,:))
+   end do
 
    end subroutine init_var_gotm_mossco_fabm
 
