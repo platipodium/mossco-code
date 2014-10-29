@@ -1,0 +1,18 @@
+instances:
+- inout1 : inout
+- inout2 : inout
+
+coupling:
+  - components:
+    - constant
+    - inout1
+    interval: 5 h
+  - components:
+    - inout1
+    - inout2
+    interval: 13 h
+  - components:
+    - inout2
+    - netcdf
+    interval: 24 h
+  

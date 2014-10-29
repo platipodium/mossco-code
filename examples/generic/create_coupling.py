@@ -1209,6 +1209,7 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
         'test'       : ['mossco_test'],
         'simplewave' : ['mossco_simplewave'],
         'empty'      : ['empty'],
+        'inout'      : ['mossco_inout'],
         'info'       : ['mossco_info'],
         'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea_prod',
                         'input_prod', 'util_prod', 'fabm'],
@@ -1235,6 +1236,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'test'       : ['libmossco_test'],
         'info'       : ['libmossco_info'],
         'empty'      : ['libempty'],
+        'inout'      : ['libmossco_inout'],
         'constant'   : ['libconstant'],
         'constant_grid'  : ['libconstant_grid'],
         'gotm'       : ['libgotm', 'libsolver'],
@@ -1322,7 +1324,7 @@ libsediment libconstant libconstant_grid libmossco_clm libmossco_erosed \
 libmossco_fabm0d libmossco_fabmpelagic:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libempty libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
+libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_info libmossco_test:

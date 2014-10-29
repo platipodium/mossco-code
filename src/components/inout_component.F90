@@ -12,7 +12,7 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
-module empty_component
+module inout_component
 
   use esmf
   use mossco_component
@@ -85,16 +85,8 @@ module empty_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-	  if (.not.present(importState)) then
-	    write(message,'(A)') trim(name)//' got no import state, thus skipping ahead.'
-	    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-    elseif (.not.present(exportState)) then
-	    write(message,'(A)') trim(name)//' got no export state, thus skipping ahead.'
-	    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-	  else
-	  	exportState=importState
-	  endif
-    
+	  exportState=importState
+
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -118,15 +110,7 @@ module empty_component
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-	  if (.not.present(importState)) then
-	    write(message,'(A)') trim(name)//' got no import state, thus skipping ahead.'
-	    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-    elseif (.not.present(exportState)) then
-	    write(message,'(A)') trim(name)//' got no export state, thus skipping ahead.'
-	    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-	  else
-	  	exportState=importState
-	  endif
+   	exportState=importState
  
 	  call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -174,4 +158,4 @@ module empty_component
 
   end subroutine Finalize
 
-end module empty_component
+end module inout_component
