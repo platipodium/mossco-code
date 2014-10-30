@@ -10,10 +10,10 @@ module pelagic_benthic_coupler
   type(ESMF_GRID) :: pelagic_bdy_grid
   type(ESMF_ARRAYSPEC) :: pelagic_bdy_array
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN,DIN,vDETN
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP,DETP,vDETP
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP,vDETP
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
-  real(ESMF_KIND_R8),dimension(1:1,1:1,1:1)    :: oxy,odu
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2
 
@@ -64,7 +64,7 @@ module pelagic_benthic_coupler
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    ! create omexdia_p-related fields
+    ! create omexdia_p-related fields, if not existing
     call create_required_fields(exportState,pelagic_bdy_grid)
 
     call ESMF_LogWrite("pelagic-benthic coupler initialized", ESMF_LOGMSG_INFO)
@@ -82,17 +82,18 @@ module pelagic_benthic_coupler
     integer              :: ammrc,nitrc
 
     integer                     :: myrank
+    integer                     :: i,j,inum,jnum
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
     character (len=ESMF_MAXSTR) :: message
     type(ESMF_Field)            :: field
-    real(ESMF_KIND_R8),parameter    :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
-    real(ESMF_KIND_R8)    :: CN_det=106.0_rk/16.0_rk
+    real(ESMF_KIND_R8),parameter      :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: CN_det=>null()
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
     real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
-    real(ESMF_KIND_R8)    :: fac_fdet
-    real(ESMF_KIND_R8)    :: fac_sdet
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet
     !> fdet + sdet = CN_det*det
     !> NC_fdet*fdet + NC_sdet*sdet = det
     !> fdet = fac_fdet*det
@@ -101,16 +102,26 @@ module pelagic_benthic_coupler
       ! water temperature:
       call mossco_state_get(importState,(/'temperature_in_water'/),ptr_f3,rc=rc)
       call mossco_state_get(exportState,(/'temperature_at_soil_surface'/),ptr_f2,rc=rc)
-      ptr_f2(1,1) = ptr_f3(1,1,1)
+      ptr_f2 = ptr_f3(:,:,1)
 
       ! dissolved_oxygen:
       call mossco_state_get(importState,(/ &
         'oxygen          ', &
         'dissolved_oxygen'/),ptr_f3,rc=rc)
       call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/),ptr_f2,rc=rc)
-      oxy = max(0.0d0,ptr_f3(1,1,1))
-      odu = max(0.0d0,-ptr_f3(1,1,1))
-      ptr_f2(1,1) = oxy(1,1,1)
+
+      inum=ubound(ptr_f3,1)
+      jnum=ubound(ptr_f3,2)
+      if (.not.associated(oxy)) allocate(oxy(inum,jnum))
+      if (.not.associated(odu)) allocate(odu(inum,jnum))
+
+      do i=1,inum
+        do j=1,jnum
+          oxy = max(0.0d0,ptr_f3(i,j,1))
+          odu = max(0.0d0,-ptr_f3(i,j,1))
+        end do
+      end do
+      ptr_f2 = oxy(:,:)
 
 
       !   Det flux:
@@ -123,27 +134,32 @@ module pelagic_benthic_coupler
             'detN_z_velocity                  ', &
             'Detritus_Nitrogen_detN_z_velocity'/),vDETN,rc=rc)
 
+      inum=ubound(DETN,1)
+      jnum=ubound(DETN,2)
+      if (.not.associated(CN_det)) allocate(CN_det(1:inum,1:jnum))
+      if (.not.associated(fac_fdet)) allocate(fac_fdet(1:inum,1:jnum))
+      if (.not.associated(fac_sdet)) allocate(fac_sdet(1:inum,1:jnum))
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
       call mossco_state_get(importState,(/'Detritus_Carbon_detC'/),DETC,rc=rc)
       if (rc /= 0) then
          CN_det=106.0_rk/16.0_rk
       else
-         CN_det = DETC(1,1,1)/DETN(1,1,1)
+         CN_det = DETC(:,:,1)/DETN(:,:,1)
       end if
       fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
       fac_sdet = (1.0_rk-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
       call ESMF_StateGet(exportState,'fast_detritus_C_at_soil_surface',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
-      ptr_f2(1,1) = fac_fdet * DETN(1,1,1)
+      ptr_f2 = fac_fdet * DETN(:,:,1)
       call ESMF_StateGet(exportState,'slow_detritus_C_at_soil_surface',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
-      ptr_f2(1,1) = fac_sdet * DETN(1,1,1)
+      ptr_f2 = fac_sdet * DETN(:,:,1)
 
       call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=rc)
-      if (rc==0) ptr_f2(1,1) = sinking_factor * vDETN(1,1,1)
+      if (rc==0) ptr_f2 = sinking_factor * vDETN(:,:,1)
       call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=rc)
-      if (rc==0) ptr_f2(1,1) = sinking_factor * vDETN(1,1,1)
+      if (rc==0) ptr_f2 = sinking_factor * vDETN(:,:,1)
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
@@ -152,9 +168,9 @@ module pelagic_benthic_coupler
           'detP                    ', &
           'Detritus_Phosphorus_detP'/),DETP,rc=rc)
       if (rc == 0) then
-        ptr_f2(1,1) = DETP(1,1,1)
+        ptr_f2 = DETP(:,:,1)
       else
-        ptr_f2(1,1) = 1.0d0/16.0d0 * DETN(1,1,1)
+        ptr_f2 = 1.0d0/16.0d0 * DETN(:,:,1)
       end if
 
       call mossco_state_get(exportState,(/'detritus-P_z_velocity_at_soil_surface'/),ptr_f2,rc=rc)
@@ -162,16 +178,16 @@ module pelagic_benthic_coupler
               'detP_z_velocity                    ', &
               'Detritus_Phosphorus_detP_z_velocity'/),vDETP,rc=rc)
       if (rc==0) then
-        ptr_f2(1,1) = sinking_factor * vDETP(1,1,1)
+        ptr_f2 = sinking_factor * vDETP(:,:,1)
       else
-        ptr_f2(1,1) = sinking_factor * vDETN(1,1,1)
+        ptr_f2 = sinking_factor * vDETN(:,:,1)
       end if
 
       ! DIM concentrations:
       !  oxygen is coming from constant component
       !  set reduced substances to zero
       call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/),ptr_f2,rc=rc)
-      ptr_f2(1,1) = odu(1,1,1)
+      ptr_f2 = odu(:,:)
 
       call mossco_state_get(importState,(/'nitrate'/),nit,rc=nitrc)
       if (nitrc /= 0) then
@@ -187,18 +203,18 @@ module pelagic_benthic_coupler
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (ammrc == 0) then
-        ptr_f2(1,1) = amm(1,1,1)
+        ptr_f2 = amm(:,:,1)
       else
-        ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
+        ptr_f2 = 0.5d0 * DIN(:,:,1)
       end if
       call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       if (nitrc == 0) then
-        ptr_f2(1,1) = nit(1,1,1)
+        ptr_f2 = nit(:,:,1)
       else
-        ptr_f2(1,1) = 0.5d0 * DIN(1,1,1)
+        ptr_f2 = 0.5d0 * DIN(:,:,1)
       end if
 
       !> check for DIP, if present, take as is, if not calculate it N-based
@@ -207,14 +223,14 @@ module pelagic_benthic_coupler
           'phosphate                              ', &
           'Dissolved_Inorganic_Phosphorus_DIP_nutP'/),DIP,rc=rc)
       if (rc /= 0) then
-        if (.not.(associated(DIP))) allocate(DIP(1,1,1))
-        DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
+        if (.not.(associated(DIP))) allocate(DIP(1:ubound(DIN,1),1:ubound(DIN,2),1))
+        DIP(:,:,1) = 1.0_rk/16.0_rk * DIN(:,:,1)
       end if
       call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2(1,1) = DIP(1,1,1)
+      ptr_f2 = DIP(:,:,1)
 
   end subroutine Run
 
