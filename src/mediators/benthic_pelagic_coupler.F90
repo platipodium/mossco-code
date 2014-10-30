@@ -129,9 +129,9 @@ module benthic_pelagic_coupler
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(exportState,(/'nitrate_upward_flux'/),DINflux,rc=nitrc)
-      if (nitrc == 0) DINflux(1,1) = val2_f2(1,1)
+      if (nitrc == 0) DINflux = val2_f2
       call mossco_state_get(exportState,(/'ammonium_upward_flux'/),DINflux,rc=nitrc)
-      if (nitrc == 0) DINflux(1,1) = val1_f2(1,1)
+      if (nitrc == 0) DINflux = val1_f2
 
       !RH: weak check, needs to be replaced:
       if (nitrc /= 0) then
@@ -140,9 +140,9 @@ module benthic_pelagic_coupler
               'DIN_upward_flux                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux'/),DINflux,rc=rc)
         if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        DINflux(1,1) = val1_f2(1,1) + val2_f2(1,1)
+        DINflux = val1_f2 + val2_f2
         ! add constant boundary flux of DIN (through groundwater, advection, rain
-        DINflux(1,1) = DINflux(1,1) + dinflux_const/(86400.0*365.0)
+        DINflux = DINflux + dinflux_const/(86400.0*365.0)
       end if
 
       !   DIP flux:
@@ -153,7 +153,7 @@ module benthic_pelagic_coupler
       if (rc == 0)  then
         call mossco_state_get(importState,(/ &
               'mole_concentration_of_phosphate_upward_flux'/),val1_f2,rc=rc)
-         DIPflux(1,1) = val1_f2(1,1) + dipflux_const/(86400.0*365.0)
+         DIPflux = val1_f2 + dipflux_const/(86400.0*365.0)
       end if
 
       !   Det flux:
@@ -166,13 +166,13 @@ module benthic_pelagic_coupler
             'detN_upward_flux                  ', &
             'Detritus_Nitrogen_detN_upward_flux'/),DETNflux,rc=rc)
       if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      DETNflux(1,1) = NC_fdet*FDETCflux(1,1) + NC_sdet*SDETCflux(1,1)
+      DETNflux = NC_fdet*FDETCflux + NC_sdet*SDETCflux
 
       !> search for Detritus-C
       call mossco_state_get(exportState,(/ &
          'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
       if (rc == 0) then
-         DETCflux(1,1) = FDETCflux(1,1) + SDETCflux(1,1)
+         DETCflux = FDETCflux + SDETCflux
       end if
 
       !> check for Detritus-P and calculate flux either N-based
@@ -181,7 +181,7 @@ module benthic_pelagic_coupler
           'detP_upward_flux                    ', &
           'Detritus_Phosphorus_detP_upward_flux'/),DETPflux,rc=rc)
       if (rc == 0) then
-        DETPflux(1,1) = omexDETPflux(1,1)
+        DETPflux = omexDETPflux
       end if
 
       !> oxygen and odu fluxes
@@ -189,7 +189,7 @@ module benthic_pelagic_coupler
       if (rc == 0) then
         call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux'/),val1_f2,rc=rc)
         call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux'/),val2_f2,rc=rc)
-        OXYflux(1,1) = val1_f2(1,1) - val2_f2(1,1)
+        OXYflux = val1_f2 - val2_f2
       end if
 
   end subroutine Run
@@ -211,40 +211,6 @@ module benthic_pelagic_coupler
 
     call ESMF_LogWrite("benthic-pelagic coupler finalized", ESMF_LOGMSG_INFO)
   end subroutine Finalize
-
-  subroutine mossco_create_upward_flux_fields(inputstate, name, outputstate)
-  type(ESMF_State)  :: inputstate,outputstate
-  character(len=*),dimension(:) :: name
-  type(ESMF_Field)  :: newfield
-  integer           :: rc,i,itemcount
-  type(ESMF_ArraySpec) :: flux_bdy_array
-  type(ESMF_Grid)      :: flux_bdy_grid
-
-  ! create arraySpec and grid for flux fields
-  call ESMF_ArraySpecSet(flux_bdy_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
-  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  flux_bdy_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
-      regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="sediment fluxes grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
-      coorddep2=(/2/),rc=rc)
-  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-  do i=1,ubound(name,1)
-    ! if name present in inputstate, then create corresponding flux field
-    call ESMF_StateGet(inputstate, itemSearch=trim(name(i)), itemCount=itemcount,rc=rc)
-    if (itemcount>0) then
-      newfield = ESMF_FieldCreate(flux_bdy_grid,flux_bdy_array, &
-                       name=trim(name(i))//'_upward_flux', &
-                       staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = 0.0_rk
-      call ESMF_StateAddReplace(outputstate,(/newfield/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    end if
-  end do
-  end subroutine mossco_create_upward_flux_fields  
 
 
 end module benthic_pelagic_coupler
