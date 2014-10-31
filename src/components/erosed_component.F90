@@ -38,26 +38,26 @@ module erosed_component
   ! Dimensions (x,y,depth layer, fraction index)
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
-  type(ESMF_Field)            :: upward_flux_Field, downward_flux_Field
+  type(ESMF_Field)                              :: upward_flux_Field, downward_flux_Field
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                     :: ubnd(4),lbnd(4)
 
 
-   integer                                     :: nmlb           ! first cell number
-   integer                                     :: nmub           ! last cell number
-   integer                                     :: inum, jnum     ! number of elements in x and y directions , inum * jnum== nmub - nmlb + 1
-   integer                                     :: flufflyr       ! switch for fluff layer concept
-   integer                                     :: iunderlyr      ! Underlayer mechanism
-   integer                                     :: nfrac          ! number of sediment fractions
-   real(fp)    , dimension(:,:)    , pointer   :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
-   real(fp)    , dimension(:,:)    , pointer   :: frac
+   integer                                      :: nmlb           ! first cell number
+   integer                                      :: nmub           ! last cell number
+   integer                                      :: inum, jnum     ! number of elements in x and y directions , inum * jnum== nmub - nmlb + 1
+   integer                                      :: flufflyr       ! switch for fluff layer concept
+   integer                                      :: iunderlyr      ! Underlayer mechanism
+   integer                                      :: nfrac          ! number of sediment fractions
+   real(fp)    , dimension(:,:)    , pointer    :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
+   real(fp)    , dimension(:,:)    , pointer    :: frac
     !
     ! Local variables
     !
     integer                                     :: i            ! diffusion layer counter
     integer                                     :: l            ! sediment counter
     integer                                     :: nm           ! cell counter
-   ! integer                                     :: istat        ! error flag
+   !integer                                     :: istat        ! error flag
     integer     , dimension(:)  , allocatable   :: sedtyp       ! sediment type [-]
     real(fp)                                    :: g            ! gravitational acceleration [m/s2]
     real(fp)                                    :: morfac       ! morphological scale factor [-]
@@ -73,9 +73,9 @@ module erosed_component
     real(fp)    , dimension(:)  , allocatable   :: umod         ! depth averaged flow magnitude [m/s]
     real(fp)    , dimension(:,:), allocatable   :: mass         ! change in sediment composition of top layer, [kg/m2]
     real(fp)    , dimension(:,:), allocatable   :: massfluff    ! change in sediment composition of fluff layer [kg/m2]
-!    real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
-!    real(fp)    , dimension(:,:), allocatable   :: r1           ! concentration new time level[kg/m3]
-!    real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
+!   real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
+!   real(fp)    , dimension(:,:), allocatable   :: r1           ! concentration new time level[kg/m3]
+!   real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
     real(fp)    , dimension(:,:), allocatable   :: sink         ! sediment sink flux [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sinkf        ! sediment sink flux fluff layer [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sour         ! sediment source flux [kg/m2/s]
@@ -109,43 +109,43 @@ contains
 
     implicit none
 
-    type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: importState, exportState
-    type(ESMF_Clock)    :: parentClock
-    integer, intent(out)     :: rc
+    type(ESMF_GridComp)    :: gridComp
+    type(ESMF_State)       :: importState, exportState
+    type(ESMF_Clock)       :: parentClock
+    integer, intent(out)   :: rc
 
-    type(ESMF_Grid)      :: grid, foreign_grid
-    type(ESMF_DistGrid)  :: distgrid
-    type(ESMF_ArraySpec) :: arrayspec
-    type(ESMF_Array)     :: array
-    type(ESMF_Field)     :: field
-    real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
+    type(ESMF_Grid)        :: grid, foreign_grid
+    type(ESMF_DistGrid)    :: distgrid
+    type(ESMF_ArraySpec)   :: arrayspec
+    type(ESMF_Array)       :: array
+    type(ESMF_Field)       :: field
+    real(ESMF_KIND_R8),dimension(:)  ,pointer :: LonCoord,LatCoord,DepthCoord
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, ptr2_f2
-    type(ESMF_FieldBundle) :: upward_flux_bundle,downward_flux_bundle,fieldBundle
+    type(ESMF_FieldBundle)                    :: upward_flux_bundle,downward_flux_bundle,fieldBundle
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
-    character(len=ESMF_MAXSTR) :: foreignGridFieldName
+    character(len=ESMF_MAXSTR)                :: foreignGridFieldName
     
-    integer , allocatable :: maxIndex(:)
-    integer               :: rank
+    integer , allocatable  :: maxIndex(:)
+    integer                :: rank
 
-    type(ESMF_Time)   :: wallTime, clockTime
-    type(ESMF_TimeInterval) :: timeInterval
-    real(ESMF_KIND_R8) :: dt
-    character(len=80)  :: title
-    character(len=256) :: din_variable='',pon_variable=''
-    integer(ESMF_KIND_I8) :: nlev,n
+    type(ESMF_Time)        :: wallTime, clockTime
+    type(ESMF_TimeInterval):: timeInterval
+    real(ESMF_KIND_R8)     :: dt
+    character(len=80)      :: title
+    character(len=256)     :: din_variable='',pon_variable=''
+    integer(ESMF_KIND_I8)  :: nlev,n
 
-    integer                    :: UnitNr, istat,ii,j
-    logical                    :: opnd, exst
+    integer                :: UnitNr, istat,ii,j
+    logical                :: opnd, exst
 
-    character(ESMF_MAXSTR):: name, message, timeString
-    type(ESMF_Clock)      :: clock
-    type(ESMF_Time)       :: currTime
-    logical               :: clockIsPresent
+    character(ESMF_MAXSTR) :: name, message, timeString
+    type(ESMF_Clock)       :: clock
+    type(ESMF_Time)        :: currTime
+    logical                :: clockIsPresent
 
 
 
-    namelist /globaldata/ g, rhow
+    namelist /globaldata/g, rhow
     namelist /benthic/   nmlb   ! = 1                 ! first cell number
     namelist /benthic/   nmub   ! = 1                 ! last cell number
     namelist /benthic/   morfac ! = 1.0               ! morphological scale factor [-]
@@ -158,7 +158,7 @@ contains
                                 !  0: no fluff layer (default)
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
-   namelist /benthic/   anymud       != .true.
+   namelist /benthic/    anymud       != .true.
 
 
 
@@ -288,37 +288,30 @@ contains
 
 
 
-inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
+  inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
     !write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
-if (exst.and.(.not.opnd)) then
- UnitNr = 567
-
- open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
- !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
-
- read (UnitNr, nml=globaldata, iostat = istat)
-
- close (UnitNr)
-end if
+  if (exst.and.(.not.opnd)) then
+    UnitNr = 567
+    open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+   !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+   read (UnitNr, nml=globaldata, iostat = istat)
+   close (UnitNr)
+  end if
 !    g       = 9.81_fp   ! gravitational acceleration [m/s2]
 !    rhow    = 1000.0_fp ! density of water [kg/m3]
     !
 
     !
-    inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
+  inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
 
-
-if (exst.and.(.not.opnd)) then
- UnitNr = 568
-
- open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
- !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
-
- read (UnitNr, nml=benthic, iostat = istat)
-
- close (UnitNr)
-end if
+  if (exst.and.(.not.opnd)) then
+    UnitNr = 568
+    open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+    !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
+    read (UnitNr, nml=benthic, iostat = istat)
+    close (UnitNr)
+  end if
 !    nmlb    = 1                 ! first cell number
 !    nmub    = 1                 ! last cell number
 !    morfac  = 1.0               ! morphological scale factor [-]
@@ -375,43 +368,39 @@ end if
     massfluff=0.0_fp
     mudfrac = 0.0_fp
     mfluff =0.0_fp
+  
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
   !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
-if (exst.and.(.not.opnd)) then
- UnitNr = 569
-
- open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
-
+    if (exst.and.(.not.opnd)) then
+      UnitNr = 569
+      open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
  ! non-cohesive sediment
- read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ( cdryb(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+      read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ( cdryb(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
  ! cohesive sediment
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
  ! cohesive sediment
- if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
- if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
  ! sediment transport formulation
- if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
  ! fluff layer
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
- if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
-
- if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
-
- close (UnitNr)
-
-end if
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+      if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
+      close (UnitNr)
+    end if
     ! ================================================================================
     !   USER INPUT
     ! ================================================================================
@@ -477,9 +466,11 @@ end if
 
   allocate(external_idx_by_nfrac(nfrac))
   allocate(nfrac_by_external_idx(nfrac))
+ 
   external_idx_by_nfrac(:)=-1
   nfrac_by_external_idx(:)=-1
-  !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
+  
+ !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
   call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
   if(rc /= ESMF_SUCCESS) then
     write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM". Possibly &
@@ -505,12 +496,14 @@ end if
   !!       mapping by e.g. d50. It is unknown here, which SPM fraction in water is
   !!       related to SPM fractions in the bed module
   !! after having external_index defined by nfrac, create nfrac_by_external_idx:
+
   do n=1,ubound(external_idx_by_nfrac,1)
     nfrac_by_external_idx(external_idx_by_nfrac(n))=n
   end do
 
   upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux',rc=rc)
   downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux',rc=rc)
+
   do n=1,nfrac
     ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
     upward_flux_field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
@@ -518,6 +511,7 @@ end if
     call ESMF_AttributeSet(upward_flux_field,'external_index',external_idx_by_nfrac(n))
     call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=rc)
   end do
+  
   call ESMF_StateAddReplace(exportState,(/upward_flux_bundle,downward_flux_bundle/),rc=rc)
 
   call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
@@ -527,10 +521,10 @@ end if
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     use BioTypes , only :  BioturbationEffect
 
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
+    type(ESMF_GridComp)      :: gridComp
+    type(ESMF_State)         :: importState, exportState
+    type(ESMF_Clock)         :: parentClock
+    integer, intent(out)     :: rc
 
     character(len=255)       :: logstring
     type(ESMF_Time)          :: clockTime
@@ -551,13 +545,13 @@ end if
     real(kind=ESMF_KIND_R8),parameter :: ws_convention_factor=-1.0
     type (BioturbationEffect):: BioEffects
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR):: name, message, timeString
-    logical               :: clockIsPresent
-    type(ESMF_Time)       :: currTime
-    type(ESMF_Clock)      :: clock
-    integer               :: external_index
-    real(kind=ESMF_KIND_R8):: vonkar, ustar, z0cur, cdr, cds, summ, rhowat,vicmol, reynold
+    integer                  :: petCount, localPet
+    character(ESMF_MAXSTR)   :: name, message, timeString
+    logical                  :: clockIsPresent
+    type(ESMF_Time)          :: currTime
+    type(ESMF_Clock)         :: clock
+    integer                  :: external_index
+    real(kind=ESMF_KIND_R8)  :: vonkar, ustar, z0cur, cdr, cds, summ, rhowat,vicmol, reynold
 
 !#define DEBUG
 
@@ -743,6 +737,7 @@ end if
 !      r0=r1
     end if
 
+! Soulsby
 
     summ = 0.0_fp
     rhowat = 1000.0_fp
@@ -804,16 +799,21 @@ end if
 
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
-      !> @todo add warning about negative spm concentrations
-      spm_concentration(:,:,l) = max (0.0_fp, spm_concentration(:,:,l) )
+
      do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
              j= 1+ mod(nm,inum)
              i= nm - inum*(j -1)
-             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,1)*spm_concentration(i,j,l), sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
-      size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
+
+ !     if (spm_concentration(1,1,l) < 0.0_fp) write (*,*) "WARNING: spm of fraction", l, "was negative and therefore set to zero!!!"
+       
+ !     spm_concentration(:,:,l) = max (0.0_fp, spm_concentration(:,:,l) )
+
+             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,1)*spm_concentration(i,j,l), sour      (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+      
+       size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
           sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)
     enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
@@ -825,7 +825,7 @@ end if
 !          write (*,*) 'SPM',l,'=', spm_concentration(1,1,l)
     !      write (*,*) 'sour*1000.0', sour(l,1) *1000.0_fp
       !write (*,*) 'concentration', spm_concentration(1,1,l)
-    enddo
+   enddo
 
         !
         !   Compute change in sediment composition of top layer and fluff layer
