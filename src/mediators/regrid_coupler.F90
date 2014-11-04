@@ -1,4 +1,4 @@
-!> @brief Implementation of an ESMF regrid coupling via an exchange grid
+!> @brief Implementation of an ESMF coupling between different grids
 !>
 !> This computer program is part of MOSSCO. 
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
@@ -22,6 +22,15 @@ module regrid_coupler
 
   public SetServices
 
+  type type_mossco_fields_handle
+    type(ESMF_RouteHandle) :: routehandle
+    type(ESMF_Field) :: srcField, dstField
+    type(ESMF_State) :: srcState, dstState
+    type(type_mossco_fields_handle), pointer :: next=>null()
+  end type
+
+  class(type_mossco_fields_handle), allocatable, target :: fieldsHandle
+
   contains
 
   subroutine SetServices(cplcomp, rc)
@@ -41,258 +50,334 @@ module regrid_coupler
 
   end subroutine SetServices
 
+  subroutine Initialize(cplcomp, importState, exportState, parentClock, rc)
 
-  subroutine Initialize(cplComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_CplComp)   :: cplComp
+    type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: parentClock
+    type(ESMF_Clock)     :: parentclock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)       :: petCount, localPet, dstDeCount, srcDeCount
-    integer(ESMF_KIND_I4)       :: i, itemCount, srcRank, dstRank, dstItemCount, gridRank
-    character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
-    character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
-    type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
-    type(ESMF_StateItem_Flag)   :: itemType
-    type(ESMF_Field)            :: srcField, dstField, field
-    type(ESMF_Grid)             :: srcGrid, dstGrid
-    type(ESMF_XGrid)            :: xgrid
-    type(ESMF_VM)               :: vm
-    type(ESMF_RouteHandle)      :: rhList(3)
-    real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
-    type(ESMF_CoordSys_Flag)    :: coordSys
-    
+    integer(ESMF_KIND_I4)       :: petCount, localPet, i, itemCount
+    character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+    type(ESMf_StateItem_Flag)   :: itemType
+    type(ESMF_RouteHandle)      :: routeHandle
+    class(type_mossco_fields_handle), pointer :: currHandle=>null() 
+    type(ESMF_Field)            :: importField, exportField
+
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    !> Search for all fields that are present in both import and export state, 
+    !! for each combination of fields
+    !! - if they are defined on different grids, create a route handle and
+    !!   name it with the name of the two grids for identification (todo)
+
+    call ESMF_StateGet(exportState, name=exportName, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(importState, itemCount=itemCount, name=importName, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    if (itemCount>0) then
+      allocate(itemNameList(itemCount))
+      allocate(itemTypeList(itemCount))
+      
+      call ESMF_StateGet(importState, itemNameList=itemNameList, &
+        itemTypeList=itemTypeList, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      
+      do i=1,itemCount
+        if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then 
+          write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        endif
+     
+        call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=rc)   
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+   
+        if (itemType==ESMF_STATEITEM_NOTFOUND)   then
+          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+            //' (not in '//trim(exportName)//')'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        elseif (itemType/=ESMF_STATEITEM_FIELD) then
+          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+            //' (not a field in '//trim(exportName)//')'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        endif
         
-    ! Need to reconcile import and export states
-    call ESMF_StateReconcile(importState, vm, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_StateReconcile(exportState, vm, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_StateGet(importState, itemNameList(i), importField, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        if (importField==exportField) then
+          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+            //' (already the same in '//trim(exportName)//')'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        endif
 
-    call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-    if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+        call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
+          routeHandle=routehandle,regridmethod=ESMF_REGRIDMETHOD_BILINEAR,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument 
+        !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
-    call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
-      itemNameList=itemNameList, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (.not.associated(currHandle)) then
+          allocate(fieldsHandle)
+          currHandle=>fieldsHandle
+        endif
+        
+        do while(associated(currHandle%next)) 
+          currHandle=>currHandle%next
+        enddo
+        allocate (currHandle%next)
+        currHandle=>currHandle%next
+
+        currHandle%srcField=importField
+        currHandle%dstField=exportField
+        currHandle%srcState=importState
+        currHandle%dstState=exportState
+        currHandle%routeHandle=routeHandle
+
+      enddo
+      
+    else
+      write(message,'(A)') trim(name)//' no couplable fields in '//trim(importName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+    endif  
+            
+    if (allocated(itemNameList)) deallocate(itemNameList)
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
     
-    do i=1, itemCount
-      if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
-        !! Search for this field in exportState
-        !> @ todo what if more names are found?
-        call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
-          itemCount=dstItemCount, rc=rc)
-        if (itemCount==0) then
-          write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
-            ' in import state; it is not in export state.'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)   
-          cycle
-        endif
-        call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
-          itemType=itemType, rc=rc)        
-        if (itemType/=ESMF_STATEITEM_FIELD) then
-          write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
-            ' in import state; it is not a field in export state.'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
-          cycle
-        endif
-          
-        !! Found the field in export State, now deal with this by extracting
-        !! the grids of src and dst fields     
-        call ESMF_StateGet(importState, trim(itemNameList(i)), srcField, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_StateGet(importState, trim(itemNameList(i)), dstField, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(srcField, grid=srcGrid, rank=srcRank, localDeCount=srcDeCount, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(dstField, grid=dstGrid, rank=dstRank, localDeCount=dstDeCount, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
-        !! Check whether ranks agree
-        !> @todo check whether type agrees
-        if (srcRank /= dstRank) then
-           write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
-            ' in import state; rank disagrees with field in export state.'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
-          cycle
-        endif
-        
-        if (srcRank > 3) then
-           write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
-            ' in import state; rank > 3 not implemented'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
-          cycle
-        endif
-        
-        if (dstDeCount < 2) then
-           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
-            ' in export state; xgrid not implemented for deCount=1'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
-          cycle
-        endif
-        if (srcDeCount < 2) then
-           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
-            ' in import state; xgrid not implemented for deCount=1'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
-          cycle
-        endif
-
-
-        call ESMF_GridGet(srcGrid, coordSys=coordSys, rank=gridRank, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
-        if ((coordSys == ESMF_COORDSYS_SPH_DEG) .and. (gridRank>2)) then
-           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
-            ' in import state; regridding not implemented for 3D spherical fields'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
-          cycle
-        endif
-
-        call ESMF_GridGet(dstGrid, coordSys=coordSys, rank=gridRank, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
-        if ((coordSys == ESMF_COORDSYS_SPH_DEG) .and. (gridRank>2)) then
-           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
-            ' in export state; regridding not implemented for 3D spherical fields'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
-          cycle
-        endif
-       
-       
-        xgrid = ESMF_XGridCreate(sideAGrid=(/srcGrid/), sideBGrid=(/dstGrid/), rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-        field = ESMF_FieldCreate(xgrid, typekind=ESMF_TYPEKIND_R8, &
-          name='x::'//trim(itemNameList(i)), rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
-        if (srcRank==1) then 
-           call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=rc)
-           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-           farrayPtr1(:)=0.0
-        elseif (srcRank==2) then 
-           call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=rc)
-           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-           farrayPtr2(:,:)=0.0
-        elseif (srcRank==3) then 
-           call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=rc)
-           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-           farrayPtr3(:,:,:)=0.0
-        endif
-
-        call ESMF_FieldRegridStore(xgrid, srcField, field, &
-          routehandle=rhList(1), rc=rc)
-        call ESMF_RoutehandleSet(rhList(1), name='f2x:://trim(itemNameList(i))', rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-        call ESMF_FieldRegridStore(xgrid, field, dstField, &
-          routehandle=rhList(3), rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_RoutehandleSet(rhList(3), name='x2f:://trim(itemNameList(i))', rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-        call ESMF_StateAdd(exportState, (/rhList(1),rhList(3)/), rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_StateAdd(exportState, (/field/), rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        
-      else
-        write(message,'(A)') 'Did not setup regrid for non-field item '//trim(itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
-      endif   
-    enddo
-
-    call MOSSCO_CompExit(CplComp, rc)
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine Initialize
 
-  !> the Run() routine of this coupler copies all fields that are found
-  !! in the importState into the exportState.  If the field exists in the
-  !! exportState, then it will be replaced. 
-  subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
-    type(ESMF_CplComp)   :: cplComp
+  subroutine Run(cplcomp, importState, exportState, parentclock, rc)
+
+    type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: parentClock
+    type(ESMF_Clock)     :: parentclock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)       :: petCount, localPet
-    integer(ESMF_KIND_I4)       :: i, itemCount
-    character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
-    character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
-    character(len=ESMF_MAXSTR)  :: itemName
-    type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
-    type(ESMF_Field)            :: field, srcField, dstField
-    type(ESMF_RouteHandle)      :: rhList(2)
-
+    integer(ESMF_KIND_I4)       :: petCount, localPet, i, itemCount
+    character(len=ESMF_MAXSTR)  :: message, name, timeString, exportName, importName
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+    type(ESMf_StateItem_Flag)   :: itemType
+    class(type_mossco_fields_handle), pointer :: currHandle=>null() 
+    type(ESMF_Field)            :: importField, exportField
+    type(ESMF_RouteHandle)      :: routeHandle
 
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-	  !! Search the export state for fields with 'x::' prefix
-    call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
-    if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
+    call ESMF_StateGet(exportState, name=exportName, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(importState, itemCount=itemCount, name=importName, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
-      itemNameList=itemNameList, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    do i=1, itemCount
-      itemName=trim(itemNameList(i))
-      if (itemName(1:3) /= 'x::') cycle
+    if (itemCount>0) then
+      allocate(itemNameList(itemCount))
+      allocate(itemTypeList(itemCount))
       
-      !> We skip all the check of itemType, rank, etc as this should have been
-      !! ensured by the Initialize method
-      call ESMF_StateGet(importState,  trim(itemName(4:ESMF_MAXSTR)), srcField, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateGet(exportState,  trim(itemName(4:ESMF_MAXSTR)), dstField, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateGet(exportState,  trim(itemName), field, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
-      call ESMF_StateGet(exportState, 'f2x::'//trim(itemName(4:ESMF_MAXSTR)), routehandle=rhList(1), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateGet(exportState, 'x2f::'//trim(itemName(4:ESMF_MAXSTR)), routehandle=rhList(2), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-      call ESMF_FieldRegrid(srcField, field, routehandle=rhList(1), zeroregion=ESMF_REGION_EMPTY, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldRegrid(field, dstField, routehandle=rhList(2), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateGet(importState, itemNameList=itemNameList, &
+        itemTypeList=itemTypeList, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          
+      do i=1,itemCount
+        if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then 
+          write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        endif
+     
+        call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=rc)   
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
    
-    enddo
+        if (itemType==ESMF_STATEITEM_NOTFOUND) then 
+          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+            //' (not in '//trim(exportName)//')'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        elseif (itemType/=ESMF_STATEITEM_FIELD) then
+          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+            //' (not a field in '//trim(exportName)//')'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        endif
+        
+        call ESMF_StateGet(importState, itemNameList(i), importField, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        
+        if (importField==exportField) then
+          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
+            //' (already the same in '//trim(exportName)//')'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          cycle
+        endif
 
-    call MOSSCO_CompExit(CplComp, rc)
+        !! search for the correct routeHandle
+        currHandle=>fieldsHandle
+        do while (associated(currHandle%next))
+          if (.not.((currHandle%srcField==importField).and.(currHandle%dstField==exportField))) &
+            currHandle=>currHandle%next
+        enddo
+        routeHandle=currHandle%routeHandle
+        
+        call ESMF_FieldRegrid(srcField=importField, dstField=exportField,&
+          routeHandle=routehandle, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument 
+        !! - - can't currently regrid a grid       that contains a DE of width less than 2
+
+      enddo
+      
+    else
+      write(message,'(A)') trim(name)//' no couplable fields in '//trim(importName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+    endif  
+
+    write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running.'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine Run
 
   !> The Finalize() routine of this coupler is empty
   subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
-
+    
     type(ESMF_CplComp)   :: cplComp
-    type(ESMF_State)     :: importState
-    type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: parentClock
-    integer, intent(out) :: rc
-    
-    type(ESMF_Time)      :: currTime
-    character(ESMF_MAXSTR) :: name
-    
-    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
-    call MOSSCO_CompExit(CplComp, rc)
-    
-  end subroutine Finalize
+    type(ESMF_State)      :: importState, exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
 
+    class(type_mossco_fields_handle), pointer :: currHandle=>null() 
+
+    integer(ESMF_KIND_I4)   :: petCount, localPet
+    character(ESMF_MAXSTR)  :: name, message, timeString
+    logical                 :: clockIsPresent
+    type(ESMF_Time)         :: currTime
+    type(ESMF_Clock)        :: clock
+
+    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+   
+    if (allocated(fieldsHandle)) then
+      currHandle=>fieldsHandle
+      do while (associated(currHandle%next))
+        currHandle=>currHandle%next
+        deallocate(fieldsHandle)
+      enddo
+    endif
+
+    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
+          ' finalized'
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+
+  end subroutine Finalize
+ 
 end module regrid_coupler
 
+#undef UNITTESTS
+#ifdef UNITTESTS
+program test
+
+  use esmf
+  use regrid_coupler, only : SetServices
+
+  implicit none
+  
+  type(ESMF_State) :: states(2)
+  type(ESMF_Field) :: fields(9)
+  type(ESMF_Grid)  :: grid34,grid55,grid565
+  integer(ESMF_KIND_I4) :: i, rc
+  type(ESMF_CplComp) :: coupler
+  type(ESMF_Clock)   :: clock
+  type(ESMF_TimeInterval) :: timeInterval
+  type(ESMF_Time)         :: time
+  
+  call ESMF_Initialize(defaultLogFileName="test_regrid_coupler", &
+    logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN)
+  
+  !! Initialize
+  do i=1,2
+   states(i)=ESMF_StateCreate()
+  enddo
+  
+  call ESMF_TimeSet(time, yy=2014)
+  call ESMF_TimeSyncToRealTime(time,rc=rc)
+  call ESMF_TimeIntervalSet(timeInterval, d=1)
+  clock=ESMF_ClockCreate(timeInterval, time)
+  
+  grid34=ESMF_GridCreate(maxIndex=(/3,4/))
+  grid55=ESMF_GridCreate(maxIndex=(/5,5/))
+  grid565=ESMF_GridCreate(maxIndex=(/5,6,5/))
+
+
+  fields(1)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field1")
+  fields(2)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field2")
+  fields(3)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field3")
+  fields(4)=ESMF_FieldCreate(grid55, typekind=ESMF_TYPEKIND_R8, name="field4")
+  fields(5)=ESMF_FieldCreate(grid565, typekind=ESMF_TYPEKIND_R8, name="field5")
+
+  !! Identical field
+  fields(6)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_R8, name="field1")
+
+  !! Same name, different grid, same rank
+  fields(7)=ESMF_FieldCreate(grid55, typekind=ESMF_TYPEKIND_R8, name="field2")
+  
+  !! Same name, same grid, different type
+  fields(8)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_I8, name="field3")
+  
+  !! Same name, different rank
+  fields(9)=ESMF_FieldCreate(grid565, typekind=ESMF_TYPEKIND_I8, name="field4")
+  
+  
+  coupler=ESMF_CplCompCreate(name="coupler")
+  call ESMF_CplCompSetServices(coupler, SetServices, rc=rc)
+
+  !! Run tests
+
+  call ESMF_StateAdd(states(1),fields(1:5)) 
+  call ESMF_StateAdd(states(2),fields(6:9))
+
+  call ESMF_StatePrint(states(1))
+  call ESMF_StatePrint(states(2))
+
+  call ESMF_CplCompInitialize(coupler, importState=states(1), exportState=states(2), clock=clock)
+  !call ESMF_CplCompRun(coupler, importState=states(1), exportState=states(2))
+
+  !! Cleanup
+  do i=1,ubound(fields,1)
+    call ESMF_FieldDestroy(fields(i))
+  enddo
+
+  do i=1,ubound(states,1)
+    call ESMF_StateDestroy(states(i))
+  enddo
+  
+  call ESMF_GridDestroy(grid34)
+  call ESMF_GridDestroy(grid55)
+  call ESMF_GridDestroy(grid565)
+
+  call ESMF_Finalize()  
+
+end program test
+#endif

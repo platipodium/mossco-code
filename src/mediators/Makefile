@@ -66,8 +66,8 @@ $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a: copy_coupler.o
 $(MOSSCO_LIBRARY_PATH)/liblinkcoupler.a: link_coupler.o
 	$(AR) cruvs $@ link_coupler.o
 
-$(MOSSCO_LIBRARY_PATH)/libgridcoupler.a: grid_coupler.o
-	$(AR) cruvs $@ grid_coupler.o
+$(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a: xgrid_coupler.o
+	$(AR) cruvs $@ xgrid_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libremtc.a: remtc_atmos_ocean_coupler.o
 	$(AR) cruvs $@ remtc_atmos_ocean_coupler.o
@@ -100,7 +100,7 @@ extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
 
-test: test_grid_coupler
+test: test_regrid_coupler
 
-test_grid_coupler: grid_coupler.o
+test_regrid_coupler: regrid_coupler.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS) -lesmf
