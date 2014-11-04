@@ -14,6 +14,7 @@ module regrid_coupler
     
   use esmf
   use mossco_state
+  use mossco_component
 
   implicit none
 
@@ -50,7 +51,7 @@ module regrid_coupler
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I4)       :: petCount, localPet, dstDeCount, srcDeCount
-    integer(ESMF_KIND_I4)       :: i, itemCount, srcRank, dstRank, dstItemCount
+    integer(ESMF_KIND_I4)       :: i, itemCount, srcRank, dstRank, dstItemCount, gridRank
     character (len=ESMF_MAXSTR) :: timeString, message, name
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
@@ -62,24 +63,16 @@ module regrid_coupler
     type(ESMF_VM)               :: vm
     type(ESMF_RouteHandle)      :: rhList(3)
     real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
-
-    call ESMF_CplCompGet(cplComp, name=name, vm=vm, &
-      petCount=petCount, localPet=localPet, rc=rc)
+    type(ESMF_CoordSys_Flag)    :: coordSys
+    
+    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
     ! Need to reconcile import and export states
     call ESMF_StateReconcile(importState, vm, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_StateReconcile(exportState, vm, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -97,7 +90,7 @@ module regrid_coupler
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=dstItemCount, rc=rc)
         if (itemCount==0) then
-          write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+          write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
             ' in import state; it is not in export state.'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)   
           cycle
@@ -105,7 +98,7 @@ module regrid_coupler
         call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=rc)        
         if (itemType/=ESMF_STATEITEM_FIELD) then
-          write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+          write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
             ' in import state; it is not a field in export state.'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
           cycle
@@ -125,14 +118,14 @@ module regrid_coupler
         !! Check whether ranks agree
         !> @todo check whether type agrees
         if (srcRank /= dstRank) then
-           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+           write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
             ' in import state; rank disagrees with field in export state.'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
           cycle
         endif
         
         if (srcRank > 3) then
-           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+           write(message,'(A,A)') trim(name)//' skipped field '//trim(itemNameList(i)), &
             ' in import state; rank > 3 not implemented'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
           cycle
@@ -150,6 +143,28 @@ module regrid_coupler
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
           cycle
         endif
+
+
+        call ESMF_GridGet(srcGrid, coordSys=coordSys, rank=gridRank, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
+        if ((coordSys == ESMF_COORDSYS_SPH_DEG) .and. (gridRank>2)) then
+           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+            ' in import state; regridding not implemented for 3D spherical fields'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
+          cycle
+        endif
+
+        call ESMF_GridGet(dstGrid, coordSys=coordSys, rank=gridRank, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
+        if ((coordSys == ESMF_COORDSYS_SPH_DEG) .and. (gridRank>2)) then
+           write(message,'(A,A)') 'Skipped field '//trim(itemNameList(i)), &
+            ' in export state; regridding not implemented for 3D spherical fields'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)   
+          cycle
+        endif
+       
        
         xgrid = ESMF_XGridCreate(sideAGrid=(/srcGrid/), sideBGrid=(/dstGrid/), rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -194,13 +209,7 @@ module regrid_coupler
       endif   
     enddo
 
-    !! Return with logging 
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call MOSSCO_CompExit(CplComp, rc)
 
   end subroutine Initialize
 
@@ -225,20 +234,9 @@ module regrid_coupler
     type(ESMF_Field)            :: field, srcField, dstField
     type(ESMF_RouteHandle)      :: rhList(2)
 
-    !! Set default SUCCESS return value and log the call to this 
-    !! function into the log
-    rc = ESMF_SUCCESS
-    
-    call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
-      rc=rc)
+
+    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 	  !! Search the export state for fields with 'x::' prefix
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
@@ -275,14 +273,7 @@ module regrid_coupler
    
     enddo
 
-
-    !! Return with logging 
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call MOSSCO_CompExit(CplComp, rc)
 
   end subroutine Run
 
@@ -294,8 +285,12 @@ module regrid_coupler
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
-
-    rc = ESMF_SUCCESS
+    
+    type(ESMF_Time)      :: currTime
+    character(ESMF_MAXSTR) :: name
+    
+    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
+    call MOSSCO_CompExit(CplComp, rc)
     
   end subroutine Finalize
 
