@@ -261,6 +261,9 @@ module fabm_sediment_component
                   ungriddedLBound=(/1/), ungriddedUBound=(/sed%grid%knum/), &
                   gridToFieldMap=(/2/), rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
         call ESMF_FieldGet(field=field, farrayPtr=statemesh_ptr, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         do k=1,sed%grid%knum
@@ -276,10 +279,14 @@ module fabm_sediment_component
                     typekind=ESMF_TYPEKIND_R8, &
                     meshloc=ESMF_MESHLOC_ELEMENT,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_FieldGet(field=field, farrayPtr=fluxmesh_ptr, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           fluxmesh_ptr = -fluxes(:,1,sed%export_states(n)%fabm_id)
           call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
+          
+          
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         end if
       end do
@@ -289,6 +296,8 @@ module fabm_sediment_component
         statemesh_ptr => diag(:,1,:)
         field = ESMF_FieldCreate(state_mesh,farrayPtr=statemesh_ptr, &
                    name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
@@ -303,6 +312,8 @@ module fabm_sediment_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       fluxmesh_ptr(1:numElements)=bdys(1:numElements,1,1)
       call ESMF_StateAddReplace(importState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -312,6 +323,8 @@ module fabm_sediment_component
           field = ESMF_FieldCreate(surface_mesh, &
                    name=trim(sed%export_states(n)%standard_name)//'_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -329,6 +342,8 @@ module fabm_sediment_component
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
             fluxmesh_ptr(1:numElements)=-1.0_rk
@@ -340,8 +355,12 @@ module fabm_sediment_component
     else ! sed%grid%use_ugrid
       distGrid_3d =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,sed%grid%knum/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+      call ESMF_AttributeSet(distGrid_3d, 'creator', trim(name), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       distGrid_2d =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
                                     indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(distGrid_2d, 'creator', trim(name), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_ArraySpecSet(flux_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
@@ -353,12 +372,16 @@ module fabm_sediment_component
         name="sediment fluxes grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
         coorddep2=(/2/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(flux_grid, 'creator', trim(name), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_GridAddCoord(flux_grid, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/_INUM_,_JNUM_,sed%grid%knum/), &
         regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
         name="sediment states grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
         coorddep2=(/2/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(state_grid, 'creator', trim(name), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_GridAddCoord(state_grid, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -370,7 +393,10 @@ module fabm_sediment_component
                          name=trim(sed%export_states(n)%standard_name)//'_in_soil', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit))
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, &
                        totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -386,6 +412,8 @@ module fabm_sediment_component
           !> fluxes are defined in concentration*m/s
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit)//'/s')
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
                        totalLBound=lbnd2,totalUBound=ubnd2, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -399,7 +427,9 @@ module fabm_sediment_component
         field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
                    name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(sed%model%info%diagnostic_variables(n)%units))
+       call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+       call ESMF_AttributeSet(field,'units',trim(sed%model%info%diagnostic_variables(n)%units))
         
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -410,6 +440,8 @@ module fabm_sediment_component
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_AttributeSet(field,'units','degC')
       call ESMF_StateAddReplace(importState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -419,6 +451,8 @@ module fabm_sediment_component
                    name=trim(sed%export_states(n)%standard_name)//'_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit))
           call ESMF_StateAddReplace(importState,(/field/),rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -427,6 +461,8 @@ module fabm_sediment_component
             field = ESMF_FieldCreate(flux_grid, &
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
             if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
             call ESMF_AttributeSet(field,'units','m/s')
             call ESMF_StateAddReplace(importState,(/field/),rc=rc)
