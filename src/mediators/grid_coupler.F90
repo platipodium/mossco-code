@@ -14,6 +14,7 @@ module grid_coupler
     
   use esmf
   use mossco_state
+  use mossco_component
 
   implicit none
 
@@ -67,16 +68,8 @@ module grid_coupler
     class(type_mossco_fields_handle), pointer :: currHandle=>null() 
     type(ESMF_Field)            :: importField, exportField
 
-    call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
-      rc=rc)
+    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !> Search for all fields that are present in both import and export state, 
     !! for each combination of fields
@@ -187,16 +180,8 @@ module grid_coupler
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_RouteHandle)      :: routeHandle
 
-    call ESMF_CplCompGet(cplComp, name=name, petCount=petCount, localPet=localPet, &
-      rc=rc)
+    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     call ESMF_StateGet(exportState, name=exportName, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -287,25 +272,8 @@ module grid_coupler
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_CplCompGet(cplComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else 
-      call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
+    call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
    
     if (allocated(fieldsHandle)) then
       currHandle=>fieldsHandle
