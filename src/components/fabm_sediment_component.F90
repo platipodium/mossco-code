@@ -33,6 +33,7 @@ module fabm_sediment_component
   use solver_library!, only : ode_solver
   use mossco_strings
   use mossco_state
+  use mossco_component
 
   implicit none
 
@@ -158,7 +159,7 @@ module fabm_sediment_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       sed%grid%inum=numElements
       sed%grid%jnum=1
-      write(message,*) 'fabm_sediment_component: use unstructured grid, number of local elements:',numElements
+      write(message,*) trim(name)//': use unstructured grid, number of local elements:',numElements
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     else
       sed%grid%inum=1
@@ -169,7 +170,7 @@ module fabm_sediment_component
     sed%grid%knum=numlayers
     sed%grid%dzmin=dzmin
     !! Write log entries
-    write(message,'(A,I3,A)') 'Initialise grid with ',sed%grid%knum,' vertical layers'
+    write(message,'(A,I3,A)') trim(name)//' initialise grid with ',sed%grid%knum,' vertical layers'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     call sed%grid%init_grid()
     call sed%initialize()
