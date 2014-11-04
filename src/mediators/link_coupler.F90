@@ -196,13 +196,14 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount
-    character (len=ESMF_MAXSTR) :: message
+    character (len=ESMF_MAXSTR) :: message, creatorName
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable, save :: itemTypeList
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
+    logical                     :: isPresent
 
     rc = ESMF_SUCCESS
   
@@ -249,6 +250,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
             if (exportField /= importField) then
               write(message,'(A)') 'Replaced existing field '//trim(itemNameList(i))
+              call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+              if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
               call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)        
        
@@ -259,6 +263,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           endif          
         else        
           write(message,'(A)') 'Added field '//trim(itemNameList(i))
+          call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
           call ESMF_StateAdd(exportState,(/importField/), rc=localrc)  
         endif      
@@ -274,6 +281,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           
         if (exportItemCount==0) then
           write(message,'(A)') 'Added fieldbundle '//trim(itemNameList(i))
+          call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
           call ESMF_StateAdd(exportState,(/importFieldBundle/), rc=localrc)  
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)  
@@ -286,6 +296,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
             if (exportFieldBundle /= importFieldBundle) then
               write(message,'(A)') 'Replaced existing fieldbundle '//trim(itemNameList(i))
+              call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+              if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)     
               call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)               
             else
