@@ -119,38 +119,20 @@ module fabm_sediment_component
     logical                    :: clockIsPresent
     integer                    :: numElements,numNodes
 
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
-    !! a local clock as a clone of the parent clock, and associate it
-    !! with this component.  Finally, set the name of the local clock
-    call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
-    else
-      clock = ESMF_ClockCreate(parentClock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
-    endif
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    !! Log the call to this function
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !! read namelist input for control of timestepping  
     open(33,file='run_sed.nml',action='read',status='old')
     read(33,nml=run_nml)
 
     !! Set the time step end stop time
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=dt,rc=rc)
-    call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeIntervalSet(timeInterval, s_r8=dt, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
  
     !! also from namelist, the output timesteop is read and
     !! used to create an alarm
@@ -159,6 +141,7 @@ module fabm_sediment_component
 
     if (sed%do_output) then
       call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       outputAlarm = ESMF_AlarmCreate(clock,ringTime=startTime+alarmInterval, &
         name='outputAlarm', ringInterval=alarmInterval,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -454,13 +437,8 @@ module fabm_sediment_component
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     !call ESMF_StatePrint(importState)
 
-    !! Finally, log the successful completion of this function
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
-
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Initialize
 
@@ -496,30 +474,15 @@ module fabm_sediment_component
     integer(ESMF_KIND_I4)      :: alarmCount
     character(len=ESMF_MAXSTR) :: alarmName
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
-      timeStep=timeInterval, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' running step ',advanceCount
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     sed%bdys   => bdys
     sed%fluxes => fluxes
 
+	  call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_ClockGet(clock, alarmCount=alarmCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     if (alarmCount>0) then
@@ -628,15 +591,8 @@ module fabm_sediment_component
  
     if (allocated(fieldList)) deallocate(fieldlist)
     
-    
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+    call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
-    
   
   end subroutine Run
 
@@ -653,25 +609,8 @@ module fabm_sediment_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
-    
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
    
     close(funit)
 
@@ -686,11 +625,8 @@ module fabm_sediment_component
     !! been fixed by ESMF
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
     !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+    call MOSSCO_CompExit(gridComp, rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Finalize
 
