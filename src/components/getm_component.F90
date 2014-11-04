@@ -171,6 +171,9 @@ module getm_component
     use time, only : getm_time_timestep => timestep
     use initialise,  only: init_model,dryrun
     use integration, only: MinN,MaxN
+#ifdef GETM_PARALLEL
+    use halo_mpi, only: comm_getm
+#endif
 
     implicit none
 
@@ -187,6 +190,7 @@ module getm_component
     integer(ESMF_KIND_I4) :: localPet, petCount
     type(ESMF_VM)         :: vm
     real(ESMF_KIND_R8)    :: h_r8
+    integer               :: comm
 
     type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
     integer                 :: getmRunTimeStepCount
@@ -209,6 +213,12 @@ module getm_component
                          line=__LINE__,file=__FILE__,method='getmCmp_init()')
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end if
+
+#ifdef GETM_PARALLEL
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
+    call ESMF_VMGet(vm,mpiCommunicator=comm)
+    call MPI_COMM_DUP(comm,comm_getm,rc)
+#endif
 
     call date_and_time(datestr,timestr)
     if (clockIsPresent) then
@@ -283,7 +293,6 @@ module getm_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !! Log processor information
-    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
     call ESMF_VmGet(vm, petCount=petCount, rc=rc)
     write(message,'(A,I6,A)') trim(timestring)//' '//trim(name)//' uses ',petCount
     call ESMF_VmGetGlobal(vm=vm, rc=rc)
