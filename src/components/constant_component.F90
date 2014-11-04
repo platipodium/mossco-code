@@ -124,7 +124,7 @@ module constant_component
     type(ESMF_Mesh)                             :: mesh
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
-    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:)
+    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:), farrayPtr1(:)
     character(len=ESMF_MAXSTR)                  :: varname, meshname
     integer, parameter                          :: fileunit=21
     logical                                     :: file_readable=.true., clockIsPresent
@@ -182,9 +182,6 @@ module constant_component
         write(message,'(A,I6,A)') trim(name)//' uses unstructured grid from '//trim(fileName)//' with ',numElements,' local elements.'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         
-        !> @todo check correctness
-        localDeCount=1
-
       endif
     endif
 
@@ -316,8 +313,9 @@ module constant_component
         enddo
 
         if ((cur_item%rank == 3 .and. localDeCount3>0) &
-          .or.(cur_item%rank == 2 .and. localDeCount2>0)) then
-          write(0,*) 'constant_component: create field ', &
+          .or. (cur_item%rank == 2 .and. localDeCount2>0) &
+          .or. (numNodes > 0)) then
+          write(0,*) trim(name)//' creates field ', &
               trim(varname),' =',cur_item%value
           write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
             ' rank(',cur_item%rank,'), value ',cur_item%value
@@ -386,9 +384,9 @@ module constant_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 				do localDe=0,localDeCount-1
-          call ESMF_FieldGet(cur_item%field, localDe=localDe, farrayPtr=farrayPtr2, &
+          call ESMF_FieldGet(cur_item%field, localDe=localDe, farrayPtr=farrayPtr1, &
               computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=localrc)
-          farrayPtr2(:,:)=cur_item%value
+          farrayPtr1(:)=cur_item%value
         enddo
           
         if (len_trim(unitString)>0) then
