@@ -256,17 +256,22 @@ module getm_component
     call getmCmp_init_variables()
     call getmCmp_init_grid(gridComp)
 
-!   internal call to ESMF_FieldCreateGridDataPtr<rank><type><kind>()
-!   in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
-    TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    T3DField = ESMF_FieldCreate(getmGrid3D,T3D,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_StateAdd(exportState,(/T3DField/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (associated(Tbot)) then
+!     internal call to ESMF_FieldCreateGridData<rank><type><kind>()
+!     forced by indexflag argument.
+!     KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
+!     in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
+      TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (associated(T3D)) then
+      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/T3DField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
 
     call getmCmp_update_eState()
 
@@ -519,9 +524,6 @@ module getm_component
 #endif
 
    noKindMatch = ( kind(getmreal) .ne. ESMF_KIND_R8 )
-!  KK-TODO: as long as coordinate arrays in GETM do not hold the target
-!           attribute we have to copy the data.
-   noKindMatch = .true.
 
    if (noKindMatch) then
       select case (grid_type)
@@ -553,32 +555,32 @@ module getm_component
 #endif
       end if
     else
-!       select case (grid_type)
-!          case(1)
-!             xc1D => xcord
-!             yc1D => ycord
-!             xx1D => xxcord
-!             yx1D => yxcord
-!          case(2)
-!             lonc1D => xcord
-!             latc1D => ycord
-!             lonx1D => xxcord
-!             latx1D => yxcord
-!          case(3)
-!             xx2D => xx
-!             yx2D => yx
-!             xc2D => xc
-!             yc2D => yc
-!          case(4)
-!             lonx2D => lonx
-!             latx2D => latx
-!             lonc2D => lonc
-!             latc2D => latc
-!       end select
+      select case (grid_type)
+         case(1)
+            xc1D => xcord
+            yc1D => ycord
+            xx1D => xxcord
+            yx1D => yxcord
+         case(2)
+            lonc1D => xcord
+            latc1D => ycord
+            lonx1D => xxcord
+            latx1D => yxcord
+         case(3)
+            xx2D => xx
+            yx2D => yx
+            xc2D => xc
+            yc2D => yc
+         case(4)
+            lonx2D => lonx
+            latx2D => latx
+            lonc2D => lonc
+            latc2D => latc
+      end select
        if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
-          Tbot(imin-HALO:,imax-HALO:) => T(:,:,1)
-          T3D(imin-HALO:,imax-HALO:,1:) => T(:,:,1:)
+          Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
+          T3D(I2DFIELD,1:kmax) => T(:,:,1:kmax)
 #endif
        end if
    end if
