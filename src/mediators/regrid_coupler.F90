@@ -82,6 +82,14 @@ module regrid_coupler
     class(type_mossco_fields_handle), pointer :: currHandle=>null() 
     type(ESMF_Field)            :: importField, exportField
     integer                     :: localrc
+   
+    integer(ESMF_KIND_I4)       :: rank, localDeCount
+    type(ESMF_FieldStatus_Flag) :: status
+    type(ESMF_Mesh)             :: mesh
+    type(ESMF_Grid)             :: grid
+    type(ESMF_GeomType_Flag)    :: geomType
+    character(ESMF_MAXSTR)      :: geomName
+    integer                     :: numOwnedNodes, dimCount
     
     rc = ESMF_SUCCESS
 
@@ -140,10 +148,56 @@ module regrid_coupler
           cycle
         endif
                
+        write(message,'(A)') trim(name)//' considering '//trim(itemNameList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
 
-        call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
-          routeHandle=routehandle,regridmethod=ESMF_REGRIDMETHOD_BILINEAR,rc=localrc)
+		    call ESMF_FieldGet(importField, status=status, localDeCount=localDeCount, rank=rank, &
+		      geomType=geomType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (geomType == ESMF_GEOMTYPE_GRID) then
+          call ESMF_FieldGet(importField, grid=grid, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_GridGet(grid, dimCount=dimCount, rank=rank, name=geomName, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          write(message,'(A,I1,A,I1,A,I1)') trim(name)//' grid '//trim(geomName)//' rank ',rank,' dimensions ',dimCount
+        elseif (geomType == ESMF_GEOMTYPE_MESH) then
+           call ESMF_FieldGet(importField, mesh=mesh, rc=localrc)
+           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           call ESMF_MeshGet(mesh, numOwnedNodes=numOwnedNodes, rc=localrc)
+           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           write(message,'(A,I5,A)') trim(name)//' mesh with ',numOwnedNodes,' nodes'
+        else
+           write(message,'(A)') trim(name)//' other geomtype'
+           !! ESMF_GEOMTYPE_XGRID ESMF_TYPEKIND_LOCSTREAM
+        endif
+ 
+		    call ESMF_FieldGet(exportField, status=status, localDeCount=localDeCount, rank=rank, &
+		      geomType=geomType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (geomType == ESMF_GEOMTYPE_GRID) then
+          call ESMF_FieldGet(exportField, grid=grid, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          call ESMF_GridGet(grid, dimCount=dimCount, rank=rank, name=geomName, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          write(message,'(A,I1,A,I1,A,I1)') trim(message)//' --> grid '//trim(geomName)//' rank ',rank,' dimensions ',dimCount
+        elseif (geomType == ESMF_GEOMTYPE_MESH) then
+           call ESMF_FieldGet(importField, mesh=mesh, rc=localrc)
+           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           call ESMF_MeshGet(mesh, numOwnedNodes=numOwnedNodes, rc=localrc)
+           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           write(message,'(A,I5,A)') trim(message)//' --> mesh with ',numOwnedNodes,' nodes.'
+        else
+           write(message,'(A)') trim(name)//' --> other geomtype.'
+           !! ESMF_GEOMTYPE_XGRID ESMF_TYPEKIND_LOCSTREAM
+        endif
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+        
+        call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
+          routeHandle=routehandle,regridmethod=ESMF_REGRIDMETHOD_CONSERVE,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
         !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument 
         !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
