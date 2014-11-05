@@ -380,7 +380,7 @@ module constant_component
     else
       do 
         cur_item%field = ESMF_FieldCreate(mesh, typekind=ESMF_TYPEKIND_R8, &
-          meshloc=ESMF_MESHLOC_NODE, name=trim(cur_item%standard_name), rc=localrc)
+          meshloc=ESMF_MESHLOC_ELEMENT, name=trim(cur_item%standard_name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 				do localDe=0,localDeCount-1
@@ -456,7 +456,7 @@ module constant_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Here comes your own finalization code
