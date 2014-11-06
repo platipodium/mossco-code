@@ -89,6 +89,7 @@ erosed-svn-clone:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
 	svn co --depth empty https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $(MOSSCO_DIR)/external/erosed-svn
 	$(MAKE) erosed-svn-update
+  $(MAKE) flow2d3d-svn-export
 endif
 
 erosed-svn-update:
@@ -97,3 +98,14 @@ ifneq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/modules
 	svn update --set-depth infinity $(MOSSCO_DIR)/external/erosed-svn/source
 endif
+
+flow2d3d-svn-export:
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/bedbc1993.f90 $(MOSSCO_DIR)/external/erosed-svn/source
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $(MOSSCO_DIR)/external/erosed-svn/source
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $(MOSSCO_DIR)/external/erosed-svn/source
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source	
+	
+
+
+
+
