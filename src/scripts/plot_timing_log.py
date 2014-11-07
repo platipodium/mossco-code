@@ -51,13 +51,13 @@ for key,value in timingdict.iteritems():
   stats[key]={}
   timediffs=numpy.array(value['initialized'])-numpy.array(value['initializing'] )   
   timediff=numpy.nansum(timediffs)
-  stats[key]['Initialization']={'all':timediffs, 'total': timediff}
+  stats[key]['Initialization']={'all':timediffs, 'total': timediff, 'start': numpy.array(value['initializing'])}
   timediffs=numpy.array(value['finalized'])-numpy.array(value['finalizing'] )   
   timediff=numpy.nansum(timediffs)
-  stats[key]['Finalization']={'all':timediffs, 'total': timediff}
+  stats[key]['Finalization']={'all':timediffs, 'total': timediff, 'start': numpy.array(value['finalizing'])}
   timediffs=numpy.array(value['ran'])-numpy.array(value['running'] )   
   timediff=numpy.nansum(timediffs)
-  stats[key]['Run']={'all':timediffs, 'total': timediff}
+  stats[key]['Run']={'all':timediffs, 'total': timediff, 'start': numpy.array(value['running'])}
     
 # make piecharts
 fig=pylab.figure(1, figsize=(6,6))
@@ -92,7 +92,13 @@ for stage in ['Initialization', 'Run']: # , 'Finalization']:
   pylab.savefig(stage.lower() + '_time_spent_by_component.pdf',transparent=True,format='pdf')
   pylab.close(fig)
   
-  
+#fig=pylab.figure(5)
+#fig.clf()
+#
+#for comp,compval in stats.iteritems():
+#  for stage,stageval in compval.iteritems():
+#    pylab.plot(stageval['start'],stageval['all'])  
+#    
   
   
   

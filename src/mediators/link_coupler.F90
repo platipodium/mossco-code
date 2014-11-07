@@ -12,7 +12,7 @@
 !
 
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
-#define ESMF_ERR_PASSTHRU msg="Internal subroutine call returned Error"
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "link_coupler.F90"
 

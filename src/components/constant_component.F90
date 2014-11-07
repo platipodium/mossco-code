@@ -14,7 +14,7 @@
 !
 
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
-#define ESMF_ERR_PASSTHRU msg="Internal subroutine call returned Error"
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "constant_component.F90"
 
@@ -49,6 +49,8 @@ module constant_component
     integer, intent(out) :: rc
 
     integer              :: localrc
+    
+    rc=ESMF_SUCCESS
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
@@ -82,6 +84,8 @@ module constant_component
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+
+    rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -144,6 +148,8 @@ module constant_component
     logical                     :: fileIsPresent, labelIsPresent
     integer(ESMF_KIND_I4)       :: numNodes=0, numElements=0
     integer(ESMF_KIND_I4)       :: localDeCount, localDe
+
+    rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -425,6 +431,8 @@ module constant_component
 
     integer              :: localrc
 
+    rc=ESMF_SUCCESS
+
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc) 
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -455,6 +463,8 @@ module constant_component
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+
+    rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
