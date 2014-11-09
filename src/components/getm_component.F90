@@ -165,7 +165,7 @@ module getm_component
 !EOC
 !-----------------------------------------------------------------------
 
-  subroutine Initialize(gridComp,iState,exportState,iClock,rc)
+  subroutine Initialize(gridComp,iState,eState,iClock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
@@ -178,7 +178,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: iState,exportState ! may be uninitialized
+    type(ESMF_State)    :: iState,eState ! may be uninitialized
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
@@ -263,13 +263,13 @@ module getm_component
 !     in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
       TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
+      call ESMF_StateAdd(eState,(/TbotField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(T3D)) then
       T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/T3DField/),rc=rc)
+      call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
 
@@ -334,7 +334,7 @@ module getm_component
 
   end subroutine Initialize
 
-  subroutine Run(gridComp,iState,exportState,iClock,rc)
+  subroutine Run(gridComp,iState,eState,iClock,rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MinN
@@ -342,7 +342,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: iState,exportState ! may be uninitialized
+    type(ESMF_State)    :: iState,eState ! may be uninitialized
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
@@ -427,7 +427,7 @@ module getm_component
 
   end subroutine Run
 
-  subroutine Finalize(gridComp, iState, exportState, iClock, rc)
+  subroutine Finalize(gridComp, iState, eState, iClock, rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
@@ -436,7 +436,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: iState, exportState
+    type(ESMF_State)     :: iState, eState
     type(ESMF_Clock)     :: iClock
     integer, intent(out) :: rc
 
