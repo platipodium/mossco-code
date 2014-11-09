@@ -85,10 +85,10 @@ module getm_component
 ! !ROUTINE: InitializeP0 -
 !
 ! !INTERFACE:
-   subroutine InitializeP0(getmCmp,iState,eState,pClock,rc)
+   subroutine InitializeP0(getmCmp,iState,eState,iClock,rc)
 !
 ! !DESCRIPTION:
-!  Note: [i|e]state and pClock are uninitialized if the toplevel
+!  Note: [i|e]state and iClock are uninitialized if the toplevel
 !        component did not provide corresponding arguments to
 !        ESMF_GridCompInitialize(getmCmp).
 !  The toplevel component can inquire rc via optional keyword argument
@@ -101,7 +101,7 @@ module getm_component
 ! !INPUT/OUTPUT PARAMETERS:
    type(ESMF_GridComp) :: getmCmp
    type(ESMF_State)    :: iState,eState ! may be uninitialized
-   type(ESMF_Clock)    :: pClock        ! may be uninitialized
+   type(ESMF_Clock)    :: iClock        ! may be uninitialized
 !
 ! !OUTPUT PARAMETERS:
    integer,intent(out) :: rc
@@ -165,7 +165,7 @@ module getm_component
 !EOC
 !-----------------------------------------------------------------------
 
-  subroutine Initialize(gridComp,importState,exportState,parentClock,rc)
+  subroutine Initialize(gridComp,importState,exportState,iClock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
@@ -179,7 +179,7 @@ module getm_component
 
     type(ESMF_GridComp) :: gridComp
     type(ESMF_State)    :: importState,exportState ! may be uninitialized
-    type(ESMF_Clock)    :: parentClock        ! may be uninitialized
+    type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
     character(ESMF_MAXSTR):: name, message, timeString, string
@@ -334,7 +334,7 @@ module getm_component
 
   end subroutine Initialize
 
-  subroutine Run(gridComp,importState,exportState,parentClock,rc)
+  subroutine Run(gridComp,importState,exportState,iClock,rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MinN
@@ -343,7 +343,7 @@ module getm_component
 
     type(ESMF_GridComp) :: gridComp
     type(ESMF_State)    :: importState,exportState ! may be uninitialized
-    type(ESMF_Clock)    :: parentClock        ! may be uninitialized
+    type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
     character(ESMF_MAXSTR):: name, message, timeString
@@ -385,8 +385,8 @@ module getm_component
 
     !> Here comes your code for reading the import states
 
-    !  use parentClock to do determine time of calling routine
-    call ESMF_ClockGetNextTime(parentClock,nextTime,rc=localrc)
+    !  use iClock to do determine time of calling routine
+    call ESMF_ClockGetNextTime(iClock,nextTime,rc=localrc)
     if (localrc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
@@ -427,7 +427,7 @@ module getm_component
 
   end subroutine Run
 
-  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+  subroutine Finalize(gridComp, importState, exportState, iClock, rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
@@ -437,7 +437,7 @@ module getm_component
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
+    type(ESMF_Clock)     :: iClock
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR):: name, message, timeString
