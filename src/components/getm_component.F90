@@ -66,7 +66,7 @@ module getm_component
     integer, intent(out) :: rc
 
     call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
-                                    userRoutine=getmCmp_init_phases, &
+                                    userRoutine=InitializeP0, &
                                     phase=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
 
@@ -82,10 +82,10 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOP
 !
-! !ROUTINE: getmCmp_init_phases -
+! !ROUTINE: InitializeP0 -
 !
 ! !INTERFACE:
-   subroutine getmCmp_init_phases(getmCmp,iState,eState,pClock,rc)
+   subroutine InitializeP0(getmCmp,iState,eState,pClock,rc)
 !
 ! !DESCRIPTION:
 !  Note: [i|e]state and pClock are uninitialized if the toplevel
@@ -117,7 +117,7 @@ module getm_component
 #ifdef DEBUG
    integer, save :: Ncall = 0
    Ncall = Ncall+1
-   write(debug,*) 'getmCmp_init_phases() # ',Ncall
+   write(debug,*) 'InitializeP0() # ',Ncall
 #endif
 
    call ESMF_LogWrite("getmCmp initializing phases ... ",ESMF_LOGMSG_TRACE)
@@ -156,12 +156,12 @@ module getm_component
    call ESMF_LogWrite("getmCmp initialized phases",ESMF_LOGMSG_TRACE)
 
 #ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_init_phases()'
+   write(debug,*) 'Leaving InitializeP0()'
    write(debug,*)
 #endif
    return
 
-   end subroutine getmCmp_init_phases
+   end subroutine InitializeP0
 !EOC
 !-----------------------------------------------------------------------
 
