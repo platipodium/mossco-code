@@ -165,7 +165,7 @@ module getm_component
 !EOC
 !-----------------------------------------------------------------------
 
-  subroutine Initialize(gridComp,importState,exportState,iClock,rc)
+  subroutine Initialize(gridComp,iState,exportState,iClock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
@@ -178,7 +178,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: importState,exportState ! may be uninitialized
+    type(ESMF_State)    :: iState,exportState ! may be uninitialized
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
@@ -334,7 +334,7 @@ module getm_component
 
   end subroutine Initialize
 
-  subroutine Run(gridComp,importState,exportState,iClock,rc)
+  subroutine Run(gridComp,iState,exportState,iClock,rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MinN
@@ -342,7 +342,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: importState,exportState ! may be uninitialized
+    type(ESMF_State)    :: iState,exportState ! may be uninitialized
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
@@ -427,7 +427,7 @@ module getm_component
 
   end subroutine Run
 
-  subroutine Finalize(gridComp, importState, exportState, iClock, rc)
+  subroutine Finalize(gridComp, iState, exportState, iClock, rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
@@ -436,7 +436,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
+    type(ESMF_State)     :: iState, exportState
     type(ESMF_Clock)     :: iClock
     integer, intent(out) :: rc
 
