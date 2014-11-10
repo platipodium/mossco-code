@@ -139,12 +139,12 @@ end type vanrijn_argument
 
 type , public :: sandmud_argument
 
-    integer                                 , pointer    :: nfrac    ! number of sediment fractions
-    integer     , dimension(:)              , pointer    :: sedtyp   ! sediment type
-    real(fp)    , dimension(:)              , pointer    :: frac     ! sediment (mass) fraction [-]
-    real(fp)                                , pointer    :: mudfrac  ! mud fraction [-]
-    real(fp)                                , pointer    :: pmcrit   ! critical mud fraction [-]
-    real(fp)    , dimension(:)              , pointer    :: E        ! sediment erosion velocity [m/s]
+    integer                                 , pointer    :: nfrac   =>null()   ! number of sediment fractions
+    integer     , dimension(:)              , pointer    :: sedtyp  =>null()   ! sediment type
+    real(fp)    , dimension(:)              , pointer    :: frac    =>null()   ! sediment (mass) fraction [-]
+    real(fp)                                , pointer    :: mudfrac =>null()   ! mud fraction [-]
+    real(fp)                                , pointer    :: pmcrit  =>null()   ! critical mud fraction [-]
+    real(fp)    , dimension(:)              , pointer    :: E       =>null()   ! sediment erosion velocity [m/s]
 
 contains
     procedure,public, pass :: initialize   =>allocate_sandmud
@@ -156,6 +156,34 @@ contains
 end type sandmud_argument
 
 
+type , public    :: compbsskin_argument
+
+    real(fp), pointer  :: umean =>null()  ! depth averaged flow velocity in u-direction
+    real(fp), pointer  :: vmean =>null()  ! depth averaged flow velocity in v-direction
+    real(fp), pointer  :: depth =>null()  ! local water depth
+    real(fp), pointer  :: uorb  =>null()   ! orbital velocity based upon Hrms
+    real(fp), pointer  :: tper  =>null()   ! wave period
+    real(fp), pointer  :: teta  =>null()  ! angle between wave direction and local
+                                    ! grid orientation
+    real(fp), pointer  :: kssilt=>null() ! roughness height silt
+    real(fp), pointer  :: kssand=>null() ! roughness height sand
+                                    !(not yet used)
+    real(fp), pointer  :: thcmud=>null() ! Total hickness of mud layers
+                                    !(to be replaced by mudcnt in future)
+    real(fp), pointer  :: taumax=>null() ! resulting (maximum) bed shear stress muddy silt bed
+    logical , pointer  :: wave  =>null() ! wave impacts included in flow comp. or not
+    real(fp), pointer  :: rhowat=>null() ! water density
+    real(fp), pointer  :: vicmol=>null() ! molecular viscosity
+
+contains
+
+    procedure,public, pass :: initialize   =>allocate_compbsskin
+    procedure,public, pass :: finalize     =>deallocate_compbsskin
+    procedure,public, pass :: set          =>set_compbsskin
+    procedure,public, pass :: run          =>run_compbsskin
+    procedure,public, pass :: get          =>get_compbsskin
+
+end type   compbsskin_argument
 
 save
 
@@ -178,7 +206,8 @@ contains
 subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 & ws        , umod    , h        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf , anymud, Bioeffects )
+                & sink      , sinkf   , sour     , sourf , anymud, wave,  &
+                & uorb, tper, teta, Bioeffects)
 !----- GPL ---------------------------------------------------------------------
 !
 !  Copyright (C)  Stichting Deltares, 2012.
@@ -223,6 +252,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     type (sand_argument)                           ::      erosand_arguments
     type (vanrijn_argument)                        ::      vanrijn84_arguments
     type (sandmud_argument)                        ::      sandmud_arguments
+    type (compbsskin_argument)                     ::      compbsskin_arguments
     !
     real(fp)    , dimension(:,:)                , pointer      :: mfluff                         ! composition of fluff layer: mass of mud fractions [kg/m2]
     !
@@ -240,7 +270,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nfrac)              , intent(in)   :: sedd90        ! 90% diameter sediment fraction [m]
 
 
-    real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: taub          ! bottom shear stress [N/m2]
+    real(fp)    , dimension(nmlb:nmub)          , intent(inout):: taub          ! bottom shear stress [N/m2]
     real(fp)    , dimension(nmlb:nmub)          , intent(in)   :: umod          ! velocity magnitude (in bottom cell) [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(in)   :: ws            ! sediment settling velocity (hindered) [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(out)  :: sink          ! sediment sink flux [m/s]
@@ -249,15 +279,19 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent(out)  :: sourf         ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(nfrac,nmlb:nmub)    , intent (in)  :: frac          ! sediment (mass) fraction [-]
     real(fp)    , dimension(nmlb:nmub)          , intent (in)  :: mudfrac       ! mud fraction [-]
-    type (BioturbationEffect) , optional        , intent (in)  :: Bioeffects
-    logical                                     , intent (in)  :: anymud
+   ! type (BioturbationEffect)         , optional, intent (in)  :: Bioeffects
+    type (BioturbationEffect)                   , intent (in)  :: Bioeffects
+    logical                                     , intent (in)  :: anymud, wave
+    real(fp)    , dimension(nmlb:nmub)          , intent (in)  :: uorb
+    real(fp)    , dimension(nmlb:nmub)          , intent (in)  :: tper
+    real(fp)    , dimension(nmlb:nmub)          , intent (in)  :: teta
 !
 ! Local variables
 !
     integer                                     :: l            ! sediment counter
     integer                                     :: nm           ! cell counter
-    real(fp)                                    :: fracf
-    real(fp)                                    :: mfltot
+    real(fp)                                    :: fracf, rhowat
+    real(fp)                                    :: mfltot, vicmol
     real(fp)                                    :: sbot
     real(fp)                                    :: smfac        ! correction factor for critical bottom shear stress
     real(fp)                                    :: ssus
@@ -265,7 +299,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: fixfac       ! reduction factor in case of limited sediment availability [-]
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: rsedeq       ! equilibrium concentration [kg/m3]
     real(fp)                                    :: fc           ! Skin friction coefficient (Darcy-Weisbach)
-
+    real(fp)    , dimension(nmlb:nmub)          :: thcmud       !Total thickness of mud layers
     integer                                     :: inum, jnum, i, j
     
 
@@ -284,6 +318,10 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     sink        = 0.0_fp
     sinkf       = 0.0_fp
     sourf       = 0.0_fp
+    rhowat = 1000.0_fp
+    vicmol = 1.0e-6_fp
+    thcmud = 0.2_fp
+   ! wave =.false.
 
     !
     !   Compute change in sediment composition (e.g. based on available fractions and sediment availability)
@@ -292,14 +330,17 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     call erosand_arguments%initialize()
     call vanrijn84_arguments%initialize()
     call sandmud_arguments%initialize(nfrac)
-           
-     if (present (Bioeffects)) then
+    call compbsskin_arguments%initialize ()
+
+
+  !   if (present (Bioeffects)) then
        inum = Size(Bioeffects%ErodibilityEffect,1)
        jnum = Size(Bioeffects%ErodibilityEffect,2)
-     else
-       inum = 1
-       jnum = 1
-     endif 
+
+    ! else
+     !  inum = 1
+     !  jnum = 1
+     !endif 
 
     do nm = nmlb, nmub
         mfltot = 0.0_fp
@@ -308,6 +349,17 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 mfltot = mfltot + mfluff(l,nm)
             enddo
         endif
+ 
+                 j= 1+ mod(nm,inum)
+                 i= nm - inum*(j -1)
+
+        call compbsskin_arguments%set   (umod(nm)   , 0.0_fp     , h(nm)      , wave    , &
+                         & uorb(nm), tper  (nm)  , teta(nm), rksc  , &
+                         & rksc  , thcmud(nm), taub(nm) , rhowat, &
+                         & vicmol  )
+        call compbsskin_arguments%run ()
+        call compbsskin_arguments%get(taub(nm))
+
         do l = 1, nfrac
             if (sedtyp(l)==SEDTYP_COHESIVE) then
                 !
@@ -316,11 +368,10 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 !                write (*,*) 'cohesive ..'
                 fracf   = 0.0_fp
                 if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
-                 j= 1+ mod(nm,inum)
-                 i= nm - inum*(j -1)
+ 
                   !
 !
-                if (present (Bioeffects)) then
+    !            if (present (Bioeffects)) then
 #ifdef DEBUG
                  write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (i,j)
 
@@ -337,11 +388,11 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                           & tcrdep(l,nm)  , tcrero(l,nm) * Bioeffects%TauEffect (i,j) , eropar(l,nm)* Bioeffects%ErodibilityEffect (i,j)  ,  &
                          & flufflyr       , mfltot , tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
 
-                else
-                 call  eromud_arguments%set ( ws(l,nm)      , fixfac(l,nm)  , taub(nm)      , frac(l,nm)     , fracf  , &
-                          & tcrdep(l,nm)  , tcrero(l,nm)  , eropar(l,nm)    , flufflyr       , mfltot,  &
-                         &  tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
-                endif
+     !           else
+      !           call  eromud_arguments%set ( ws(l,nm)      , fixfac(l,nm)  , taub(nm)      , frac(l,nm)     , fracf  , &
+      !                    & tcrdep(l,nm)  , tcrero(l,nm)  , eropar(l,nm)    , flufflyr       , mfltot,  &
+       !                  &  tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
+        !        endif
                 call eromud_arguments%run ()
 
                 call eromud_arguments%get(sour (l,nm), sink (l,nm), sourf (l,nm), sinkf (l,nm) )
@@ -361,8 +412,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                 else
                     smfac = 1.0_fp
                 endif
-                !write (*,*) ' smfac= ', smfac
-                if (present (Bioeffects)) then
+           !     write (*,*) ' smfac= ', smfac
+         !       if (present (Bioeffects)) then
 #ifdef DEBUG
 !                    write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (1,1,1)
 #endif
@@ -370,7 +421,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
 #ifdef DEBUG
 !                    write (*,*) 'Bio smfac= ', smfac
 #endif
-                end if
+          !      end if
                 !
                 !   Apply sediment transport formula ( in this case vanRijn (1984) )
                 !
@@ -395,7 +446,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
                     rsedeq(l,nm) = frac(l,nm) * ssus / (umod(nm)*h(nm))
 
                 endif
-            !    write (*,*)'rsedeq', rsedeq(l,nm)
+               
                 fc = .24*(log10(12.*h(nm)/rksc))**( - 2)
                 chezy (nm) = sqrt(9.81_fp *8.0_fp / fc)
            !     write (*,*) 'rksc',rksc, 'fc', fc, 'chezy', chezy(nm)
@@ -448,6 +499,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff ,frac, mudfrac  , &
     call vanrijn84_arguments%finalize()
     call sandmud_arguments%finalize()
 
+
+    call compbsskin_arguments%finalize()
 end subroutine erosed
 
 
@@ -916,4 +969,107 @@ E = sandmud_arguments%E
 
 end subroutine get_erosion_velocity
 
+!***************************************************************
+!*******************  compbsskin *******************************
+
+Subroutine allocate_compbsskin (compbsskin_arguments)
+
+    implicit none
+    class (compbsskin_argument)  :: compbsskin_arguments
+
+
+  allocate (compbsskin_arguments%umean )
+  allocate (compbsskin_arguments%vmean )
+  allocate (compbsskin_arguments%depth )
+  allocate (compbsskin_arguments%uorb  )
+  allocate (compbsskin_arguments%tper  )
+  allocate (compbsskin_arguments%teta  )
+  allocate (compbsskin_arguments%kssilt)
+  allocate (compbsskin_arguments%kssand)
+  allocate (compbsskin_arguments%thcmud)
+  allocate (compbsskin_arguments%taumax)
+  allocate (compbsskin_arguments%wave  )
+  allocate (compbsskin_arguments%rhowat)
+  allocate (compbsskin_arguments%vicmol)
+ end subroutine  allocate_compbsskin
+
+ Subroutine deallocate_compbsskin (compbsskin_arguments)
+
+    implicit none
+    class (compbsskin_argument)  :: compbsskin_arguments
+
+
+  deallocate (compbsskin_arguments%umean )
+  deallocate (compbsskin_arguments%vmean )
+  deallocate (compbsskin_arguments%depth )
+  deallocate (compbsskin_arguments%uorb  )
+  deallocate (compbsskin_arguments%tper  )
+  deallocate (compbsskin_arguments%teta  )
+  deallocate (compbsskin_arguments%kssilt)
+  deallocate (compbsskin_arguments%kssand)
+  deallocate (compbsskin_arguments%thcmud)
+  deallocate (compbsskin_arguments%taumax)
+  deallocate (compbsskin_arguments%wave  )
+  deallocate (compbsskin_arguments%rhowat)
+  deallocate (compbsskin_arguments%vicmol)
+ end subroutine  deallocate_compbsskin
+
+
+subroutine set_compbsskin   (compbsskin_arguments, umean   , vmean     , depth      , wave    , &
+                           & uorb, tper  , teta, kssilt  , &
+                           & kssand  , thcmud, taumax    , rhowat, vicmol  )
+ implicit none
+    class (compbsskin_argument)  :: compbsskin_arguments
+
+    real(fp), intent(in)  :: umean  ! depth averaged flow velocity in u-direction
+    real(fp), intent(in)  :: vmean  ! depth averaged flow velocity in v-direction
+    real(fp), intent(in)  :: depth  ! local water depth
+    real(fp), intent(in)  :: uorb   ! orbital velocity based upon Hrms
+    real(fp), intent(in)  :: tper   ! wave period
+    real(fp), intent(in)  :: teta   ! angle between wave direction and local
+                                    ! grid orientation
+    real(fp), intent(in)  :: kssilt ! roughness height silt
+    real(fp), intent(in)  :: kssand ! roughness height sand
+                                    !(not yet used)
+    real(fp), intent(in)  :: thcmud ! Total hickness of mud layers
+                                    !(to be replaced by mudcnt in future)
+    real(fp), intent(out) :: taumax ! resulting (maximum) bed shear stress muddy silt bed
+    logical , intent(in)  :: wave   ! wave impacts included in flow comp. or not
+    real(fp), intent(in)  :: rhowat ! water density
+    real(fp), intent(in)  :: vicmol ! molecular viscosity
+
+  compbsskin_arguments%umean = umean
+  compbsskin_arguments%vmean = vmean
+  compbsskin_arguments%depth = depth
+  compbsskin_arguments%uorb  = uorb
+  compbsskin_arguments%tper  = tper
+  compbsskin_arguments%teta  = teta
+  compbsskin_arguments%kssilt= kssilt
+  compbsskin_arguments%kssand= kssand
+  compbsskin_arguments%thcmud= thcmud
+  compbsskin_arguments%taumax= taumax
+  compbsskin_arguments%wave  = wave
+  compbsskin_arguments%rhowat= rhowat
+  compbsskin_arguments%vicmol= vicmol
+
+end subroutine set_compbsskin
+
+subroutine run_compbsskin (compbsskin_arguments)
+ implicit none
+    class (compbsskin_argument)  :: compbsskin_arguments
+
+    call compbsskin (compbsskin_arguments%umean   , compbsskin_arguments%vmean     , compbsskin_arguments%depth      , compbsskin_arguments%wave    , &
+                           & compbsskin_arguments%uorb, compbsskin_arguments%tper  , compbsskin_arguments%teta, compbsskin_arguments%kssilt  , &
+                           & compbsskin_arguments%kssand  , compbsskin_arguments%thcmud, compbsskin_arguments%taumax,  &
+                           & compbsskin_arguments%rhowat, compbsskin_arguments%vicmol  )
+end subroutine run_compbsskin
+
+subroutine get_compbsskin (compbsskin_arguments, taumax)
+ implicit none
+    class (compbsskin_argument)  :: compbsskin_arguments
+     real(fp), intent(out)  ::  taumax
+
+     taumax = compbsskin_arguments%taumax
+
+end subroutine get_compbsskin
 end module erosed_driver
