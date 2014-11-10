@@ -82,8 +82,8 @@ module erosed_component
     real(fp)    , dimension(:,:), allocatable   :: sourf        ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
-    logical                                     ::lexist, anymud
-
+    logical                                     ::lexist, anymud, wave
+    real(fp)    , dimension(:)  , allocatable   :: uorb, tper, teta ! Orbital velocity [m/s], Wave period, angle between current and wave
 
 
 contains
@@ -358,6 +358,9 @@ contains
     allocate (mfluff(nfrac,nmlb:nmub))
     allocate (mudfrac (nmlb:nmub))
 
+    allocate (uorb      (nmlb:nmub))
+    allocate (tper      (nmlb:nmub))
+    allocate (teta      (nmlb:nmub))
 
     !Initialization
     sink = 0.0_fp
@@ -368,6 +371,10 @@ contains
     massfluff=0.0_fp
     mudfrac = 0.0_fp
     mfluff =0.0_fp
+    uorb = 0.0_fp
+    tper = 0.0_fp
+    teta = 0.0_fp
+    wave = .false.
   
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
   !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
@@ -783,34 +790,32 @@ contains
 
     !   Computing erosion fluxes
 
-    if (.not.associated(BioEffects%ErodibilityEffect)) then
+ !   if (.not.associated(BioEffects%ErodibilityEffect)) then
+
+  !  call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
+   !             & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
+   !             & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
+   !        & sink      , sinkf   , sour     , sourf ,anymud, wave, uorb, tper, teta             )
+
+ !   else
 
     call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
                 & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf ,anymud             )
-    else
+                & sink      , sinkf   , sour     , sourf  , anymud,  wave, uorb, tper, teta,BioEffects )
 
-     call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
-                & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
-                & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf  , anymud, BioEffects )
-    end if
+ !   end if
 
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
-
+      !> @todo add warning about negative spm concentrations
+    !  spm_concentration(:,:,l) = max (0.0_fp, spm_concentration(:,:,l) )
      do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
              j= 1+ mod(nm,inum)
              i= nm - inum*(j -1)
-
- !     if (spm_concentration(1,1,l) < 0.0_fp) write (*,*) "WARNING: spm of fraction", l, "was negative and therefore set to zero!!!"
-       
- !     spm_concentration(:,:,l) = max (0.0_fp, spm_concentration(:,:,l) )
-
              write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,1)*spm_concentration(i,j,l), sour      (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
       
        size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
@@ -911,6 +916,9 @@ contains
     deallocate (mfluff, frac)
     deallocate (sedtyp)
     deallocate (mudfrac)
+    
+    deallocate (uorb, tper,teta)
+
     !! @todo uncomment next line
     !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
     !             & tcrdep,  tcrero, tcrfluff)
