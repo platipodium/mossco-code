@@ -27,14 +27,13 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_component.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o)
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
 ifeq ($(MOSSCO_NETCDF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o)
 endif
 endif
-
-
 
 # Make targets
 
@@ -61,6 +60,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_state.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_time.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod

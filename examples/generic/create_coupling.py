@@ -1215,7 +1215,7 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
                         'input_prod', 'util_prod', 'fabm'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
-        'grid_coupler' : ['gridcoupler'],
+        'xgrid_coupler' : ['xgridcoupler'],
         'link_coupler' : ['linkcoupler'],
         'copy_coupler' : ['copycoupler'],
         'regrid_coupler' : ['regridcoupler'],
@@ -1244,7 +1244,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
-        'grid_coupler' : ['libgridcoupler'],
+        'xgrid_coupler' : ['libxgridcoupler'],
         'link_coupler' : ['liblinkcoupler'],
         'copy_coupler' : ['libcopycoupler'],
         'regrid_coupler' : ['libregridcoupler'],
@@ -1333,7 +1333,7 @@ libmossco_info libmossco_test:
 libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler libgridcoupler libregridcoupler libcopycoupler:
+libsurfacescoupler libaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:

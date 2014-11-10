@@ -66,7 +66,7 @@ module getm_component
     integer, intent(out) :: rc
 
     call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
-                                    userRoutine=getmCmp_init_phases, &
+                                    userRoutine=InitializeP0, &
                                     phase=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
 
@@ -82,13 +82,13 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOP
 !
-! !ROUTINE: getmCmp_init_phases -
+! !ROUTINE: InitializeP0 -
 !
 ! !INTERFACE:
-   subroutine getmCmp_init_phases(getmCmp,iState,eState,pClock,rc)
+   subroutine InitializeP0(getmCmp,iState,eState,iClock,rc)
 !
 ! !DESCRIPTION:
-!  Note: [i|e]state and pClock are uninitialized if the toplevel
+!  Note: [i|e]state and iClock are uninitialized if the toplevel
 !        component did not provide corresponding arguments to
 !        ESMF_GridCompInitialize(getmCmp).
 !  The toplevel component can inquire rc via optional keyword argument
@@ -101,7 +101,7 @@ module getm_component
 ! !INPUT/OUTPUT PARAMETERS:
    type(ESMF_GridComp) :: getmCmp
    type(ESMF_State)    :: iState,eState ! may be uninitialized
-   type(ESMF_Clock)    :: pClock        ! may be uninitialized
+   type(ESMF_Clock)    :: iClock        ! may be uninitialized
 !
 ! !OUTPUT PARAMETERS:
    integer,intent(out) :: rc
@@ -117,7 +117,7 @@ module getm_component
 #ifdef DEBUG
    integer, save :: Ncall = 0
    Ncall = Ncall+1
-   write(debug,*) 'getmCmp_init_phases() # ',Ncall
+   write(debug,*) 'InitializeP0() # ',Ncall
 #endif
 
    call ESMF_LogWrite("getmCmp initializing phases ... ",ESMF_LOGMSG_TRACE)
@@ -156,27 +156,30 @@ module getm_component
    call ESMF_LogWrite("getmCmp initialized phases",ESMF_LOGMSG_TRACE)
 
 #ifdef DEBUG
-   write(debug,*) 'Leaving getmCmp_init_phases()'
+   write(debug,*) 'Leaving InitializeP0()'
    write(debug,*)
 #endif
    return
 
-   end subroutine getmCmp_init_phases
+   end subroutine InitializeP0
 !EOC
 !-----------------------------------------------------------------------
 
-  subroutine Initialize(gridComp,importState,exportState,parentClock,rc)
+  subroutine Initialize(gridComp,iState,eState,iClock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
     use initialise,  only: init_model,dryrun
     use integration, only: MinN,MaxN
+#ifdef GETM_PARALLEL
+    use halo_mpi, only: comm_getm
+#endif
 
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: importState,exportState ! may be uninitialized
-    type(ESMF_Clock)    :: parentClock        ! may be uninitialized
+    type(ESMF_State)    :: iState,eState ! may be uninitialized
+    type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
     character(ESMF_MAXSTR):: name, message, timeString, string
@@ -187,6 +190,7 @@ module getm_component
     integer(ESMF_KIND_I4) :: localPet, petCount
     type(ESMF_VM)         :: vm
     real(ESMF_KIND_R8)    :: h_r8
+    integer               :: comm
 
     type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
     integer                 :: getmRunTimeStepCount
@@ -209,6 +213,12 @@ module getm_component
                          line=__LINE__,file=__FILE__,method='getmCmp_init()')
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end if
+
+#ifdef GETM_PARALLEL
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
+    call ESMF_VMGet(vm,mpiCommunicator=comm)
+    call MPI_COMM_DUP(comm,comm_getm,rc)
+#endif
 
     call date_and_time(datestr,timestr)
     if (clockIsPresent) then
@@ -246,17 +256,22 @@ module getm_component
     call getmCmp_init_variables()
     call getmCmp_init_grid(gridComp)
 
-!   internal call to ESMF_FieldCreateGridDataPtr<rank><type><kind>()
-!   in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
-    TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    T3DField = ESMF_FieldCreate(getmGrid3D,T3D,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_StateAdd(exportState,(/T3DField/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (associated(Tbot)) then
+!     internal call to ESMF_FieldCreateGridData<rank><type><kind>()
+!     forced by indexflag argument.
+!     KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
+!     in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
+      TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(eState,(/TbotField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (associated(T3D)) then
+      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
 
     call getmCmp_update_eState()
 
@@ -283,7 +298,6 @@ module getm_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !! Log processor information
-    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
     call ESMF_VmGet(vm, petCount=petCount, rc=rc)
     write(message,'(A,I6,A)') trim(timestring)//' '//trim(name)//' uses ',petCount
     call ESMF_VmGetGlobal(vm=vm, rc=rc)
@@ -320,7 +334,7 @@ module getm_component
 
   end subroutine Initialize
 
-  subroutine Run(gridComp,importState,exportState,parentClock,rc)
+  subroutine Run(gridComp,iState,eState,iClock,rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MinN
@@ -328,8 +342,8 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: importState,exportState ! may be uninitialized
-    type(ESMF_Clock)    :: parentClock        ! may be uninitialized
+    type(ESMF_State)    :: iState,eState ! may be uninitialized
+    type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
     character(ESMF_MAXSTR):: name, message, timeString
@@ -371,8 +385,8 @@ module getm_component
 
     !> Here comes your code for reading the import states
 
-    !  use parentClock to do determine time of calling routine
-    call ESMF_ClockGetNextTime(parentClock,nextTime,rc=localrc)
+    !  use iClock to do determine time of calling routine
+    call ESMF_ClockGetNextTime(iClock,nextTime,rc=localrc)
     if (localrc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
@@ -413,7 +427,7 @@ module getm_component
 
   end subroutine Run
 
-  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+  subroutine Finalize(gridComp, iState, eState, iClock, rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
@@ -422,8 +436,8 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
+    type(ESMF_State)     :: iState, eState
+    type(ESMF_Clock)     :: iClock
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR):: name, message, timeString
@@ -510,9 +524,6 @@ module getm_component
 #endif
 
    noKindMatch = ( kind(getmreal) .ne. ESMF_KIND_R8 )
-!  KK-TODO: as long as coordinate arrays in GETM do not hold the target
-!           attribute we have to copy the data.
-   noKindMatch = .true.
 
    if (noKindMatch) then
       select case (grid_type)
@@ -544,32 +555,32 @@ module getm_component
 #endif
       end if
     else
-!       select case (grid_type)
-!          case(1)
-!             xc1D => xcord
-!             yc1D => ycord
-!             xx1D => xxcord
-!             yx1D => yxcord
-!          case(2)
-!             lonc1D => xcord
-!             latc1D => ycord
-!             lonx1D => xxcord
-!             latx1D => yxcord
-!          case(3)
-!             xx2D => xx
-!             yx2D => yx
-!             xc2D => xc
-!             yc2D => yc
-!          case(4)
-!             lonx2D => lonx
-!             latx2D => latx
-!             lonc2D => lonc
-!             latc2D => latc
-!       end select
+      select case (grid_type)
+         case(1)
+            xc1D => xcord
+            yc1D => ycord
+            xx1D => xxcord
+            yx1D => yxcord
+         case(2)
+            lonc1D => xcord
+            latc1D => ycord
+            lonx1D => xxcord
+            latx1D => yxcord
+         case(3)
+            xx2D => xx
+            yx2D => yx
+            xc2D => xc
+            yc2D => yc
+         case(4)
+            lonx2D => lonx
+            latx2D => latx
+            lonc2D => lonc
+            latc2D => latc
+      end select
        if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
-          Tbot(imin-HALO:,imax-HALO:) => T(:,:,1)
-          T3D(imin-HALO:,imax-HALO:,1:) => T(:,:,1:)
+          Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
+          T3D(I2DFIELD,1:kmax) => T(:,:,1:kmax)
 #endif
        end if
    end if
