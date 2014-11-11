@@ -21,7 +21,7 @@
 !
 ! !PUBLIC DATA MEMBERS:
    public preinit_model,postinit_model,init_time,time_step
-   public do_transport_3d
+   public do_transport,do_transport_3d
    character(len=64)         :: runid
    character(len=80)         :: title
    logical                   :: hotstart=.false.
@@ -630,6 +630,63 @@
 #endif
    return
    end subroutine time_step
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: do_transport() - transport of 2D fields
+!
+! !INTERFACE:
+   subroutine do_transport(f)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain      , only: imin,imax,jmin,jmax,az,H
+   use m2d         , only: dtm,Uint,Vint
+   use advection   , only: do_advection,HALFSPLIT,P2_PDM
+   use variables_3d, only: Dn,Dun,Dvn,sseo
+   use halo_zones  , only: update_2d_halo,wait_halo,H_TAG
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+!
+! !INPUT/OUPUT PARAMETERS:
+   REALTYPE,dimension(E2DFIELD),intent(inout) :: f
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   REALTYPE,dimension(E2DFIELD) :: Dold
+   REALTYPE,parameter           :: AH=_ZERO_
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'do_transport() # ',Ncall
+#endif
+
+!  Cannot extract layer heights from grid coordinates, because these are
+!  already updated.
+!  For several timesteps we need to store Dires and calculate new
+!  D[old|[u|v]n] based on Dires.
+!  For several timesteps [U|V]int is inconsistent.
+   Dold = sseo + H
+   call update_2d_halo(f,f,az,imin,jmin,imax,jmax,H_TAG)
+   call wait_halo(H_TAG)
+   call do_advection(dtm,f,Uint,Vint,Dun,Dvn,Dold,Dn,HALFSPLIT,P2_PDM,AH,H_TAG)
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving do_transport()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine do_transport
 !EOC
 !-----------------------------------------------------------------------
 !BOP
