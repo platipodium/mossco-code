@@ -356,6 +356,7 @@ module getm_component
       type(ESMF_FieldBundle)    ,dimension(:),allocatable :: fieldBundleList
       type(ESMF_FieldBundle)                              :: fieldBundle
       type(ESMF_Field)          ,dimension(:),allocatable :: fieldList_ws,fieldList_conc
+      type(ESMF_FieldStatus_Flag)                         :: status
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
       integer                   ,dimension(:),allocatable :: transportFieldCountList,namelenList
       integer                                             :: transportFieldCount,itemCount
@@ -419,21 +420,37 @@ module getm_component
             allocate(transport_ws  (transportFieldCount))
             allocate(transport_conc(transportFieldCount))
 
+
             do n=1,transportFieldCount
-               allocate(transport_ws(n)%ptr(I3DFIELD))
-               call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,        &
-                                            transport_ws(n)%ptr,               &
-                                            ESMF_INDEX_DELOCAL,                &
-                                            staggerloc=ESMF_STAGGERLOC_CENTER, &
-                                            totalLWidth=(/HALO,HALO,1/),       &
-                                            totalUWidth=(/HALO,HALO,0/))
-               allocate(transport_conc(n)%ptr(I3DFIELD))
-               call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,            &
-                                            transport_conc(n)%ptr,                   &
-                                            ESMF_INDEX_DELOCAL,                      &
-                                            staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
-                                            totalLWidth=(/HALO,HALO,1/),             &
-                                            totalUWidth=(/HALO,HALO,0/))
+
+               call ESMF_FieldGet(fieldList_ws(n),status=status)
+
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY .or. status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+                  allocate(transport_ws(n)%ptr(I3DFIELD))
+                  call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,              &
+                                               transport_ws(n)%ptr,                     &
+                                               ESMF_INDEX_DELOCAL,                      &
+                                               staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+                                               totalLWidth=(/HALO,HALO,1/),             &
+                                               totalUWidth=(/HALO,HALO,0/))
+               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+                  call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr)
+               end if
+
+               call ESMF_FieldGet(fieldList_conc(n),status=status)
+
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY .or. status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+                  allocate(transport_conc(n)%ptr(I3DFIELD))
+                  call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,      &
+                                               transport_conc(n)%ptr,             &
+                                               ESMF_INDEX_DELOCAL,                &
+                                               staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                               totalLWidth=(/HALO,HALO,1/),       &
+                                               totalUWidth=(/HALO,HALO,0/))
+               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+                  call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr)
+               end if
+
             end do
 
          end if
