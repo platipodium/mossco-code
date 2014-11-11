@@ -53,7 +53,10 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
 
-  real(ESMF_KIND_R8),dimension(:,:,:,:),allocatable,target :: transport_ws,transport_conc
+  type :: ptrarray3D
+     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
+  end type ptrarray3D
+  type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 
   contains
 
@@ -413,18 +416,20 @@ module getm_component
                end if
             end do
 
-            allocate(transport_ws  (I3DFIELD,transportFieldCount))
-            allocate(transport_conc(I3DFIELD,transportFieldCount))
+            allocate(transport_ws  (transportFieldCount))
+            allocate(transport_conc(transportFieldCount))
 
             do n=1,transportFieldCount
+               allocate(transport_ws(n)%ptr(I3DFIELD))
                call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,        &
-                                            transport_ws(:,:,:,n),             &
+                                            transport_ws(n)%ptr,               &
                                             ESMF_INDEX_DELOCAL,                &
                                             staggerloc=ESMF_STAGGERLOC_CENTER, &
                                             totalLWidth=(/HALO,HALO,1/),       &
                                             totalUWidth=(/HALO,HALO,0/))
+               allocate(transport_conc(n)%ptr(I3DFIELD))
                call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,            &
-                                            transport_conc(:,:,:,n),                 &
+                                            transport_conc(n)%ptr,                   &
                                             ESMF_INDEX_DELOCAL,                      &
                                             staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
                                             totalLWidth=(/HALO,HALO,1/),             &
@@ -1168,23 +1173,25 @@ module getm_component
    write(debug,*) 'getmCmp_transport() # ',Ncall
 #endif
 
-   do n=1,ubound(transport_conc,4)
+   if ( .not. allocated(transport_conc) ) return
+
+   do n=1,size(transport_conc)
 
       if (noKindMatch) then
-         t_conc = transport_conc(:,:,:,n)
-         t_ws   = transport_ws  (:,:,:,n)
+         t_conc = transport_conc(n)%ptr
+         t_ws   = transport_ws  (n)%ptr
          p_conc => t_conc
          p_ws   => t_ws
       else
-         p_conc => transport_conc(:,:,:,n)
-         p_ws   => transport_ws  (:,:,:,n)
+         p_conc => transport_conc(n)%ptr
+         p_ws   => transport_ws  (n)%ptr
       end if
 
       call do_transport_3d(p_conc,p_ws)
 
       if (noKindMatch) then
-         transport_conc(:,:,:,n) = t_conc
-         transport_ws  (:,:,:,n) = t_ws
+         transport_conc(n)%ptr = t_conc
+         transport_ws  (n)%ptr = t_ws
       end if
 
    end do
