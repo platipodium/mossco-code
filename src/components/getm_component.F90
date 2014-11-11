@@ -396,7 +396,7 @@ module getm_component
          do i=1,itemCount
 !           identify items to be transported by suffix "_z_velocity"
             namelenList(i) = len_trim(itemNameList(i))
-            if (itemNameList(i)(namelenList(i)-10:) .ne. '_z_velocity') cycle
+            if (itemNameList(i)(namelenList(i)-10:namelenList(i)) .ne. '_z_velocity') cycle
             if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
             else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
