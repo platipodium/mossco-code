@@ -380,7 +380,6 @@ module getm_component
                                    itemTypeList=itemTypeList)
 
          do i=1,itemCount
-!           coupler called ESMF_FieldEmptyCreate(name) during InitializeP1()
 !           identify items to be transported by suffix "_z_velocity"
             namelenList(i) = len_trim(itemNameList(i))
             if (itemNameList(i)(namelenList(i)-10:) .ne. '_z_velocity') cycle
@@ -426,6 +425,14 @@ module getm_component
                call ESMF_FieldGet(fieldList_ws(n),status=status)
 
                if (status.eq.ESMF_FIELDSTATUS_EMPTY .or. status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+!                 Either coupler called ESMF_FieldEmptyCreate(name),
+!                 because fabm_pelagic ships with its own grid (coupler
+!                 checks whether temperature field in fabm_pelagic's
+!                 iState is already completed). Or coupler copied empty
+!                 field, because fabm_pelagic was created with getmGrid.
+!                 In the latter case the state variables are allocated
+!                 only here (and the exclusiveDomain still needs to be
+!                 passed to FABM!) in order to include the total domain.
                   allocate(transport_ws(n)%ptr(I3DFIELD))
                   call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,              &
                                                transport_ws(n)%ptr,                     &
@@ -434,6 +441,11 @@ module getm_component
                                                totalLWidth=(/HALO,HALO,1/),             &
                                                totalUWidth=(/HALO,HALO,0/))
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+!                 Coupler copied completed fields from fabm_pelagic,
+!                 because "foreignGridField" was provided to fabm_pelagic
+!                 (coupler checks whether temperature field in fabm_pelagic's
+!                  iState is empty).
+!                 The field MUST include the HALO zones and k=0 !!!
                   call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr)
                end if
 
