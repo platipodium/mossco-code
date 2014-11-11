@@ -111,7 +111,7 @@ module getm_component
 ! !REVISION HISTORY:
 !
 ! !LOCAL VARIABLES
-   character(len=NUOPC_PhaseMapStringLength) :: InitializePhaseMap(1)
+   character(len=NUOPC_PhaseMapStringLength) :: InitializePhaseMap(2)
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -147,8 +147,8 @@ module getm_component
 !
 ! (!) has to be done by the user, (*) optional by the user
 
-!  KK-TODO: Not sure whether we can communicate that no phase 2 is available...
    InitializePhaseMap(1) = "IPDv00p1=1"
+   InitializePhaseMap(2) = "IPDv00p2=2"
 
    call NUOPC_GridCompAttributeAdd(getmCmp)
    call ESMF_AttributeSet(getmCmp,name="InitializePhaseMap",           &
