@@ -56,6 +56,8 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
 
+  real(ESMF_KIND_R8),dimension(:,:,:,:),allocatable,target :: transport_ws,transport_conc
+
   contains
 
   subroutine SetServices(gridcomp, rc)
@@ -70,7 +72,7 @@ module getm_component
                                     phase=0,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, InitializeP1, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -120,7 +122,7 @@ module getm_component
    write(debug,*) 'InitializeP0() # ',Ncall
 #endif
 
-   call ESMF_LogWrite("getmCmp initializing phases ... ",ESMF_LOGMSG_TRACE)
+   call ESMF_LogWrite("getmCmp initializing P0 ... ",ESMF_LOGMSG_TRACE)
 
 !  Note (KK): NUOPC initialises all components in various phases. By
 !             default NUOPC assumes IPDv00 and thus requires userRoutines
@@ -153,7 +155,7 @@ module getm_component
                                   valueList=InitializePhaseMap,        &
                                   convention="NUOPC",purpose="General",rc=rc)
 
-   call ESMF_LogWrite("getmCmp initialized phases",ESMF_LOGMSG_TRACE)
+   call ESMF_LogWrite("getmCmp initialized P0",ESMF_LOGMSG_TRACE)
 
 #ifdef DEBUG
    write(debug,*) 'Leaving InitializeP0()'
@@ -165,7 +167,7 @@ module getm_component
 !EOC
 !-----------------------------------------------------------------------
 
-  subroutine Initialize(gridComp,iState,eState,iClock,rc)
+  subroutine InitializeP1(gridComp,iState,eState,iClock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
@@ -197,6 +199,8 @@ module getm_component
     character(len=8)        :: datestr
     character(len=10)       :: timestr
     character(len=19)       :: TimeStrISOFrac,start_external,stop_external
+
+   call ESMF_LogWrite("getmCmp initializing P1 ... ",ESMF_LOGMSG_TRACE)
 
     !! Check whether there is already a clock (it might have been set
     !! with a prior ESMF_gridCompCreate() call.  If not, then create
@@ -332,7 +336,108 @@ module getm_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-  end subroutine Initialize
+   call ESMF_LogWrite("getmCmp initialized P1",ESMF_LOGMSG_TRACE)
+
+  end subroutine InitializeP1
+
+!-----------------------------------------------------------------------
+
+   subroutine InitializeP2(gridComp,iState,eState,iClock,rc)
+
+      use domain, only: imin,imax,jmin,jmax,kmax
+      implicit none
+
+      type(ESMF_GridComp) :: gridComp
+      type(ESMF_State)    :: iState,eState ! may be uninitialized
+      type(ESMF_Clock)    :: iClock        ! may be uninitialized
+      integer,intent(out) :: rc
+
+      type(ESMF_StateItem_Flag) ,dimension(:),allocatable :: itemTypeList
+      type(ESMF_FieldBundle)    ,dimension(:),allocatable :: fieldBundleList
+      type(ESMF_FieldBundle)                              :: fieldBundle
+      type(ESMF_Field)          ,dimension(:),allocatable :: fieldList_ws,fieldList_conc
+      character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
+      integer                   ,dimension(:),allocatable :: transportFieldCountList
+      integer                                             :: transportFieldCount,itemCount
+      integer                                             :: i,ii,j
+
+      call ESMF_LogWrite("getmCmp initializing P2 ... ",ESMF_LOGMSG_TRACE)
+
+      call ESMF_StateGet(iState,itemCount=itemCount)
+
+
+      if (itemCount .gt. 0) then
+
+         allocate(itemTypeList           (itemCount))
+         allocate(itemNameList           (itemCount))
+         allocate(fieldBundleList        (itemCount))
+         allocate(transportFieldCountList(itemCount))
+         transportFieldCountList = 0
+
+         call ESMF_StateGet(iState,itemNameList=itemNameList, &
+                                   itemTypeList=itemTypeList)
+
+         do i=1,itemCount
+!           coupler called ESMF_FieldEmptyCreate(name) and
+!           FieldEmptySet(grid,staggerloc) during InitializeP1()
+!           identify items to be transported by suffix "_z_velocity"
+            if (itemNameList(i)(len(itemNameList(i))-10:) .ne. '_z_velocity') cycle
+            if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
+               transportFieldCountList(i) = 1
+            else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
+               call ESMF_StateGet(iState,itemNameList(i),fieldBundleList(i))
+               call ESMF_FieldBundleGet(fieldBundleList(i),fieldCount=transportFieldCountList(i))
+            end if
+         end do
+
+         transportFieldCount = sum(transportFieldCountList)
+
+
+         if (transportFieldCount .gt. 0) then
+
+            allocate(fieldList_ws  (transportFieldCount))
+            allocate(fieldList_conc(transportFieldCount))
+            j = 1
+
+            do i=1,itemCount
+               if (transportFieldCountList(i) .eq. 0) cycle
+               if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
+                  call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(j))
+                  call ESMF_StateGet(iState,itemNameList(i)(:len(itemNameList(i))-11),fieldList_conc(j))
+                  j = j + 1
+               else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
+                  do ii=1,transportFieldCountList(i)
+                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(j))
+                     call ESMF_StateGet(iState,itemNameList(i)(:len(itemNameList(i))-11),fieldBundle)
+                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(j))
+                     j = j + 1
+                  end do
+               end if
+            end do
+
+            allocate(transport_ws  (I3DFIELD,transportFieldCount))
+            allocate(transport_conc(I3DFIELD,transportFieldCount))
+
+            do j=1,transportFieldCount
+               call ESMF_FieldEmptyComplete(fieldList_ws(j),transport_ws(:,:,:,j), &
+                                            indexflag=ESMF_INDEX_DELOCAL,          &
+                                            totalLWidth=(/HALO,HALO,1/),           &
+                                            totalUWidth=(/HALO,HALO,0/))
+               call ESMF_FieldEmptyComplete(fieldList_conc(j),transport_conc(:,:,:,j), &
+                                            indexflag=ESMF_INDEX_DELOCAL,              &
+                                            totalLWidth=(/HALO,HALO,1/),               &
+                                            totalUWidth=(/HALO,HALO,0/))
+            end do
+
+         end if
+
+      end if
+
+      call ESMF_LogWrite("getmCmp initialized P2",ESMF_LOGMSG_TRACE)
+
+   end subroutine InitializeP2
+
+!-----------------------------------------------------------------------
 
   subroutine Run(gridComp,iState,eState,iClock,rc)
 
