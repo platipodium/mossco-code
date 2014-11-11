@@ -406,9 +406,9 @@ module getm_component
                   call ESMF_StateGet(iState,itemNameList(i)(:len(itemNameList(i))-11),fieldList_conc(j))
                   j = j + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
+                  call ESMF_StateGet(iState,itemNameList(i)(:len(itemNameList(i))-11),fieldBundle)
                   do ii=1,transportFieldCountList(i)
                      call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(j))
-                     call ESMF_StateGet(iState,itemNameList(i)(:len(itemNameList(i))-11),fieldBundle)
                      call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(j))
                      j = j + 1
                   end do
@@ -433,7 +433,7 @@ module getm_component
 
       end if
 
-      call ESMF_LogWrite("getmCmp initialized P2",ESMF_LOGMSG_TRACE)
+      call ESMF_LogWrite("getmCmp initialized P2",ESMF_LOGMSG_TRACE,rc=rc)
 
    end subroutine InitializeP2
 
