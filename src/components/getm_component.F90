@@ -13,6 +13,7 @@
 !
 
 !> @todo, get rid of include file here
+#define FOREIGN_GRID
 #include "cppdefs.h"
 
 module getm_component
@@ -271,7 +272,11 @@ module getm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(T3D)) then
+#ifdef FOREIGN_GRID
+      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+#else
       T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+#endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -696,7 +701,11 @@ module getm_component
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          allocate(Tbot(I2DFIELD))
+#ifdef FOREIGN_GRID
+         allocate(T3D(I3DFIELD))
+#else
          allocate(T3D(I2DFIELD,1:kmax))
+#endif
 #endif
       end if
     else
@@ -725,7 +734,11 @@ module getm_component
        if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
           Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
+#ifdef FOREIGN_GRID
+          T3D=>T
+#else
           T3D(I2DFIELD,1:kmax) => T(:,:,1:kmax)
+#endif
 #endif
        end if
    end if
@@ -1154,7 +1167,11 @@ module getm_component
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          Tbot = T(:,:,1)
+#ifdef FOREIGN_GRID
+         T3D = T
+#else
          T3D = T(:,:,1:)
+#endif
 #endif
       end if
    end if
