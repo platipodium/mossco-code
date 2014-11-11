@@ -379,8 +379,7 @@ module getm_component
                                    itemTypeList=itemTypeList)
 
          do i=1,itemCount
-!           coupler called ESMF_FieldEmptyCreate(name) and
-!           FieldEmptySet(grid,staggerloc) during InitializeP1()
+!           coupler called ESMF_FieldEmptyCreate(name) during InitializeP1()
 !           identify items to be transported by suffix "_z_velocity"
             namelenList(i) = len_trim(itemNameList(i))
             if (itemNameList(i)(namelenList(i)-10:) .ne. '_z_velocity') cycle
@@ -421,13 +420,17 @@ module getm_component
             allocate(transport_conc(I3DFIELD,transportFieldCount))
 
             do j=1,transportFieldCount
-               call ESMF_FieldEmptyComplete(fieldList_ws(j),transport_ws(:,:,:,j), &
-                                            indexflag=ESMF_INDEX_DELOCAL,          &
-                                            totalLWidth=(/HALO,HALO,1/),           &
+               call ESMF_FieldEmptyComplete(fieldList_ws(j),getmGrid3D,        &
+                                            transport_ws(:,:,:,j),             &
+                                            ESMF_INDEX_DELOCAL,                &
+                                            staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                            totalLWidth=(/HALO,HALO,1/),       &
                                             totalUWidth=(/HALO,HALO,0/))
-               call ESMF_FieldEmptyComplete(fieldList_conc(j),transport_conc(:,:,:,j), &
-                                            indexflag=ESMF_INDEX_DELOCAL,              &
-                                            totalLWidth=(/HALO,HALO,1/),               &
+               call ESMF_FieldEmptyComplete(fieldList_conc(j),getmGrid3D,            &
+                                            transport_conc(:,:,:,j),                 &
+                                            ESMF_INDEX_DELOCAL,                      &
+                                            staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+                                            totalLWidth=(/HALO,HALO,1/),             &
                                             totalUWidth=(/HALO,HALO,0/))
             end do
 
