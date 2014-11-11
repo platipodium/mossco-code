@@ -357,7 +357,7 @@ module getm_component
       type(ESMF_FieldBundle)                              :: fieldBundle
       type(ESMF_Field)          ,dimension(:),allocatable :: fieldList_ws,fieldList_conc
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
-      integer                   ,dimension(:),allocatable :: transportFieldCountList
+      integer                   ,dimension(:),allocatable :: transportFieldCountList,namelenList
       integer                                             :: transportFieldCount,itemCount
       integer                                             :: i,ii,j
 
@@ -370,6 +370,7 @@ module getm_component
 
          allocate(itemTypeList           (itemCount))
          allocate(itemNameList           (itemCount))
+         allocate(namelenList            (itemCount))
          allocate(fieldBundleList        (itemCount))
          allocate(transportFieldCountList(itemCount))
          transportFieldCountList = 0
@@ -381,7 +382,8 @@ module getm_component
 !           coupler called ESMF_FieldEmptyCreate(name) and
 !           FieldEmptySet(grid,staggerloc) during InitializeP1()
 !           identify items to be transported by suffix "_z_velocity"
-            if (itemNameList(i)(len(itemNameList(i))-10:) .ne. '_z_velocity') cycle
+            namelenList(i) = len_trim(itemNameList(i))
+            if (itemNameList(i)(namelenList(i)-10:) .ne. '_z_velocity') cycle
             if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
             else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
@@ -403,10 +405,10 @@ module getm_component
                if (transportFieldCountList(i) .eq. 0) cycle
                if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                   call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(j))
-                  call ESMF_StateGet(iState,itemNameList(i)(:len(itemNameList(i))-11),fieldList_conc(j))
+                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldList_conc(j))
                   j = j + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-                  call ESMF_StateGet(iState,itemNameList(i)(:len(itemNameList(i))-11),fieldBundle)
+                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldBundle)
                   do ii=1,transportFieldCountList(i)
                      call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(j))
                      call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(j))
