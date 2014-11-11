@@ -447,6 +447,8 @@ module getm_component
 !                 In the latter case the state variables are allocated
 !                 only here (and the exclusiveDomain still needs to be
 !                 passed to FABM!) in order to include the total domain.
+!                 PROBLEM: exclusiveDomain is not contiguous and cannot
+!                          be provided to FABM!!!
                   allocate(transport_ws(n)%ptr(I3DFIELD))
                   call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,              &
                                                transport_ws(n)%ptr,                     &
