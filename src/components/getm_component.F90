@@ -26,7 +26,7 @@ module getm_component
   public SetServices
 
 ! this probably violates general ESMF rules :-)
-  public do_transport,do_transport_3d
+  public do_transport
 
   private getmCmp_init_variables
   private getmCmp_init_grid,getmCmp_update_grid
@@ -359,7 +359,7 @@ module getm_component
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
       integer                   ,dimension(:),allocatable :: transportFieldCountList,namelenList
       integer                                             :: transportFieldCount,itemCount
-      integer                                             :: i,ii,j
+      integer                                             :: i,ii,n
 
       call ESMF_LogWrite("getmCmp initializing P2 ... ",ESMF_LOGMSG_TRACE)
 
@@ -398,20 +398,20 @@ module getm_component
 
             allocate(fieldList_ws  (transportFieldCount))
             allocate(fieldList_conc(transportFieldCount))
-            j = 1
+            n = 1
 
             do i=1,itemCount
                if (transportFieldCountList(i) .eq. 0) cycle
                if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
-                  call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(j))
-                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldList_conc(j))
-                  j = j + 1
+                  call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(n))
+                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldList_conc(n))
+                  n = n + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
                   call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldBundle)
                   do ii=1,transportFieldCountList(i)
-                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(j))
-                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(j))
-                     j = j + 1
+                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n))
+                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n))
+                     n = n + 1
                   end do
                end if
             end do
@@ -419,15 +419,15 @@ module getm_component
             allocate(transport_ws  (I3DFIELD,transportFieldCount))
             allocate(transport_conc(I3DFIELD,transportFieldCount))
 
-            do j=1,transportFieldCount
-               call ESMF_FieldEmptyComplete(fieldList_ws(j),getmGrid3D,        &
-                                            transport_ws(:,:,:,j),             &
+            do n=1,transportFieldCount
+               call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,        &
+                                            transport_ws(:,:,:,n),             &
                                             ESMF_INDEX_DELOCAL,                &
                                             staggerloc=ESMF_STAGGERLOC_CENTER, &
                                             totalLWidth=(/HALO,HALO,1/),       &
                                             totalUWidth=(/HALO,HALO,0/))
-               call ESMF_FieldEmptyComplete(fieldList_conc(j),getmGrid3D,            &
-                                            transport_conc(:,:,:,j),                 &
+               call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,            &
+                                            transport_conc(:,:,:,n),                 &
                                             ESMF_INDEX_DELOCAL,                      &
                                             staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
                                             totalLWidth=(/HALO,HALO,1/),             &
@@ -518,6 +518,8 @@ module getm_component
         call time_step(runtype,n)
       end if
 
+      call getmCmp_transport()
+
       call ESMF_ClockAdvance(clock)
       call ESMF_ClockGet(clock,currtime=currTime,advanceCount=advanceCount)
     end do
@@ -536,6 +538,8 @@ module getm_component
 
 
   end subroutine Run
+
+!-----------------------------------------------------------------------
 
   subroutine Finalize(gridComp, iState, eState, iClock, rc)
 
@@ -1135,6 +1139,70 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOP
 !
+! !ROUTINE: getmCmp_transport() - transport of additional fields
+!
+! !INTERFACE:
+   subroutine getmCmp_transport()
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain, only: imin,imax,jmin,jmax,kmax
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+!
+! !INPUT/OUPUT PARAMETERS:
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   REALTYPE,dimension(I3DFIELD),target  :: t_conc,t_ws
+   REALTYPE,dimension(:,:,:)   ,pointer :: p_conc,p_ws
+   integer                              :: n
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_transport() # ',Ncall
+#endif
+
+   do n=1,ubound(transport_conc,4)
+
+      if (noKindMatch) then
+         t_conc = transport_conc(:,:,:,n)
+         t_ws   = transport_ws  (:,:,:,n)
+         p_conc => t_conc
+         p_ws   => t_ws
+      else
+         p_conc => transport_conc(:,:,:,n)
+         p_ws   => transport_ws  (:,:,:,n)
+      end if
+
+      call do_transport_3d(p_conc,p_ws)
+
+      if (noKindMatch) then
+         transport_conc(:,:,:,n) = t_conc
+         transport_ws  (:,:,:,n) = t_ws
+      end if
+
+   end do
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving getmCmp_transport()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_transport
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
 ! !ROUTINE: do_transport() - do transport of 2D fields
 !
 ! !INTERFACE:
@@ -1208,96 +1276,6 @@ module getm_component
    return
 
    end subroutine do_transport
-!EOC
-!-----------------------------------------------------------------------
-!BOP
-!
-! !ROUTINE: do_transport_3d() - do transport of 3D fields
-!
-! !INTERFACE:
-   subroutine do_transport_3d(getmCmp,dt,field,AH,wsfield)
-!
-! !DESCRIPTION:
-!
-! !USES:
-   use domain      , only: imin,imax,jmin,jmax,kmax,az
-   use advection_3d, only: do_advection_3d
-   use advection   , only: HALFSPLIT,P2_PDM
-   use variables_3d, only: uu,vv,ww,hun,hvn,ho,hn,nuh
-   use halo_zones  , only: update_3d_halo,wait_halo
-   use halo_zones  , only: H_TAG
-   use util        , only: NEUMANN,FLUX
-   IMPLICIT NONE
-!
-! !INPUT PARAMETERS:
-   type(ESMF_GridComp)                  :: getmCmp
-   REALTYPE,intent(in)                  :: dt,AH
-   type(ESMF_Field),intent(in),optional :: wsfield
-!
-! !INPUT/OUPUT PARAMETERS:
-   type(ESMF_Field)                     :: field
-!
-! !REVISION HISTORY:
-!  Original Author(s): Knut Klingbeil
-!
-! !LOCAL VARIABLES
-   REALTYPE,dimension(I3DFIELD)                :: f
-   real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farrayPtrf,farrayPtrws
-   REALTYPE,dimension(0:kmax)                  :: sour,Taur,ws
-   integer                                     :: i,j
-   logical                                     :: ws_present
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'do_transport_3d() # ',Ncall
-#endif
-
-!  KK-TODO: VMIsPetLocal() ???
-   if (.not. ESMF_GridCompIsPetLocal(getmCmp)) return
-
-   ws_present = present(wsfield)
-
-   call ESMF_FieldGet(field,farrayPtr=farrayPtrf)
-   if (ws_present) call ESMF_FieldGet(wsfield,farrayPtr=farrayPtrws)
-
-   f(:,:,1:) = farrayPtrf
-
-!  see comments in do_transport()
-   call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
-   call wait_halo(H_TAG)
-   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,AH,H_TAG)
-
-   sour = _ZERO_
-   Taur = 1.d15
-   do j=jmin,jmax
-      do i=imin,imax
-         if (az(i,j) .eq. 1) then
-            if (ws_present) then
-!              Do advection step due to settling or rising
-               ws = farrayPtrws(i,j,:)
-               call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws,FLUX,FLUX, &
-                               _ZERO_,_ZERO_,6,1,f(i,j,:))
-            end if
-            call diff_center(kmax,dt,_ONE_,1,hn(i,j,:),NEUMANN,NEUMANN, &
-                             _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &
-                             f(i,j,:),f(i,j,:))
-         end if
-      end do
-   end do
-
-   farrayPtrf = f(:,:,1:)
-
-#ifdef DEBUG
-   write(debug,*) 'Leaving do_transport_3d()'
-   write(debug,*)
-#endif
-   return
-
-   end subroutine do_transport_3d
 !EOC
 !-----------------------------------------------------------------------
 !BOP

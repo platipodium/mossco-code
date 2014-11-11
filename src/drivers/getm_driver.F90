@@ -21,6 +21,7 @@
 !
 ! !PUBLIC DATA MEMBERS:
    public preinit_model,postinit_model,init_time,time_step
+   public do_transport_3d
    character(len=64)         :: runid
    character(len=80)         :: title
    logical                   :: hotstart=.false.
@@ -629,6 +630,77 @@
 #endif
    return
    end subroutine time_step
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: do_transport_3d() - transport of 3D fields
+!
+! !INTERFACE:
+   subroutine do_transport_3d(f,ws)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain      ,only: imin,imax,jmin,jmax,kmax,az
+   use m3d         ,only: dt,cnpar
+   use advection_3d,only: do_advection_3d
+   use variables_3d,only: uu,vv,ww,hun,hvn,ho,hn,nuh
+   use halo_zones  ,only: update_3d_halo,wait_halo,H_TAG
+   use advection   ,only: HALFSPLIT
+   use util        ,only: P2_PDM,NEUMANN,FLUX
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   REALTYPE,dimension(I3DFIELD),intent(in)    :: ws
+!
+! !INPUT/OUPUT PARAMETERS:
+   REALTYPE,dimension(I3DFIELD),intent(inout) :: f
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   REALTYPE,dimension(0:kmax) :: sour,Taur
+   integer                    :: i,j
+   REALTYPE,parameter         :: AH=_ZERO_
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'do_transport_3d() # ',Ncall
+#endif
+
+!  see comments in do_transport()
+   call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
+   call wait_halo(H_TAG)
+   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,AH,H_TAG)
+
+   sour = _ZERO_
+   Taur = 1.d15
+   do j=jmin,jmax
+      do i=imin,imax
+         if (az(i,j) .eq. 1) then
+!           Do advection step due to settling or rising
+            call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws(i,j,:),FLUX,FLUX, &
+                            _ZERO_,_ZERO_,P2_PDM,1,f(i,j,:))
+            call diff_center(kmax,dt,cnpar,1,hn(i,j,:),NEUMANN,NEUMANN, &
+                             _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &
+                             f(i,j,:),f(i,j,:))
+         end if
+      end do
+   end do
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving do_transport_3d()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine do_transport_3d
 !EOC
 !-----------------------------------------------------------------------
 
