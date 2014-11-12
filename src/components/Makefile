@@ -105,7 +105,7 @@ libmossco_getm_driver:
 
 getm_component.o: getm_component.F90
 	@echo "Compiling $<"
-	$(F90) -I$(GETM_INCLUDE_PATH) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) $(GETM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm0d_component.o: fabm0d_component.F90
 	@echo "Compiling $<"

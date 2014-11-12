@@ -243,8 +243,6 @@ ifeq ($(MOSSCO_GOTM),true)
 endif
 
 ifeq ($(MOSSCO_GETM),true)
-  GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
-  GETM_INCLUDE_PATH=$(GETMDIR)/include
   GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
   GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
   GETM_LIBS := -lgetm_prod  -loutput_prod -lmeteo_prod
@@ -261,11 +259,8 @@ ifeq ($(MOSSCO_GETM),true)
   ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
     DEFINES += -DGETM_PARALLEL
   endif
-  export GETM_MODULE_PATH
-  export GETM_INCLUDE_PATH
   export GETM_LIBRARY_PATH
-  export GETM_LINKDIRS
-  export GETM_LIBS
+  export GETM_CPPFLAGS = -I$(GETMDIR)/include -I$(GETMDIR)/modules/$(FORTRAN_COMPILER)
   export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
 endif
 export MOSSCO_GETM
@@ -373,9 +368,6 @@ INCLUDES  += -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drive
 endif
 ifeq ($(MOSSCO_GOTM),true)
 INCLUDES += -I$(GOTM_MODULE_PATH) -I$(GOTM_INCLUDE_PATH)
-endif
-ifeq ($(MOSSCO_GETM),true)
-INCLUDES += -I$(GETM_MODULE_PATH) -I$(GETM_INCLUDE_PATH)
 endif
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
