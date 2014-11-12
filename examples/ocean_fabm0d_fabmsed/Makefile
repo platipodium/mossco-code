@@ -28,12 +28,11 @@ LDFLAGS += $(FABM_LDFLAGS)
 .PHONY: all exec libremtc libsediment liboceansedimentcoupler libmossco_util
 
 all: exec
-exec: ocean_fabm0d_fabmsed
+exec: libmossco_util libmossco_fabm0d libsediment libremtc liboceansedimentcoupler ocean_fabm0d_fabmsed
 
-ocean_fabm0d_fabmsed: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o ocean_fabm0d_fabmsed  $^ $(LDFLAGS)
-	@echo "Created example binary ocean_fabm0d_fabmsed in $(PWD)"
-	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d_fabmsed/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d_fabmsed.txt
+ocean_fabm0d_fabmsed: toplevel_component.o ../common/main.o
+	$(F90) $(F90FLAGS)  $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
@@ -47,13 +46,7 @@ liboceansedimentcoupler:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment libremtc liboceansedimentcoupler
-
-main.F90: ../common/main.F90
-	ln -f $< $@
-
 clean: extraclean
 
 extraclean:
-	@rm -f ocean_fabm0d_fabmsed main.F90
+	@rm -f ocean_fabm0d_fabmsed
