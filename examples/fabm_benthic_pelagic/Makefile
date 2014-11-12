@@ -1,13 +1,13 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
+# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
 ifndef MOSSCO_DIR
@@ -35,7 +35,7 @@ NC_LIBS += $(shell nf-config --flibs)
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lgotm -lmossco_fabmgotm -lpelagicbenthiccoupler -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
-LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
+LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += $(NC_LIBS)
 
@@ -44,7 +44,7 @@ LDFLAGS += $(NC_LIBS)
 all: exec
 exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_netcdf fbp
 
-fbp: toplevel_component.o ../common/main.o  
+fbp: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) -o fabm_benthic_pelagic $^ $(LDFLAGS)
 	@echo "Created example binary $(MOSSCO_DIR)/examples/fabm_benthic_pelagic/fabm_benthic_pelagic"
 
@@ -62,6 +62,6 @@ libpelagicbenthiccoupler:
 
 clean: extraclean
 
-extraclean: 
+extraclean:
 	@-rm -f fabm_benthic_pelagic
 #	@-rm -f toplevel_component.o

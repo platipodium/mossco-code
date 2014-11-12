@@ -22,11 +22,11 @@ ifneq ($(MOSSCO_GETM),true)
 $(error This example only works with MOSSCO_GETM = true)
 endif
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)
-LDFLAGS += -llinkcoupler 
+LDFLAGS += -llinkcoupler
 LDFLAGS += -lmossco_netcdf
 LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)
-LDFLAGS += -lmossco_fabmpelagic -lutil -lsolver -lfabm -L$(FABM_LIBRARY_PATH)
-LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) 
+LDFLAGS += -lmossco_fabmpelagic -lutil -lsolver $(FABM_LDFLAGS)
+LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
 
 .PHONY: all exec $(TARGET)
 

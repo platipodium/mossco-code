@@ -94,7 +94,7 @@ coupling = config.pop("coupling")
 # Make it a list in any case
 if not (type(coupling) is list):
   coupling=[coupling]
-  
+
 if len(coupling)<1:
   print 'File ' + filename + ' contains an empty coupling list.'
   print coupling
@@ -102,7 +102,7 @@ if len(coupling)<1:
 
 # Loop over the list of couuplings.  Each entry in this list is a dictionary
 # that has at least the key 'components:'
-# todo: we could shortcut this by allowing comp1:comp2 to 
+# todo: we could shortcut this by allowing comp1:comp2 to
 for item in coupling:
     if type(item) is dict:
         if item.has_key("components"):
@@ -121,13 +121,13 @@ for item in coupling:
                 intervals.append("6 m")
             if item.has_key("direction"):
                 directions.append(item["direction"])
-        else: 
+        else:
           gridComplist.extend(item.keys())
           gridCompList.extend(item.values())
           for key,value in item.iteritems():
              couplingList.append(key, "link_coupler",value)
           cplCompList.append("link_coupler")
-          
+
     else:
         print 'Warning, dictionary expected for item ' + item + ', it is of type ',  type(item)
 
@@ -166,7 +166,7 @@ for component in componentSet:
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
-    dependencyDict[item]=compdeps  
+    dependencyDict[item]=compdeps
 
   elif type(dependencies) is list:
     for i in range(0,len(dependencies)):
@@ -190,7 +190,7 @@ for component in componentSet:
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
-        dependencyDict[item.keys()[0]]=compdeps  
+        dependencyDict[item.keys()[0]]=compdeps
 
   else:
     print 'The dependencies specification must be list or dictionary'
@@ -201,7 +201,7 @@ if 'link_coupler' in componentList:
 
 
 # Create dictionary for component names (instanceDict) and for petLists that
-# instances of these components run on.  Get this information from the 
+# instances of these components run on.  Get this information from the
 # yaml 'instances' dictionary/list
 instanceDict={}
 instancePetDict={}
@@ -226,7 +226,7 @@ else:
       instanceDict[key] = value['component']
       if value.has_key('petList'):
           instancePetDict[key]=value['petList']
-    
+
 print 'Components to process:', componentList
 if len(instanceDict)>0:
   for key,value in instanceDict.iteritems():
@@ -381,7 +381,7 @@ fid.write('''
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -736,11 +736,11 @@ fid.write('''
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     if (.not.allocated(alarmList)) allocate(alarmList(20))
 
     numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
-    
+
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
     !! be integrated with GridCompGet
@@ -755,7 +755,7 @@ fid.write('''
       phaseCountList(i)=phaseCount
       hasPhaseZeroList(i)=hasPhaseZero
     enddo
-    
+
     call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=rc)
 
@@ -898,7 +898,7 @@ fid.write('''
 
         enddo
       enddo
-  
+
       !! Loop through all components and check whether their clock is currently at the
       !! same time as my own clock's currTime, if yes, then run the component
       do i=1,numGridComp
@@ -1146,7 +1146,7 @@ fid.write('''
     if (allocated(exportStates)) deallocate(exportStates)
     if (allocated(importStates)) deallocate(importStates)
     if (allocated(cplAlarmList)) deallocate(cplAlarmList)
-    
+
     call ESMF_ClockDestroy(clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -1194,12 +1194,12 @@ for item in gridCompSet.union(cplCompSet):
         fid.write('endif\n')
 
 libs = {'gotm'       : ['solver', 'gotm'] ,
-        'gotmfabm'   : ['mossco_gotmfabm','mossco_fabmpelagic', 'gotm', 'solver', 'fabm'],
-        'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver', 'fabm',
+        'gotmfabm'   : ['mossco_gotmfabm','mossco_fabmpelagic', 'gotm', 'solver'],
+        'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver',
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
-        'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver', 'fabm'],
-        'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver', 'fabm'],
+        'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver'],
+        'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver'],
         'constant'   : ['constant'],
         'constant_grid'   : ['constant_grid'],
         'clm_netcdf' : ['mossco_clm'],
@@ -1267,17 +1267,17 @@ for item in gridCompSet.union(cplCompSet):
         if item=='getm':
             fid.write(' $(GETM_LDFLAGS)')
         if item=='fabm_sediment':
-            fid.write(' -L$(FABM_LIBRARY_PATH)')
+            fid.write(' $(FABM_LDFLAGS)')
         if item=='fabm_pelagic':
-            fid.write(' -L$(FABM_LIBRARY_PATH)')
+            fid.write(' $(FABM_LDFLAGS)')
         if item=='fabm':
-            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm_gotm':
-            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
         if item=='gotmfabm':
-            fid.write(' $(GOTM_LDFLAGS) -L$(FABM_LIBRARY_PATH)')
+            fid.write(' $(GOTM_LDFLAGS) $(FABM_LDFLAGS)')
         if item=='fabm0d':
-            fid.write(' -L$(FABM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
         fid.write('\n')
 
 #fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')

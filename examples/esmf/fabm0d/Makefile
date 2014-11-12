@@ -1,13 +1,13 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
+# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/esmf/fabm0d$,,$(PWD))
@@ -27,7 +27,7 @@ NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS) -lmossco_fabm0d -lsolver -lmossco_util
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
-LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
+LDFLAGS += $(FABM_LDFLAGS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)
 #LDFLAGS += -Wl,-force_load
 #endif
@@ -39,7 +39,7 @@ exec: libmossco_util libmossco_fabm0d fabm0d
 
 libmossco_fabm0d:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
-	
+
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 

@@ -226,6 +226,7 @@ ifeq ($(MOSSCO_FABM),true)
   export FABM_INCLUDE_PATH=$(FABM_PREFIX)/include
   export FABM_LIBRARY_PATH=$(FABM_PREFIX)/lib
   export FABM_LIBS=-lfabm
+  export FABM_LDFLAGS = -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 endif
 
 ifeq ($(MOSSCO_GOTM),true)
