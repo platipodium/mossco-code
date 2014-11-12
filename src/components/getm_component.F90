@@ -274,6 +274,7 @@ module getm_component
 !     internal call to ESMF_FieldCreateGridData<rank><type><kind>()
 !     forced by indexflag argument.
 !     KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
+!              (maybe only in case of non-1-based indices?)
 !     in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
       TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -284,7 +285,7 @@ module getm_component
 #ifdef FOREIGN_GRID
       T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
 #else
-      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,name="temperature_in_water",rc=rc)
 #endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
@@ -715,7 +716,7 @@ module getm_component
 #ifdef FOREIGN_GRID
          allocate(T3D(I3DFIELD))
 #else
-         allocate(T3D(I2DFIELD,1:kmax))
+         allocate(T3D(imin:imax,jmin:jmax,1:kmax))
 #endif
 #endif
       end if
@@ -748,7 +749,7 @@ module getm_component
 #ifdef FOREIGN_GRID
           T3D=>T
 #else
-          T3D(I2DFIELD,1:kmax) => T(:,:,1:kmax)
+          T3D => T(imin:imax,jmin:jmax,1:kmax)
 #endif
 #endif
        end if
@@ -1152,6 +1153,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
+   use domain    ,only: imin,imax,jmin,jmax,kmax
    use initialise  , only: runtype
 #ifndef NO_BAROCLINIC
    use variables_3d, only: T
@@ -1181,7 +1183,7 @@ module getm_component
 #ifdef FOREIGN_GRID
          T3D = T
 #else
-         T3D = T(:,:,1:)
+         T3D = T(imin:imax,jmin:jmax,1:kmax)
 #endif
 #endif
       end if
