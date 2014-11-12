@@ -234,7 +234,6 @@ ifeq ($(MOSSCO_GOTM),true)
   export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
   GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
   GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
-  export GOTM_LIBS
   export GOTM_LDFLAGS = -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
   ifeq ($(MOSSCO_FABM),true)
     DEFINES += -D_GOTM_MOSSCO_FABM_
