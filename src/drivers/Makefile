@@ -32,7 +32,7 @@ ifeq ($(MOSSCO_FABM),true)
 endif
 
 ifeq ($(MOSSCO_GETM),true)
-  TARGETS+=libmossco_getm_driver
+  TARGETS+=libmossco_getm
 endif
 
 ifeq ($(MOSSCO_EROSED),true)
@@ -53,11 +53,13 @@ libmossco_fabm0d: prefix libsolver $(FABM_PREFIX)/lib/libfabm.a libgotm_external
 libmossco_fabmgotm: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a libgotm_external $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_driver.o)
 libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
-
-libmossco_getm_driver: prefix libgetm_external $(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
 libmossco_fabmpelagic: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
+
 # A really, really dirty hack for now...
-# ...and automatic rm of .o also does not work because of this.
+libmossco_getm: prefix libgetm_external \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
+	$(RM) getm_driver.o
+
 getm_driver.o: getm_driver.F90
 	@echo "Compiling $<"
 	$(F90) -I$(GETM_INCLUDE_PATH) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@

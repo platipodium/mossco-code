@@ -95,16 +95,14 @@ modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
 
-libmossco_getm: libmossco_getm_driver libmossco_getm_component
-
-libmossco_getm_component: libmossco_getm_driver \
+# A really, really dirty hack for now...
+libmossco_getm: libmossco_getm_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
+	$(RM) getm_component.o
 
 libmossco_getm_driver:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_getm
 
-# A really, really dirty hack for now...
-# ...and automatic rm of .o also does not work because of this.
 getm_component.o: getm_component.F90
 	@echo "Compiling $<"
 	$(F90) -I$(GETM_INCLUDE_PATH) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
