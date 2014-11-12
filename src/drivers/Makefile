@@ -75,7 +75,7 @@ libmossco_getm: prefix libgetm_external \
 
 getm_driver.o: getm_driver.F90
 	@echo "Compiling $<"
-	$(F90) $(GETM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) $(GETM_CPPFLAGS) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 # Benthos section
 libmossco_benthos: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
