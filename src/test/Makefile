@@ -46,8 +46,8 @@ test_Solver: libsolver
 test_FabmDependencies:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -L$(FABM_LIBRARY_PATH) $(FABM_LIBS) $(LIBS)
 
-test_pointer:
-	$(F90) $@.F90 -o $@
+test_pointer: test_pointer.F90
+	$(F90) $< -o $@
 
 libsolver libmossco_util:
 	make -C $(MOSSCO_DIR)/src/utilities $@
