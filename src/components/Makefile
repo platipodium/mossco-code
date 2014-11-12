@@ -87,8 +87,8 @@ libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component
 
 libmossco_fabmpelagic: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_pelagic_driver.o) $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o) $(MOSSCO_MODULE_PATH)/fabm_pelagic_component.mod
 libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
-libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
-libmossco_inout: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a(inout_component.o)
+libempty: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
+libmossco_inout: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a(inout_component.o)
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
 libconstant_grid: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant_grid.a(constant_grid_component.o)
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
