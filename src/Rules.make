@@ -229,16 +229,16 @@ ifeq ($(MOSSCO_FABM),true)
 endif
 
 ifeq ($(MOSSCO_GOTM),true)
-  export GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
-  export GOTM_INCLUDE_PATH=$(GOTMDIR)/include
-  export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
+  GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
   GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
   GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
-  export GOTM_LDFLAGS = -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
   ifeq ($(MOSSCO_FABM),true)
     DEFINES += -D_GOTM_MOSSCO_FABM_
     export MOSSCO_GOTM_FABM=true
   endif
+  export GOTM_CPPFLAGS = -I$(GOTMDIR)/include -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
+  export GOTM_LDFLAGS = -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
+  export GOTM_LIBRARY_PATH
 endif
 
 ifeq ($(MOSSCO_GETM),true)
@@ -364,9 +364,6 @@ INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(MOSSCO_DIR)/src/include
 ifeq (${MOSSCO_FABM},true)
 INCLUDES  += -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
-endif
-ifeq ($(MOSSCO_GOTM),true)
-INCLUDES += -I$(GOTM_MODULE_PATH) -I$(GOTM_INCLUDE_PATH)
 endif
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
