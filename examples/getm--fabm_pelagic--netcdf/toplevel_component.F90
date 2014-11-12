@@ -204,10 +204,12 @@ module toplevel_component
     !! Also, try to find coupling/dependency specific export/import states in
     !! the initialization
     
+    call ESMF_AttributeSet(exportStates(1), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     do phase = 1,maxPhaseCount
       !! Initializing getm
       if (phase <= phaseCountList(1)) call ESMF_GridCompInitialize(gridCompList(1), &
-        importState=importStates(1), exportState=exportStates(1), phase=phase, clock=clock, rc=rc)
+        importState=exportStates(3), exportState=exportStates(1), phase=phase, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       !! Initializing netcdf
@@ -216,8 +218,6 @@ module toplevel_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       !! Initializing fabm_pelagic
-      call ESMF_AttributeSet(exportStates(1), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       if (phase <= phaseCountList(3)) call ESMF_GridCompInitialize(gridCompList(3), &
         importState=exportStates(1), exportState=exportStates(3), clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
