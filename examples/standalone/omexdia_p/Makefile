@@ -20,18 +20,17 @@ LIBS := -lmossco_sediment -lsolver -lmossco_util $(LIBS)
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBS)
 LDFLAGS += $(FABM_LDFLAGS)
 
-.PHONY: exec libmossco_sediment
+.PHONY: all exec omexdia_p libmossco_sediment
 
 all: exec
+exec: libmossco_sediment omexdia_p
 
 libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-exec: main.F90 libmossco_sediment
-	$(F90) $(CPPFLAGS) $(F90FLAGS) -c -o omexdia_p.o main.F90
-	$(F90) -o omexdia_p omexdia_p.o $(LDFLAGS)
-	@echo "Created example binary omexdia_p in  $(PWD)"
-	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/omexdia_p to run the example." > $(MOSSCO_BIN_PATH)/omexdia_p.txt
+omexdia_p: main.o
+	$(F90) $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 clean: extraclean
 
