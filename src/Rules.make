@@ -97,6 +97,10 @@ ifeq ($(MOSSCO_ESMF),true)
   endif
 endif
 
+ifeq ($(FORTRAN_COMPILER),MPXLF2003_R)
+  FORTRAN_COMPILER=XLF
+endif
+
 # 3. Checking for the either FABM, GOTM, or GETM.  Set the MOSSCO_XXXX variables
 #    of these three components to process them later
 MOSSCO_FABM=false
@@ -378,7 +382,12 @@ ifeq ($(FORTRAN_COMPILER),PGF90)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
 EXTRA_CPP=
 else
+ifeq ($(FORTRAN_COMPILER),XLF)
+F90FLAGS += -qmoddir=$(MOSSCO_MODULE_PATH) -qstrict
+EXTRA_CPP=
+else
 $(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER).)
+endif
 endif
 endif
 endif
@@ -406,9 +415,17 @@ export LIBRARY_PATHS
 export LIBS := $(ESMF_F90ESMFLINKLIBS)
 
 CPPFLAGS = $(DEFINES)  
+ifeq ($(FORTRAN_COMPILER),XLF)
+CPPFLAGS += -WF,-DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -WF,-DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
+else
 CPPFLAGS += -DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
+endif
 ifeq ("x$(MOSSCO_MPI)","xtrue")
+ifeq ($(FORTRAN_COMPILER),XLF)
+CPPFLAGS += -WF,-DMOSSCO_MPI
+else
 CPPFLAGS += -DMOSSCO_MPI
+endif
 endif
 export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 
