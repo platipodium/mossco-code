@@ -15,10 +15,16 @@
 !> @todo, get rid of include file here
 #include "cppdefs.h"
 
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "getm_component.F90"
+
 module getm_component
 
   use esmf
   use getm_driver
+  use mossco_component
 
   implicit none
   private
@@ -26,7 +32,7 @@ module getm_component
   public SetServices
 
 ! this probably violates general ESMF rules :-)
-  public do_transport,do_transport_3d
+  public do_transport, do_transport_3d
 
   private getmCmp_init_variables
   private getmCmp_init_grid,getmCmp_update_grid
@@ -60,6 +66,8 @@ module getm_component
 
   contains
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
     implicit none
@@ -87,6 +95,8 @@ module getm_component
 ! !ROUTINE: InitializeP0 -
 !
 ! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
    subroutine InitializeP0(getmCmp,iState,eState,iClock,rc)
 !
 ! !DESCRIPTION:
@@ -112,17 +122,22 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    character(len=NUOPC_PhaseMapStringLength) :: InitializePhaseMap(1)
+   integer                :: localrc
+   type(ESMF_Time)        :: currTime
+   character(ESMF_MAXSTR) :: name
 !
 !EOP
 !-----------------------------------------------------------------------
 !BOC
+
+    call MOSSCO_CompEntry(getmCmp, iClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 #ifdef DEBUG
    integer, save :: Ncall = 0
    Ncall = Ncall+1
    write(debug,*) 'InitializeP0() # ',Ncall
 #endif
-
-   call ESMF_LogWrite("getmCmp initializing P0 ... ",ESMF_LOGMSG_TRACE)
 
 !  Note (KK): NUOPC initialises all components in various phases. By
 !             default NUOPC assumes IPDv00 and thus requires userRoutines
@@ -167,6 +182,8 @@ module getm_component
 !EOC
 !-----------------------------------------------------------------------
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp,iState,eState,iClock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
@@ -341,7 +358,8 @@ module getm_component
   end subroutine InitializeP1
 
 !-----------------------------------------------------------------------
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
    subroutine InitializeP2(gridComp,iState,eState,iClock,rc)
 
       use domain, only: imin,imax,jmin,jmax,kmax
@@ -441,6 +459,8 @@ module getm_component
 
 !-----------------------------------------------------------------------
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp,iState,eState,iClock,rc)
 
     use initialise ,only: runtype,dryrun
@@ -534,6 +554,8 @@ module getm_component
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, iState, eState, iClock, rc)
 
     use initialise ,only: runtype,dryrun
@@ -597,6 +619,8 @@ module getm_component
 ! !ROUTINE: getmCmp_init_variables
 !
 ! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "getmCmp_init_variables"
    subroutine getmCmp_init_variables()
 !
 ! !DESCRIPTION:
@@ -725,6 +749,8 @@ module getm_component
 ! !ROUTINE: getmCmp_init_grid - Creates Grid
 !
 ! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "getmCmp_init_grid"
    subroutine getmCmp_init_grid(getmCmp)
 !
 ! !DESCRIPTION:
@@ -998,6 +1024,8 @@ module getm_component
 ! !ROUTINE: getmCmp_update_grid -
 !
 ! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "getmCmp_update_grid"
    subroutine getmCmp_update_grid(getmCmp)
 !
 ! !DESCRIPTION:
@@ -1085,6 +1113,8 @@ module getm_component
 ! !ROUTINE: getmCmp_update_eState -
 !
 ! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "getmCmp_update_eState"
    subroutine getmCmp_update_eState()
 !
 ! !DESCRIPTION:
@@ -1135,6 +1165,8 @@ module getm_component
 ! !ROUTINE: do_transport() - do transport of 2D fields
 !
 ! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "do_transport"
    subroutine do_transport(getmCmp,dt,field,AH)
 !
 ! !DESCRIPTION:
@@ -1212,6 +1244,8 @@ module getm_component
 ! !ROUTINE: do_transport_3d() - do transport of 3D fields
 !
 ! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "do_transport_3d"
    subroutine do_transport_3d(getmCmp,dt,field,AH,wsfield)
 !
 ! !DESCRIPTION:
@@ -1302,7 +1336,9 @@ module getm_component
 ! !ROUTINE: TimeStringISOFrac2ESMFtime - converts timestring to ESMF_Time
 !
 ! !INTERFACE:
-   subroutine TimeStringISOFrac2ESMFtime(TimeStrISOFrac,ESMFtime)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "TimeStringISOFrac2ESMFtime"
+  subroutine TimeStringISOFrac2ESMFtime(TimeStrISOFrac,ESMFtime)
 !
 ! !DESCRIPTION:
 !  So far missing extension to ESMF_TimeSet().
