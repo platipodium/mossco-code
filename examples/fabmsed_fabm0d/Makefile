@@ -23,13 +23,14 @@ LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 
-.PHONY: all exec libsediment
+.PHONY: all exec fabmsed_fabm0d
 
 all: exec
+exec: libmossco_util libmossco_fabm0d libsediment fabmsed_fabm0d
 
-exec: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o fabmsed_fabm0d $^ $(LDFLAGS)
-	@echo "Created example binary fabmsed_fabm0d in  $(PWD)"
+fabmsed_fabm0d: toplevel_component.o ../common/main.o
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
@@ -37,11 +38,7 @@ libmossco_fabm0d libsediment:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libsediment
-
-main.F90: ../common/main.F90
-	ln -f  $< $@
+toplevel_component.o: toplevel_component.F90
 
 clean: extraclean
 
