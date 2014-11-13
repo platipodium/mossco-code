@@ -26,7 +26,7 @@ LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += $(ESMF_LDFLAGS)
 
-.PHONY: all exec libmossco_gotmfabm
+.PHONY: all exec pelagicfabm1d libmossco_gotmfabm
 
 all: exec
 exec: libmossco_util libsolver libmossco_gotmfabm pelagicfabm1d
