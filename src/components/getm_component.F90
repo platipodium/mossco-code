@@ -106,12 +106,12 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
-   subroutine InitializeP0(getmCmp,iState,eState,iClock,rc)
+   subroutine InitializeP0(gridComp,iState,eState,iClock,rc)
 !
 ! !DESCRIPTION:
 !  Note: [i|e]state and iClock are uninitialized if the toplevel
 !        component did not provide corresponding arguments to
-!        ESMF_GridCompInitialize(getmCmp).
+!        ESMF_GridCompInitialize(gridComp).
 !  The toplevel component can inquire rc via optional keyword argument
 !  userRc to ESMF_GridCompInitialize().
 !
@@ -120,7 +120,7 @@ module getm_component
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
+   type(ESMF_GridComp) :: gridComp
    type(ESMF_State)    :: iState,eState ! may be uninitialized
    type(ESMF_Clock)    :: iClock        ! may be uninitialized
 !
@@ -139,7 +139,7 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOC
 
-    call MOSSCO_CompEntry(getmCmp, iClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, iClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
@@ -174,12 +174,13 @@ module getm_component
 !  KK-TODO: Not sure whether we can communicate that no phase 2 is available...
    InitializePhaseMap(1) = "IPDv00p1=1"
 
-   call NUOPC_GridCompAttributeAdd(getmCmp)
-   call ESMF_AttributeSet(getmCmp,name="InitializePhaseMap",           &
+   call NUOPC_GridCompAttributeAdd(gridComp)
+   call ESMF_AttributeSet(gridComp,name="InitializePhaseMap",           &
                                   valueList=InitializePhaseMap,        &
                                   convention="NUOPC",purpose="General",rc=rc)
 
-   call ESMF_LogWrite("getmCmp initialized P0",ESMF_LOGMSG_TRACE)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
    write(debug,*) 'Leaving InitializeP0()'
@@ -226,7 +227,7 @@ module getm_component
     character(len=10)       :: timestr
     character(len=19)       :: TimeStrISOFrac,start_external,stop_external
 
-   call ESMF_LogWrite("getmCmp initializing P1 ... ",ESMF_LOGMSG_TRACE)
+   call ESMF_LogWrite("gridComp initializing P1 ... ",ESMF_LOGMSG_TRACE)
 
     !! Check whether there is already a clock (it might have been set
     !! with a prior ESMF_gridCompCreate() call.  If not, then create
@@ -760,7 +761,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_init_grid"
-   subroutine getmCmp_init_grid(getmCmp)
+   subroutine getmCmp_init_grid(gridComp)
 !
 ! !DESCRIPTION:
 !
@@ -771,7 +772,7 @@ module getm_component
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
+   type(ESMF_GridComp) :: gridComp
 !
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil
@@ -802,7 +803,7 @@ module getm_component
    write(debug,*) 'getmCmp_init_grid() # ',Ncall
 #endif
 
-   call ESMF_GridCompGet(getmCmp,vm=getmVM,petCount=getmPetCount)
+   call ESMF_GridCompGet(gridComp,vm=getmVM,petCount=getmPetCount)
 
    myedges = (/ ioff , joff , imax , jmax /)
    allocate(alledges(4*getmPetCount))
@@ -1012,8 +1013,8 @@ module getm_component
 
    call ESMF_GridSetCoord(getmGrid3D,3,array=zwArray,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE)
 
-   call ESMF_GridCompSet(getmCmp,grid=getmGrid3D)
-   call getmCmp_update_grid(getmCmp)
+   call ESMF_GridCompSet(gridComp,grid=getmGrid3D)
+   call getmCmp_update_grid(gridComp)
 
    deallocate(alledges)
    deallocate(deBlockList)
@@ -1035,7 +1036,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_update_grid"
-   subroutine getmCmp_update_grid(getmCmp)
+   subroutine getmCmp_update_grid(gridComp)
 !
 ! !DESCRIPTION:
 !
@@ -1047,7 +1048,7 @@ module getm_component
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
+   type(ESMF_GridComp) :: gridComp
 !
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil
@@ -1176,7 +1177,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "do_transport"
-   subroutine do_transport(getmCmp,dt,field,AH)
+   subroutine do_transport(gridComp,dt,field,AH)
 !
 ! !DESCRIPTION:
 !
@@ -1191,7 +1192,7 @@ module getm_component
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
-   type(ESMF_GridComp) :: getmCmp
+   type(ESMF_GridComp) :: gridComp
    REALTYPE,intent(in) :: dt,AH
 !
 ! !INPUT/OUPUT PARAMETERS:
@@ -1216,7 +1217,7 @@ module getm_component
 #endif
 
 !  KK-TODO: VMIsPetLocal() ???
-   if (.not. ESMF_GridCompIsPetLocal(getmCmp)) return
+   if (.not. ESMF_GridCompIsPetLocal(gridComp)) return
 
    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
 
@@ -1255,7 +1256,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "do_transport_3d"
-   subroutine do_transport_3d(getmCmp,dt,field,AH,wsfield)
+   subroutine do_transport_3d(gridComp,dt,field,AH,wsfield)
 !
 ! !DESCRIPTION:
 !
@@ -1270,7 +1271,7 @@ module getm_component
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
-   type(ESMF_GridComp)                  :: getmCmp
+   type(ESMF_GridComp)                  :: gridComp
    REALTYPE,intent(in)                  :: dt,AH
    type(ESMF_Field),intent(in),optional :: wsfield
 !
@@ -1297,7 +1298,7 @@ module getm_component
 #endif
 
 !  KK-TODO: VMIsPetLocal() ???
-   if (.not. ESMF_GridCompIsPetLocal(getmCmp)) return
+   if (.not. ESMF_GridCompIsPetLocal(gridComp)) return
 
    ws_present = present(wsfield)
 
