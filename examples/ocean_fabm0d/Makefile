@@ -36,7 +36,7 @@ ifeq ($(HAVE_LD_FORCE_LOAD),true)
 endif
 
 
-.PHONY: all exec libremtc libsediment liboceansedimentcoupler libgotm
+.PHONY: all exec ocean_fabm0d libremtc libsediment liboceansedimentcoupler libgotm
 
 all: exec
 exec: libmossco_util libmossco_fabm0d $(dep) ocean_fabm0d

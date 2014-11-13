@@ -25,7 +25,7 @@ LDFLAGS += $(FABM_LDFLAGS)
 #LDFLAGS += -Wl,-force_load
 #endif
 
-.PHONY: all exec libremtc libsediment liboceansedimentcoupler libmossco_util
+.PHONY: all exec ocean_fabm0d_fabmsed libremtc libsediment liboceansedimentcoupler libmossco_util
 
 all: exec
 exec: libmossco_util libmossco_fabm0d libsediment libremtc liboceansedimentcoupler ocean_fabm0d_fabmsed
