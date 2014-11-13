@@ -19,28 +19,20 @@ LIBS := -lsediment -lmossco_sediment -lconstant -lmossco_util -lsolver -lesmf $(
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += $(FABM_LDFLAGS)
 
-.PHONY: all exec libsediment libmossco_util
+.PHONY: all exec sediment libsediment libmossco_util
 
 all: exec
-exec: sediment
+exec: libmossco_util libsediment libconstant sediment
 
-sediment: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS)
-	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
+sediment: toplevel_component.o ../../common/main.o
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	@echo "Created example $(PWD)/$@"
 
-libsediment:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
-
-libconstant:
+libconstant libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
-
-main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libsediment libconstant
-main.F90: ../../common/main.F90
-	ln -f  $< $@
 
 clean: extraclean
 
