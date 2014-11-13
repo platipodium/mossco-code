@@ -354,18 +354,23 @@ module mossco_netcdf
     if (present(timeUnit)) call nc%init_time(timeUnit)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
 
+#ifndef ESMF_OS_AIX
     !> @todo check cross-platform compatibility of the iso_fortran_env calls
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_version',compiler_version())
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_options',compiler_options())
-
+#endif
     call get_command(string)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_command_line',trim(string))
     call getcwd(string)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_working_directory',trim(string))
+#ifndef ESMF_OS_AIX
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_process_id',getpid())
+#endif
     !> @todo check cross-platform compatibility of these gnu extensions
     call getlog(string)
+#ifndef ESMF_OS_AIX
     write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
+#endif
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_user',trim(string))
     call hostnm(string)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_hostname',trim(string))
