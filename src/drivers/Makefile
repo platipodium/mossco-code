@@ -1,13 +1,13 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
+# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
   export MOSSCO_DIR=$(subst /src/drivers$,,$(PWD))
@@ -37,7 +37,7 @@ endif
 
 ifeq ($(MOSSCO_EROSED),true)
   TARGETS += libmossco_erosed
-  CPPFLAGS += -I$(EROSED_DIR)/include 
+  CPPFLAGS += -I$(EROSED_DIR)/include
 endif
 
 .PHONY: $(TARGETS)
@@ -48,7 +48,8 @@ all: $(TARGETS)
 
 # FABM/sediment section
 
-libmossco_sediment: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a $(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
+libmossco_sediment: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
 
 libmossco_fabm0d: prefix libsolver $(FABM_PREFIX)/lib/libfabm.a libgotm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
@@ -58,18 +59,27 @@ libmossco_fabmgotm: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a
 
 libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
-libmossco_fabmpelagic: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
+libmossco_fabmpelagic: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
 
 libmossco_getm: prefix libgetm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
 
+fabm_sediment_driver.o: fabm_sediment_driver.F90
+	@echo "Compiling $<"
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+fabm_pelagic_driver.o: fabm_pelagic_driver.F90
+	@echo "Compiling $<"
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
 fabm0d_driver.o: fabm0d_driver.F90
 	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) $(GOTM_CPPFLAGS) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm_gotm_driver.o: fabm_gotm_driver.F90
 	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) $(GOTM_CPPFLAGS) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 getm_driver.o: getm_driver.F90
 	@echo "Compiling $<"

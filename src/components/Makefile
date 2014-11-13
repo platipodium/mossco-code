@@ -77,15 +77,17 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_pelagic_driver.o):
+libmossco_fabmpelagic_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmpelagic
 
 # Why these next two lines???
 #libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 #libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
-libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o) $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
+libsediment: prefix libmossco_sediment_driver \
+	$(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o)
 
-libmossco_fabmpelagic: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_pelagic_driver.o) $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o) $(MOSSCO_MODULE_PATH)/fabm_pelagic_component.mod
+libmossco_fabmpelagic: prefix libmossco_fabmpelagic_driver \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o)
 
 libmossco_fabm0d: prefix libmossco_fabm0d_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
@@ -104,6 +106,9 @@ $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
 libmossco_fabm0d_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d
 
+libmossco_sediment_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_sediment
+
 libmossco_getm_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_getm
 
@@ -113,12 +118,15 @@ getm_component.o: getm_component.F90
 
 fabm0d_component.o: fabm0d_component.F90
 	@echo "Compiling $<"
-	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
+	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm_sediment_component.o: fabm_sediment_component.F90
 	@echo "Compiling $<"
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_sediment
-	$(F90) $(CPPFLAGS) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+fabm_pelagic_component.o: fabm_pelagic_component.F90
+	@echo "Compiling $<"
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
