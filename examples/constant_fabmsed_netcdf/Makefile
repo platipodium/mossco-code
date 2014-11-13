@@ -27,10 +27,10 @@ LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += $(NC_LIBS)
 
-.PHONY: all exec libsediment libmossco_sediment libconstant libmossco_netcdf
+.PHONY: all exec constant_fabmsed_netcdf libsediment libmossco_sediment libconstant libmossco_netcdf
 
 all: exec
-exec: constant_fabmsed_netcdf
+exec: libmossco_util libsediment libmossco_sediment libconstant libpelagicbenthiccoupler libmossco_netcdf constant_fabmsed_netcdf
 
 deprecation:
 	@-echo This hardcoded example is deprecated and will be removed in the near future.
@@ -42,10 +42,9 @@ deprecation:
 	@-echo In your setups directory, execute the generated program
 	@-echo     $(MOSSCO_DIR)/examples/generic/coupling
 
-constant_fabmsed_netcdf: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example binary $@ in $(PWD)"
-	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
+constant_fabmsed_netcdf: toplevel_component.o ../common/main.o
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
@@ -55,12 +54,6 @@ libsediment libconstant libmossco_netcdf:
 
 libpelagicbenthiccoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators pelagicbenthiccoupler benthicpelagiccoupler
-
-main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../common/main.F90
-	ln -f $< $@
-
-toplevel_component.o: toplevel_component.F90 libmossco_util libsediment libmossco_sediment libconstant libpelagicbenthiccoupler libmossco_netcdf
 
 clean: extraclean
 
