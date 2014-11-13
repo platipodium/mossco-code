@@ -1,12 +1,12 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
 ifndef MOSSCO_DIR
@@ -27,19 +27,18 @@ NC_LIBS += $(shell nf-config --flibs)
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lgotm -lmossco_fabmgotm -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
-LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
+LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += $(NC_LIBS)
 
-.PHONY: all exec libsediment libmossco_fabmgotm libmossco_sediment libconstant libgotm libsurfacescoupler
+.PHONY: all exec fabmgotm_fabmsed_constant libsediment libmossco_fabmgotm libmossco_sediment libconstant libgotm libsurfacescoupler
 
 all: exec
-exec: fabmgotm_fabmsed_constant
+exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libsolver libconstant libgotm libsurfacescoupler fabmgotm_fabmsed_constant
 
-fabmgotm_fabmsed_constant: toplevel_component.o main.o  
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example binary $@ in $(PWD)" 
-	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
+fabmgotm_fabmsed_constant: toplevel_component.o ../common/main.o
+	$(F90) $(F90FLAGS)  $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_fabmgotm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
@@ -56,13 +55,7 @@ libmossco_sediment libsolver:
 libsurfacescoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
-main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../common/main.F90
-	ln -f $< $@
-
-toplevel_component.o: toplevel_component.F90 libmossco_fabmgotm libmossco_util libsediment libmossco_sediment libsolver libconstant libgotm libsurfacescoupler
-
 clean: extraclean
 
-extraclean: 
+extraclean:
 	@-rm -f fabmgotm_fabmsed_constant main.F90

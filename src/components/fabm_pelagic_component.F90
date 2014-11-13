@@ -442,6 +442,18 @@ module fabm_pelagic_component
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f2, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         ptr_f2 = 0.0_rk
+        ! check for valid upper bounds of possibly existing array
+        if ((ubound(ptr_f2,1).lt.pel%inum).or. &
+            (ubound(ptr_f2,2).lt.pel%jnum).or. &
+            (lbound(ptr_f2,1).gt.1).or. &
+            (lbound(ptr_f2,2).gt.1)) then
+          write(message,*) 'upper bounds of possibly existing 2d array for ', &
+                           trim(pel%horizontal_dependencies(n)%name), &
+                           ' does not fit into domain: ',size(ptr_f2), &
+                           'vs.',pel%inum,pel%jnum
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR,rc=rc)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        end if
         call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
       end do
     end if

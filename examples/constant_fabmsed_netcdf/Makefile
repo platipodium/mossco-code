@@ -1,13 +1,13 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
+# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
 ifndef MOSSCO_DIR
@@ -23,18 +23,18 @@ NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lpelagicbenthiccoupler -lsolver -lmossco_util
-LDFLAGS += -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
+LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf
-LDFLAGS += $(NC_LIBS) 
+LDFLAGS += $(NC_LIBS)
 
-.PHONY: all exec libsediment libmossco_sediment libconstant libmossco_netcdf 
+.PHONY: all exec constant_fabmsed_netcdf libsediment libmossco_sediment libconstant libmossco_netcdf
 
 all: exec
-exec: constant_fabmsed_netcdf
+exec: libmossco_util libsediment libmossco_sediment libconstant libpelagicbenthiccoupler libmossco_netcdf constant_fabmsed_netcdf
 
 deprecation:
 	@-echo This hardcoded example is deprecated and will be removed in the near future.
-	@-echo You can obtain the same simulation with the generic example found in 
+	@-echo You can obtain the same simulation with the generic example found in
 	@-echo $(MOSSCO_DIR)/examples/generic
 	@-echo and the configuration constant--fabm_sediment--netcdf.yaml.
 	@-echo In that directory, execute the following:
@@ -42,10 +42,9 @@ deprecation:
 	@-echo In your setups directory, execute the generated program
 	@-echo     $(MOSSCO_DIR)/examples/generic/coupling
 
-constant_fabmsed_netcdf: toplevel_component.o main.o  
-	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example binary $@ in $(PWD)" 
-	@echo "Please copy this binary $(MOSSCO_DIR)/examples/$@/$@ to a setup directory." > $(MOSSCO_BIN_PATH)/$@.txt
+constant_fabmsed_netcdf: toplevel_component.o ../common/main.o
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
@@ -56,13 +55,7 @@ libsediment libconstant libmossco_netcdf:
 libpelagicbenthiccoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators pelagicbenthiccoupler benthicpelagiccoupler
 
-main.o: toplevel_component.o main.F90 libmossco_util
-main.F90: ../common/main.F90
-	ln -f $< $@
-
-toplevel_component.o: toplevel_component.F90 libmossco_util libsediment libmossco_sediment libconstant libpelagicbenthiccoupler libmossco_netcdf
-
 clean: extraclean
 
-extraclean: 
+extraclean:
 	@-rm -f constant_fabmsed_netcdf main.F90

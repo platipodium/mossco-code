@@ -222,30 +222,26 @@ ifneq (,$(filter $(MOSSCO_GOTM),$(MOSSCO_FABM),$(MOSSCO_GETM) true))
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-  export FABM_MODULE_PATH=$(FABM_PREFIX)/include
-  export FABM_INCLUDE_PATH=$(FABM_PREFIX)/include
   export FABM_LIBRARY_PATH=$(FABM_PREFIX)/lib
   export FABM_LIBS=-lfabm
+  export FABM_CPPFLAGS = -I$(FABM_PREFIX)/include
+  export FABM_LDFLAGS = -L$(FABM_LIBRARY_PATH) $(FABM_LIBS)
 endif
 
 ifeq ($(MOSSCO_GOTM),true)
-  export GOTM_MODULE_PATH=$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
-  export GOTM_INCLUDE_PATH=$(GOTMDIR)/include
   export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
   GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
   GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
-  export GOTM_LIBS
-  export GOTM_LDFLAGS = -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
   ifeq ($(MOSSCO_FABM),true)
     DEFINES += -D_GOTM_MOSSCO_FABM_
     export MOSSCO_GOTM_FABM=true
   endif
+  export GOTM_CPPFLAGS = -I$(GOTMDIR)/include -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
+  export GOTM_LDFLAGS = -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
 endif
 
 ifeq ($(MOSSCO_GETM),true)
-  GETM_MODULE_PATH=$(GETMDIR)/modules/$(FORTRAN_COMPILER)
-  GETM_INCLUDE_PATH=$(GETMDIR)/include
-  GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
+  export GETM_LIBRARY_PATH=$(GETMDIR)/lib/$(FORTRAN_COMPILER)
   GETM_LINKDIRS = -L$(GETM_LIBRARY_PATH) -L$(GOTM_LIBRARY_PATH)
   GETM_LIBS := -lgetm_prod  -loutput_prod -lmeteo_prod
   ifneq ($(GETM_NO_3D),true)
@@ -253,7 +249,7 @@ ifeq ($(MOSSCO_GETM),true)
   endif
   GETM_LIBS += -l2d_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
   ifeq ($(MOSSCO_GETM_FABM),true)
-    GETM_LINKDIRS += -L$(FABMDIR)/lib/gotm/$(FORTRAN_COMPILER)
+    GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
     GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
   endif
   GETM_LIBS += -lturbulence_prod -lutil_prod
@@ -261,11 +257,8 @@ ifeq ($(MOSSCO_GETM),true)
   ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
     DEFINES += -DGETM_PARALLEL
   endif
-  export GETM_MODULE_PATH
-  export GETM_INCLUDE_PATH
   export GETM_LIBRARY_PATH
-  export GETM_LINKDIRS
-  export GETM_LIBS
+  export GETM_CPPFLAGS = -I$(GETMDIR)/include -I$(GETMDIR)/modules/$(FORTRAN_COMPILER)
   export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
 endif
 export MOSSCO_GETM
@@ -368,15 +361,6 @@ endif
 INCLUDES += $(ESMF_F90COMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(MOSSCO_DIR)/src/include
-ifeq (${MOSSCO_FABM},true)
-INCLUDES  += -I$(FABM_INCLUDE_PATH) -I$(FABM_MODULE_PATH) -I$(FABMDIR)/src/drivers/$(FABMHOST)
-endif
-ifeq ($(MOSSCO_GOTM),true)
-INCLUDES += -I$(GOTM_MODULE_PATH) -I$(GOTM_INCLUDE_PATH)
-endif
-ifeq ($(MOSSCO_GETM),true)
-INCLUDES += -I$(GETM_MODULE_PATH) -I$(GETM_INCLUDE_PATH)
-endif
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
 F90FLAGS = $(ESMF_F90COMPILEOPTS)

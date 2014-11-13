@@ -10,6 +10,7 @@ integer :: rc
 type(ESMF_GridComp) :: testComp
 
 #define EXTEND_ESMF
+#undef EXTEND_ESMF
 
 #ifndef EXTEND_ESMF
 type :: MOSSCO_GridComp

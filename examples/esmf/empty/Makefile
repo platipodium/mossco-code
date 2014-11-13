@@ -1,12 +1,12 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /examples/esmf/empty$,,$(PWD))
@@ -17,27 +17,22 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS :=  -lempty -lmossco_util -lesmf $(LIBS)
 LDFLAGS += $(MOSSCO_LDFLAGS)
 
-.PHONY: all exec
+.PHONY: all exec empty
 
 all: exec
-exec: empty
+exec: libmossco_util libempty empty
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-empty: main.o toplevel_component.o 
-	$(F90) $(F90FLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
-	@echo "Created example $(MOSSCO_DIR)/examples/esmf/$@"
-	
-main.o: toplevel_component.o main.F90 libmossco_util
-toplevel_component.o: toplevel_component.F90 libempty
-main.F90: ../../common/main.F90
-	ln -f  $< $@
+empty: toplevel_component.o ../../common/main.o
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
+	@echo "Created example $(PWD)/$@"
 
 libempty:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 clean: extraclean
 
-extraclean: 
+extraclean:
 	@rm -f empty main.F90

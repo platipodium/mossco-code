@@ -77,47 +77,56 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_pelagic_driver.o):
+libmossco_fabmpelagic_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmpelagic
 
 # Why these next two lines???
 #libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 #libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
-libsediment: prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o) $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
+libsediment: prefix libmossco_sediment_driver \
+	$(MOSSCO_LIBRARY_PATH)/libsediment.a(fabm_sediment_component.o)
 
-libmossco_fabmpelagic: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_pelagic_driver.o) $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o) $(MOSSCO_MODULE_PATH)/fabm_pelagic_component.mod
-libmossco_fabm0d: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
-libempty: prefix $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
-libmossco_inout: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a(inout_component.o)
+libmossco_fabmpelagic: prefix libmossco_fabmpelagic_driver \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o)
+
+libmossco_fabm0d: prefix libmossco_fabm0d_driver \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
+
+libmossco_getm: libmossco_getm_driver \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
+
+libempty: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
+libmossco_inout: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a(inout_component.o)
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
 libconstant_grid: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant_grid.a(constant_grid_component.o)
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
 
-libmossco_getm: libmossco_getm_driver libmossco_getm_component
+libmossco_fabm0d_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d
 
-libmossco_getm_component: libmossco_getm_driver \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
+libmossco_sediment_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_sediment
 
 libmossco_getm_driver:
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_getm
 
-# A really, really dirty hack for now...
-# ...and automatic rm of .o also does not work because of this.
 getm_component.o: getm_component.F90
 	@echo "Compiling $<"
-	$(F90) -I$(GETM_INCLUDE_PATH) -I$(GETM_MODULE_PATH) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) $(GETM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm0d_component.o: fabm0d_component.F90
 	@echo "Compiling $<"
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d
-	$(F90) $(CPPFLAGS) -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
+	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm_sediment_component.o: fabm_sediment_component.F90
 	@echo "Compiling $<"
-	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_sediment
-	$(F90) $(CPPFLAGS) -I$(FABMDIR)/modules/mossco/$(FORTRAN_COMPILER) $(F90FLAGS) -c $< -o $@
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+fabm_pelagic_component.o: fabm_pelagic_component.F90
+	@echo "Compiling $<"
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)

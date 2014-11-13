@@ -13,6 +13,7 @@
 !
 
 !> @todo, get rid of include file here
+#define FOREIGN_GRID
 #include "cppdefs.h"
 
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
@@ -30,9 +31,6 @@ module getm_component
   private
 
   public SetServices
-
-! this probably violates general ESMF rules :-)
-  public do_transport, do_transport_3d
 
   private getmCmp_init_variables
   private getmCmp_init_grid,getmCmp_update_grid
@@ -62,7 +60,10 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
 
-  real(ESMF_KIND_R8),dimension(:,:,:,:),allocatable,target :: transport_ws,transport_conc
+  type :: ptrarray3D
+     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
+  end type ptrarray3D
+  type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 
   contains
 
@@ -130,10 +131,11 @@ module getm_component
 ! !REVISION HISTORY:
 !
 ! !LOCAL VARIABLES
-   character(len=NUOPC_PhaseMapStringLength) :: InitializePhaseMap(1)
+   character(len=NUOPC_PhaseMapStringLength) :: InitializePhaseMap(2)
    integer                :: localrc
    type(ESMF_Time)        :: currTime
    character(ESMF_MAXSTR) :: name
+
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -171,8 +173,8 @@ module getm_component
 !
 ! (!) has to be done by the user, (*) optional by the user
 
-!  KK-TODO: Not sure whether we can communicate that no phase 2 is available...
    InitializePhaseMap(1) = "IPDv00p1=1"
+   InitializePhaseMap(2) = "IPDv00p2=2"
 
    call NUOPC_GridCompAttributeAdd(gridComp)
    call ESMF_AttributeSet(gridComp,name="InitializePhaseMap",           &
@@ -288,6 +290,7 @@ module getm_component
 !     internal call to ESMF_FieldCreateGridData<rank><type><kind>()
 !     forced by indexflag argument.
 !     KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
+!              (maybe only in case of non-1-based indices?)
 !     in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
       TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -295,7 +298,11 @@ module getm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(T3D)) then
-      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,0/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+#ifdef FOREIGN_GRID
+      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
+#else
+      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,name="temperature_in_water",rc=rc)
+#endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -368,10 +375,11 @@ module getm_component
       type(ESMF_FieldBundle)    ,dimension(:),allocatable :: fieldBundleList
       type(ESMF_FieldBundle)                              :: fieldBundle
       type(ESMF_Field)          ,dimension(:),allocatable :: fieldList_ws,fieldList_conc
+      type(ESMF_FieldStatus_Flag)                         :: status
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
       integer                   ,dimension(:),allocatable :: transportFieldCountList,namelenList
       integer                                             :: transportFieldCount,itemCount
-      integer                                             :: i,ii,j
+      integer                                             :: i,ii,n
       integer                    :: localrc
       type(ESMF_Time)            :: currTime
       character(len=ESMF_MAXSTR) :: name
@@ -395,11 +403,9 @@ module getm_component
                                    itemTypeList=itemTypeList)
 
          do i=1,itemCount
-!           coupler called ESMF_FieldEmptyCreate(name) and
-!           FieldEmptySet(grid,staggerloc) during InitializeP1()
 !           identify items to be transported by suffix "_z_velocity"
             namelenList(i) = len_trim(itemNameList(i))
-            if (itemNameList(i)(namelenList(i)-10:) .ne. '_z_velocity') cycle
+            if (itemNameList(i)(namelenList(i)-10:namelenList(i)) .ne. '_z_velocity') cycle
             if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
             else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
@@ -415,36 +421,73 @@ module getm_component
 
             allocate(fieldList_ws  (transportFieldCount))
             allocate(fieldList_conc(transportFieldCount))
-            j = 1
+            n = 1
 
             do i=1,itemCount
                if (transportFieldCountList(i) .eq. 0) cycle
                if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
-                  call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(j))
-                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldList_conc(j))
-                  j = j + 1
+                  call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(n))
+                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldList_conc(n))
+                  n = n + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
                   call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldBundle)
                   do ii=1,transportFieldCountList(i)
-                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(j))
-                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(j))
-                     j = j + 1
+                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n))
+                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n))
+                     n = n + 1
                   end do
                end if
             end do
 
-            allocate(transport_ws  (I3DFIELD,transportFieldCount))
-            allocate(transport_conc(I3DFIELD,transportFieldCount))
+            allocate(transport_ws  (transportFieldCount))
+            allocate(transport_conc(transportFieldCount))
 
-            do j=1,transportFieldCount
-               call ESMF_FieldEmptyComplete(fieldList_ws(j),transport_ws(:,:,:,j), &
-                                            indexflag=ESMF_INDEX_DELOCAL,          &
-                                            totalLWidth=(/HALO,HALO,1/),           &
-                                            totalUWidth=(/HALO,HALO,0/))
-               call ESMF_FieldEmptyComplete(fieldList_conc(j),transport_conc(:,:,:,j), &
-                                            indexflag=ESMF_INDEX_DELOCAL,              &
-                                            totalLWidth=(/HALO,HALO,1/),               &
-                                            totalUWidth=(/HALO,HALO,0/))
+
+            do n=1,transportFieldCount
+
+               call ESMF_FieldGet(fieldList_ws(n),status=status)
+
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY .or. status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+!                 Either coupler called ESMF_FieldEmptyCreate(name),
+!                 because fabm_pelagic ships with its own grid (coupler
+!                 checks whether temperature field in fabm_pelagic's
+!                 iState is already completed). Or coupler copied empty
+!                 field, because fabm_pelagic was created with getmGrid.
+!                 In the latter case the state variables are allocated
+!                 only here (and the exclusiveDomain still needs to be
+!                 passed to FABM!) in order to include the total domain.
+!                 PROBLEM: exclusiveDomain is not contiguous and cannot
+!                          be provided to FABM!!!
+                  allocate(transport_ws(n)%ptr(I3DFIELD))
+                  call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,              &
+                                               transport_ws(n)%ptr,                     &
+                                               ESMF_INDEX_DELOCAL,                      &
+                                               staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+                                               totalLWidth=(/HALO,HALO,1/),             &
+                                               totalUWidth=(/HALO,HALO,0/))
+               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+!                 Coupler copied completed fields from fabm_pelagic,
+!                 because "foreignGridField" was provided to fabm_pelagic
+!                 (coupler checks whether temperature field in fabm_pelagic's
+!                  iState is empty).
+!                 The field MUST include the HALO zones and k=0 !!!
+                  call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr)
+               end if
+
+               call ESMF_FieldGet(fieldList_conc(n),status=status)
+
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY .or. status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+                  allocate(transport_conc(n)%ptr(I3DFIELD))
+                  call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,      &
+                                               transport_conc(n)%ptr,             &
+                                               ESMF_INDEX_DELOCAL,                &
+                                               staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                               totalLWidth=(/HALO,HALO,1/),       &
+                                               totalUWidth=(/HALO,HALO,0/))
+               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+                  call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr)
+               end if
+
             end do
 
          end if
@@ -521,6 +564,8 @@ module getm_component
         call time_step(runtype,n)
       end if
 
+      call getmCmp_transport()
+
       call ESMF_ClockAdvance(clock)
       call ESMF_ClockGet(clock,currtime=currTime,advanceCount=advanceCount)
     end do
@@ -533,6 +578,7 @@ module getm_component
 
   end subroutine Run
 
+!-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, iState, eState, iClock, rc)
@@ -655,7 +701,11 @@ module getm_component
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          allocate(Tbot(I2DFIELD))
-         allocate(T3D(I2DFIELD,1:kmax))
+#ifdef FOREIGN_GRID
+         allocate(T3D(I3DFIELD))
+#else
+         allocate(T3D(imin:imax,jmin:jmax,1:kmax))
+#endif
 #endif
       end if
     else
@@ -684,7 +734,11 @@ module getm_component
        if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
           Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
-          T3D(I2DFIELD,1:kmax) => T(:,:,1:kmax)
+#ifdef FOREIGN_GRID
+          T3D=>T
+#else
+          T3D => T(imin:imax,jmin:jmax,1:kmax)
+#endif
 #endif
        end if
    end if
@@ -1093,6 +1147,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
+   use domain    ,only: imin,imax,jmin,jmax,kmax
    use initialise  , only: runtype
 #ifndef NO_BAROCLINIC
    use variables_3d, only: T
@@ -1119,7 +1174,11 @@ module getm_component
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          Tbot = T(:,:,1)
-         T3D = T(:,:,1:)
+#ifdef FOREIGN_GRID
+         T3D = T
+#else
+         T3D = T(imin:imax,jmin:jmax,1:kmax)
+#endif
 #endif
       end if
    end if
@@ -1135,40 +1194,30 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOP
 !
-! !ROUTINE: do_transport() - do transport of 2D fields
+! !ROUTINE: getmCmp_transport() - transport of additional fields
 !
 ! !INTERFACE:
 #undef  ESMF_METHOD
-#define ESMF_METHOD "do_transport"
-   subroutine do_transport(gridComp,dt,field,AH)
+#define ESMF_METHOD "getmCmp_transport"
+   subroutine getmCmp_transport()
 !
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain      , only: imin,imax,jmin,jmax,az,H
-   use advection   , only: do_advection
-   use advection   , only: HALFSPLIT,P2_PDM
-   use m2d         , only: Uint,Vint
-   use variables_3d, only: Dn,Dun,Dvn,sseo
-   use halo_zones  , only: update_2d_halo,wait_halo
-   use halo_zones  , only: H_TAG
+   use domain, only: imin,imax,jmin,jmax,kmax
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
-   type(ESMF_GridComp) :: gridComp
-   REALTYPE,intent(in) :: dt,AH
 !
 ! !INPUT/OUPUT PARAMETERS:
-   type(ESMF_Field)    :: field
 !
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES
-   REALTYPE,dimension(E2DFIELD)              :: Dold
-   REALTYPE,dimension(E2DFIELD),target       :: f
-   REALTYPE,dimension(:,:),pointer           :: pf
-   real(ESMF_KIND_R8),dimension(:,:),pointer :: farrayPtr
+   REALTYPE,dimension(I3DFIELD),target  :: t_conc,t_ws
+   REALTYPE,dimension(:,:,:)   ,pointer :: p_conc,p_ws
+   integer                              :: n
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -1176,132 +1225,39 @@ module getm_component
 #ifdef DEBUG
    integer, save :: Ncall = 0
    Ncall = Ncall+1
-   write(debug,*) 'do_transport() # ',Ncall
+   write(debug,*) 'getmCmp_transport() # ',Ncall
 #endif
 
-!  KK-TODO: VMIsPetLocal() ???
-   if (.not. ESMF_GridCompIsPetLocal(gridComp)) return
+   if ( .not. allocated(transport_conc) ) return
 
-   call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+   do n=1,size(transport_conc)
 
-   if (noKindMatch) then
-      pf => f
-      f = farrayPtr
-   else
-      pf => farrayPtr
-   end if
+      if (noKindMatch) then
+         t_conc = transport_conc(n)%ptr
+         t_ws   = transport_ws  (n)%ptr
+         p_conc => t_conc
+         p_ws   => t_ws
+      else
+         p_conc => transport_conc(n)%ptr
+         p_ws   => transport_ws  (n)%ptr
+      end if
 
-!  Cannot extract layer heights from grid coordinates, because these are
-!  already updated.
-!  For several timesteps we need to store Dires and calculate new
-!  D[old|[u|v]n] based on Dires.
-!  For several timesteps [U|V]int is inconsistent.
-   Dold = sseo + H
-   call update_2d_halo(pf,pf,az,imin,jmin,imax,jmax,H_TAG)
-   call wait_halo(H_TAG)
-   call do_advection(dt,pf,Uint,Vint,Dun,Dvn,Dold,Dn,HALFSPLIT,P2_PDM,AH,H_TAG)
+      call do_transport_3d(p_conc,p_ws)
 
-   if (noKindMatch) farrayPtr = f
+      if (noKindMatch) then
+         transport_conc(n)%ptr = t_conc
+         transport_ws  (n)%ptr = t_ws
+      end if
 
-#ifdef DEBUG
-   write(debug,*) 'Leaving do_transport()'
-   write(debug,*)
-#endif
-   return
-
-   end subroutine do_transport
-!EOC
-!-----------------------------------------------------------------------
-!BOP
-!
-! !ROUTINE: do_transport_3d() - do transport of 3D fields
-!
-! !INTERFACE:
-#undef  ESMF_METHOD
-#define ESMF_METHOD "do_transport_3d"
-   subroutine do_transport_3d(gridComp,dt,field,AH,wsfield)
-!
-! !DESCRIPTION:
-!
-! !USES:
-   use domain      , only: imin,imax,jmin,jmax,kmax,az
-   use advection_3d, only: do_advection_3d
-   use advection   , only: HALFSPLIT,P2_PDM
-   use variables_3d, only: uu,vv,ww,hun,hvn,ho,hn,nuh
-   use halo_zones  , only: update_3d_halo,wait_halo
-   use halo_zones  , only: H_TAG
-   use util        , only: NEUMANN,FLUX
-   IMPLICIT NONE
-!
-! !INPUT PARAMETERS:
-   type(ESMF_GridComp)                  :: gridComp
-   REALTYPE,intent(in)                  :: dt,AH
-   type(ESMF_Field),intent(in),optional :: wsfield
-!
-! !INPUT/OUPUT PARAMETERS:
-   type(ESMF_Field)                     :: field
-!
-! !REVISION HISTORY:
-!  Original Author(s): Knut Klingbeil
-!
-! !LOCAL VARIABLES
-   REALTYPE,dimension(I3DFIELD)                :: f
-   real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farrayPtrf,farrayPtrws
-   REALTYPE,dimension(0:kmax)                  :: sour,Taur,ws
-   integer                                     :: i,j
-   logical                                     :: ws_present
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-#ifdef DEBUG
-   integer, save :: Ncall = 0
-   Ncall = Ncall+1
-   write(debug,*) 'do_transport_3d() # ',Ncall
-#endif
-
-!  KK-TODO: VMIsPetLocal() ???
-   if (.not. ESMF_GridCompIsPetLocal(gridComp)) return
-
-   ws_present = present(wsfield)
-
-   call ESMF_FieldGet(field,farrayPtr=farrayPtrf)
-   if (ws_present) call ESMF_FieldGet(wsfield,farrayPtr=farrayPtrws)
-
-   f(:,:,1:) = farrayPtrf
-
-!  see comments in do_transport()
-   call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
-   call wait_halo(H_TAG)
-   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,AH,H_TAG)
-
-   sour = _ZERO_
-   Taur = 1.d15
-   do j=jmin,jmax
-      do i=imin,imax
-         if (az(i,j) .eq. 1) then
-            if (ws_present) then
-!              Do advection step due to settling or rising
-               ws = farrayPtrws(i,j,:)
-               call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws,FLUX,FLUX, &
-                               _ZERO_,_ZERO_,6,1,f(i,j,:))
-            end if
-            call diff_center(kmax,dt,_ONE_,1,hn(i,j,:),NEUMANN,NEUMANN, &
-                             _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &
-                             f(i,j,:),f(i,j,:))
-         end if
-      end do
    end do
 
-   farrayPtrf = f(:,:,1:)
-
 #ifdef DEBUG
-   write(debug,*) 'Leaving do_transport_3d()'
+   write(debug,*) 'Leaving getmCmp_transport()'
    write(debug,*)
 #endif
    return
 
-   end subroutine do_transport_3d
+   end subroutine getmCmp_transport
 !EOC
 !-----------------------------------------------------------------------
 !BOP
