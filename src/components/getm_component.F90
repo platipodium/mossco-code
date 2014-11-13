@@ -71,33 +71,33 @@ module getm_component
 #define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
+    implicit none
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    integer              :: localrc
-    
-    rc=ESMF_SUCCESS
+    call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
+                                    userRoutine=InitializeP0, &
+                                    phase=0,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
-      userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
-      userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
+                                    userRoutine=InitializeP1, &
+                                    phase=1,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
-      userRoutine=InitializeP2, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
+                                    userRoutine=InitializeP2, &
+                                    phase=2,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine SetServices
-
 
 !-----------------------------------------------------------------------
 !BOP
@@ -135,20 +135,17 @@ module getm_component
    integer                :: localrc
    type(ESMF_Time)        :: currTime
    character(ESMF_MAXSTR) :: name
-
 !
 !EOP
 !-----------------------------------------------------------------------
 !BOC
-
-    call MOSSCO_CompEntry(gridComp, iClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 #ifdef DEBUG
    integer, save :: Ncall = 0
    Ncall = Ncall+1
    write(debug,*) 'InitializeP0() # ',Ncall
 #endif
+
+   call MOSSCO_CompEntry(gridComp, iClock, name, currTime, localrc)
 
 !  Note (KK): NUOPC initialises all components in various phases. By
 !             default NUOPC assumes IPDv00 and thus requires userRoutines
@@ -178,11 +175,10 @@ module getm_component
 
    call NUOPC_GridCompAttributeAdd(gridComp)
    call ESMF_AttributeSet(gridComp,name="InitializePhaseMap",           &
-                                  valueList=InitializePhaseMap,        &
-                                  convention="NUOPC",purpose="General",rc=rc)
+                                   valueList=InitializePhaseMap,        &
+                                   convention="NUOPC",purpose="General",rc=rc)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
    write(debug,*) 'Leaving InitializeP0()'
@@ -231,10 +227,10 @@ module getm_component
     integer               :: localrc
 
     call MOSSCO_CompEntry(gridComp, iClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompGet(gridComp, vmIsPresent=vmIsPresent, clockIsPresent=clockIsPresent, &
-                                    rc=rc)
+    call ESMF_GridCompGet(gridComp,vmIsPresent=vmIsPresent,       &
+                                   clockIsPresent=clockIsPresent, &
+                                   rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (.not.vmIsPresent) then
@@ -264,7 +260,6 @@ module getm_component
       call postinit_model()
     else
       ! set up clock based on internal GETM specifications
-      ! I don' think we ever arrive here ..
 
       call init_model(datestr,timestr)
       TimeStrISOFrac=getm_time_start(1:10)//"T"//getm_time_start(12:19)
@@ -354,7 +349,6 @@ module getm_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
 
@@ -385,7 +379,6 @@ module getm_component
       character(len=ESMF_MAXSTR) :: name
 
       call MOSSCO_CompEntry(gridComp, iClock, name, currTime, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(iState,itemCount=itemCount)
 
@@ -456,8 +449,6 @@ module getm_component
 !                 In the latter case the state variables are allocated
 !                 only here (and the exclusiveDomain still needs to be
 !                 passed to FABM!) in order to include the total domain.
-!                 PROBLEM: exclusiveDomain is not contiguous and cannot
-!                          be provided to FABM!!!
                   allocate(transport_ws(n)%ptr(I3DFIELD))
                   call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,              &
                                                transport_ws(n)%ptr,                     &
@@ -495,7 +486,6 @@ module getm_component
       end if
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    end subroutine InitializeP2
 
@@ -531,7 +521,6 @@ module getm_component
     integer                 :: n
 
     call MOSSCO_CompEntry(gridComp, iClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -574,7 +563,6 @@ module getm_component
     call getmCmp_update_eState()
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
@@ -602,7 +590,6 @@ module getm_component
     integer               :: localrc
 
     call MOSSCO_CompEntry(gridComp, iClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifndef NO_3D
     if (meanout .eq. 0) then
@@ -611,7 +598,12 @@ module getm_component
 #endif
     call clean_up(dryrun,runtype,MaxN)
 
-    
+    call ESMF_GridCompGet(gridComp,clockIsPresent=ClockIsPresent, &
+                                   gridIsPresent=GridIsPresent,   &
+                                   rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ClockIsPresent) call ESMF_ClockDestroy(clock)
+
     if (GridIsPresent) then
       call ESMF_GridCompGet(gridComp,grid=getmGrid)
       !call ESMF_GridGet(getmGrid,distgrid=getmDistGrid)
@@ -622,13 +614,7 @@ module getm_component
       call ESMF_GridDestroy(getmGrid)
     end if
 
-    call ESMF_GridCompGet(gridComp,clock=clock,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-	  call ESMF_ClockDestroy(clock)    
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
 
