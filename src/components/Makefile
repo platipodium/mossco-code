@@ -90,6 +90,9 @@ libmossco_fabmpelagic: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic(fabm_
 libmossco_fabm0d: prefix libmossco_fabm0d_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
 
+libmossco_getm: libmossco_getm_driver \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
+
 libempty: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
 libmossco_inout: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a(inout_component.o)
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
@@ -97,11 +100,6 @@ libconstant_grid: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant_grid.a(cons
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
-
-# A really, really dirty hack for now...
-libmossco_getm: libmossco_getm_driver \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
-	$(RM) getm_component.o
 
 libmossco_fabm0d_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d

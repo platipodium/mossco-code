@@ -60,6 +60,9 @@ libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 libmossco_fabmpelagic: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a $(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
 
+libmossco_getm: prefix libgetm_external \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
+
 fabm0d_driver.o: fabm0d_driver.F90
 	@echo "Compiling $<"
 	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
@@ -67,11 +70,6 @@ fabm0d_driver.o: fabm0d_driver.F90
 fabm_gotm_driver.o: fabm_gotm_driver.F90
 	@echo "Compiling $<"
 	$(F90) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-
-# A really, really dirty hack for now...
-libmossco_getm: prefix libgetm_external \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
-	$(RM) getm_driver.o
 
 getm_driver.o: getm_driver.F90
 	@echo "Compiling $<"
