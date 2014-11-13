@@ -19,16 +19,16 @@ OCEAN?=GOTM
 include $(MOSSCO_DIR)/src/Rules.make
 
 NC_LIBS += $(shell nf-config --flibs)
-ifeq ($(OCEAN),GOTM)
-LIBS :=  -lgotm -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
-else
-LIBS := -lremtc -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
-endif
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 ifeq ($(OCEAN),GOTM)
+CPPFLAGS += -D_GOTMOCEAN_
+LIBS :=  -lgotm -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 LDFLAGS += $(GOTM_LDFLAGS)
+dep := libgotm
 else
+LIBS := -lremtc -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
+dep := libremtc
 endif
 LDFLAGS += $(FABM_LDFLAGS)
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
@@ -39,12 +39,11 @@ endif
 .PHONY: all exec libremtc libsediment liboceansedimentcoupler libgotm
 
 all: exec
-exec: ocean_fabm0d
+exec: libmossco_util libmossco_fabm0d $(dep) ocean_fabm0d
 
-ocean_fabm0d: toplevel_component.o main.o
-	$(F90) $(F90FLAGS) -o ocean_fabm0d  $^ $(LDFLAGS)
-	@echo "Created example binary ocean_fabm0d in $(PWD)"
-	@echo "Please change to $(MOSSCO_DIR)/examples/ocean_fabm0d/ to run the example." > $(MOSSCO_BIN_PATH)/ocean_fabm0d.txt
+ocean_fabm0d: toplevel_component.o ../common/main.o
+	$(F90) $(F90FLAGS)  $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
@@ -57,17 +56,6 @@ libmossco_fabm0d:
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
-
-main.o: toplevel_component.o main.F90 libmossco_util
-ifeq ($(OCEAN),GOTM)
-CPPFLAGS += -D_GOTMOCEAN_
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libgotm
-else
-toplevel_component.o: toplevel_component.F90 libmossco_fabm0d libremtc
-endif
-
-main.F90: ../common/main.F90
-	ln -f  $< $@
 
 clean: extraclean
 
