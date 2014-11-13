@@ -39,14 +39,14 @@ LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += $(NC_LIBS)
 
-.PHONY: all exec libsediment libmossco_fabmgotm libmossco_sediment libconstant libgotm $(EROSED_DEP)
+.PHONY: all exec fabm_benthic_pelagic libsediment libmossco_fabmgotm libmossco_sediment libconstant libgotm $(EROSED_DEP)
 
 all: exec
-exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_netcdf fbp
+exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_netcdf fabm_benthic_pelagic
 
-fbp: toplevel_component.o ../common/main.o
-	$(F90) $(F90FLAGS) -o fabm_benthic_pelagic $^ $(LDFLAGS)
-	@echo "Created example binary $(MOSSCO_DIR)/examples/fabm_benthic_pelagic/fabm_benthic_pelagic"
+fabm_benthic_pelagic: toplevel_component.o ../common/main.o
+	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
+	@echo "Created example binary $(PWD)/$@"
 
 libmossco_fabmgotm libgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
