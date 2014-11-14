@@ -29,7 +29,8 @@ model => fabm_create_model_from_file(namlst)
   do i=1,size(model%state_variables)
      LEVEL3 trim(model%state_variables(i)%name), '  ', &
             trim(model%state_variables(i)%units),'  ',&
-            trim(model%state_variables(i)%long_name)
+            trim(model%state_variables(i)%long_name), &
+            'missing_value:',model%state_variables(i)%missing_value
   end do
 
   LEVEL2 'FABM benthic state variables:'

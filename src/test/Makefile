@@ -44,7 +44,7 @@ test_Solver: libsolver
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lsolver $(LIBS)
 
 test_FabmDependencies:
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(FABM_LDFLAGS) $(LIBS)
+	$(F90) $(CPPFLAGS) $(FABM_CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(FABM_LDFLAGS) $(LIBS)
 
 test_pointer: test_pointer.F90
 	$(F90) $< -o $@
