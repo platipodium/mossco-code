@@ -89,7 +89,7 @@ erosed-svn-clone:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/erosed-svn),)
 	svn co --depth empty https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $(MOSSCO_DIR)/external/erosed-svn
 	$(MAKE) erosed-svn-update
-  $(MAKE) flow2d3d-svn-export
+	$(MAKE) flow2d3d-svn-export
 endif
 
 erosed-svn-update:
