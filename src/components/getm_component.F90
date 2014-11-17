@@ -26,6 +26,7 @@ module getm_component
   use esmf
   use getm_driver
   use mossco_component
+  use variables_3d, only: hn
 
   implicit none
   private
@@ -59,6 +60,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer, dimension(:,:,:) :: hn3d=>null()
 
   type :: ptrarray3D
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
@@ -298,6 +300,13 @@ module getm_component
 #else
       T3DField = ESMF_FieldCreate(getmGrid3D,T3D,name="temperature_in_water",rc=rc)
 #endif
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    hn3d(-HALO:,-HALO:,0:)=>hn
+    if (associated(hn3d)) then
+      T3DField = ESMF_FieldCreate(getmGrid3D,hn3d,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/),name="cell_thickness_in_water",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
