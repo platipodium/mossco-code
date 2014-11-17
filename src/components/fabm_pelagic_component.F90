@@ -397,11 +397,16 @@ module fabm_pelagic_component
 
     !! create forcing fields in import State
     do n=1,size(pel%bulk_dependencies)
+        write(message,*) 'create bulk field ',trim(pel%bulk_dependencies(n)%name)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
         field = ESMF_FieldCreate(state_grid, &
                name=trim(pel%bulk_dependencies(n)%name)//'_in_water', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+        call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        ptr_f3 = 0.0_rk
         ! add field to state, if not present
         call ESMF_StateAdd(importState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) then
@@ -416,12 +421,13 @@ module fabm_pelagic_component
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f3 = 0.0_rk
         call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
     end do
 
     if (associated(pel%horizontal_dependencies)) then
       do n=1,size(pel%horizontal_dependencies)
+        write(message,*) 'create hor. field ',trim(pel%horizontal_dependencies(n)%name)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
         field = ESMF_FieldCreate(horizontal_grid, &
                name=trim(pel%horizontal_dependencies(n)%name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
@@ -461,6 +467,8 @@ module fabm_pelagic_component
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
       varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux'
+      write(message,*) 'create hor. field ',trim(varname)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
       field = ESMF_FieldCreate(horizontal_grid, &
              name=varname, &
              typekind=ESMF_TYPEKIND_R8, &
@@ -542,7 +550,7 @@ module fabm_pelagic_component
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
       !       have to be updated from importState here in Run
       do n=1,pel%nvar
-        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p*dt/pel%layer_height(RANGE2D,1)
+        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
       end do
 
       ! reset concentrations to mininum_value
