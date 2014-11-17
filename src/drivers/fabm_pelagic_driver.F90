@@ -298,7 +298,7 @@
     bulk_id = fabm_get_bulk_variable_id(pf%model,varname)
     ! link data if variable is used
     if (fabm_is_variable_used(bulk_id)) call fabm_link_bulk_data(pf%model,bulk_id,ptr_bulk(RANGE3D))
-    if (varname == 'cell_thickness') pf%layer_height => ptr_bulk
+    if (varname == 'cell_thickness') pf%layer_height => ptr_bulk(RANGE3D)
 
   else if (present(ptr_horizontal)) then
     horizontal_id = fabm_get_horizontal_variable_id(pf%model,varname)
