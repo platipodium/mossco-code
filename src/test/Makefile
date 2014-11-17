@@ -28,7 +28,7 @@ all: tests
 
 tests: $(TESTS)
 
-test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize test_FieldBounds test_FieldGet test_Grid test_GridCreate test_MPI_Initialize test_Redist test_Regrid2d test_Ugrid test_Regrid3d test_RegridLocStream:
+test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize test_FieldBounds test_FieldGet test_Grid test_GridCreate test_MPI_Initialize test_Redist test_Regrid2d test_Ugrid test_Regrid3d test_RegridLocStream test_Regrid2d_GridToMesh:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@  $(LDFLAGS)  $(LIBS)
 
 test_Concurrency: libmossco_constant libmossco_info
