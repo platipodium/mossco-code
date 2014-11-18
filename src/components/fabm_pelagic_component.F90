@@ -3,8 +3,8 @@
 !> The ESMF/FABM pelagic driver component module provides infrastructure for the
 !! MOSSCO pelagic component.
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -35,7 +35,7 @@ module fabm_pelagic_component
   implicit none
 
   private
- 
+
   real(rk)  :: dt
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: inum=1,jnum=1
@@ -52,11 +52,11 @@ module fabm_pelagic_component
 
   real(rk),dimension(:,:,:),pointer            :: diag=>null()
   type(type_2d_pointer), dimension(:), pointer :: bfl=>null()
- 
+
   type(type_mossco_fabm_pelagic),save :: pel
 
   public :: SetServices,rk
-  
+
   contains
 
   subroutine SetServices(gridcomp, rc)
@@ -72,11 +72,11 @@ module fabm_pelagic_component
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
 
   end subroutine SetServices
-  
+
     subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
- 
+
     implicit none
-  
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -111,11 +111,11 @@ module fabm_pelagic_component
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min
 
-    !! read namelist input for control of timestepping  
+    !! read namelist input for control of timestepping
     open(33,file='fabm_pelagic.nml',action='read',status='old')
     read(33,nml=fabm_pelagic)
     close(33)
-  
+
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
 
@@ -130,7 +130,7 @@ module fabm_pelagic_component
         name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_AttributeSet(field,'units',trim(pel%model%info%diagnostic_variables(n)%units))
-        
+
       call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
@@ -149,7 +149,7 @@ module fabm_pelagic_component
 
   end subroutine Initialise_Advertise
 
-  
+
   !> Initialize phase 1
   !!
   !! Allocate memory for boundaries and fluxes, create ESMF fields
@@ -179,7 +179,7 @@ module fabm_pelagic_component
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
     type(ESMF_ArraySpec) :: flux_array,state_array
     type(ESMF_StateItem_Flag) :: itemType
-
+    type(ESMF_CoordSys_Flag) :: coordSys
 
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
@@ -193,7 +193,7 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4) :: totallwidth(3,1), totaluwidth(3,1)
     integer(ESMF_KIND_I8) :: tidx
     type(ESMF_Alarm)      :: outputAlarm
-  
+
     character(len=ESMF_MAXSTR) :: timestring, name, message, units
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
     type(ESMF_Clock)           :: clock
@@ -201,7 +201,10 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
     logical                    :: clockIsPresent
-    integer                    :: numElements,numNodes
+    integer                            :: tileCount,numElements,numNodes
+    integer,dimension(3)               :: coordDimCount
+    integer,dimension(3,3)             :: coordDimMap
+    integer,dimension(:,:),allocatable :: minIndexPTile,maxIndexPTile
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
 
@@ -212,7 +215,7 @@ module fabm_pelagic_component
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !! read namelist input for control of timestepping  
+    !! read namelist input for control of timestepping
     open(33,file='fabm_pelagic.nml',action='read',status='old')
     read(33,nml=fabm_pelagic)
     close(33)
@@ -274,6 +277,24 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       end if
     end if
+#if 0
+    call ESMF_GridGet(state_Grid,distgrid=distGrid_3D,tileCount=tileCount, &
+                                 coordSys=coordSys,                        &
+                                 coordDimCount=coordDimCount,              &
+                                 coordDimMap=coordDimMap)
+    allocate(minIndexPTile(3,tileCount))
+    allocate(maxIndexPTile(3,tileCount))
+    call ESMF_DistGridGet(distGrid_3D,minIndexPTile=minIndexPTile, &
+                                      maxIndexPTile=maxIndexPTile)
+    distGrid_2D = ESMF_DistGridCreate(int(minIndexPTile(1:2,:)), &
+                                      int(maxIndexPTile(1:2,:)))
+    horizontal_grid = ESMF_GridCreate(distGrid_2D,name="pelagic horizontal grid", &
+                                       gridAlign=(/1,1/),                         &
+                                       coordSys=coordSys,                         &
+                                       coordDimCount=int(coordDimCount(1:2)),     &
+                                       coordDimMap=int(coordDimMap(1:2,1:2)),     &
+                                       rc=rc)
+#else
     horizontal_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
                    maxIndex=(/inum,jnum/), &
                    regDecomp=(/1,1/), &
@@ -282,10 +303,11 @@ module fabm_pelagic_component
                    name="pelagic horizontal grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=rc)
+#endif
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridAddCoord(horizontal_grid, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
- 
+
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
 
@@ -305,7 +327,7 @@ module fabm_pelagic_component
 
     !! allocate local arrays
     allocate(bfl(pel%nvar))
- 
+
     ! set solver_settings:
     pel%dt_min=dt_min
     pel%relative_change_min=relative_change_min
@@ -391,7 +413,7 @@ module fabm_pelagic_component
                    name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field,'units',trim(pel%model%info%diagnostic_variables(n)%units))
-        
+
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end do
@@ -446,7 +468,7 @@ module fabm_pelagic_component
         !! this probably has to be done only once (here) and not in Run
         call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), field=field, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(field=field, farrayPtr=ptr_f2, rc=rc)
+        call ESMF_FieldGet(field, farrayPtr=ptr_f2, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         ptr_f2 = 0.0_rk
         ! check for valid upper bounds of possibly existing array
@@ -507,7 +529,7 @@ module fabm_pelagic_component
     !call ESMF_StatePrint(exportState)
     call pel%check_ready()
     !> also update export states again with sinking velocities
-    !! todo: this has to go into a second init phase, 
+    !! todo: this has to go into a second init phase,
     !!       when real forcing is linked. Also diagnostic variables could
     !!       be initialised, while doing a 0-timestep based on initial fields
     !!       and forcing
@@ -524,16 +546,16 @@ module fabm_pelagic_component
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
- 
+
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
     integer           :: i,j
     integer(8)     :: t
- 
+
     character(len=ESMF_MAXSTR) :: name
     type(ESMF_Clock)           :: clock
     type(ESMF_Time)            :: currTime
-    
+
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -576,12 +598,12 @@ module fabm_pelagic_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
 
-    !> prepare component's export   
+    !> prepare component's export
     call pel%update_export_states()
- 
+
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
+
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
