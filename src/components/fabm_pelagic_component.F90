@@ -174,6 +174,7 @@ module fabm_pelagic_component
     integer              :: i
     integer              :: rank
     integer, allocatable :: maxIndex(:)
+    type(ESMF_DELayout)  :: delayout
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
     type(ESMF_Grid)      :: state_grid,horizontal_grid,foreign_grid
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
@@ -201,10 +202,11 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
     logical                    :: clockIsPresent
-    integer                            :: tileCount,numElements,numNodes
-    integer,dimension(3)               :: coordDimCount
-    integer,dimension(3,3)             :: coordDimMap
-    integer,dimension(:,:),allocatable :: minIndexPTile,maxIndexPTile
+    integer                    :: deCount,numElements,numNodes
+    integer,dimension(3)       :: coordDimCount
+    integer,dimension(3,3)     :: coordDimMap
+    integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
+    integer,dimension(:,:,:),allocatable,target :: deBlockList
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
 
@@ -277,33 +279,34 @@ module fabm_pelagic_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       end if
     end if
-#if 0
-    call ESMF_GridGet(state_Grid,distgrid=distGrid_3D,tileCount=tileCount, &
-                                 coordSys=coordSys,                        &
-                                 coordDimCount=coordDimCount,              &
+
+    call ESMF_GridGet(state_Grid,distgrid=distGrid_3D,        &
+                                 coordSys=coordSys,           &
+                                 coordDimCount=coordDimCount, &
                                  coordDimMap=coordDimMap)
-    allocate(minIndexPTile(3,tileCount))
-    allocate(maxIndexPTile(3,tileCount))
-    call ESMF_DistGridGet(distGrid_3D,minIndexPTile=minIndexPTile, &
-                                      maxIndexPTile=maxIndexPTile)
-    distGrid_2D = ESMF_DistGridCreate(int(minIndexPTile(1:2,:)), &
-                                      int(maxIndexPTile(1:2,:)))
+    call ESMF_DistGridGet(distGrid_3D,delayout=delayout)
+    call ESMF_DELayoutGet(delayout,deCount=deCount)
+
+    allocate(minIndexPDe(3,deCount))
+    allocate(maxIndexPDe(3,deCount))
+    allocate(deBlockList(3,2,deCount))
+
+    call ESMF_DistGridGet(distGrid_3D,minIndexPDe=minIndexPDe, &
+                                      maxIndexPDe=maxIndexPDe)
+    deBlockList(:,1,:) = minIndexPDe
+    deBlockList(:,2,:) = maxIndexPDe
+
+    distGrid_2D = ESMF_DistGridCreate(minval(deBlockList(1:2,1,:),2), &
+                                      maxval(deBlockList(1:2,2,:),2), &
+                                      int(deBlockList(1:2,:,:)),      &
+                                      delayout=delayout)
+
     horizontal_grid = ESMF_GridCreate(distGrid_2D,name="pelagic horizontal grid", &
-                                       gridAlign=(/1,1/),                         &
-                                       coordSys=coordSys,                         &
-                                       coordDimCount=int(coordDimCount(1:2)),     &
-                                       coordDimMap=int(coordDimMap(1:2,1:2)),     &
-                                       rc=rc)
-#else
-    horizontal_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
-                   maxIndex=(/inum,jnum/), &
-                   regDecomp=(/1,1/), &
-                   coordSys=ESMF_COORDSYS_SPH_DEG, &
-                   indexflag=ESMF_INDEX_GLOBAL,  &
-                   name="pelagic horizontal grid", &
-                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=rc)
-#endif
+                                      gridAlign=(/1,1/),                          &
+                                      coordSys=coordSys,                          &
+                                      coordDimCount=int(coordDimCount(1:2)),      &
+                                      coordDimMap=int(coordDimMap(1:2,1:2)),      &
+                                      rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridAddCoord(horizontal_grid, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
