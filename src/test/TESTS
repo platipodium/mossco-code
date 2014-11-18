@@ -13,6 +13,7 @@ test_MPI_Initialize
 test_Netcdf
 test_pointer
 test_Regrid2d
+test_Regrid2d_GridToMesh
 test_Regrid3d
 test_RegridLocStream
 test_Solver
