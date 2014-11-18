@@ -338,6 +338,7 @@ module fabm_pelagic_component
 
       wsfield = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
                        name=trim(varname)//'_z_velocity', &
+                       totalLWidth=totalLWidth3,totalUWidth=totalUWidth3, &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_AttributeSet(wsfield,'units','m/s')
