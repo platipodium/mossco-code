@@ -304,7 +304,7 @@ module getm_component
       call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
-    hn3d(-HALO:,-HALO:,0:)=>hn
+    hn3d(-HALO+1:,-HALO+1:,0:)=>hn
     if (associated(hn3d)) then
       T3DField = ESMF_FieldCreate(getmGrid3D,hn3d,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/),name="cell_thickness_in_water",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
