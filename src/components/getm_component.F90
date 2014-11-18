@@ -506,6 +506,7 @@ module getm_component
 
     use initialise ,only: runtype,dryrun
     use integration,only: MinN
+    use m3d, only: M
 
     implicit none
 
@@ -562,7 +563,8 @@ module getm_component
         call time_step(runtype,n)
       end if
 
-      call getmCmp_transport()
+!     Call transport routine every macro timestep
+      if (mod(n,M).eq.0) call getmCmp_transport()
 
       call ESMF_ClockAdvance(clock)
       call ESMF_ClockGet(clock,currtime=currTime,advanceCount=advanceCount)
