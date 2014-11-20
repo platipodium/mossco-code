@@ -47,6 +47,8 @@ module getm_component
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
   logical                    :: noKindMatch
+  integer(ESMF_KIND_I4),pointer :: maskC(:,:)=>NULL(),maskX(:,:)=>NULL()
+  integer(ESMF_KIND_I4),dimension(:,:,:),allocatable :: maskC3D,maskX3D
   real(ESMF_KIND_R8),pointer :: xc1D(:)  =>NULL(),yc1D(:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: xx1D(:)  =>NULL(),yx1D(:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: xc2D(:,:)=>NULL(),yc2D(:,:)=>NULL()
@@ -643,6 +645,7 @@ module getm_component
 !
 ! !USES:
    use domain      ,only: imin,jmin,imax,jmax,kmax
+   use domain      ,only: az,ax
    use domain      ,only: xcord,ycord,xx,yx,lonx,latx
    use domain      ,only: xxcord,yxcord,xc,yc,lonc,latc
    use domain      ,only: grid_type
@@ -659,7 +662,7 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    REALTYPE :: getmreal
-   integer  :: klen
+   integer  :: k,klen
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -749,11 +752,28 @@ module getm_component
          latx1D(:) = latx(imin,:)
    end select
 
+   if (kind(klen) .eq. ESMF_KIND_I4) then
+      maskC => az
+      maskX => ax
+   else
+      allocate(maskC(E2DFIELD)) ; maskC = az
+      allocate(maskX(E2DFIELD)) ; maskX = ax
+   end if
+
    if (runtype .eq. 1) then
       klen = 1
    else
       klen = kmax
    end if
+
+   allocate(maskC3D(E2DFIELD,1:klen))
+   allocate(maskX3D(E2DFIELD,0:klen))
+
+   do k=1,klen
+      maskC3D(:,:,k) = az
+      maskX3D(:,:,k) = ax
+   end do
+   maskX3D(:,:,0) = 0
 
    allocate(zw(E2DFIELD ,0:klen))
    allocate(zc(E2DFIELD ,1:klen))
@@ -797,7 +817,7 @@ module getm_component
    type(ESMF_StaggerLoc)    :: StaggerLoc
    type(ESMF_Array)         :: xcArray2D,ycArray2D,xxArray2D,yxArray2D
    type(ESMF_Array)         :: xcArray3D,ycArray3D,xxArray3D,yxArray3D
-   type(ESMF_Array)         :: zwArray,zcArray,zxArray
+   type(ESMF_Array)         :: zwArray,zcArray,zxArray,array
 !  Note (KK): ESMF_ARRAY's are deep classes, that persist after return.
 !             (even without save attribute).
    integer(ESMF_KIND_I4),dimension(:),allocatable,target :: alledges
@@ -1012,18 +1032,33 @@ module getm_component
                                 coordDimMap=coordDimMap)
 
    StaggerLoc = ESMF_STAGGERLOC_CENTER ! (default)
+!  2D grid
    call ESMF_GridSetCoord(getmGrid2D,1,array=xcArray2D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid2D,2,array=ycArray2D,staggerloc=StaggerLoc)
+   array = ESMF_ArrayCreate(getmDistGrid2D,maskC,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetItem(getmGrid2D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+!  3D grid
    call ESMF_GridSetCoord(getmGrid3D,1,array=xcArray3D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid3D,2,array=ycArray3D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid3D,3,array=zcArray  ,staggerloc=StaggerLoc)
+   !array = ESMF_ArrayCreate(getmDistGrid3D,maskC,indexflag=ESMF_INDEX_DELOCAL)
+   array = ESMF_ArrayCreate(getmDistGrid3D,maskC3D,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
 
    StaggerLoc = ESMF_STAGGERLOC_CORNER
+!  2D grid
    call ESMF_GridSetCoord(getmGrid2D,1,array=xxArray2D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid2D,2,array=yxArray2D,staggerloc=StaggerLoc)
+   array = ESMF_ArrayCreate(getmDistGrid2D,maskX,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetItem(getmGrid2D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+!  3D grid
    call ESMF_GridSetCoord(getmGrid3D,1,array=xxArray3D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid3D,2,array=yxArray3D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid3D,3,array=zxArray  ,staggerloc=StaggerLoc)
+   !array = ESMF_ArrayCreate(getmDistGrid3D,maskX,indexflag=ESMF_INDEX_DELOCAL)
+   array = ESMF_ArrayCreate(getmDistGrid3D,maskX3D,indexflag=ESMF_INDEX_DELOCAL,     &
+                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/))
+   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
 
    call ESMF_GridSetCoord(getmGrid3D,3,array=zwArray,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE)
 
