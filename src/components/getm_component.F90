@@ -817,7 +817,7 @@ module getm_component
    type(ESMF_StaggerLoc)    :: StaggerLoc
    type(ESMF_Array)         :: xcArray2D,ycArray2D,xxArray2D,yxArray2D
    type(ESMF_Array)         :: xcArray3D,ycArray3D,xxArray3D,yxArray3D
-   type(ESMF_Array)         :: zwArray,zcArray,zxArray,array
+   type(ESMF_Array)         :: array
 !  Note (KK): ESMF_ARRAY's are deep classes, that persist after return.
 !             (even without save attribute).
    integer(ESMF_KIND_I4),dimension(:),allocatable,target :: alledges
@@ -1002,17 +1002,6 @@ module getm_component
          ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc2D,indexflag=ESMF_INDEX_DELOCAL)
    end select
 
-   zwArray = ESMF_ArrayCreate(getmDistGrid3D,zw,            &
-                              indexflag=ESMF_INDEX_DELOCAL, &
-                              totalLWidth=(/HALO,HALO,1/),  &
-                              totalUWidth=(/HALO,HALO,0/))
-   zcArray = ESMF_ArrayCreate(getmDistGrid3D,zc,            &
-                              indexflag=ESMF_INDEX_DELOCAL)
-   zxArray = ESMF_ArrayCreate(getmDistGrid3D,zx,               &
-                              indexflag=ESMF_INDEX_DELOCAL,    &
-                              totalLWidth=(/HALO+1,HALO+1,1/), &
-                              totalUWidth=(/HALO,HALO,0/))
-
 !  Note (KK): gridAlign specifies which corner point in a grid cell
 !             shares the center indices [ default=(/-1,...,-1/) ].
 !             gridEdge[L|U]Width only affect DE's at the edge of tiles
@@ -1040,7 +1029,8 @@ module getm_component
 !  3D grid
    call ESMF_GridSetCoord(getmGrid3D,1,array=xcArray3D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid3D,2,array=ycArray3D,staggerloc=StaggerLoc)
-   call ESMF_GridSetCoord(getmGrid3D,3,array=zcArray  ,staggerloc=StaggerLoc)
+   array = ESMF_ArrayCreate(getmDistGrid3D,zc,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=StaggerLoc)
    !array = ESMF_ArrayCreate(getmDistGrid3D,maskC,indexflag=ESMF_INDEX_DELOCAL)
    array = ESMF_ArrayCreate(getmDistGrid3D,maskC3D,indexflag=ESMF_INDEX_DELOCAL)
    call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
@@ -1054,13 +1044,17 @@ module getm_component
 !  3D grid
    call ESMF_GridSetCoord(getmGrid3D,1,array=xxArray3D,staggerloc=StaggerLoc)
    call ESMF_GridSetCoord(getmGrid3D,2,array=yxArray3D,staggerloc=StaggerLoc)
-   call ESMF_GridSetCoord(getmGrid3D,3,array=zxArray  ,staggerloc=StaggerLoc)
+   array = ESMF_ArrayCreate(getmDistGrid3D,zx,indexflag=ESMF_INDEX_DELOCAL,              &
+                            totalLWidth=(/HALO+1,HALO+1,1/),totalUWidth=(/HALO,HALO,0/))
+   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=StaggerLoc)
    !array = ESMF_ArrayCreate(getmDistGrid3D,maskX,indexflag=ESMF_INDEX_DELOCAL)
    array = ESMF_ArrayCreate(getmDistGrid3D,maskX3D,indexflag=ESMF_INDEX_DELOCAL,     &
                             totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/))
    call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
 
-   call ESMF_GridSetCoord(getmGrid3D,3,array=zwArray,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE)
+   array = ESMF_ArrayCreate(getmDistGrid3D,zw,indexflag=ESMF_INDEX_DELOCAL,          &
+                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/))
+   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE)
 
    call ESMF_GridCompSet(gridComp,grid=getmGrid3D)
    call getmCmp_update_grid(gridComp)
