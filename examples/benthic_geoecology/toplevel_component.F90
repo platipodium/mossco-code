@@ -184,10 +184,14 @@ module toplevel_component
       endif
       call ESMF_GridCompRun(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
       
-      if (mod(advanceCount,5)==0) &
-          call ESMF_GridCompRun(netcdfComp, & 
-          importState=state, exportState=state, clock=parentClock, rc=rc)
-      
+      call ESMF_GridCompGet(netcdfComp,clock=childClock)
+      call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
+      if (mod(advanceCount,5)==0) then
+        call ESMF_GridCompRun(netcdfComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+      else
+        call ESMF_ClockSet(childClock,currTime=currTime+cplInterval)     
+      endif
+            
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
