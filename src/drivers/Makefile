@@ -117,7 +117,9 @@ EROSED_OBJS= \
   $(EROSED_DIR)/source/vanRijn84.o    \
   $(EROSED_DIR)/source/shld.o      \
   $(EROSED_DIR)/source/sand_mud.o\
-  $(EROSED_DIR)/source/compbsskin.o
+  $(EROSED_DIR)/source/compbsskin.o\
+#  $(EROSED_DIR)/source/bedbc1993.o\
+#  $(EROSED_DIR)/source/soursin_3d.o
 
 libmossco_erosed_dependencies: prefix              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
@@ -129,7 +131,10 @@ libmossco_erosed_dependencies: prefix              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/vanRijn84.o)    \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/shld.o)    \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/sand_mud.o)\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/compbsskin.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/compbsskin.o)\
+ # $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/bedbc1993.o)\
+ # $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/soursin_3d.o)
+
 
 libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies       \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosed_driver.o)
