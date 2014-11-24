@@ -27,7 +27,7 @@ module erosed_component
 
   private
 
-  ! These Parameters are defined in sedparam.inc seperately for delft-routine
+ ! These Parameters are defined in sedparam.inc seperately for delft-routine
  ! integer, parameter :: SEDTYP_NONCOHESIVE_TOTALLOAD = 0
  ! integer, parameter :: SEDTYP_NONCOHESIVE_SUSPENDED = 1
  ! integer, parameter :: SEDTYP_COHESIVE              = 2
@@ -124,7 +124,7 @@ contains
     type(ESMF_FieldBundle)                    :: upward_flux_bundle,downward_flux_bundle,fieldBundle
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     character(len=ESMF_MAXSTR)                :: foreignGridFieldName
-    
+
     integer , allocatable  :: maxIndex(:)
     integer                :: rank
 
@@ -202,13 +202,13 @@ contains
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-    
+
 
  !! get/set grid:
     !! rely on field with name foreignGridFieldName given as attribute and field
     !! in importState
     !! and just take the same grid&distgrid.
-    
+
     call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
            value=foreignGridFieldName, defaultValue='none',rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -231,28 +231,28 @@ contains
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     else
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) then 
+      if(rc /= ESMF_SUCCESS) then
        call ESMF_StatePrint (importstate)
        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       end if
       call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
+
       if (rank<2) then
         write(message,*) 'foreign grid must be of at least rank >= 2'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      end if 
-      
+      end if
+
       allocate(maxIndex(rank))
         inum=maxIndex(1)
         jnum=maxIndex(2)
-      if (rank ==2) then 
-        !grid = foreign_Grid    !> ToDO discuss copy or link for grid 
+      if (rank ==2) then
+        !grid = foreign_Grid    !> ToDO discuss copy or link for grid
         grid = ESMF_GridCreate(foreign_grid,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       elseif (rank == 3) then
- 
+
         call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
                computationalCount=maxIndex,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -327,7 +327,7 @@ contains
  !   nlev=nmub-nmlb+1
 
     nmlb=1
-    nmub = inum * jnum  
+    nmub = inum * jnum
     call initerosed( nmlb, nmub, nfrac)
 
 
@@ -375,7 +375,7 @@ contains
     tper = 0.0_fp
     teta = 0.0_fp
     wave = .false.
-  
+
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
   !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
@@ -449,20 +449,20 @@ contains
 
     if (lexist) then
   !      write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
-        open (unit = 707, file = 'delft_sediment_test.out', status = 'REPLACE', action = 'WRITE')
+        open (unit = 707, file = 'delft_sediment.out', status = 'REPLACE', action = 'WRITE')
     else
-        open (unit = 707, file = 'delft_sediment_test.out', status = 'NEW', action = 'WRITE')
+        open (unit = 707, file = 'delft_sediment.out', status = 'NEW', action = 'WRITE')
     end if
 
     write (707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
         'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
 
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(inum, jnum,nfrac))
-     
+
      do j=1,jnum
        do i= 1, inum
           size_classes_of_upward_flux_of_pim_at_bottom(i,j,:) = sink(:,inum*(j -1)+i)-sour(:,inum*(j -1)+i)
-       end do    
+       end do
      end do
 
 !> not used fo export State, since sink,sour are used by bed module
@@ -473,10 +473,10 @@ contains
 
   allocate(external_idx_by_nfrac(nfrac))
   allocate(nfrac_by_external_idx(nfrac))
- 
+
   external_idx_by_nfrac(:)=-1
   nfrac_by_external_idx(:)=-1
-  
+
  !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
   call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
   if(rc /= ESMF_SUCCESS) then
@@ -518,7 +518,7 @@ contains
     call ESMF_AttributeSet(upward_flux_field,'external_index',external_idx_by_nfrac(n))
     call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=rc)
   end do
-  
+
   call ESMF_StateAddReplace(exportState,(/upward_flux_bundle,downward_flux_bundle/),rc=rc)
 
   call ESMF_LogWrite('Initialized Delft erosed component',ESMF_LOGMSG_INFO)
@@ -543,7 +543,7 @@ contains
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
     &                            Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
-    integer                  :: n, i, j 
+    integer                  :: n, i, j
     type(ESMF_Field)         :: field
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
@@ -610,13 +610,13 @@ contains
 
       u_mean(:,:) = sum (grid_height*sqrt(u**2+v**2),3)/sum(grid_height,3)
       !umod = sqrt( u(1,1,:)**2 + v(1,1,:)**2)
-      
+
      do j=1,jnum
        do i= 1, inum
-           umod (inum*(j -1)+i) = u_mean(i,j) 
-       end do    
+           umod (inum*(j -1)+i) = u_mean(i,j)
+       end do
      end do
-     
+
 
       else
         umod = 0.2
@@ -731,8 +731,8 @@ contains
           call ESMF_AttributeGet(fieldlist(n),'external_index',external_index,defaultvalue=-1)
          do j=1,jnum
           do i= 1, inum
-           ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1) 
-          end do    
+           ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1)
+          end do
          end do
 
         end do
@@ -749,87 +749,34 @@ contains
     summ = 0.0_fp
     rhowat = 1000.0_fp
     vicmol     = 1e-6_fp
- !  Loop over all cells
-    do nm = nmlb, nmub
-     do l = 1, nfrac
-
-      z0cur = sedd50(l)/12.0
-
-      reynold    = umod(nm) * h0(nm) / vicmol
-      cds    = 1.615e-4 * exp(6.0 * reynold**(-0.08))
-      cdr    = ( 0.40 / (log(h0(nm)/z0cur)-1.0) )**2
-
-  !   Determine flow regime
-
-   !     Flow only
-
-       if (reynold <= 2000.) then
-          taub(nm)   = 3.0 * rhowat * vicmol * umod(nm) / h0(nm)
-
-       else
-          if (cdr >= cds) then
-             taub(nm) = rhowat * cdr * umod(nm) * umod(nm)
-          else
-             taub(nm) = rhowat * cds * umod (nm)* umod(nm)
-          endif
-
-       endif
-
-       summ = summ + taub(nm) * frac(l,nm)
-
-    enddo
-
-     taub(nm) = summ
-     summ = 0.0_fp
-
-   enddo
-
-
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
-    !   Computing erosion fluxes
-
- !   if (.not.associated(BioEffects%ErodibilityEffect)) then
-
-  !  call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
-   !             & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
-   !             & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-   !        & sink      , sinkf   , sour     , sourf ,anymud, wave, uorb, tper, teta             )
-
- !   else
 
     call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
                 & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
                 & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
                 & sink      , sinkf   , sour     , sourf  , anymud,  wave, uorb, tper, teta,BioEffects )
 
- !   end if
 
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
-      !> @todo add warning about negative spm concentrations
-    !  spm_concentration(:,:,l) = max (0.0_fp, spm_concentration(:,:,l) )
      do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
              j= 1+ mod(nm,inum)
              i= nm - inum*(j -1)
-             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,1)*spm_concentration(i,j,l), sour      (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
-      
+             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+
        size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
           sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)
+          !sour(l,nm) *1000.0_fp - sink(l,nm)*spm_concentration(i,j,l)
     enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
 
-     
-
-!          write (*,*) 'SPM',l,'=', spm_concentration(1,1,l)
-    !      write (*,*) 'sour*1000.0', sour(l,1) *1000.0_fp
-      !write (*,*) 'concentration', spm_concentration(1,1,l)
    enddo
 
         !
@@ -916,7 +863,7 @@ contains
     deallocate (mfluff, frac)
     deallocate (sedtyp)
     deallocate (mudfrac)
-    
+
     deallocate (uorb, tper,teta)
 
     !! @todo uncomment next line
