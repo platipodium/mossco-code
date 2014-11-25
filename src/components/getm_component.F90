@@ -177,7 +177,7 @@ module getm_component
    InitializePhaseMap(1) = "IPDv00p1=1"
    InitializePhaseMap(2) = "IPDv00p2=2"
 
-   call NUOPC_GridCompAttributeAdd(gridComp)
+   call NUOPC_CompAttributeAdd(gridComp)
    call ESMF_AttributeSet(gridComp,name="InitializePhaseMap",           &
                                    valueList=InitializePhaseMap,        &
                                    convention="NUOPC",purpose="General",rc=rc)
