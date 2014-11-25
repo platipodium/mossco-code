@@ -211,11 +211,10 @@ module getm_component
     integer,intent(out) :: rc
 
     type(ESMF_Clock)      :: clock
-    type(ESMF_Time)       :: currTime, startTime, stopTime
+    type(ESMF_Time)       :: startTime,stopTime
     logical               :: vmIsPresent,clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
     type(ESMF_VM)         :: vm
-    real(ESMF_KIND_R8)    :: h_r8
     integer               :: comm
 
     type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
@@ -483,14 +482,8 @@ module getm_component
 
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime, stopTime
-    logical               :: clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
-
-    integer(ESMF_KIND_I4) :: petCount, localPet, rank
     integer(ESMF_KIND_I8) :: advanceCount
-    real(ESMF_KIND_R8)    :: h_r8
-
-
     type(ESMF_Time)         :: nextTime
     integer                 :: n
 
