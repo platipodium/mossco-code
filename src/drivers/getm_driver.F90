@@ -718,7 +718,7 @@
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES
-   REALTYPE,dimension(0:kmax) :: sour,Taur
+   REALTYPE,dimension(0:kmax) :: sour,Taur,ws1d
    integer                    :: i,j
    REALTYPE,parameter         :: AH=_ZERO_
 !
@@ -738,11 +738,14 @@
 
    sour = _ZERO_
    Taur = 1.d15
+   ws1d(0   ) = _ZERO_
+   ws1d(kmax) = _ZERO_
    do j=jmin,jmax
       do i=imin,imax
          if (az(i,j) .eq. 1) then
 !           Do advection step due to settling or rising
-            call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws(i,j,:),FLUX,FLUX, &
+            ws1d(1:kmax-1) = _HALF_ * ( ws(i,j,1:kmax-1) + ws(i,j,2:kmax) )
+            call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws1d,FLUX,FLUX, &
                             _ZERO_,_ZERO_,P2_PDM,1,f(i,j,:))
             call diff_center(kmax,dt,cnpar,1,hn(i,j,:),NEUMANN,NEUMANN, &
                              _ZERO_,_ZERO_,nuh(i,j,:),sour,sour,Taur,   &

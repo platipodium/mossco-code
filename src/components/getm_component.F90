@@ -461,11 +461,11 @@ module getm_component
 !                 only here (and the exclusiveDomain still needs to be
 !                 passed to FABM!) in order to include the total domain.
                   allocate(transport_ws(n)%ptr(I3DFIELD))
-                  call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,              &
-                                               transport_ws(n)%ptr,                     &
-                                               ESMF_INDEX_DELOCAL,                      &
-                                               staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
-                                               totalLWidth=(/HALO,HALO,1/),             &
+                  call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,        &
+                                               transport_ws(n)%ptr,               &
+                                               ESMF_INDEX_DELOCAL,                &
+                                               staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                               totalLWidth=(/HALO,HALO,1/),       &
                                                totalUWidth=(/HALO,HALO,0/))
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
 !                 Coupler copied completed fields from fabm_pelagic,
