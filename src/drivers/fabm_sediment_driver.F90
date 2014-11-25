@@ -24,11 +24,18 @@ private
 
 integer, public, parameter :: rk=selected_real_kind(12) !< real kind
 
+!> grid_type-s to be
+integer, public, parameter :: LOCAL_GRID=0
+integer, public, parameter :: UGRID=1
+integer, public, parameter :: FOREIGN_GRID=2
+
+
 type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    real(rk),dimension(:,:,:),pointer :: zi,dz,zc,dzc
    integer  :: knum,inum=-1,jnum=-1
    real(rk) :: dzmin
    logical  :: use_ugrid=.false.
+   integer  :: type=LOCAL_GRID
 contains
    procedure :: init_grid
 end type fabm_sed_grid
