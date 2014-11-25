@@ -57,7 +57,7 @@ module fabm_sediment_component
   type(type_sed),save :: sed
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
-                     dt_min,relative_change_min,ugrid_name, &
+                     dt_min,relative_change_min,ugrid_name, output, &
                      bcup_dissolved_variables
  
   public :: SetServices,bdys,fluxes,rk
@@ -554,8 +554,9 @@ module fabm_sediment_component
       if (sed%do_output) then
         !! Check if the output alarm is ringing, if so, quiet it and 
         !! get the current advance count (formerly t) from clock
-        if (ESMF_AlarmIsRinging(outputAlarm)) then
-          call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
+        !if (ESMF_AlarmIsRinging(outputAlarm)) then
+        !  call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
+        if (mod(advanceCount,output)==0) then
           !write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
           !write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
           !call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
