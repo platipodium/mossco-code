@@ -41,8 +41,7 @@ dx = (max(1)-min(1))/(counts(1)-1)
 dy = (max(2)-min(2))/(counts(2)-1)
 
     
-srcGrid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=counts, &
-    gridEdgeLWidth=(/0,0/), gridEdgeUWidth=(/0,0/), rc=rc, &
+srcGrid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), maxIndex=counts, rc=rc, &
     indexflag=ESMF_INDEX_GLOBAL, regDecomp=(/1,1/), name="source grid")
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
@@ -64,13 +63,19 @@ do j = cLBound(2), cUBound(2)
   enddo
 enddo
 
-! Create UGrid
-call ESMF_LogWrite('Creating Ugrid', ESMF_LOGMSG_INFO, rc=rc)
-call ESMF_LogFlush(rc=rc)
+! Create Mesh
 
+#ifdef UGRID
+call ESMF_LogWrite('Create Mesh from UGRID', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
 mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='ugrid_sediment.nc',filetypeflag=ESMF_FILEFORMAT_UGRID,rc=rc)
+#else
+call ESMF_LogWrite('Create Mesh from SCRIP', ESMF_LOGMSG_INFO, rc=rc)
+call ESMF_LogFlush(rc=rc)
+mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='scrip_sediment.nc',filetypeflag=ESMF_FILEFORMAT_SCRIP,rc=rc)
+#endif
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
- 
+
 ! Create Array spec and fields for both grids
 call ESMF_LogWrite('Create fields', ESMF_LOGMSG_INFO, rc=rc)
 call ESMF_LogFlush(rc=rc)
