@@ -71,7 +71,7 @@ contains
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)
+    write(message,'(A)') trim(name)//' '//trim(timestring)
     
     if (method == ESMF_METHOD_RUN) then
       write(message,'(A)') trim(message)//' running'
@@ -168,9 +168,9 @@ contains
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      write(message,'(A)') trim(timestring)//' '//trim(name)
+      write(message,'(A)') trim(name)//' '//trim(timestring)
     else
-      write(message,'(A)') '------------------- '//trim(name)
+      write(message,'(A)') trim(name)//'------------------- '
     endif
     
     if (method == ESMF_METHOD_RUN) then
@@ -235,7 +235,7 @@ contains
       write(timestring,'(A)') '-------------------'
     end if
 
-    write(message,'(A)') trim(timestring)//' '//trim(myName)
+    write(message,'(A)') trim(myName)//' '//trim(timestring)
     if (cMethod == ESMF_METHOD_INITIALIZE) then
       write(message,'(A)') trim(message)//' initializing'
     else if (cMethod == ESMF_METHOD_RUN) then
@@ -292,7 +292,7 @@ contains
       write(timestring,'(A)') '-------------------'
     end if
 
-    write(message,'(A)') trim(timestring)//' '//trim(myName)
+    write(message,'(A)') trim(myName)//' '//trim(timestring)
     if (cMethod == ESMF_METHOD_INITIALIZE) then
       write(message,'(A)') trim(message)//' initialized'
     else if (cMethod == ESMF_METHOD_RUN) then
