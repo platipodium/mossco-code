@@ -2,19 +2,19 @@
 
 TAGS=""
 
-TAGS=ESMF_7_0_0_beta_snapshot_25
+TAGS=ESMF_7_0_0_beta_snapshot_27
 #TAGS=ESMF_6_3_0rp2_beta_snapshot_02
-TAGS=ESMF_6_3_0rp1
+#TAGS=ESMF_6_3_0rp1
 #TAGS="ESMF_5_3_1_beta_snapshot_18
 #TAGS=ESMF_4_0_1_beta_snapshot_01
 #TAGS=ESMF_3_1_0rp5
 export TAGS
 
 COMPS="gfortran gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
-COMMS="mpich2" #"openmpi" #  mpiuni mpich2
+COMMS="mpich2 openmpi mpiuni" #"openmpi" #  mpiuni mpich2
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
-cd $ESMF_DIR && git pull
+cd $ESMF_DIR && git pull origin master
 
 test -n ${ESMF_INSTALL_PREFIX} || export ESMF_INSTALL_PREFIX=/opt/esmf
 mkdir -p ${ESMF_INSTALL_PREFIX}/etc
@@ -22,9 +22,9 @@ mkdir -p ${ESMF_INSTALL_PREFIX}/etc
 export ESMF_OS=$(${ESMF_DIR}/scripts/esmf_os)
 export ESMF_ABI=64
 
-`which sed` && export SED=$(which sed)
-`which gsed` && export SED=$(which gsed)
-#export SED=$(which sed)
+#`which sed` && export SED=$(which sed)
+#`which gsed` && export SED=$(which gsed)
+export SED=$(which gsed)
 
 echo Using SED=${SED}
 echo Using ESMF_OS=${ESMF_OS}
