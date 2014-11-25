@@ -1,6 +1,6 @@
-!> @file test_Regrid.F90
-!! @brief explores Regrid capability on one PET
-!! @author Carsten Lemmen
+!> @file test_Regrid2d_GridToMesh.F90
+!! @brief explores Regrid Grid to Mesh capability on one PET
+!! @author Richard Hofmeister & Carsten Lemmen
 !!
 
 program test_Regrid2d_GridToMesh
@@ -9,18 +9,18 @@ use esmf
 
 implicit none
 
-type(ESMF_Grid)      :: srcGrid, dstGrid
-type(ESMF_Mesh)      :: mesh
-type(ESMF_Field)     :: srcField, dstField
-type(ESMF_VM)        :: vm
+type(ESMF_Grid)        :: srcGrid
+type(ESMF_Mesh)        :: mesh
+type(ESMF_Field)       :: srcField, dstField
+type(ESMF_VM)          :: vm
 type(ESMF_RouteHandle) :: routeHandle
-type(ESMF_ArraySpec) :: arraySpec
+type(ESMF_ArraySpec)   :: arraySpec
 
 integer(ESMF_KIND_I4)  :: petCount, localPet
-real(ESMF_KIND_R8), dimension(:,:) , pointer:: farrayPtr2
-real(ESMF_KIND_R8), dimension(:) , pointer:: farrayPtr1
-integer              :: i, j, rc,  counts(2), cLBound(2), cUBound(2)
-real(ESMF_KIND_R8)   :: min(2), max(2), dx, dy
+real(ESMF_KIND_R8), dimension(:,:), pointer :: farrayPtr2
+real(ESMF_KIND_R8), dimension(:)  , pointer :: farrayPtr1
+integer                :: i, j, rc,  counts(2), cLBound(2), cUBound(2)
+real(ESMF_KIND_R8)     :: min(2), max(2), dx, dy
 real(ESMF_KIND_R8), dimension(:,:), pointer :: coordX, coordY
 
 call ESMF_Initialize(vm=vm, defaultCalKind=ESMF_CALKIND_GREGORIAN, rc=rc)
