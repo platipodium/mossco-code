@@ -83,13 +83,13 @@ contains
    end function order
    
    function intformat(i)
-     character(len=2) :: intformat
+     character(len=4) :: intformat
      integer(kind=8), intent(in) :: i
      integer             :: o,j
      character           :: c
      
      o=order(i)    
-     write(intformat,'(A,I1)') 'I', order(i)+1
+     write(intformat,'(A,I1,A,I1)') 'I', order(i)+1, '.', order(i)+1
 
   end function intformat
      

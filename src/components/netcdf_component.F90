@@ -117,6 +117,7 @@ module netcdf_component
     character(len=3)        :: numberstring
     type(ESMF_Clock)        :: clock
     logical                 :: clockIsPresent
+    character(len=ESMF_MAXSTR) :: form
        
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
@@ -125,10 +126,14 @@ module netcdf_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+	  call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
-      defaultValue='netcdf_component.nc', rc=rc)
+      defaultValue=trim(name)//'_out.nc', rc=rc)
     if (petCount>0) then
-      write(fileName,'(A,I3.3,A)') filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
+      write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
+      write(fileName,form) filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
     endif
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)

@@ -18,7 +18,7 @@ program test_mossco_strings
   
   character(len=255) :: string1, string2
   integer(kind=8)            :: i, n
-  character(len=2)   :: f
+  character(len=4)   :: f
   
   write(string1,'(A)') 'The quick brown fox jumped'
   write(string2,'(A)') 'The_quick_brown_fox_jumped'
@@ -38,7 +38,7 @@ program test_mossco_strings
     
   write(f,'(A)') intformat(i)
   
-  if (.not.trim(f).eq.'I6') then
+  if (.not.trim(f).eq.'I6.6') then
     write(0,'(A)') 'Error testing intformat'
     print *, intformat(i)
   endif
