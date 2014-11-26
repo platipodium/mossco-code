@@ -137,7 +137,7 @@ if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 ! Generate Weights
 call ESMF_FieldRegridStore(srcField, dualDstField, &
      factorIndexList=factorIndexList, factorList=factorList, &
-     regridmethod=ESMF_REGRIDMETHOD_BILINEAR, rc=rc)
+     regridmethod=ESMF_REGRIDMETHOD_NEAREST_STOD, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 ! Create routeHandle on original Mesh using weights
