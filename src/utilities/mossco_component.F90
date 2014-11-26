@@ -211,9 +211,10 @@ contains
     character(ESMF_MAXSTR) :: myName,timestring,message
     type(ESMF_Method_Flag) :: cMethod
     integer                :: cPhase,phaseCount,petCount
-    logical                :: have_clock
+    logical                :: have_clock, phaseZeroFlag
     type(ESMF_Clock)       :: myClock
     type(ESMF_Time)        :: cTime
+    integer                :: rc
 
     call ESMF_GridCompGet(gridComp,name=myName,currentMethod=cMethod,currentPhase=cPhase, &
                           clockIsPresent=have_clock)
@@ -222,7 +223,8 @@ contains
     if (present(currentPhase  )) currentPhase   = cPhase
     if (present(clockIsPresent)) clockIsPresent = have_clock
 
-    call ESMF_GridCompGetEPPhaseCount(gridComp,cMethod,phaseCount=phaseCount)
+    call ESMF_GridCompGetEPPhaseCount(gridComp, cMethod, phaseCount=phaseCount, &
+      phaseZeroFlag=phaseZeroFlag, rc=rc)
 
     if (have_clock) then
       call ESMF_GridCompGet(gridComp,clock=myClock)
@@ -268,9 +270,10 @@ contains
     character(ESMF_MAXSTR) :: myName,timestring,message
     type(ESMF_Method_Flag) :: cMethod
     integer                :: cPhase,phaseCount
-    logical                :: have_clock
+    logical                :: have_clock, phaseZeroFlag
     type(ESMF_Clock)       :: myClock
     type(ESMF_Time)        :: cTime
+    integer                :: rc
 
     call ESMF_GridCompGet(gridComp,name=myName,currentMethod=cMethod,currentPhase=cPhase, &
                           clockIsPresent=have_clock)
@@ -279,7 +282,8 @@ contains
     if (present(currentPhase  )) currentPhase   = cPhase
     if (present(clockIsPresent)) clockIsPresent = have_clock
 
-    call ESMF_GridCompGetEPPhaseCount(gridComp,cMethod,phaseCount=phaseCount)
+    call ESMF_GridCompGetEPPhaseCount(gridComp, cMethod, phaseCount=phaseCount, &
+      phaseZeroFlag=phaseZeroFlag, rc=rc)
 
     if (have_clock) then
       call ESMF_GridCompGet(gridComp,clock=myClock)
