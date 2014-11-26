@@ -81,7 +81,7 @@ contains
       write(message,'(A)') trim(message)//' finalizing'
     endif
 
-		write(message,'(A,I1,A)') trim(message)//' phase ',phase,' ...'
+    write(message,'(A,I1,A)') trim(message)//' phase ',phase,' ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
 
   end subroutine MOSSCO_CplCompEntry
@@ -101,7 +101,6 @@ contains
     type(ESMF_Method_Flag)  :: method
     type(ESMF_Context_Flag) :: context
     type(ESMF_Config)       :: config
-    integer(ESMF_KIND_I8)   :: advanceCount
     
     call MOSSCO_GridCompEntryLog(gridComp,name=name,currentMethod=method,currentPhase=phase, &
                                  clockIsPresent=clockIsPresent,clock=clock,currTime=currTime)
@@ -181,7 +180,7 @@ contains
       write(message,'(A)') trim(message)//' finalized'
     endif
 
-		write(message,'(A,I1)') trim(message)//' phase ',phase
+    write(message,'(A,I1)') trim(message)//' phase ',phase
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
   
   end subroutine MOSSCO_CplCompExit
