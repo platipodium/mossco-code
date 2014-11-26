@@ -79,7 +79,7 @@ module simplewave_component
     integer, intent(out)  :: rc
 
     character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
 
@@ -111,24 +111,14 @@ module simplewave_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
+    character(ESMF_MAXSTR)  :: name,message
     type(ESMF_Time)         :: currTime
-    type(ESMF_Clock)        :: clock
-
-    type(ESMF_Time)   :: clockTime
-    type(ESMF_TimeInterval) :: timeInterval
-    real(ESMF_KIND_R8) :: dt
-    integer                     :: myrank,i,j
-    integer                     :: nimport,nexport
+    integer                     :: i
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Field), target     :: field
     type(ESMF_Grid)      :: grid
     integer              :: localrc
     integer              :: farray_shape(2)
-    
-    real(ESMF_KIND_R8), pointer           :: farrayPtr(:,:,:)
     real(ESMF_KIND_R8), pointer           :: coordX(:), coordY(:)
     
     logical                         :: fileIsPresent, labelIsPresent
@@ -149,7 +139,7 @@ module simplewave_component
       config = ESMF_ConfigCreate(rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
-	    call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
+      call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ConfigFindLabel(config, label='grid:', isPresent=labelIsPresent, rc = rc)
@@ -217,10 +207,10 @@ module simplewave_component
     
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     
-	  do i=1,4
-	    variableItemList(i)%standard_name=trim(variableItemList(i)%name)
-	    allocate(variableItemList(i)%value(farray_shape(1),farray_shape(2)))
-	    variableItemList(i)%value=0.0
+    do i=1,4
+      variableItemList(i)%standard_name=trim(variableItemList(i)%name)
+      allocate(variableItemList(i)%value(farray_shape(1),farray_shape(2)))
+      variableItemList(i)%value=0.0
       field = ESMF_FieldCreate(grid, variableItemList(i)%value, indexflag=ESMF_INDEX_GLOBAL, &
         staggerloc=ESMF_STAGGERLOC_CENTER, name=trim(variableItemList(i)%standard_name), rc=localrc)
       !field = ESMF_FieldCreate(grid, arraySpec, staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -239,9 +229,9 @@ module simplewave_component
     variableItemList(6)%name='wind_x_velocity_at_10m'
     variableItemList(7)%name='wind_y_velocity_at_10m'
 
-	  do i=5,7
+    do i=5,7
       variableItemList(i)%standard_name=trim(variableItemList(i)%name)
-	    field=ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
+      field=ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       variableItemList(i)%field=>field
       call ESMF_StateAddReplace(importState,(/field/), rc=localrc)
@@ -263,19 +253,13 @@ module simplewave_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer(ESMF_KIND_I8)   :: advanceCount
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
+    character(ESMF_MAXSTR)  :: name,message
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
-    type(ESMF_TimeInterval) :: timeInterval
 
-    type(ESMF_Time)         :: clockTime, stopTime
+    type(ESMF_Time)         :: stopTime
     type(ESMF_StateItem_Flag) :: itemType
     integer(ESMF_KIND_I4)   :: itemCount
-    integer(ESMF_KIND_I8)   :: n
-    integer                 :: nvar
     real(ESMF_KIND_R8),dimension(:,:),pointer :: depth=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: wind=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: windDir=>null()
@@ -283,7 +267,6 @@ module simplewave_component
     real(ESMF_KIND_R8),dimension(:,:),pointer :: windy=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: z0=>null()
     type(ESMF_Field)        :: Field
-    character(len=ESMF_MAXSTR) :: string,varname
     real(ESMF_KIND_R8)           :: wdepth,wwind
     real(ESMF_KIND_R8)           :: Hrms,omegam1,uorb,aorb,Rew,tauwr,tauws
     real(ESMF_KIND_R8),parameter :: avmmolm1 = 1.8d6
@@ -306,10 +289,10 @@ module simplewave_component
     real(ESMF_KIND_R8),dimension(:,:),allocatable,target :: taubw
     real(ESMF_KIND_R8), pointer, dimension(:,:) :: waveH,waveT,waveDir,waveK
 
-		waveH=>variableItemList(2)%value
-		waveK=>variableItemList(4)%value
-		waveDir=>variableItemList(2)%value
-		waveT=>variableItemList(3)%value
+    waveH=>variableItemList(2)%value
+    waveK=>variableItemList(4)%value
+    waveDir=>variableItemList(2)%value
+    waveT=>variableItemList(3)%value
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -517,9 +500,8 @@ module simplewave_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet, i
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
+    integer(ESMF_KIND_I4)   :: i
+    character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
     integer                 :: localrc
@@ -581,7 +563,6 @@ module simplewave_component
    real(ESMF_KIND_R8),parameter :: k3 = 0.343d0
    real(ESMF_KIND_R8),parameter :: m3 = 1.14d0
    real(ESMF_KIND_R8),parameter :: p  = 0.572d0
-    integer                      :: farray_shape(2)
 !
 !EOP
 !-----------------------------------------------------------------------
