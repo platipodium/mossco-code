@@ -1,3 +1,16 @@
+!> @brief Implementation of string utilities 
+!>
+!> This computer program is part of MOSSCO.
+!> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
+
 module mossco_strings
 
 implicit none
@@ -63,5 +76,29 @@ contains
      endif   
      return
    end subroutine split_string
+   
+   integer function order(i)
+     integer(kind=8),intent(in) :: i
+     order=int(log10(i*1.0))
+   end function order
+   
+   function intformat(i)
+     character, allocatable :: intformat(:)
+     integer(kind=8), intent(in) :: i
+     integer             :: o,j
+     character           :: c
+     
+     o=order(i)
+     allocate(intformat(1+order(int(o,kind=8))))
+     
+     intformat(1)='I'
+     do j=2,order(int(o,kind=8))+1
+       write(c,'(I1)') mod(o,10**(j-1))
+       intformat(j)=c
+     enddo
+
+  end function intformat
+     
+   
 
 end module mossco_strings
