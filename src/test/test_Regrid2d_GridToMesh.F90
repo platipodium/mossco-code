@@ -23,6 +23,11 @@ integer                :: i, j, rc,  counts(2), cLBound(2), cUBound(2)
 real(ESMF_KIND_R8)     :: min(2), max(2), dx, dy
 real(ESMF_KIND_R8), dimension(:,:), pointer :: coordX, coordY
 
+type(ESMF_Mesh)        :: dualMesh
+type(ESMF_Field)       :: dualDstField
+integer(ESMF_KIND_I4), pointer:: factorIndexList(:,:)
+real(ESMF_KIND_R8), pointer :: factorList(:)
+
 call ESMF_Initialize(vm=vm, defaultCalKind=ESMF_CALKIND_GREGORIAN, rc=rc)
 call ESMF_VmGet(vm, petCount=petCount, localPet=localPet, rc=rc)
 
@@ -63,8 +68,8 @@ do j = cLBound(2), cUBound(2)
   enddo
 enddo
 
-! Create Mesh
 
+! Create the Mesh, depending if UGRID available
 #ifdef UGRID
 call ESMF_LogWrite('Create Mesh from UGRID', ESMF_LOGMSG_INFO, rc=rc)
 call ESMF_LogFlush(rc=rc)
@@ -72,7 +77,10 @@ mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='ugrid_sediment
 #else
 call ESMF_LogWrite('Create Mesh from SCRIP', ESMF_LOGMSG_INFO, rc=rc)
 call ESMF_LogFlush(rc=rc)
-mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='scrip_sediment.nc',filetypeflag=ESMF_FILEFORMAT_SCRIP,rc=rc)
+mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='scrip_sediment.nc', &
+       convertToDual=.false.,filetypeflag=ESMF_FILEFORMAT_SCRIP,rc=rc)
+!           NOTE HERE   ^ SETTING TO FALSE, BECAUSE DEFAULT IS TRUE
+
 #endif
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -101,10 +109,54 @@ farrayPtr1(:)=2.0
 call ESMF_FieldPrint(srcField)
 call ESMF_FieldPrint(dstField)
 
-call ESMF_LogWrite('Create regrid store', ESMF_LOGMSG_INFO, rc=rc)
-call ESMF_LogFlush(rc=rc)
-call ESMF_FieldRegridStore(srcField, dstField, routeHandle=routeHandle, &
-  regridmethod=ESMF_REGRIDMETHOD_BILINEAR, rc=rc)
+
+! Mesh Create from file doesn't set center coordinates right now, so can't do dual,
+! thus can't do bilinear on MESHLOC_ELEMENT when using MeshCreate
+! As a work around use MeshCreate from SCRIP file with convertToDual flag set. 
+! For historical reasons, this does things 
+! differently and thus doesn't require the center coordinates to be set in the Mesh. 
+! 
+! The work around is this:
+! 1. Create a Dual Mesh (dualMesh) from the SCRIP file
+! 2. Create a tmp Field (dualDstField) on the NODEs of the Dual Mesh (which correspond to the ELEMENTs of the non-dual Mesh)
+! 3. Use tmp Field to create regridding weights
+! 4. Create the Non-Dual Mesh
+! 5. Create Field on the Non-Dual Mesh
+! 6. Use those weights to build the RouteHandle
+! 7. Clean up all the stuff from the workaround
+
+! Create temporary dual mesh
+dualMesh = ESMF_MeshCreate(meshname='sediment_surface_mesh',filename='scrip_sediment.nc', &
+       convertToDual=.true.,filetypeflag=ESMF_FILEFORMAT_SCRIP,rc=rc)
+
+! Build a field on it
+dualDstField= ESMF_FieldCreate(dualMesh, typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_NODE, &
+                 name="dstField", rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+! Generate Weights
+call ESMF_FieldRegridStore(srcField, dualDstField, &
+     factorIndexList=factorIndexList, factorList=factorList, &
+     regridmethod=ESMF_REGRIDMETHOD_BILINEAR, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+! Create routeHandle on original Mesh using weights
+call ESMF_FieldSMMStore(srcField, dstField, &
+     factorIndexList=factorIndexList, factorList=factorList, &
+     routeHandle=routeHandle, &
+     rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+! Cleanup from workaround
+call ESMF_MeshDestroy(dualMesh, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+call ESMF_FieldDestroy(dualDstField, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+deallocate(factorIndexList)
+deallocate(factorList)
+
 
 call ESMF_LogWrite('Perform Regridding', ESMF_LOGMSG_INFO, rc=rc)
 call ESMF_LogFlush(rc=rc)
