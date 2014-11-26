@@ -20,7 +20,7 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_inout ibmossco_simplewave libmossco_info # libconstant_grid
+TARGETS=libempty libconstant libmossco_inout libmossco_simplewave libmossco_info # libconstant_grid
 
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS += libmossco_netcdf libmossco_clm
@@ -60,7 +60,10 @@ libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_drive
 
 libmossco_benthos_drivers: prefix  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o)
 libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
-libmossco_simplewave: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+
+libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
+   $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+
 libmossco_netcdf: prefix libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_input_component.o)
@@ -102,6 +105,9 @@ libconstant_grid: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant_grid.a(cons
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
+
+libmossco_simplewave_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_simplewave
 
 libmossco_fabm0d_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabm0d

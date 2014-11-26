@@ -23,6 +23,7 @@
    private
 !
 ! !PUBLIC DATA MEMBERS:
+   public wind2waveHeight,wind2wavePeriod,wavePeriod2waveNumber,wbbl_tauw,wbbl_rdrag
    integer,public,parameter :: WBBL_DATA2=1
    integer,public,parameter :: WBBL_SOULSBY05=2
    integer,public           :: waves_bbl_method=WBBL_DATA2

@@ -19,10 +19,10 @@
 module simplewave_component
 
   use esmf
+  use simplewave_driver
   use mossco_variable_types
   use mossco_state
   use mossco_component
-  use mossco_grid
 
   implicit none
   private
@@ -268,13 +268,6 @@ module simplewave_component
     real(ESMF_KIND_R8),dimension(:,:),pointer :: z0=>null()
     type(ESMF_Field)        :: Field
     real(ESMF_KIND_R8)           :: wdepth,wwind
-    real(ESMF_KIND_R8)           :: Hrms,omegam1,uorb,aorb,Rew,tauwr,tauws
-    real(ESMF_KIND_R8),parameter :: avmmolm1 = 1.8d6
-    real(ESMF_KIND_R8),parameter :: sqrthalf=sqrt(0.5d0)
-    real(ESMF_KIND_R8),parameter :: pi=3.1415926535897932384626433832795029d0
-    real(ESMF_KIND_R8),parameter :: oneovertwopi=0.5d0/pi
-    real(ESMF_KIND_R8),parameter :: Rew_crit = 5.0d5 ! (Stanev et al., 2009)
-!   real(ESMF_KIND_R8),parameter :: Rew_crit = 1.5d5 ! (Soulsby & Clarke, 2005)
     real(ESMF_KIND_R8),parameter :: min_wind=0.1d0
     real(ESMF_KIND_R8),parameter :: max_depth_windwaves=99999.0
     logical                      :: calc_wind,calc_windDir,calc_taubw
@@ -448,41 +441,12 @@ module simplewave_component
       waveT(i,j) = wind2wavePeriod(wwind,wdepth)
       waveK(i,j) = wavePeriod2waveNumber(waveT(i,j),depth(i,j))
 
-      if (calc_taubw) then
+        if (calc_taubw) then
 
-        Hrms = sqrthalf * waveH(i,j)
-        omegam1 = oneovertwopi * waveT(i,j)
-!     peak wave orbital velocity (orbital velocity amplitude) at bottom (ubot in SWAN)
-        uorb = 0.5d0 * Hrms / ( omegam1*sinh(waveK(i,j)*depth(i,j)) )
-!     wave orbital excursion
-        aorb = omegam1 * uorb
-!     wave Reynolds number
-        Rew = aorb * uorb * avmmolm1
+          taubw(i,j) = wbbl_tauw(waveT(i,j),waveH(i,j),waveK(i,j),depth(i,j),z0(i,j))
 
-!     Note (KK): We do not calculate fw alone, because for small
-!                uorb this can become infinite.
-
-!     KK-TODO: For combined wave-current flow, the decision on
-!              turbulent or laminar flow depends on Rew AND Rec!
-!              (Soulsby & Clarke, 2005)
-!              However, here we decide according to Lettmann et al. (2009).
-!              (Or we always assume turbulent currents.)
-        if ( Rew .gt. Rew_crit ) then
-!       rough turbulent flow
-          tauwr = 0.5d0 * 1.39d0 * (omegam1/z0(i,j))**(-0.52d0) * uorb**(2-0.52d0)
-!       smooth turbulent flow
-          tauws = 0.5d0 * (omegam1*avmmolm1)**(-0.187d0) * uorb**(2-2*0.187d0)
-!       Note (KK): For combined wave-current flow, the decision on
-!                  rough or smooth flow depends on the final taubmax.
-!                  (Soulsby & Clarke, 2005)
-!                  However, here we decide according to Stanev et al. (2009).
-!                  (as for wave-only flow)
-          taubw(i,j) = max( tauwr , tauws )
-        else
-!       laminar flow
-          taubw(i,j) = (omegam1*avmmolm1)**(-0.5d0) * uorb
         end if
-       end if
+
       enddo
     enddo
     
@@ -535,168 +499,4 @@ module simplewave_component
 
   end subroutine Finalize
 
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: wind2waveHeight - estimates significant wave height from wind
-!
-! !INTERFACE:
-   real(ESMF_KIND_R8) function wind2waveHeight(wind,depth)
-
-! !USES:
-   IMPLICIT NONE
-!
-! !INPUT PARAMETERS:
-   real(ESMF_KIND_R8),intent(in) :: wind,depth
-!
-! !DESCRIPTION:
-!  Calculates significant wave height (Hm0) under assumption of unlimited fetch.
-!  See page 250 in Holthuijsen (2007).
-!
-! !REVISION HISTORY:
-!  Original author(s): Ulf Graewe
-!                      Knut Klingbeil
-!
-! !LOCAL VARIABLES
-   real(ESMF_KIND_R8)           :: depthstar,waveHeightstar
-   real(ESMF_KIND_R8),parameter :: waveHeightstar8 = 0.24d0
-   real(ESMF_KIND_R8),parameter :: k3 = 0.343d0
-   real(ESMF_KIND_R8),parameter :: m3 = 1.14d0
-   real(ESMF_KIND_R8),parameter :: p  = 0.572d0
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-
-!  dimensionless depth
-   depthstar = gravity * depth / wind**2
-
-!  dimensionless significant wave height
-   waveHeightstar = waveHeightstar8 * tanh(k3*depthstar**m3)**p
-
-!  significant wave height
-   wind2waveHeight = wind**2 * waveHeightstar / gravity
-
-   end function wind2waveHeight
-!EOC
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: wind2wavePeriod - estimates peak wave period from wind
-!
-! !INTERFACE:
-   real(ESMF_KIND_R8) function wind2wavePeriod(wind,depth)
-
-! !USES:
-   IMPLICIT NONE
-!
-! !INPUT PARAMETERS:
-   real(ESMF_KIND_R8),intent(in) :: wind,depth
-!
-! !DESCRIPTION:
-!  Calculates peak wave period under assumption of unlimited fetch.
-!  See page 250 in Holthuijsen (2007).
-!  The peak wave period can be empirically related to the significant
-!  wave period (Holthuijsen Eqs. (4.2.7) and (4.2.9)).
-!
-! !REVISION HISTORY:
-!  Original author(s): Ulf Graewe
-!                      Knut Klingbeil
-!
-! !LOCAL VARIABLES
-   real(ESMF_KIND_R8)           :: depthstar,wavePeriodstar
-   real(ESMF_KIND_R8),parameter :: wavePeriodstar8 = 7.69d0
-   real(ESMF_KIND_R8),parameter :: k4 = 0.10d0
-   real(ESMF_KIND_R8),parameter :: m4 = 2.01d0
-   real(ESMF_KIND_R8),parameter :: q  = 0.187d0
- !
-!EOP
-!-----------------------------------------------------------------------
-!BOC
-
-!  dimensionless depth
-   depthstar = gravity * depth / wind**2
-
-!  dimensionless peak wave period
-   wavePeriodstar = wavePeriodstar8 * tanh(k4*depthstar**m4)**q
-
-!  peak wave period
-   wind2wavePeriod = wind * wavePeriodstar / gravity
-
-   end function wind2wavePeriod
-!EOC
-!-----------------------------------------------------------------------
-!BOP
-!
-! !IROUTINE: wavePeriod2waveNumber - approximates wave number from wave period
-!
-! !INTERFACE:
-   real(ESMF_KIND_R8) function wavePeriod2waveNumber(period,depth)
-
-! !USES:
-   IMPLICIT NONE
-!
-! !INPUT PARAMETERS:
-   real(ESMF_KIND_R8),intent(in) :: period,depth
-!
-! !DESCRIPTION:
-!  x=k*D=kD,y=omega/sqrt(g/D)=omegastar
-!  y=sqrt(x*tanh(x)),y(1)=0.8727=omegastar1
-!  x'=lg(x),(dx'|dx)=1/(x*ln(10))
-!  y'=lg(y),(dy'|dy)=1/(y*ln(10))
-!  m'(x)=(dy'|dx')=(dy'|dy)*(dy|dx)*(dx|dx')=x/y*m(x)
-!  m(x)=(dy|dx)=0.5*[tanh(x)+x*(1-tanh(x)**2)]/sqrt(x*tanh(x))
-!  m(1)=0.677,m'(1)=0.77572=slopestar1
-!  y'=lg(y(1))+m'(1)*x' <=> y=y(1)*[x**m'(1)] <=> x=(y/y(1))**(1/m'(1))
-!  shallow: y=x       => x<=y(1)**(1/(1  -m'(1)))=0.5449  => y<=0.5449
-!  deep   : y=sqrt(x) => x>=y(1)**(1/(0.5-m'(1)))=1.63865 => y>=1.28
-!
-!  For alternatives see Holthuijsen (2007) page 124
-!  (Eckart, 1952 and Fenton, 1988)
-!
-! !REVISION HISTORY:
-!  Original author(s): Knut Klingbeil
-!
-! !LOCAL VARIABLES
-   real(ESMF_KIND_R8)           :: omega,omegastar,kD
-   real(ESMF_KIND_R8),parameter :: omegastar1_rec = 1.0d0/0.8727d0
-   real(ESMF_KIND_R8),parameter :: slopestar1_rec = 1.0d0/0.77572d0
-   real(ESMF_KIND_R8),parameter :: one5th = 1.0d0/5
-   real(ESMF_KIND_R8),parameter :: pi=3.1415926535897932384626433832795029d0
-
-
-!
-!EOP
-!-----------------------------------------------------------------------
-!BOC
- 
-   omega = 2 * pi / period ! radian frequency
-   omegastar = omega * sqrt(depth/gravity) ! non-dimensional radian frequency
-
-!!   approximation by Knut
-!!   (errors less than 5%)
-!   if ( omegastar .gt. 1.28d0 ) then
-!!     deep-water approximation
-!      kD = omegastar**2
-!   else if ( omegastar .lt. 0.5449d0 ) then
-!!     shallow-water approximation
-!      kD = omegastar
-!   else
-!!     tangential approximation in loglog-space for full dispersion relation
-!      kD = (omegastar1_rec * omegastar) ** slopestar1_rec
-!   end if
-
-!  approximation by Soulsby (1997, page 71) (see (18) in Lettmann et al., 2009)
-!  (errors less than 1%)
-   if ( omegastar .gt. 1.0d0 ) then
-      kD = omegastar**2 * ( 1.0d0 + one5th*exp(2*(1.0d0-omegastar**2)) )
-   else
-      kD = omegastar * ( 1.0d0 + one5th*omegastar**2 )
-   end if
-
-   wavePeriod2waveNumber = kD / depth
-
-   end function wavePeriod2waveNumber
-!EOC
-!-----------------------------------------------------------------------
 end module simplewave_component
