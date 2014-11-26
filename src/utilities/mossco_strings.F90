@@ -83,19 +83,13 @@ contains
    end function order
    
    function intformat(i)
-     character, allocatable :: intformat(:)
+     character(len=2) :: intformat
      integer(kind=8), intent(in) :: i
      integer             :: o,j
      character           :: c
      
-     o=order(i)
-     allocate(intformat(1+order(int(o,kind=8))))
-     
-     intformat(1)='I'
-     do j=2,order(int(o,kind=8))+1
-       write(c,'(I1)') mod(o,10**(j-1))
-       intformat(j)=c
-     enddo
+     o=order(i)    
+     write(intformat,'(A,I1)') 'I', order(i)+1
 
   end function intformat
      
