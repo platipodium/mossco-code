@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS = libmossco_benthos
+TARGETS = libmossco_benthos libmossco_simplewave
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS+=libmossco_clm
 endif
@@ -45,6 +45,9 @@ endif
 # Make targets
 # Default is to make all of the targets
 all: $(TARGETS)
+
+libmossco_simplewave: prefix \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_driver.o)
 
 # FABM/sediment section
 
