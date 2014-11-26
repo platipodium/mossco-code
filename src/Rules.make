@@ -367,7 +367,7 @@ INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(MOSSCO_DIR)/src/include
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
-F90FLAGS = $(ESMF_F90COMPILEOPTS)
+F90FLAGS = $(MOSSCO_FFLAGS) $(ESMF_F90COMPILEOPTS)
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
