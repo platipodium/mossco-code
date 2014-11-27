@@ -248,6 +248,8 @@
   nullify(pf%bulk_dependencies)
   allocate(pf%bulk_dependencies(1))
   pf%bulk_dependencies(1)=standard_variables%cell_thickness
+  allocate(pf%horizontal_dependencies(1))
+  pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
   
   !> add required dependencies
   link => pf%model%links_postcoupling%first
