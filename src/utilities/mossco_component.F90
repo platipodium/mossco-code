@@ -1,3 +1,5 @@
+#define MOSSCO_MAXLEN_COMPNAME 15
+
 module mossco_component
 
 use esmf
@@ -71,7 +73,7 @@ contains
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(name)//' '//trim(timestring)
+    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     
     if (method == ESMF_METHOD_RUN) then
       write(message,'(A)') trim(message)//' running'
@@ -167,9 +169,9 @@ contains
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      write(message,'(A)') trim(name)//' '//trim(timestring)
+      write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     else
-      write(message,'(A)') trim(name)//'------------------- '
+      write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' -------------------'
     endif
     
     if (method == ESMF_METHOD_RUN) then
@@ -236,7 +238,7 @@ contains
       write(timestring,'(A)') '-------------------'
     end if
 
-    write(message,'(A)') trim(myName)//' '//trim(timestring)
+    write(message,'(A)') myName(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     if (cMethod == ESMF_METHOD_INITIALIZE) then
       write(message,'(A)') trim(message)//' initializing'
     else if (cMethod == ESMF_METHOD_RUN) then
@@ -249,7 +251,7 @@ contains
 
     if (cMethod.eq.ESMF_METHOD_INITIALIZE .and. cPhase.eq.1) then
       call ESMF_GridCompGet(gridComp,petCount=petCount)
-      write(message,'(A,I6,A)') trim(myName)//' uses ',petCount,' PETs'
+      write(message,'(A,I6,A)') myName(:MOSSCO_MAXLEN_COMPNAME)//' uses ',petCount,' PETs'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     end if
 
@@ -295,7 +297,7 @@ contains
       write(timestring,'(A)') '-------------------'
     end if
 
-    write(message,'(A)') trim(myName)//' '//trim(timestring)
+    write(message,'(A)') myName(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     if (cMethod == ESMF_METHOD_INITIALIZE) then
       write(message,'(A)') trim(message)//' initialized'
     else if (cMethod == ESMF_METHOD_RUN) then
