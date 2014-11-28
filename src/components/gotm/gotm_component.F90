@@ -257,7 +257,7 @@ module gotm_component
     export_variables(5)%standard_name="x_velocity"
     export_variables(6)%standard_name="y_velocity"
     allocate(exportField(nexport))
-    allocate(variables(farray_shape(1),farray_shape(2),farray_shape(3),nexport))
+    allocate(variables(farray_shape(1),farray_shape(2),0:farray_shape(3),nexport))
     
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -265,7 +265,8 @@ module gotm_component
     do k=1,nexport
       farrayPtr => variables(:,:,:,k)
       exportField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables(k)%standard_name)//'_in_water', &
-        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+        staggerloc=ESMF_STAGGERLOC_CENTER, &
+        totalLWidth=(/0,0,1/), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
