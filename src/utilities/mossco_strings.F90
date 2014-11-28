@@ -88,7 +88,9 @@ contains
      integer             :: o,j
      character           :: c
      
-     o=order(i)    
+     o=order(i) 
+     if (o<0) o=0
+     if (o>9) o=9   
      write(intformat,'(A,I1,A,I1)') 'I', order(i)+1, '.', order(i)+1
 
   end function intformat
