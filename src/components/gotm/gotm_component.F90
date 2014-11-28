@@ -89,6 +89,7 @@ module gotm_component
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+    use meanflow, only: h
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -104,7 +105,7 @@ module gotm_component
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
     integer                     :: nimport,nexport
-    real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
+    real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY, coordZ
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
     
     logical                    :: clockIsPresent
@@ -227,6 +228,14 @@ module gotm_component
     do i=lbnd(1),ubnd(1) 
       coordY(i) = latitude
     enddo  
+    call ESMF_GridGetCoord(grid,coordDim=2,localDE=0, &
+      staggerloc=ESMF_STAGGERLOC_CENTER, &
+      farrayPtr=coordZ, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    coordZ(0) = -depth
+    do i=1,nlev 
+      coordZ(i) = coordZ(i-1) + h(i)
+    enddo
 
     ! Get information to generate the fields that store the pointers to variables
     call ESMF_GridGet(grid,distgrid=distgrid,rc=rc)
