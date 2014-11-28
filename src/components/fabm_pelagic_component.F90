@@ -466,7 +466,7 @@ module fabm_pelagic_component
                name=trim(pel%horizontal_dependencies(n)%name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+          call ESMF_AttributeSet(field,'units',trim(pel%horizontal_dependencies(n)%units))
           !! add field to state, if not present
           call ESMF_StateAddReplace(importState,(/field/),rc=rc)
         else
