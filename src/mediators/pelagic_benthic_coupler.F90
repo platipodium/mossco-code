@@ -83,6 +83,7 @@ module pelagic_benthic_coupler
 
     integer                     :: myrank
     integer                     :: i,j,inum,jnum
+    integer                     :: lbnd(3)=1
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
     character (len=ESMF_MAXSTR) :: message
@@ -100,14 +101,14 @@ module pelagic_benthic_coupler
     !> sdet = fac_sdet*det
 
       ! water temperature:
-      call mossco_state_get(importState,(/'temperature_in_water'/),ptr_f3,rc=rc)
+      call mossco_state_get(importState,(/'temperature_in_water'/),ptr_f3,lbnd=lbnd,rc=rc)
       call mossco_state_get(exportState,(/'temperature_at_soil_surface'/),ptr_f2,rc=rc)
-      ptr_f2 = ptr_f3(:,:,1)
+      ptr_f2 = ptr_f3(:,:,lbnd(3))
 
       ! dissolved_oxygen:
       call mossco_state_get(importState,(/ &
         'oxygen          ', &
-        'dissolved_oxygen'/),ptr_f3,rc=rc)
+        'dissolved_oxygen'/),ptr_f3,lbnd=lbnd,rc=rc)
       call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/),ptr_f2,rc=rc)
 
       inum=ubound(ptr_f3,1)
@@ -117,8 +118,8 @@ module pelagic_benthic_coupler
 
       do i=1,inum
         do j=1,jnum
-          oxy = max(0.0d0,ptr_f3(i,j,1))
-          odu = max(0.0d0,-ptr_f3(i,j,1))
+          oxy = max(0.0d0,ptr_f3(i,j,lbnd(3)))
+          odu = max(0.0d0,-ptr_f3(i,j,lbnd(3)))
         end do
       end do
       ptr_f2 = oxy(:,:)
@@ -194,7 +195,7 @@ module pelagic_benthic_coupler
         call mossco_state_get(importState,(/ &
               'nutrients                            ', &
               'DIN                                  ', &
-              'Dissolved_Inorganic_Nitrogen_DIN_nutN'/),DIN,rc=rc)
+              'Dissolved_Inorganic_Nitrogen_DIN_nutN'/),DIN,lbnd=lbnd,rc=rc)
       end if
       call mossco_state_get(importState,(/'ammonium'/),amm,rc=ammrc)
       
@@ -205,7 +206,7 @@ module pelagic_benthic_coupler
       if (ammrc == 0) then
         ptr_f2 = amm(:,:,1)
       else
-        ptr_f2 = 0.5d0 * DIN(:,:,1)
+        ptr_f2 = 0.5d0 * DIN(:,:,lbnd(3))
       end if
       call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -214,7 +215,7 @@ module pelagic_benthic_coupler
       if (nitrc == 0) then
         ptr_f2 = nit(:,:,1)
       else
-        ptr_f2 = 0.5d0 * DIN(:,:,1)
+        ptr_f2 = 0.5d0 * DIN(:,:,lbnd(3))
       end if
 
       !> check for DIP, if present, take as is, if not calculate it N-based
@@ -224,13 +225,14 @@ module pelagic_benthic_coupler
           'Dissolved_Inorganic_Phosphorus_DIP_nutP'/),DIP,rc=rc)
       if (rc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(1:ubound(DIN,1),1:ubound(DIN,2),1))
-        DIP(:,:,1) = 1.0_rk/16.0_rk * DIN(:,:,1)
+        DIP(:,:,1) = 1.0_rk/16.0_rk * DIN(:,:,lbnd(3))
+        lbnd(3)=1
       end if
       call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = DIP(:,:,1)
+      ptr_f2 = DIP(:,:,lbnd(3))
 
   end subroutine Run
 

@@ -38,13 +38,16 @@ contains
     end do
   end subroutine mossco_state_get_f2
 
-  subroutine mossco_state_get_f3(state,name,fpointer,rc)
+  subroutine mossco_state_get_f3(state,name,fpointer,lbnd,ubnd,rc)
     type(ESMF_State) :: state
     type(ESMF_Field) :: field
     character(len=*),dimension(:) :: name
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: fpointer
     integer(ESMF_KIND_I4) :: esmfrc,i
     integer,intent(out) :: rc
+    !> output exclusive bounds as lbnd,ubnd
+    integer,intent(out),optional    :: ubnd(3),lbnd(3)
+    integer                         :: ubnd_(3),lbnd_(3)
     type(ESMF_StateItem_Flag) :: itemType
 
     rc=1
@@ -58,8 +61,11 @@ contains
 !        write(0,*) 'found field ',trim(name(i))
          call ESMF_StateGet(state,trim(name(i)),field,rc=esmfrc)
          if(esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-         call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=esmfrc)
+         call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer, &
+                exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=esmfrc)
          if(esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+         if (present(ubnd)) ubnd=ubnd_
+         if (present(lbnd)) lbnd=lbnd_
          rc=0
          exit
       end if
