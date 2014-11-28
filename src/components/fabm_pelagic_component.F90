@@ -423,6 +423,9 @@ module fabm_pelagic_component
 
     !! create forcing fields in import State
     do n=1,size(pel%bulk_dependencies)
+      !> check for existing field
+      call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', itemType,rc=rc)
+      if (itemType == ESMF_STATEITEM_NOTFOUND) then
         write(message,*) 'create bulk field ',trim(pel%bulk_dependencies(n)%name)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
         field = ESMF_FieldCreate(state_grid, &
@@ -435,35 +438,38 @@ module fabm_pelagic_component
         ptr_f3 = 0.0_rk
         ! add field to state, if not present
         call ESMF_StateAdd(importState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) then
-          write(message,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,rc=rc)
-        end if
-        attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
-        call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
-        !! set FABM's pointers to dependencies data,
-        !! this probably has to be done only once (here) and not in Run
-        call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
+      else
+        write(message,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE,rc=rc)
+      end if
+      attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
+      call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
+      !! set FABM's pointers to dependencies data,
+      !! this probably has to be done only once (here) and not in Run
+      call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
     end do
 
     if (associated(pel%horizontal_dependencies)) then
       do n=1,size(pel%horizontal_dependencies)
-        write(message,*) 'create hor. field ',trim(pel%horizontal_dependencies(n)%name)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
-        field = ESMF_FieldCreate(horizontal_grid, &
+        !> check for existing field
+        call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), itemType,rc=rc)
+        if (itemType == ESMF_STATEITEM_NOTFOUND) then
+          write(message,*) 'create hor. field ',trim(pel%horizontal_dependencies(n)%name)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+          field = ESMF_FieldCreate(horizontal_grid, &
                name=trim(pel%horizontal_dependencies(n)%name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
-        !! add field to state, if not present
-        call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) then
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+          !! add field to state, if not present
+          call ESMF_StateAddReplace(importState,(/field/),rc=rc)
+        else
           write(message,*) 'use existing field: ',trim(pel%horizontal_dependencies(n)%name)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,rc=rc)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE,rc=rc)
         end if
         attribute_name=trim(pel%horizontal_dependencies(n)%name)
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=2)
