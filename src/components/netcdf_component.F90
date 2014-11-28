@@ -131,7 +131,7 @@ module netcdf_component
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
       defaultValue=trim(name)//'_out.nc', rc=rc)
-    if (petCount>0) then
+    if (petCount>1) then
       write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
       write(fileName,form) filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
     endif
