@@ -109,11 +109,15 @@ Change to the HDF source directory.  Add flags to enable the C++ and Fortran API
     cd $WORK/hdf5-1.8.13
 	./configure --prefix=$PREFIX --enable-fortran --enable-fortran2003 --enable-cxx --enable-parallel
 	make -j8 && make check && make install
+	
+> A user reported the additional need for `--enable-unsupported`
 
 Then install the netcdf C library first
 
     cd $WORK/netcdf-4.3.2
 	./configure --prefix=$PREFIX && make -j8 && make check && make install
+	
+> A user reported that she needed to add the `libdl` library at link time
 
 and later the fortran library. Issue
     
