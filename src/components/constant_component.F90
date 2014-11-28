@@ -141,6 +141,7 @@ module constant_component
     integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
     type(ESMF_VM)                        :: vm
+    integer                              :: petCount, localPet
     
     integer                     :: localrc
     character(ESMF_MAXPATHLEN)  :: configFileName, fileName
@@ -152,6 +153,9 @@ module constant_component
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Check whether there is a config file with the same name as this component
@@ -193,7 +197,7 @@ module constant_component
 
 	  if (numNodes==0) then
       grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
-        regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+        regDecomp=(/petCount,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
         name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
