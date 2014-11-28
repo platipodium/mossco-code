@@ -10,6 +10,9 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
+#define MOSSCO_MAXLEN_COMPNAME 15
+
 module toplevel_component
 
   use esmf
@@ -120,7 +123,7 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
+    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     !! Allocate the fields for all gridded components and their names
@@ -327,7 +330,7 @@ module toplevel_component
       call ESMF_AlarmGet(alarmList(i), ringTime=time, name=name, rc=rc)
 
       call ESMF_TimeGet(time,timeStringISOFrac=timestring)
-      write(message,'(A)') trim(name)//' rings at '//trim(timestring)
+      write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' rings at '//trim(timestring)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       if (index(trim(name),'cplAlarm') < 1) cycle
@@ -347,13 +350,13 @@ module toplevel_component
 
     call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A)') trim(name)//' alarms ring next at '//trim(timestring)
+    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     !! Log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
+    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)//' initialized'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     !! Flush the log at the end of Initialize()
@@ -410,7 +413,7 @@ module toplevel_component
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' running ...'
+    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)//' running ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
@@ -456,7 +459,7 @@ module toplevel_component
         call ESMF_ClockGet(childClock,currTime=time, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        ! write(message,'(A)') trim(compName)//' now at '//trim(timestring)
+        ! write(message,'(A)') compName(:MOSSCO_MAXLEN_COMPNAME)//' now at '//trim(timestring)
         !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
 
         if (time>currTime) cycle
@@ -499,7 +502,7 @@ module toplevel_component
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
           !write(0,*) trim(compName)//' ', i,'/',alarmCount,' '//trim(alarmName)//' rings at '//trim(timeString)
-          write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
+          write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(alarmName)//' rings at '//trim(timeString)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           myName=trim(alarmName(1:index(alarmName,'--')-1))
@@ -512,7 +515,7 @@ module toplevel_component
             endif
           enddo
 
-          write(message,'(A)') trim(timeString)//' '//trim(myName)//' ->'
+          write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timeString)//' '//trim(myName)//' ->'
           if (trim(cplName) /= 'link') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
@@ -548,7 +551,7 @@ module toplevel_component
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
+          write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timeString)//' Calling '//trim(cplCompNames(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
@@ -581,12 +584,12 @@ module toplevel_component
         if (time>currTime) then
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(compName)//' now at '//trim(timestring)//', but'
+          write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(compName)//' now at '//trim(timestring)//', but'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(name)//' now at '//trim(timestring)//', cycling ...'
+          write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' now at '//trim(timestring)//', cycling ...'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           cycle
@@ -646,7 +649,7 @@ module toplevel_component
         call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(timeString)//' calling '//trim(compName), &
+        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timeString)//' calling '//trim(compName), &
           ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
 
@@ -700,7 +703,7 @@ module toplevel_component
       !> Log current and next ring time
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      write(message,'(A)') trim(timeString)//' '//trim(name)//' stepping to'
+      write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timeString)//'  stepping to'
       call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       write(message,'(A)') trim(message)//' '//trim(timeString)
@@ -723,8 +726,7 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 !#ifdef DEBUG
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
+    write(message,'(A,A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timeString)//' finished running.'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
 !#endif
 
@@ -760,7 +762,7 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
+    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)//' finalizing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     do i=1,ubound(cplCompList,1)
@@ -799,8 +801,7 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
+    write(message,'(A,A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timeString)//' finalized'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
     call ESMF_LogFlush(rc=rc)
 
