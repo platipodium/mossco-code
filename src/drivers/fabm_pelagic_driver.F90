@@ -29,8 +29,9 @@
     type(type_model),pointer           :: model
     type(export_state_type),dimension(:),pointer :: export_states
     real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
-    real(rk),dimension(:,:,:),pointer  :: layer_height
-    real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0
+    real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
+    real(rk),dimension(:,:,:),pointer  :: zi=>null() !> layer interface depth
+    real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0=>null()
     real(rk)                           :: decimal_yearday
     real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
     integer                            :: ndiag
@@ -50,6 +51,7 @@
     procedure :: initialize_concentrations
     procedure :: update_pointers
     procedure :: initialize_domain
+    procedure :: update_grid
   end type
 
   type,public :: export_state_type !< pelagic FABM driver type for export states
@@ -146,18 +148,43 @@
       call fabm_check_ready(pf%model)
       pf%fabm_ready = .true.
     end if
-   ! call fabm_do to fill diagnostic variables and pre-fetch data
-   do i=1,pf%inum
-     do j=1,pf%jnum
-       call fabm_do_surface(pf%model,1,1,pf%knum,rhs(:))
-       call fabm_do_bottom(pf%model,1,1,1,rhs(:),bottom_flux(:))
-       rhs=0.0_rk
-       do k=1,pf%knum
-         call fabm_do(pf%model,1,1,k,rhs(:))
-       end do
-     end do
-   end do
+    !> check for I_0 and zi to be associated
+    if (.not.associated(pf%zi)) then
+      write(0,*) 'layer interface depth not linked yet.'
+      stop
+    else
+      if (.not.associated(pf%layer_height)) then
+        write(0,*) 'allocate layer height'
+        allocate(pf%layer_height(pf%inum,pf%jnum,pf%knum))
+        call pf%update_grid()
+      end if
+    end if
+    if (.not.associated(pf%I_0)) then
+      write(0,*) 'surface light not linked yet.'
+      stop
+    end if
+    !> call fabm_do to fill diagnostic variables and pre-fetch data
+    do i=1,pf%inum
+      do j=1,pf%jnum
+        call fabm_do_surface(pf%model,1,1,pf%knum,rhs(:))
+        call fabm_do_bottom(pf%model,1,1,1,rhs(:),bottom_flux(:))
+        rhs=0.0_rk
+        do k=1,pf%knum
+          call fabm_do(pf%model,1,1,k,rhs(:))
+        end do
+      end do
+    end do
   end subroutine check_ready
+
+
+  subroutine update_grid(pf)
+    class(type_mossco_fabm_pelagic) :: pf
+    integer  :: i,j,k
+
+    do k=1,pf%knum
+      pf%layer_height(RANGE2D,k) = pf%zi(RANGE2D,k) - pf%zi(RANGE2D,k-1)
+    end do
+  end subroutine
 
 
   subroutine get_rhs(rhs_driver,rhs)
@@ -246,8 +273,6 @@
   ! allocate list of dependencies names (here: required by the driver)
   nullify(pf%horizontal_dependencies)
   nullify(pf%bulk_dependencies)
-  allocate(pf%bulk_dependencies(1))
-  pf%bulk_dependencies(1)=standard_variables%cell_thickness
   allocate(pf%horizontal_dependencies(1))
   pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
   

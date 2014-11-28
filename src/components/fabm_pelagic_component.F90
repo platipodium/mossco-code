@@ -422,36 +422,38 @@ module fabm_pelagic_component
     end do
 
     !! create forcing fields in import State
-    do n=1,size(pel%bulk_dependencies)
-      !> check for existing field
-      call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', itemType,rc=rc)
-      if (itemType == ESMF_STATEITEM_NOTFOUND) then
-        write(message,*) 'create bulk field ',trim(pel%bulk_dependencies(n)%name)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
-        field = ESMF_FieldCreate(state_grid, &
-               name=trim(pel%bulk_dependencies(n)%name)//'_in_water', &
-               typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+    if (associated(pel%bulk_dependencies)) then
+      do n=1,size(pel%bulk_dependencies)
+        !> check for existing field
+        call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', itemType,rc=rc)
+        if (itemType == ESMF_STATEITEM_NOTFOUND) then
+          write(message,*) 'create bulk field ',trim(pel%bulk_dependencies(n)%name)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+          field = ESMF_FieldCreate(state_grid, &
+                    name=trim(pel%bulk_dependencies(n)%name)//'_in_water', &
+                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AttributeSet(field,'units',trim(pel%bulk_dependencies(n)%units))
+          call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          ptr_f3 = 0.0_rk
+          ! add field to state, if not present
+          call ESMF_StateAdd(importState,(/field/),rc=rc)
+        else
+          write(message,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE,rc=rc)
+        end if
+        attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
+        call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
+        !! set FABM's pointers to dependencies data,
+        !! this probably has to be done only once (here) and not in Run
+        call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        ptr_f3 = 0.0_rk
-        ! add field to state, if not present
-        call ESMF_StateAdd(importState,(/field/),rc=rc)
-      else
-        write(message,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE,rc=rc)
-      end if
-      attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
-      call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
-      !! set FABM's pointers to dependencies data,
-      !! this probably has to be done only once (here) and not in Run
-      call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
-    end do
+        call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
+      end do
+    end if
 
     if (associated(pel%horizontal_dependencies)) then
       do n=1,size(pel%horizontal_dependencies)
@@ -534,6 +536,11 @@ module fabm_pelagic_component
       end if
     end do
 
+    !> get z-positions of vertical layer interfaces
+    call ESMF_GridGetCoord(state_grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+           farrayPtr=pel%zi, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
     call pel%check_ready()
@@ -567,6 +574,9 @@ module fabm_pelagic_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    ! calculate layer_heights
+    call pel%update_grid()
 
     ! calculate PAR
     call pel%light()
