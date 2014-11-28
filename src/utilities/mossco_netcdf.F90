@@ -66,7 +66,7 @@ module mossco_netcdf
     integer                     :: nDims, nAtts, udimid, dimlen
     character(len=ESMF_MAXSTR)  :: varname, message, fmt
 
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, totalCount
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, exclusiveCount
     integer(ESMF_KIND_I4)       :: localDeCount
 
     real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: farrayPtr4
@@ -82,18 +82,18 @@ module mossco_netcdf
 
     allocate(lbnd(rank))
     allocate(ubnd(rank))
-    allocate(totalCount(rank))
+    allocate(exclusiveCount(rank))
     call ESMF_FieldGetBounds(field, localDe=0, exclusiveLBound=lbnd, &
-      exclusiveUBound=ubnd, totalCount=totalCount, rc=rc)
+      exclusiveUBound=ubnd, exclusiveCount=exclusiveCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !write(fmt,'(A,I1,A,I1,A,I1,A)') '(A,I2.2,A,',rank, 'I2,A,', rank, 'I2,A,', rank, 'I2)'
     !write(message,fmt) 'localDeCount=', localDeCount,' bounds ',lbnd,' : ', &
-    !  ubnd, ' totalCount ', totalCount
+    !  ubnd, ' exclusiveCount ', exclusiveCount
     !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, rc=rc)
     !call ESMF_LogFlush( rc=rc)
 
-    if (any(totalCount==0)) return
+    if (any(exclusiveCount==0)) return
 
     if (present(name)) varname=trim(name)
 
@@ -153,7 +153,7 @@ module mossco_netcdf
 
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
-    if (allocated(totalCount)) deallocate(totalCount)
+    if (allocated(exclusiveCount)) deallocate(exclusiveCount)
 
   end subroutine mossco_netcdf_variable_put
 
@@ -582,7 +582,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
     integer, pointer, dimension(:)     :: dimids
     type(ESMF_CoordSys_Flag)                         :: coordSys
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: totalCount
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: exclusiveCount
     real(ESMF_KIND_R8), dimension(:), allocatable    :: ownedNodeCoords
     integer(ESMF_KIND_I4)  :: parametricDim, spatialDim, numOwnedNodes
 
@@ -676,7 +676,7 @@ module mossco_netcdf
     integer :: eLBound1(1),eLBound2(2),eLBound3(3),eLBound4(4)
     integer :: eUBound1(1),eUBound2(2),eUBound3(3),eUBound4(4)
     type(ESMF_CoordSys_Flag)                         :: coordSys
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, totalCount
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, exclusiveCount
     integer(ESMF_KIND_I4)                            :: dimCount
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
@@ -710,8 +710,8 @@ module mossco_netcdf
       endif
 
       allocate(coordDimids(coordDimCount(i)))
-      if (allocated(totalCount)) deallocate(totalCount)
-      allocate(totalCount(coordDimCount(i)))
+      if (allocated(exclusiveCount)) deallocate(exclusiveCount)
+      allocate(exclusiveCount(coordDimCount(i)))
 
 !     TODO: The following is a really dirty hack for non-rectilinear coordinates.
 !           Correct would be use of coordDimMap.
