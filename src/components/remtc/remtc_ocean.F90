@@ -54,7 +54,7 @@ module remtc_ocean_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    type(ESMF_Grid)      :: grid
+    type(ESMF_Grid)      :: grid, grid2
     type(ESMF_ArraySpec) :: arrayspec
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
@@ -64,13 +64,21 @@ module remtc_ocean_component
 
     real(ESMF_KIND_R8), allocatable, target :: farray(:,:,:)
     real(ESMF_KIND_R8), pointer ::  farrayPtr(:,:,:)
+    real(ESMF_KIND_R8), pointer ::  farrayPtr2(:,:)
     type(ESMF_Field) :: exportField(3), importField(1)
 
-    integer               :: petCount, localPet
-    character(ESMF_MAXSTR):: name, message, timeString
-    logical               :: clockIsPresent
-    type(ESMF_Time)       :: currTime
-    type(ESMF_Clock)      :: clock
+    integer                  :: petCount, localPet, rank
+    character(ESMF_MAXSTR)   :: name, message, timeString
+    logical                  :: clockIsPresent
+    type(ESMF_Time)          :: currTime
+    type(ESMF_Clock)         :: clock
+    type(ESMF_TypeKind_Flag) :: coordTypeKind
+    type(ESMF_CoordSys_Flag) :: coordSys
+    type(ESMF_Index_Flag)    :: indexFlag
+    type(ESMF_DistGrid)      :: distGrid
+    integer(ESMF_KIND_I4)    :: dimCount, localDeCount
+    integer(ESMF_KIND_I4), allocatable    :: coordDimCount(:), coordDimMap(:,:)
+    
      
     call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -93,30 +101,57 @@ module remtc_ocean_component
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
  
+
+    !! Read a 2D File from SCRIP format provided exterally
+    grid2 = ESMF_GridCreate(filename="T42_grid.nc", &
+      fileFormat=ESMF_FILEFORMAT_SCRIP,regDecomp=(/1,1/), rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_GridGet(grid2, coordTypeKind=coordTypeKind, distGrid=distgrid, &
+      coordSys=coordSys, indexFlag=indexFlag, rank=rank, dimCount=dimCount, &
+      localDeCount=localDeCount, rc=rc)       
+
+		if (localDeCount /= 1) then
+		  write(message,*) 'Not implemented: localDeCount /= 1'
+		  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+		  call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    endif
+    
+    call ESMF_GridGetCoord(grid2, coordDim=1, staggerloc=ESMF_STAGGERLOC_CENTER, &
+      localDE=0, farrayPtr=farrayPtr2, rc=rc)
+    
+    
+		!allocate(coordDimCount(dimCount),coordDimMap(dimCount,dimCount))
+    !call ESMF_GridGet(grid2, coordDimMap=coordDimMap, coordDimCount=coordDimCount, rc=rc)       
+       
+       
+      !, tileCount, staggerlocCount, , , & distgridToGridMap, , arbDim,  arbDimCount, gridEdgeLWidth, gridEdgeUWidth, gridAlign, & , status, name, rc)
+       print *, rank, dimCount, size(farrayPtr2)
+
     !> Create the grid and coordinates
     !> This example grid is a 40 x 40 grid at 0.1 degree resolution from 0..4 deg East
     !> to 50 .. 55 deg North
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/40, 50,3/), &
-      regDecomp=(/2,5,2/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
+      regDecomp=(/2,5,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name="ocean grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-      computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    do i=lbnd(1),ubnd(1) 
-      coordX(i) = 0 + 0.1 * i + 0.05
-    enddo
-    call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-      computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    do i=lbnd(1),ubnd(1) 
-      coordY(i) = 50 + 0.1 * i + 0.05
-    enddo  
+    !call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+    !  computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !do i=lbnd(1),ubnd(1) 
+    !  coordX(i) = 0 + 0.1 * i + 0.05
+    !enddo
+    !call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+    !  computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !do i=lbnd(1),ubnd(1) 
+    !  coordY(i) = 50 + 0.1 * i + 0.05
+    !enddo  
 
     export_variables(1)%standard_name="salinity"
     export_variables(2)%standard_name="water_temperature"
