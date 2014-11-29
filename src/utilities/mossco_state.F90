@@ -11,12 +11,13 @@ end interface
 contains
 
   subroutine mossco_state_get_f2(state,name,fpointer,rc)
-    type(ESMF_State) :: state
-    character(len=*),dimension(:) :: name
-    type(ESMF_Field) :: field
-    real(ESMF_KIND_R8),pointer,dimension(:,:) :: fpointer
-    integer(ESMF_KIND_I4) :: esmfrc,i
+    type(ESMF_State), intent(in)              :: state
+    character(len=*),dimension(:), intent(in) :: name
+    real(ESMF_KIND_R8),pointer,dimension(:,:), intent(inout) :: fpointer
     integer,intent(out) :: rc
+        
+    type(ESMF_Field) :: field
+    integer(ESMF_KIND_I4) :: esmfrc,i
     type(ESMF_StateItem_Flag) :: itemType
 
     rc=1
@@ -44,7 +45,7 @@ contains
     character(len=*),dimension(:) :: name
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: fpointer
     integer(ESMF_KIND_I4) :: esmfrc,i
-    integer,intent(out) :: rc
+    integer,intent(out), optional :: rc
     !> output exclusive bounds as lbnd,ubnd
     integer,intent(out),optional    :: ubnd(3),lbnd(3)
     integer                         :: ubnd_(3),lbnd_(3)

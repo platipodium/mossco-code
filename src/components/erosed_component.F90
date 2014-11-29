@@ -559,6 +559,7 @@ contains
     type(ESMF_Clock)         :: clock
     integer                  :: external_index
     real(kind=ESMF_KIND_R8)  :: vonkar, ustar, z0cur, cdr, cds, summ, rhowat,vicmol, reynold
+    integer    :: ubnd(3),lbnd(3)
 
 !#define DEBUG
 
@@ -602,9 +603,9 @@ contains
      ! call ESMF_StatePrint(importState)
 
       !> get u,v and use bottom layer value
-      call mossco_state_get(importState,(/'x_velocity_in_water'/),u,rc)
-      call mossco_state_get(importState,(/'y_velocity_in_water'/),v,rc)
-      call mossco_state_get(importState,(/'grid_height_in_water'/),grid_height,rc)
+      call mossco_state_get(importState,(/'x_velocity_in_water'/),u,lbnd,ubnd,rc)
+      call mossco_state_get(importState,(/'y_velocity_in_water'/),v,lbnd,ubnd,rc)
+      call mossco_state_get(importState,(/'grid_height_in_water'/),grid_height,lbnd,ubnd,rc)
 
       if (rc == 0) then
 
