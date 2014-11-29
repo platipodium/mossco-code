@@ -1,0 +1,70 @@
+# configuration dependencies:
+dependencies:
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - erosed: 
+    - getm
+    - fabm_pelagic
+    - simplewave
+  - simplewave:
+    - component: getm
+      grid: temperature_in_water
+    - clm_netcdf
+  - benthic_pelagic_coupler: fabm_pelagic
+  - benthos: erosed
+
+coupling:
+  - components: 
+     - clm_netcdf
+     - getm
+  - components: 
+     - getm
+     - simplewave
+  - components: 
+     - clm_netcdf
+     - simplewave
+  - components: 
+     - simplewave
+     - erosed
+  - components: 
+     - getm
+     - fabm_pelagic
+  - components:
+     - fabm_pelagic
+     - erosed
+  - components:
+     - getm
+     - erosed
+  - components:
+     - erosed
+     - fabm_pelagic
+  - components:
+     - fabm_pelagic
+     - pelagic_benthic_coupler
+     - fabm_sediment
+  - components:
+     - constant
+     - fabm_sediment
+    interval: 1 yy
+  - components:
+     - fabm_sediment
+     - netcdf
+    interval: 1 d
+  - components:
+     - erosed
+     - netcdf
+    interval: 1 h
+  - components:
+     - fabm_sediment
+     - benthic_pelagic_coupler
+     - fabm_pelagic
+    interval: 6 m
+  - components:
+     - benthos
+     - erosed
+    interval: 1 h
+  - components:
+     - fabm_sediment
+     - benthos
+    interval: 1 h
