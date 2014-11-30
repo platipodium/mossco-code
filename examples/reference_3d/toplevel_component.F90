@@ -361,8 +361,10 @@ module toplevel_component
     !! Manually added to get spm information from fabm_sed to erosed in phase 1
     call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(5), &
       exportState=importStates(3), clock=clock, phase=1, rc=rc)
-    call MOSSCO_StateLog(importStates(3), rc=rc)
-    
+    !! Manually added to get spm information from constant to erosed in phase 1
+    call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(4), &
+      exportState=importStates(3), clock=clock, phase=1, rc=rc)
+    call MOSSCO_StateLog(importStates(3), rc=rc)    
     
     !! Initializing phase 1 of erosed
     if (phaseCountList( 3)>=1) then
