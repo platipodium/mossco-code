@@ -44,6 +44,8 @@ LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
 
 all: exec
 
+toplevel_component.o : toplevel_component.F90 libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver liblinkcoupler libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed 
+
 exec: libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver liblinkcoupler libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed reference_3d
 
 reference_3d: toplevel_component.o ../common/main.o
