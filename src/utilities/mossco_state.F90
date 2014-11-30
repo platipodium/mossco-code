@@ -4,6 +4,7 @@ use esmf
 implicit none
 
 interface mossco_state_get
+    module procedure mossco_state_get_f1
     module procedure mossco_state_get_f2
     module procedure mossco_state_get_f3
 end interface
@@ -38,6 +39,37 @@ contains
       end if
     end do
   end subroutine mossco_state_get_f2
+
+  subroutine mossco_state_get_f1(state,name,fpointer,rc)
+    type(ESMF_State), intent(in)              :: state
+    character(len=*),dimension(:), intent(in) :: name
+    real(ESMF_KIND_R8),pointer,dimension(:), intent(inout) :: fpointer
+    integer,intent(out) :: rc
+        
+    type(ESMF_Field) :: field
+    integer(ESMF_KIND_I4) :: esmfrc,i
+    type(ESMF_StateItem_Flag) :: itemType
+
+    rc=1
+    do i=1,size(name)
+      call ESMF_StateGet(state,trim(name(i)),itemType, rc=esmfrc) ! this is really a call to StateGetInfo
+      if(itemtype == ESMF_STATEITEM_NOTFOUND) then
+!         write(0,*) 'not found field ',trim(name(i))
+        continue
+      else
+         if(esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!        write(0,*) 'found field ',trim(name(i))
+         call ESMF_StateGet(state,trim(name(i)),field,rc=esmfrc)
+         if(esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+         call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=esmfrc)
+         if(esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+         rc=0
+         exit
+      end if
+    end do
+  end subroutine mossco_state_get_f1
+
+
 
   subroutine mossco_state_get_f3(state,name,fpointer,lbnd,ubnd,rc)
     type(ESMF_State) :: state
@@ -203,8 +235,8 @@ contains
     type(ESMF_State)                :: state
     integer(ESMF_KIND_I4), optional :: rc
 
-    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits
-    character(len=ESMF_MAXSTR)      :: fieldName, name, message, string, gridName
+    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits, count
+    character(len=ESMF_MAXSTR)      :: fieldName, name, message, string, gridName, attributeName
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMF_Field)                :: field
@@ -214,10 +246,38 @@ contains
     logical                         :: isPresent, isNeeded
     type(ESMF_LocStream)            :: locStream
     type(ESMF_TypeKind_Flag)        :: typeKind
+    logical, allocatable            :: logicalValueList(:)
       
     if (present(rc)) rc=ESMF_SUCCESS
     
-    call ESMF_StateGet(state, name=name, itemCount=itemCount, rc=localRc)
+    call ESMF_StateGet(state, name=name, rc=localRc)
+    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_AttributeGet(state, count=count, rc=localrc)
+    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    do i=1, count
+      write(message,'(A)')  trim(name)//' attribute '
+      call ESMF_AttributeGet(state, attributeIndex=1 , name=attributeName, rc=localrc)
+      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      write(message,'(A)')  trim(message)//' '//trim(attributeName)//':'
+      
+      call ESMF_AttributeGet(state, name=name, typekind=typekind,  itemCount=itemCount, rc=localrc)
+      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+			if (typekind==ESMF_TYPEKIND_Logical) then
+			  allocate(logicalValueList(itemCount))
+				call ESMF_AttributeGet(state, name=attributeName, valueList=logicalValueList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+        enddo
+        deallocate(logicalValueList)
+			endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)     
+    enddo
+    
+    call ESMF_StateGet(state, itemCount=itemCount, rc=localRc)
     if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (itemCount==0) then
