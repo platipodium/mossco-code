@@ -324,7 +324,7 @@ contains
         enddo
         deallocate(real8ValueList)
 			endif
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)     
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)     
     enddo
     
     call ESMF_StateGet(state, itemCount=itemCount, rc=localRc)
@@ -332,7 +332,7 @@ contains
 
     if (itemCount==0) then
       write(message,'(A)')  trim(name)//' contains no items'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       return
     endif
       
@@ -378,7 +378,7 @@ contains
         call ESMF_AttributeGet(state, name=trim(fieldName)//':required', value=isNeeded, rc=rc)
         if (isNeeded) write(message,'(A)')  trim(message)//', required'
       endif    
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
     
     deallocate(itemTypeList)
