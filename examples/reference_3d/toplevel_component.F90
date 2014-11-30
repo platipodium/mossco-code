@@ -298,6 +298,11 @@ module toplevel_component
     call ESMF_AttributeSet(importStates(2), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+    !! Manually added to get grid information from getm to fabm in phase 1
+    !call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(1), &
+    !  exportState=importStates(2), clock=clock, phase=1, rc=rc)
+    !call MOSSCO_StateLog(importStates(2), rc=rc)
+
     if (phaseCountList( 2)>=1) then
       call ESMF_GridCompInitialize(gridCompList(2), importState=importStates(2), &
         exportState=exportStates(2), clock=clock, phase=1, rc=rc)
