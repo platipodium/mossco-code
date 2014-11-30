@@ -257,12 +257,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)        
        
             else
-              write(message,'(A)') 'Skipped existing field '//trim(itemNameList(i))
+              write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
               !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
             endif            
           endif          
         else        
-          write(message,'(A)') 'Added field '//trim(itemNameList(i))
+          write(message,'(A)') '    added field '//trim(itemNameList(i))
           call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
@@ -280,7 +280,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           
         if (exportItemCount==0) then
-          write(message,'(A)') 'Added fieldbundle '//trim(itemNameList(i))
+          write(message,'(A)') '    added fieldbundle '//trim(itemNameList(i))
           call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
@@ -295,19 +295,19 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (exportFieldBundle /= importFieldBundle) then
-              write(message,'(A)') 'Replaced existing fieldbundle '//trim(itemNameList(i))
+              write(message,'(A)') '    replaced existing fieldbundle '//trim(itemNameList(i))
               call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
               if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)     
               call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)               
             else
-              write(message,'(A)') 'Skipped existing fieldbundle '//trim(itemNameList(i))
+              write(message,'(A)') '    skipped existing fieldbundle '//trim(itemNameList(i))
               !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
             endif            
           endif          
           if (exportItemCount>1) then
-            write(message,'(A)') 'Found multiple fieldbundles with name '//trim(itemNameList(i))
+            write(message,'(A)') '    found multiple fieldbundles with name '//trim(itemNameList(i))
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
               call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)     
           endif                      
@@ -315,7 +315,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)    
        
       else
-        write(message,'(A)') 'Did not link non-field item '//trim(itemNameList(i))
+        write(message,'(A)') '    did not link non-field item '//trim(itemNameList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
       endif   
     enddo
