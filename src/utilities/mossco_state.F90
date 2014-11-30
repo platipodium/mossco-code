@@ -382,10 +382,8 @@ contains
     enddo
     
     deallocate(itemTypeList)
-    deallocate(itemNameList)
-    
+    deallocate(itemNameList)  
   
   end subroutine MOSSCO_StateLog
     
-  
 end module mossco_state
