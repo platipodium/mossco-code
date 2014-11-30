@@ -246,14 +246,13 @@ contains
     else if (cMethod == ESMF_METHOD_FINALIZE) then
       write(message,'(A)') trim(message)//' finalizing'
     end if
-    write(message,'(A,I1,A,I1,A)') trim(message)//' phase ',cPhase,' of ',phaseCount,' ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
+    write(message,'(A,I1,A,I1,A)') trim(message)//' phase ',cPhase,' of ',phaseCount
     if (cMethod.eq.ESMF_METHOD_INITIALIZE .and. cPhase.eq.1) then
       call ESMF_GridCompGet(gridComp,petCount=petCount)
-      write(message,'(A,I6,A)') myName(:MOSSCO_MAXLEN_COMPNAME)//' uses ',petCount,' PETs'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A,I6,A)') trim(message)//' on ',petCount,' PETs'
     end if
+    write(message,'(A)') trim(message)//' ...'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   end subroutine MOSSCO_GridCompEntryLog
 
