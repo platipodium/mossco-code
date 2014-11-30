@@ -320,24 +320,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 1 of erosed
-    if (phaseCountList( 3)>=1) then
-      call ESMF_GridCompInitialize(gridCompList(3), importState=importStates(3), &
-        exportState=exportStates(3), clock=clock, phase=1, rc=rc)
-    endif
 
-    if (rc /= ESMF_SUCCESS) then
-      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
-        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
-        write(message,'(A,I4)') 'Initializing failed with error code ', rc
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_LogFlush()
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      endif
-    endif
     !! Initializing phase 1 of constant
     if (phaseCountList( 4)>=1) then
       call ESMF_GridCompInitialize(gridCompList(4), importState=importStates(4), &
@@ -374,6 +357,34 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
+    
+    !! Manually added to get spm information from fabm_sed to erosed in phase 1
+    call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(5), &
+      exportState=importStates(3), clock=clock, phase=1, rc=rc)
+    call MOSSCO_StateLog(importStates(3), rc=rc)
+    
+    
+    !! Initializing phase 1 of erosed
+    if (phaseCountList( 3)>=1) then
+      call ESMF_GridCompInitialize(gridCompList(3), importState=importStates(3), &
+        exportState=exportStates(3), clock=clock, phase=1, rc=rc)
+    endif
+
+    if (rc /= ESMF_SUCCESS) then
+      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
+        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      else
+        write(message,'(A,I4)') 'Initializing failed with error code ', rc
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogFlush()
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    endif
+
+    
+    
     !! Initializing phase 1 of simplewave
     if (phaseCountList( 6)>=1) then
       call ESMF_GridCompInitialize(gridCompList(6), importState=importStates(6), &
