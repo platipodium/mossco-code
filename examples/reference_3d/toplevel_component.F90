@@ -1508,6 +1508,8 @@ module toplevel_component
             call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
               exportState=impState, clock=clock, rc=rc)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            
+            call MOSSCO_StateLog(impState, rc=rc)
           endif
           
 
