@@ -424,7 +424,7 @@ contains
     enddo
 
     ! Open file for producing output
-    inquire (file ='delft_sediment_test.out', exist = lexist)
+    inquire (file ='delft_sediment.out', exist = lexist)
 
     if (lexist) then
   !      write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
