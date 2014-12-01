@@ -119,14 +119,6 @@ module gotmfabm_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(field, farrayPtr=bottom_stress, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_StateGet(state, 'cell_thickness_in_water', field=field, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(field, farrayPtr=layer_height, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_StateGet(state, 'grid_height_in_water', field=field, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(field, farrayPtr=gotm_layer_height, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_StateGet(state, 'density_in_water', field=field, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(field, farrayPtr=density, rc=rc)
@@ -167,9 +159,8 @@ module gotmfabm_component
 
       ! copy GOTM's surface radiation and layer height into state
       surface_radiation = I_0*(1.0d0 - A)
-      layer_height(1,1,:) = gotm_layer_height(1,1,:)
       bottom_stress = taub
-      density(1,1,:) = rho(1:ubound(layer_height,3))
+      density(1,1,:) = rho(:)
 
       call ESMF_GridCompGet(fabmComp,clock=childClock)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
