@@ -195,10 +195,10 @@ module fabm_sediment_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       end if
-      call ESMF_FieldGetBounds(field, exclusiveCount=exclusiveCount, rc=rc)
+      call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      sed%grid%inum=exclusiveCount(1)
-      sed%grid%jnum=exclusiveCount(2)
+      sed%grid%inum=ubnd2(1)-lbnd2(1)+1
+      sed%grid%jnum=ubnd2(2)-lbnd2(2)+1
 
     elseif (sed%grid%type==LOCAL_GRID) then
       write(message,*) '  use local 1x1 horizontal grid'
@@ -211,7 +211,7 @@ module fabm_sediment_component
     sed%grid%knum=numlayers
     sed%grid%dzmin=dzmin
     !! Write log entries
-    write(message,'(A,I3,A)') trim(name)//' initialise grid with ',sed%grid%knum,' vertical layers'
+    write(message,*) trim(name)//' initialise grid with [inum x jnum x knum]',_INUM_,' x ',_JNUM_,' x ',_KNUM_
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     call sed%grid%init_grid()
     call sed%initialize()
@@ -422,6 +422,7 @@ module fabm_sediment_component
       end if
       ! by here, have flux_grid available
       call ESMF_GridGet(flux_grid, indexflag=indexflag,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       ! put concentration array into export state
       ! it might be enough to do this once in initialize(?)
@@ -446,8 +447,9 @@ module fabm_sediment_component
 
         if (sed%export_states(n)%fabm_id/=-1) then
           !> add boundary upward fluxes
-          field = ESMF_FieldCreate(flux_grid,flux_array, &
-                         name=trim(sed%export_states(n)%standard_name)//'_upward_flux', &
+          field = ESMF_FieldCreate(flux_grid, &
+                         typekind=ESMF_TYPEKIND_R8, &
+                         name=trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
           !> fluxes are defined in concentration*m/s
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit)//'/s')
@@ -517,6 +519,7 @@ module fabm_sediment_component
     endif ! self%use_ugrid
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     !call ESMF_StatePrint(importState)
+    !call ESMF_StatePrint(exportState)
 
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
