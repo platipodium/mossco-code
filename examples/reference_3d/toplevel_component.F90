@@ -339,7 +339,14 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
+    
     !! Initializing phase 1 of fabm_sediment
+    call ESMF_AttributeSet(importStates(5), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    !! Manually added to get grid information from getm to fabm_sed in phase 1
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(5), clock=clock, phase=1, rc=rc)
+    
     if (phaseCountList( 5)>=1) then
       call ESMF_GridCompInitialize(gridCompList(5), importState=importStates(5), &
         exportState=exportStates(5), clock=clock, phase=1, rc=rc)
