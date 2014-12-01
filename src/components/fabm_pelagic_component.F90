@@ -163,7 +163,7 @@ module fabm_pelagic_component
     integer, intent(out) :: rc
 
     type(ESMF_TimeInterval) :: timeInterval,alarmInterval
-    character(len=ESMF_MAXSTR) :: string,fileName,varname
+    character(len=ESMF_MAXSTR) :: string,fileName,varname,wsname
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     character(len=ESMF_MAXSTR) :: attribute_name
     type(ESMF_Config)     :: config
@@ -339,6 +339,8 @@ module fabm_pelagic_component
     ! it might be enough to do this once in initialize(?)
     do n=1,size(pel%export_states)
       varname = trim(pel%export_states(n)%standard_name)//'_in_water'
+      wsname  = trim(pel%export_states(n)%standard_name)//'_z_velocity_in_water'
+
       concfield = ESMF_FieldCreate(state_grid,farrayPtr=pel%export_states(n)%conc, &
                        name=trim(varname), &
                        totalLWidth=totalLWidth3,totalUWidth=totalUWidth3, &
@@ -362,7 +364,7 @@ module fabm_pelagic_component
       call ESMF_AttributeSet(concfield,'external_index',pel%export_states(n)%fabm_id)
 
       wsfield = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
-                       name=trim(varname)//'_z_velocity', &
+                       name=trim(wsname), &
                        totalLWidth=totalLWidth3,totalUWidth=totalUWidth3, &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -386,12 +388,10 @@ module fabm_pelagic_component
                 multiflag=.true.,rc=rc)
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
 
-        call ESMF_StateGet(exportState, &
-                trim(varname)//'_z_velocity',field,rc=rc)
-        call ESMF_StateRemove(exportState, &
-                (/ trim(varname)//'_z_velocity' /),rc=rc)
+        call ESMF_StateGet(exportState, trim(wsname), field, rc=rc)
+        call ESMF_StateRemove(exportState, (/ trim(wsname) /), rc=rc)
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,wsfield/), &
-                name=trim(varname)//'_z_velocity',   &
+                name=trim(wsname),   &
                 multiflag=.true.,rc=rc)
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
 
@@ -399,7 +399,7 @@ module fabm_pelagic_component
       !> if fieldBundle, get the bundle and add field
         call ESMF_StateGet(exportState,trim(varname),fieldBundle,rc=rc)
         call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=rc)
-        call ESMF_StateGet(exportState,trim(varname)//'_z_velocity',fieldBundle,rc=rc)
+        call ESMF_StateGet(exportState,trim(wsname),fieldBundle,rc=rc)
         call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=rc)
       end if
     end do
@@ -500,7 +500,7 @@ module fabm_pelagic_component
 
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
-      varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux'
+      varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux_at_soil_surface'
       write(message,*) 'create hor. field ',trim(varname)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
       field = ESMF_FieldCreate(horizontal_grid, &
