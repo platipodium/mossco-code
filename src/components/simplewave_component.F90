@@ -21,7 +21,6 @@ module simplewave_component
   use esmf
   use simplewave_driver
   use mossco_variable_types
-  use mossco_state
   use mossco_component
 
   implicit none
@@ -29,15 +28,7 @@ module simplewave_component
 
   public :: SetServices
 
-  type,extends(MOSSCO_VariableInfo)    :: variable_item_type
-    type(variable_item_type), pointer  :: next => null()
-    type(ESMF_Field), pointer          :: field => null()
-    integer                            :: rank
-    real(ESMF_KIND_R8), pointer        :: value(:,:) => null()
-  end type
-
-  real(ESMF_KIND_R8),parameter :: gravity=9.81d0
-  type(variable_item_type), allocatable :: variableItemList(:)
+  type(MOSSCO_VariableFArray2d), allocatable :: variableItemList(:)
 
   contains
 
@@ -112,81 +103,84 @@ module simplewave_component
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR)  :: name,message
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName
     type(ESMF_Time)         :: currTime
     integer                     :: i
-    type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Field), target     :: field
     type(ESMF_Grid)      :: grid
     integer              :: localrc
-    integer              :: farray_shape(2)
+    integer              :: rank,farray_shape(2)
     real(ESMF_KIND_R8), pointer           :: coordX(:), coordY(:)
     
-    logical                         :: fileIsPresent, labelIsPresent
+    logical                         :: gridIsPresent,fileIsPresent,labelIsPresent
     character(ESMF_MAXSTR)          :: configFileName, gridFileName
     type(ESMF_Config)               :: config
-    type(ESMF_ArraySpec)            :: arraySpec
     integer(ESMF_KIND_I4)           :: lbnd(2), ubnd(2)
     
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Check whether there is a config file with the same name as this component
-    !! If yes, load it. 
-    configFileName=trim(name)//'.cfg'
-    inquire(FILE=trim(configFileName), exist=fileIsPresent)   
-    if (fileIsPresent) then 
-      config = ESMF_ConfigCreate(rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
-      call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!!! Create Grid
+    call ESMF_GridCompGet(gridComp,gridIsPresent=gridIsPresent)
+    if (gridIsPresent) then
+      call ESMF_GridCompGet(gridComp,grid=grid)
+    else
+      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+                             value=foreignGridFieldName, defaultValue='none',rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_ConfigFindLabel(config, label='grid:', isPresent=labelIsPresent, rc = rc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_ConfigGetAttribute(config, gridFileName, rc = rc, default=trim(name)//'_grid.nc')
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
-      inquire(file=trim(gridFileName), exist=fileIsPresent)
-      if (fileIsPresent) then      
-        grid = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
-          addCornerStagger=.true., regDecomp=(/2,2/), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        write(message,'(A,I6,A)') trim(name)//' uses regular grid from '//trim(gridFileName)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-      endif
-    endif
-
-    if (.not.fileIsPresent) then
-        !!> @todo replace this by call to mossco_grid
-  
-      grid = ESMF_GridCreateNoPeriDim(maxIndex=(/40,50/), regDecomp=(/1,1/), &
-        coordSys=ESMF_COORDSYS_SPH_DEG, indexFlag=ESMF_INDEX_GLOBAL,  &
-        name=trim(name)//' grid', coordTypeKind=ESMF_TYPEKIND_R8, coordDep1=(/1/), &
-        coorddep2=(/2/), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
-      call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-        computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
-      do i=lbnd(1),ubnd(1) 
-        coordX(i) = 0 + 0.1 * i + 0.05
-      enddo
-      call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-        computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      do i=lbnd(1),ubnd(1) 
-        coordY(i) = 50 + 0.1 * i + 0.05
-      enddo
-   
-    endif
-   
+      if (trim(foreignGridFieldName)/='none') then
+        call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FieldGet(field, grid=grid, rank=rank, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (rank .ne. 2) then
+          write(message,*) 'foreign grid must be of rank = 2'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        end if
+      else
+        !! Check whether there is a config file with the same name as this component
+        !! If yes, load it. 
+        configFileName=trim(name)//'.cfg'
+        inquire(FILE=trim(configFileName), exist=fileIsPresent)   
+        if (fileIsPresent) then 
+          config = ESMF_ConfigCreate(rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_ConfigFindLabel(config, label='grid:', isPresent=labelIsPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_ConfigGetAttribute(config, gridFileName, rc=localrc, default=trim(name)//'_grid.nc')
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          grid = ESMF_GridCreate(trim(gridFileName),ESMF_FILEFORMAT_SCRIP,(/1,1/), &
+                                 addCornerStagger=.true., rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          write(message,'(A,I6,A)') trim(name)//' uses regular grid from '//trim(gridFileName)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        else
+          grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),name=trim(name)//'Grid',rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX,rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          do i=lbnd(1),ubnd(1) 
+            coordX(i) = 0 + 0.1 * i + 0.05
+          enddo
+          call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          do i=lbnd(1),ubnd(1) 
+            coordY(i) = 50 + 0.1 * i + 0.05
+          enddo
+        end if
+      end if
+      call ESMF_GridCompSet(gridComp,grid=grid)
+    end if
     ! Get information to generate the fields that store the pointers to variables
-    call ESMF_GridGet(grid,distgrid=distgrid,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
       totalCount=farray_shape,rc=localrc)
@@ -195,48 +189,45 @@ module simplewave_component
     write(0,*) farray_shape
     !> Create export fields and add them to export state, allocate the space for these
     !> that will be filled later with data
-    allocate(variableItemList(7))
-    variableItemList(1)%name='wave_direction'
-    variableItemList(1)%unit='degree_east'
-    variableItemList(2)%name='wave_height'
-    variableItemList(2)%unit='m'
-    variableItemList(3)%name='wave_period'
-    variableItemList(3)%unit='s'
-    variableItemList(4)%name='wave_number'
-    variableItemList(4)%unit=''
-    
-    call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    allocate(variableItemList(4+3))
+
+!!! Advertise Export Fields
+    variableItemList(1)%name='wave_height'
+    variableItemList(1)%unit='m'
+    variableItemList(2)%name='wave_period'
+    variableItemList(2)%unit='s'
+    variableItemList(3)%name='wave_number'
+    variableItemList(3)%unit='1/m'
+    variableItemList(4)%name='wave_direction'
+    variableItemList(4)%unit='degrees'
     
     do i=1,4
       variableItemList(i)%standard_name=trim(variableItemList(i)%name)
-      allocate(variableItemList(i)%value(farray_shape(1),farray_shape(2)))
-      variableItemList(i)%value=0.0
-      field = ESMF_FieldCreate(grid, variableItemList(i)%value, indexflag=ESMF_INDEX_GLOBAL, &
-        staggerloc=ESMF_STAGGERLOC_CENTER, name=trim(variableItemList(i)%standard_name), rc=localrc)
-      !field = ESMF_FieldCreate(grid, arraySpec, staggerloc=ESMF_STAGGERLOC_CENTER, &
-      !   name=trim(variableItemList(i)%standard_name), rc=localrc)
-      
+      field = ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      variableItemList(i)%field=>field
-      
+      call ESMF_FieldEmptySet(field,grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'units',trim(variableItemList(i)%unit), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo    
 
+!!! Advertise Import Fields
     variableItemList(5)%name='water_depth_at_soil_surface'
     variableItemList(6)%name='wind_x_velocity_at_10m'
     variableItemList(7)%name='wind_y_velocity_at_10m'
 
-    do i=5,7
+    do i=4+1,4+3
       variableItemList(i)%standard_name=trim(variableItemList(i)%name)
       field=ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      variableItemList(i)%field=>field
-      call ESMF_StateAddReplace(importState,(/field/), rc=localrc)
+      call ESMF_FieldEmptySet(field,grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call set_item_flags(importState,trim(variableItemList(i)%standard_name),requiredFlag=.true.,requiredRank=2)
+      call ESMF_AttributeSet(field,trim(variableItemList(i)%standard_name)//":required",value=.true.)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(importState,(/field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
     !> @todo add optional fields (see Run method)
@@ -282,11 +273,6 @@ module simplewave_component
     real(ESMF_KIND_R8),dimension(:,:),allocatable,target :: taubw
     real(ESMF_KIND_R8), pointer, dimension(:,:) :: waveH,waveT,waveDir,waveK
 
-    waveH=>variableItemList(2)%value
-    waveK=>variableItemList(4)%value
-    waveDir=>variableItemList(2)%value
-    waveT=>variableItemList(3)%value
-
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -295,6 +281,12 @@ module simplewave_component
 
     !! associate local pointers with import data, check that all fields are complete
     !! before using them
+
+    waveH   => variableItemList(1)%data
+    waveT   => variableItemList(2)%data
+    waveK   => variableItemList(3)%data
+    waveDir => variableItemList(4)%data
+
     call ESMF_StateGet(importState, itemSearch='water_depth_at_soil_surface', &
       itemCount=itemCount, rc = localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -464,7 +456,6 @@ module simplewave_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)   :: i
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
@@ -473,10 +464,6 @@ module simplewave_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    do i=1,size(variableItemList)
-      if (associated(variableItemList(i)%field)) nullify(variableItemList(i)%field)
-      if (associated(variableItemList(i)%value)) nullify(variableItemList(i)%value)
-    enddo
     deallocate(variableItemList)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
