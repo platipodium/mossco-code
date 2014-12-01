@@ -407,6 +407,66 @@ contains
   
   end subroutine MOSSCO_StateLog
      
+  subroutine MOSSCO_FieldString(field, message, length_, rc_)
+  
+    use mossco_strings
+    implicit none
     
+    type(ESMF_Field), intent(in)                   :: field
+    character(len=ESMF_MAXSTR), intent(inout)      :: message
+    integer(ESMF_KIND_I4), intent(inout), optional :: length_
+    integer(ESMF_KIND_I4), intent(out), optional   :: rc_
+    
+    integer(ESMF_KIND_I4)   :: rc, length, rank, localrc
+    integer(ESMF_KIND_I4)   :: ubnd1(1), ubnd2(2), ubnd3(3), ubnd4(4)
+    integer(ESMF_KIND_I4)   :: lbnd1(1), lbnd2(2), lbnd3(3), lbnd4(4)
+    character(ESMF_MAXSTR)  :: geomName, name
+    type(ESMF_Grid)         :: grid
+    
+    type(ESMF_GeomType_Flag) :: geomtype
+   
+    rc=ESMF_SUCCESS
+ 
+    call ESMF_FieldGet(field, name=name, rank=rank, rc=localrc)
+    if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   
+    if (rank==1) then
+      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd1, exclusiveLBound=lbnd1, rc=rc)
+    elseif (rank==2) then
+      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=rc)
+    elseif (rank==3) then
+      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd3, exclusiveLBound=lbnd3, rc=rc)
+    elseif (rank==4) then
+      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd4, exclusiveLBound=lbnd4, rc=rc)
+    else
+      write(0,*) 'NOT implemented: rank > 4'
+    endif
+  
+  	write(message,'(A)') trim(message)//' '//trim(name)
+  	write(message,'(A,I1)') trim(message)//' rank ',rank 
+  	
+    call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
+    if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (geomtype==ESMF_GEOMTYPE_GRID) then
+      call ESMF_GridGet(grid, name=geomName, rc=localrc)  
+      if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+     	write(message,'(A)') trim(message)//' grid '//trim(geomName)
+    elseif (geomtype==ESMF_GEOMTYPE_MESH) then
+     	write(message,'(A)') trim(message)//' mesh'
+    elseif (geomtype==ESMF_GEOMTYPE_LOCSTREAM) then
+     	write(message,'(A)') trim(message)//' locstream'
+    elseif (geomtype==ESMF_GEOMTYPE_XGRID) then
+     	write(message,'(A)') trim(message)//' xgrid'
+    else
+      write(0,*) 'ERROR: geomtype not defined'
+    endif
+    
+    length=len_trim(message)	
+    if (present(length_)) length_=length
+    if (present(rc_)) rc_=rc
+  
+  end subroutine MOSSCO_FieldString
+  
     
 end module mossco_state
