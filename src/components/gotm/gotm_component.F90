@@ -50,7 +50,8 @@ module gotm_component
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   real(ESMF_KIND_R8),dimension(1:1,1:1),target   :: H_2d
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
-  real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY, coordZ
+  real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: coordZ
 
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -215,6 +216,8 @@ module gotm_component
 
     call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
       computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
@@ -227,14 +230,26 @@ module gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     do i=lbnd(1),ubnd(1) 
       coordY(i) = latitude
-    enddo  
-    call ESMF_GridGetCoord(grid,coordDim=2,localDE=0, &
-      staggerloc=ESMF_STAGGERLOC_CENTER, &
+    enddo
+    call ESMF_GridGetCoord(grid2d,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    do i=lbnd(1),ubnd(1) 
+      coordX(i) = longitude
+    enddo
+    call ESMF_GridGetCoord(grid2d,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+      computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    do i=lbnd(1),ubnd(1) 
+      coordY(i) = latitude
+    enddo 
+    call ESMF_GridGetCoord(grid,coordDim=3,localDE=0, &
+      staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
       farrayPtr=coordZ, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    coordZ(0) = -depth
+    coordZ(1,1,0) = -depth
     do i=1,nlev 
-      coordZ(i) = coordZ(i-1) + h(i)
+      coordZ(1,1,i) = coordZ(1,1,i-1) + h(i)
     enddo
 
     ! Get information to generate the fields that store the pointers to variables
@@ -382,7 +397,7 @@ module gotm_component
 
     !> update grid of export fields
     do k=1,nlev 
-      coordZ(k) = coordZ(k-1) + gotm_heights(k)
+      coordZ(1,1,k) = coordZ(1,1,k-1) + gotm_heights(k)
     enddo
 
     !> update export fields
