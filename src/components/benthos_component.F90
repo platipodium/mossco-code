@@ -222,7 +222,7 @@ contains
     Effect_of_MPB_on_sediment_erodibility_at_bottom => Micro%ErodibilityEffect
 
 #ifdef DEBUG
-    write (*,*) ' Effect_of_MPB_on_sediment_erodibility_at_bottom', &
+    write (*,*) ' Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
     Effect_of_MPB_on_sediment_erodibility_at_bottom
 #endif
 
@@ -232,7 +232,7 @@ contains
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     Microphytobenthos_erodibility = ESMF_FieldCreate(grid, array, &
-      name="Effect_of_MPB_on_sediment_erodibility_at_bottom", &
+      name="Effect_of_MPB_on_sediment_erodibility_at_soil_surface", &
       staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -242,7 +242,7 @@ contains
     Effect_of_MPB_on_critical_bed_shearstress => Micro%TauEffect
 
 #ifdef DEBUG
-    write (*,*) 'Effect_of_MPB_on_critical_bed_shearstress',&
+    write (*,*) 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface',&
      Effect_of_MPB_on_critical_bed_shearstress
 #endif
 
@@ -261,7 +261,7 @@ contains
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom => Total_Bioturb%ErodibilityEffect
 
 #ifdef DEBUG
-    write (*,*) 'Effect_of_Mbalthica_on_sediment_erodibility_at_bottom', &
+    write (*,*) 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
 #endif
 
@@ -271,7 +271,7 @@ contains
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_Mbalthica_on_sediment_erodibility_at_bottom", rc=rc)
+      name="Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface", rc=rc)
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -280,7 +280,7 @@ contains
     Effect_of_Mbalthica_on_critical_bed_shearstress => Total_Bioturb%TauEffect
 
 #ifdef DEBUG
-    write (*,*) 'Effect_of_Mbalthica_on_critical_bed_shearstress',&
+    write (*,*) 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface',&
     Effect_of_Mbalthica_on_critical_bed_shearstress
 #endif
 

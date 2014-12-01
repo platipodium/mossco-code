@@ -457,10 +457,10 @@ contains
   nfrac_by_external_idx(:)=-1
 
  !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
-  call ESMF_StateGet(importState,"concentration_of_SPM",fieldBundle,rc=rc)
+  call ESMF_StateGet(importState,"concentration_of_SPM_in_water",fieldBundle,rc=rc)
   if(rc /= ESMF_SUCCESS) then
-    write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM". Possibly &
-            & number of SPM fractions do not match with fabm_component.'
+    write(0,*) 'erosed_component: cannot find field bundle "concentration_of_SPM_in_water". Possibly &
+            & number of SPM fractions do not match with fabm_pelagic component.'
   else
     call ESMF_FieldBundleGet(fieldBundle,fieldCount=j,rc=rc)
     if (allocated(fieldlist)) deallocate(fieldlist)
@@ -487,13 +487,13 @@ contains
     nfrac_by_external_idx(external_idx_by_nfrac(n))=n
   end do
 
-  upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux',rc=rc)
-  downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux',rc=rc)
+  upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux_at_soil_surface',rc=rc)
+  downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux_at_soil_surface',rc=rc)
 
   do n=1,nfrac
     ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
     upward_flux_field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
-            name='concentration_of_SPM_upward_flux', rc=rc)
+            name='concentration_of_SPM_upward_flux_at_soil_surface', rc=rc)
     call ESMF_AttributeSet(upward_flux_field,'external_index',external_idx_by_nfrac(n))
     call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=rc)
   end do
@@ -596,7 +596,7 @@ contains
 
       !> get bio effects
 
-      call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_bottom', &
+      call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
                                                     Microphytobenthos_erodibility,rc=rc)
       if (rc==0) then
 
@@ -610,7 +610,7 @@ contains
 #endif
       end if
 
-      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_bottom', &
+      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
                                                            Macrofauna_erodibility,rc=rc)
       if (rc==0) then
 
@@ -631,7 +631,7 @@ contains
 
       end if
 
-      call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress', &
+      call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
                                       Microphytobenthos_critical_bed_shearstress ,rc=rc)
       if (rc==0) then
 
@@ -643,7 +643,7 @@ contains
 
       endif
 
-      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress', &
+      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
                            Macrofauna_critical_bed_shearstress ,rc=rc)
       if (rc==0) then
          if (.not.associated(BioEffects%TauEffect)) then
@@ -661,7 +661,7 @@ contains
       endif
 
       !> get spm concentrations
-      call ESMF_StateGet(importState,'concentration_of_SPM',fieldBundle,rc=rc)
+      call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=rc)
       if(rc /= ESMF_SUCCESS) then
         !> run without SPM forcing from pelagic component
 #ifdef DEBUG
@@ -694,7 +694,7 @@ contains
 !        r0(:,nmub) = spm_concentration(1,1,:)
 
         !> get sinking velocities
-        call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity',fieldBundle,rc=rc)
+        call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity_in_water',fieldBundle,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
