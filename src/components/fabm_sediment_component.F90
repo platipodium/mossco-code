@@ -119,7 +119,8 @@ module fabm_sediment_component
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
     logical                    :: clockIsPresent
-    integer                    :: numElements,numNodes
+    integer                    :: numElements,numNodes, exclusiveCount(2), rank
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -167,9 +168,41 @@ module fabm_sediment_component
       sed%grid%jnum=1
       write(message,*) trim(name)//': use unstructured grid, number of local elements:',numElements
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    elseif (sed%grid%type==FOREIGN_GRID) then
+    else
+      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+           value=foreignGridFieldName, defaultValue='none',rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (trim(foreignGridFieldName)=='none') then 
+        sed%grid%type=LOCAL_GRID
+      else
+        sed%grid%type=FOREIGN_GRID
+      endif
+    end if
+
+    if (sed%grid%type==FOREIGN_GRID) then
       ! get 2d grid from foreign_grid_field
+      write(message,*) '  use foreign horizontal grid '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      call ESMF_StateGet(importState,foreignGridFieldName, field, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field, grid=flux_grid, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldGet(field, rank=rank, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (rank/=2) then
+        write(message,*) '  foreign horizontal grid rank <> 2'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      end if
+      call ESMF_FieldGetBounds(field, exclusiveCount=exclusiveCount, rc=rc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      sed%grid%inum=exclusiveCount(1)
+      sed%grid%jnum=exclusiveCount(2)
+
     elseif (sed%grid%type==LOCAL_GRID) then
+      write(message,*) '  use local 1x1 horizontal grid'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       sed%grid%inum=1
       sed%grid%jnum=1
     end if
