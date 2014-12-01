@@ -45,6 +45,7 @@ module gotm_transport_component
   GOTM_REALTYPE             :: cnpar,latitude,longitude,depth
   GOTM_REALTYPE             :: T0,S0,p0,dtr0,dsr0
   integer                   :: buoy_method,eq_state_mode,eq_state_method
+  GOTM_REALTYPE,allocatable :: ones(:),zeros(:),relaxTau(:)
 
     
   public :: SetServices
@@ -195,6 +196,14 @@ module gotm_transport_component
 
     end if ! itemcount>0
 
+    !> create helper arrays
+    allocate(ones(0:nlev))
+    ones=_ONE_
+    allocate(zeros(0:nlev))
+    zeros=_ZERO_
+    allocate(relaxTau(0:nlev))
+    relaxTau=1.d15
+
     call ESMF_LogWrite("FABM/GOTM component initialized.",ESMF_LOGMSG_INFO)
     
   end subroutine Initialize
@@ -258,24 +267,28 @@ module gotm_transport_component
        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
        ! Vertical advection and residual movement (sinking/floating)
-       do i=1,size(tracer)
+       do i=1,ubound(tracer,1)
 
          ! get number of layers as 3rd dimension of tracer pointer
          knum = ubound(tracer(i)%conc,3)
 
+write(0,*) 'ws',shape(tracer(i)%ws), 'conc', shape(tracer(i)%conc)
          ! Do advection step due to settling or rising
-         call mossco_adv_center(knum,dt,gotm_heights, &
-           tracer(i)%ws, w_adv_discr,tracer(i)%conc(1,1,:))
+         call adv_center(knum,dt,gotm_heights, gotm_heights, &
+           tracer(i)%ws(1,1,:), flux, flux, _ZERO_, _ZERO_, &
+           w_adv_discr,1,tracer(i)%conc(1,1,:))
 
          ! Do advection step due to vertical velocity
-         if (w_adv_method/=0) call mossco_adv_center(knum,dt,gotm_heights, &
-                                w(1:knum), w_adv_ctr,tracer(i)%conc(1,1,:))
-       end do
+         if (w_adv_method/=0) &
+           call adv_center(knum,dt,gotm_heights, gotm_heights, &
+             w, flux, flux, _ZERO_, _ZERO_, &
+             w_adv_ctr,0,tracer(i)%conc(1,1,:))
 
-       ! Vertical diffusion
-       do i=1,size(tracer)
-         call mossco_diff_center(knum,dt,cnpar,gotm_heights, &
-            diffusivity,tracer(i)%conc(1,1,:))
+         ! Vertical diffusion
+         call diff_center(knum,dt,cnpar,1,gotm_heights, &
+            Neumann, Neumann, _ZERO_, _ZERO_, &
+            diffusivity,zeros, zeros, relaxTau, &
+            tracer(i)%conc(1,1,:),tracer(i)%conc(1,1,:))
        end do
 
       call ESMF_ClockAdvance(clock,rc=rc)
@@ -319,7 +332,7 @@ module gotm_transport_component
   end subroutine
 
 
-
+#if 0
    subroutine mossco_diff_center(N,dt,cnpar,h,nuY,Y)
    use util,          only  : Dirichlet, Neumann
    use mtridiagonal
@@ -541,5 +554,6 @@ module gotm_transport_component
 
    return
    end subroutine mossco_adv_center
+#endif
 
 end module gotm_transport_component
