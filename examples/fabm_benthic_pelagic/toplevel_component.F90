@@ -138,6 +138,9 @@ module toplevel_component
 
     call ESMF_GridCompInitialize(fabmgotmComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    !> remove foreignGridFieldName
+    call ESMF_AttributeSet(pelagicstate, name='foreign_grid_field_name', value='none', rc=rc)
+
     call ESMF_GridCompInitialize(fabmsedComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 #ifdef MOSSCO_EROSED
