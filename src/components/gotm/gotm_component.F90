@@ -50,6 +50,7 @@ module gotm_component
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   real(ESMF_KIND_R8),dimension(1:1,1:1),target   :: H_2d
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
+  real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY, coordZ
 
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -105,7 +106,6 @@ module gotm_component
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
     integer                     :: nimport,nexport
-    real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY, coordZ
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
     
     logical                    :: clockIsPresent
@@ -365,16 +365,6 @@ module gotm_component
        call update_time(n)
        call gotm_time_step()
 
-       do k=1,nlev
-         variables(:,:,k,1) = gotm_temperature(k)
-         variables(:,:,k,2) = gotm_heights(k)
-         variables(:,:,k,3) = gotm_salinity(k)
-         variables(:,:,k,4) = gotm_radiation(k)
-         variables(:,:,k,5) = gotm_u(k)
-         variables(:,:,k,6) = gotm_v(k)
-       end do
-       H_2d(1,1) = sum(gotm_heights(:))
-
        !> Check if the output alarm is ringing, if so, quiet it and 
        !> call do_output from GOTM
        if (ESMF_AlarmIsRinging(outputAlarm)) then
@@ -389,6 +379,22 @@ module gotm_component
        call ESMF_ClockAdvance(clock, timeStep=timeInterval, rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end do
+
+    !> update grid of export fields
+    do k=1,nlev 
+      coordZ(k) = coordZ(k-1) + gotm_heights(k)
+    enddo
+
+    !> update export fields
+    do k=1,nlev
+      variables(:,:,k,1) = gotm_temperature(k)
+      variables(:,:,k,2) = gotm_heights(k)
+      variables(:,:,k,3) = gotm_salinity(k)
+      variables(:,:,k,4) = gotm_radiation(k)
+      variables(:,:,k,5) = gotm_u(k)
+      variables(:,:,k,6) = gotm_v(k)
+    end do
+    H_2d(1,1) = sum(gotm_heights(:))
 
   end subroutine Run
 
