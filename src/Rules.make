@@ -534,7 +534,7 @@ ifdef MOSSCO_GOTMDIR
 endif
 ifdef MOSSCO_GETMDIR
 	@echo Recreating the GETM library in $(GETM_LIBRARY_PATH)
-	(export FABM=true ; $(MAKE) -C $(GETMDIR)/src STATIC=-DSPHERICAL)
+	(export FABM=true ; $(MAKE) -C $(GETMDIR)/src)
 endif
 else
 ifdef MOSSCO_GOTMDIR
@@ -544,7 +544,7 @@ ifdef MOSSCO_GOTMDIR
 endif
 ifdef MOSSCO_GETMDIR
 	@echo Recreating the GETM library without FABM in $(GETM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GETMDIR)/src STATIC=-DSPHERICAL)
+	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)
 endif
 endif
 
