@@ -249,7 +249,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (exportField /= importField) then
-              write(message,'(A)') 'Replaced existing field '//trim(itemNameList(i))
+              write(message,'(A)') '    replaced existing field '//trim(itemNameList(i))
               call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
               if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'

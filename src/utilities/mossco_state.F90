@@ -235,10 +235,11 @@ contains
     type(ESMF_State)                :: state
     integer(ESMF_KIND_I4), optional :: rc
 
-    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits, count
+    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits, count, fieldCount
     character(len=ESMF_MAXSTR)      :: fieldName, name, message, string, gridName, attributeName
-    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), fieldNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+    type(ESMF_Field), allocatable   :: fieldList(:)
     type(ESMF_Field)                :: field
     type(ESMF_FieldBundle)          :: fieldBundle
     integer(ESMF_KIND_I4)           :: totalLWidth(7), totalUWidth(7)
@@ -352,14 +353,43 @@ contains
           rc=localRc)
         if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
+        call ESMF_GridGet(grid, name=gridName, rc=localRc)  
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+        write(message,'(A,I1)')  trim(name)//' field '//trim(fieldName)//' of rank ',rank
+        !!> @todo write out attributes of field  
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        
+      elseif (itemtypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+        call ESMF_StateGet(state, itemNameList(i), fieldBundle, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
+        call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+	      allocate(fieldList(fieldCount),fieldNameList(fieldCount)) 
+        call ESMF_FieldBundleGet(fieldBundle, fieldNameList=fieldNameList, fieldList=fieldList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+	      do j=1, fieldCount	             
+          call ESMF_FieldGet(fieldList(j), name=fieldName, rank=rank, grid=grid, &
+            rc=localRc)
+          if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+          call ESMF_GridGet(grid, name=gridName, rc=localRc)  
+          if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      
+          write(message,'(A,I1)')  trim(name)//' field '//trim(itemNameList(i))//'/'//trim(fieldName)//' of rank ',rank
+          !!> @todo write out attributes of field  
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        enddo
+        deallocate(fieldList,fieldNameList)
       else
         write(message,'(A)')  trim(name)//' non-field item '//trim(itemNameList(i))//' skipped'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
       
-      call ESMF_GridGet(grid, name=gridName, rc=localRc)  
-      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       !call ESMF_LocStreamGet(locStream, name=gridName, rc=localRc)  
       !if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -370,20 +400,13 @@ contains
 
       !write(string,'(A,I1,A,I1)') 'A,',rank,'I',maxDigits      
       !write(message,string)  trim(name)//' field '//trim(fieldName)//' [',totalUWidth
-      write(message,'(A,I1)')  trim(name)//' field '//trim(fieldName)//' of rank ',rank
-
-      call ESMF_AttributeGet(state, name=trim(fieldName)//':required', isPresent=isPresent, &
-        typekind=typeKind, rc=rc)
-      if (isPresent) then
-        call ESMF_AttributeGet(state, name=trim(fieldName)//':required', value=isNeeded, rc=rc)
-        if (isNeeded) write(message,'(A)')  trim(message)//', required'
-      endif    
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
     
     deallocate(itemTypeList)
     deallocate(itemNameList)  
   
   end subroutine MOSSCO_StateLog
+     
+    
     
 end module mossco_state
