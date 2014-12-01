@@ -102,10 +102,19 @@ case(ADAPTIVE_EULER)
       call rhs_driver%get_rhs(rhs)
       c1 = rhs_driver%conc(_SHAPE3D_,:) + dt_red*rhs
 
+! the avoid-division code is O(10) times faster
+! todo: still faster would be to solve grid cell by grid cell and refine timesteps
+!       only locally. get_rhs has to take optional argument then for update of
+!       a single grid-cell. 
+#define AVOID_DIVISION
+#ifdef AVOID_DIVISION
+      if (any(c1-(1.0_rk-rhs_driver%relative_change_min)*c_pointer(_SHAPE3D_,:)<0.0_rk) &
+#else
       relative_change = minval((c1-c_pointer(_SHAPE3D_,:))/c_pointer(_SHAPE3D_,:))
       if ((relative_change < rhs_driver%relative_change_min) &
+#endif
               .and. (dt_red> rhs_driver%dt_min)) then 
-         dt_red = dt_red/4
+         dt_red = dt_red*0.25_rk
       else
          rhs_driver%conc(_SHAPE3D_,:) = c1
          dt_int = dt_int + dt_red
