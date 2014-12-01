@@ -1500,6 +1500,17 @@ module toplevel_component
           write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
+          !! >@todo manual fix: if pelagic_benthic coupler, then need getm and constant as import
+          if (l==3)  then ! pelagic_benthic coupler
+            call ESMF_CplCompRun(cplCompList(1), importState=exportStates(4), &
+              exportState=impState, clock=clock, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+              exportState=impState, clock=clock, rc=rc)
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          endif
+          
+
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
             exportState=expState, clock=clock, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
