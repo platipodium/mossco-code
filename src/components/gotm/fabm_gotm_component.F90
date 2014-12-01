@@ -116,6 +116,7 @@ module fabm_gotm_component
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR)  :: message
     character(len=ESMF_MAXSTR)  :: configFileName
+    character(len=ESMF_MAXSTR)  :: fieldname, wsfieldname
       
     !! Check whether there is already a clock (it might have been set 
     !! with a prior ESMF_gridCompCreate() call.  If not, then create 
@@ -218,8 +219,11 @@ module fabm_gotm_component
 
     do k=1,size(fabm_export_states)
       !> create field for state variable
+      fieldname=trim(fabm_export_states(k)%standard_name)//'_in_water'
+      wsfieldname=trim(fabm_export_states(k)%standard_name)//'_z_velocity_in_water'
+
       concfield = ESMF_FieldCreate(grid, farrayPtr=fabm_export_states(k)%conc, &
-        name=trim(fabm_export_states(k)%standard_name), &
+        name=fieldname, &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
@@ -242,7 +246,7 @@ module fabm_gotm_component
       !> create field for sinking velocity of state variable
       wsPtr => fabm_export_states(k)%ws
       wsfield = ESMF_FieldCreate(grid, farrayPtr=fabm_export_states(k)%ws, &
-        name=trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
+        name=wsfieldname, &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       call ESMF_AttributeSet(wsfield,'external_index',fabm_export_states(k)%fabm_id)
       !! always set units to m/s (fabm convention)
@@ -250,7 +254,7 @@ module fabm_gotm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       call ESMF_StateGet(exportState, &
-              trim(fabm_export_states(k)%standard_name),itemType, rc=rc)
+              fieldname,itemType, rc=rc)
 
       if (itemType == ESMF_STATEITEM_NOTFOUND) then
         call ESMF_StateAddReplace(exportState,(/concfield,wsfield/),rc=rc)
@@ -258,39 +262,36 @@ module fabm_gotm_component
       else if (itemType ==ESMF_STATEITEM_FIELD) then
       !> if field present, remove from state, create bundle, add fields
         call ESMF_StateGet(exportState, &
-                trim(fabm_export_states(k)%standard_name),field,rc=rc)
+                fieldname,field,rc=rc)
 #if ESMF_VERSION_MAJOR > 5
         call ESMF_StateRemove(exportState, &
-                (/ trim(fabm_export_states(k)%standard_name) /),rc=rc)
+                (/ fieldname /),rc=rc)
 #else
         call ESMF_StateRemove(exportState, &
-                trim(fabm_export_states(k)%standard_name),rc=rc)
+                fieldname,rc=rc)
 #endif
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,concfield/), &
-                name=trim(fabm_export_states(k)%standard_name),   &
+                name=fieldname,   &
                 multiflag=.true.,rc=rc)
-        call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
+        call ESMF_StateAddReplace(exportState,(/fieldBundle/), rc=rc)
 
-        call ESMF_StateGet(exportState, &
-                trim(fabm_export_states(k)%standard_name)//'_z_velocity',field,rc=rc)
+        call ESMF_StateGet(exportState, wsfieldname, field, rc=rc)
 #if ESMF_VERSION_MAJOR > 5
-        call ESMF_StateRemove(exportState, &
-                (/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /),rc=rc)
+        call ESMF_StateRemove(exportState, (/ wsfieldname /), rc=rc)
 #else
-        call ESMF_StateRemove(exportState, &
-                trim(fabm_export_states(k)%standard_name)//'_z_velocity',rc=rc)
+        call ESMF_StateRemove(exportState, wsfieldname,rc=rc)
 #endif
         fieldBundle = ESMF_FieldBundleCreate(fieldlist=(/field,wsfield/), &
-                name=trim(fabm_export_states(k)%standard_name)//'_z_velocity',   &
+                name=wsfieldname,   &
                 multiflag=.true.,rc=rc)
         call ESMF_StateAddReplace(exportState,(/fieldBundle/),rc=rc)
 
       else if(itemType == ESMF_STATEITEM_FIELDBUNDLE) then
       !> if fieldBundle, get the bundle and add field
-        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name),fieldBundle,rc=rc)
-        call ESMF_FieldBundleAdd(fieldBundle,(/concfield/),multiflag=.true.,rc=rc)
-        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity',fieldBundle,rc=rc)
-        call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/),multiflag=.true.,rc=rc)
+        call ESMF_StateGet(exportState,fieldname,fieldBundle,rc=rc)
+        call ESMF_FieldBundleAdd(fieldBundle, (/concfield/), multiflag=.true., rc=rc)
+        call ESMF_StateGet(exportState, wsfieldname, fieldBundle, rc=rc)
+        call ESMF_FieldBundleAdd(fieldBundle,(/wsfield/), multiflag=.true., rc=rc)
       end if
 
     enddo
@@ -366,7 +367,7 @@ module fabm_gotm_component
        ! diffusion routine (so far - later use integration by solver_library)
        do nvar=1,size(gotmfabm%model%info%state_variables)
          varname=trim(only_var_name( &
-           gotmfabm%model%info%state_variables(nvar)%long_name))//'_upward_flux'
+           gotmfabm%model%info%state_variables(nvar)%long_name))//'_upward_flux_at_soil_surface'
          !> if fieldBundle, then start counter on name and map nvar accordinlgy
          !> later use attributes to distribute fields
          call ESMF_StateGet(importState, trim(varname), itemType,rc=rc)
@@ -477,32 +478,32 @@ module fabm_gotm_component
     type(ESMF_Field)           :: field
     type(ESMF_FieldBundle)     :: fieldBundle
     type(ESMF_StateItem_Flag)  :: itemType
+    character(len=ESMF_MAXSTR) :: fieldname, wsfieldname
 
     do k=1,size(fabm_export_states)
-      call ESMF_StateGet(exportState, &
-              trim(fabm_export_states(k)%standard_name),itemType, rc=rc)
+      fieldname=trim(fabm_export_states(k)%standard_name)//'_in_water'
+      wsfieldname=trim(fabm_export_states(k)%standard_name)//'_z_velocity_in_water'
+
+      call ESMF_StateGet(exportState, fieldname, itemType, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       if (itemType == ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), field, rc=rc)
+        call ESMF_StateGet(exportState, fieldname, field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldDestroy(field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name)//'_z_velocity', field, rc=rc)
+        call ESMF_StateGet(exportState, wsfieldname, field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldDestroy(field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
       else if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
-        call ESMF_StateGet(exportState,trim(fabm_export_states(k)%standard_name), &
-                fieldBundle, rc=rc)
+        call ESMF_StateGet(exportState, fieldname, fieldBundle, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldBundleDestroy(fieldbundle,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-        call ESMF_StateGet(exportState, &
-                trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
-                fieldbundle, rc=rc)
+        call ESMF_StateGet(exportState, wsfieldname, fieldbundle, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldBundleDestroy(fieldbundle,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -510,16 +511,14 @@ module fabm_gotm_component
 
 #if ESMF_VERSION_MAJOR > 5
       call ESMF_StateRemove(exportState, &
-              (/ trim(fabm_export_states(k)%standard_name) /),relaxedFlag=.true.,rc=rc)
+              (/ fieldname /), relaxedFlag=.true., rc=rc)
       call ESMF_StateRemove(exportState, &
-              (/ trim(fabm_export_states(k)%standard_name)//'_z_velocity' /), &
-              relaxedFlag=.true.,rc=rc)
+              (/ wsfieldname /), relaxedFlag=.true., rc=rc)
 #else
       call ESMF_StateRemove(exportState, &
-              trim(fabm_export_states(k)%standard_name),relaxedFlag=.true.,rc=rc)
+              fieldname, relaxedFlag=.true., rc=rc)
       call ESMF_StateRemove(exportState, &
-              trim(fabm_export_states(k)%standard_name)//'_z_velocity', &
-              relaxedFlag=.true.,rc=rc)
+              wsfieldname, relaxedFlag=.true., rc=rc)
 #endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
