@@ -543,7 +543,7 @@ module fabm_gotm_component
 
     do n=1,size(gotmfabm%model%info%state_variables)
       varname=trim(only_var_name( &
-           gotmfabm%model%info%state_variables(n)%long_name))//'_upward_flux'
+           gotmfabm%model%info%state_variables(n)%long_name))//'_upward_flux_at_soil_surface'
       call set_item_flags(importState,varname,optionalFlag=.true.,requiredRank=2)
     end do
   end subroutine set_import_flags

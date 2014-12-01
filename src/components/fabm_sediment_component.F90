@@ -316,7 +316,7 @@ module fabm_sediment_component
         if (sed%export_states(n)%fabm_id/=-1) then
           !> add boundary upward fluxes
           field = ESMF_FieldCreate(surface_mesh, &
-                    name=trim(sed%export_states(n)%standard_name)//'_upward_flux', &
+                    name=trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
                     typekind=ESMF_TYPEKIND_R8, &
                     meshloc=ESMF_MESHLOC_ELEMENT,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -647,7 +647,7 @@ module fabm_sediment_component
         end do
         if (sed%export_states(n)%fabm_id /= -1) then
           call ESMF_StateGet(exportState, &
-             trim(sed%export_states(n)%standard_name)//'_upward_flux', &
+             trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
              field,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_FieldGet(field=field, localDe=0, farrayPtr=fluxmesh_ptr, rc=rc)
@@ -664,7 +664,7 @@ module fabm_sediment_component
         ptr_f3 = sed%export_states(n)%data
         if (sed%export_states(n)%fabm_id /= -1) then
           call ESMF_StateGet(exportState, &
-             trim(sed%export_states(n)%standard_name)//'_upward_flux', &
+             trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
              field,rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
