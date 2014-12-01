@@ -258,11 +258,14 @@ ifeq ($(MOSSCO_GETM),true)
   endif
   GETM_LIBS += -lturbulence_prod -lutil_prod
 
+# always compile for SPHERICAL
+  export STATIC += -DSPHERICAL
+  export GETM_CPPFLAGS = $(STATIC)
   ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
-    DEFINES += -DGETM_PARALLEL
+    export GETM_CPPFLAGS += -DGETM_PARALLEL
   endif
   export GETM_LIBRARY_PATH
-  export GETM_CPPFLAGS = -I$(GETMDIR)/include -I$(GETMDIR)/modules/$(FORTRAN_COMPILER)
+  export GETM_CPPFLAGS += -I$(GETMDIR)/include -I$(GETMDIR)/modules/$(FORTRAN_COMPILER)
   export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
 endif
 export MOSSCO_GETM
