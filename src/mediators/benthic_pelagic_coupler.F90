@@ -75,22 +75,22 @@ module benthic_pelagic_coupler
 
     ! create coupler fields
     call create_optional_fields_from_names(exportState, (/&
-           "nutrients_upward_flux                              ", &
-           "nitrate_upward_flux                                ", &
-           "ammonium_upward_flux                               ", &
-           "phosphate_upward_flux                              ", &
-           "oxygen_upward_flux                                 ", &
-           "phosphate_upward_flux                              ", &
-           "DIN_upward_flux                                    ", &
-           "DIP_upward_flux                                    ", &
-           "detN_upward_flux                                   ", &
-           "detP_upward_flux                                   ", &
-           "Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux  ", &
-           "Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux", &
-           "detritus_upward_flux                               ", &
-           "Detritus_Nitrogen_detN_upward_flux                 ", &
-           "Detritus_Phosphorus_detP_upward_flux               ", &
-           "Detritus_Carbon_detC_upward_flux                   "/),flux_bdy_grid)
+           "nutrients_upward_flux_at_soil_surface                              ", &
+           "nitrate_upward_flux_at_soil_surface                                ", &
+           "ammonium_upward_flux_at_soil_surface                               ", &
+           "phosphate_upward_flux_at_soil_surface                              ", &
+           "oxygen_upward_flux_at_soil_surface                                 ", &
+           "phosphate_upward_flux_at_soil_surface                              ", &
+           "DIN_upward_flux_at_soil_surface                                    ", &
+           "DIP_upward_flux_at_soil_surface                                    ", &
+           "detN_upward_flux_at_soil_surface                                   ", &
+           "detP_upward_flux_at_soil_surface                                   ", &
+           "Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux_at_soil_surface  ", &
+           "Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface", &
+           "detritus_upward_flux_at_soil_surface                               ", &
+           "Detritus_Nitrogen_detN_upward_flux_at_soil_surface                 ", &
+           "Detritus_Phosphorus_detP_upward_flux_at_soil_surface               ", &
+           "Detritus_Carbon_detC_upward_flux_at_soil_surface                   "/),flux_bdy_grid)
 
     !> allocate temporary arrays
     allocate(DETNflux(1,1))
@@ -120,25 +120,25 @@ module benthic_pelagic_coupler
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
 
       !   DIN flux:
-      call ESMF_StateGet(importState,trim('mole_concentration_of_nitrate_upward_flux'),field,rc=rc)
+      call ESMF_StateGet(importState,trim('mole_concentration_of_nitrate_upward_flux_at_soil_surface'),field,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val1_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateGet(importState,'mole_concentration_of_ammonium_upward_flux',field,rc=rc)
+      call ESMF_StateGet(importState,'mole_concentration_of_ammonium_upward_flux_at_soil_surface',field,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call mossco_state_get(exportState,(/'nitrate_upward_flux'/),DINflux,rc=nitrc)
+      call mossco_state_get(exportState,(/'nitrate_upward_flux_at_soil_surface'/),DINflux,rc=nitrc)
       if (nitrc == 0) DINflux = val2_f2
-      call mossco_state_get(exportState,(/'ammonium_upward_flux'/),DINflux,rc=nitrc)
+      call mossco_state_get(exportState,(/'ammonium_upward_flux_at_soil_surface'/),DINflux,rc=nitrc)
       if (nitrc == 0) DINflux = val1_f2
 
       !RH: weak check, needs to be replaced:
       if (nitrc /= 0) then
         call mossco_state_get(exportState,(/ &
-              'nutrients_upward_flux                            ', &
-              'DIN_upward_flux                                  ', &
-              'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux'/),DINflux,rc=rc)
+              'nutrients_upward_flux_at_soil_surface                            ', &
+              'DIN_upward_flux_at_soil_surface                                  ', &
+              'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux_at_soil_surface'/),DINflux,rc=rc)
         if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         DINflux = val1_f2 + val2_f2
         ! add constant boundary flux of DIN (through groundwater, advection, rain
@@ -147,30 +147,30 @@ module benthic_pelagic_coupler
 
       !   DIP flux:
       call mossco_state_get(exportState,(/ &
-              'DIP_upward_flux                                    ', &
-              'phosphate_upward_flux                              ', &
-              'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux'/),DIPflux,rc=rc)
+              'DIP_upward_flux_at_soil_surface                                    ', &
+              'phosphate_upward_flux_at_soil_surface                              ', &
+              'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface'/),DIPflux,rc=rc)
       if (rc == 0)  then
         call mossco_state_get(importState,(/ &
-              'mole_concentration_of_phosphate_upward_flux'/),val1_f2,rc=rc)
+              'mole_concentration_of_phosphate_upward_flux_at_soil_surface'/),val1_f2,rc=rc)
          DIPflux = val1_f2 + dipflux_const/(86400.0*365.0)
       end if
 
       !   Det flux:
-      call mossco_state_get(importState,(/'slow_detritus_C_upward_flux'/),SDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'fast_detritus_C_upward_flux'/),FDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'detritus-P_upward_flux'/),omexDETPflux,rc=rc)
+      call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/),SDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/),FDETCflux,rc=rc)
+      call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/),omexDETPflux,rc=rc)
 
       call mossco_state_get(exportState,(/ &
-            'detritus_upward_flux              ', &
-            'detN_upward_flux                  ', &
-            'Detritus_Nitrogen_detN_upward_flux'/),DETNflux,rc=rc)
+            'detritus_upward_flux_at_soil_surface              ', &
+            'detN_upward_flux_at_soil_surface                  ', &
+            'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'/),DETNflux,rc=rc)
       if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       DETNflux = NC_fdet*FDETCflux + NC_sdet*SDETCflux
 
       !> search for Detritus-C
       call mossco_state_get(exportState,(/ &
-         'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
+         'Detritus_Carbon_detC_upward_flux_at_soil_surface'/),DETCflux,rc=rc)
       if (rc == 0) then
          DETCflux = FDETCflux + SDETCflux
       end if
@@ -178,17 +178,17 @@ module benthic_pelagic_coupler
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
       call mossco_state_get(exportState,(/ &
-          'detP_upward_flux                    ', &
-          'Detritus_Phosphorus_detP_upward_flux'/),DETPflux,rc=rc)
+          'detP_upward_flux_at_soil_surface                    ', &
+          'Detritus_Phosphorus_detP_upward_flux_at_soil_surface'/),DETPflux,rc=rc)
       if (rc == 0) then
         DETPflux = omexDETPflux
       end if
 
       !> oxygen and odu fluxes
-      call mossco_state_get(exportState,(/'oxygen_upward_flux'/),OXYflux,rc=rc)
+      call mossco_state_get(exportState,(/'oxygen_upward_flux_at_soil_surface'/),OXYflux,rc=rc)
       if (rc == 0) then
-        call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux'/),val1_f2,rc=rc)
-        call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux'/),val2_f2,rc=rc)
+        call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux_at_soil_surface'/),val1_f2,rc=rc)
+        call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux_at_soil_surface'/),val2_f2,rc=rc)
         OXYflux = val1_f2 - val2_f2
       end if
 
