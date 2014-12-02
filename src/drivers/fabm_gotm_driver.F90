@@ -114,10 +114,12 @@ end type
    !  Original author(s): Jorn Bruggeman
 
    integer                   :: i,namlst=55
+   REALTYPE                  :: dt_min=1.0, relative_change_min=0.1
    namelist /gotm_fabm_nml/ fabm_calc,                                               &
                             cnpar,w_adv_discr,ode_method,split_factor,               &
                             bioshade_feedback,bioalbedo_feedback,biodrag_feedback,   &
                             repair_state,no_precipitation_dilution,                  &
+                            dt_min, relative_change_min,                             &
                             salinity_relaxation_to_freshwater_flux,save_inputs
 !
 !-----------------------------------------------------------------------
@@ -148,6 +150,8 @@ end type
    read(namlst,nml=gotm_fabm_nml)
    close(namlst)
 
+   gotmfabm%dt_min=dt_min
+   gotmfabm%relative_change_min=relative_change_min
    gotmfabm%knum=nlev
    gotmfabm%inum=1
    gotmfabm%jnum=1
