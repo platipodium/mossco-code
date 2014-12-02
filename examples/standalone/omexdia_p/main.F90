@@ -14,7 +14,7 @@ use solver_library
 
 implicit none
 
-real(rk)       :: dt,dzmin
+real(rk)       :: dt,dzmin,dt_min, relative_change_min
 integer        :: tnum,t,funit,output,k,n,numyears,numlayers
 integer        :: ode_method
 integer        :: presimulation_years=-1
@@ -23,7 +23,9 @@ real(rk),dimension(:,:,:,:),allocatable,target :: conc
 real(rk),dimension(:,:,:), allocatable,target  :: bdys,fluxes
 real(rk),dimension(:,:,:),pointer              :: diag
 
-namelist/run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years
+namelist/run_nml/ numyears,dt,output,numlayers,dzmin, &
+                  ode_method,presimulation_years, &
+                  dt_min, relative_change_min
 
 ! initialise
 dt=60._rk !s
@@ -32,6 +34,8 @@ output=86400/int(dt)
 numlayers=10
 dzmin=0.005
 ode_method=_RK4_
+dt_min=1.0_rk
+relative_change_min=0.1_rk
 
 open(33,file='run.nml',action='read',status='old')
 read(33,nml=run_nml)
@@ -40,6 +44,8 @@ sed%grid%inum=1
 sed%grid%jnum=1
 sed%grid%knum=numlayers
 sed%grid%dzmin=dzmin
+sed%dt_min=dt_min
+sed%relative_change_min=relative_change_min
 
 funit=2
 
