@@ -261,11 +261,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
             endif            
           endif          
-        else        
-          write(message,'(A)') '    added field '//trim(itemNameList(i))
-          call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
+        else     
+          write(message,'(A)') '    added field '
+          call MOSSCO_FieldString(importField,message)  
+          !call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
+          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          !if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
           call ESMF_StateAdd(exportState,(/importField/), rc=localrc)  
         endif      
