@@ -1455,7 +1455,7 @@ module toplevel_component
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
           !write(0,*) trim(compName)//' ', i,'/',alarmCount,' '//trim(alarmName)//' rings at '//trim(timeString)
-          write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
+          write(message,'(A)') trim(name)//'  '//trim(alarmName)//' rings at '//trim(timeString)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           myName=trim(alarmName(1:index(alarmName,'--')-1))
@@ -1468,7 +1468,7 @@ module toplevel_component
             endif
           enddo
 
-          write(message,'(A)') trim(timeString)//' '//trim(myName)//' ->'
+          write(message,'(A)') trim(name)//' '//trim(timeString)//' '//trim(myName)//' ->'
           if (trim(cplName) /= 'link') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
@@ -1504,7 +1504,7 @@ module toplevel_component
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
+          write(message,'(A)') trim(name)//' '//trim(timeString)//' calling '//trim(cplCompNames(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           !! >@todo manual fix: if pelagic_benthic coupler, then need getm and constant as import
