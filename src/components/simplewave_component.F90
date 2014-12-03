@@ -177,17 +177,23 @@ module simplewave_component
     character(ESMF_MAXSTR)  :: name,message
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     type(ESMF_Time)         :: currTime
-    integer                     :: i
+
     type(ESMF_Field), target     :: field
     type(ESMF_Grid)      :: grid
     integer              :: localrc
-    integer              :: rank,farray_shape(2)
+    integer              :: rank
     real(ESMF_KIND_R8), pointer           :: coordX(:), coordY(:)
-    
+    integer,target :: coordDimCount(2),coordDimMap(2,2)
     logical                         :: gridIsPresent,fileIsPresent,labelIsPresent
     character(ESMF_MAXSTR)          :: configFileName, gridFileName
     type(ESMF_Config)               :: config
     integer(ESMF_KIND_I4)           :: lbnd(2), ubnd(2)
+    integer,dimension(2)            :: totalLBound,totalUBound
+    integer                         :: i,j
+    type :: allocatable_integer_array
+      integer,dimension(:),allocatable :: data
+    end type
+    type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
     
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
@@ -252,15 +258,23 @@ module simplewave_component
       end if
       call ESMF_GridCompSet(gridComp,grid=grid)
     end if
-    ! Get information to generate the fields that store the pointers to variables
 
-    call ESMF_GridGetFieldBounds(grid=grid,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER,&
-      totalCount=farray_shape,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    write(0,*) farray_shape
-    !> Create export fields and add them to export state, allocate the space for these
-    !> that will be filled later with data
+!   Get the total domain size from the coordinates associated with the Grid
+    call ESMF_GridGet(grid,coordDimCount=coordDimCount,coordDimMap=coordDimMap)
+    do i=1,2
+      allocate(coordTotalLBound(i)%data(coordDimCount(i)))
+      allocate(coordTotalUBound(i)%data(coordDimCount(i)))
+      call ESMF_GridGetCoordBounds(grid,coordDim=i,                      &
+                                   totalLBound=coordTotalLBound(i)%data, &
+                                   totalUBound=coordTotalUBound(i)%data)
+      do j=1,coordDimCount(i)
+        if (coordDimMap(i,j) .eq. i) then
+          totalLBound(i) = coordTotalLBound(i)%data(j)
+          totalUBound(i) = coordTotalUBound(i)%data(j)
+          exit
+        end if
+      end do
+    end do
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
