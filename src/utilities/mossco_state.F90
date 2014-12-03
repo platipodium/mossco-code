@@ -352,44 +352,27 @@ contains
    
     rc=ESMF_SUCCESS
  
-    call ESMF_FieldGet(field, name=name, rank=rank, rc=localrc)
+    call ESMF_FieldGet(field, name=name, status=fieldStatus, rc=localrc)
     if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
-    if (rank==1) then
-      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd1, exclusiveLBound=lbnd1, rc=rc)
-    elseif (rank==2) then
-      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=rc)
-    elseif (rank==3) then
-      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd3, exclusiveLBound=lbnd3, rc=rc)
-    elseif (rank==4) then
-      call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd4, exclusiveLBound=lbnd4, rc=rc)
-    else
-      write(0,*) 'NOT implemented: rank > 4'
-    endif
-  
   	write(message,'(A)') trim(message)//' '//trim(name)
-  	write(message,'(A,I1)') trim(message)//' rank ',rank 
-  	
-    call ESMF_FieldGet(field, geomtype=geomtype, status=fieldStatus, rc=localrc)
-    if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     if (fieldStatus==ESMF_FIELDSTATUS_EMPTY) then
-     	write(message,'(A)') trim(message)//' empty '
+     	write(message,'(A)') trim(message)//' (empty) '
+     	return
     elseif (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then
-     	write(message,'(A)') trim(message)//' gridset '
-    elseif (fieldStatus==ESMF_FIELDSTATUS_COMPLETE) then
-     	write(message,'(A)') trim(message)
-    else    
-     	write(message,'(A)') trim(message)//' unknown'
+     	write(message,'(A)') trim(message)//' (gridset) '
     endif
+
+    call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
+    if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
     if (geomtype==ESMF_GEOMTYPE_GRID) then
-     	write(message,'(A)') trim(message)//' grid '
-      if (fieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
-        !call ESMF_GridGet(grid, name=geomName, rc=localrc)  
-        !if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-     	  !write(message,'(A)') trim(message)//' '//trim(geomName)
-     	endif
+      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridGet(grid, name=geomName, rc=localrc)  
+      if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+     	write(message,'(A)') trim(message)//' '//trim(geomName)
     elseif (geomtype==ESMF_GEOMTYPE_MESH) then
      	write(message,'(A)') trim(message)//' mesh'
     elseif (geomtype==ESMF_GEOMTYPE_LOCSTREAM) then
@@ -399,6 +382,25 @@ contains
     else
       write(0,*) 'ERROR: geomtype not defined'
     endif
+
+    call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+ 
+    if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank 
+  
+    !if (rank==1) then
+    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd1, exclusiveLBound=lbnd1, rc=rc)
+    !elseif (rank==2) then
+    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=rc)
+    !elseif (rank==3) then
+    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd3, exclusiveLBound=lbnd3, rc=rc)
+    !elseif (rank==4) then
+    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd4, exclusiveLBound=lbnd4, rc=rc)
+    !else
+    !  write(0,*) 'NOT implemented: rank > 4'
+    !endif
+    
+    if (len_trim(message)>len(message)-3) message(len(message)-3:len(message))='.'
     
     length=len_trim(message)	
     if (present(length_)) length_=length
