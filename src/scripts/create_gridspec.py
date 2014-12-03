@@ -18,12 +18,20 @@ import sys
 import numpy
 import time
 
-ll_lon = -4.		#lower left of cell corner 4°W
-ll_lat = 50.
-ur_lon = 15.
-ur_lat = 61.
-delta_lon = 0.035		#delta lon in dezimalgrad
-delta_lat = 0.02
+if (1==1):
+  ll_lon = -4.		#lower left of cell corner 4°W
+  ll_lat = 50.
+  ur_lon = 15.
+  ur_lat = 61.
+  delta_lon = 0.035		#delta lon in dezimalgrad
+  delta_lat = 0.02
+if (2==2): ## spherical box / deep lake test case
+  delta_lon=0.01250
+  delta_lat=0.25/30.0
+  ll_lon=0.0
+  ur_lon=1.25
+  ll_lat=45.0
+  ur_lat=45.25
     
 if __name__ == '__main__':
 
@@ -76,12 +84,14 @@ if __name__ == '__main__':
   ilon=numpy.array(range(0,nlon))
   jlat=numpy.array(range(0,nlat))
 
-  lon[:]=ll_lon+((ilon+0.5)*(ur_lon-ll_lon))/nlon
-  lat[:]=ll_lat+((jlat+0.5)*(ur_lat-ll_lat))/nlat
+  lon[:]=ll_lon+(ilon+0.5)*delta_lon
+  lat[:]=ll_lat+(jlat+0.5)*delta_lat
   lon_bnds[:,0]=lon[:]-0.5*delta_lon
   lon_bnds[:,1]=lon[:]+0.5*delta_lon
   lat_bnds[:,0]=lat[:]-0.5*delta_lat
   lat_bnds[:,1]=lat[:]+0.5*delta_lat
+  
+  print lon_bnds[0,:], lat_bnds[-1,:]
   
   nc.close()
 

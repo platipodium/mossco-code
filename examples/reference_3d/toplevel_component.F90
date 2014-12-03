@@ -393,7 +393,7 @@ module toplevel_component
     endif
     
     !! Initializing phase 1 of simplewave
-    call ESMF_AttributeSet(importStates(6), name="foreign_grid_field_name", value="temperature_at_surface", rc=rc)
+    call ESMF_AttributeSet(importStates(6), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     if (phaseCountList( 6)>=1) then

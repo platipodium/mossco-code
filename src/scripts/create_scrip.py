@@ -18,14 +18,21 @@ import sys
 import numpy
 import time
 
-ll_lon = -4.		#lower left of cell corner 4°W
-ll_lat = 50.
-ur_lon = 15.
-ur_lat = 61.
-delta_lon = 0.035		#delta lon in dezimalgrad
-delta_lat = 0.02
-
-       
+if (1==1):
+  ll_lon = -4.		#lower left of cell corner 4°W
+  ll_lat = 50.
+  ur_lon = 15.
+  ur_lat = 61.
+  delta_lon = 0.035		#delta lon in dezimalgrad
+  delta_lat = 0.02
+if (2==2): ## spherical box / deep lake test case
+  delta_lon=0.01250
+  delta_lat=0.25/30.0
+  ll_lon=0.0
+  ur_lon=1.25
+  ll_lat=45.0
+  ur_lat=45.25
+  
 if __name__ == '__main__':
 
   nlat=abs(ur_lat-ll_lat)/abs(delta_lat)
@@ -83,8 +90,8 @@ if __name__ == '__main__':
   ilon=numpy.array(range(0,nlon))
   jlat=numpy.array(range(0,nlat))
 
-  glon=ll_lon+((ilon+0.5)*(ur_lon-ll_lon))/nlon
-  glat=ll_lat+((jlat+0.5)*(ur_lat-ll_lat))/nlat
+  glon=ll_lon+(ilon+0.5)*delta_lon
+  glat=ll_lat+(jlat+0.5)*delta_lat
   
   for j in jlat:
       k=ilon+j*nlon    
@@ -105,6 +112,9 @@ if __name__ == '__main__':
   grid_corner_lon[:,3]=grid_corner_lon[:,0]
   grid_corner_lat[:,1]=grid_corner_lat[:,0]
   grid_corner_lat[:,3]=grid_corner_lat[:,2]  
+  
+  print grid_corner_lon[0,0], grid_corner_lon[-1,2]
+  print grid_corner_lat[0,0], grid_corner_lat[-1,2]
   nc.close()
 
 
