@@ -299,7 +299,7 @@ contains
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     Microphytobenthos_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_MPB_on_critical_bed_shearstress", rc=rc)
+      name="Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface", rc=rc)
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -337,7 +337,7 @@ contains
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     Macrofauna_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_Mbalthica_on_critical_bed_shearstress", rc=rc)
+      name="Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface", rc=rc)
 
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
