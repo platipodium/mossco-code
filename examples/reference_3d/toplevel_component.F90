@@ -393,30 +393,14 @@ module toplevel_component
     endif
     
     !! Initializing phase 1 of simplewave
-    call ESMF_AttributeSet(importStates(6), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
+    call ESMF_AttributeSet(importStates(6), name="foreign_grid_field_name", value="temperature_at_surface", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Manually added to get grid information from getm to simplewave in phase 1
-    !!> @todo not needed when simplewave phase 2 is implemented
-    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
-      exportState=importStates(6), clock=clock, phase=1, rc=rc)
     if (phaseCountList( 6)>=1) then
       call ESMF_GridCompInitialize(gridCompList(6), importState=importStates(6), &
         exportState=exportStates(6), clock=clock, phase=1, rc=rc)
     endif
 
-    if (rc /= ESMF_SUCCESS) then
-      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
-        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
-        write(message,'(A,I4)') 'Initializing failed with error code ', rc
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_LogFlush()
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      endif
-    endif
     !! Initializing phase 1 of netcdf
     if (phaseCountList( 7)>=1) then
       call ESMF_GridCompInitialize(gridCompList(7), importState=importStates(7), &
@@ -597,6 +581,11 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
+
+    !! Manually added to get grid information from getm to simplewave
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(6), clock=clock, phase=1, rc=rc)
+
     !! Initializing phase 2 of simplewave
     if (phaseCountList( 6)>=2) then
       call ESMF_GridCompInitialize(gridCompList(6), importState=importStates(6), &
