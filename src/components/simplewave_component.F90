@@ -112,8 +112,51 @@ module simplewave_component
     type(ESMF_Time)        :: currTime
     integer                :: localrc
 
+    type(ESMF_Field)       :: field
+    integer                :: i
+
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    allocate(variableItemList(4+3))
+
+!!! Advertise Export Fields
+    variableItemList(1)%name='wave_height'
+    variableItemList(1)%unit='m'
+    variableItemList(2)%name='wave_period'
+    variableItemList(2)%unit='s'
+    variableItemList(3)%name='wave_number'
+    variableItemList(3)%unit='1/m'
+    variableItemList(4)%name='wave_direction'
+    variableItemList(4)%unit='rad'
+
+    do i=1,4
+      variableItemList(i)%standard_name=trim(variableItemList(i)%name)
+      field = ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'units',trim(variableItemList(i)%unit), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+!!! Advertise Import Fields
+    variableItemList(4+1)%name='water_depth_at_soil_surface'
+    variableItemList(4+1)%unit='m'
+    variableItemList(4+2)%name='wind_x_velocity_at_10m'
+    variableItemList(4+2)%unit='m/s'
+    variableItemList(4+3)%name='wind_y_velocity_at_10m'
+    variableItemList(4+3)%unit='m/s'
+
+    do i=4+1,4+3
+      variableItemList(i)%standard_name=trim(variableItemList(i)%name)
+      field=ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(importState,(/field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+    !> @todo add optional fields (see Run method)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -218,48 +261,6 @@ module simplewave_component
     write(0,*) farray_shape
     !> Create export fields and add them to export state, allocate the space for these
     !> that will be filled later with data
-    allocate(variableItemList(4+3))
-
-!!! Advertise Export Fields
-    variableItemList(1)%name='wave_height'
-    variableItemList(1)%unit='m'
-    variableItemList(2)%name='wave_period'
-    variableItemList(2)%unit='s'
-    variableItemList(3)%name='wave_number'
-    variableItemList(3)%unit='1/m'
-    variableItemList(4)%name='wave_direction'
-    variableItemList(4)%unit='degrees'
-    
-    do i=1,4
-      variableItemList(i)%standard_name=trim(variableItemList(i)%name)
-      field = ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldEmptySet(field,grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(variableItemList(i)%unit), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo    
-
-!!! Advertise Import Fields
-    variableItemList(5)%name='water_depth_at_soil_surface'
-    variableItemList(6)%name='wind_x_velocity_at_10m'
-    variableItemList(7)%name='wind_y_velocity_at_10m'
-
-    do i=4+1,4+3
-      variableItemList(i)%standard_name=trim(variableItemList(i)%name)
-      field=ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%standard_name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldEmptySet(field,grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,trim(variableItemList(i)%standard_name)//":required",value=.true.)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAdd(importState,(/field/), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-
-    !> @todo add optional fields (see Run method)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
