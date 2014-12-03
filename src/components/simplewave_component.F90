@@ -160,7 +160,7 @@ module simplewave_component
           write(message,'(A,I6,A)') trim(name)//' uses regular grid from '//trim(gridFileName)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         else
-          grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),name=trim(name)//'Grid',rc=localrc)
+          grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),coordDep1=(/1/),coordDep2=(/2/),name=trim(name)//'Grid',rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -168,13 +168,13 @@ module simplewave_component
              computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           do i=lbnd(1),ubnd(1) 
-            coordX(i) = 0 + 0.1 * i + 0.05
+            coordX(i) = i
           enddo
           call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
              computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           do i=lbnd(1),ubnd(1) 
-            coordY(i) = 50 + 0.1 * i + 0.05
+            coordY(i) = i
           enddo
         end if
       end if
