@@ -472,9 +472,9 @@ contains
     !call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     do n=1,size(fieldlist)
-      call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n),rc=rc)
       !> if attribute not present, set external idx to -1
-      if(rc /= ESMF_SUCCESS) external_idx_by_nfrac(n)=-1
+      call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n), &
+      defaultValue=-1,rc=rc)
     end do
   end if
 
@@ -534,7 +534,7 @@ contains
 
     integer                  :: petCount, localPet
     character(ESMF_MAXSTR)   :: name, message, timeString
-    logical                  :: clockIsPresent
+    logical                  :: clockIsPresent, isPresent
     type(ESMF_Time)          :: currTime
     type(ESMF_Clock)         :: clock
     integer                  :: external_index
@@ -679,10 +679,19 @@ contains
           field = fieldlist(n)
           call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1)
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=rc)
-          call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)))
-          call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)))
-          sedd90(n) = d90_from_d50(sedd50(nfrac_by_external_idx(external_index)))
-
+          call ESMF_AttributeGet(field,'mean_particle_diameter', isPresent=isPresent, rc=rc)
+          if (isPresent) then
+            call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=rc)
+          else
+            sedd50(nfrac_by_external_idx(external_index))=0.0
+          endif
+          call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, rc=rc)
+          if (isPresent) then
+            call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)), rc=rc)
+          else
+            rhosol(nfrac_by_external_idx(external_index))=0.0
+          endif
+          
           if (rc == ESMF_SUCCESS) then
             spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(:,:,1)
           else
