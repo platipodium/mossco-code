@@ -256,7 +256,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)    
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-startTime, rc=rc)    
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)    
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call MOSSCO_CompExit(gridComp, rc)
