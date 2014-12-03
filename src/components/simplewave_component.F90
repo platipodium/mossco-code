@@ -49,6 +49,10 @@ module simplewave_component
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
+      userRoutine=InitializeP2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -69,7 +73,7 @@ module simplewave_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(len=10)           :: InitializePhaseMap(1)
+    character(len=10)           :: InitializePhaseMap(2)
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
@@ -78,6 +82,7 @@ module simplewave_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
+    InitializePhaseMap(2) = "IPDv00p2=2"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
@@ -92,9 +97,33 @@ module simplewave_component
 
   end subroutine InitializeP0
 
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
+    implicit none
+
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
+
+    character(ESMF_MAXSTR) :: name
+    type(ESMF_Time)        :: currTime
+    integer                :: localrc
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP1
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -235,7 +264,8 @@ module simplewave_component
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  end subroutine InitializeP1
+  end subroutine InitializeP2
+
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
