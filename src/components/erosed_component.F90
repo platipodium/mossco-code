@@ -570,7 +570,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer, intent(out)     :: rc
 
     character(len=255)       :: logstring
-    type(ESMF_Time)          :: clockTime
+    type(ESMF_Time)          :: clockTime, stopTime
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
@@ -837,6 +837,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !            enddo
 !    enddo
         !
+        
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)    
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)    
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -907,9 +914,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 #undef  ESMF_METHOD
 #define ESMF_METHOD "d90_from_d50"
   function d90_from_d50(d50)
-  real(ESMF_KIND_R8)            :: d90_from_d50
-  real(ESMF_KIND_R8),intent(in) :: d50
-  d90_from_d50 = 2.0_ESMF_KIND_R8 * d50
+    real(ESMF_KIND_R8)            :: d90_from_d50
+    real(ESMF_KIND_R8),intent(in) :: d50
+    
+    d90_from_d50 = 2.0_ESMF_KIND_R8 * d50
+    
   end function d90_from_d50
 
 end module erosed_component
