@@ -113,10 +113,14 @@ module benthic_pelagic_coupler
     type(ESMF_Clock)     :: externalclock
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
-    integer              :: nmlunit=127
+    
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)       :: currTime
+    integer              :: nmlunit=127, localrc
     namelist /benthic_pelagic_coupler/ dinflux_const,dipflux_const
 
-    call ESMF_LogWrite("benthic-pelagic coupler initializing", ESMF_LOGMSG_INFO)
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !read namelist
     open(nmlunit,file='benthic_pelagic_coupler.nml',action='read',status='old')
@@ -162,7 +166,8 @@ module benthic_pelagic_coupler
     allocate(DETNflux(1,1))
     allocate(DETPflux(1,1))
 
-    call ESMF_LogWrite("benthic-pelagic coupler initialized", ESMF_LOGMSG_INFO)
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
 
@@ -178,14 +183,19 @@ module benthic_pelagic_coupler
     integer, intent(out) :: rc
     integer              :: ammrc,nitrc,oxyrc
 
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)       :: currTime
     integer                     :: myrank
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
-    character (len=ESMF_MAXSTR) :: message
     type(ESMF_Field)            :: field
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
     real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
+    integer :: localrc
+
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !   DIN flux:
       call ESMF_StateGet(importState,trim('mole_concentration_of_nitrate_upward_flux_at_soil_surface'),field,rc=rc)
@@ -260,6 +270,9 @@ module benthic_pelagic_coupler
         OXYflux = val1_f2 - val2_f2
       end if
 
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   end subroutine Run
 
 #undef  ESMF_METHOD
@@ -271,7 +284,12 @@ module benthic_pelagic_coupler
     type(ESMF_Clock)     :: externalclock
     integer,intent(out)  :: rc
      
-    call ESMF_LogWrite("pelagic-benthic coupler finalizing", ESMF_LOGMSG_INFO)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)       :: currTime
+    integer :: localrc
+    
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !call ESMF_ArraySpecDestroy(flux_bdy_array, rc)
     call ESMF_GridDestroy(flux_bdy_grid, rc=rc)
@@ -279,7 +297,9 @@ module benthic_pelagic_coupler
     if (associated(DETNflux)) deallocate(DETNflux)
     if (associated(DETPflux)) deallocate(DETPflux)
 
-    call ESMF_LogWrite("benthic-pelagic coupler finalized", ESMF_LOGMSG_INFO)
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   end subroutine Finalize
 
 
