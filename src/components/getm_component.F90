@@ -109,7 +109,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
-   subroutine InitializeP0(gridComp,iState,eState,iClock,rc)
+   subroutine InitializeP0(gridComp,importState,exportState,iClock,rc)
 !
 ! !DESCRIPTION:
 !  Note: [i|e]state and iClock are uninitialized if the toplevel
@@ -124,7 +124,7 @@ module getm_component
 !
 ! !INPUT/OUTPUT PARAMETERS:
    type(ESMF_GridComp) :: gridComp
-   type(ESMF_State)    :: iState,eState ! may be uninitialized
+   type(ESMF_State)    :: importState,exportState ! may be uninitialized
    type(ESMF_Clock)    :: iClock        ! may be uninitialized
 !
 ! !OUTPUT PARAMETERS:
@@ -193,7 +193,7 @@ module getm_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
-  subroutine InitializeP1(gridComp,iState,eState,iClock,rc)
+  subroutine InitializeP1(gridComp,importState,exportState,iClock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
@@ -206,7 +206,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: iState,eState ! may be uninitialized
+    type(ESMF_State)    :: importState,exportState ! may be uninitialized
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
@@ -294,7 +294,7 @@ module getm_component
 !     in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
       TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(eState,(/TbotField/),rc=rc)
+      call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(T3D)) then
@@ -304,11 +304,11 @@ module getm_component
       T3DField = ESMF_FieldCreate(getmGrid3D,T3D,name="temperature_in_water",rc=rc)
 #endif
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(eState,(/T3DField/),rc=rc)
+      call ESMF_StateAdd(exportState,(/T3DField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
 
-    call getmCmp_update_eState()
+    call getmCmp_update_exportState()
 
     if (.not.dryrun) then
       STDERR LINE
@@ -324,13 +324,13 @@ module getm_component
 !-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP2"
-   subroutine InitializeP2(gridComp,iState,eState,iClock,rc)
+   subroutine InitializeP2(gridComp,importState,exportState,iClock,rc)
 
       use domain, only: imin,imax,jmin,jmax,kmax
       implicit none
 
       type(ESMF_GridComp) :: gridComp
-      type(ESMF_State)    :: iState,eState ! may be uninitialized
+      type(ESMF_State)    :: importState,exportState ! may be uninitialized
       type(ESMF_Clock)    :: iClock        ! may be uninitialized
       integer,intent(out) :: rc
 
@@ -347,7 +347,7 @@ module getm_component
 
       call MOSSCO_GridCompEntryLog(gridComp)
 
-      call ESMF_StateGet(iState,itemCount=itemCount)
+      call ESMF_StateGet(importState,itemCount=itemCount)
 
 
       if (itemCount .gt. 0) then
@@ -359,7 +359,7 @@ module getm_component
          allocate(transportFieldCountList(itemCount))
          transportFieldCountList = 0
 
-         call ESMF_StateGet(iState,itemNameList=itemNameList, &
+         call ESMF_StateGet(importState,itemNameList=itemNameList, &
                                    itemTypeList=itemTypeList)
 
          do i=1,itemCount
@@ -369,7 +369,7 @@ module getm_component
             if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
             else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-               call ESMF_StateGet(iState,itemNameList(i),fieldBundleList(i))
+               call ESMF_StateGet(importState,itemNameList(i),fieldBundleList(i))
                call ESMF_FieldBundleGet(fieldBundleList(i),fieldCount=transportFieldCountList(i))
             end if
          end do
@@ -386,11 +386,11 @@ module getm_component
             do i=1,itemCount
                if (transportFieldCountList(i) .eq. 0) cycle
                if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
-                  call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(n))
-                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldList_conc(n))
+                  call ESMF_StateGet(importState,itemNameList(i),fieldList_ws(n))
+                  call ESMF_StateGet(importState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldList_conc(n))
                   n = n + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldBundle)
+                  call ESMF_StateGet(importState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldBundle)
                   do ii=1,transportFieldCountList(i)
                      call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n))
                      call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n))
@@ -411,7 +411,7 @@ module getm_component
 !                 Either coupler called ESMF_FieldEmptyCreate(name),
 !                 because fabm_pelagic ships with its own grid (coupler
 !                 checks whether temperature field in fabm_pelagic's
-!                 iState is already completed). Or coupler copied empty
+!                 importState is already completed). Or coupler copied empty
 !                 field, because fabm_pelagic was created with getmGrid.
 !                 In the latter case the state variables are allocated
 !                 only here (and the exclusiveDomain still needs to be
@@ -427,7 +427,7 @@ module getm_component
 !                 Coupler copied completed fields from fabm_pelagic,
 !                 because "foreignGridField" was provided to fabm_pelagic
 !                 (coupler checks whether temperature field in fabm_pelagic's
-!                  iState is empty).
+!                  importState is empty).
 !                 The field MUST include the HALO zones and k=0 !!!
                   call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr)
                end if
@@ -461,7 +461,7 @@ module getm_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
-  subroutine Run(gridComp,iState,eState,iClock,rc)
+  subroutine Run(gridComp,importState,exportState,iClock,rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MinN
@@ -470,7 +470,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp) :: gridComp
-    type(ESMF_State)    :: iState,eState ! may be uninitialized
+    type(ESMF_State)    :: importState,exportState ! may be uninitialized
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
@@ -522,7 +522,7 @@ module getm_component
     end do
 
     call getmCmp_update_grid(gridComp)
-    call getmCmp_update_eState()
+    call getmCmp_update_exportState()
 
     call MOSSCO_GridCompExitLog(gridComp)
     rc = ESMF_SUCCESS
@@ -532,7 +532,7 @@ module getm_component
 !-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine Finalize(gridComp, iState, eState, iClock, rc)
+  subroutine Finalize(gridComp, importState, exportState, iClock, rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
@@ -541,7 +541,7 @@ module getm_component
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: iState, eState
+    type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: iClock
     integer, intent(out) :: rc
 
@@ -1116,12 +1116,12 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOP
 !
-! !ROUTINE: getmCmp_update_eState -
+! !ROUTINE: getmCmp_update_exportState -
 !
 ! !INTERFACE:
 #undef  ESMF_METHOD
-#define ESMF_METHOD "getmCmp_update_eState"
-   subroutine getmCmp_update_eState()
+#define ESMF_METHOD "getmCmp_update_exportState"
+   subroutine getmCmp_update_exportState()
 !
 ! !DESCRIPTION:
 !
@@ -1146,7 +1146,7 @@ module getm_component
 #ifdef DEBUG
    integer, save :: Ncall = 0
    Ncall = Ncall+1
-   write(debug,*) 'getmCmp_update_eState() # ',Ncall
+   write(debug,*) 'getmCmp_update_exportState() # ',Ncall
 #endif
 
    if (noKindMatch) then
@@ -1163,12 +1163,12 @@ module getm_component
    end if
 
 #ifdef DEBUG
-   write(debug,*) 'getmCmp_update_eState()'
+   write(debug,*) 'getmCmp_update_exportState()'
    write(debug,*)
 #endif
    return
 
-   end subroutine getmCmp_update_eState
+   end subroutine getmCmp_update_exportState
 !EOC
 !-----------------------------------------------------------------------
 !BOP
