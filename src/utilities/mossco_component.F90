@@ -25,9 +25,10 @@ contains
     type(ESMF_Time), intent(out)         :: currTime
     integer, intent(out)                 :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet, phase
+    integer(ESMF_KIND_I4)   :: petCount, localPet, phase, phaseCount
     character(ESMF_MAXSTR)  :: message, timeString
     logical                 :: clockIsPresent, configIsPresent, vmIsPresent
+    logical                 :: phaseZeroFlag
     type(ESMF_Clock)        :: clock
     type(ESMF_Vm)           :: vm
     type(ESMF_Method_Flag)  :: method
@@ -47,10 +48,10 @@ contains
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_CplCompSet(cplComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Check for config presence
     if (configIsPresent) then
@@ -68,7 +69,12 @@ contains
       !!> @todo: what todo with this information?
     endif
 
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !! Synchronize clock with parent clock
+    call ESMF_ClockGet(parentClock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockSet(clock, currTime=currTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -83,7 +89,13 @@ contains
       write(message,'(A)') trim(message)//' finalizing'
     endif
 
-    write(message,'(A,I1,A)') trim(message)//' phase ',phase,' ...'
+    !call ESMF_CplCompGetEPPhaseCount(cplComp, method, phaseCount, &
+    !  phaseZeroFlag, rc)
+    phaseCount=1 !>@todo for now we assume all couplers have only 1 phase
+
+    if (phaseCount>1 .or. phase==0) then
+      write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
+    endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
 
   end subroutine MOSSCO_CplCompEntry
@@ -149,9 +161,9 @@ contains
     type(ESMF_CplComp), intent(in)    :: cplComp
     integer, intent(out)              :: rc
 
-    integer(ESMF_KIND_I4)   :: phase
+    integer(ESMF_KIND_I4)   :: phase, phaseCount
     character(ESMF_MAXSTR)  :: message, timeString
-    logical                 :: clockIsPresent
+    logical                 :: clockIsPresent, phaseZeroFlag
     type(ESMF_Clock)        :: clock
     type(ESMF_Method_Flag)  :: method
     character(ESMF_MAXSTR)  :: name
@@ -182,7 +194,13 @@ contains
       write(message,'(A)') trim(message)//' finalized'
     endif
 
-    write(message,'(A,I1)') trim(message)//' phase ',phase
+    !call ESMF_CplCompGetEPPhaseCount(cplComp, method, phaseCount, &
+    !  phaseZeroFlag, rc)
+    phaseCount=1 !>@todo for now we assume all couplers have only 1 phase
+
+    if (phaseCount>1 .or. phase==0) then
+      write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
+    endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
   
   end subroutine MOSSCO_CplCompExit
@@ -246,7 +264,11 @@ contains
     else if (cMethod == ESMF_METHOD_FINALIZE) then
       write(message,'(A)') trim(message)//' finalizing'
     end if
-    write(message,'(A,I1,A,I1,A)') trim(message)//' phase ',cPhase,' of ',phaseCount
+    
+    if (phaseCount>1 .or. cphase==0) then
+      write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
+    endif
+
     if (cMethod.eq.ESMF_METHOD_INITIALIZE .and. cPhase.eq.1) then
       call ESMF_GridCompGet(gridComp,petCount=petCount)
       write(message,'(A,I6,A)') trim(message)//' on ',petCount,' PETs'
@@ -304,7 +326,10 @@ contains
     else if (cMethod == ESMF_METHOD_FINALIZE) then
       write(message,'(A)') trim(message)//' finalized'
     end if
-    write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
+    
+    if (phaseCount>1 .or. cphase==0) then
+      write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
+    endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine MOSSCO_GridCompExitLog
