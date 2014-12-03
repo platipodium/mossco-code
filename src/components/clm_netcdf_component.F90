@@ -12,6 +12,11 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "clm_netcdf_component.F90"
+
 !> This module encapsulates the CLM atmospheric interface.
 module clm_netcdf_component
     
@@ -61,28 +66,75 @@ module clm_netcdf_component
 
     contains
 
-    subroutine SetServices(gridComp, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
+  subroutine SetServices(gridcomp, rc)
 
-      type(ESMF_GridComp)  :: gridComp
-      integer, intent(out) :: rc
+    type(ESMF_GridComp)  :: gridcomp
+    integer, intent(out) :: rc
+
+    integer              :: localrc
+    
+    rc=ESMF_SUCCESS
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
-      rc = ESMF_SUCCESS
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_GridCompSetEntryPoint(gridComp, ESMF_METHOD_INITIALIZE, Initialize  &
-                                      , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSetEntryPoint(gridComp, ESMF_METHOD_RUN,        Run   &
-                                      , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSetEntryPoint(gridComp, ESMF_METHOD_FINALIZE,   atmos_final &
-                                      , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    end subroutine SetServices
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine SetServices
 
 !----------------------------------------------------------------------------------
 
-    subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
+  subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+ 
+    implicit none
+  
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime
+    integer                     :: localrc
+
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP0
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
+  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
       type(ESMF_GridComp)  :: gridComp
       type(ESMF_State)     :: importState
@@ -126,16 +178,20 @@ module clm_netcdf_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !> Load config file for atmospheric component
-    config = ESMF_ConfigCreate(rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ConfigLoadFile(config, "atmos.rc", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ConfigGetAttribute(config, iprocs, label='iprocs:', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ConfigGetAttribute(config, jprocs, label='jprocs:', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ConfigDestroy(config, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !config = ESMF_ConfigCreate(rc=rc)
+    ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !call ESMF_ConfigLoadFile(config, "atmos.rc", rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !call ESMF_ConfigGetAttribute(config, iprocs, label='iprocs:', rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !call ESMF_ConfigGetAttribute(config, jprocs, label='jprocs:', rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    !call ESMF_ConfigDestroy(config, rc=rc)
+    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    iprocs = petCount
+    jprocs = 1
+
 
 ! Load config file for variable selection
     config = ESMF_ConfigCreate(rc=rc)
@@ -179,7 +235,7 @@ module clm_netcdf_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       endif
     enddo
-    write(0,*) 'Hurray'
+   ! write(0,*) 'Hurray'
 
 ! Create grid and retrieve local loop boundaries
     grid = ESMF_GridCreate(filename="clm_grid.nc",fileFormat=ESMF_FILEFORMAT_SCRIP, &
@@ -187,12 +243,12 @@ module clm_netcdf_component
                              isSphere=.false., rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridAddCoord(grid, rc=rc)
-    write(0,*) 'Hurray'
+    !write(0,*) 'Hurray'
     call ESMF_GridGetCoordBounds(grid, coordDim=1, localDE=0, &
                            computationalLBound=lbnd, &
                            computationalUBound=ubnd, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(0,*) 'Hurray'
+    !write(0,*) 'Hurray'
 
     ib = lbnd(1)
     ie = ubnd(1)
@@ -250,9 +306,12 @@ module clm_netcdf_component
 
 ! Setup timing
       call ESMF_TimeSet(ref_time, yy=1948, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       d_time = currTime - ref_time
       call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
 ! Open netcdf file for atmospheric data
       call CLM_init(localPet, app_time_secs, lrc)
@@ -319,9 +378,11 @@ module clm_netcdf_component
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    end subroutine Initialize
+    end subroutine InitializeP1
 
 !----------------------------------------------------------------------------------
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
 
     subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
@@ -338,7 +399,7 @@ module clm_netcdf_component
       
       integer(ESMF_KIND_I4)       :: localPet, petCount
       character(len=ESMF_MAXSTR)  :: message, name, timeString
-      type(ESMF_Time)             :: currTime, time
+      type(ESMF_Time)             :: currTime, time, stopTime
       type(ESMF_Clock)            :: clock
 
 
@@ -396,22 +457,23 @@ module clm_netcdf_component
 !     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 #endif
 
-    do 
-      call ESMF_ClockAdvance(clock, rc=rc) 
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   
-      if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)           
-    enddo
 
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc) 
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
   end subroutine Run
 
 !----------------------------------------------------------------------------------
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
 
-    subroutine atmos_final(gridComp, importState, exportState, parentClock, rc)
+    subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
       type(ESMF_GridComp)  :: gridComp
       type(ESMF_State)     :: importState
@@ -430,7 +492,6 @@ module clm_netcdf_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_GridCompGet(gridComp, localPet=localPet, clock=clock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldDestroy(P_field, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -455,11 +516,19 @@ module clm_netcdf_component
       deallocate ( atmos_C )
       deallocate ( atmos_R )
 
-      call CLM_final(localPet)
+    call ESMF_GridCompGet(gridComp, localPet=localPet, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call CLM_final(localPet)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockDestroy(clock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call MOSSCO_CompExit(gridComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-  end subroutine atmos_final
+  end subroutine Finalize
 
 end module clm_netcdf_component

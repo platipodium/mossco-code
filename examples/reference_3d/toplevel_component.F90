@@ -420,25 +420,12 @@ module toplevel_component
       endif
     endif
     
-    !! @todo commented out
     !! Initializing phase 1 of clm_netcdf
-    !if (phaseCountList( 8)>=1) then
-    !  call ESMF_GridCompInitialize(gridCompList(8), importState=importStates(8), &
-    !    exportState=exportStates(8), clock=clock, phase=1, rc=rc)
-    !endif
-
-    if (rc /= ESMF_SUCCESS) then
-      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
-        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
-        write(message,'(A,I4)') 'Initializing failed with error code ', rc
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_LogFlush()
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      endif
+    if (phaseCountList( 8)>=1) then
+      call ESMF_GridCompInitialize(gridCompList(8), importState=importStates(8), &
+        exportState=exportStates(8), clock=clock, phase=1, rc=rc)
     endif
+
     !! Initializing phase 1 of benthos
     if (phaseCountList( 9)>=1) then
       call ESMF_GridCompInitialize(gridCompList(9), importState=importStates(9), &
