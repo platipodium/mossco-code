@@ -112,7 +112,12 @@ module pelagic_benthic_coupler
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
 
-    call ESMF_LogWrite("pelagic-benthic coupler initializing", ESMF_LOGMSG_INFO)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime, stopTime
+    integer                     :: localrc 
+
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! create exchange fields
     !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
@@ -132,7 +137,8 @@ module pelagic_benthic_coupler
     ! create omexdia_p-related fields, if not existing
     call create_required_fields(exportState,pelagic_bdy_grid)
 
-    call ESMF_LogWrite("pelagic-benthic coupler initialized", ESMF_LOGMSG_INFO)
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
 
@@ -155,7 +161,6 @@ module pelagic_benthic_coupler
     integer                     :: Cubnd(3),AMMubnd(3),Pubnd(3)
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
-    character (len=ESMF_MAXSTR) :: message
     type(ESMF_Field)            :: field
     real(ESMF_KIND_R8),parameter      :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
     real(ESMF_KIND_R8),dimension(:,:),pointer :: CN_det=>null()
@@ -164,6 +169,14 @@ module pelagic_benthic_coupler
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet
+    
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime, stopTime
+    integer                     :: localrc
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    
     !> fdet + sdet = CN_det*det
     !> NC_fdet*fdet + NC_sdet*sdet = det
     !> fdet = fac_fdet*det
@@ -301,6 +314,9 @@ module pelagic_benthic_coupler
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       ptr_f2 = DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),Plbnd(3))
 
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   end subroutine Run
 
 #undef  ESMF_METHOD
@@ -311,13 +327,20 @@ module pelagic_benthic_coupler
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer,intent(out)  :: rc
+
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime, stopTime
+    integer                     :: localrc 
      
-    call ESMF_LogWrite("pelagic-benthic coupler finalizing", ESMF_LOGMSG_INFO)
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !call ESMF_ArraySpecDestroy(pelagic_bdy_array, rc)
     call ESMF_GridDestroy(pelagic_bdy_grid, rc=rc)
 
-    call ESMF_LogWrite("pelagic-benthic coupler finalized", ESMF_LOGMSG_INFO)
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   end subroutine Finalize
 
 
