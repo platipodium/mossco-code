@@ -343,6 +343,7 @@ module getm_component
       integer                   ,dimension(:),allocatable :: transportFieldCountList,namelenList
       integer                                             :: transportFieldCount,itemCount
       integer                                             :: i,ii,n
+      character(len=*),parameter :: ws_suffix="_z_velocity_in_water"
 
       call MOSSCO_GridCompEntryLog(gridComp)
 
@@ -362,9 +363,9 @@ module getm_component
                                    itemTypeList=itemTypeList)
 
          do i=1,itemCount
-!           identify items to be transported by suffix "_z_velocity"
+!           identify items to be transported by suffix
             namelenList(i) = len_trim(itemNameList(i))
-            if (itemNameList(i)(namelenList(i)-10:namelenList(i)) .ne. '_z_velocity') cycle
+            if (itemNameList(i)(namelenList(i)-len_trim(ws_suffix)+1:namelenList(i)) .ne. trim(ws_suffix)) cycle
             if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
             else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
@@ -386,10 +387,10 @@ module getm_component
                if (transportFieldCountList(i) .eq. 0) cycle
                if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                   call ESMF_StateGet(iState,itemNameList(i),fieldList_ws(n))
-                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldList_conc(n))
+                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldList_conc(n))
                   n = n + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-11),fieldBundle)
+                  call ESMF_StateGet(iState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldBundle)
                   do ii=1,transportFieldCountList(i)
                      call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n))
                      call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n))
