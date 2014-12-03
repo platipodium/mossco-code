@@ -1,8 +1,27 @@
+!> @brief Implementation of an ESMF link coupling
+!>
+!> This computer program is part of MOSSCO. 
+!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister
+
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
+
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "benthic_pelagic_coupler.F90"
+
 module benthic_pelagic_coupler
     
   use esmf
   use fabm_sediment_component, only : rk
   use mossco_state
+  use mossco_component
 
   implicit none
 
@@ -22,24 +41,71 @@ module benthic_pelagic_coupler
 
   contains
 
-  subroutine SetServices(cplcomp, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
+  subroutine SetServices(cplComp, rc)
 
-    type(ESMF_CplComp)   :: cplcomp
+    implicit none
+
+    type(ESMF_CplComp)   :: cplComp
     integer, intent(out) :: rc
 
-    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_INITIALIZE, Initialize  &
-                                      , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_RUN,    Run   &
-                                      , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_FINALIZE, Finalize &
-                                      , rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    integer              :: localrc
+    
+    rc = ESMF_SUCCESS
+
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
-  subroutine Initialize(cplcomp, importState, exportState, externalclock, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
+  subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
+  
+    implicit none
+  
+    type(ESMF_cplComp)    :: cplComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    integer              :: localrc
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)       :: currTime
+
+    rc = ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP0
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
+  subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 
     type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
@@ -98,8 +164,10 @@ module benthic_pelagic_coupler
 
     call ESMF_LogWrite("benthic-pelagic coupler initialized", ESMF_LOGMSG_INFO)
 
-  end subroutine Initialize
+  end subroutine InitializeP1
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
 
   subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 
@@ -194,6 +262,8 @@ module benthic_pelagic_coupler
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
     type(ESMF_CplComp)   :: cplcomp
     type(ESMF_State)     :: importState
