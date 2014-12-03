@@ -184,7 +184,8 @@ module benthic_pelagic_coupler
     integer              :: ammrc,nitrc,oxyrc
 
     character(len=ESMF_MAXSTR)  :: name, message
-    type(ESMF_Time)       :: currTime
+    type(ESMF_Time)             :: currTime, stopTime
+    integer                     :: localrc
     integer                     :: myrank
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
@@ -192,7 +193,6 @@ module benthic_pelagic_coupler
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
     real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
-    integer :: localrc
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
