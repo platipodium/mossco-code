@@ -837,8 +837,8 @@ module getm_component
    select case (grid_type)
       case(1)
          coordSys = ESMF_COORDSYS_CART
-!        coordDimMap(i,j): grid dimension i => array dimension j
-!                          i=1,dimCount ; j=1,coordDimCount(i)
+!        coordDimMap: for each grid dimension i map array dimension j to grid dimension coordDimMap(i,j)
+!                     i=1,dimCount ; j=1,coordDimCount(i)
          coordDimCount = (/ 1 , 1 , 3 /)     ! rectilinear horizontal coordinates
          coordDimMap = reshape( (/1,2,1,0,0,2,0,0,3/) , (/3,3/) )
 !        1D xcord is replicated automatically along 2nd DistGrid dimension
