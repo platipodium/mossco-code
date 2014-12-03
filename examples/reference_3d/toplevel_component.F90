@@ -393,6 +393,13 @@ module toplevel_component
     endif
     
     !! Initializing phase 1 of simplewave
+    call ESMF_AttributeSet(importStates(6), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    !! Manually added to get grid information from getm to simplewave in phase 1
+    !!> @todo not needed when simplewave phase 2 is implemented
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(6), clock=clock, phase=1, rc=rc)
     if (phaseCountList( 6)>=1) then
       call ESMF_GridCompInitialize(gridCompList(6), importState=importStates(6), &
         exportState=exportStates(6), clock=clock, phase=1, rc=rc)
