@@ -28,7 +28,7 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
-     filename='reference_3d'
+     #filename='reference_3d'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -500,6 +500,11 @@ fid.write('''
       !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
       !! contains information on the phases defined in the component.
     enddo
+    
+    !! Initialize the link coupler phase 1
+    call ESMF_CplCompInitialize(cplCompList(1), importState=importStates(1), &
+      exportState=exportStates(1), clock=clock, phase=1, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)   
 
     !! Go through all phases:
     !! IPDv00p1 = phase 1: Advertise Fields in import and export States. These can be
@@ -524,6 +529,12 @@ for phase in range(1,maxPhases+1):
     if (phase == 1) and (foreignGrid.has_key(item)):
       fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
       fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+      
+      if dependencyDict.has_key(item):
+        for jtem in dependencyDict[item]:
+          ifrom=gridCompList.index(jtem)
+          fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
+          fid.write('      exportState=importStates(' + str(ito+1)+'), clock=clock, rc=rc)\n')
 
     fid.write('    if (phaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
     fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
@@ -543,7 +554,7 @@ for phase in range(1,maxPhases+1):
       endif
     endif
 ''')
-  for icpl in range(0,len(cplCompList)):
+  for icpl in range(1,len(cplCompList)):
     item=cplCompList[icpl]
     for i in range(0, len(couplingList)):
         jtem=couplingList[i]
