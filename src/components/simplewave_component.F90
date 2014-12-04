@@ -314,7 +314,7 @@ module simplewave_component
     type(ESMF_Time)        :: currTime
     integer                :: localrc
 
-    type(ESMF_Clock)        :: clock
+    type(ESMF_Clock)        :: myClock
     type(ESMF_Time)         :: nextTime
     real(ESMF_KIND_R8),dimension(:,:),pointer :: waveH,waveT,waveK,waveDir
     real(ESMF_KIND_R8),dimension(:,:),pointer :: depth,windx,windy
@@ -327,7 +327,7 @@ module simplewave_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompGet(gridcomp, clock=clock, rc=localrc)
+    call ESMF_GridCompGet(gridcomp, clock=myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_ClockGetNextTime(parentClock,nextTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -355,7 +355,7 @@ module simplewave_component
       end do
     end do
     
-    call ESMF_ClockAdvance(clock, timeStep=nextTime-currTime, rc=localrc)
+    call ESMF_ClockAdvance(myClock, timeStep=nextTime-currTime, rc=localrc)
  
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -371,7 +371,7 @@ module simplewave_component
 
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
-    type(ESMF_Clock)        :: clock
+    type(ESMF_Clock)        :: myClock
     integer                 :: localrc
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
@@ -379,7 +379,7 @@ module simplewave_component
 
     deallocate(variableItemList)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    
     !! Here comes your own finalization code
@@ -391,7 +391,7 @@ module simplewave_component
     !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
-    call ESMF_ClockDestroy(clock, rc=localrc)
+    call ESMF_ClockDestroy(myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
