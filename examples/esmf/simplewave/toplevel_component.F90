@@ -88,13 +88,47 @@ module toplevel_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
+    type(ESMF_Field)                          :: field
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: farrayPtr
+
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_TRACE)
-      
+
+    call ESMF_StateGet(simplewave_ImportState,"water_depth_at_soil_surface",field)
+    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+    farrayPtr = 50.0
+    write(*,*) "depth:",farrayPtr
+
+    call ESMF_StateGet(simplewave_ImportState,"wind_x_velocity_at_10m",field)
+    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+    farrayPtr = 10.0
+    write(*,*) "windx:",farrayPtr
+
+    call ESMF_StateGet(simplewave_ImportState,"wind_y_velocity_at_10m",field)
+    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+    farrayPtr = 20.0
+    write(*,*) "windy:",farrayPtr
+
     call ESMF_GridCompRun(simplewave_Comp,                    &
                           importState=simplewave_ImportState, &
                           exportState=simplewave_ExportState, &
                           clock=parentclock, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    call ESMF_StateGet(simplewave_ExportState,"wave_height",field)
+    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+    write(*,*) "wave_height:",farrayPtr
+
+    call ESMF_StateGet(simplewave_ExportState,"wave_period",field)
+    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+    write(*,*) "wave_period:",farrayPtr
+
+    call ESMF_StateGet(simplewave_ExportState,"wave_number",field)
+    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+    write(*,*) "wave_number:",farrayPtr
+
+    call ESMF_StateGet(simplewave_ExportState,"wave_direction",field)
+    call ESMF_FieldGet(field,farrayPtr=farrayPtr)
+    write(*,*) "wave_direction:",farrayPtr
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_TRACE)
  
