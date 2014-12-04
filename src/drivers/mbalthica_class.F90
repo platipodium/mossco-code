@@ -34,7 +34,7 @@ integer, intent (in)     :: inum, jnum ! dimesions of grid in x and y directions
 allocate (this%Species)
 allocate (this%StateVar)
 !allocate (This%StateVar%amount)
-!allocate (This%BioMass%Unitt)
+!allocate (This%BioMass%units)
 allocate (this%Bioturbation)
 allocate (this%Bioturbation%TauEffect(inum,jnum))
 allocate (this%Bioturbation%ErodibilityEffect(inum,jnum))
@@ -58,13 +58,13 @@ implicit none
 
 class (Mbalthica_Object)  :: this
 real (fp)                 :: Mass,intensity
-character (len = 10)      :: UUnit
+character (len = 10)      :: units
 integer                   :: StringLength, UnitNr,istat
 logical                   :: opnd, exst
 
-namelist /Macrofaun/  UUnit, Intensity
+namelist /Macrofaun/  units, Intensity
 
-UUnit = ''
+units = ''
 Mass = 0.0
 Intensity = 0.0
 
@@ -90,7 +90,7 @@ elseif (opnd) then
   read (UnitNr, nml=Macrofaun, iostat = istat)
   if (istat /= 0 ) write (*,*)' Error in reading Mbalthica data'
 
-  write (*,*) ' unit and  intensity are ', UUnit, Intensity
+  write (*,*) ' units and  intensity are ', units, Intensity
 
 else
 
@@ -100,14 +100,14 @@ else
 end if
 
 
- if (UUnit == '-') then
+ if (units == '-') then
 
   write (*,*) ' In Mbalthica_class, the intensity of Mbalthica is ', Intensity
 
   allocate (This%StateVar%Intensity)
   This%StateVar%Intensity = intensity
 
- elseif  (UUnit == 'gCm-2') then
+ elseif  (units == 'gCm-2') then
 
   write (*,*) ' In Mbalthica_class, the Mass of Mbalthica is ', Mass
   allocate (This%StateVar%amount)
@@ -116,12 +116,12 @@ end if
  end if
 
 
- StringLength = len_trim (Uunit)
+ StringLength = len_trim (units)
 
 if (StringLength /= 0 ) then
-   ! allocate (character(StringLength) :: This%StateVar%Unitt)
-    allocate (This%StateVar%Unitt)
-    This%StateVar%Unitt = trim (UUnit)
+   ! allocate (character(StringLength) :: This%StateVar%units)
+    allocate (This%StateVar%units)
+    This%StateVar%units = trim (units)
 end if
 
 end subroutine set_Mbalthica
@@ -165,17 +165,17 @@ class (Mbalthica_Object) :: this
 integer                   :: UnitNr
 logical                   :: opnd, exst
 
-if (This%StateVar%Unitt == '-') then
+if (This%StateVar%units == '-') then
 
   deallocate (This%StateVar%Intensity)
 
-elseif  (This%StateVar%Unitt == 'gCm-2') then
+elseif  (This%StateVar%units == 'gCm-2') then
 
   deallocate (This%StateVar%amount)
 
 end if
 
-deallocate (This%StateVar%Unitt)
+deallocate (This%StateVar%units)
 deallocate (this%StateVar)
 deallocate (this%Species)
 deallocate (this%Bioturbation%TauEffect)

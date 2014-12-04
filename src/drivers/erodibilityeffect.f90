@@ -27,15 +27,15 @@ implicit none
 real (fp)                    :: g_erod_microphyto
 type (statevariable)         :: Chl
 
-!Uunit    ! Unit of Biomass (mgg: microgram/ g dry sediment weight)
+!units    ! Unit of Biomass (mgg: microgram/ g dry sediment weight)
           ! or     (mgm-2 :: microgram/ m**2 area)
 
 
 !statements
 
-!if (allocated (Chl%unitt) ) then
+!if (allocated (Chl%units) ) then
 
-     if (trim(Chl%unitt) == 'mgg' ) then
+     if (trim(Chl%units) == 'mgg' ) then
         g_erod_microphyto= 1. - 0.018 * Chl%amount ! Paarlberg et al (2005)
      else
         g_erod_microphyto= 1.0
@@ -84,11 +84,11 @@ real (fp)    :: b2 = 5.08e-8
 
       g_erod_Macrofauna = 1.0
 
-    elseif (trim(Mbalthica%unitt) == '-' )  then
+    elseif (trim(Mbalthica%units) == '-' )  then
 
       g_erod_Macrofauna =    b2 * gammaa /I/(b2 + gammaa * b1** Mbalthica%Intensity) ! Paarlberg et al (2005)
 
-    else if (trim(Mbalthica%unitt) == '' ) then    ! according to Borsje et al. (2008)
+    else if (trim(Mbalthica%units) == '' ) then    ! according to Borsje et al. (2008)
 
        g_erod_Macrofauna = 1.0
 

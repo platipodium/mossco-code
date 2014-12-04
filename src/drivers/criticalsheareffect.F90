@@ -29,13 +29,13 @@ implicit none
 real (fp)                          :: fcr_microphyto
 type (statevariable)               :: Chl
 
-!Uunit    ! Unit of Biomass (mgg: microgram/ g dry sediment weight)
+!units    ! Unit of Biomass (mgg: microgram/ g dry sediment weight)
           ! or     (mgm-2 :: microgram/ m**2 area)
 
 
-!if (allocated (Chl%unitt) ) then
+!if (allocated (Chl%units) ) then
 
-     if (trim(Chl%unitt) == 'mgg' ) then
+     if (trim(Chl%units) == 'mgg' ) then
 
        fcr_microphyto= 1. + 0.08 * Chl%amount ! Knaapen et al (2003)
 
@@ -78,11 +78,11 @@ type (Mc_statevariable)          :: Mbalthica
 
       fcr_macrofauna = 1.0
 
-    elseif (trim(Mbalthica%unitt) == '-' )  then
+    elseif (trim(Mbalthica%units) == '-' )  then
 
       fcr_macrofauna = 0.0016 * log (Mbalthica%Intensity * Mbalthica%Intensity) -0.085 * log(Mbalthica%Intensity) +1.0    ! Knaapen et al (2003)
 
-    else if (trim(Mbalthica%unitt) == '' ) then    ! according to Borsje et al. (2008)
+    else if (trim(Mbalthica%units) == '' ) then    ! according to Borsje et al. (2008)
 
       fcr_macrofauna = 1.0
 
