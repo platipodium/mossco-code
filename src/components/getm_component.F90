@@ -210,7 +210,7 @@ module getm_component
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
-    type(ESMF_Clock)      :: clock
+    type(ESMF_Clock)      :: myClock
     type(ESMF_Time)       :: startTime,stopTime
     logical               :: vmIsPresent,clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
@@ -246,8 +246,8 @@ module getm_component
     if (clockIsPresent) then
 
       ! use startTime and stopTime from already initialised getmClock
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      call ESMF_ClockGet(clock,startTime=startTime,stopTime=stopTime)
+      call ESMF_GridCompGet(gridComp, clock=myClock, rc=rc)
+      call ESMF_ClockGet(myClock,startTime=startTime,stopTime=stopTime)
       call ESMF_TimeGet(startTime,timeStringISOFrac=start_external)
       call ESMF_TimeGet(stopTime,timeStringISOFrac=stop_external)
 
@@ -259,7 +259,7 @@ module getm_component
       ! use internal GETM time step
       call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep)
 
-      call ESMF_ClockSet(clock,name='getmClock',timeStep=timeInterval)
+      call ESMF_ClockSet(myClock,name='getmClock',timeStep=timeInterval)
 
     else
 
@@ -275,11 +275,11 @@ module getm_component
       getmStopTime  = getmRefTime + MaxN*timeInterval
       getmRunTimeStepCount = MaxN - MinN + 1
 
-      clock = ESMF_ClockCreate(timeInterval,getmStartTime,            &
+      myClock = ESMF_ClockCreate(timeInterval,getmStartTime,            &
                                    runTimeStepCount=getmRunTimeStepCount, &
                                    refTime=getmRefTime,                   &
                                    name='getmClock', rc=rc)
-      call ESMF_GridCompSet(gridComp,clock=clock)
+      call ESMF_GridCompSet(gridComp,clock=myClock)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
 
@@ -474,7 +474,7 @@ module getm_component
     type(ESMF_Clock)    :: iClock        ! may be uninitialized
     integer,intent(out) :: rc
 
-    type(ESMF_Clock)      :: clock
+    type(ESMF_Clock)      :: myClock
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8) :: advanceCount
@@ -483,10 +483,10 @@ module getm_component
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    call ESMF_GridCompGet(gridComp, clock=myClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
+    call ESMF_ClockGet(myClock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeInterval, stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -496,13 +496,13 @@ module getm_component
     if (rc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
-      call ESMF_ClockGet(clock,stopTime=NextTime)
+      call ESMF_ClockGet(myClock,stopTime=NextTime)
     end if
 
 
     do while (currTime + 0.5d0*timeInterval <= nextTime)
 
-      if (ESMF_ClockIsStopTime(clock)) then
+      if (ESMF_ClockIsStopTime(myClock)) then
         call ESMF_LogWrite('already exceeded stopTime',ESMF_LOGMSG_ERROR, &
                             line=__LINE__,file=__FILE__,method='Run()')
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -517,8 +517,8 @@ module getm_component
 !     Call transport routine every macro timestep
       if (mod(n,M).eq.0) call getmCmp_transport()
 
-      call ESMF_ClockAdvance(clock)
-      call ESMF_ClockGet(clock,currtime=currTime,advanceCount=advanceCount)
+      call ESMF_ClockAdvance(myClock)
+      call ESMF_ClockGet(myClock,currtime=currTime,advanceCount=advanceCount)
     end do
 
     call getmCmp_update_grid(gridComp)
@@ -546,7 +546,7 @@ module getm_component
     integer, intent(out) :: rc
 
     type(ESMF_Grid)       :: getmGrid
-    type(ESMF_Clock)      :: clock
+    type(ESMF_Clock)      :: myClock
     logical               :: ClockIsPresent,GridIsPresent
 
     call MOSSCO_GridCompEntryLog(gridComp)
@@ -563,8 +563,8 @@ module getm_component
                                    rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (ClockIsPresent) then
-      call ESMF_GridCompGet(gridComp,clock=clock)
-      call ESMF_ClockDestroy(clock)
+      call ESMF_GridCompGet(gridComp,clock=myClock)
+      call ESMF_ClockDestroy(myClock)
     end if
 
     if (GridIsPresent) then
