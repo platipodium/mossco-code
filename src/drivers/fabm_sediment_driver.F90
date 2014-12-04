@@ -482,13 +482,13 @@ function get_export_state_by_id(self,fabm_id) result(export_state)
    if (self%model%info%state_variables(fabm_id)%standard_variable%name/='') then
      export_state%standard_name = &
        trim(self%model%info%state_variables(fabm_id)%standard_variable%name)
-     export_state%unit = &
+     export_state%units = &
        trim(self%model%info%state_variables(fabm_id)%standard_variable%units)
    else
    !> otherwise use CF-ed version of long_name
      export_state%standard_name = only_var_name( &
            self%model%info%state_variables(fabm_id)%long_name)
-     export_state%unit = self%model%info%state_variables(fabm_id)%units
+     export_state%units = self%model%info%state_variables(fabm_id)%units
    end if
    export_state%fabm_id = fabm_id
 end function get_export_state_by_id
@@ -507,13 +507,13 @@ function get_export_state_by_diag_id(self,fabm_id) result(export_state)
    if (self%model%info%diagnostic_variables(fabm_id)%standard_variable%name/='') then
      export_state%standard_name = &
        trim(self%model%info%diagnostic_variables(fabm_id)%standard_variable%name)
-     export_state%unit = &
+     export_state%units = &
        trim(self%model%info%diagnostic_variables(fabm_id)%standard_variable%units)
    else
    !> otherwise use CF-ed version of long_name
      export_state%standard_name = only_var_name( &
            self%model%info%diagnostic_variables(fabm_id)%long_name)
-     export_state%unit = self%model%info%diagnostic_variables(fabm_id)%units
+     export_state%units = self%model%info%diagnostic_variables(fabm_id)%units
    end if
 end function get_export_state_by_diag_id
 
@@ -526,23 +526,23 @@ subroutine get_all_export_states(self)
    allocate(self%export_states(self%nvar+5))
    self%export_states(1)%standard_name='porosity'
    self%export_states(1)%data => self%porosity
-   self%export_states(1)%unit='m3/m3'
+   self%export_states(1)%units ='m3/m3'
 
    self%export_states(2)%standard_name='layer_height'
    self%export_states(2)%data => self%grid%dz
-   self%export_states(2)%unit='m'
+   self%export_states(2)%units ='m'
 
    self%export_states(3)%standard_name='layer_center_depth'
    self%export_states(3)%data => self%grid%zc
-   self%export_states(3)%unit='m'
+   self%export_states(3)%units ='m'
 
    self%export_states(4)%standard_name='temperature'
    self%export_states(4)%data => self%temp3d
-   self%export_states(4)%unit='degC'
+   self%export_states(4)%units ='degC'
 
    self%export_states(5)%standard_name='photosynthetically_available_radiation'
    self%export_states(5)%data => self%par
-   self%export_states(5)%unit='W/m2'
+   self%export_states(5)%units ='W/m2'
 
    do fabm_id=1,self%nvar
        self%export_states(5+fabm_id) = self%get_export_state_by_id(fabm_id)

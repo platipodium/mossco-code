@@ -122,34 +122,36 @@ module simplewave_component
     allocate(importList(3))
 
 !!! Advertise Import Fields
-    importList(1)%name='water_depth_at_soil_surface'
-    importList(1)%unit='m'
-    importList(2)%name='wind_x_velocity_at_10m'
-    importList(2)%unit='m/s'
-    importList(3)%name='wind_y_velocity_at_10m'
-    importList(3)%unit='m/s'
+    importList(1)%name  = 'water_depth_at_soil_surface'
+    importList(1)%units = 'm'
+    importList(2)%name  = 'wind_x_velocity_at_10m'
+    importList(2)%units = 'm/s'
+    importList(3)%name  = 'wind_y_velocity_at_10m'
+    importList(3)%units = 'm/s'
 
     do i=1,size(importList)
       field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_StateAdd(importState,(/field/), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
 !!! Advertise Export Fields
-    exportList(1)%name='wave_height'
-    exportList(1)%unit='m'
-    exportList(2)%name='wave_period'
-    exportList(2)%unit='s'
-    exportList(3)%name='wave_number'
-    exportList(3)%unit='1/m'
-    exportList(4)%name='wave_direction'
-    exportList(4)%unit='rad'
+    exportList(1)%name  = 'wave_height'
+    exportList(1)%units = 'm'
+    exportList(2)%name  = 'wave_period'
+    exportList(2)%units = 's'
+    exportList(3)%name  = 'wave_number'
+    exportList(3)%units = '1/m'
+    exportList(4)%name  = 'wave_direction'
+    exportList(4)%units = 'rad'
 
     do i=1,size(exportList)
       field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(exportList(i)%unit), rc=localrc)
+      call ESMF_AttributeSet(field,'units',trim(exportList(i)%units), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_StateAdd(exportState,(/field/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

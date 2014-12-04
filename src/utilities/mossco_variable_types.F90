@@ -10,7 +10,7 @@ module mossco_variable_types
 
   type, public, abstract :: MOSSCO_VariableInfo
     character(len=255) :: name  = ''   ! Short name
-    character(len=255) :: unit = ''    ! Units
+    character(len=255) :: units = ''    ! Units
     character(len=511) :: standard_name = '' ! CF standard name 
     character(len=511) :: description = '' ! long description 
     contains 

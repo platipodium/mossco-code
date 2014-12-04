@@ -26,7 +26,6 @@ module constant_component
     type(ESMF_Field)                      :: field
     integer :: rank
     real(ESMF_KIND_R4) :: value
-    character(ESMF_MAXSTR) :: units
   end type
 
   type(variable_item_type), pointer :: cur_item,variable_items

@@ -436,7 +436,7 @@ module fabm_sediment_component
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit))
+        call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units))
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, &
                        totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
@@ -452,7 +452,7 @@ module fabm_sediment_component
                          name=trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
           !> fluxes are defined in concentration*m/s
-          call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit)//'/s')
+          call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units)//'/s')
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -499,7 +499,7 @@ module fabm_sediment_component
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%unit))
+          call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units))
           call ESMF_StateAddReplace(importState,(/field/),rc=rc)
           if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           if (sed%model%info%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &

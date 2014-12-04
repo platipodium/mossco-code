@@ -401,7 +401,7 @@ module mossco_netcdf
     allocate(self%variables(1))
     var => self%variables(1)
     var%name='time'
-    var%unit=trim(timeUnit)
+    var%units=trim(timeUnit)
     var%rank=1
   end if
   if (present(rc)) rc=rc_
@@ -421,7 +421,7 @@ module mossco_netcdf
       var%varid = i
       ncStatus = nf90_inquire_variable(self%ncid,i,ndims=var%rank,natts=nvaratts)
       ncStatus = nf90_get_att(self%ncid,var%varid,'long_name',var%standard_name)
-      ncStatus = nf90_get_att(self%ncid,var%varid,'units',var%unit)
+      ncStatus = nf90_get_att(self%ncid,var%varid,'units',var%units)
     end do
   end subroutine mossco_netcdf_update_variables
 
