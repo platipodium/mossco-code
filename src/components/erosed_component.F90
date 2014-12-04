@@ -23,6 +23,7 @@ module erosed_component
 
   use esmf
   use mossco_component
+  use mossco_variable_types
   
   use erosed_driver !, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
@@ -41,6 +42,8 @@ module erosed_component
 
   !! @todo hn: read CF documnetation for correct name of this
   !size_classes_of_upward_flux_of_pim_at_bottom
+
+  type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
 
   ! Dimensions (x,y,depth layer, fraction index)
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
@@ -170,6 +173,7 @@ contains
     type(ESMF_Clock)       :: parentClock
     integer, intent(out)   :: rc
 
+    integer                :: localrc
     type(ESMF_Grid)        :: grid, foreign_grid
     type(ESMF_DistGrid)    :: distgrid
     type(ESMF_ArraySpec)   :: arrayspec
@@ -501,6 +505,45 @@ contains
 !> not used fo export State, since sink,sour are used by bed module
 !    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
 !    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
+
+! Advertise Import Fields
+  if (wave) then
+
+    allocate(importList(4))
+
+    importList(1)%name  = 'wave_height'
+    importList(1)%units = 'm'
+    importList(2)%name  = 'wave_period'
+    importList(2)%units = 's'
+    importList(3)%name  = 'wave_number'
+    importList(3)%units = '1/m'
+    importList(4)%name  = 'wave_direction'
+    importList(4)%units = 'rad'
+
+    do i=1,size(importList)
+      field = ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(importState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+  end if
+
+! Complete Import Fields
+! TODO: should be moved to InitializeP2()
+  !if (wave) then
+  !  do i=1,size(importList)
+  !    call ESMF_StateGet(importState,trim(importList(i)%name),field)
+  !    allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+  !    call ESMF_FieldEmptyComplete(field,grid,importList(i)%data,     &
+  !                                 ESMF_INDEX_DELOCAL,                      &
+  !                                 totalLWidth=exclusiveLBound-totalLBound, &
+  !                                 totalUWidth=totalUBound-exclusiveUBound)
+  !  end do
+  !end if
+
 
     !> create export fields
 
