@@ -38,7 +38,6 @@ module getm_component
 ! the following objects point to deep objects and do not need to be
 ! requested everytime again
 ! Note (KK): the save attribute can be deleted for F2008 standard
-  type(ESMF_Clock)   ,save :: getmClock
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
   type(ESMF_Field)   ,save :: TbotField,T3DField
