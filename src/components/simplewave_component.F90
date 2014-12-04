@@ -315,7 +315,7 @@ module simplewave_component
     integer                :: localrc
 
     type(ESMF_Clock)        :: clock
-    type(ESMF_Time)         :: stopTime
+    type(ESMF_Time)         :: nextTime
     real(ESMF_KIND_R8),dimension(:,:),pointer :: waveH,waveT,waveK,waveDir
     real(ESMF_KIND_R8),dimension(:,:),pointer :: depth,windx,windy
     real(ESMF_KIND_R8)           :: wdepth,wind,wwind
@@ -328,6 +328,8 @@ module simplewave_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridcomp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_ClockGetNextTime(parentClock,nextTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     waveH   => variableItemList(1)%data
@@ -353,7 +355,7 @@ module simplewave_component
       end do
     end do
     
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
+    call ESMF_ClockAdvance(clock, timeStep=nextTime-currTime, rc=localrc)
  
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
