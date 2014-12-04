@@ -63,14 +63,14 @@ module simplewave_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
-  subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+  subroutine InitializeP0(gridComp, importState, exportState, clock, rc)
  
     implicit none
   
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
+    type(ESMF_Clock)      :: clock
     integer, intent(out)  :: rc
 
     character(len=10)           :: InitializePhaseMap(2)
@@ -78,7 +78,7 @@ module simplewave_component
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -100,12 +100,12 @@ module simplewave_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
-  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
+  subroutine InitializeP1(gridComp, importState, exportState, clock, rc)
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
+    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR) :: name
@@ -115,7 +115,7 @@ module simplewave_component
     type(ESMF_Field)       :: field
     integer                :: i
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(variableItemList(4+3))
@@ -164,12 +164,12 @@ module simplewave_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP2"
-  subroutine InitializeP2(gridComp, importState, exportState, parentClock, rc)
+  subroutine InitializeP2(gridComp, importState, exportState, clock, rc)
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
+    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR)  :: name,message
@@ -195,7 +195,7 @@ module simplewave_component
     type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
     
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !!! Create Grid
@@ -303,11 +303,11 @@ module simplewave_component
   end subroutine InitializeP2
 
 
-  subroutine Run(gridComp, importState, exportState, parentClock, rc)
+  subroutine Run(gridComp, importState, exportState, clock, rc)
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: parentClock
+    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR) :: name
@@ -324,12 +324,12 @@ module simplewave_component
     integer,dimension(2)         :: totalLBound,totalUBound
     integer                      :: i,j
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridcomp, clock=myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_ClockGetNextTime(parentClock,nextTime, rc=localrc)
+    call ESMF_ClockGetNextTime(clock,nextTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     waveH   => variableItemList(1)%data
@@ -362,11 +362,11 @@ module simplewave_component
 
   end subroutine Run
 
-  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+  subroutine Finalize(gridComp, importState, exportState, clock, rc)
     
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
-    type(ESMF_Clock)      :: parentClock
+    type(ESMF_Clock)      :: clock
     integer, intent(out)  :: rc
 
     character(ESMF_MAXSTR)  :: name
@@ -374,7 +374,7 @@ module simplewave_component
     type(ESMF_Clock)        :: myClock
     integer                 :: localrc
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     deallocate(variableItemList)
