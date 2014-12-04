@@ -28,7 +28,7 @@ module simplewave_component
 
   public :: SetServices
 
-  type(MOSSCO_VariableFArray2d), allocatable :: variableItemList(:)
+  type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList,exportList
 
   contains
 
@@ -118,39 +118,40 @@ module simplewave_component
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(variableItemList(4+3))
+    allocate(exportList(4))
+    allocate(importList(3))
 
-!!! Advertise Export Fields
-    variableItemList(1)%name='wave_height'
-    variableItemList(1)%unit='m'
-    variableItemList(2)%name='wave_period'
-    variableItemList(2)%unit='s'
-    variableItemList(3)%name='wave_number'
-    variableItemList(3)%unit='1/m'
-    variableItemList(4)%name='wave_direction'
-    variableItemList(4)%unit='rad'
+!!! Advertise Import Fields
+    importList(1)%name='water_depth_at_soil_surface'
+    importList(1)%unit='m'
+    importList(2)%name='wind_x_velocity_at_10m'
+    importList(2)%unit='m/s'
+    importList(3)%name='wind_y_velocity_at_10m'
+    importList(3)%unit='m/s'
 
-    do i=1,4
-      field = ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%name), rc=localrc)
+    do i=1,size(importList)
+      field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(variableItemList(i)%unit), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
+      call ESMF_StateAdd(importState,(/field/), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
-!!! Advertise Import Fields
-    variableItemList(4+1)%name='water_depth_at_soil_surface'
-    variableItemList(4+1)%unit='m'
-    variableItemList(4+2)%name='wind_x_velocity_at_10m'
-    variableItemList(4+2)%unit='m/s'
-    variableItemList(4+3)%name='wind_y_velocity_at_10m'
-    variableItemList(4+3)%unit='m/s'
+!!! Advertise Export Fields
+    exportList(1)%name='wave_height'
+    exportList(1)%unit='m'
+    exportList(2)%name='wave_period'
+    exportList(2)%unit='s'
+    exportList(3)%name='wave_number'
+    exportList(3)%unit='1/m'
+    exportList(4)%name='wave_direction'
+    exportList(4)%unit='rad'
 
-    do i=4+1,4+3
-      field=ESMF_FieldEmptyCreate(name=trim(variableItemList(i)%name), rc=localrc)
+    do i=1,size(exportList)
+      field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAdd(importState,(/field/), rc=localrc)
+      call ESMF_AttributeSet(field,'units',trim(exportList(i)%unit), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
@@ -277,21 +278,21 @@ module simplewave_component
       end do
     end do
 
-!   Complete Export Fields
-    do i=1,4
-      call ESMF_StateGet(exportState,trim(variableItemList(i)%name),field)
-      allocate(variableItemList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-      call ESMF_FieldEmptyComplete(field,grid,variableItemList(i)%data,     &
+!   Complete Import Fields
+    do i=1,size(importList)
+      call ESMF_StateGet(importState,trim(importList(i)%name),field)
+      allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+      call ESMF_FieldEmptyComplete(field,grid,importList(i)%data,     &
                                    ESMF_INDEX_DELOCAL,                      &
                                    totalLWidth=exclusiveLBound-totalLBound, &
                                    totalUWidth=totalUBound-exclusiveUBound)
     end do
 
-!   Complete Import Fields
-    do i=4+1,4+3
-      call ESMF_StateGet(importState,trim(variableItemList(i)%name),field)
-      allocate(variableItemList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-      call ESMF_FieldEmptyComplete(field,grid,variableItemList(i)%data,     &
+!   Complete Export Fields
+    do i=1,size(exportList)
+      call ESMF_StateGet(exportState,trim(exportList(i)%name),field)
+      allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+      call ESMF_FieldEmptyComplete(field,grid,exportList(i)%data,     &
                                    ESMF_INDEX_DELOCAL,                      &
                                    totalLWidth=exclusiveLBound-totalLBound, &
                                    totalUWidth=totalUBound-exclusiveUBound)
@@ -332,13 +333,14 @@ module simplewave_component
     call ESMF_ClockGetNextTime(clock,nextTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    waveH   => variableItemList(1)%data
-    waveT   => variableItemList(2)%data
-    waveK   => variableItemList(3)%data
-    waveDir => variableItemList(4)%data
-    depth   => variableItemList(5)%data
-    windx   => variableItemList(6)%data
-    windy   => variableItemList(7)%data
+    depth   => importList(1)%data
+    windx   => importList(2)%data
+    windy   => importList(3)%data
+
+    waveH   => exportList(1)%data
+    waveT   => exportList(2)%data
+    waveK   => exportList(3)%data
+    waveDir => exportList(4)%data
 
     totalLBound = lbound(waveH)
     totalUBound = ubound(waveH)
@@ -377,7 +379,8 @@ module simplewave_component
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    deallocate(variableItemList)
+    deallocate(importList)
+    deallocate(exportList)
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
