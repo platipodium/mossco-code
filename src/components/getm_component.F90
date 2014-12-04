@@ -109,10 +109,10 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
-   subroutine InitializeP0(gridComp,importState,exportState,iClock,rc)
+   subroutine InitializeP0(gridComp,importState,exportState,clock,rc)
 !
 ! !DESCRIPTION:
-!  Note: [i|e]state and iClock are uninitialized if the toplevel
+!  Note: [i|e]state and clock are uninitialized if the toplevel
 !        component did not provide corresponding arguments to
 !        ESMF_GridCompInitialize(gridComp).
 !  The toplevel component can inquire rc via optional keyword argument
@@ -125,7 +125,7 @@ module getm_component
 ! !INPUT/OUTPUT PARAMETERS:
    type(ESMF_GridComp) :: gridComp
    type(ESMF_State)    :: importState,exportState ! may be uninitialized
-   type(ESMF_Clock)    :: iClock        ! may be uninitialized
+   type(ESMF_Clock)    :: clock        ! may be uninitialized
 !
 ! !OUTPUT PARAMETERS:
    integer,intent(out) :: rc
@@ -193,7 +193,7 @@ module getm_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
-  subroutine InitializeP1(gridComp,importState,exportState,iClock,rc)
+  subroutine InitializeP1(gridComp,importState,exportState,clock,rc)
 
     use time, only : getm_time_start => start, getm_time_stop => stop
     use time, only : getm_time_timestep => timestep
@@ -207,7 +207,7 @@ module getm_component
 
     type(ESMF_GridComp) :: gridComp
     type(ESMF_State)    :: importState,exportState ! may be uninitialized
-    type(ESMF_Clock)    :: iClock        ! may be uninitialized
+    type(ESMF_Clock)    :: clock        ! may be uninitialized
     integer,intent(out) :: rc
 
     type(ESMF_Clock)      :: myClock
@@ -324,14 +324,14 @@ module getm_component
 !-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP2"
-   subroutine InitializeP2(gridComp,importState,exportState,iClock,rc)
+   subroutine InitializeP2(gridComp,importState,exportState,clock,rc)
 
       use domain, only: imin,imax,jmin,jmax,kmax
       implicit none
 
       type(ESMF_GridComp) :: gridComp
       type(ESMF_State)    :: importState,exportState ! may be uninitialized
-      type(ESMF_Clock)    :: iClock        ! may be uninitialized
+      type(ESMF_Clock)    :: clock        ! may be uninitialized
       integer,intent(out) :: rc
 
       type(ESMF_StateItem_Flag) ,dimension(:),allocatable :: itemTypeList
@@ -461,7 +461,7 @@ module getm_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
-  subroutine Run(gridComp,importState,exportState,iClock,rc)
+  subroutine Run(gridComp,importState,exportState,clock,rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MinN
@@ -471,7 +471,7 @@ module getm_component
 
     type(ESMF_GridComp) :: gridComp
     type(ESMF_State)    :: importState,exportState ! may be uninitialized
-    type(ESMF_Clock)    :: iClock        ! may be uninitialized
+    type(ESMF_Clock)    :: clock        ! may be uninitialized
     integer,intent(out) :: rc
 
     type(ESMF_Clock)      :: myClock
@@ -491,8 +491,8 @@ module getm_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 
-    !  use iClock to do determine time of calling routine
-    call ESMF_ClockGetNextTime(iClock,nextTime,rc=rc)
+    !  use clock to do determine time of calling routine
+    call ESMF_ClockGetNextTime(clock,nextTime,rc=rc)
     if (rc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
@@ -532,7 +532,7 @@ module getm_component
 !-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine Finalize(gridComp, importState, exportState, iClock, rc)
+  subroutine Finalize(gridComp, importState, exportState, clock, rc)
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
@@ -542,7 +542,7 @@ module getm_component
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: iClock
+    type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
     type(ESMF_Grid)       :: getmGrid
