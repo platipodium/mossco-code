@@ -58,13 +58,13 @@ implicit none
 
 class (Mbalthica_Object)  :: this
 real (fp)                 :: Mass,intensity
-character (len = 10)      :: Unitt
+character (len = 10)      :: units
 integer                   :: StringLength, UnitNr,istat
 logical                   :: opnd, exst
 
-namelist /Macrofaun/  Unitt, Intensity
+namelist /Macrofaun/  units, Intensity
 
-Unitt = ''
+units = ''
 Mass = 0.0
 Intensity = 0.0
 
@@ -90,7 +90,7 @@ elseif (opnd) then
   read (UnitNr, nml=Macrofaun, iostat = istat)
   if (istat /= 0 ) write (*,*)' Error in reading Mbalthica data'
 
-  write (*,*) ' units and  intensity are ', Unitt, Intensity
+  write (*,*) ' units and  intensity are ', units, Intensity
 
 else
 
@@ -100,14 +100,14 @@ else
 end if
 
 
- if (Unitt == '-') then
+ if (units == '-') then
 
   write (*,*) ' In Mbalthica_class, the intensity of Mbalthica is ', Intensity
 
   allocate (This%StateVar%Intensity)
   This%StateVar%Intensity = intensity
 
- elseif  (Unitt == 'gCm-2') then
+ elseif  (units == 'gCm-2') then
 
   write (*,*) ' In Mbalthica_class, the Mass of Mbalthica is ', Mass
   allocate (This%StateVar%amount)
@@ -116,12 +116,12 @@ end if
  end if
 
 
- StringLength = len_trim (Unitt)
+ StringLength = len_trim (units)
 
 if (StringLength /= 0 ) then
    ! allocate (character(StringLength) :: This%StateVar%units)
     allocate (This%StateVar%units)
-    This%StateVar%units = trim (Unitt)
+    This%StateVar%units = trim (units)
 end if
 
 end subroutine set_Mbalthica

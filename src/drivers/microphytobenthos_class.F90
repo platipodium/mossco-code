@@ -58,12 +58,12 @@ implicit none
 
 class (Microphytobenthos)  :: this
 real (fp)                  :: Mass
-character (len = 10)       :: Unitt
+character (len = 10)       :: units
 integer                    :: StringLength, UnitNr, istat
 logical                    :: opnd, exst
 
 
-namelist /Microphyto/ Unitt, Mass
+namelist /Microphyto/ units, Mass
 
 this%Species='Microphytobenthos'
 
@@ -95,16 +95,16 @@ end if
 
  this%UnitNr = UnitNr
  write (*,*) ' In Microphytobenthos_class, the amount of Chl biomass is ', Mass
- write (*,*) ' Units are ', Unitt
+ write (*,*) ' Units are ', units
 
  This%BioMass%amount = Mass
 
-StringLength = len_trim (Unitt)
+StringLength = len_trim (units)
 
 if (StringLength /= 0 ) then
     !allocate (character(StringLength) :: This%BioMass%units)
     allocate (This%BioMass%units)
-    This%BioMass%units = trim (Unitt)
+    This%BioMass%units = trim (units)
 end if
 
 
