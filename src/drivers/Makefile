@@ -89,14 +89,15 @@ getm_driver.o: getm_driver.F90
 	$(F90) $(GETM_CPPFLAGS) $(GOTM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 # Benthos section
-libmossco_benthos: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
+libmossco_benthos: prefix \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
 
 microphytobenthos_class.o: criticalsheareffect.o benthoseffect_class.o biotypes.o erodibilityeffect.o
 mbalthica_class.o: macrofauna_class.o
