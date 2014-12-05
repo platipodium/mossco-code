@@ -95,7 +95,7 @@ libmossco_fabmpelagic: prefix libmossco_fabmpelagic_driver \
 libmossco_fabm0d: prefix libmossco_fabm0d_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
 
-libmossco_getm: libmossco_getm_driver \
+libmossco_getm: libmossco_getm_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_component.o)
 
 libempty: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
