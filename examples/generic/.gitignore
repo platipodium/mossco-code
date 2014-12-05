@@ -33,5 +33,6 @@ gotm_coupling
 gotm--gotm_fabm--fabm_sediment
 maecs_omexdia
 reference_1d
+reference_3d
 remtcocean-atmosphere
 test_create_coupling
