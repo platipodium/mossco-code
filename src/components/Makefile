@@ -54,12 +54,12 @@ libmossco_constant_grid: libconstant_grid
 libmossco_empty: libempty
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 libmossco_clm: libmossco_clm_driver libmossco_clm_component 
-libmossco_benthos: libmossco_benthos_drivers libmossco_benthos_component
+
+libmossco_benthos: libmossco_benthos_driver libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
+
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
-
-libmossco_benthos_drivers: prefix  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o)
-libmossco_benthos_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
    $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
@@ -74,7 +74,7 @@ erosed_driver:
 .PHONY: erosed_component
 erosed_component: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosed_component.o)
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o):
+libmossco_benthos_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
