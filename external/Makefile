@@ -30,15 +30,16 @@ update: fabm-git-update gotm-git-update getm-git-update #erosed-svn-update
 
 clean: extraclean
 
-extraclean:
-ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-	$(RM) -rf $(FABM_PREFIX)
-endif
+extraclean: getm_distclean gotm_distclean fabm_clean
+
+gotm_distclean:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
-	$(MAKE) -C $(MOSSCO_DIR)/external/gotm-git distclean
+	(unset FABM ; $(MAKE) -C $(MOSSCO_DIR)/external/gotm-git distclean)
 endif
+
+getm_distclean:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
-	$(MAKE) -C $(MOSSCO_DIR)/external/getm-git distclean
+	(unset FABM ; $(MAKE) -C $(MOSSCO_DIR)/external/getm-git distclean)
 endif
 
 subdirs: $(SUBDIRS)

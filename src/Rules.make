@@ -107,6 +107,7 @@ MOSSCO_FABM=false
 
 #Note (KK): undefine does not work for gnu make <3.8.2
 FABM_PREFIX=
+FABM_BINARY_DIR=
 
 ifdef MOSSCO_FABM_PREFIX
   export FABM_PREFIX=$(MOSSCO_FABM_PREFIX)
@@ -492,33 +493,37 @@ endif
 # External libraries
 
 ifeq ($(MOSSCO_FABM),true)
-
 $(FABM_PREFIX)/lib/libfabm.a:
 	$(MAKE) -C $(MOSSCO_DIR) libfabm_external
+endif
 
 libfabm_external: fabm_build fabm_install
 
 fabm_build:
+ifeq ($(MOSSCO_FABM),true)
 ifndef MOSSCO_FABM_BINARY_DIR
 	@mkdir -p $(FABM_BINARY_DIR)
 	(cd $(FABM_BINARY_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST))
 endif
+endif
 
 fabm_install:
+ifeq ($(MOSSCO_FABM),true)
 ifdef FABM_BINARY_DIR
 	@echo Recreating the FABM library in $(FABM_PREFIX)
 	$(MAKE) -sC $(FABM_BINARY_DIR) install
 endif
+endif
 
-libfabm_clean:
+fabm_clean:
+ifeq ($(MOSSCO_FABM),true)
 	@echo Cleaning the FABM library in $(FABM_PREFIX)
 ifndef MOSSCO_FABM_BINARY_DIR
-	$(RM) -rf $(FABM_BINARY_DIR)
+	$(RM) $(FABM_BINARY_DIR)
 endif
 ifndef MOSSCO_FABM_PREFIX
-	$(RM) -rf $(FABM_PREFIX)
+	$(RM) $(FABM_PREFIX)
 endif
-
 endif
 
 libgotm_external:
@@ -565,10 +570,10 @@ endif
 mossco_clean: distclean
 # Note (KK): These distcleans might be redundant, but might also operate outside MOSSCO_DIR.
 ifdef MOSSCO_GOTMDIR
-	$(MAKE) -C $(MOSSCO_GOTMDIR) distclean
+	(unset FABM ; $(MAKE) -C $(MOSSCO_GOTMDIR) distclean)
 endif
 ifdef MOSSCO_GETMDIR
-	$(MAKE) -C $(MOSSCO_GETMDIR) distclean
+	(unset FABM ; $(MAKE) -C $(MOSSCO_GETMDIR) distclean)
 endif
 
 # Common rules
