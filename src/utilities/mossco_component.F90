@@ -274,7 +274,7 @@ contains
       write(message,'(A,I6,A)') trim(message)//' on ',petCount,' PETs'
     end if
     write(message,'(A)') trim(message)//' ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine MOSSCO_GridCompEntryLog
 
