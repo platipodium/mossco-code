@@ -567,14 +567,7 @@ endif
 #	@cp $(MOSSCO_MODULE_PATH)/*.mod  $(MOSSCO_INSTALL_PREFIX)/include
 
 .PHONY: mossco_clean
-mossco_clean: distclean
-# Note (KK): These distcleans might be redundant, but might also operate outside MOSSCO_DIR.
-ifdef MOSSCO_GOTMDIR
-	(unset FABM ; $(MAKE) -C $(MOSSCO_GOTMDIR) distclean)
-endif
-ifdef MOSSCO_GETMDIR
-	(unset FABM ; $(MAKE) -C $(MOSSCO_GETMDIR) distclean)
-endif
+mossco_clean: distclean fabm_clean
 
 # Common rules
 #ifndef EXTRA_CPP

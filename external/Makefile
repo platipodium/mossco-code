@@ -30,7 +30,7 @@ update: fabm-git-update gotm-git-update getm-git-update #erosed-svn-update
 
 clean: extraclean
 
-extraclean: getm_distclean gotm_distclean fabm_clean
+extraclean:
 
 gotm_distclean:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
