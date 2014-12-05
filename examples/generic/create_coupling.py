@@ -450,9 +450,9 @@ for i in range(0, len(gridCompList)):
     fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' +item + '_SetServices, rc=rc)\n')
     fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
 
+fid.write('\n    !! Allocate the fields for all coupler components and their names\n')
+fid.write('    numCplComp = ' + str(len(cplCompList)) )
 if len(cplCompList)>0:
-    fid.write('\n    !! Allocate the fields for all coupler components and their names\n')
-    fid.write('    numCplComp = ' + str(len(cplCompList)) )
     fid.write('''
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
@@ -500,12 +500,17 @@ fid.write('''
       !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
       !! contains information on the phases defined in the component.
     enddo
-    
+''')
+
+if len(cplCompList)>0:
+    fid.write('''
     !! Initialize the link coupler phase 1
     call ESMF_CplCompInitialize(cplCompList(1), importState=importStates(1), &
       exportState=exportStates(1), clock=clock, phase=1, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)   
+''')
 
+fid.write('''
     !! Go through all phases:
     !! IPDv00p1 = phase 1: Advertise Fields in import and export States. These can be
     !!   empty fields that are later completed with FieldEmptyComplete
@@ -582,7 +587,8 @@ for phase in range(1,maxPhases+1):
 
 
 fid.write('    numCplAlarm = ' + str(len(couplingList)))
-fid.write('''
+if len(cplCompList)>0:
+    fid.write('''
     if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
     if (.not.allocated(cplNames)) allocate(cplNames(numCplAlarm))
     cplNames(:) = 'link'
