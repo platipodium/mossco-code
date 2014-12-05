@@ -519,10 +519,10 @@ fabm_clean:
 ifeq ($(MOSSCO_FABM),true)
 	@echo Cleaning the FABM library in $(FABM_PREFIX)
 ifndef MOSSCO_FABM_BINARY_DIR
-	$(RM) $(FABM_BINARY_DIR)
+	$(RM) -rf $(FABM_BINARY_DIR)
 endif
 ifndef MOSSCO_FABM_PREFIX
-	$(RM) $(FABM_PREFIX)
+	$(RM) -rf $(FABM_PREFIX)
 endif
 endif
 
