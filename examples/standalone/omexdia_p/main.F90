@@ -35,7 +35,7 @@ numlayers=10
 dzmin=0.005
 ode_method=_RK4_
 dt_min=1.0_rk
-relative_change_min=0.1_rk
+relative_change_min=-0.9_rk
 
 open(33,file='run.nml',action='read',status='old')
 read(33,nml=run_nml)

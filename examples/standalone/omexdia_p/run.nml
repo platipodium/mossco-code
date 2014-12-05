@@ -14,8 +14,8 @@
   numlayers=24
   dzmin=0.003
   ode_method=2
-  relative_change_min=0.3
-  dt_min=72.
+  relative_change_min=-0.9
+  dt_min=1.
 /
 
 &sed_nml
