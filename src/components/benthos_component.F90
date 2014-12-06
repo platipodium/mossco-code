@@ -16,6 +16,8 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "benthos_component.F90"
 
+#define DEBUG
+
 module benthos_component
 
   use esmf
@@ -138,7 +140,6 @@ contains
     real(ESMF_KIND_R8),dimension(:),pointer :: LonCoord,LatCoord,DepthCoord
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     
-    integer , allocatable :: maxIndex(:)
     integer               :: rank, localrc
 
     type(ESMF_Time)   :: wallTime, clockTime
@@ -152,6 +153,8 @@ contains
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime
     logical               :: clockIsPresent
+    
+    integer(ESMF_KIND_I4) :: ubnd2(2), lbnd2(2), ubnd3(3), lbnd3(3)
     
     rc = ESMF_SUCCESS
      
@@ -187,46 +190,59 @@ contains
       call ESMF_GridAddCoord(grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
+      write(message,*) trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=localrc)
+
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (rank<2) then
-        write(message,*) 'foreign grid must be of at least rank >= 2'
+
+      if (rank<2 .or. rank>3) then
+        write(message,*) 'foreign grid must be of rank 2 or 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       end if 
+
+      if (rank==2) then 
+        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
-      allocate(maxIndex(rank))
-        inum=maxIndex(1)
-        jnum=maxIndex(2)
-      if (rank ==2) then 
-        !grid = foreign_Grid    !> ToDO discuss copy or link for grid 
-        grid = ESMF_GridCreate(foreign_grid,rc=localrc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-      elseif (rank == 3) then
- 
-        call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-               computationalCount=maxIndex,rc=localrc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-          grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
-                   maxIndex=maxIndex(1:2), &
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            
+        inum=ubnd2(1)-lbnd2(1)+1
+        jnum=ubnd2(2)-lbnd2(2)+1     
+      endif
+      
+      if (rank==3) then 
+        write(message,*) 'foreign grid of rank 3 not yet implemented'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+
+        call ESMF_FieldGet(field, grid=foreign_grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            
+        inum=ubnd3(1)-lbnd3(1)+1
+        jnum=ubnd3(2)-lbnd3(2)+1  
+        
+        grid = ESMF_GridCreateNoPeriDim(minIndex=lbnd3(1:2), &
+                   maxIndex=ubnd3(1:2), &
                    regDecomp=(/1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
                    indexflag=ESMF_INDEX_GLOBAL,  &
                    name="benthos grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=localrc)
-        inum=maxIndex(1)
-        jnum=maxIndex(2)
-      !  numlayers=maxIndex(3)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_GridAddCoord(grid, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
-        deallocate(maxIndex)
-      else
-        write(message,*) 'foreign grid must be of rank = 2 or 3'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      end if
-    end if
+          
+      endif
+    endif
 
 
     !> create grid
@@ -257,8 +273,8 @@ contains
     Erod = 0.00006
 
 #ifdef DEBUG
-    write (*,*) 'Abiotic critical tau =' , tau, 'Abiotic Erodibility = ', Erod
-    write (*,*)
+    write(0,*) 'Abiotic critical tau =' , tau, 'Abiotic Erodibility = ', Erod
+    write(0,*)
 #endif
 
    !> create export fields
@@ -266,8 +282,8 @@ contains
     Effect_of_MPB_on_sediment_erodibility_at_bottom => Micro%ErodibilityEffect
 
 #ifdef DEBUG
-    write (*,*) ' Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
-    Effect_of_MPB_on_sediment_erodibility_at_bottom
+    write(0,*) ' Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
+    Effect_of_MPB_on_sediment_erodibility_at_bottom, ubound(Effect_of_MPB_on_sediment_erodibility_at_bottom)
 #endif
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
@@ -284,7 +300,7 @@ contains
     Effect_of_MPB_on_critical_bed_shearstress => Micro%TauEffect
 
 #ifdef DEBUG
-    write (*,*) 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface',&
+    write(0,*) 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface',&
      Effect_of_MPB_on_critical_bed_shearstress
 #endif
 
@@ -301,7 +317,7 @@ contains
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom => Total_Bioturb%ErodibilityEffect
 
 #ifdef DEBUG
-    write (*,*) 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
+    write(0,*) 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
 #endif
 
@@ -318,7 +334,7 @@ contains
     Effect_of_Mbalthica_on_critical_bed_shearstress => Total_Bioturb%TauEffect
 
 #ifdef DEBUG
-    write (*,*) 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface',&
+    write(0,*) 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface',&
     Effect_of_Mbalthica_on_critical_bed_shearstress
 #endif
 
@@ -345,16 +361,16 @@ contains
 
 #ifdef DEBUG
     call ESMF_FieldPrint (Microphytobenthos_erodibility)
-      write (*,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
+      write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
 
     call ESMF_FieldPrint (Microphytobenthos_critical_bed_shearstress)
-      write (*,*) 'Mircrophy. Tau effect', Micro%TauEffect
+      write(0,*) 'Mircrophy. Tau effect', Micro%TauEffect
 
     call ESMF_FieldPrint (Macrofauna_erodibility)
-      write (*,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
+      write(0,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
 
     call ESMF_FieldPrint (Macrofauna_critical_bed_shearstress)
-      write (*,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
+      write(0,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
 #endif
 
     call MOSSCO_CompExit(gridComp, localrc)
@@ -415,24 +431,24 @@ contains
 #ifdef DEBUG
     call ESMF_FieldPrint (Microphytobenthos_erodibility)
 
-    write (*,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
+    write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
 
     call ESMF_FieldPrint (Microphytobenthos_critical_bed_shearstress)
 
-    write (*,*) 'Mircrophy. Tau effect', Micro%TauEffect
+    write(0,*) 'Mircrophy. Tau effect', Micro%TauEffect
 
     call ESMF_FieldPrint (Macrofauna_erodibility)
 
-    write (*,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
+    write(0,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
 
     call ESMF_FieldPrint (Macrofauna_critical_bed_shearstress)
 
-    write (*,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
+    write(0,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
 
-    write (*,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= ',&
+    write(0,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= ',&
       &   Total_Bioturb%TauEffect, 'Both Biotic erodibility',Total_Bioturb%ErodibilityEffect
 
-    write (*,*)
+    write(0,*)
 #endif
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)    
