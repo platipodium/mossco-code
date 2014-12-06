@@ -153,6 +153,7 @@ contains
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime
     logical               :: clockIsPresent
+    type(ESMF_INDEX_Flag) :: indexFlag
     
     integer(ESMF_KIND_I4) :: ubnd2(2), lbnd2(2), ubnd3(3), lbnd3(3)
     
@@ -244,20 +245,10 @@ contains
       endif
     endif
 
-
-    !> create grid
-   ! grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
- !     regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-   !   name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8, rc=localrc)
-   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-   ! call ESMF_GridAddCoord(grid, rc=localrc)
-   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-
-
     !> Create distgrid for arrays
-   !   distgrid =  ESMF_DistGridCreate(minIndex=(/inum,jnum/), maxIndex=(/inum,jnum/), &
-   !   indexflag=ESMF_INDEX_GLOBAL, rc=localrc)
-    call ESMF_GridGet(grid, distGrid=distGrid, rc=localrc)
+    !   distgrid =  ESMF_DistGridCreate(minIndex=(/inum,jnum/), maxIndex=(/inum,jnum/), &
+    !   indexflag=ESMF_INDEX_GLOBAL, rc=localrc)
+    call ESMF_GridGet(grid, distGrid=distGrid, indexflag=indexflag, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     nlev=1
@@ -286,7 +277,7 @@ contains
     Effect_of_MPB_on_sediment_erodibility_at_bottom, ubound(Effect_of_MPB_on_sediment_erodibility_at_bottom)
 #endif
 
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag, &
       farray=Effect_of_MPB_on_sediment_erodibility_at_bottom,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -304,7 +295,7 @@ contains
      Effect_of_MPB_on_critical_bed_shearstress
 #endif
 
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag, &
       farray=Effect_of_MPB_on_critical_bed_shearstress, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -321,7 +312,7 @@ contains
     Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
 #endif
 
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL,  &
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag,  &
       farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -338,7 +329,7 @@ contains
     Effect_of_Mbalthica_on_critical_bed_shearstress
 #endif
 
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
+    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag, &
       farray=Effect_of_Mbalthica_on_critical_bed_shearstress, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
