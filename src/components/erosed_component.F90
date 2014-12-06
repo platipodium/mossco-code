@@ -282,18 +282,17 @@ contains
       end if
 
       allocate(maxIndex(rank))
-        inum=maxIndex(1)
-        jnum=maxIndex(2)
+      call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
+               computationalCount=maxIndex,rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      inum=maxIndex(1)
+      jnum=maxIndex(2)
       if (rank ==2) then
         !grid = foreign_Grid    !> ToDO discuss copy or link for grid
         grid = ESMF_GridCreate(foreign_grid,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      elseif (rank == 3) then
-
-        call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-               computationalCount=maxIndex,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-          grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+      elseif (rank == 3) then
+         grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
                    maxIndex=maxIndex(1:2), &
                    regDecomp=(/1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
@@ -301,15 +300,13 @@ contains
                    name="erosed grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=rc)
-        inum=maxIndex(1)
-        jnum=maxIndex(2)
       !  numlayers=maxIndex(3)
         call ESMF_GridAddCoord(grid, rc=rc)   !> ToDO we need to copy the coordiane from foreign Grid.
-        deallocate(maxIndex)
       else
         write(message,*) 'foreign grid must be of rank = 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       end if
+      deallocate(maxIndex)
     end if
 
     !> create grid
