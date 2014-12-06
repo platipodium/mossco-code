@@ -28,7 +28,7 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
-     #filename='reference_3d'
+     filename='reference_3d'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -166,7 +166,10 @@ for component in componentSet:
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
-    dependencyDict[item]=compdeps
+    if dependencyDict.has_key(item):
+      dependencyDict[item].extend(compdeps)
+    else:
+      dependencyDict[item]=compdeps
 
   elif type(dependencies) is list:
     for i in range(0,len(dependencies)):
@@ -190,10 +193,16 @@ for component in componentSet:
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
-        dependencyDict[item.keys()[0]]=compdeps
-
+        if dependencyDict.has_key(item.keys()[0]):
+          dependencyDict[item.keys()[0]].extend(compdeps)
+        else:
+          dependencyDict[item.keys()[0]]=compdeps
   else:
     print 'The dependencies specification must be list or dictionary'
+
+for key, value in dependencyDict.iteritems():
+    dependencyDict[key]=list(set(value))
+
 
 if 'link_coupler' in componentList:
     c=componentList.pop(componentList.index('link_coupler'))
