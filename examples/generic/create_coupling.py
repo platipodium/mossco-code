@@ -549,7 +549,8 @@ for phase in range(1,maxPhases+1):
           ifrom=gridCompList.index(jtem)
           fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
           fid.write('      exportState=importStates(' + str(ito+1)+'), clock=clock, rc=rc)\n')
-
+          fid.write('    call ESMF_LogFlush()\n')
+          
     fid.write('    if (phaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
     fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
     fid.write('        exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
@@ -921,6 +922,7 @@ fid.write('''
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
             exportState=expState, clock=clock, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_LogFlush()
 
         enddo
       enddo
@@ -1023,6 +1025,7 @@ fid.write('''
           call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
             exportState=exportStates(i), clock=clock, phase=phase, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          call ESMF_LogFlush()
         enddo
 
         call ESMF_ClockGet(childClock, currTime=time, rc=rc)
