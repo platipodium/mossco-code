@@ -593,6 +593,10 @@ contains
     upward_flux_field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
             name='concentration_of_SPM_upward_flux_at_soil_surface', rc=localrc)
     call ESMF_AttributeSet(upward_flux_field,'external_index',external_idx_by_nfrac(n))
+    write(message,'(A)') trim(name)//' creates field'
+    call MOSSCO_FieldString(upward_flux_field, message)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    
     call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=localrc)
   end do
 

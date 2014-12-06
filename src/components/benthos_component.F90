@@ -16,8 +16,6 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "benthos_component.F90"
 
-#define DEBUG
-
 module benthos_component
 
   use esmf

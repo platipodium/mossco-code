@@ -22,13 +22,13 @@ module toplevel_component
 
   use getm_component, only : getm_SetServices => SetServices 
   use fabm_pelagic_component, only : fabm_pelagic_SetServices => SetServices 
-  use erosed_component, only : erosed_SetServices => SetServices 
   use constant_component, only : constant_SetServices => SetServices 
   use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices 
   use simplewave_component, only : simplewave_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
   use clm_netcdf_component, only : clm_netcdf_SetServices => SetServices 
   use benthos_component, only : benthos_SetServices => SetServices 
+  use erosed_component, only : erosed_SetServices => SetServices 
   use link_coupler, only : link_coupler_SetServices => SetServices 
   use benthic_pelagic_coupler, only : benthic_pelagic_coupler_SetServices => SetServices 
   use pelagic_benthic_coupler, only : pelagic_benthic_coupler_SetServices => SetServices 
@@ -52,22 +52,22 @@ module toplevel_component
   type(ESMF_CplComp), save  :: pelagic_benthic_couplerComp
   type(ESMF_GridComp), save :: getmComp
   type(ESMF_GridComp), save :: fabm_pelagicComp
-  type(ESMF_GridComp), save :: erosedComp
   type(ESMF_GridComp), save :: constantComp
   type(ESMF_GridComp), save :: fabm_sedimentComp
   type(ESMF_GridComp), save :: simplewaveComp
   type(ESMF_GridComp), save :: netcdfComp
   type(ESMF_GridComp), save :: clm_netcdfComp
   type(ESMF_GridComp), save :: benthosComp
+  type(ESMF_GridComp), save :: erosedComp
   type(ESMF_State), save    :: getmExportState, getmImportState
   type(ESMF_State), save    :: fabm_pelagicExportState, fabm_pelagicImportState
-  type(ESMF_State), save    :: erosedExportState, erosedImportState
   type(ESMF_State), save    :: constantExportState, constantImportState
   type(ESMF_State), save    :: fabm_sedimentExportState, fabm_sedimentImportState
   type(ESMF_State), save    :: simplewaveExportState, simplewaveImportState
   type(ESMF_State), save    :: netcdfExportState, netcdfImportState
   type(ESMF_State), save    :: clm_netcdfExportState, clm_netcdfImportState
   type(ESMF_State), save    :: benthosExportState, benthosImportState
+  type(ESMF_State), save    :: erosedExportState, erosedImportState
 
 
   contains
@@ -142,13 +142,13 @@ module toplevel_component
 
     gridCompNames(1) = 'getm'
     gridCompNames(2) = 'fabm_pelagic'
-    gridCompNames(3) = 'erosed'
-    gridCompNames(4) = 'constant'
-    gridCompNames(5) = 'fabm_sediment'
-    gridCompNames(6) = 'simplewave'
-    gridCompNames(7) = 'netcdf'
-    gridCompNames(8) = 'clm_netcdf'
-    gridCompNames(9) = 'benthos'
+    gridCompNames(3) = 'constant'
+    gridCompNames(4) = 'fabm_sediment'
+    gridCompNames(5) = 'simplewave'
+    gridCompNames(6) = 'netcdf'
+    gridCompNames(7) = 'clm_netcdf'
+    gridCompNames(8) = 'benthos'
+    gridCompNames(9) = 'erosed'
 
     !! Create all gridded components, and create import and export states for these
     call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
@@ -206,19 +206,19 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(gridCompList(2), fabm_pelagic_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(3), erosed_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(3), constant_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(4), constant_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(4), fabm_sediment_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(5), fabm_sediment_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(5), simplewave_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(6), simplewave_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(6), netcdf_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(7), netcdf_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(7), clm_netcdf_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(8), clm_netcdf_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(8), benthos_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompSetServices(gridCompList(9), benthos_SetServices, rc=rc)
+    call ESMF_GridCompSetServices(gridCompList(9), erosed_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Allocate the fields for all coupler components and their names
@@ -270,6 +270,11 @@ module toplevel_component
       !! contains information on the phases defined in the component.
     enddo
 
+    !! Initialize the link coupler phase 1
+    call ESMF_CplCompInitialize(cplCompList(1), importState=importStates(1), &
+      exportState=exportStates(1), clock=clock, phase=1, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)   
+
     !! Go through all phases:
     !! IPDv00p1 = phase 1: Advertise Fields in import and export States. These can be
     !!   empty fields that are later completed with FieldEmptyComplete
@@ -298,11 +303,9 @@ module toplevel_component
     call ESMF_AttributeSet(importStates(2), name="foreign_grid_field_name", value="temperature_in_water", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Manually added to get grid information from getm to fabm in phase 1
-    call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(1), &
-      exportState=importStates(2), clock=clock, phase=1, rc=rc)
-    call MOSSCO_StateLog(importStates(2), rc=rc)
-
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(2), clock=clock, rc=rc)
+    call ESMF_LogFlush()
     if (phaseCountList( 2)>=1) then
       call ESMF_GridCompInitialize(gridCompList(2), importState=importStates(2), &
         exportState=exportStates(2), clock=clock, phase=1, rc=rc)
@@ -320,60 +323,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-
     !! Initializing phase 1 of constant
-    if (phaseCountList( 4)>=1) then
-      call ESMF_GridCompInitialize(gridCompList(4), importState=importStates(4), &
-        exportState=exportStates(4), clock=clock, phase=1, rc=rc)
-    endif
-
-    if (rc /= ESMF_SUCCESS) then
-      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
-        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
-        write(message,'(A,I4)') 'Initializing failed with error code ', rc
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_LogFlush()
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      endif
-    endif
-    
-    !! Initializing phase 1 of fabm_sediment
-    call ESMF_AttributeSet(importStates(5), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    !! Manually added to get grid information from getm to fabm_sed in phase 1
-    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
-      exportState=importStates(5), clock=clock, phase=1, rc=rc)
-    
-    if (phaseCountList( 5)>=1) then
-      call ESMF_GridCompInitialize(gridCompList(5), importState=importStates(5), &
-        exportState=exportStates(5), clock=clock, phase=1, rc=rc)
-    endif
-
-    if (rc /= ESMF_SUCCESS) then
-      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
-        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
-        write(message,'(A,I4)') 'Initializing failed with error code ', rc
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_LogFlush()
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      endif
-    endif
-    
-    !! Manually added to get spm information from fabm_pelagic to erosed in phase 1
-    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(2), &
-      exportState=importStates(3), clock=clock, phase=1, rc=rc)
-    !! Manually added to get spm information from constant to erosed in phase 1
-    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
-      exportState=importStates(3), clock=clock, phase=1, rc=rc)
-    call MOSSCO_StateLog(importStates(3), rc=rc)    
-    
-    !! Initializing phase 1 of erosed
     if (phaseCountList( 3)>=1) then
       call ESMF_GridCompInitialize(gridCompList(3), importState=importStates(3), &
         exportState=exportStates(3), clock=clock, phase=1, rc=rc)
@@ -391,17 +341,67 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    
+    !! Initializing phase 1 of fabm_sediment
+    if (phaseCountList( 4)>=1) then
+      call ESMF_GridCompInitialize(gridCompList(4), importState=importStates(4), &
+        exportState=exportStates(4), clock=clock, phase=1, rc=rc)
+    endif
+
+    if (rc /= ESMF_SUCCESS) then
+      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
+        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      else
+        write(message,'(A,I4)') 'Initializing failed with error code ', rc
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogFlush()
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    endif
     !! Initializing phase 1 of simplewave
-    call ESMF_AttributeSet(importStates(6), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=rc)
+    call ESMF_AttributeSet(importStates(5), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(5), clock=clock, rc=rc)
+    call ESMF_LogFlush()
+    if (phaseCountList( 5)>=1) then
+      call ESMF_GridCompInitialize(gridCompList(5), importState=importStates(5), &
+        exportState=exportStates(5), clock=clock, phase=1, rc=rc)
+    endif
+
+    if (rc /= ESMF_SUCCESS) then
+      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
+        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      else
+        write(message,'(A,I4)') 'Initializing failed with error code ', rc
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogFlush()
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    endif
+    !! Initializing phase 1 of netcdf
     if (phaseCountList( 6)>=1) then
       call ESMF_GridCompInitialize(gridCompList(6), importState=importStates(6), &
         exportState=exportStates(6), clock=clock, phase=1, rc=rc)
     endif
 
-    !! Initializing phase 1 of netcdf
+    if (rc /= ESMF_SUCCESS) then
+      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
+        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      else
+        write(message,'(A,I4)') 'Initializing failed with error code ', rc
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogFlush()
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    endif
+    !! Initializing phase 1 of clm_netcdf
     if (phaseCountList( 7)>=1) then
       call ESMF_GridCompInitialize(gridCompList(7), importState=importStates(7), &
         exportState=exportStates(7), clock=clock, phase=1, rc=rc)
@@ -419,14 +419,40 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    
-    !! Initializing phase 1 of clm_netcdf
+    !! Initializing phase 1 of benthos
+    call ESMF_AttributeSet(importStates(8), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(8), clock=clock, rc=rc)
+    call ESMF_LogFlush()
     if (phaseCountList( 8)>=1) then
       call ESMF_GridCompInitialize(gridCompList(8), importState=importStates(8), &
         exportState=exportStates(8), clock=clock, phase=1, rc=rc)
     endif
 
-    !! Initializing phase 1 of benthos
+    if (rc /= ESMF_SUCCESS) then
+      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
+        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
+        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      else
+        write(message,'(A,I4)') 'Initializing failed with error code ', rc
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogFlush()
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    endif
+    !! Initializing phase 1 of erosed
+    call ESMF_AttributeSet(importStates(9), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(9), clock=clock, rc=rc)
+    call ESMF_LogFlush()
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(2), &
+      exportState=importStates(9), clock=clock, rc=rc)
+    call ESMF_LogFlush()
     if (phaseCountList( 9)>=1) then
       call ESMF_GridCompInitialize(gridCompList(9), importState=importStates(9), &
         exportState=exportStates(9), clock=clock, phase=1, rc=rc)
@@ -444,9 +470,8 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-
     !! Initializing benthic_pelagic_coupler
-    call ESMF_CplCompInitialize(cplCompList(2), importState=exportStates(5), &
+    call ESMF_CplCompInitialize(cplCompList(2), importState=exportStates(4), &
       exportState=importStates(2), clock=clock, phase=1, rc=rc)
 
     if (rc /= ESMF_SUCCESS) then
@@ -463,7 +488,7 @@ module toplevel_component
     endif
     !! Initializing pelagic_benthic_coupler
     call ESMF_CplCompInitialize(cplCompList(3), importState=exportStates(2), &
-      exportState=importStates(5), clock=clock, phase=1, rc=rc)
+      exportState=importStates(4), clock=clock, phase=1, rc=rc)
 
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
@@ -514,7 +539,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 2 of erosed
+    !! Initializing phase 2 of constant
     if (phaseCountList( 3)>=2) then
       call ESMF_GridCompInitialize(gridCompList(3), importState=importStates(3), &
         exportState=exportStates(3), clock=clock, phase=2, rc=rc)
@@ -532,7 +557,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 2 of constant
+    !! Initializing phase 2 of fabm_sediment
     if (phaseCountList( 4)>=2) then
       call ESMF_GridCompInitialize(gridCompList(4), importState=importStates(4), &
         exportState=exportStates(4), clock=clock, phase=2, rc=rc)
@@ -550,7 +575,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 2 of fabm_sediment
+    !! Initializing phase 2 of simplewave
     if (phaseCountList( 5)>=2) then
       call ESMF_GridCompInitialize(gridCompList(5), importState=importStates(5), &
         exportState=exportStates(5), clock=clock, phase=2, rc=rc)
@@ -568,12 +593,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-
-    !! Manually added to get grid information from getm to simplewave
-    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
-      exportState=importStates(6), clock=clock, phase=1, rc=rc)
-
-    !! Initializing phase 2 of simplewave
+    !! Initializing phase 2 of netcdf
     if (phaseCountList( 6)>=2) then
       call ESMF_GridCompInitialize(gridCompList(6), importState=importStates(6), &
         exportState=exportStates(6), clock=clock, phase=2, rc=rc)
@@ -591,7 +611,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 2 of netcdf
+    !! Initializing phase 2 of clm_netcdf
     if (phaseCountList( 7)>=2) then
       call ESMF_GridCompInitialize(gridCompList(7), importState=importStates(7), &
         exportState=exportStates(7), clock=clock, phase=2, rc=rc)
@@ -609,7 +629,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 2 of clm_netcdf
+    !! Initializing phase 2 of benthos
     if (phaseCountList( 8)>=2) then
       call ESMF_GridCompInitialize(gridCompList(8), importState=importStates(8), &
         exportState=exportStates(8), clock=clock, phase=2, rc=rc)
@@ -627,7 +647,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing phase 2 of benthos
+    !! Initializing phase 2 of erosed
     if (phaseCountList( 9)>=2) then
       call ESMF_GridCompInitialize(gridCompList(9), importState=importStates(9), &
         exportState=exportStates(9), clock=clock, phase=2, rc=rc)
@@ -645,24 +665,8 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    !! Initializing link_coupler
-    call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(8), &
-      exportState=importStates(1), clock=clock, phase=2, rc=rc)
-
-    if (rc /= ESMF_SUCCESS) then
-      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
-        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
-        write(message,'(A,I4)') 'Initializing failed with error code ', rc
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_LogFlush()
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      endif
-    endif
     !! Initializing benthic_pelagic_coupler
-    call ESMF_CplCompInitialize(cplCompList(2), importState=exportStates(5), &
+    call ESMF_CplCompInitialize(cplCompList(2), importState=exportStates(4), &
       exportState=importStates(2), clock=clock, phase=2, rc=rc)
 
     if (rc /= ESMF_SUCCESS) then
@@ -679,7 +683,7 @@ module toplevel_component
     endif
     !! Initializing pelagic_benthic_coupler
     call ESMF_CplCompInitialize(cplCompList(3), importState=exportStates(2), &
-      exportState=importStates(5), clock=clock, phase=2, rc=rc)
+      exportState=importStates(4), clock=clock, phase=2, rc=rc)
 
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
@@ -1438,7 +1442,7 @@ module toplevel_component
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
           !write(0,*) trim(compName)//' ', i,'/',alarmCount,' '//trim(alarmName)//' rings at '//trim(timeString)
-          write(message,'(A)') trim(name)//'  '//trim(alarmName)//' rings at '//trim(timeString)
+          write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           myName=trim(alarmName(1:index(alarmName,'--')-1))
@@ -1451,7 +1455,7 @@ module toplevel_component
             endif
           enddo
 
-          write(message,'(A)') trim(name)//' '//trim(timeString)//' '//trim(myName)//' ->'
+          write(message,'(A)') trim(timeString)//' '//trim(myName)//' ->'
           if (trim(cplName) /= 'link') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
@@ -1487,25 +1491,23 @@ module toplevel_component
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(name)//' '//trim(timeString)//' calling '//trim(cplCompNames(l))
+          write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-          !! >@todo manual fix: if pelagic_benthic coupler, then need getm and constant as import
-          if (l==3)  then ! pelagic_benthic coupler
-            call ESMF_CplCompRun(cplCompList(1), importState=exportStates(4), &
-              exportState=impState, clock=clock, rc=rc)
-            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-            call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
-              exportState=impState, clock=clock, rc=rc)
-            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-            
-            call MOSSCO_StateLog(impState, rc=rc)
+          !!>@ todo manual fix for pb coupler
+          if (l==3)  then ! pelagic_benthic coupler from constant + getm
+             call ESMF_CplCompRun(cplCompList(1), importState=exportStates(3), &
+               exportState=impState, clock=clock, rc=rc)
+             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+             call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+               exportState=impState, clock=clock, rc=rc)
+             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           endif
-          
 
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
             exportState=expState, clock=clock, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_LogFlush()
 
         enddo
       enddo
@@ -1608,6 +1610,7 @@ module toplevel_component
           call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
             exportState=exportStates(i), clock=clock, phase=phase, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          call ESMF_LogFlush()
         enddo
 
         call ESMF_ClockGet(childClock, currTime=time, rc=rc)

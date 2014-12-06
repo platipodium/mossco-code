@@ -4,15 +4,18 @@ dependencies:
     - component: getm
       grid: temperature_in_water
   - erosed: 
-    - getm
-    - fabm_pelagic
-    - simplewave
+    - component: getm
+      grid: temperature_at_soil_surface
+  - erosed: fabm_pelagic
   - simplewave:
     - component: getm
-      grid: temperature_in_water
-    - clm_netcdf
-  - benthic_pelagic_coupler: fabm_pelagic
-  - benthos: erosed
+      grid: temperature_at_soil_surface
+#  - benthic_pelagic_coupler: fabm_pelagic
+  - benthos:
+    - component: getm
+      grid: temperature_at_soil_surface 
+
+# todo find a mechansim to feed constant/getm into pelagic_benthic_coupler
 
 coupling:
   - components: 
