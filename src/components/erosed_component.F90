@@ -184,6 +184,8 @@ contains
     type(ESMF_FieldBundle)                    :: upward_flux_bundle,downward_flux_bundle,fieldBundle
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     character(len=ESMF_MAXSTR)                :: foreignGridFieldName
+    
+    type(ESMF_INDEX_Flag)   :: indexFlag
 
     integer , allocatable  :: maxIndex(:)
     integer                :: rank
@@ -202,6 +204,8 @@ contains
     type(ESMF_Clock)       :: clock
     type(ESMF_Time)        :: currTime
     logical                :: clockIsPresent
+    
+    integer(ESMF_KIND_I4)  :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
 
 
 
@@ -218,8 +222,8 @@ contains
                                 !  0: no fluff layer (default)
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
-   namelist /benthic/    anymud       != .true.
-
+    namelist /benthic/    anymud       != .true.
+ 
 
 
 
@@ -253,73 +257,73 @@ contains
     if (trim(foreignGridFieldName)=='none') then
      inum=1
      jnum = 1
-     ! call ESMF_ArraySpecSet(array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+     ! call ESMF_ArraySpecSet(array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=localrc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
                    maxIndex=(/inum,jnum/), &
                    regDecomp=(/1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
                    indexflag=ESMF_INDEX_GLOBAL,  &
-                   name="erosed grid", &
+                   name="benthos grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridAddCoord(grid, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+                   coorddep2=(/2/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_GridAddCoord(grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) then
-       call ESMF_StatePrint (importstate)
-       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      end if
-      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      write(message,*) trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      if (rank<2) then
-        write(message,*) 'foreign grid must be of at least rank >= 2'
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank<2 .or. rank>3) then
+        write(message,*) 'foreign grid must be of rank 2 or 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      end if
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+      end if 
 
-      allocate(maxIndex(rank))
-      call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-               computationalCount=maxIndex,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      inum=maxIndex(1)
-      jnum=maxIndex(2)
-      if (rank ==2) then
-        !grid = foreign_Grid    !> ToDO discuss copy or link for grid
-        grid = ESMF_GridCreate(foreign_grid,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      elseif (rank == 3) then
-         grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
-                   maxIndex=maxIndex(1:2), &
+      if (rank==2) then 
+        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            
+        inum=ubnd2(1)-lbnd2(1)+1
+        jnum=ubnd2(2)-lbnd2(2)+1     
+      endif
+      
+      if (rank==3) then 
+        write(message,*) 'foreign grid of rank 3 not yet implemented'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+
+        call ESMF_FieldGet(field, grid=foreign_grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            
+        inum=ubnd3(1)-lbnd3(1)+1
+        jnum=ubnd3(2)-lbnd3(2)+1  
+        
+        grid = ESMF_GridCreateNoPeriDim(minIndex=lbnd3(1:2), &
+                   maxIndex=ubnd3(1:2), &
                    regDecomp=(/1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
                    indexflag=ESMF_INDEX_GLOBAL,  &
-                   name="erosed grid", &
+                   name="benthos grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=rc)
-      !  numlayers=maxIndex(3)
-        call ESMF_GridAddCoord(grid, rc=rc)   !> ToDO we need to copy the coordiane from foreign Grid.
-      else
-        write(message,*) 'foreign grid must be of rank = 3'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      end if
-      deallocate(maxIndex)
-    end if
-
-    !> create grid
-
-!     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
-!           coordSys= ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,&
-!            name="Erosed grid",  coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
- !    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!
-  !   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-
-
+                   coorddep2=(/2/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridAddCoord(grid, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
+          
+      endif
+    endif
 
 
   inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
