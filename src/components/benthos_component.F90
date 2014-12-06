@@ -139,7 +139,7 @@ contains
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     
     integer , allocatable :: maxIndex(:)
-    integer               :: rank
+    integer               :: rank, localrc
 
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
@@ -155,10 +155,11 @@ contains
     
     rc = ESMF_SUCCESS
      
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! get/set grid:
     !! rely on field with name foreignGridFieldName given as attribute and field
@@ -166,14 +167,14 @@ contains
     !! and just take the same grid&distgrid.
     
     call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
-           value=foreignGridFieldName, defaultValue='none',rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+           value=foreignGridFieldName, defaultValue='none',rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (trim(foreignGridFieldName)=='none') then
      inum=1
      jnum = 1
-     ! call ESMF_ArraySpecSet(array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+     ! call ESMF_ArraySpecSet(array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=localrc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
                    maxIndex=(/inum,jnum/), &
                    regDecomp=(/1,1/), &
@@ -181,19 +182,19 @@ contains
                    indexflag=ESMF_INDEX_GLOBAL,  &
                    name="benthos grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridAddCoord(grid, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+                   coorddep2=(/2/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_GridAddCoord(grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, grid=foreign_grid, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (rank<2) then
         write(message,*) 'foreign grid must be of at least rank >= 2'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       end if 
       
       allocate(maxIndex(rank))
@@ -201,13 +202,13 @@ contains
         jnum=maxIndex(2)
       if (rank ==2) then 
         !grid = foreign_Grid    !> ToDO discuss copy or link for grid 
-        grid = ESMF_GridCreate(foreign_grid,rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        grid = ESMF_GridCreate(foreign_grid,rc=localrc)
+       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       elseif (rank == 3) then
  
         call ESMF_GridGet(foreign_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-               computationalCount=maxIndex,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+               computationalCount=maxIndex,rc=localrc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
           grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
                    maxIndex=maxIndex(1:2), &
                    regDecomp=(/1,1/), &
@@ -215,11 +216,11 @@ contains
                    indexflag=ESMF_INDEX_GLOBAL,  &
                    name="benthos grid", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=rc)
+                   coorddep2=(/2/),rc=localrc)
         inum=maxIndex(1)
         jnum=maxIndex(2)
       !  numlayers=maxIndex(3)
-        call ESMF_GridAddCoord(grid, rc=rc)   !> ToDO we need to copy the coordiane from foreign Grid.
+        call ESMF_GridAddCoord(grid, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
         deallocate(maxIndex)
       else
         write(message,*) 'foreign grid must be of rank = 2 or 3'
@@ -231,20 +232,17 @@ contains
     !> create grid
    ! grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
  !     regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-   !   name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8, rc=rc)
-   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-   ! call ESMF_GridAddCoord(grid, rc=rc)
-   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   !   name="Benthos grid",coordTypeKind=ESMF_TYPEKIND_R8, rc=localrc)
+   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+   ! call ESMF_GridAddCoord(grid, rc=localrc)
+   ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
 
     !> Create distgrid for arrays
    !   distgrid =  ESMF_DistGridCreate(minIndex=(/inum,jnum/), maxIndex=(/inum,jnum/), &
-   !   indexflag=ESMF_INDEX_GLOBAL, rc=rc)
-       call ESMF_GridGet (grid, DistGrid= DistGrid, rc=rc)
-
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
- 
+   !   indexflag=ESMF_INDEX_GLOBAL, rc=localrc)
+    call ESMF_GridGet(grid, distGrid=distGrid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     nlev=1
 
@@ -263,7 +261,6 @@ contains
     write (*,*)
 #endif
 
-
    !> create export fields
     allocate(Effect_of_MPB_on_sediment_erodibility_at_bottom(inum,jnum))
     Effect_of_MPB_on_sediment_erodibility_at_bottom => Micro%ErodibilityEffect
@@ -274,15 +271,13 @@ contains
 #endif
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
-      farray=Effect_of_MPB_on_sediment_erodibility_at_bottom,rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farray=Effect_of_MPB_on_sediment_erodibility_at_bottom,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     Microphytobenthos_erodibility = ESMF_FieldCreate(grid, array, &
       name="Effect_of_MPB_on_sediment_erodibility_at_soil_surface", &
-      staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(Effect_of_MPB_on_critical_bed_shearstress(inum,jnum))
 
@@ -294,14 +289,12 @@ contains
 #endif
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
-      farray=Effect_of_MPB_on_critical_bed_shearstress, rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farray=Effect_of_MPB_on_critical_bed_shearstress, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     Microphytobenthos_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface", rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      name="Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate( Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(inum,jnum))
 
@@ -313,14 +306,12 @@ contains
 #endif
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL,  &
-      farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface", rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      name="Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(Effect_of_Mbalthica_on_critical_bed_shearstress(inum,jnum))
 
@@ -332,21 +323,25 @@ contains
 #endif
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=ESMF_INDEX_GLOBAL, &
-      farray=Effect_of_Mbalthica_on_critical_bed_shearstress, rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      farray=Effect_of_Mbalthica_on_critical_bed_shearstress, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     Macrofauna_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface", rc=rc)
-
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      name="Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> set export state
-    call ESMF_StateAdd(exportState,(/Microphytobenthos_erodibility/),rc=rc)
-    call ESMF_StateAdd(exportState,(/Microphytobenthos_critical_bed_shearstress/),rc=rc)
+    call ESMF_StateAdd(exportState,(/Microphytobenthos_erodibility/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateAdd(exportState,(/Macrofauna_erodibility/),rc=rc)
-    call ESMF_StateAdd(exportState,(/Macrofauna_critical_bed_shearstress/),rc=rc)
+    call ESMF_StateAdd(exportState,(/Microphytobenthos_critical_bed_shearstress/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateAdd(exportState,(/Macrofauna_erodibility/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateAdd(exportState,(/Macrofauna_critical_bed_shearstress/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
     call ESMF_FieldPrint (Microphytobenthos_erodibility)
@@ -362,8 +357,8 @@ contains
       write (*,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
 #endif
 
-    call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
 
@@ -381,29 +376,33 @@ contains
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
-     integer               :: petCount, localPet
+    integer               :: petCount, localPet
     character(ESMF_MAXSTR):: name, message, timeString
     logical               :: clockIsPresent
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_Clock)      :: clock
+    
+    integer :: localrc
+    
+    rc=ESMF_SUCCESS
      
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
 
 
     call ESMF_ClockGet(clock,currTime=currTime, AdvanceCount=advancecount,&
-      runTimeStepCount=runtimestepcount,timeStep=timestep, rc=rc)
+      runTimeStepCount=runtimestepcount,timeStep=timestep, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=rc)
+    call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
 
 
 #if 0
     ! get import state
     if (forcing_from_coupler) then
-      call ESMF_StateGet(importState, "temperature_in_water", water_temperature_field, rc=rc)
-      call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=rc)
+      call ESMF_StateGet(importState, "temperature_in_water", water_temperature_field, rc=localrc)
+      call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=localrc)
       zerod%temp = water_temperature(1,1,1)
     end if
 
@@ -436,14 +435,14 @@ contains
     write (*,*)
 #endif
 
-    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)    
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)    
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)    
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)    
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
@@ -461,10 +460,14 @@ contains
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+    
+    integer :: localrc
+    
+    rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
 
    
     !! Here comes your own finalization code
@@ -472,11 +475,11 @@ contains
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
     !! 2. Deallocate all your model's internal allocated memory    
 
-    call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_ClockDestroy(clock, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     
     call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
   end subroutine Finalize
