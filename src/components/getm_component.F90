@@ -339,10 +339,12 @@ module getm_component
       type(ESMF_Field)          ,dimension(:),allocatable :: fieldList_ws,fieldList_conc
       type(ESMF_FieldStatus_Flag)                         :: status
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
+      character(len=ESMF_MAXSTR)                          :: itemName
       integer                   ,dimension(:),allocatable :: transportFieldCountList,namelenList
       integer                                             :: transportFieldCount,itemCount
       integer                                             :: i,ii,n
       character(len=*),parameter :: ws_suffix="_z_velocity_in_water"
+      character(len=*),parameter :: conc_suffix="_in_water"
 
       call MOSSCO_GridCompEntryLog(gridComp)
 
@@ -386,13 +388,19 @@ module getm_component
                if (transportFieldCountList(i) .eq. 0) cycle
                if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                   call ESMF_StateGet(importState,itemNameList(i),fieldList_ws(n))
-                  call ESMF_StateGet(importState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldList_conc(n))
+                  itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
+                  call ESMF_StateGet(importState,itemName,fieldList_conc(n),rc=rc)
+                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+                  call ESMF_LogWrite(' will transport field '//trim(itemName),ESMF_LOGMSG_INFO)
                   n = n + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-                  call ESMF_StateGet(importState,itemNameList(i)(:namelenList(i)-len_trim(ws_suffix)),fieldBundle)
+                  itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
+                  call ESMF_StateGet(importState,itemName,fieldBundle)
                   do ii=1,transportFieldCountList(i)
                      call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n))
-                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n))
+                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n),rc=rc)
+                     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+                     call ESMF_LogWrite(' will transport fieldbundle '//trim(itemName),ESMF_LOGMSG_INFO)
                      n = n + 1
                   end do
                end if
@@ -421,14 +429,16 @@ module getm_component
                                                ESMF_INDEX_DELOCAL,                &
                                                staggerloc=ESMF_STAGGERLOC_CENTER, &
                                                totalLWidth=(/HALO,HALO,1/),       &
-                                               totalUWidth=(/HALO,HALO,0/))
+                                               totalUWidth=(/HALO,HALO,0/),rc=rc)
+                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
 !                 Coupler copied completed fields from fabm_pelagic,
 !                 because "foreignGridField" was provided to fabm_pelagic
 !                 (coupler checks whether temperature field in fabm_pelagic's
 !                  importState is empty).
 !                 The field MUST include the HALO zones and k=0 !!!
-                  call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr)
+                  call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr,rc=rc)
+                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
                end if
 
                call ESMF_FieldGet(fieldList_conc(n),status=status)
@@ -440,9 +450,11 @@ module getm_component
                                                ESMF_INDEX_DELOCAL,                &
                                                staggerloc=ESMF_STAGGERLOC_CENTER, &
                                                totalLWidth=(/HALO,HALO,1/),       &
-                                               totalUWidth=(/HALO,HALO,0/))
+                                               totalUWidth=(/HALO,HALO,0/),rc=rc)
+                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
-                  call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr)
+                  call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr,rc=rc)
+                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
                end if
 
             end do
