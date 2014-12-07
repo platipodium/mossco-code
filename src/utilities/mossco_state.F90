@@ -259,9 +259,76 @@ contains
     call ESMF_StateGet(state, name=name, rc=localRc)
     if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    write(message,'(A)')  trim(name)//' attribute '
-    call MOSSCO_StateAttributeString(state, message)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)     
+    call ESMF_AttributeGet(state, count=count, rc=localrc)
+    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    do i=1, count
+      call ESMF_AttributeGet(state, attributeIndex=i , name=attributeName, rc=localrc)
+      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      
+      write(message,'(A)')  trim(name)//' attribute '//trim(attributeName)//'='
+      
+      call ESMF_AttributeGet(state, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
+      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+			if (typekind==ESMF_TYPEKIND_Logical) then
+			  allocate(logicalValueList(itemCount))
+				call ESMF_AttributeGet(state, name=attributeName, valueList=logicalValueList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+        enddo
+        deallocate(logicalValueList)
+			elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+			  allocate(characterValueList(itemCount))
+				call ESMF_AttributeGet(state, name=attributeName, valueList=characterValueList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
+          write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
+          do j=2, itemCount-1
+            write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
+          enddo
+          deallocate(characterValueList)
+        endif
+			elseif (typekind==ESMF_TYPEKIND_I4) then
+			  allocate(integer4ValueList(itemCount))
+				call ESMF_AttributeGet(state, name=attributeName, valueList=integer4ValueList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+        enddo
+        deallocate(integer4ValueList)
+			elseif (typekind==ESMF_TYPEKIND_I8) then
+			  allocate(integer8ValueList(itemCount))
+				call ESMF_AttributeGet(state, name=attributeName, valueList=integer8ValueList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+        enddo
+        deallocate(integer8ValueList)
+			elseif (typekind==ESMF_TYPEKIND_R4) then
+			  allocate(real4ValueList(itemCount))
+				call ESMF_AttributeGet(state, name=attributeName, valueList=real4ValueList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        write(message,'(A,G8.2)') trim(message)//' ',real4ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,G8.2)') trim(message)//', ',real4ValueList(j)
+        enddo
+        deallocate(real4ValueList)
+			elseif (typekind==ESMF_TYPEKIND_R8) then
+			  allocate(real8ValueList(itemCount))
+				call ESMF_AttributeGet(state, name=attributeName, valueList=real8ValueList, rc=localrc)
+        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        write(message,'(A,G8.2)') trim(message)//' ',real8ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,G8.2)') trim(message)//', ',real8ValueList(j)
+        enddo
+        deallocate(real8ValueList)
+			endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)     
+    enddo
     
     call ESMF_StateGet(state, itemCount=itemCount, rc=localRc)
     if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -372,7 +439,12 @@ contains
       if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_GridGet(grid, name=geomName, rc=localrc)  
       if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-     	write(message,'(A)') trim(message)//' '//trim(geomName)
+      
+      if (len_trim(message) + len_trim(geomName) + 1 <= len(message)) then
+     	  write(message,'(A)') trim(message)//' '//trim(geomName)
+     	else 
+     	  message(len_trim(message)+1:len(message)) = ' '//geomName(1:len(message)-len_trim(message)-1)
+     	endif
     elseif (geomtype==ESMF_GEOMTYPE_MESH) then
      	write(message,'(A)') trim(message)//' mesh'
     elseif (geomtype==ESMF_GEOMTYPE_LOCSTREAM) then
@@ -409,97 +481,99 @@ contains
   end subroutine MOSSCO_FieldString
   
     
-  subroutine MOSSCO_StateAttributeString(state, message , length, rc) 
-
-    use mossco_strings
-    implicit none
-    
-    type(ESMF_State), intent(in)                    :: state
-    character(len=ESMF_MAXSTR), intent(inout)      :: message
-    integer(ESMF_KIND_I4), intent(inout), optional :: length
-    integer(ESMF_KIND_I4), intent(out), optional   :: rc
-
-    type(ESMF_TypeKind_Flag)        :: typeKind
-    logical, allocatable            :: logicalValueList(:)
-    real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
-    real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
-    integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
-    integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
-    character(len=ESMF_MAXSTR), allocatable :: characterValueList(:)
-    
-    integer(ESMF_KIND_I4)   :: rank, localrc, count, i, j, itemCount
-    character(ESMF_MAXSTR)  :: attributeName
-      
-    call ESMF_AttributeGet(state, count=count, rc=localrc)
-    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    do i=1, count
-      call ESMF_AttributeGet(state, attributeIndex=1 , name=attributeName, rc=localrc)
-      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      write(message,'(A)')  trim(message)//' '//trim(attributeName)//':'
-      
-      call ESMF_AttributeGet(state, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
-      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-			if (typekind==ESMF_TYPEKIND_Logical) then
-			  allocate(logicalValueList(itemCount))
-				call ESMF_AttributeGet(state, name=attributeName, valueList=logicalValueList, rc=localrc)
-        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
-        do j=2, itemCount-1
-          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
-        enddo
-        deallocate(logicalValueList)
-			elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
-			  allocate(characterValueList(itemCount))
-				call ESMF_AttributeGet(state, name=attributeName, valueList=characterValueList, rc=localrc)
-        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
-          write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
-          do j=2, itemCount-1
-            write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
-          enddo
-          deallocate(characterValueList)
-        endif
-			elseif (typekind==ESMF_TYPEKIND_I4) then
-			  allocate(integer4ValueList(itemCount))
-				call ESMF_AttributeGet(state, name=attributeName, valueList=integer4ValueList, rc=localrc)
-        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
-        do j=2, itemCount-1
-          write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
-        enddo
-        deallocate(integer4ValueList)
-			elseif (typekind==ESMF_TYPEKIND_I8) then
-			  allocate(integer8ValueList(itemCount))
-				call ESMF_AttributeGet(state, name=attributeName, valueList=integer8ValueList, rc=localrc)
-        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
-        do j=2, itemCount-1
-          write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
-        enddo
-        deallocate(integer8ValueList)
-			elseif (typekind==ESMF_TYPEKIND_R4) then
-			  allocate(real4ValueList(itemCount))
-				call ESMF_AttributeGet(state, name=attributeName, valueList=real4ValueList, rc=localrc)
-        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        write(message,'(A,G8.2)') trim(message)//' ',real4ValueList(1)
-        do j=2, itemCount-1
-          write(message,'(A,G8.2)') trim(message)//', ',real4ValueList(j)
-        enddo
-        deallocate(real4ValueList)
-			elseif (typekind==ESMF_TYPEKIND_R8) then
-			  allocate(real8ValueList(itemCount))
-				call ESMF_AttributeGet(state, name=attributeName, valueList=real8ValueList, rc=localrc)
-        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        write(message,'(A,G8.2)') trim(message)//' ',real8ValueList(1)
-        do j=2, itemCount-1
-          write(message,'(A,G8.2)') trim(message)//', ',real8ValueList(j)
-        enddo
-        deallocate(real8ValueList)
-			endif
-    enddo
-    
-    end subroutine MOSSCO_StateAttributeString
-      
+!  subroutine MOSSCO_StateAttributeString(state, message , length, rc) 
+!
+!    use mossco_strings
+!    implicit none
+!    
+!    type(ESMF_State), intent(in)                    :: state
+!    character(len=ESMF_MAXSTR), intent(inout)      :: message
+!    integer(ESMF_KIND_I4), intent(inout), optional :: length
+!    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+!
+!    type(ESMF_TypeKind_Flag)        :: typeKind
+!    logical, allocatable            :: logicalValueList(:)
+!    real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
+!    real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
+!    integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
+!    integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
+!    character(len=ESMF_MAXSTR), allocatable :: characterValueList(:)
+!    
+!    integer(ESMF_KIND_I4)   :: rank, localrc, count, i, j, itemCount
+!    character(ESMF_MAXSTR)  :: attributeName
+!      
+!    call ESMF_AttributeGet(state, count=count, rc=localrc)
+!    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+!
+!    do i=1, count
+!      call ESMF_AttributeGet(state, attributeIndex=count-1 , name=attributeName, rc=localrc)
+!      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!      
+!      if (len_trim(message) + len_trim(attributeName) + 2 <= len(message)) then
+!        write(message,'(A)')  trim(message)//' '//trim(attributeName)//':'
+!      
+!      call ESMF_AttributeGet(state, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
+!      if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!			if (typekind==ESMF_TYPEKIND_Logical) then
+!			  allocate(logicalValueList(itemCount))
+!				call ESMF_AttributeGet(state, name=attributeName, valueList=logicalValueList, rc=localrc)
+!        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+!        do j=2, itemCount-1
+!          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+!        enddo
+!        deallocate(logicalValueList)
+!			elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+!			  allocate(characterValueList(itemCount))
+!				call ESMF_AttributeGet(state, name=attributeName, valueList=characterValueList, rc=localrc)
+!        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
+!          write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
+!          do j=2, itemCount-1
+!            write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
+!          enddo
+!          deallocate(characterValueList)
+!        endif
+!			elseif (typekind==ESMF_TYPEKIND_I4) then
+!			  allocate(integer4ValueList(itemCount))
+!				call ESMF_AttributeGet(state, name=attributeName, valueList=integer4ValueList, rc=localrc)
+!        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+!        do j=2, itemCount-1
+!          write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+!        enddo
+!        deallocate(integer4ValueList)
+!			elseif (typekind==ESMF_TYPEKIND_I8) then
+!			  allocate(integer8ValueList(itemCount))
+!				call ESMF_AttributeGet(state, name=attributeName, valueList=integer8ValueList, rc=localrc)
+!        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+!        do j=2, itemCount-1
+!          write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+!        enddo
+!        deallocate(integer8ValueList)
+!			elseif (typekind==ESMF_TYPEKIND_R4) then
+!			  allocate(real4ValueList(itemCount))
+!				call ESMF_AttributeGet(state, name=attributeName, valueList=real4ValueList, rc=localrc)
+!        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        write(message,'(A,G8.2)') trim(message)//' ',real4ValueList(1)
+!        do j=2, itemCount-1
+!          write(message,'(A,G8.2)') trim(message)//', ',real4ValueList(j)
+!        enddo
+!        deallocate(real4ValueList)
+!			elseif (typekind==ESMF_TYPEKIND_R8) then
+!			  allocate(real8ValueList(itemCount))
+!				call ESMF_AttributeGet(state, name=attributeName, valueList=real8ValueList, rc=localrc)
+!        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!        write(message,'(A,G8.2)') trim(message)//' ',real8ValueList(1)
+!        do j=2, itemCount-1
+!          write(message,'(A,G8.2)') trim(message)//', ',real8ValueList(j)
+!        enddo
+!        deallocate(real8ValueList)
+!			endif
+!    enddo
+!    
+!    end subroutine MOSSCO_StateAttributeString
+!      
     
 end module mossco_state
