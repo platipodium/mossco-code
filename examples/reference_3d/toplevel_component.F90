@@ -311,6 +311,12 @@ module toplevel_component
         exportState=exportStates(2), clock=clock, phase=1, rc=rc)
     endif
 
+    !! Manual fix, add pelagic states to getm import
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(2), &
+      exportState=importStates(1), clock=clock, rc=rc)
+    call ESMF_LogFlush()
+
+
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
         write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
