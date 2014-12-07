@@ -1516,6 +1516,12 @@ module toplevel_component
              if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
           endif
 
+	        call MOSSCO_StateLog(impState,rc)
+	        call ESMF_LogFlush()
+	        call MOSSCO_StateLog(expState,rc)
+	        call ESMF_LogFlush()
+
+
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
             exportState=expState, clock=clock, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
