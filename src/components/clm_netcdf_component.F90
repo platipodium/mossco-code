@@ -58,7 +58,7 @@ module clm_netcdf_component
       integer                     :: ndims      !< number of dimensions
       real(ESMF_KIND_R8), pointer :: array(:,:) !< array for atm. variable
       type(ESMF_Field)            :: field      !< ESMF field for atm. variable
-    endtype atm_var
+    end type atm_var
 
     type(atm_var), allocatable  :: var(:)
     
@@ -163,43 +163,33 @@ module clm_netcdf_component
       character (len=2)           :: label2
       character (len=3)           :: label3
      
-    character(len=ESMF_MAXSTR)    :: timeString, message, name
+    character(len=ESMF_MAXSTR)    :: timeString, message, name, configFileName
     logical                       :: clockIsPresent
     type(ESMF_Clock)              :: clock
     type(ESMF_Time)               :: currTime
-    integer(ESMF_KIND_I4)         :: localPet, petCount
+    integer(ESMF_KIND_I4)         :: localPet, petCount, localrc
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, localPet=localPet, petCount=petCount, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    !> Load config file for atmospheric component
-    !config = ESMF_ConfigCreate(rc=rc)
-    ! if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    !call ESMF_ConfigLoadFile(config, "atmos.rc", rc=rc)
-    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    !call ESMF_ConfigGetAttribute(config, iprocs, label='iprocs:', rc=rc)
-    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    !call ESMF_ConfigGetAttribute(config, jprocs, label='jprocs:', rc=rc)
-    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    !call ESMF_ConfigDestroy(config, rc=rc)
-    !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompGet(gridComp, clock=clock, localPet=localPet, petCount=petCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     iprocs = petCount
     jprocs = 1
 
+    ! Load config file for variable selection
+    configFileName=trim(name)//'.rc'
+    config = ESMF_ConfigCreate(rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-! Load config file for variable selection
-    config = ESMF_ConfigCreate(rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ConfigLoadFile(config, "config.rc", rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ConfigGetAttribute(config, nvar, label='nvar:', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ConfigLoadFile(config, configFilename, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ConfigGetAttribute(config, nvar, label='nvar:', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate (lvarid(nvar))
     allocate ( vname(nvar))
@@ -212,22 +202,22 @@ module clm_netcdf_component
  
       if ( ind < 10 ) then
           write(label2,"(i1,a)") ind,':'
-          call ESMF_ConfigFindLabel(config, label2, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_ConfigFindLabel(config, label2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
           write(label3,"(i2,a)") ind,':'
-          call ESMF_ConfigFindLabel(config, label3, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_ConfigFindLabel(config, label3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call ESMF_ConfigGetAttribute(config, vname(ind), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigGetAttribute(config, active(ind), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigGetAttribute(config, vscale(ind), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ConfigGetAttribute(config, ndims(ind), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_ConfigGetAttribute(config, vname(ind), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ConfigGetAttribute(config, active(ind), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ConfigGetAttribute(config, vscale(ind), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ConfigGetAttribute(config, ndims(ind), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if ( localPet == 0 .and. active(ind) == 1 ) then
         ! print *,"ind,name,ndims=",ind,vname(ind),ndims(ind)
@@ -240,14 +230,14 @@ module clm_netcdf_component
 ! Create grid and retrieve local loop boundaries
     grid = ESMF_GridCreate(filename="clm_grid.nc",fileFormat=ESMF_FILEFORMAT_SCRIP, &
                              regDecomp=(/iprocs,jprocs/),            &
-                             isSphere=.false., rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridAddCoord(grid, rc=rc)
+                             isSphere=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridAddCoord(grid, rc=localrc)
     !write(0,*) 'Hurray'
     call ESMF_GridGetCoordBounds(grid, coordDim=1, localDE=0, &
                            computationalLBound=lbnd, &
-                           computationalUBound=ubnd, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+                           computationalUBound=ubnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !write(0,*) 'Hurray'
 
     ib = lbnd(1)
@@ -270,8 +260,8 @@ module clm_netcdf_component
         var(ind)%ndims = ndims (var(ind)%id)
         allocate ( var(ind)%array(ib:ie,jb:je) )
         var(ind)%field = ESMF_FieldCreate(grid, var(ind)%array &
-                       , name=var(ind)%nam, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+                       , name=var(ind)%nam, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
 
 !xxxxxxxxxxxxxxxx hier gehts weiter
@@ -285,41 +275,41 @@ module clm_netcdf_component
       allocate ( atmos_R(ib:ie,jb:je) )
 
 ! Create atmospheric fields and have it create the corresponding array internally
-      P_field = ESMF_FieldCreate(grid, atmos_P, name="air_pressure_at_sea_level", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      U_field = ESMF_FieldCreate(grid, atmos_U, name="wind_x_velocity_at_10m", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      V_field = ESMF_FieldCreate(grid, atmos_V, name="wind_y_velocity_at_10m", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      T_field = ESMF_FieldCreate(grid, atmos_T, name="air_temperature_at_10m", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      Q_field = ESMF_FieldCreate(grid, atmos_Q, name="HUM", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      C_field = ESMF_FieldCreate(grid, atmos_C, name="CC", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      R_field = ESMF_FieldCreate(grid, atmos_R, name="RR", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      P_field = ESMF_FieldCreate(grid, atmos_P, name="air_pressure_at_sea_level", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      U_field = ESMF_FieldCreate(grid, atmos_U, name="wind_x_velocity_at_10m", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      V_field = ESMF_FieldCreate(grid, atmos_V, name="wind_y_velocity_at_10m", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      T_field = ESMF_FieldCreate(grid, atmos_T, name="air_temperature_at_10m", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      Q_field = ESMF_FieldCreate(grid, atmos_Q, name="HUM", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      C_field = ESMF_FieldCreate(grid, atmos_C, name="CC", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      R_field = ESMF_FieldCreate(grid, atmos_R, name="RR", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Create decomposition field
-      de_field = ESMF_FieldCreate(grid, de, name="DE", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      de_field = ESMF_FieldCreate(grid, de, name="DE", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Setup timing
-      call ESMF_TimeSet(ref_time, yy=1948, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_TimeSet(ref_time, yy=1948, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       d_time = currTime - ref_time
-      call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Open netcdf file for atmospheric data
       call CLM_init(localPet, app_time_secs, lrc)
-      if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
 ! Find first record of data window
       call CLM_getrecord(localPet, app_time_secs, lrc)
-      if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
 ! Get initial values
       call CLM_getdata(atmos_P, ib, ie, jb, je, 'P')
@@ -333,50 +323,50 @@ module clm_netcdf_component
       de = localPet
 
 ! Fill export state
-      call ESMF_StateAdd(exportState, (/P_field/), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState, (/U_field/), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState, (/V_field/), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState, (/T_field/), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState, (/Q_field/), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState, (/C_field/), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState, (/R_field/), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState, (/P_field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState, (/U_field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState, (/V_field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState, (/T_field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState, (/Q_field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState, (/C_field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState, (/R_field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Output to netCDF files, seems to be broken on some systems.
 #ifdef DEBUG
       print_count = 1
-      call ESMF_FieldWrite(P_field, file="atmos_P.nc", timeslice=print_count, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(U_field, file="atmos_U.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(V_field, file="atmos_V.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldWrite(T_field, file="atmos_T.nc", timeslice=print_count, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(Q_field, file="atmos_Q.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(C_field, file="atmos_C.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(R_field, file="atmos_R.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldWrite(de_field, file="atmos_de.nc", rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldWrite(P_field, file="atmos_P.nc", timeslice=print_count, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(U_field, file="atmos_U.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(V_field, file="atmos_V.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldWrite(T_field, file="atmos_T.nc", timeslice=print_count, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(Q_field, file="atmos_Q.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(C_field, file="atmos_C.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(R_field, file="atmos_R.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldWrite(de_field, file="atmos_de.nc", rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
 ! Destroy field
-      call ESMF_FieldDestroy(de_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldDestroy(de_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       deallocate ( de )
 
-    call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     end subroutine InitializeP1
 
@@ -397,23 +387,26 @@ module clm_netcdf_component
       type(ESMF_TimeInterval)     :: d_time
       real(ESMF_KIND_R8)          :: app_time_secs
       
-      integer(ESMF_KIND_I4)       :: localPet, petCount
+      integer(ESMF_KIND_I4)       :: localPet, petCount, localrc
       character(len=ESMF_MAXSTR)  :: message, name, timeString
       type(ESMF_Time)             :: currTime, time, stopTime
       type(ESMF_Clock)            :: clock
 
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet, &
-      name=name, clock=clock, rc=rc)  
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=rc)
-    call ESMF_ClockSet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      name=name, clock=clock, rc=localrc)  
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(parentClock,currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)    
+
+    call ESMF_ClockSet(clock,currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ib = lbound(atmos_T,1)
     ie = ubound(atmos_T,1)
@@ -422,12 +415,12 @@ module clm_netcdf_component
 
     write(0,*) "Proc ",localPet," time=",trim(timestring)
     d_time = currTime - ref_time
-    call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Check data interval
-    call CLM_getrecord(localPet, app_time_secs, lrc)
-    if(lrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call CLM_getrecord(localPet, app_time_secs, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Get data interpolated in time
       call CLM_getdata(atmos_P, ib, ie, jb, je, 'P')
@@ -441,31 +434,31 @@ module clm_netcdf_component
 #ifdef debug
 ! Output to netCDF files, fails on some systems
       print_count = print_count + 1
-      call ESMF_FieldWrite(P_field, file="atmos_P.nc", timeslice=print_count, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(U_field, file="atmos_U.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(V_field, file="atmos_V.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldWrite(T_field, file="atmos_T.nc", timeslice=print_count, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(Q_field, file="atmos_Q.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(C_field, file="atmos_C.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-!     call ESMF_FieldWrite(R_field, file="atmos_R.nc", timeslice=print_count, rc=rc)
-!     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_FieldWrite(P_field, file="atmos_P.nc", timeslice=print_count, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(U_field, file="atmos_U.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(V_field, file="atmos_V.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldWrite(T_field, file="atmos_T.nc", timeslice=print_count, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(Q_field, file="atmos_Q.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(C_field, file="atmos_C.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     call ESMF_FieldWrite(R_field, file="atmos_R.nc", timeslice=print_count, rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
 
-    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc) 
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc) 
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
     call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
@@ -473,40 +466,39 @@ module clm_netcdf_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
 
-    subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
-      type(ESMF_GridComp)  :: gridComp
-      type(ESMF_State)     :: importState
-      type(ESMF_State)     :: exportState
-      type(ESMF_Clock)     :: parentClock
-      integer, intent(out) :: rc
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState
+    type(ESMF_State)     :: exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
 
-      integer              :: ierr
+    integer              :: ierr
      
-    integer(ESMF_KIND_I4)   :: petCount, localPet
+    integer(ESMF_KIND_I4)   :: petCount, localPet, localrc
     character(ESMF_MAXSTR)  :: name, message, timeString
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldDestroy(P_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldDestroy(U_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldDestroy(V_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldDestroy(T_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldDestroy(Q_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldDestroy(C_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_FieldDestroy(R_field, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_FieldDestroy(P_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldDestroy(U_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldDestroy(V_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldDestroy(T_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldDestroy(Q_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldDestroy(C_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldDestroy(R_field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       deallocate ( atmos_P )
       deallocate ( atmos_U )
@@ -516,18 +508,18 @@ module clm_netcdf_component
       deallocate ( atmos_C )
       deallocate ( atmos_R )
 
-    call ESMF_GridCompGet(gridComp, localPet=localPet, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompGet(gridComp, localPet=localPet, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call CLM_final(localPet)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockDestroy(clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_ClockDestroy(clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
 
