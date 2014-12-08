@@ -30,101 +30,247 @@ end interface
 contains
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_state_get_f2"
-  subroutine mossco_state_get_f2(state,name,fpointer,rc)
-    type(ESMF_State), intent(in)              :: state
-    character(len=*),dimension(:), intent(in) :: name
-    real(ESMF_KIND_R8),pointer,dimension(:,:), intent(inout) :: fpointer
-    integer,intent(out) :: rc
-        
-    type(ESMF_Field) :: field
-    integer(ESMF_KIND_I4) :: localrc,i
-    type(ESMF_StateItem_Flag) :: itemType
+#define ESMF_METHOD "mossco_state_get_f1"
+  subroutine mossco_state_get_f1(state, name, fpointer, lbnd, ubnd, rc)
 
-    rc = ESMF_SUCCESS
-    
-    do i=1,size(name)
-      call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc) ! this is really a call to StateGetInfo
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if(itemtype == ESMF_STATEITEM_NOTFOUND) then
-        continue
-      else
-         call ESMF_StateGet(state,trim(name(i)),field,rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         
-         call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         exit
-      end if
-    end do
-  end subroutine mossco_state_get_f2
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_state_get_f2"
-  subroutine mossco_state_get_f1(state,name,fpointer,rc)
-    type(ESMF_State), intent(in)              :: state
-    character(len=*),dimension(:), intent(in) :: name
+    type(ESMF_State), intent(in)                 :: state
+    character(len=*),dimension(:), intent(in)    :: name
     real(ESMF_KIND_R8),pointer,dimension(:), intent(inout) :: fpointer
-    integer,intent(out) :: rc
-        
-    type(ESMF_Field) :: field
-    integer(ESMF_KIND_I4) :: localrc,i
-    type(ESMF_StateItem_Flag) :: itemType
+    integer,intent(out), optional                :: rc    
+    integer(ESMF_KIND_I4), intent(out),optional  :: ubnd(1),lbnd(1)
 
-    rc = ESMF_SUCCESS
+    integer(ESMF_KIND_I4)         :: ubnd_(1),lbnd_(1), rc_
+    type(ESMF_Field)              :: field
+    type(ESMF_FieldBundle)        :: fieldBundle
+    integer(ESMF_KIND_I4)         :: localrc,i, fieldCount
+    type(ESMF_StateItem_Flag)     :: itemType
+    type(ESMF_Field), allocatable :: fieldList(:)
+    logical                       :: isPresent
+    character(len=ESMF_MAXSTR)    :: message  
     
-    do i=1,size(name)
-      call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc) ! this is really a call to StateGetInfo
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if(itemtype == ESMF_STATEITEM_NOTFOUND) then
-        continue
-      else
-         call ESMF_StateGet(state,trim(name(i)),field,rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-         call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         exit
-      end if
-    end do
-  end subroutine mossco_state_get_f1
-
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_state_get_f3"
-  subroutine mossco_state_get_f3(state,name,fpointer,lbnd,ubnd,rc)
-    type(ESMF_State) :: state
-    type(ESMF_Field) :: field
-    character(len=*),dimension(:) :: name
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: fpointer
-    integer(ESMF_KIND_I4) :: localrc,i
-    integer,intent(out), optional :: rc
-    !> output exclusive bounds as lbnd,ubnd
-    integer,intent(out),optional    :: ubnd(3),lbnd(3)
-    integer                         :: ubnd_(3),lbnd_(3)
-    type(ESMF_StateItem_Flag) :: itemType
-
-    rc = ESMF_SUCCESS
+    nullify(fpointer)
     
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if(itemType == ESMF_STATEITEM_NOTFOUND) then
-        continue
-      else
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       
+      if (itemtype == ESMF_STATEITEM_FIELDBUNDLE) then
+      
+         call ESMF_StateGet(state,trim(name(i)),fieldBundle,rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         if (.not.isPresent) cycle
+
+         allocate(fieldList(fieldCount))
+         
+         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         call ESMF_FieldBundleGet(fieldBundle, trim(name(i)), fieldList=fieldList, rc=localRc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         field=fieldList(1)
+         
+         deallocate(fieldList)
+                  
+      elseif (itemtype == ESMF_STATEITEM_FIELD) then
+
          call ESMF_StateGet(state,trim(name(i)),field,rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else 
+        cycle
+      endif
 
-         call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer, &
-                exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-         if (present(ubnd)) ubnd=ubnd_
-         if (present(lbnd)) lbnd=lbnd_
-
-         exit
-      end if
+      call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+      exit
     end do
+    
+    if (associated(fpointer)) then
+      write(message, '(A)') 'Found field '//trim(name(i))
+    else
+      write(message, '(A)') 'Did not find field '//trim(name(i))
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
+    if (present(rc)) then
+      rc = ESMF_SUCCESS
+      if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
+    endif
+    
+    if (present(ubnd)) ubnd=ubnd_
+    if (present(lbnd)) lbnd=lbnd_    
+    
+  end subroutine mossco_state_get_f1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_state_get_f2"
+  subroutine mossco_state_get_f2(state, name, fpointer, lbnd, ubnd, rc)
+
+    type(ESMF_State), intent(in)                 :: state
+    character(len=*),dimension(:), intent(in)    :: name
+    real(ESMF_KIND_R8),pointer,dimension(:,:), intent(inout) :: fpointer
+    integer,intent(out), optional                :: rc    
+    integer(ESMF_KIND_I4), intent(out),optional  :: ubnd(2),lbnd(2)
+
+    integer(ESMF_KIND_I4)         :: ubnd_(2),lbnd_(2), rc_
+    type(ESMF_Field)              :: field
+    type(ESMF_FieldBundle)        :: fieldBundle
+    integer(ESMF_KIND_I4)         :: localrc,i, fieldCount
+    type(ESMF_StateItem_Flag)     :: itemType
+    type(ESMF_Field), allocatable :: fieldList(:)
+    logical                       :: isPresent
+    character(len=ESMF_MAXSTR)    :: message  
+    type(ESMF_FieldStatus_Flag)   :: fieldStatus
+    
+    
+    nullify(fpointer)
+    
+    do i=1,size(name)
+      call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       
+      if (itemtype == ESMF_STATEITEM_FIELDBUNDLE) then
+      
+         call ESMF_StateGet(state,trim(name(i)),fieldBundle,rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         if (.not.isPresent) cycle
+
+         allocate(fieldList(fieldCount))
+         
+         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         call ESMF_FieldBundleGet(fieldBundle, trim(name(i)), fieldList=fieldList, rc=localRc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         field=fieldList(1)
+         
+         deallocate(fieldList)
+                  
+      elseif (itemtype == ESMF_STATEITEM_FIELD) then
+
+         call ESMF_StateGet(state,trim(name(i)),field,rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+      else 
+        cycle
+      endif
+
+      call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+      exit
+    end do
+    
+    if (associated(fpointer)) then
+      write(message, '(A)') 'Found field '//trim(name(i))
+    else
+      write(message, '(A)') 'Did not find field '//trim(name(i))
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
+    if (present(rc)) then
+      rc = ESMF_SUCCESS
+      if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
+    endif
+    
+    if (present(ubnd)) ubnd=ubnd_
+    if (present(lbnd)) lbnd=lbnd_    
+    
+  end subroutine mossco_state_get_f2
+  
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_state_get_f3"
+  subroutine mossco_state_get_f3(state, name, fpointer, lbnd, ubnd, rc)
+
+    type(ESMF_State), intent(in)                 :: state
+    character(len=*),dimension(:), intent(in)    :: name
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(inout) :: fpointer
+    integer,intent(out), optional                :: rc    
+    integer(ESMF_KIND_I4), intent(out),optional  :: ubnd(3),lbnd(3)
+
+    integer(ESMF_KIND_I4)         :: ubnd_(3),lbnd_(3), rc_
+    type(ESMF_Field)              :: field
+    type(ESMF_FieldBundle)        :: fieldBundle
+    integer(ESMF_KIND_I4)         :: localrc,i, fieldCount
+    type(ESMF_StateItem_Flag)     :: itemType
+    type(ESMF_Field), allocatable :: fieldList(:)
+    logical                       :: isPresent
+    character(len=ESMF_MAXSTR)    :: message  
+    type(ESMF_FieldStatus_Flag)   :: fieldStatus
+    
+    nullify(fpointer)
+    
+    do i=1,size(name)
+      call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       
+      if (itemtype == ESMF_STATEITEM_FIELDBUNDLE) then
+      
+         call ESMF_StateGet(state,trim(name(i)),fieldBundle,rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         if (.not.isPresent) cycle
+
+         allocate(fieldList(fieldCount))
+         
+         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+         call ESMF_FieldBundleGet(fieldBundle, trim(name(i)), fieldList=fieldList, rc=localRc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         field=fieldList(1)
+         
+         deallocate(fieldList)
+                  
+      elseif (itemtype == ESMF_STATEITEM_FIELD) then
+
+         call ESMF_StateGet(state,trim(name(i)),field,rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else 
+        cycle
+      endif
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         
+      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+      
+      call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+ 
+      exit
+    end do
+    
+    if (associated(fpointer)) then
+      write(message, '(A)') 'Found field '//trim(name(i))
+    else
+      write(message, '(A)') 'Did not find field '//trim(name(i))
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
+    if (present(rc)) then
+      rc = ESMF_SUCCESS
+      if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
+    endif
+    
+    if (present(ubnd)) ubnd=ubnd_
+    if (present(lbnd)) lbnd=lbnd_    
+    
   end subroutine mossco_state_get_f3
 
 
