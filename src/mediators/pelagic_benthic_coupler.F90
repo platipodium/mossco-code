@@ -112,27 +112,95 @@ module pelagic_benthic_coupler
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name, message, stateName, fieldName, geomName
     type(ESMF_Time)             :: currTime, stopTime
-    integer                     :: localrc 
+    integer                     :: localrc, i
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_STATEITEM_Flag), allocatable  :: itemTypeList(:)
+    type(ESMF_STATEITEM_Flag)   :: stateItem
+    type(ESMF_FIELDSTATUS_Flag) :: fieldStatus
+    type(ESMF_GEOMTYPE_Flag)    :: geomType
+    logical                     :: found = .false.
+    
+    type(ESMF_Grid)             :: grid
+    type(ESMF_Field)            :: field
+    integer(ESMF_KIND_I4)       :: rank, ubnd2(2), lbnd2(2), itemCount
+
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Search for suitable 2D field in export state (first found will be used)
+    call ESMF_StateGet(exportState, itemCount=itemCount, name=stateName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount == 0) then
+      write(message,'(A)') trim(name)//' needs at least one field in its export state '//trim(stateName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+    
+    allocate(itemNameList(itemCount), itemTypeList(itemCount))
+    call ESMF_StateGet(exportState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, itemCount
+      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
+      
+      call ESMF_StateGet(exportState, itemNameList(i), field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
+      
+      call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (geomType == ESMF_GEOMTYPE_GRID) then
+        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        
+        call ESMF_GridGet(grid, rank=rank, name=geomName, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (rank /= 2) cycle
+      else
+        write(message,'(A)') trim(name)//' not yet implemented obtaining geo information from non-grids. Skipped.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+      
+      write(message,'(A)') trim(name)//' uses grid '//trim(geomName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      
+      pelagic_bdy_grid=grid
+      found=.true.
+      exit
+          
+    enddo
+    
+    deallocate(itemNameList)
+    deallocate(itemTypeList)
 
     ! create exchange fields
     !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
     call ESMF_ArraySpecSet(pelagic_bdy_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    pelagic_bdy_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
-      maxIndex=(/1,1/), &
-      regDecomp=(/1,1/), &
-      coordSys=ESMF_COORDSYS_SPH_DEG, &
-      indexflag=ESMF_INDEX_GLOBAL,  &
-      name="sediment_surface_boundary_grid", &
-      coordTypeKind=ESMF_TYPEKIND_R8, &
-      coordDep1=(/1/),&
-      coorddep2=(/2/),rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    if (.not.found) then
+      pelagic_bdy_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
+        maxIndex=(/1,1/), &
+        regDecomp=(/1,1/), &
+        coordSys=ESMF_COORDSYS_SPH_DEG, &
+        indexflag=ESMF_INDEX_GLOBAL,  &
+        name="pelagic_benthic_coupler", &
+        coordTypeKind=ESMF_TYPEKIND_R8, &
+        coordDep1=(/1/),&
+        coorddep2=(/2/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     ! create omexdia_p-related fields, if not existing
     call create_required_fields(exportState,pelagic_bdy_grid)
