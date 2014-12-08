@@ -275,6 +275,13 @@ module pelagic_benthic_coupler
             'detN_in_water                  ', &
             'Detritus_Nitrogen_detN_in_water'/),DETN,lbnd=lbnd,ubnd=ubnd,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if ( ubnd(1)-lbnd(1)<0 .or. ubnd(2)-lbnd(2)<0 .or. ubnd(3)-lbnd(3)<0 ) then
+      write(message,'(A)')  trim(name)//' received zero-length data for detritus nitrogen'
+      write(0,*) 'lbnd = ', lbnd, 'ubnd = ', ubnd
+      
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)     
+    endif
 
     call mossco_state_get(importState,(/ &
             'detritus_z_velocity_in_water              ', &
@@ -289,9 +296,20 @@ module pelagic_benthic_coupler
       if (.not.associated(fac_sdet)) allocate(fac_sdet(1:inum,1:jnum))
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
       call mossco_state_get(importState,(/'Detritus_Carbon_detC_in_water'/),DETC,lbnd=Clbnd,ubnd=Cubnd,rc=localrc)
-      if (rc /= 0) then
+
+      if ( Cubnd(1)-Clbnd(1)<0 .or. Cubnd(2)-Clbnd(2)<0 .or. Cubnd(3)-Clbnd(3)<0 ) then
+        write(message,'(A)')  trim(name)//' received zero-length data for detritus carbon'
+        write(0,*) 'Clbnd = ', lbnd, 'Cubnd = ', ubnd
+      
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)     
+      endif
+
+      if (localrc /= 0) then
          CN_det=106.0_rk/16.0_rk
       else
+         write(0,*) Clbnd, Cubnd
+      
          CN_det = DETC(Clbnd(1):Cubnd(1),Clbnd(2):Cubnd(2),Clbnd(3))/ &
                     DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
@@ -300,15 +318,15 @@ module pelagic_benthic_coupler
 
       call mossco_state_get(exportState, &
         (/'fast_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
-      if (rc==0) ptr_f2 = fac_fdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      if (localrc==0) ptr_f2 = fac_fdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       call mossco_state_get(exportState, &
         (/'slow_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
-      if(rc==0) ptr_f2 = fac_sdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      if(localrc==0) ptr_f2 = fac_sdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
       call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
-      if (rc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
-      if (rc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
@@ -316,7 +334,7 @@ module pelagic_benthic_coupler
       call mossco_state_get(importState,(/ &
           'detP_in_water                    ', &
           'Detritus_Phosphorus_detP_in_water'/),DETP,lbnd=Plbnd,ubnd=Pubnd,rc=localrc)
-      if (rc == 0) then
+      if (localrc == 0) then
         ptr_f2 = DETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),plbnd(3))
       else
         ptr_f2 = 1.0d0/16.0d0 * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
@@ -326,7 +344,7 @@ module pelagic_benthic_coupler
       call mossco_state_get(importState,(/ &
               'detP_z_velocity_in_water                    ', &
               'Detritus_Phosphorus_detP_z_velocity_in_water'/),vDETP,rc=localrc)
-      if (rc==0) then
+      if (localrc==0) then
         ptr_f2 = sinking_factor * vDETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),Plbnd(3))
       else
         ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
@@ -375,7 +393,7 @@ module pelagic_benthic_coupler
           'DIP_in_water                                    ', &
           'phosphate_in_water                              ', &
           'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'/),DIP,lbnd=Plbnd,ubnd=Pubnd,rc=localrc)
-    if (rc /= 0) then
+    if (localrc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1))
         DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = 1.0_rk/16.0_rk * DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
         Plbnd(3)=1
