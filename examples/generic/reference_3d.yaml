@@ -1,5 +1,8 @@
 # configuration dependencies:
 dependencies:
+  - fabm_sediment:
+    - component: getm
+      grid: temperature_in_water
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
