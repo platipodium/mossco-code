@@ -184,22 +184,10 @@ module pelagic_benthic_coupler
     deallocate(itemNameList)
     deallocate(itemTypeList)
 
-    ! create exchange fields
-    !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
-    call ESMF_ArraySpecSet(pelagic_bdy_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
     if (.not.found) then
-      pelagic_bdy_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
-        maxIndex=(/1,1/), &
-        regDecomp=(/1,1/), &
-        coordSys=ESMF_COORDSYS_SPH_DEG, &
-        indexflag=ESMF_INDEX_GLOBAL,  &
-        name="pelagic_benthic_coupler", &
-        coordTypeKind=ESMF_TYPEKIND_R8, &
-        coordDep1=(/1/),&
-        coorddep2=(/2/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      write(message,'(A)') trim(name)//' found no suitable 2D field with grid in state '//trim(stateName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     ! create omexdia_p-related fields, if not existing
