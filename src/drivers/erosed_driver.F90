@@ -609,7 +609,7 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
                 call erosand_arguments%run()
 
                 call erosand_arguments%get(sour (l,nm), sink (l,nm) )
-                write (*,*) ' sour and sink 2D', sour (l,nm), sink (l,nm)
+ !               write (*,*) ' sour and sink 2D', sour (l,nm), sink (l,nm)
 
 
 #ifdef DEBUG
