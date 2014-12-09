@@ -36,8 +36,7 @@ exec: libmossco_util  liblinkcoupler libmossco_netcdf libmossco_getm libmossco_f
 
 $(TARGET): toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example $(MOSSCO_DIR)/examples/getm--fabm_pelagic--netcdf/$@"
-toplevel_component.o : toplevel_component.F90 liblinkcoupler libmossco_netcdf libmossco_getm libmossco_fabmpelagic libmossco_util libsolver
+	@echo "Created example $(PWD)/$@"
 
 # Other subsidiary targets that might not be needed, these should evetually
 # end up in some global Rules.make
