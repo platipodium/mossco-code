@@ -64,6 +64,7 @@ program main
      logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN,&
      vm=vm)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_LogSet(flush=.true.)
    write(message,'(A)')  trim(title)//" coupled system starts"
    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
    call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=rc)
