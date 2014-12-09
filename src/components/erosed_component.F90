@@ -674,7 +674,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (forcing_from_coupler) then
 
       !> get water depth
-      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),ptr_f2,localrc)
+      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),ptr_f2,rc=localrc)
       if (localrc == 0) then
         h0 = ptr_f2(1,1)
       else
@@ -684,9 +684,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
      ! call ESMF_StatePrint(importState)
 
       !> get u,v and use bottom layer value
-      call mossco_state_get(importState,(/'x_velocity_in_water'/),u,lbnd,ubnd,localrc)
+      call mossco_state_get(importState,(/'x_velocity_in_water'/),u,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'y_velocity_in_water'/),v,lbnd,ubnd,localrc)
+      call mossco_state_get(importState,(/'y_velocity_in_water'/),v,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'grid_height_in_water'/),grid_height,lbnd,ubnd,localrc)
 
