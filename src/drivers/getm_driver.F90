@@ -50,8 +50,7 @@
    subroutine preinit_model(dstr,tstr)
 !
 ! !DESCRIPTION:
-!  Reads the namelist and makes calls to the init functions of the
-!  various model components.
+!  Reads the namelist and initialises parallel runs.
 !
 ! !USES:
    use kurt_parallel, only: init_parallel
@@ -168,7 +167,7 @@
          LEVEL1 '3D run - full (hotstart=',hotstart,')'
       case default
          FATAL 'A non valid runtype has been specified.'
-         stop 'initialise()'
+         stop 'preinit_model()'
    end select
 
 #ifdef DEBUG
@@ -187,6 +186,8 @@
    subroutine postinit_model()
 !
 ! !DESCRIPTION:
+!  Makes calls to the init functions of the
+!  various model components.
 !
 ! !USES:
    use kurt_parallel, only: myid
@@ -297,7 +298,7 @@
    if (hotstart) then
       LEVEL1 'hotstart'
       if (myid .ge. 0) then
-         write(buf,'(I3.3)') myid
+         write(buf,'(I4.4)') myid
          buf = '.' // trim(buf) // '.in'
       else
          buf = '.in'
@@ -767,5 +768,5 @@
    end module getm_driver
 
 !-----------------------------------------------------------------------
-! Copyright (C) 2013 - Knut Klingbeil                                  !
+! Copyright (C) 2013 - Hans Burchard                                   !
 !-----------------------------------------------------------------------
