@@ -133,7 +133,6 @@ contains
     nullify(fpointer)
     
     do i=1,size(name)
-      write(0,*) i, size(name), name(i)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
        
