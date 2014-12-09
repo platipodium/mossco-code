@@ -32,8 +32,6 @@ module pelagic_benthic_coupler
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2
 
   public SetServices
 
@@ -125,6 +123,8 @@ module pelagic_benthic_coupler
     type(ESMF_Grid)             :: grid
     type(ESMF_Field)            :: field
     integer(ESMF_KIND_I4)       :: rank, ubnd2(2), lbnd2(2), itemCount
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
 
     rc = ESMF_SUCCESS
 
@@ -225,6 +225,8 @@ module pelagic_benthic_coupler
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
     
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime

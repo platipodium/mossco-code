@@ -50,6 +50,9 @@ contains
     
     nullify(fpointer)
     
+    ubnd(:)=-1
+    lbnd(:)=0
+    
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -130,6 +133,7 @@ contains
     nullify(fpointer)
     
     do i=1,size(name)
+      write(0,*) i, size(name), name(i)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
        
@@ -176,7 +180,9 @@ contains
     if (associated(fpointer)) then
       write(message, '(A)') 'Found field '//trim(name(i))
     else
-      write(message, '(A)') 'Did not find field '//trim(name(i))
+      write(message, '(A)') 'Did not find field '//trim(name(1))
+      ubnd(:)=-1
+      lbnd(:)=0
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     
@@ -211,6 +217,10 @@ contains
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
     
     nullify(fpointer)
+
+    ubnd(:)=-1
+    lbnd(:)=0
+    
     
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
