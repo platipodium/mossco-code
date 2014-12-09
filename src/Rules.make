@@ -533,29 +533,10 @@ ifdef MOSSCO_GOTMDIR
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
 endif
 
-libgetm_external: prefix
-ifeq ($(MOSSCO_GETM_FABM),true)
-ifdef MOSSCO_GOTMDIR
-	@echo Recreating the GOTM library in $(GOTM_LIBRARY_PATH)
-	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
-	(export FABM=true ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
-endif
+libgetm_external: libgotm_external
 ifdef MOSSCO_GETMDIR
-	@echo Recreating the GETM library in $(GETM_LIBRARY_PATH)
-	(export FABM=true ; $(MAKE) -C $(GETMDIR)/src)
+	( unset FABM ; $(MAKE) -C $(GETMDIR)/src GIT FORTRAN ../VERSION makedirs subdirs )
 endif
-else
-ifdef MOSSCO_GOTMDIR
-	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
-	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
-endif
-ifdef MOSSCO_GETMDIR
-	@echo Recreating the GETM library without FABM in $(GETM_LIBRARY_PATH)
-	(unset FABM ; $(MAKE) -C $(GETMDIR)/src)
-endif
-endif
-
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 	
 	
