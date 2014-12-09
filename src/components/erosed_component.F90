@@ -862,10 +862,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
 
-    call erosed( nmlb     , nmub    , flufflyr , mfluff ,frac , mudfrac, &
-                & ws_convention_factor*ws        , umod    , h0        , chezy  , taub          , &
-                & nfrac     , rhosol  , sedd50   , sedd90 , sedtyp        , &
-                & sink      , sinkf   , sour     , sourf  , anymud,  wave, uorb, tper, teta,BioEffects )
+    call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
+                & umod   , h0     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
+                & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud , wave,     uorb, &
+                & tper   , teta   , spm_concentration , BioEffects     )
 
 
     !   Updating sediment concentration in water column over cells
