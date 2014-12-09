@@ -122,8 +122,8 @@ EROSED_OBJS= \
   $(EROSED_DIR)/source/shld.o      \
   $(EROSED_DIR)/source/sand_mud.o\
   $(EROSED_DIR)/source/compbsskin.o\
-#  $(EROSED_DIR)/source/bedbc1993.o\
-#  $(EROSED_DIR)/source/soursin_3d.o
+  $(EROSED_DIR)/source/bedbc1993.o\
+  $(EROSED_DIR)/source/soursin_3d.o
 
 libmossco_erosed_dependencies: prefix              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \

@@ -163,17 +163,17 @@ type, public ::bedbc1993_argument
     real(fp),  pointer    :: taubcw =>null()  ! combined current-wave bed shear stress according to van Rijn 1993
     real(fp),  pointer    :: tauc   =>null()  ! current only bed shear stress
     real(fp),  pointer    :: taucr  =>null()  ! critical bed shear stress
-    real(fp),  pointer    :: taurat =>null()  ! ratio of tau current to tau wave
+    real(fp),  pointer    :: taurat =>null()  ! ratio of tau current to tau wave (seesm this is corrcet:Ratio of total tau to to criitical tau)
     real(fp),  pointer    :: tauwav =>null()  ! wave only bed shear stress
     real(fp),  pointer    :: tp     =>null()  ! wave period
-    real(fp),  pointer    :: umod   =>null()  ! near_bed velocity magnitude
+    real(fp),  pointer    :: ubed   =>null()  ! near_bed velocity magnitude
     real(fp),  pointer    :: uorb   =>null()  ! neear ed orbital velocity
     real(fp),  pointer    :: ustarc =>null()  ! u*-critical
     real(fp),  pointer    :: usus   =>null()  ! velocity magnitude near bed for current and at the top od the wave boundary layer for wave
     real(fp),  pointer    :: uwb    =>null()  ! sqrt (urob)
     real(fp),  pointer    :: z0cur  =>null()  ! current_related bed roughness
     real(fp),  pointer    :: z0rou  =>null()  ! wave_related bed roughness
-    real(fp),  pointer    :: zumod  =>null()  ! elevation of umod
+    real(fp),  pointer    :: zubed  =>null()  ! elevation of ubed
     real(fp),  pointer    :: zusus  =>null()  ! elevation of usus
     real(fp),  pointer    :: eps    =>null()  ! 1e-6
     real(fp),  pointer    :: aksfac =>null()  ! a unser-defined factor in determination of aks = min [ max(aksfac*ks, delr/2,0.01), 0.2 h]
@@ -276,11 +276,11 @@ save
 contains
 
 
-subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
-                 & ws       , umod    , h        , chezy  , taub            , &
-                 & nfrac    , rhosol  , sedd50   , sedd90 , sedtyp          , &
-                 & sink     , sinkf   , sour     , sourf  , anymud , wave   , &
-                 & uorb     , tper    , teta     , Bioeffects                 )
+subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   , &
+                 & ws       , umod    , h        , chezy  , taub               , &
+                 & nfrac    , rhosol  , sedd50   , sedd90 , sedtyp             , &
+                 & sink     , sinkf   , sour     , sourf  , anymud , wave      , &
+                 & uorb     , tper    , teta     ,spm_concentration, Bioeffects  )
 
 !
 !    Function: Computes sedimentation and erosion fluxes
@@ -301,6 +301,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
     type (soursin3d_argument)                              :: soursin3d_arguments
     type (compbsskin_argument)                             :: compbsskin_arguments
     !
+    real(fp)    , dimension(:,:,:)          , pointer      :: spm_concentration
     real(fp)    , dimension(:,:)            , pointer      :: mfluff        ! composition of fluff layer: mass of mud fractions [kg/m2]
     integer                                 , intent(in)   :: flufflyr      ! switch for fluff layer concept
     integer                                 , intent(in)   :: nfrac         ! number of sediment fractions
@@ -323,19 +324,19 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
     real(fp)    , dimension(nfrac,nmlb:nmub), intent(out)  :: sourf         ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(nfrac,nmlb:nmub), intent (in)  :: frac          ! sediment (mass) fraction [-]
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: mudfrac       ! mud fraction [-]
-    type (BioturbationEffect)               , intent (in)  :: Bioeffects
-    logical                                 , intent (in)  :: anymud, wave
-    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: uorb
-    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: tper
-    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: teta
+    type (BioturbationEffect)               , intent (in)  :: Bioeffects    ! Biological effects on the sediment flux
+    logical                                 , intent (in)  :: anymud, wave  ! if wave effect on sheare stress is requiried set to .true.
+    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: uorb          ! wave orbital velocity (rms)
+    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: tper          ! wave period
+    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: teta          ! angle between wave and current (radian)
 
 !
 ! Local variables
 !
     integer                                     :: l            ! sediment counter
     integer                                     :: nm           ! cell counter
-    real(fp)                                    :: fracf, rhowat
-    real(fp)                                    :: mfltot, vicmol
+    real(fp)                                    :: fracf,rhowat
+    real(fp)                                    :: mfltot,vicmol! vicmol: molecular viscosity
     real(fp)                                    :: sbot
     real(fp)                                    :: smfac        ! correction factor for critical bottom shear stress
     real(fp)                                    :: ssus
@@ -343,9 +344,57 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: fixfac       ! reduction factor in case of limited sediment availability [-]
     real(fp)    , dimension(nfrac,nmlb:nmub)    :: rsedeq       ! equilibrium concentration [kg/m3]
     real(fp)                                    :: fc           ! Skin friction coefficient (Darcy-Weisbach)
-    real(fp)    , dimension(nmlb:nmub)          :: thcmud       !Total thickness of mud layers
-    integer                                     :: inum, jnum, i, j
-    real(fp)                                    :: kssilt, kssand ! Roughness height for silt and sand
+    real(fp)    , dimension(nmlb:nmub)          :: thcmud       ! Total thickness of mud layers
+    integer                                     :: inum,jnum,i,j! inum and jnum are the number of elements in x and y directions
+    real(fp)                                    :: kssilt,kssand! Roughness height for silt and sand
+    integer                                     :: iform        ! selection of different transport methods (default 1 (van Rijn)
+    real(fp)                                    :: drho		! relative density
+    logical                                     :: flow2d
+! Bedbc1993 variables
+    real(fp)                                    :: aks, ce_nm   ! aks: Van Rijn's reference height, ce_nm: equilibrium sand concentration [Kg/m^3]
+    real(fp)                                    :: delr         ! Delta: ripple height
+    real(fp)                                    :: dss          ! suspended sediment diameter of fraction [m], defined in Engelund-Hansen
+    real(fp)                                    :: muc          ! mu(c) factor in calculation of current-wave bed shear stress
+    real(fp)               		            	:: ta		! dimensionless bed shear stress
+    real(fp) 			                        :: taubcw       ! combined current-wave bed shear stress according to van Rijn 1993 (muc*tauc + muw*tauwav)
+    real(fp)    , dimension(nmlb:nmub)      	:: tauc		! Current only bed shear stress
+    real(fp)					                :: taurat	! Ratio of total tau to to criitical tau
+    real(fp)	, dimension(nmlb:nmub)		    :: tauwav	! Tau due to wave
+    real(fp)   			                        :: ustarc	! u* due to current only
+    real(fp)              			            :: uwb		! sqr(2.) * uorb
+    real(fp)					                :: zusus  	! elevation of usus
+    real(fp)              			            :: usus     ! Velocity magnitude at the top of boundary layer (in case of wave and the lowest cell in case of the current)
+! Bedbc1993 required varaibles (input)
+    real(fp)	, dimension(nfrac) 		        :: taucr	! Critical bed shear stress for sand
+    real(fp)    , dimension(nfrac)              :: dstar        ! dimensiosless corn diameter d* in van Rijn formula
+    real(fp)	, dimension(nfrac) 		        :: tetacr	! Dimensionless critical bed shear stress for sand
+    real(fp)   	, dimension(nmlb:nmub)	        :: ubed		! near_bed velocity magnitude
+    real(fp)	, dimension(nmlb:nmub)		    :: zubed        ! elevation of ubed
+    real(fp)					                :: eps          ! 1e-6
+    real(fp)	, dimension(nfrac)		        :: z0cur	! current_related bed roughness (i.e. z0= ks/30.0 (ks = 2.50 sedd50))
+    real(fp)	, dimension(nfrac)		        :: z0rou  	! wave_related bed roughness
+    real(fp)				                	:: aksfac	! a unser-defined factor in determination of aks = min [ max(aksfac*ks, delr/2,0.01), 0.2 h]
+    real(fp)                					:: camax	! User-defined upper limit of the sediment concentration (sand)
+    real(fp)				                	:: rdc		! Nikoradse roughness length (ks)
+    real(fp)                					:: rdw		! wave related roughness ks,wave , ks,w= rdw * delr
+    real(fp)				                	:: rwave	! user-defined wave related roughness coefficient 1-3 (default 2)
+    integer                  					:: iopkcw   ! Flag for determination of ks ( or kw) in code or assignment by user in input data
+                                             			    ! if iopkcw = 1: kw = RWAVE . delr and rc   = 30.*z0cur; else read from data file
+    integer 				                	:: iopsus	! A flag for recalculation of charactersitic sediment diameter for suspension (dss)
+    real(fp)		                			:: vonkar
+    real(fp)	                				:: tauadd	! User-defined additional bed shear stress
+    real(fp)                                    :: g        ! gravity acceleration: @TODO: It should be substituted by g in globaldat.nml
+    real(fp)                                    :: factcr   ! user-defined factor multiplied by critical bed shear stress
+
+! soursin_3D
+
+    real(fp)                                    :: seddif   !@ToDO : sediment diffusion coefficent of teh loweset element should be received from GoTM
+    real(fp)                                    :: sigsed
+    real(fp)                                    :: sigmol
+    real(fp)                                    :: thicksed
+    real(fp)                                    :: thick0
+    real(fp)                                    :: thick1
+    real(fp)                                    :: thick
 
 !
 !! executable statements ------------------
@@ -369,94 +418,38 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
                         ! z0 roughness for taub in compbsskin. Taub is the combined wave current shear
                         ! stress for cohesive soil
 
+   !++++++++++ TEST Bedbc_1993 ++++++++++
+flow2d = .true.
+ubed = 0.35_fp
+zubed = 0.50_fp
+eps = 1e-6
+z0cur = sedd50/12._fp
+z0rou = z0cur
+aksfac = 1.0_fp
+rwave = 1.0_fp
+camax=0.65_fp
+rdc = 2.5_fp* sedd50(2)
+rdw = rdc
+rwave = 2.0_fp
+iopkcw=1
+iopsus = 1
+vonkar = 0.4_fp
+tauadd = 0.0_fp
+iform = 1
+g = 9.81_fp
+factcr = 1.0
+!+++++++++++TEST Soursin_3D++++++++++++++
+sigsed = 0.1_fp
+sigmol = 1.e-5_fp
+seddif = 1.e-3_fp
+thicksed = 1.0_fp
+thick0  = 1.0_fp
+thick1 = 1.0_fp
+thick = 0.25_fp ! thickness of bed layer bed cell!?
+!+++++++++++TEST++++++++++++++
 
 
-    ! bedbc1993 input arguments
 !
-!   ! d50   = d50
-!   ! d90   = d90
-!    !dstar = dstar
-!    h1    = h1
-!    mudfrac=mudfrac
-!    taucr = taucr
-!    tp    = tp
-!    uorb  = uorb
-!    z0cur = z0cur
-!    z0rou = z0rou
-!    zumod = zumod
-!    eps   = eps
-!    aksfac= aksfac
-!    rwave = rwave
-!    camax = camax
-!    rdc   = rdc
-!    rdw   = rdw
-!    iopkcw= iopkcw
-!    iopsus= iopsus
-!    vonkar= vonkar
-!    wave  = wave
-!    tauadd= tauadd
-!
-!          !  di50     = sedd50fld(nm)
-!             drho     = (rhosol(l)-rhowat(nm,kmax)) / rhowat(nm,kmax)
-!             dstar(l) = sedd50(l) * (drho*ag/vicmol**2)**0.3333_fp
-!             if (dstar(l) < 1.0_fp) then
-!                if (iform(l) == -2) then
-!                   tetacr(l) = 0.115_fp / (dstar(l)**0.5_fp)
-!                else
-!                   tetacr(l) = 0.24_fp / dstar(l)
-!                endif
-!             elseif (dstar(l) <= 4.0_fp) then
-!                if (iform(l) == -2) then
-!                   tetacr(l) = 0.115_fp / (dstar(l)**0.5_fp)
-!                else
-!                   tetacr(l) = 0.24_fp / dstar(l)
-!                endif
-!             elseif (dstar(l)>4.0_fp .and. dstar(l)<=10.0_fp) then
-!                tetacr(l) = 0.14_fp  / (dstar(l)**0.64_fp)
-!             elseif (dstar(l)>10.0_fp .and. dstar(l)<=20.0_fp) then
-!                tetacr(l) = 0.04_fp  / (dstar(l)**0.1_fp)
-!             elseif (dstar(l)>20.0_fp .and. dstar(l)<=150.0_fp) then
-!                tetacr(l) = 0.013_fp * (dstar(l)**0.29_fp)
-!             else
-!                tetacr(l) = 0.055_fp
-!             endif
-!             taucr(l) = factcr * (rhosol(l)-rhowat(nm,kmax)) * ag * di50 * tetacr(l)
-!
-!    real(fp),  pointer    :: dss    =>null()  ! suspended sediment diameter of fraction [m], defined in Engelund-Hansen
-!    real(fp),  pointer    :: dstar  =>null()  ! dimensiosless corn diameter d* in van Rijn formula
-!    real(fp),  pointer    :: h1     =>null()  ! water depth
-!    real(fp),  pointer    :: muc    =>null()  ! mu(c) factor in calculation of current-wave bed shear stress
-!    real(fp),  pointer    :: mudfrac=>null()  ! mud fraction
-!    real(fp),  pointer    :: rhowat =>null()  ! roh of water
-!    real(fp),  pointer    :: ta     =>null()  ! dimensionless bed shear stress
-!    real(fp),  pointer    :: taubcw =>null()  ! combined current-wave bed shear stress according to van Rijn 1993
-!    real(fp),  pointer    :: tauc   =>null()  ! current only bed shear stress
-!    real(fp),  pointer    :: taucr  =>null()  ! critical bed shear stress
-!    real(fp),  pointer    :: taurat =>null()  ! ratio of tau current to tau wave
-!    real(fp),  pointer    :: tauwav =>null()  ! wave only bed shear stress
-!    real(fp),  pointer    :: tp     =>null()  ! wave period
-!    real(fp),  pointer    :: umod   =>null()  ! near_bed velocity magnitude
-!    real(fp),  pointer    :: uorb   =>null()  ! neear ed orbital velocity
-!    real(fp),  pointer    :: ustarc =>null()  ! u*-critical
-!    real(fp),  pointer    :: usus   =>null()  ! velocity magnitude near bed for current and at the top od the wave boundary layer for wave
-!    real(fp),  pointer    :: uwb    =>null()  ! sqrt (urob)
-!    real(fp),  pointer    :: z0cur  =>null()  ! current_related bed roughness
-!    real(fp),  pointer    :: z0rou  =>null()  ! wave_related bed roughness
-!    real(fp),  pointer    :: zumod  =>null()  ! elevation of umod
-!    real(fp),  pointer    :: zusus  =>null()  ! elevation of usus
-!    real(fp),  pointer    :: eps    =>null()  ! 1e-6
-!    real(fp),  pointer    :: aksfac =>null()  ! a unser-defined factor in determination of aks = min [ max(aksfac*ks, delr/2,0.01), 0.2 h]
-!    real(fp),  pointer    :: rwave  =>null()  ! a user-defined value betwen 1-3.
-!    real(fp),  pointer    :: camax  =>null()
-!    real(fp),  pointer    :: rdc    =>null()
-!    real(fp),  pointer    :: rdw    =>null()
-!    integer ,  pointer    :: iopkcw =>null()  ! Flag for determination of ks ( or kw) in code or assignment by user in input data
-!                                              ! if iopkcw = 1: kw = RWAVE . delr and rc   = 30.*z0cur; else read from data file
-!    integer ,  pointer    :: iopsus =>null()  ! A flag for recalculation of charactersitic sediment diameter for suspension (dss)
-!    real(fp),  pointer    :: vonkar =>null()  ! von Karman constant
-!    logical ,  pointer    :: wave   =>null()  ! a flag for inclusion of wave-effect for bed sheaar stress
-!    real(fp),  pointer    :: tauadd =>null()  ! a user-defined additional bed shear stress added to the current-only bed shear stress
-
     !
     !   Compute change in sediment composition (e.g. based on available fractions and sediment availability)
     !
@@ -465,12 +458,13 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
     call vanrijn84_arguments%initialize()
     call sandmud_arguments%initialize(nfrac)
     call bedbc1993_arguments%initialize()
- !   call soursin3d_arguments%initialize ()
+    call soursin3d_arguments%initialize ()
     call compbsskin_arguments%initialize ()
 
     inum = Size(Bioeffects%ErodibilityEffect,1)
     jnum = Size(Bioeffects%ErodibilityEffect,2)
 
+    allocate (spm_concentration (inum,jnum,nfrac))
     kssilt = 0.0_fp
     kssand = 0.0_fp
     i = 0
@@ -491,8 +485,9 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
        kssand     = kssand /(j *1.0_fp)
        i          = 0
        j          = 0
+! Main loop over elements organized in vector form
+ elements: do nm = nmlb, nmub
 
-    do nm = nmlb, nmub
         mfltot = 0.0_fp
         if (flufflyr>0) then
             do l = 1, nfrac
@@ -511,18 +506,18 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
 
 
 
-        do l = 1, nfrac
+ fractions: do l = 1, nfrac
             if (sedtyp(l)==SEDTYP_COHESIVE) then
 
 
                 !   Compute source and sink fluxes for cohesive sediment (mud)
 
-         call compbsskin_arguments%set (umod(nm), 0.0_fp    , h(nm)   , wave  ,       &
-                                     & uorb(nm), tper  (nm), teta(nm), kssilt,       &
-                                     & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
+                call compbsskin_arguments%set (umod(nm), 0.0_fp    , h(nm)   , wave  ,       &
+                                             & uorb(nm), tper  (nm), teta(nm), kssilt,       &
+                                             & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
 
-         call compbsskin_arguments%run ()
-         call compbsskin_arguments%get(taub(nm))
+                call compbsskin_arguments%run ()
+                call compbsskin_arguments%get(taub(nm))
 
                 fracf   = 0.0_fp
                 if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
@@ -539,21 +534,22 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
                  write (*,*) 'Bio tcrero(l,nm)=', tcrero(l,nm)* Bioeffects%TauEffect (i,j)
 #endif
 
-                call  eromud_arguments%set ( ws(l,nm)      , fixfac(l,nm)  , taub(nm)      , frac(l,nm)     , fracf  , &
-                          & tcrdep(l,nm)  , tcrero(l,nm) * Bioeffects%TauEffect (i,j) , eropar(l,nm)* Bioeffects%ErodibilityEffect (i,j)  ,  &
-                         & flufflyr       , mfltot , tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
+                 call  eromud_arguments%set(ws(l,nm) , fixfac(l,nm)  , taub(nm)      , frac(l,nm)    , fracf  , &
+                         & tcrdep(l,nm)   , tcrero(l,nm) * Bioeffects%TauEffect (i,j), eropar(l,nm)* Bioeffects%ErodibilityEffect (i,j),&
+                         & flufflyr       , mfltot   , tcrfluff(l,nm), depeff(l,nm)  , depfac(l,nm)  , parfluff0(l,nm), parfluff1(l,nm) )
 
-                call eromud_arguments%run ()
+                 call eromud_arguments%run ()
 
-                call eromud_arguments%get(sour (l,nm), sink (l,nm), sourf (l,nm), sinkf (l,nm) )
+                 call eromud_arguments%get(sour (l,nm), sink (l,nm), sourf (l,nm), sinkf (l,nm) )
 #ifdef DEBUG
                  write (*,*) 'erosed mud sour', sour (l,nm), l
-                write (*,*) 'erosed mud sink',sink (l,nm), l
-#endif                !
+                 write (*,*) 'erosed mud sink',sink (l,nm), l
+#endif
             else
-                !
+                !Non-Cohesive soil
                 ! Compute correction factor for critical bottom shear stress with sand-mud interaction
                 !
+              if (flow2d) Then
                 !write (*,*) 'pmcrit = ',pmcrit(nm)
                 if ( pmcrit(nm) > 0.0_fp ) then
                     smfac = ( 1.0_fp + mudfrac(nm) ) ** betam
@@ -579,8 +575,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
                                         ! for wave-related roughness it should be modified.
                 !rksc = 3.0_fp * sedd90(l)
 
-                call vanrijn84_arguments%set ( umod(nm)  ,sedd50(l),sedd90(l),h(nm) ,ws(l,nm), &
-                             & rhosol(l) ,alf1      ,rksc ,smfac )
+                call vanrijn84_arguments%set (umod(nm) ,sedd50(l),sedd90(l),h(nm) ,ws(l,nm), &
+                                            & rhosol(l),alf1     ,rksc     ,smfac )
 
                 call vanrijn84_arguments%run()
 
@@ -597,9 +593,14 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
 
                 endif
 
-                fc = .24*(log10(12.*h(nm)/rksc))**( - 2)
+                fc = .24*(log10(12.*h(nm)/rksc ))**( - 2)   ! rksc according to vanrijn subroutine
                 chezy (nm) = sqrt(9.81_fp *8.0_fp / fc)
-           !     write (*,*) 'rksc',rksc, 'fc', fc, 'chezy', chezy(nm)
+                !write (*,*) ' Chezy with rksc= ', chezy(nm)
+
+                !fc = .24*(log10(12.*h(nm)/(2*sedd50(l)) ))**( - 2) ! ks = 2.50 d50 according to teh Delft3D manual pp. 210
+                !chezy (nm) = sqrt(9.81_fp *8.0_fp / fc)
+                !write (*,*) ' Chezy with ks= ', chezy(nm)
+
                 !
                 !   Compute suspended sediment fluxes for non-cohesive sediment (sand)
                 !
@@ -608,13 +609,77 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
                 call erosand_arguments%run()
 
                 call erosand_arguments%get(sour (l,nm), sink (l,nm) )
+ !               write (*,*) ' sour and sink 2D', sour (l,nm), sink (l,nm)
+
+
 #ifdef DEBUG
 !                write (*,*) 'erosed sand sour', sour (l,nm), l
 !                write (*,*) 'erosed sand sink',sink (l,nm), l
 #endif
-            endif
-        enddo
-    enddo
+              else
+                !(3D)
+                 drho     = (rhosol(l)-rhowat) / rhowat
+                 dstar(l) = sedd50(l) * (drho*g/vicmol**2)**0.3333_fp
+                 if (dstar(l) < 1.0_fp) then
+                    if (iform == -2) then
+                       tetacr(l) = 0.115_fp / (dstar(l)**0.5_fp)
+                    else
+                       tetacr(l) = 0.24_fp / dstar(l)
+                    endif
+                 elseif (dstar(l) <= 4.0_fp) then
+                    if (iform == -2) then
+                       tetacr(l) = 0.115_fp / (dstar(l)**0.5_fp)
+                    else
+                       tetacr(l) = 0.24_fp / dstar(l)
+                    endif
+                 elseif (dstar(l)>4.0_fp .and. dstar(l)<=10.0_fp) then
+                    tetacr(l) = 0.14_fp  / (dstar(l)**0.64_fp)
+                 elseif (dstar(l)>10.0_fp .and. dstar(l)<=20.0_fp) then
+                    tetacr(l) = 0.04_fp  / (dstar(l)**0.1_fp)
+                 elseif (dstar(l)>20.0_fp .and. dstar(l)<=150.0_fp) then
+                    tetacr(l) = 0.013_fp * (dstar(l)**0.29_fp)
+                 else
+                    tetacr(l) = 0.055_fp
+                 endif
+
+                 taucr(l) = factcr * (rhosol(l)-rhowat) * g * sedd50(l) * tetacr(l)* Bioeffects%TauEffect(i,j)
+
+                 call bedbc1993_arguments%set (tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm), &
+                           & zubed(nm)   ,sedd50(l)     ,sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l), &
+                           & taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax   , &
+                           & rdc         ,rdw           ,iopkcw    ,iopsus    ,vonkar  ,wave,tauadd )
+
+                 call bedbc1993_arguments%run
+
+    !                call bedbc1993(tper      ,uorb (nm) ,rhowat    ,h(nm)     ,ubed(nm)      , &
+    !                             & zubed (nm),sedd50(l) ,sedd90(l) ,z0cur     ,z0rou     , &
+    !                             & dstar     ,taucr(l)  ,aks       ,usus      ,zusus     , &
+    !                             & uwb       ,delr      ,muc       ,tauwav    ,ustarc    , &
+    !                             & tauc      ,taubcw    ,taurat    ,ta        ,ce_nm     , &
+    !                             & dss       ,mudfrac   ,eps       ,aksfac    ,rwave     , &
+    !                             & camax     ,rdc       ,rdw       ,iopkcw    ,iopsus    , &
+    !                             & vonkar    ,wave      ,tauadd    )
+
+                 call  bedbc1993_arguments%get (aks, ce_nm, taubcw, ta)
+    !
+    !               call soursin_3d  ( h(nm)             ,thick0         ,thick1             , &
+    !                               &  sig(kmaxsd)       ,thick(kmaxsd)  ,r0(nm,kmaxsd,ll)   , &
+    !                               &  vicmol            ,sigmol(ll)     ,seddif(nm,kmaxsd,l), &
+    !                               &  rhosol(l)         ,ce_nmtmp       ,ws(nm,kmaxsd,l)    , &
+    !                               &  aks               ,sourse(nm,l)   ,sinkse(nm,l) )
+
+                 call soursin3d_arguments%set (h (nm) ,thick0   ,thick1 , sigsed ,thick , &
+                                   &  spm_concentration(i,j,l)  , vicmol, sigmol ,seddif, &
+                                   &  rhosol (l)      ,ce_nm    , ws (l,nm)      , aks  )
+
+                 call soursin3d_arguments%run ()
+
+                 call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
+                 write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm)
+              end if !(2D/3D)
+            endif ! (cohesive /non-cohesive
+        enddo     fractions
+    enddo    elements
     !
 
     ! Recompute fluxes due to sand-mud interaction
@@ -649,8 +714,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac, &
     call erosand_arguments%finalize()
     call vanrijn84_arguments%finalize()
     call sandmud_arguments%finalize()
-   call bedbc1993_arguments%finalize()
-  !  call soursin3d_arguments%finalize()
+    call bedbc1993_arguments%finalize()
+    call soursin3d_arguments%finalize()
 end subroutine erosed
 
 
@@ -943,8 +1008,6 @@ class (sand_argument) :: erosand_arguments
       erosand_arguments%ws     =ws
       erosand_arguments%rsedeq =rsedeq
 
-   !   write (*,*) 'in set_sandgrau :: chezy = ', chezy
-
 
 end subroutine set_sandargu
 
@@ -1131,8 +1194,8 @@ subroutine allocate_bedbc (bedbc1993_arguments)
 implicit none
 class (bedbc1993_argument)   :: bedbc1993_arguments
 
-allocate (               bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%umod      , &
-                       & bedbc1993_arguments%zumod     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
+allocate (               bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%ubed      , &
+                       & bedbc1993_arguments%zubed     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
                        & bedbc1993_arguments%dstar     ,bedbc1993_arguments%taucr     ,bedbc1993_arguments%aks       ,bedbc1993_arguments%usus      ,bedbc1993_arguments%zusus     , &
                        & bedbc1993_arguments%uwb       ,bedbc1993_arguments%delr      ,bedbc1993_arguments%muc       ,bedbc1993_arguments%tauwav    ,bedbc1993_arguments%ustarc    , &
                        & bedbc1993_arguments%tauc     ,bedbc1993_arguments%taubcw    ,bedbc1993_arguments%taurat    ,bedbc1993_arguments%ta        ,bedbc1993_arguments%ce_nm     , &
@@ -1149,8 +1212,8 @@ subroutine deallocate_bedbc (bedbc1993_arguments)
 implicit none
 class (bedbc1993_argument)   :: bedbc1993_arguments
 
-deallocate (             bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%umod      , &
-                       & bedbc1993_arguments%zumod     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
+deallocate (             bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%ubed      , &
+                       & bedbc1993_arguments%zubed     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
                        & bedbc1993_arguments%dstar     ,bedbc1993_arguments%taucr     ,bedbc1993_arguments%aks       ,bedbc1993_arguments%usus      ,bedbc1993_arguments%zusus     , &
                        & bedbc1993_arguments%uwb       ,bedbc1993_arguments%delr      ,bedbc1993_arguments%muc       ,bedbc1993_arguments%tauwav    ,bedbc1993_arguments%ustarc    , &
                        & bedbc1993_arguments%tauc      ,bedbc1993_arguments%taubcw    ,bedbc1993_arguments%taurat    ,bedbc1993_arguments%ta        ,bedbc1993_arguments%ce_nm     , &
@@ -1162,8 +1225,8 @@ deallocate (             bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb
 
 end subroutine deallocate_bedbc
 
- subroutine set_bedbc ( bedbc1993_arguments   ,tp        ,uorb      ,rhowat    ,h1        ,umod      , &
-                       & zumod     ,d50       ,d90       ,z0cur     ,z0rou     , &
+ subroutine set_bedbc ( bedbc1993_arguments   ,tp        ,uorb      ,rhowat    ,h1        ,ubed      , &
+                       & zubed     ,d50       ,d90       ,z0cur     ,z0rou     , &
                        & dstar     ,taucr    , &
                        & mudfrac   ,eps       ,aksfac    ,rwave     , &
                        & camax     ,rdc       ,rdw       ,iopkcw    ,iopsus    , &
@@ -1180,11 +1243,11 @@ implicit none
     real(fp), intent(in)  :: rhowat !  Description and declaration in esm_alloc_real.f90
     real(fp), intent(in)  :: taucr
     real(fp), intent(in)  :: tp     !  Description and declaration in esm_alloc_real.f90
-    real(fp), intent(in)  :: umod
+    real(fp), intent(in)  :: ubed
     real(fp), intent(in)  :: uorb   !  Description and declaration in esm_alloc_real.f90
     real(fp), intent(in)  :: z0cur
     real(fp), intent(in)  :: z0rou
-    real(fp), intent(in)  :: zumod
+    real(fp), intent(in)  :: zubed
     real(fp), intent(in)  :: eps
     real(fp), intent(in)  :: aksfac
     real(fp), intent(in)  :: rwave
@@ -1205,11 +1268,11 @@ implicit none
     bedbc1993_arguments%rhowat= rhowat
     bedbc1993_arguments%taucr = taucr
     bedbc1993_arguments%tp    = tp
-    bedbc1993_arguments%umod  = umod
+    bedbc1993_arguments%ubed  = ubed
     bedbc1993_arguments%uorb  = uorb
     bedbc1993_arguments%z0cur = z0cur
     bedbc1993_arguments%z0rou = z0rou
-    bedbc1993_arguments%zumod = zumod
+    bedbc1993_arguments%zubed = zubed
     bedbc1993_arguments%eps   = eps
     bedbc1993_arguments%aksfac= aksfac
     bedbc1993_arguments%rwave = rwave
@@ -1230,8 +1293,8 @@ implicit none
 
 class (bedbc1993_argument) :: bedbc1993_arguments
 
-call bedbc1993(          bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%umod      , &
-                       & bedbc1993_arguments%zumod     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
+call bedbc1993(          bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%ubed      , &
+                       & bedbc1993_arguments%zubed     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
                        & bedbc1993_arguments%dstar     ,bedbc1993_arguments%taucr     ,bedbc1993_arguments%aks       ,bedbc1993_arguments%usus      ,bedbc1993_arguments%zusus     , &
                        & bedbc1993_arguments%uwb       ,bedbc1993_arguments%delr      ,bedbc1993_arguments%muc       ,bedbc1993_arguments%tauwav    ,bedbc1993_arguments%ustarc    , &
                        & bedbc1993_arguments%tauc      ,bedbc1993_arguments%taubcw    ,bedbc1993_arguments%taurat    ,bedbc1993_arguments%ta        ,bedbc1993_arguments%ce_nm     , &

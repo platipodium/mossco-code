@@ -30,7 +30,6 @@ class (Mbalthica_Object) :: this
 integer, intent (in)     :: inum, jnum ! dimesions of grid in x and y directions
 !integer :: istatus
 
-!allocate (character (9) :: this%Species)
 allocate (this%Species)
 allocate (this%StateVar)
 !allocate (This%StateVar%amount)
@@ -99,7 +98,6 @@ else
 
 end if
 
-
  if (units == '-') then
 
   write (*,*) ' In Mbalthica_class, the intensity of Mbalthica is ', Intensity
@@ -137,8 +135,9 @@ implicit none
 class (Mbalthica_Object) :: this
 
 integer                  :: i,j
-do i = 1, this%jnum
- do j = 1, this%inum
+
+do j = 1, this%jnum
+ do i = 1, this%inum
     this%Bioturbation%TauEffect(i,j)         =  Crit_shear_bioeffect(this%StateVar)
     this%Bioturbation%ErodibilityEffect(i,j) = erodibility_bioeffect(this%StateVar) 
  end do
