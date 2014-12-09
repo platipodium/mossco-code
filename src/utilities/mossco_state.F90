@@ -237,9 +237,6 @@ contains
 
          allocate(fieldList(fieldCount))
          
-         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         
          call ESMF_FieldBundleGet(fieldBundle, trim(name(i)), fieldList=fieldList, rc=localRc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          field=fieldList(1)
@@ -268,10 +265,12 @@ contains
     if (associated(fpointer)) then
       write(message, '(A)') 'Found field '//trim(name(i))
     else
-      write(message, '(A)') 'Did not find field '//trim(name(i))
+      do i=1,size(name)
+        write(message, '(A)') 'Did not find field '//trim(name(i))
+      end do
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    
+
     if (present(rc)) then
       rc = ESMF_SUCCESS
       if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
