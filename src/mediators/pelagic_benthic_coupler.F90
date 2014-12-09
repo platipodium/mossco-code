@@ -234,7 +234,7 @@ module pelagic_benthic_coupler
   
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+   
     !> fdet + sdet = CN_det*det
     !> NC_fdet*fdet + NC_sdet*sdet = det
     !> fdet = fac_fdet*det
@@ -297,21 +297,20 @@ module pelagic_benthic_coupler
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
       call mossco_state_get(importState,(/'Detritus_Carbon_detC_in_water'/),DETC,lbnd=Clbnd,ubnd=Cubnd,rc=localrc)
 
-      if ( Cubnd(1)-Clbnd(1)<0 .or. Cubnd(2)-Clbnd(2)<0 .or. Cubnd(3)-Clbnd(3)<0 ) then
-        write(message,'(A)')  trim(name)//' received zero-length data for detritus carbon'
-        write(0,*) 'Clbnd = ', lbnd, 'Cubnd = ', ubnd
-      
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)     
-      endif
-
       if (localrc /= 0) then
          CN_det=106.0_rk/16.0_rk
       else
-         write(0,*) Clbnd, Cubnd
+        if ( Cubnd(1)-Clbnd(1)<0 .or. Cubnd(2)-Clbnd(2)<0 .or. Cubnd(3)-Clbnd(3)<0 ) then
+          write(message,'(A)')  trim(name)//' received zero-length data for detritus carbon'
+          write(0,*) 'Clbnd = ', lbnd, 'Cubnd = ', ubnd
       
-         CN_det = DETC(Clbnd(1):Cubnd(1),Clbnd(2):Cubnd(2),Clbnd(3))/ &
-                    DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogFlush()
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)     
+        endif
+
+        CN_det = DETC(Clbnd(1):Cubnd(1),Clbnd(2):Cubnd(2),Clbnd(3))/ &
+                   DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
       fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
       fac_sdet = (1.0_rk-NC_fdet*CN_det)/(NC_sdet-NC_fdet)

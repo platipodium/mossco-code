@@ -41,7 +41,7 @@ contains
     integer(ESMF_KIND_I4) :: localrc,i
     type(ESMF_StateItem_Flag) :: itemType
 
-    rc = ESMF_SUCCESS
+    rc = -1
     
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc) ! this is really a call to StateGetInfo
@@ -54,6 +54,7 @@ contains
          
          call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         rc = ESMF_SUCCESS
          exit
       end if
     end do
@@ -71,7 +72,7 @@ contains
     integer(ESMF_KIND_I4) :: localrc,i
     type(ESMF_StateItem_Flag) :: itemType
 
-    rc = ESMF_SUCCESS
+    rc = -1
     
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc) ! this is really a call to StateGetInfo
@@ -84,6 +85,7 @@ contains
 
          call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         rc=ESMF_SUCCESS
          exit
       end if
     end do
@@ -104,7 +106,7 @@ contains
     integer                         :: ubnd_(3),lbnd_(3)
     type(ESMF_StateItem_Flag) :: itemType
 
-    rc = ESMF_SUCCESS
+    rc = -1
     
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
@@ -121,7 +123,7 @@ contains
 
          if (present(ubnd)) ubnd=ubnd_
          if (present(lbnd)) lbnd=lbnd_
-
+         rc = ESMF_SUCCESS
          exit
       end if
     end do
