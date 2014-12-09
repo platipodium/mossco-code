@@ -22,16 +22,12 @@
 ! !PUBLIC DATA MEMBERS:
    public preinit_model,postinit_model,init_time,time_step
    public do_transport,do_transport_3d
-   character(len=64)         :: runid
-   character(len=80)         :: title
-   logical                   :: hotstart=.false.
-   logical                   :: use_epoch=.false.
-   logical                   :: save_initial=.false.
-#if (defined GETM_PARALLEL && defined INPUT_DIR)
-   character(len=PATH_MAX)   :: input_dir=INPUT_DIR
-#else
-   character(len=PATH_MAX)   :: input_dir='./'
-#endif
+   character(len=64)                   :: runid
+   character(len=80)                   :: title
+   logical                             :: hotstart=.false.
+   logical                             :: use_epoch=.false.
+   logical                             :: save_initial=.false.
+   character(len=PATH_MAX)             :: input_dir=''
 !
 ! !REVISION HISTORY:
 !  Original author(s): Knut Klingbeil
@@ -57,6 +53,7 @@
 #ifdef GETM_PARALLEL
    use halo_mpi, only: init_mpi
 #endif
+   use parameters, only: init_parameters
    use getm_timers, only: init_getm_timers, tic, toc, TIM_INITIALIZE
    use exceptions
    IMPLICIT NONE
@@ -69,6 +66,7 @@
 !
 ! !LOCAL VARIABLES:
    logical                   :: parallel=.false.
+   character(len=PATH_MAX)   :: namlst_file=''
    namelist /param/ &
              dryrun,runid,title,parallel,runtype,  &
              hotstart,use_epoch,save_initial
@@ -106,15 +104,21 @@
    call init_mpi()
 #endif
 
-#if (defined GETM_PARALLEL && defined INPUT_DIR)
+#ifdef INPUT_DIR
+   input_dir=trim(INPUT_DIR) // '/'
    STDERR 'input_dir:'
-   STDERR trim(input_dir)
+   STDERR input_dir
+#endif
+#ifdef _NAMLST_FILE_
+   namlst_file=trim(_NAMLST_FILE_)
+#else
+   namlst_file=trim(input_dir) // 'getm.inp'
 #endif
 !
 ! Open the namelist file to get basic run parameters.
 !
    title='A descriptive title can be specified in the param namelist'
-   open(NAMLST,status='unknown',file=trim(input_dir) // "/getm.inp")
+   open(NAMLST,status='unknown',file=namlst_file)
    read(NAMLST,NML=param)
 
 #ifdef NO_BAROCLINIC
@@ -143,11 +147,6 @@
 #endif
    end if
 
-#if (defined GETM_PARALLEL && defined SLICE_MODEL)
-    call getm_error('preinit_model()', &
-         'SLICE_MODEL does not work with GETM_PARALLEL - for now')
-#endif
-
    STDERR LINE
    STDERR 'getm ver. ',RELEASE,': Started on  ',dstr,' ',tstr
    STDERR LINE
@@ -169,6 +168,8 @@
          FATAL 'A non valid runtype has been specified.'
          stop 'preinit_model()'
    end select
+
+   call init_parameters()
 
 #ifdef DEBUG
    write(debug,*) 'Leaving preinit_model()'
@@ -197,23 +198,27 @@
    use domain, only: kmax
    use time, only: update_time,write_time_string
    use time, only: start,timestr,timestep
-   use m2d, only: init_2d,postinit_2d
+   use m2d, only: init_2d,postinit_2d,depth_update
+   use variables_2d, only: zo,z,D,Dvel,DU,DV
+   use les, only: init_les
    use getm_timers, only: init_getm_timers, tic, toc, TIM_INITIALIZE
 #ifndef NO_3D
-   use m2d, only: Uint,Vint
    use m3d, only: init_3d,postinit_3d
 #ifndef NO_BAROCLINIC
-   use m3d, only: T
+   use m3d, only: T,calc_temp,calc_salt
+   use temperature, only: init_temperature_field
+   use salinity, only: init_salinity_field
 #endif
+   use m3d, only: use_gotm
    use turbulence, only: init_turbulence
    use mtridiagonal, only: init_tridiagonal
    use rivers, only: init_rivers
-   use variables_3d, only: avmback,avhback
 #ifdef SPM
    use suspended_matter, only: init_spm
 #endif
 #ifdef _FABM_
-   use getm_fabm, only: init_getm_fabm
+   use getm_fabm, only: fabm_calc
+   use getm_fabm, only: init_getm_fabm, postinit_getm_fabm
    use rivers, only: init_rivers_fabm
 #endif
 #ifdef GETM_BIO
@@ -222,11 +227,10 @@
    use rivers, only: init_rivers_bio
 #endif
 #endif
-   use meteo, only: init_meteo,do_meteo
-   use integration,  only: MinN
-#ifndef NO_BAROCLINIC
-   use eqstate, only: do_eqstate
-#endif
+   use meteo, only: metforcing,met_method,init_meteo,do_meteo
+   use waves, only: init_waves,do_waves,waveforcing_method,NO_WAVES
+   use integration,  only: MinN,MaxN
+   use exceptions
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
@@ -254,8 +258,10 @@
 
    call init_meteo(hotstart)
 
+   call init_waves(hotstart,runtype)
+
 #ifndef NO_3D
-   call init_rivers()
+   call init_rivers(hotstart)
 #endif
 
    call init_2d(runtype,timestep,hotstart)
@@ -263,13 +269,9 @@
 #ifndef NO_3D
    if (runtype .gt. 1) then
       call init_3d(runtype,timestep,hotstart)
-#ifndef CONSTANT_VISCOSITY
-      call init_turbulence(60,trim(input_dir) // 'gotmturb.nml',kmax)
-#else
-      LEVEL3 'turbulent viscosity and diffusivity set to constant (-DCONSTANT_VISCOSITY)'
-#endif
-      LEVEL2 'background turbulent viscosity set to',avmback
-      LEVEL2 'background turbulent diffusivity set to',avhback
+      if (use_gotm) then
+         call init_turbulence(60,trim(input_dir) // 'gotmturb.nml',kmax)
+      end if
       call init_tridiagonal(kmax)
 
 #ifdef SPM
@@ -286,12 +288,13 @@
    end if
 #endif
 
-   call init_output(runid,title,start,runtype,dryrun,myid)
+   call init_les(runtype)
+
+   call init_output(runid,title,start,runtype,dryrun,myid,MinN,MaxN,save_initial)
 
    close(NAMLST)
 
 #if 0
-   call init_waves(hotstart)
    call init_biology(hotstart)
 #endif
 
@@ -306,46 +309,68 @@
       hot_in = trim(out_dir) //'/'// 'restart' // trim(buf)
       call restart_file(READING,trim(hot_in),MinN,runtype,use_epoch)
       LEVEL3 'MinN adjusted to ',MinN
-
-#ifndef NO_3D
-      if (runtype .ge. 2) then
-         Uint=_ZERO_
-         Vint=_ZERO_
-      end if
-#endif
-
-#ifndef NO_BAROCLINIC
-      if (runtype .ge. 3) call do_eqstate()
-#endif
       call update_time(MinN)
       call write_time_string()
       LEVEL3 timestr
       MinN = MinN+1
-   end if
-
-   call postinit_2d(runtype,timestep,hotstart)
-#ifndef NO_3D
-   if (runtype .gt. 1) then
-      call postinit_3d(runtype,timestep,hotstart)
-   end if
+#ifndef NO_BAROCLINIC
+      if (calc_temp) then
+         LEVEL2 'hotstart temperature:'
+         call init_temperature_field()
+      end if
+      if (calc_salt) then
+         LEVEL2 'hotstart salinity:'
+         call init_salinity_field()
+      end if
 #endif
+   end if
 
+!  Note (KK): we need Dvel for do_waves()
+!  KK-TODO: we would not need Dvel if we use H for WAVES_FROMWIND
+   call depth_update(zo,z,D,Dvel,DU,DV)
+
+!  Note (KK): init_input() calls do_3d_bdy_ncdf() which requires hn
    call init_input(input_dir,MinN)
 
    call toc(TIM_INITIALIZE)
-   ! The rest is timed with meteo and output.
 
-   if(runtype .le. 2) then
-      call do_meteo(MinN)
-#ifndef NO_3D
+   if (metforcing) then
+      if(runtype .le. 2) then
+         call do_meteo(MinN-1)
+         if (met_method .eq. 2) then
+            call get_meteo_data(MinN-1)
+            call do_meteo(MinN-1)
+         end if
 #ifndef NO_BAROCLINIC
-   else
-      call do_meteo(MinN,T(:,:,kmax))
+      else
+         call do_meteo(MinN-1,T(:,:,kmax))
+         if (met_method .eq. 2) then
+            call get_meteo_data(MinN-1)
+            call do_meteo(MinN-1,T(:,:,kmax))
+         end if
 #endif
-#endif
+      end if
    end if
 
-   if (save_initial .and. .not. dryrun) then
+   if (waveforcing_method .ne. NO_WAVES) then
+      call do_waves(MinN-1,Dvel)
+   end if
+
+   call tic(TIM_INITIALIZE)
+
+   call postinit_2d(runtype,timestep,hotstart,MinN)
+#ifndef NO_3D
+   if (runtype .gt. 1) then
+      call postinit_3d(runtype,timestep,hotstart,MinN)
+#ifdef _FABM_
+      if (fabm_calc) call postinit_getm_fabm()
+#endif
+   end if
+#endif
+
+   call toc(TIM_INITIALIZE)
+
+   if (.not. dryrun) then
       call do_output(runtype,MinN-1,timestep)
    end if
 
@@ -511,8 +536,9 @@
    use time,     only: update_time,timestep
    use domain,   only: kmax
    use meteo,    only: do_meteo,tausx,tausy,airp,fwf_method,evap,precip
-   use m2d,      only: integrate_2d
-   use variables_2d, only: fwf,fwf_int
+   use waves,    only: do_waves,waveforcing_method,NO_WAVES
+   use m2d,      only: no_2d,integrate_2d
+   use variables_2d, only: fwf,fwf_int,Dvel
 #ifndef NO_3D
    use m3d,      only: integrate_3d,M
 #ifndef NO_BAROCLINIC
@@ -531,7 +557,7 @@
    use suspended_matter, only: spm_calc,do_spm
 #endif
    use input,    only: do_input
-   use output,   only: do_output,meanout
+   use output,   only: do_output
 #ifdef TEST_NESTING
    use nesting,   only: nesting_file
 #endif
@@ -543,7 +569,7 @@
 ! !REVISION HISTORY:
 !
 ! !LOCAL VARIABLES
-   logical                   :: do_3d
+   logical                   :: do_3d=.false.
    integer                   :: progress=100
    character(8)              :: d_
    character(10)             :: t_
@@ -556,74 +582,72 @@
    write(debug,*) 'time_step() # ',Ncall
 #endif
 
-   if (progress .gt. 0 .and. mod(n,progress) .eq. 0) then
-      call date_and_time(date=d_,time=t_)
-      LEVEL1 t_(1:2),':',t_(3:4),':',t_(5:10),' n=',n
-   end if
+      if (progress .gt. 0 .and. mod(n,progress) .eq. 0) then
+         call date_and_time(date=d_,time=t_)
+         LEVEL1 t_(1:2),':',t_(3:4),':',t_(5:10),' n=',n
+      end if
 
 #ifndef NO_3D
-   do_3d = (runtype .ge. 2 .and. mod(n,M) .eq. 0)
+      do_3d = (runtype .ge. 2 .and. mod(n,M) .eq. 0)
 #endif
-
-   call do_input(n)
-
-   if(runtype .le. 2) then
-      call do_meteo(n)
+      call do_input(n,do_3d)
+      if(runtype .le. 2) then
+         call do_meteo(n)
 #ifndef NO_3D
 #ifndef NO_BAROCLINIC
-   else
-      call do_meteo(n,T(:,:,kmax))
+      else
+         call do_meteo(n,T(:,:,kmax))
 #endif
 #endif
-   end if
+      end if
 
-   if (fwf_method .ge. 1) then
-      fwf = evap+precip
+      if (waveforcing_method .ne. NO_WAVES) then
+         call do_waves(n,Dvel)
+      end if
+
+      if (fwf_method .ge. 1) then
+         fwf = evap+precip
 #ifndef NO_3D
-      fwf_int = fwf_int+timestep*fwf
+         fwf_int = fwf_int+timestep*fwf
 #endif
-   end if
+      end if
 
 #ifndef NO_BAROTROPIC
-   call integrate_2d(runtype,n,tausx,tausy,airp)
+      if (.not. no_2d) call integrate_2d(runtype,n,tausx,tausy,airp)
 #endif
 #ifndef NO_3D
-   call do_rivers(do_3d)
-   if (do_3d) then
-      call integrate_3d(runtype,n)
+      call do_rivers(n,do_3d)
+      if (do_3d) then
+         call integrate_3d(runtype,n)
 #ifdef SPM
-      if (spm_calc) call do_spm()
+         if (spm_calc) call do_spm()
 #endif
 #ifdef _FABM_
-      if (fabm_calc) call do_getm_fabm(M*timestep)
+         if (fabm_calc) call do_getm_fabm(M*timestep)
 #endif
 #ifdef GETM_BIO
-      if (bio_calc) call do_getm_bio(M*timestep)
+         if (bio_calc) call do_getm_bio(M*timestep)
 #endif
 #ifndef NO_3D
-      if (fwf_method .ge. 1) then
-         fwf_int = _ZERO_
-      end if
+         if (fwf_method .ge. 1) then
+            fwf_int = _ZERO_
+         end if
 #endif
-   end if
+      end if
 #endif
 
 #ifdef TEST_NESTING
-   if (mod(n,80) .eq. 0) then
-      call nesting_file(WRITING)
-   end if
+      if (mod(n,80) .eq. 0) then
+         call nesting_file(WRITING)
+      end if
 #endif
-   call update_time(n)
+      call update_time(n)
 
-#ifndef NO_3D
-   if(meanout .ge. 0) then
-      call calc_mean_fields(n,meanout)
-   end if
-#endif
-   call do_output(runtype,n,timestep)
+      call do_output(runtype,n,timestep)
 #ifdef DIAGNOSE
-   call diagnose(n,MaxN,runtype)
+      call diagnose(n,MaxN,runtype)
 #endif
+
 
 #ifdef DEBUG
    write(debug,*) 'Leaving time_step()'

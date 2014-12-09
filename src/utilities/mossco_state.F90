@@ -50,8 +50,8 @@ contains
     
     nullify(fpointer)
     
-    ubnd(:)=-1
-    lbnd(:)=0
+    ubnd_(:)=-1
+    lbnd_(:)=0
     
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
@@ -133,7 +133,6 @@ contains
     nullify(fpointer)
     
     do i=1,size(name)
-      write(0,*) i, size(name), name(i)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
        
@@ -181,8 +180,8 @@ contains
       write(message, '(A)') 'Found field '//trim(name(i))
     else
       write(message, '(A)') 'Did not find field '//trim(name(1))
-      ubnd(:)=-1
-      lbnd(:)=0
+      ubnd_(:)=-1
+      lbnd_(:)=0
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     
@@ -218,8 +217,8 @@ contains
     
     nullify(fpointer)
 
-    ubnd(:)=-1
-    lbnd(:)=0
+    ubnd_(:)=-1
+    lbnd_(:)=0
         
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
@@ -236,9 +235,6 @@ contains
          if (.not.isPresent) cycle
 
          allocate(fieldList(fieldCount))
-         
-         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(name(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          
          call ESMF_FieldBundleGet(fieldBundle, trim(name(i)), fieldList=fieldList, rc=localRc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -267,11 +263,16 @@ contains
     
     if (associated(fpointer)) then
       write(message, '(A)') 'Found field '//trim(name(i))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
-      write(message, '(A)') 'Did not find field '//trim(name(i))
+      write(message, '(A)') 'Did not find field(s):'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      do i=1,size(name)
+        write(message, '(A)') ' '//trim(name(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      end do
     endif
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    
+
     if (present(rc)) then
       rc = ESMF_SUCCESS
       if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND

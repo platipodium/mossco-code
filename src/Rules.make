@@ -178,8 +178,8 @@ export MOSSCO_GOTM
 # 3c. GETM
 MOSSCO_GETM=false
 
+external_GETMDIR = $(MOSSCO_DIR)/external/getm/code
 ifndef MOSSCO_GETMDIR
-  external_GETMDIR = $(MOSSCO_DIR)/external/getm-git
   ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
     export MOSSCO_GETMDIR=$(external_GETMDIR)
   endif
@@ -252,7 +252,7 @@ ifeq ($(MOSSCO_GETM),true)
   ifneq ($(GETM_NO_3D),true)
     GETM_LIBS += -l3d_prod
   endif
-  GETM_LIBS += -l2d_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
+  GETM_LIBS += -l2d_prod -lwaves_prod -lles_prod -lpool_prod -ldomain_prod -linput_prod -lncdfio_prod -lfutils_prod
   ifeq ($(MOSSCO_GETM_FABM),true)
     GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
     GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)

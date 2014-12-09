@@ -545,7 +545,6 @@ module getm_component
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
-    use output     ,only: meanout
 
     implicit none
 
@@ -560,11 +559,6 @@ module getm_component
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
-#ifndef NO_3D
-    if (meanout .eq. 0) then
-      call calc_mean_fields(MaxN,MaxN)
-    end if
-#endif
     call clean_up(dryrun,runtype,MaxN)
 
     call ESMF_GridCompGet(gridComp,clockIsPresent=ClockIsPresent, &

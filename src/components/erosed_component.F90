@@ -649,7 +649,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Clock)         :: clock
     integer                  :: external_index
     real(kind=ESMF_KIND_R8)  :: vonkar, ustar, z0cur, cdr, cds, summ, rhowat,vicmol, reynold
-    integer    :: ubnd(3),lbnd(3)
+    integer    :: ubnd(3),lbnd(3),ubnd2(2),lbnd2(2)
 
 !#define DEBUG
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
@@ -674,7 +674,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (forcing_from_coupler) then
 
       !> get water depth
-      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),ptr_f2,lbnd=lbnd2,ubnd=ubnd2,rc=localrc)
       if (localrc == 0) then
         h0 = ptr_f2(1,1)
       else
