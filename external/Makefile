@@ -20,13 +20,13 @@ SUBDIRS =
 
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
-.PHONY: fabm-git-clone  gotm-git-clone  getm-git-clone  erosed-svn-clone
-.PHONY: fabm-git-update gotm-git-update getm-git-update erosed-svn-update
+.PHONY: fabm-git-clone  gotm-git-clone  getm_clone  erosed-svn-clone
+.PHONY: fabm-git-update gotm-git-update getm_update erosed-svn-update
 
 all: clone
 
-clone:  fabm-git-clone  gotm-git-clone  getm-git-clone  #erosed-svn-clone
-update: fabm-git-update gotm-git-update getm-git-update #erosed-svn-update
+clone:  fabm-git-clone  gotm-git-clone  getm_clone  #erosed-svn-clone
+update: fabm-git-update gotm-git-update getm_update #erosed-svn-update
 
 clean: extraclean
 
@@ -37,17 +37,12 @@ ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
 	(unset FABM ; $(MAKE) -C $(MOSSCO_DIR)/external/gotm-git distclean)
 endif
 
-getm_distclean:
-ifneq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
-	(unset FABM ; $(MAKE) -C $(MOSSCO_DIR)/external/getm-git distclean)
-endif
 
 subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@
 
-.PHONY: fabm-git gotm-git getm-git erosed-svn
 
 fabm-git-clone:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
@@ -74,16 +69,23 @@ ifneq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
 	(cd $(MOSSCO_DIR)/external/gotm-git ; git pull origin master)
 endif
 
-getm-git-clone:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
-	git clone git://git.code.sf.net/p/getm/code $(MOSSCO_DIR)/external/getm-git
+
+getm_clone:
+ifeq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+	git clone git://git.code.sf.net/p/getm/code $(external_GETMDIR)
+	( cd $(external_GETMDIR) ; git checkout -b iow origin/iow )
 else
-	$(MAKE) getm-git-update
+	$(MAKE) getm_update
 endif
 
-getm-git-update:
-ifneq ($(wildcard $(MOSSCO_DIR)/external/getm-git/src/Makefile),)
-	(cd $(MOSSCO_DIR)/external/getm-git ; git pull origin master)
+getm_update:
+ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+	( cd $(external_GETMDIR) ; git pull )
+endif
+
+getm_distclean:
+ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+	( unset FABM ; $(MAKE) -C $(external_GETMDIR) distclean )
 endif
 
 erosed-svn-clone:
