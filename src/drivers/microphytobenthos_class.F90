@@ -31,11 +31,9 @@ class (Microphytobenthos) :: this
 integer, intent (in)      :: inum, jnum ! inum and jnum are the number of elementes in x and y directions
 integer                   :: istatus
 
-!allocate (character (17) :: this%Species)
 allocate (this%Species)
 allocate (this%BioMass)
 allocate (This%BioMass%amount)
-!allocate (This%BioMass%units)
 allocate (this%TauEffect(inum,jnum))
 allocate (this%ErodibilityEffect (inum,jnum),stat= istatus)
 
@@ -43,7 +41,7 @@ allocate (this%ErodibilityEffect (inum,jnum),stat= istatus)
 !    write (*,*) 'allocation of ErodibilityEffect was successfull'
 !else
 !    write (*,*) 'Error , allocation of ErodibilityEffect was NOT successfull'
-!end
+!end if
 
   this%inum      = inum
   this%jnum      = jnum

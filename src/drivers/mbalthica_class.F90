@@ -30,7 +30,6 @@ class (Mbalthica_Object) :: this
 integer, intent (in)     :: inum, jnum ! dimesions of grid in x and y directions
 !integer :: istatus
 
-!allocate (character (9) :: this%Species)
 allocate (this%Species)
 allocate (this%StateVar)
 !allocate (This%StateVar%amount)
@@ -98,7 +97,6 @@ else
  stop
 
 end if
-
 
  if (units == '-') then
 
