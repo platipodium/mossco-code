@@ -266,8 +266,10 @@ contains
       write(message, '(A)') 'Found field '//trim(name(i))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
+      write(message, '(A)') 'Did not find field(s):'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       do i=1,size(name)
-        write(message, '(A)') 'Did not find field '//trim(name(i))
+        write(message, '(A)') ' '//trim(name(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
     endif
