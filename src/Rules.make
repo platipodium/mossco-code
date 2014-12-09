@@ -119,9 +119,9 @@ ifdef MOSSCO_FABM_BINARY_DIR
   #export FABMDIR=$(shell grep fabm_SOURCE_DIR $(MOSSCO_FABM_BINARY_DIR)/CMakeCache.txt | cut -d "=" -f2)
 endif
 
+external_FABMDIR = $(MOSSCO_DIR)/external/fabm/code
 ifeq ($(FABM_PREFIX),)
   ifndef MOSSCO_FABMDIR
-    external_FABMDIR = $(MOSSCO_DIR)/external/fabm-git
     ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
       export MOSSCO_FABMDIR=$(external_FABMDIR)
     endif
@@ -130,8 +130,8 @@ ifeq ($(FABM_PREFIX),)
     export FABMDIR=$(MOSSCO_FABMDIR)
   endif
   ifdef FABMDIR
-    export FABM_BINARY_DIR=$(MOSSCO_DIR)/external/fabm-build
-    export FABM_PREFIX=$(MOSSCO_DIR)/external/fabm-install
+    export FABM_BINARY_DIR=$(MOSSCO_DIR)/external/fabm/build
+    export FABM_PREFIX=$(MOSSCO_DIR)/external/fabm/install
   endif
 endif
 

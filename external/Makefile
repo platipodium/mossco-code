@@ -20,13 +20,13 @@ SUBDIRS =
 
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
-.PHONY: fabm-git-clone  gotm-git-clone  getm_clone  erosed-svn-clone
-.PHONY: fabm-git-update gotm-git-update getm_update erosed-svn-update
+.PHONY: fabm_clone  gotm-git-clone  getm_clone  erosed-svn-clone
+.PHONY: fabm_update gotm-git-update getm_update erosed-svn-update
 
 all: clone
 
-clone:  fabm-git-clone  gotm-git-clone  getm_clone  #erosed-svn-clone
-update: fabm-git-update gotm-git-update getm_update #erosed-svn-update
+clone:  fabm_clone  gotm-git-clone  getm_clone  #erosed-svn-clone
+update: fabm_update gotm-git-update getm_update #erosed-svn-update
 
 clean: extraclean
 
@@ -44,18 +44,17 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 
-fabm-git-clone:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-	git clone git://git.code.sf.net/p/fabm/code $(MOSSCO_DIR)/external/fabm-git
+fabm_clone:
+ifeq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+	git clone git://git.code.sf.net/p/fabm/code $(external_FABMDIR)
 else
-	$(MAKE) fabm-git-update
+	$(MAKE) fabm_update
 endif
 
-fabm-git-update:
-ifneq ($(wildcard $(MOSSCO_DIR)/external/fabm-git/src/Makefile),)
-	(cd $(MOSSCO_DIR)/external/fabm-git ; git pull origin master)
+fabm_update:
+ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+	( cd $(external_FABMDIR) ; git pull )
 endif
-	(cd $(MOSSCO_DIR)/external/fabm-git ; git checkout)
 
 gotm-git-clone:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/gotm-git/src/Makefile),)
