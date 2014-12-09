@@ -50,8 +50,8 @@ contains
     
     nullify(fpointer)
     
-    ubnd(:)=-1
-    lbnd(:)=0
+    ubnd_(:)=-1
+    lbnd_(:)=0
     
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
@@ -181,8 +181,8 @@ contains
       write(message, '(A)') 'Found field '//trim(name(i))
     else
       write(message, '(A)') 'Did not find field '//trim(name(1))
-      ubnd(:)=-1
-      lbnd(:)=0
+      ubnd_(:)=-1
+      lbnd_(:)=0
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     
@@ -218,8 +218,8 @@ contains
     
     nullify(fpointer)
 
-    ubnd(:)=-1
-    lbnd(:)=0
+    ubnd_(:)=-1
+    lbnd_(:)=0
         
     do i=1,size(name)
       call ESMF_StateGet(state,trim(name(i)),itemType, rc=localrc)
