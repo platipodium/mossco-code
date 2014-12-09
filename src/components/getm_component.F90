@@ -414,15 +414,11 @@ module getm_component
 
                call ESMF_FieldGet(fieldList_ws(n),status=status)
 
-               if (status.eq.ESMF_FIELDSTATUS_EMPTY .or. status.eq.ESMF_FIELDSTATUS_GRIDSET) then
-!                 Either coupler called ESMF_FieldEmptyCreate(name),
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
+!                 Coupler called ESMF_FieldEmptyCreate(name),
 !                 because fabm_pelagic ships with its own grid (coupler
 !                 checks whether temperature field in fabm_pelagic's
-!                 importState is already completed). Or coupler copied empty
-!                 field, because fabm_pelagic was created with getmGrid.
-!                 In the latter case the state variables are allocated
-!                 only here (and the exclusiveDomain still needs to be
-!                 passed to FABM!) in order to include the total domain.
+!                 importState is already completed).
                   allocate(transport_ws(n)%ptr(I3DFIELD))
                   call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,        &
                                                transport_ws(n)%ptr,               &
@@ -432,13 +428,15 @@ module getm_component
                                                totalUWidth=(/HALO,HALO,0/),rc=rc)
                   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
-!                 Coupler copied completed fields from fabm_pelagic,
-!                 because "foreignGridField" was provided to fabm_pelagic
-!                 (coupler checks whether temperature field in fabm_pelagic's
-!                  importState is empty).
+!                 Coupler linked completed field from fabm_pelagic,
+!                 because GETM's grid was provided to fabm_pelagic.
 !                 The field MUST include the HALO zones and k=0 !!!
                   call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr,rc=rc)
                   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+               else
+                  call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
+                                     line=__LINE__,file=__FILE__,method='InitializeP2()')
+                  call ESMF_Finalize(endflag=ESMF_END_ABORT)
                end if
 
                call ESMF_FieldGet(fieldList_conc(n),status=status)
