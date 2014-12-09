@@ -568,6 +568,8 @@ endif
 
 .PHONY: mossco_clean
 mossco_clean: distclean fabm_clean
+	$(MAKE) -C $(MOSSCO_DIR)/external external_GOTMDIR=$(external_GOTMDIR) gotm_distclean
+	$(MAKE) -C $(MOSSCO_DIR)/external external_GETMDIR=$(external_GETMDIR) getm_distclean
 
 # Common rules
 #ifndef EXTRA_CPP
