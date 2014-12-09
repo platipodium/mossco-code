@@ -125,8 +125,8 @@ class (Microphytobenthos) :: this
 
 integer                   :: i,j
 
-do i = 1, this%jnum
- do j = 1, this%inum
+do i = 1, this%inum
+ do j = 1, this%jnum
      this%TauEffect (i,j)         =  Crit_shear_bioeffect(this%BioMass)
      this%ErodibilityEffect (i,j) =  erodibility_bioeffect(this%BioMass)
  end do

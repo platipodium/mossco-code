@@ -137,8 +137,9 @@ implicit none
 class (Mbalthica_Object) :: this
 
 integer                  :: i,j
-do i = 1, this%jnum
- do j = 1, this%inum
+
+do j = 1, this%jnum
+ do i = 1, this%inum
     this%Bioturbation%TauEffect(i,j)         =  Crit_shear_bioeffect(this%StateVar)
     this%Bioturbation%ErodibilityEffect(i,j) = erodibility_bioeffect(this%StateVar) 
  end do
