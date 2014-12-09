@@ -251,8 +251,8 @@ contains
 
     nlev=1
 
-    call init_microphyt(Micro,inum, jnum)
-    call set_microphyt(Micro)
+    call Micro%initialize(inum, jnum)
+    call Micro%set()
 
     call Macrofanua_init(Total_Bioturb, inum, jnum)
     call Macrofanua_set()
@@ -413,7 +413,7 @@ contains
 
 #endif
 
-    call run_microphyt(Micro)
+    call Micro%run()
     call Macrofanua_run(Total_Bioturb)
 
 
