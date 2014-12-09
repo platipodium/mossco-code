@@ -264,12 +264,13 @@ contains
     
     if (associated(fpointer)) then
       write(message, '(A)') 'Found field '//trim(name(i))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       do i=1,size(name)
         write(message, '(A)') 'Did not find field '//trim(name(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
     endif
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (present(rc)) then
       rc = ESMF_SUCCESS
