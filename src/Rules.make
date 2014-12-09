@@ -153,8 +153,8 @@ endif
 # 3b. GOTM
 MOSSCO_GOTM=false
 
+external_GOTMDIR = $(MOSSCO_DIR)/external/gotm/code
 ifndef MOSSCO_GOTMDIR
-external_GOTMDIR = $(MOSSCO_DIR)/external/gotm-git
 ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
 export MOSSCO_GOTMDIR=$(external_GOTMDIR)
 endif
