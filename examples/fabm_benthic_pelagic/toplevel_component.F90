@@ -167,7 +167,7 @@ module toplevel_component
     integer, intent(out)  :: rc
     type(ESMF_Field)      :: field
     type(ESMF_Clock)      :: childClock
-    type(ESMF_TimeInterval)   :: cplInterval
+    type(ESMF_TimeInterval)   :: cplInterval, outputInterval
     type(ESMF_Time)       :: currtime, ringTime
     type(ESMF_Alarm)      :: alarm
     logical :: clockIsPresent
@@ -176,6 +176,7 @@ module toplevel_component
     integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
     integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
     logical                :: hasPhaseZero
+    real(ESMF_KIND_R8)     :: dt
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
@@ -232,10 +233,18 @@ module toplevel_component
       !  call ESMF_ClockGetAlarm(childClock,'outputAlarm', alarm, rc=rc)
       !  write(0,*) rc
       
-      if (mod(advanceCount,240)==0) &
-          call ESMF_GridCompRun(netcdfComp, & 
+      if (mod(advanceCount,240)==0) then
+        call ESMF_GridCompGet(netcdfComp,clock=childClock)
+        call ESMF_TimeIntervalGet(cplInterval,s_r8=dt,rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_TimeIntervalSet(outputInterval, s_r8=240.0d0*dt,rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_ClockSet(childClock,stopTime=currTime+outputInterval,rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_GridCompRun(netcdfComp, & 
           importState=sedimentstate, exportState=sedimentstate, clock=parentClock, rc=rc)
-      
+      end if      
+
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
