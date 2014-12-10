@@ -87,7 +87,7 @@ elseif (opnd) then
 else
 
  write (*,*) 'Warning: The input file for Microphytobenthos doesnot exists!'
- write (*,*) ' Biological effects on erodibility and bed shear stress are set to 1."
+ write (*,*) ' Biological effects on erodibility and bed shear stress are set to 1.'
 
 end if
 
