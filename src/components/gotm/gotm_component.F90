@@ -427,6 +427,7 @@ module gotm_component
     integer(ESMF_KIND_I4)        :: itemCount, localRc, i
     character(len=ESMF_MAXSTR)   :: name
     character(len=ESMF_MAXSTR),allocatable   :: itemNameList(:)
+    logical                      :: clockIsPresent
 
 !!> @todo StateGet gets a destroyed state here in the generic coupling, this needs to be fixed
      return
