@@ -8,11 +8,11 @@ dependencies:
       grid: temperature_in_water
   - erosed: 
     - component: getm
-      grid: temperature_at_soil_surface
+      grid: water_depth_at_soil_surface
   - erosed: fabm_pelagic
   - simplewave:
     - component: getm
-      grid: temperature_at_soil_surface
+      grid: water_depth_at_soil_surface
 #  - benthic_pelagic_coupler: fabm_pelagic
   - benthos:
     - component: getm
