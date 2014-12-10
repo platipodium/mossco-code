@@ -119,7 +119,7 @@ ifdef MOSSCO_FABM_BINARY_DIR
   #export FABMDIR=$(shell grep fabm_SOURCE_DIR $(MOSSCO_FABM_BINARY_DIR)/CMakeCache.txt | cut -d "=" -f2)
 endif
 
-external_FABMDIR = $(MOSSCO_DIR)/external/fabm/code
+export external_FABMDIR=$(MOSSCO_DIR)/external/fabm/code
 ifeq ($(FABM_PREFIX),)
   ifndef MOSSCO_FABMDIR
     ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
@@ -153,7 +153,7 @@ endif
 # 3b. GOTM
 MOSSCO_GOTM=false
 
-external_GOTMDIR = $(MOSSCO_DIR)/external/gotm/code
+export external_GOTMDIR=$(MOSSCO_DIR)/external/gotm/code
 ifndef MOSSCO_GOTMDIR
 ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
 export MOSSCO_GOTMDIR=$(external_GOTMDIR)
@@ -178,7 +178,7 @@ export MOSSCO_GOTM
 # 3c. GETM
 MOSSCO_GETM=false
 
-external_GETMDIR = $(MOSSCO_DIR)/external/getm/code
+export external_GETMDIR=$(MOSSCO_DIR)/external/getm/code
 ifndef MOSSCO_GETMDIR
   ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
     export MOSSCO_GETMDIR=$(external_GETMDIR)
@@ -549,8 +549,7 @@ endif
 
 .PHONY: mossco_clean
 mossco_clean: distclean fabm_clean
-	$(MAKE) -C $(MOSSCO_DIR)/external external_GOTMDIR=$(external_GOTMDIR) gotm_distclean
-	$(MAKE) -C $(MOSSCO_DIR)/external external_GETMDIR=$(external_GETMDIR) getm_distclean
+	$(MAKE) -C $(MOSSCO_DIR)/external gotm_distclean getm_distclean
 
 # Common rules
 #ifndef EXTRA_CPP
