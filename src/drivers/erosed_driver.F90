@@ -618,20 +618,41 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
 #endif
               else
                 !(3D)
+
+                ! Find bottom cell for SAND sediment calculations and store for use
+                ! in DIFU and DIF_WS
+                !
+!                kmaxsd = 1
+!                 do k = kmax - 1, 1, -1
+!                   !
+!                   ! Calculate level of lower cell interface
+!                   !
+!                   lci = (1.0_fp + sig(k) - thick(k)/2.0_fp) * h1
+!                   if (lci >= aks) then
+!                      kmaxsd = k
+!                      exit
+!                   endif
+!                 enddo
+
                  drho     = (rhosol(l)-rhowat) / rhowat
                  dstar(l) = sedd50(l) * (drho*g/vicmol**2)**0.3333_fp
+
                  if (dstar(l) < 1.0_fp) then
+
                     if (iform == -2) then
                        tetacr(l) = 0.115_fp / (dstar(l)**0.5_fp)
                     else
                        tetacr(l) = 0.24_fp / dstar(l)
                     endif
+
                  elseif (dstar(l) <= 4.0_fp) then
+
                     if (iform == -2) then
                        tetacr(l) = 0.115_fp / (dstar(l)**0.5_fp)
                     else
                        tetacr(l) = 0.24_fp / dstar(l)
                     endif
+
                  elseif (dstar(l)>4.0_fp .and. dstar(l)<=10.0_fp) then
                     tetacr(l) = 0.14_fp  / (dstar(l)**0.64_fp)
                  elseif (dstar(l)>10.0_fp .and. dstar(l)<=20.0_fp) then
@@ -647,26 +668,14 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
                  call bedbc1993_arguments%set (tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm), &
                            & zubed(nm)   ,sedd50(l)     ,sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l), &
                            & taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax   , &
-                           & rdc         ,rdw           ,iopkcw    ,iopsus    ,vonkar  ,wave,tauadd )
+                           & rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd )
 
                  call bedbc1993_arguments%run
 
-    !                call bedbc1993(tper      ,uorb (nm) ,rhowat    ,h(nm)     ,ubed(nm)      , &
-    !                             & zubed (nm),sedd50(l) ,sedd90(l) ,z0cur     ,z0rou     , &
-    !                             & dstar     ,taucr(l)  ,aks       ,usus      ,zusus     , &
-    !                             & uwb       ,delr      ,muc       ,tauwav    ,ustarc    , &
-    !                             & tauc      ,taubcw    ,taurat    ,ta        ,ce_nm     , &
-    !                             & dss       ,mudfrac   ,eps       ,aksfac    ,rwave     , &
-    !                             & camax     ,rdc       ,rdw       ,iopkcw    ,iopsus    , &
-    !                             & vonkar    ,wave      ,tauadd    )
 
                  call  bedbc1993_arguments%get (aks, ce_nm, taubcw, ta)
-    !
-    !               call soursin_3d  ( h(nm)             ,thick0         ,thick1             , &
-    !                               &  sig(kmaxsd)       ,thick(kmaxsd)  ,r0(nm,kmaxsd,ll)   , &
-    !                               &  vicmol            ,sigmol(ll)     ,seddif(nm,kmaxsd,l), &
-    !                               &  rhosol(l)         ,ce_nmtmp       ,ws(nm,kmaxsd,l)    , &
-    !                               &  aks               ,sourse(nm,l)   ,sinkse(nm,l) )
+
+                 ce_nm =ce_nm * frac(l,nm)
 
                  call soursin3d_arguments%set (h (nm) ,thick0   ,thick1 , sigsed ,thick , &
                                    &  spm_concentration(i,j,l)  , vicmol, sigmol ,seddif, &
@@ -675,7 +684,8 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
                  call soursin3d_arguments%run ()
 
                  call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
-                 write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm)
+    !             write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm)
+
               end if !(2D/3D)
             endif ! (cohesive /non-cohesive
         enddo     fractions
