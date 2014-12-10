@@ -430,7 +430,6 @@ module gotm_component
     logical                      :: clockIsPresent
 
 !!> @todo StateGet gets a destroyed state here in the generic coupling, this needs to be fixed
-     return
 
     call ESMF_StateGet(exportState, name=name, itemCount=itemCount, rc=localRc)
     if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -446,7 +445,7 @@ module gotm_component
       if (itemtypeList(i) == ESMF_STATEITEM_FIELD) then
         call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=localrc)
         if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)        
-        
+      
 #if ESMF_VERSION_MAJOR > 5
         call ESMF_StateRemove(exportState,trim(itemNameList(i)),rc=rc)
 #else
@@ -456,17 +455,21 @@ module gotm_component
 
         call ESMF_FieldDestroy(field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-	    endif
+      endif
     enddo
 
-	  if (allocated(itemNameList)) deallocate(itemNameList)
-	  if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(variables)) deallocate(variables)
 
     !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
-    if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
+    call ESMF_GridCompGet(gridcomp, clockIsPresent=clockIsPresent,rc=rc)
+    if (clockIsPresent) then
+      call ESMF_GridCompGet(GridComp,clock=clock,rc=rc)
+      call ESMF_ClockDestroy(clock, rc=rc)
+    end if
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call clean_up()
