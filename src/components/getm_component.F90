@@ -40,7 +40,7 @@ module getm_component
 ! Note (KK): the save attribute can be deleted for F2008 standard
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
-  type(ESMF_Field)   ,save :: TbotField,T3DField
+  type(ESMF_Field)   ,save :: depthField,TbotField,T3DField
 
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
@@ -58,6 +58,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zw(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
 
@@ -285,6 +286,12 @@ module getm_component
     call getmCmp_init_variables()
     call getmCmp_init_grid(gridComp)
 
+    if (associated(depth)) then
+      DepthField = ESMF_FieldCreate(getmGrid2D,depth,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="water_depth_at_soil_surface",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/depthField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
     if (associated(Tbot)) then
 !     internal call to ESMF_FieldCreateGridData<rank><type><kind>()
 !     forced by indexflag argument.
@@ -604,6 +611,7 @@ module getm_component
    use domain      ,only: xxcord,yxcord,xc,yc,lonc,latc
    use domain      ,only: grid_type
    use initialise  ,only: runtype
+   use variables_2d,only: D
 #ifndef NO_BAROCLINIC
    use variables_3d,only: T
 #endif
@@ -652,6 +660,7 @@ module getm_component
             allocate(lonc2D(E2DFIELD )) ; lonc2D = lonc
             allocate(latc2D(E2DFIELD )) ; latc2D = latc
       end select
+      allocate(depth(E2DFIELD))
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          allocate(Tbot(I2DFIELD))
@@ -685,6 +694,7 @@ module getm_component
             lonc2D => lonc
             latc2D => latc
       end select
+       depth=>D
        if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
           Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
@@ -1131,6 +1141,7 @@ module getm_component
 ! !USES:
    use domain    ,only: imin,imax,jmin,jmax,kmax
    use initialise  , only: runtype
+   use variables_2d, only: D
 #ifndef NO_BAROCLINIC
    use variables_3d, only: T
 #endif
@@ -1153,6 +1164,7 @@ module getm_component
 #endif
 
    if (noKindMatch) then
+      depth = D
       if (runtype .gt. 2) then
 #ifndef NO_BAROCLINIC
          Tbot = T(:,:,1)
