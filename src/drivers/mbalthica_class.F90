@@ -93,8 +93,8 @@ elseif (opnd) then
 
 else
 
- write (*,*) 'ERROR: The input file for Mbalthica doesnot exists!'
- stop
+ write (*,*) 'Warning: The input file for Mbalthica doesnot exists!'
+ write (*,*) ' Biological effects on erodibility and bed shear stress are set to 1."
 
 end if
 
@@ -139,7 +139,7 @@ integer                  :: i,j
 do j = 1, this%jnum
  do i = 1, this%inum
     this%Bioturbation%TauEffect(i,j)         =  Crit_shear_bioeffect(this%StateVar)
-    this%Bioturbation%ErodibilityEffect(i,j) = erodibility_bioeffect(this%StateVar) 
+    this%Bioturbation%ErodibilityEffect(i,j) = erodibility_bioeffect(this%StateVar)
  end do
 end do
 
