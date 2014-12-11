@@ -30,15 +30,15 @@ Manipulate `$GOTMDIR/compilers/compiler.XLF` and replace xlf90 with mpxlf2003_r
 
 	export FORTRAN_COMPILER=XLF
 	export ARFLAGS='-X64 rv '
-	export GOTMDIR=/pf/g/g260077/mossco/code/external/gotm-git
+	export GOTMDIR=/pf/g/g260077/mossco/code/external/gotm/code
 	export NETCDF_VERSION=NETCDF4
 	
 ## Installing GETM
 
 	export ARFLAGS='-X64 rv '
-	export GOTMDIR=/pf/g/g260077/mossco/code/external/gotm-git
+	export GOTMDIR=/pf/g/g260077/mossco/code/external/gotm/code
 	export FORTRAN_COMPILER=XLF
-	export GETMDIR=/pf/g/g260077/mossco/code/external/getm-git
+	export GETMDIR=/pf/g/g260077/mossco/code/external/getm/code
 	export NETCDF=NETCDF4 
 	export GETM_PARALLEL=true
 	export MPI=MPI

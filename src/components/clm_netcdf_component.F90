@@ -421,9 +421,10 @@ module clm_netcdf_component
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet, &
       name=name, clock=clock, rc=localrc)  
+      
+    call ESMF_ClockGet(clock, refTime=refTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_ClockGet(parentClock,currTime=currTime, refTime=refTime, rc=localrc)
-
+    
     ib = lbound(atmos_T,1)
     ie = ubound(atmos_T,1)
     jb = lbound(atmos_T,2)
