@@ -368,6 +368,10 @@ module fabm_pelagic_component
                        totalLWidth=totalLWidth3,totalUWidth=totalUWidth3, &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      !> add fabm index in concentration array as "external_index" to be used by other components
+      call ESMF_AttributeSet(wsfield,'external_index',pel%export_states(n)%fabm_id)
+
       call ESMF_AttributeSet(wsfield,'units','m/s')
       call ESMF_FieldGet(field=wsfield, localDe=0, farrayPtr=pel%export_states(n)%ws, &
                      totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
