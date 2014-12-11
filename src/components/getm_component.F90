@@ -40,7 +40,7 @@ module getm_component
 ! Note (KK): the save attribute can be deleted for F2008 standard
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
-  type(ESMF_Field)   ,save :: depthField
+  type(ESMF_Field)   ,save :: depthField,hbotField
   type(ESMF_Field)   ,save :: U2DField,V2DField,UbotField,VbotField
   type(ESMF_Field)   ,save :: TbotField,T3DField
 
@@ -60,7 +60,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zw(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL(),hbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: U2D (:,:)=>NULL(),V2D (:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Ubot(:,:)=>NULL(),Vbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
@@ -294,6 +294,12 @@ module getm_component
       DepthField = ESMF_FieldCreate(getmGrid2D,depth,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="water_depth_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(exportState,(/depthField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (associated(hbot)) then
+      DepthField = ESMF_FieldCreate(getmGrid2D,hbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="layer_height_at_soil_surface",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/hbotField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(U2D)) then
@@ -640,8 +646,11 @@ module getm_component
    use domain      ,only: grid_type
    use initialise  ,only: runtype
    use variables_2d,only: D
+#ifndef NO_3D
+   use variables_3d,only: hn
 #ifndef NO_BAROCLINIC
    use variables_3d,only: T
+#endif
 #endif
    IMPLICIT NONE
 !
@@ -664,6 +673,12 @@ module getm_component
 #endif
 
    noKindMatch = ( kind(getmreal) .ne. ESMF_KIND_R8 )
+
+   if (runtype .eq. 1) then
+      klen = 1
+   else
+      klen = kmax
+   end if
 
    if (noKindMatch) then
       select case (grid_type)
@@ -689,17 +704,24 @@ module getm_component
             allocate(latc2D(E2DFIELD )) ; latc2D = latc
       end select
       allocate(depth(E2DFIELD))
-      if (runtype .gt. 2) then
+      if (runtype .eq. 1) then
+         hbot => depth
+      else
+#ifndef NO_3D
+         allocate(hbot(E2DFIELD))
 #ifndef NO_BAROCLINIC
-         allocate(Tbot(I2DFIELD))
+         if (runtype .gt. 2) then
+            allocate(Tbot(I2DFIELD))
 #ifdef FOREIGN_GRID
-         allocate(T3D(I3DFIELD))
+            allocate(T3D(I3DFIELD))
 #else
-         allocate(T3D(imin:imax,jmin:jmax,1:kmax))
+            allocate(T3D(imin:imax,jmin:jmax,1:kmax))
+#endif
+         end if
 #endif
 #endif
       end if
-    else
+   else
       select case (grid_type)
          case(1)
             xc1D => xcord
@@ -722,17 +744,24 @@ module getm_component
             lonc2D => lonc
             latc2D => latc
       end select
-       depth=>D
-       if (runtype .gt. 2) then
+      depth => D
+      if (runtype .eq. 1) then
+         hbot => D
+      else
+#ifndef NO_3D
+         hbot(imin-HALO:,jmin-HALO:) => hn(:,:,1)
 #ifndef NO_BAROCLINIC
-          Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
+         if (runtype .gt. 2) then
+            Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
 #ifdef FOREIGN_GRID
-          T3D=>T
+            T3D => T
 #else
-          T3D => T(imin:imax,jmin:jmax,1:kmax)
+            T3D => T(imin:imax,jmin:jmax,1:kmax)
+#endif
+         end if
 #endif
 #endif
-       end if
+      end if
    end if
 
    select case (grid_type)
@@ -750,12 +779,6 @@ module getm_component
    else
       allocate(maskC(E2DFIELD)) ; maskC = az
       allocate(maskX(E2DFIELD)) ; maskX = ax
-   end if
-
-   if (runtype .eq. 1) then
-      klen = 1
-   else
-      klen = kmax
    end if
 
    allocate(maskC3D(E2DFIELD,1:klen))
@@ -1190,7 +1213,7 @@ module getm_component
    use initialise  ,only: runtype
    use variables_2d,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
-   use variables_3d, only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
+   use variables_3d,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
 #ifndef NO_BAROCLINIC
    use variables_3d,only: T
 #endif
@@ -1221,16 +1244,21 @@ module getm_component
 
    if (noKindMatch) then
       depth = D
-      if (runtype .gt. 2) then
+#ifndef NO_3D
+      if (runtype .gt. 1) then
+         hbot = hn(:,:,1)
 #ifndef NO_BAROCLINIC
-         Tbot = T(:,:,1)
+         if (runtype .gt. 2) then
+            Tbot = T(:,:,1)
 #ifdef FOREIGN_GRID
-         T3D = T
+            T3D = T
 #else
-         T3D = T(imin:imax,jmin:jmax,1:kmax)
+            T3D = T(imin:imax,jmin:jmax,1:kmax)
 #endif
+         end if
 #endif
       end if
+#endif
    end if
 
 
