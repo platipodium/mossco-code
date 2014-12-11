@@ -40,7 +40,9 @@ module getm_component
 ! Note (KK): the save attribute can be deleted for F2008 standard
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
-  type(ESMF_Field)   ,save :: U2DField,V2DField,depthField,TbotField,T3DField
+  type(ESMF_Field)   ,save :: depthField
+  type(ESMF_Field)   ,save :: U2DField,V2DField,UbotField,VbotField
+  type(ESMF_Field)   ,save :: TbotField,T3DField
 
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
@@ -59,7 +61,8 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: U2D(:,:)=>NULL(),V2D(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: U2D (:,:)=>NULL(),V2D (:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: Ubot(:,:)=>NULL(),Vbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
 
@@ -303,6 +306,18 @@ module getm_component
       V2DField = ESMF_FieldCreate(getmGrid2D,V2D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="depth_averaged_y_velocity_in_water",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(exportState,(/V2DField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (associated(Ubot)) then
+      UbotField = ESMF_FieldCreate(getmGrid2D,Ubot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="x_velocity_at_soil_surface",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/UbotField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (associated(Vbot)) then
+      V2DField = ESMF_FieldCreate(getmGrid2D,Vbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="y_velocity_at_soil_surface",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/VbotField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(Tbot)) then
@@ -759,6 +774,15 @@ module getm_component
    allocate(U2D(E2DFIELD))
    allocate(V2D(E2DFIELD))
 
+   if (klen .eq. 1) then
+      Ubot => U2D
+      Vbot => V2D
+   else
+      allocate(Ubot(E2DFIELD))
+      allocate(Vbot(E2DFIELD))
+   end if
+
+
 #ifdef DEBUG
    write(debug,*) 'getmCmp_init_variables()'
    write(debug,*)
@@ -1165,8 +1189,11 @@ module getm_component
 #endif
    use initialise  ,only: runtype
    use variables_2d,only: zo,z,D,Dvel,U,DU,V,DV
+#ifndef NO_3D
+   use variables_3d, only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
 #ifndef NO_BAROCLINIC
    use variables_3d,only: T
+#endif
 #endif
    use m2d         ,only: dtm
    IMPLICIT NONE
@@ -1180,6 +1207,7 @@ module getm_component
    REALTYPE,dimension(E2DFIELD)         :: wrk
    REALTYPE,dimension(E2DFIELD),target  :: t_vel
    REALTYPE,dimension(:,:),pointer      :: p_vel
+   integer                              :: klen
    REALTYPE,parameter                   :: vel_missing=-9999.0
 !
 !EOP
@@ -1213,7 +1241,6 @@ module getm_component
    else
       p_vel => U2D
    end if
-
    call to_u(imin,jmin,imax,jmax,az,                                 &
              dtm,grid_type,                                          &
 #if defined(CURVILINEAR) || defined(SPHERICAL)
@@ -1222,7 +1249,6 @@ module getm_component
              dx,dy,ard1,                                             &
 #endif
              xc,xu,xv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
-
    if (noKindMatch) then
       U2D = t_vel
    end if
@@ -1232,7 +1258,6 @@ module getm_component
    else
       p_vel => V2D
    end if
-
    call to_v(imin,jmin,imax,jmax,az,                                 &
              dtm,grid_type,                                          &
 #if defined(CURVILINEAR) || defined(SPHERICAL)
@@ -1241,10 +1266,57 @@ module getm_component
              dx,dy,ard1,                                             &
 #endif
              yc,yu,yv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
-
    if (noKindMatch) then
       V2D = t_vel
    end if
+
+#ifndef NO_3D
+   if (runtype .eq. 1) then
+      klen = 1
+   else
+      klen = kmax
+   end if
+
+   if (klen .gt. 1) then
+      if (noKindMatch) then
+         p_vel => t_vel
+      else
+         p_vel => Ubot
+      end if
+      call to_u(imin,jmin,imax,jmax,az,                            &
+                dt,grid_type,                                      &
+#if defined(CURVILINEAR) || defined(SPHERICAL)
+                dxv,dyu,arcd1,                                     &
+#else
+                dx,dy,ard1,                                        &
+#endif
+                xc,xu,xv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
+                uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
+                ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
+      if (noKindMatch) then
+         Ubot = t_vel
+      end if
+
+      if (noKindMatch) then
+         p_vel => t_vel
+      else
+         p_vel => Vbot
+      end if
+      call to_v(imin,jmin,imax,jmax,az,                            &
+                dt,grid_type,                                      &
+#if defined(CURVILINEAR) || defined(SPHERICAL)
+                dxv,dyu,arcd1,                                     &
+#else
+                dx,dy,ard1,                                        &
+#endif
+                yc,yu,yv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
+                uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
+                ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
+      if (noKindMatch) then
+         Vbot = t_vel
+      end if
+   end if
+#endif
 
 #ifdef DEBUG
    write(debug,*) 'getmCmp_update_exportState()'
