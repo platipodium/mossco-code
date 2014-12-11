@@ -843,7 +843,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         do n=1,size(fieldlist)
           call ESMF_FieldGet(fieldlist(n),farrayPtr=ptr_f3,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_AttributeGet(fieldlist(n),'external_index',external_index,defaultvalue=-1)
+          call ESMF_AttributeGet(fieldlist(n),'external_index',external_index, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          do j=1,jnum
           do i= 1, inum
            ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1)
