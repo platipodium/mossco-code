@@ -206,7 +206,7 @@ module getm_component
     use time, only : getm_time_timestep => timestep
     use initialise,  only: init_model,dryrun
     use integration, only: MinN,MaxN
-    use meteo      ,only: met_method,calc_met
+    use meteo      ,only: met_method
 #ifdef GETM_PARALLEL
     use halo_mpi, only: comm_getm
 #endif
@@ -642,7 +642,7 @@ module getm_component
    use variables_3d,only: T
 #endif
 #endif
-   use meteo       ,only: met_method,calc_met,u10,v10
+   use meteo       ,only: metforcing,met_method,calc_met,u10,v10
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -712,7 +712,7 @@ module getm_component
 #endif
 #endif
       end if
-      if (met_method.eq.2 .or. met_method.eq.3) then
+      if (metforcing .and. (met_method.eq.2 .or. met_method.eq.3)) then ! still required...
       if (calc_met) then
          allocate(windU(E2DFIELD))
          allocate(windV(E2DFIELD))
@@ -759,7 +759,7 @@ module getm_component
 #endif
 #endif
       end if
-      if (met_method.eq.2 .or. met_method.eq.3) then
+      if (metforcing .and. (met_method.eq.2 .or. met_method.eq.3)) then ! still required...
       if (calc_met) then
          windU => u10
          windV => v10
@@ -1222,7 +1222,7 @@ module getm_component
 #endif
 #endif
    use m2d         ,only: dtm
-   use meteo       ,only: met_method,calc_met,u10,v10
+   use meteo       ,only: metforcing,met_method,calc_met,u10,v10
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1263,9 +1263,11 @@ module getm_component
 #endif
       end if
 #endif
+      if (metforcing) then ! still required...
       if (calc_met .and. met_method.eq.2) then
          windU = u10
          windV = v10
+      end if
       end if
    end if
 
@@ -1375,7 +1377,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use meteo       ,only: met_method,calc_met,u10,v10
+   use meteo       ,only: metforcing,met_method,calc_met,u10,v10
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1395,9 +1397,11 @@ module getm_component
 #endif
 
    if (noKindMatch) then
+      if (metforcing) then ! still required...
       if (calc_met .and. met_method.eq.3) then
          u10 = windU
          v10 = windV
+      end if
       end if
    end if
 
