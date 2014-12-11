@@ -67,6 +67,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Ubot(:,:)=>NULL(),Vbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
 
   type :: ptrarray3D
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
@@ -205,6 +206,7 @@ module getm_component
     use time, only : getm_time_timestep => timestep
     use initialise,  only: init_model,dryrun
     use integration, only: MinN,MaxN
+    use meteo      ,only: met_method,calc_met
 #ifdef GETM_PARALLEL
     use halo_mpi, only: comm_getm
 #endif
@@ -316,6 +318,23 @@ module getm_component
     if (associated(T3D)) then
       call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState)
     end if
+
+    select case (met_method)
+      case(2)
+        if (associated(windU)) then
+          call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,exportState)
+        end if
+        if (associated(windV)) then
+          call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,exportState)
+        end if
+      case(3)
+        if (associated(windU)) then
+          call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,importState)
+        end if
+        if (associated(windV)) then
+          call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,importState)
+        end if
+    end select
 
     call getmCmp_update_exportState()
 
@@ -502,6 +521,8 @@ module getm_component
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
+    call getmCmp_update_importState()
+
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -621,6 +642,7 @@ module getm_component
    use variables_3d,only: T
 #endif
 #endif
+   use meteo       ,only: met_method,calc_met,u10,v10
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -690,6 +712,12 @@ module getm_component
 #endif
 #endif
       end if
+      if (met_method.eq.2 .or. met_method.eq.3) then
+      if (calc_met) then
+         allocate(windU(E2DFIELD))
+         allocate(windV(E2DFIELD))
+      end if
+      end if
    else
       select case (grid_type)
          case(1)
@@ -730,6 +758,12 @@ module getm_component
          end if
 #endif
 #endif
+      end if
+      if (met_method.eq.2 .or. met_method.eq.3) then
+      if (calc_met) then
+         windU => u10
+         windV => v10
+      end if
       end if
    end if
 
@@ -1188,6 +1222,7 @@ module getm_component
 #endif
 #endif
    use m2d         ,only: dtm
+   use meteo       ,only: met_method,calc_met,u10,v10
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1228,6 +1263,10 @@ module getm_component
 #endif
       end if
 #endif
+      if (calc_met .and. met_method.eq.2) then
+         windU = u10
+         windV = v10
+      end if
    end if
 
 
@@ -1322,6 +1361,53 @@ module getm_component
    return
 
    end subroutine getmCmp_update_exportState
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_update_importState -
+!
+! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "getmCmp_update_importState"
+   subroutine getmCmp_update_importState()
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use meteo       ,only: met_method,calc_met,u10,v10
+   IMPLICIT NONE
+!
+! !INPUT/OUTPUT PARAMETERS:
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_update_importState() # ',Ncall
+#endif
+
+   if (noKindMatch) then
+      if (calc_met .and. met_method.eq.3) then
+         u10 = windU
+         v10 = windV
+      end if
+   end if
+
+#ifdef DEBUG
+   write(debug,*) 'getmCmp_update_importState()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_update_importState
 !EOC
 !-----------------------------------------------------------------------
 !BOP
