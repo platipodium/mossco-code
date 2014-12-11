@@ -181,6 +181,7 @@ module simplewave_component
 
     type(ESMF_Field), target     :: field
     type(ESMF_Grid)      :: grid
+    type(ESMF_FieldStatus_Flag)     :: status
     integer              :: localrc
     integer              :: rank
     real(ESMF_KIND_R8), pointer           :: coordX(:), coordY(:)
@@ -283,21 +284,43 @@ module simplewave_component
 !   Complete Import Fields
     do i=1,size(importList)
       call ESMF_StateGet(importState,trim(importList(i)%name),field)
-      allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-      call ESMF_FieldEmptyComplete(field,grid,importList(i)%data,     &
-                                   ESMF_INDEX_DELOCAL,                      &
-                                   totalLWidth=exclusiveLBound-totalLBound, &
-                                   totalUWidth=totalUBound-exclusiveUBound)
+      call ESMF_FieldGet(field,status=status)
+      if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
+        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        call ESMF_FieldEmptyComplete(field,grid,importList(i)%data,     &
+                                     ESMF_INDEX_DELOCAL,                      &
+                                     totalLWidth=exclusiveLBound-totalLBound, &
+                                     totalUWidth=totalUBound-exclusiveUBound)
+      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+        call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
+      else
+        call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
+                           line=__LINE__,file=__FILE__,method='InitializeP2()')
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      end if
     end do
 
 !   Complete Export Fields
     do i=1,size(exportList)
       call ESMF_StateGet(exportState,trim(exportList(i)%name),field)
-      allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-      call ESMF_FieldEmptyComplete(field,grid,exportList(i)%data,     &
-                                   ESMF_INDEX_DELOCAL,                      &
-                                   totalLWidth=exclusiveLBound-totalLBound, &
-                                   totalUWidth=totalUBound-exclusiveUBound)
+      call ESMF_FieldGet(field,status=status)
+      if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
+        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        call ESMF_FieldEmptyComplete(field,grid,exportList(i)%data,     &
+                                     ESMF_INDEX_DELOCAL,                      &
+                                     totalLWidth=exclusiveLBound-totalLBound, &
+                                     totalUWidth=totalUBound-exclusiveUBound)
+      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+        call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
+      else
+        call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
+                           line=__LINE__,file=__FILE__,method='InitializeP2()')
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      end if
     end do
 
     call MOSSCO_CompExit(gridComp, localrc)
