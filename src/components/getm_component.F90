@@ -297,7 +297,7 @@ module getm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(hbot)) then
-      DepthField = ESMF_FieldCreate(getmGrid2D,hbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="layer_height_at_soil_surface",rc=rc)
+      hbotField = ESMF_FieldCreate(getmGrid2D,hbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="layerheight_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(exportState,(/hbotField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -321,7 +321,7 @@ module getm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(Vbot)) then
-      V2DField = ESMF_FieldCreate(getmGrid2D,Vbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="y_velocity_at_soil_surface",rc=rc)
+      VbotField = ESMF_FieldCreate(getmGrid2D,Vbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="y_velocity_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(exportState,(/VbotField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
