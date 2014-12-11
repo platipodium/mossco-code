@@ -20,51 +20,51 @@
 !> This module encapsulates the CLM atmospheric interface.
 module clm_netcdf_component
     
-    use esmf
-    use mossco_component
+  use esmf
+  use mossco_component
 
-    use clm_driver, only : CLM_init, CLM_final
-    use clm_driver, only : CLM_getrecord, CLM_getdata
+  use clm_driver, only : CLM_init, CLM_final
+  use clm_driver, only : CLM_getrecord, CLM_getdata
     
-    implicit none
+  implicit none
 
-    private
+  private
 
-    integer                     :: print_count  !< counter for printout
-    integer                     :: nact         !< number of active variables
-    integer, allocatable        :: varids(:)    !< indices of active variables
-    real(ESMF_KIND_R8)          :: posx, posy, radius
-    real(ESMF_KIND_R8), pointer :: atmos_P(:,:) !< atm. sea-level pressure
-    real(ESMF_KIND_R8), pointer :: atmos_U(:,:) !< atm. u-component
-    real(ESMF_KIND_R8), pointer :: atmos_V(:,:) !< atm. v-component
-    real(ESMF_KIND_R8), pointer :: atmos_T(:,:) !< atm. temperature
-    real(ESMF_KIND_R8), pointer :: atmos_Q(:,:) !< atm. relative humidity
-    real(ESMF_KIND_R8), pointer :: atmos_C(:,:) !< atm. cloud cover
-    real(ESMF_KIND_R8), pointer :: atmos_R(:,:) !< atm. rain rate
-    type(ESMF_Field)            :: P_field
-    type(ESMF_Field)            :: U_field
-    type(ESMF_Field)            :: V_field
-    type(ESMF_Field)            :: T_field
-    type(ESMF_Field)            :: Q_field
-    type(ESMF_Field)            :: C_field
-    type(ESMF_Field)            :: R_field
-    type(ESMF_Time)             :: clm_time
-    type(ESMF_Time)             :: ref_time
+  integer                     :: print_count  !< counter for printout
+  integer                     :: nact         !< number of active variables
+  integer, allocatable        :: varids(:)    !< indices of active variables
+  real(ESMF_KIND_R8)          :: posx, posy, radius
+  real(ESMF_KIND_R8), pointer :: atmos_P(:,:) !< atm. sea-level pressure
+  real(ESMF_KIND_R8), pointer :: atmos_U(:,:) !< atm. u-component
+  real(ESMF_KIND_R8), pointer :: atmos_V(:,:) !< atm. v-component
+  real(ESMF_KIND_R8), pointer :: atmos_T(:,:) !< atm. temperature
+  real(ESMF_KIND_R8), pointer :: atmos_Q(:,:) !< atm. relative humidity
+  real(ESMF_KIND_R8), pointer :: atmos_C(:,:) !< atm. cloud cover
+  real(ESMF_KIND_R8), pointer :: atmos_R(:,:) !< atm. rain rate
+  type(ESMF_Field)            :: P_field
+  type(ESMF_Field)            :: U_field
+  type(ESMF_Field)            :: V_field
+  type(ESMF_Field)            :: T_field
+  type(ESMF_Field)            :: Q_field
+  type(ESMF_Field)            :: C_field
+  type(ESMF_Field)            :: R_field
+  type(ESMF_Time)             :: clm_time
+  type(ESMF_Time)             :: ref_time
 
-    type atm_var
+  type atm_var
       character (len=4)           :: nam        !< field name
       integer                     :: id         !< netcdf variable ID
       real(4)                     :: scl        !< scale factor
       integer                     :: ndims      !< number of dimensions
       real(ESMF_KIND_R8), pointer :: array(:,:) !< array for atm. variable
       type(ESMF_Field)            :: field      !< ESMF field for atm. variable
-    end type atm_var
+  end type atm_var
 
-    type(atm_var), allocatable  :: var(:)
+  type(atm_var), allocatable  :: var(:)
     
-    public SetServices
+  public SetServices
 
-    contains
+  contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "SetServices"
@@ -136,35 +136,35 @@ module clm_netcdf_component
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
-      type(ESMF_GridComp)  :: gridComp
-      type(ESMF_State)     :: importState
-      type(ESMF_State)     :: exportState
-      type(ESMF_Clock)     :: parentClock
-      integer, intent(out) :: rc
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState
+    type(ESMF_State)     :: exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
 
-      type(ESMF_Grid)             :: grid
-      type(ESMF_Field)            :: de_field
-      type(ESMF_Config)           :: config
-      real(ESMF_KIND_R8), pointer :: de(:,:)
-      real(ESMF_KIND_R8), pointer :: coordX(:,:), coordY(:,:)
-      real(ESMF_KIND_R8)          :: dx, dy, x0, y0
-      real(ESMF_KIND_R8)          :: xc, yc, r
-      integer                     :: lbnd(2), ubnd(2)
-      integer                     :: ibuf(3)
-      integer                     :: ib, ie, jb, je
-      integer                     :: ierr, dimid, lrc
-      integer                     :: i, j, iprocs, jprocs
-      type(ESMF_TimeInterval)     :: d_time
-      real(ESMF_KIND_R8)          :: app_time_secs
-      integer                     :: ind, inda, nvar, id
-      character (len=4), allocatable :: vname(:)
-      integer, allocatable        :: active(:), ndims(:), lvarid(:)
-      real(4), allocatable        :: vscale(:)
-      character (len=2)           :: label2
-      character (len=3)           :: label3
+    type(ESMF_Grid)             :: grid
+    type(ESMF_Field)            :: de_field
+    type(ESMF_Config)           :: config
+    real(ESMF_KIND_R8), pointer :: de(:,:)
+    real(ESMF_KIND_R8), pointer :: coordX(:,:), coordY(:,:)
+    real(ESMF_KIND_R8)          :: dx, dy, x0, y0
+    real(ESMF_KIND_R8)          :: xc, yc, r
+    integer                     :: lbnd(2), ubnd(2)
+    integer                     :: ibuf(3)
+    integer                     :: ib, ie, jb, je
+    integer                     :: ierr, dimid, lrc
+    integer                     :: i, j, iprocs, jprocs
+    type(ESMF_TimeInterval)     :: d_time
+    real(ESMF_KIND_R8)          :: app_time_secs
+    integer                     :: ind, inda, nvar, id
+    character (len=4), allocatable :: vname(:)
+    integer, allocatable        :: active(:), ndims(:), lvarid(:)
+    real(4), allocatable        :: vscale(:)
+    character (len=2)           :: label2
+    character (len=3)           :: label3
      
     character(len=ESMF_MAXSTR)    :: timeString, message, name, configFileName, gridFileName
-    logical                       :: clockIsPresent, fileIsPresent
+    logical                       :: clockIsPresent, fileIsPresent, isPresent
     type(ESMF_Clock)              :: clock
     type(ESMF_Time)               :: currTime
     integer(ESMF_KIND_I4)         :: localPet, petCount, localrc
@@ -177,29 +177,42 @@ module clm_netcdf_component
     call ESMF_GridCompGet(gridComp, clock=clock, localPet=localPet, petCount=petCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> @ todo rethink parallel layout
     iprocs = petCount
     jprocs = 1
 
     ! Load config file for variable selection
     configfilename=trim(name)//'.rc'
     inquire(FILE=trim(configfilename), exist=fileIsPresent)   
-    if (fileIsPresent) then 
-      config = ESMF_ConfigCreate(rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (.not.fileIsPresent) then
+      write(message,'(A)')  trim(name)//' required configuration file '//trim(configfilename)//' not found.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+    
+    config = ESMF_ConfigCreate(rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_ConfigLoadFile(config, configFilename, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigLoadFile(config, configFilename, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    call ESMF_ConfigFindLabel(config, label='nvar:', isPresent=ispresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+		if (.not.isPresent) then
+		  write(message, '(A)') trim(name)//' required attribute "nvar" not found in '//trim(configFileName)//'. Set to default value 24'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      nvar = 24
+    else
       call ESMF_ConfigGetAttribute(config, nvar, label='nvar:', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+    endif
 
-      allocate (lvarid(nvar))
-      allocate ( vname(nvar))
-      allocate (active(nvar))
-      allocate (vscale(nvar))
-      allocate ( ndims(nvar))
+    allocate (lvarid(nvar))
+    allocate ( vname(nvar))
+    allocate (active(nvar))
+    allocate (vscale(nvar))
+    allocate ( ndims(nvar))
 
-      do ind=1,nvar
+    do ind=1,nvar
         lvarid(ind) = ind
  
         if ( ind < 10 ) then
@@ -229,8 +242,7 @@ module clm_netcdf_component
           write(message,'(A,I2,A,I1)') trim(name)//' uses variable ',ind,' '//trim(vname(ind))//' of rank ',ndims(ind)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         endif
-      enddo
-   ! write(0,*) 'Hurray'
+    enddo
 
 ! Create grid and retrieve local loop boundaries
     !gridFileName=trim(name)//'_grid.nc'
@@ -371,12 +383,8 @@ module clm_netcdf_component
       call ESMF_FieldDestroy(de_field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      deallocate ( de )
-    else
-      write(message,'(A)') trim(name)//' config file '//trim(configFileName)//' not found. No data will be provided.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    endif
-
+    deallocate ( de )
+    
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -425,7 +433,6 @@ module clm_netcdf_component
     jb = lbound(atmos_T,2)
     je = ubound(atmos_T,2)
 
-    !write(0,*) "Proc ",localPet," time=",trim(timestring)
     d_time = currTime - ref_time
     call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
