@@ -49,7 +49,6 @@ module clm_netcdf_component
   type(ESMF_Field)            :: C_field
   type(ESMF_Field)            :: R_field
   type(ESMF_Time)             :: clm_time
-  type(ESMF_Time)             :: ref_time
 
   type atm_var
       character (len=4)           :: nam        !< field name
@@ -166,7 +165,7 @@ module clm_netcdf_component
     character(len=ESMF_MAXSTR)    :: timeString, message, name, configFileName, gridFileName
     logical                       :: clockIsPresent, fileIsPresent, isPresent
     type(ESMF_Clock)              :: clock
-    type(ESMF_Time)               :: currTime
+    type(ESMF_Time)               :: currTime, refTime
     integer(ESMF_KIND_I4)         :: localPet, petCount, localrc
 
     rc = ESMF_SUCCESS
@@ -176,6 +175,8 @@ module clm_netcdf_component
 
     call ESMF_GridCompGet(gridComp, clock=clock, localPet=localPet, petCount=petCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
 
     !> @ todo rethink parallel layout
     iprocs = petCount
@@ -315,11 +316,14 @@ module clm_netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Setup timing
-      call ESMF_TimeSet(ref_time, yy=1948, rc=localrc)
+      call ESMF_TimeSet(refTime, yy=1948, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(clock, refTime=refTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      d_time = currTime - ref_time
+      d_time = currTime - refTime
       call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -404,12 +408,11 @@ module clm_netcdf_component
 
       integer                     :: ib, ie, jb, je, i, j, ierr, lrc
       real(ESMF_KIND_R8)          :: r
-      type(ESMF_TimeInterval)     :: d_time
       real(ESMF_KIND_R8)          :: app_time_secs
       
       integer(ESMF_KIND_I4)       :: localPet, petCount, localrc
       character(len=ESMF_MAXSTR)  :: message, name, timeString
-      type(ESMF_Time)             :: currTime, time, stopTime
+      type(ESMF_Time)             :: currTime, time, stopTime, refTime
       type(ESMF_Clock)            :: clock
 
 
@@ -419,22 +422,14 @@ module clm_netcdf_component
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet, &
       name=name, clock=clock, rc=localrc)  
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_ClockGet(parentClock,currTime=currTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)    
-
-    call ESMF_ClockSet(clock,currTime=currTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(parentClock,currTime=currTime, refTime=refTime, rc=localrc)
 
     ib = lbound(atmos_T,1)
     ie = ubound(atmos_T,1)
     jb = lbound(atmos_T,2)
     je = ubound(atmos_T,2)
 
-    d_time = currTime - ref_time
-    call ESMF_TimeIntervalGet(d_time,s_r8=app_time_secs, rc=localrc)
+    call ESMF_TimeIntervalGet(currTime - refTime,s_r8=app_time_secs, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ! Check data interval
