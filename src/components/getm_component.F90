@@ -40,7 +40,7 @@ module getm_component
 ! Note (KK): the save attribute can be deleted for F2008 standard
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
-  type(ESMF_Field)   ,save :: depthField,TbotField,T3DField
+  type(ESMF_Field)   ,save :: U2DField,V2DField,depthField,TbotField,T3DField
 
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
@@ -59,6 +59,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: U2D(:,:)=>NULL(),V2D(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
 
@@ -290,6 +291,18 @@ module getm_component
       DepthField = ESMF_FieldCreate(getmGrid2D,depth,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="water_depth_at_soil_surface",rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_StateAdd(exportState,(/depthField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (associated(U2D)) then
+      U2DField = ESMF_FieldCreate(getmGrid2D,U2D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="depth_averaged_x_velocity_in_water",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/U2DField/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    end if
+    if (associated(V2D)) then
+      V2DField = ESMF_FieldCreate(getmGrid2D,V2D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="depth_averaged_y_velocity_in_water",rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_StateAdd(exportState,(/V2DField/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
     if (associated(Tbot)) then
@@ -743,6 +756,9 @@ module getm_component
    allocate(zc(E2DFIELD ,1:klen))
    allocate(zx(E2DXFIELD,0:klen))
 
+   allocate(U2D(E2DFIELD))
+   allocate(V2D(E2DFIELD))
+
 #ifdef DEBUG
    write(debug,*) 'getmCmp_init_variables()'
    write(debug,*)
@@ -1139,12 +1155,20 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain    ,only: imin,imax,jmin,jmax,kmax
-   use initialise  , only: runtype
-   use variables_2d, only: D
-#ifndef NO_BAROCLINIC
-   use variables_3d, only: T
+   use domain      ,only: imin,imax,jmin,jmax,kmax
+   use domain      ,only: az
+   use domain      ,only: grid_type,xc,xu,xv,yc,yu,yv
+#if defined(CURVILINEAR) || defined(SPHERICAL)
+   use domain      ,only: dxv,dyu,arcd1
+#else
+   use domain      ,only: dx,dy,ard1
 #endif
+   use initialise  ,only: runtype
+   use variables_2d,only: zo,z,D,Dvel,U,DU,V,DV
+#ifndef NO_BAROCLINIC
+   use variables_3d,only: T
+#endif
+   use m2d         ,only: dtm
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1153,6 +1177,10 @@ module getm_component
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES
+   REALTYPE,dimension(E2DFIELD)         :: wrk
+   REALTYPE,dimension(E2DFIELD),target  :: t_vel
+   REALTYPE,dimension(:,:),pointer      :: p_vel
+   REALTYPE,parameter                   :: vel_missing=-9999.0
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -1175,6 +1203,47 @@ module getm_component
 #endif
 #endif
       end if
+   end if
+
+
+   wrk = _ZERO_
+
+   if (noKindMatch) then
+      p_vel => t_vel
+   else
+      p_vel => U2D
+   end if
+
+   call to_u(imin,jmin,imax,jmax,az,                                 &
+             dtm,grid_type,                                          &
+#if defined(CURVILINEAR) || defined(SPHERICAL)
+             dxv,dyu,arcd1,                                          &
+#else
+             dx,dy,ard1,                                             &
+#endif
+             xc,xu,xv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
+
+   if (noKindMatch) then
+      U2D = t_vel
+   end if
+
+   if (noKindMatch) then
+      p_vel => t_vel
+   else
+      p_vel => V2D
+   end if
+
+   call to_v(imin,jmin,imax,jmax,az,                                 &
+             dtm,grid_type,                                          &
+#if defined(CURVILINEAR) || defined(SPHERICAL)
+             dxv,dyu,arcd1,                                          &
+#else
+             dx,dy,ard1,                                             &
+#endif
+             yc,yu,yv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
+
+   if (noKindMatch) then
+      V2D = t_vel
    end if
 
 #ifdef DEBUG
