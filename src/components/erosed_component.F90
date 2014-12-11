@@ -628,7 +628,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
-    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, u_mean,u2d,v2d
+    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, u_mean
+    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: depth,hbot,u2d,v2d,ubot,vbot
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration,grid_height
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
@@ -674,35 +675,30 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (forcing_from_coupler) then
 
       !> get water depth
-      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),ptr_f2,lbnd=lbnd2,ubnd=ubnd2,rc=localrc)
+      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),depth,lbnd=lbnd2,ubnd=ubnd2,rc=localrc)
       if (localrc == 0) then
-        h0 = ptr_f2(1,1)
+        h0 = depth(1,1)
       else
         h0=h1
       endif
 
      ! call ESMF_StatePrint(importState)
 
-#if 1
-      !> get u,v and use bottom layer value
-      call mossco_state_get(importState,(/'x_velocity_in_water'/),u,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      call mossco_state_get(importState,(/'layerheight_at_soil_surface'/),hbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'y_velocity_in_water'/),v,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'grid_height_in_water'/),grid_height,lbnd,ubnd,localrc)
-#else
       call mossco_state_get(importState,(/'depth_averaged_x_velocity_in_water'/),u2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'depth_averaged_y_velocity_in_water'/),v2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-#endif
+      call mossco_state_get(importState,(/'x_velocity_at_soil_surface'/),ubot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call mossco_state_get(importState,(/'y_velocity_at_soil_surface'/),vbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       if (localrc == 0) then
 
-#if 1
-        u_mean(:,:) = sum (grid_height*sqrt(u**2+v**2),3)/sum(grid_height,3)
-#else
         u_mean(:,:) = sqrt( u2d*u2d + v2d*v2d )
-#endif
+
         !umod = sqrt( u(1,1,:)**2 + v(1,1,:)**2)
 
         do j=1,jnum
