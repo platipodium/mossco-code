@@ -35,14 +35,16 @@ module getm_component
   private getmCmp_init_variables
   private getmCmp_init_grid,getmCmp_update_grid
 
+  interface getmCmp_StateAddPtr
+    module procedure getmCmp_StateAddPtr2D
+    module procedure getmCmp_StateAddPtr3D
+  end interface
+
 ! the following objects point to deep objects and do not need to be
 ! requested everytime again
 ! Note (KK): the save attribute can be deleted for F2008 standard
   type(ESMF_DistGrid),save :: getmDistGrid2D,getmDistGrid3D
   type(ESMF_Grid)    ,save :: getmGrid2D,getmGrid3D
-  type(ESMF_Field)   ,save :: depthField,hbotField
-  type(ESMF_Field)   ,save :: U2DField,V2DField,UbotField,VbotField
-  type(ESMF_Field)   ,save :: TbotField,T3DField
 
 ! The following objects are treated differently, depending on whether
 ! the kinds of GETM's internal REALTYPE matches ESMF_KIND_R8
@@ -291,61 +293,28 @@ module getm_component
     call getmCmp_init_grid(gridComp)
 
     if (associated(depth)) then
-      DepthField = ESMF_FieldCreate(getmGrid2D,depth,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="water_depth_at_soil_surface",rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/depthField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("water_depth_at_soil_surface",depth,exportState)
     end if
     if (associated(hbot)) then
-      hbotField = ESMF_FieldCreate(getmGrid2D,hbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="layerheight_at_soil_surface",rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/hbotField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("layerheight_at_soil_surface",hbot,exportState)
     end if
     if (associated(U2D)) then
-      U2DField = ESMF_FieldCreate(getmGrid2D,U2D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="depth_averaged_x_velocity_in_water",rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/U2DField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("depth_averaged_x_velocity_in_water",U2D,exportState)
     end if
     if (associated(V2D)) then
-      V2DField = ESMF_FieldCreate(getmGrid2D,V2D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="depth_averaged_y_velocity_in_water",rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/V2DField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("depth_averaged_y_velocity_in_water",V2D,exportState)
     end if
     if (associated(Ubot)) then
-      UbotField = ESMF_FieldCreate(getmGrid2D,Ubot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="x_velocity_at_soil_surface",rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/UbotField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("x_velocity_at_soil_surface",Ubot,exportState)
     end if
     if (associated(Vbot)) then
-      VbotField = ESMF_FieldCreate(getmGrid2D,Vbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="y_velocity_at_soil_surface",rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/VbotField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("y_velocity_at_soil_surface",Vbot,exportState)
     end if
     if (associated(Tbot)) then
-!     internal call to ESMF_FieldCreateGridData<rank><type><kind>()
-!     forced by indexflag argument.
-!     KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
-!              (maybe only in case of non-1-based indices?)
-!     in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
-      TbotField = ESMF_FieldCreate(getmGrid2D,Tbot,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO/),totalUWidth=(/HALO,HALO/),name="temperature_at_soil_surface",rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/TbotField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("temperature_at_soil_surface",Tbot,exportState)
     end if
     if (associated(T3D)) then
-#ifdef FOREIGN_GRID
-      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,indexflag=ESMF_INDEX_DELOCAL,totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/),name="temperature_in_water",rc=rc)
-#else
-      T3DField = ESMF_FieldCreate(getmGrid3D,T3D,name="temperature_in_water",rc=rc)
-#endif
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_StateAdd(exportState,(/T3DField/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState)
     end if
 
     call getmCmp_update_exportState()
@@ -1421,6 +1390,135 @@ module getm_component
    return
 
    end subroutine getmCmp_transport
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_StateAddPtr2D -
+!
+! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "getmCmp_StateAddPtr2D"
+  subroutine getmCmp_StateAddPtr2D(name,p2d,state)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use domain, only: imin,imax,jmin,jmax
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   character(len=*),intent(in)                          :: name
+   real(ESMF_KIND_R8),dimension(:,:),pointer,intent(in) :: p2d
+!
+! !INPUT/OUTPUT PARAMETERS:
+   type(ESMF_State),intent(inout)                       :: state
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   type(ESMF_Field) :: field
+   integer          :: rc
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_StateAddPtr2D() # ',Ncall
+#endif
+
+!  internal call to ESMF_FieldCreateGridData<rank><type><kind>()
+!  forced by indexflag argument.
+!  KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
+!           (maybe only in case of non-1-based indices?)
+!  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
+
+   field = ESMF_FieldCreate(getmGrid2D,p2d,indexflag=ESMF_INDEX_DELOCAL, &
+                            totalLWidth=int((/imin,jmin/)-lbound(p2d)),  &
+                            totalUWidth=int(ubound(p2d)-(/imax,jmax/)),  &
+                            name=name,rc=rc)
+   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   call ESMF_StateAdd(state,(/field/),rc=rc)
+   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving getmCmp_StateAddPtr2D()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_StateAddPtr2D
+!EOC
+!-----------------------------------------------------------------------
+!BOP
+!
+! !ROUTINE: getmCmp_StateAddPtr3D -
+!
+! !INTERFACE:
+#undef  ESMF_METHOD
+#define ESMF_METHOD "getmCmp_StateAddPtr3D"
+  subroutine getmCmp_StateAddPtr3D(name,p3d,state)
+!
+! !DESCRIPTION:
+!
+! !USES:
+   use initialise,only: runtype
+   use domain    ,only: imax,jmax,kmax
+   IMPLICIT NONE
+!
+! !INPUT PARAMETERS:
+   character(len=*),intent(in)                            :: name
+   real(ESMF_KIND_R8),dimension(:,:,:),pointer,intent(in) :: p3d
+!
+! !INPUT/OUTPUT PARAMETERS:
+   type(ESMF_State),intent(inout)                       :: state
+!
+! !REVISION HISTORY:
+!  Original Author(s): Knut Klingbeil
+!
+! !LOCAL VARIABLES
+   type(ESMF_Field) :: field
+   integer          :: klen,rc
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+#ifdef DEBUG
+   integer, save :: Ncall = 0
+   Ncall = Ncall+1
+   write(debug,*) 'getmCmp_StateAddPtr3D() # ',Ncall
+#endif
+
+!  internal call to ESMF_FieldCreateGridData<rank><type><kind>()
+!  forced by indexflag argument.
+!  KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
+!           (maybe only in case of non-1-based indices?)
+!  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
+
+   if (runtype .eq. 1) then
+      klen = 1
+   else
+      klen = kmax
+   end if
+
+   field = ESMF_FieldCreate(getmGrid3D,p3d,indexflag=ESMF_INDEX_DELOCAL,     &
+                            totalLWidth=int((/1,1,1/)-lbound(p3d)),          &
+                            totalUWidth=int(ubound(p3d)-(/imax,jmax,klen/)), &
+                            name=name,rc=rc)
+   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+   call ESMF_StateAdd(state,(/field/),rc=rc)
+   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+#ifdef DEBUG
+   write(debug,*) 'Leaving getmCmp_StateAddPtr3D()'
+   write(debug,*)
+#endif
+   return
+
+   end subroutine getmCmp_StateAddPtr3D
 !EOC
 !-----------------------------------------------------------------------
 !BOP
