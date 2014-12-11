@@ -540,7 +540,9 @@ for phase in range(1,maxPhases+1):
         if jtem[-1]==item:
             ifrom=gridCompList.index(jtem[0])
     j=gridCompList.index(item)
-    if (phase == 1) and (foreignGrid.has_key(item)):
+    if foreignGrid.has_key(item):
+      fid.write('    if (    (phase.eq.1 .and. phaseCountList( ' + str(ito+1) + ').eq.1) &\n')
+      fid.write('        .or.(phase.eq.2 .and. phaseCountList( ' + str(ito+1) + ').gt.1) ) then\n')
       fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
       fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
       
@@ -550,6 +552,7 @@ for phase in range(1,maxPhases+1):
           fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
           fid.write('      exportState=importStates(' + str(ito+1)+'), clock=clock, rc=rc)\n')
           fid.write('    call ESMF_LogFlush()\n')
+          fid.write('    end if\n\n')
           
     fid.write('    if (phaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
     fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
