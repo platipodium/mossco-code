@@ -552,7 +552,8 @@ for phase in range(1,maxPhases+1):
           fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
           fid.write('      exportState=importStates(' + str(ito+1)+'), clock=clock, rc=rc)\n')
           fid.write('    call ESMF_LogFlush()\n')
-          fid.write('    end if\n\n')
+
+      fid.write('    end if\n\n')
           
     fid.write('    if (phaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
     fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
