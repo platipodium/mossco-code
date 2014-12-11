@@ -383,12 +383,6 @@ module toplevel_component
       endif
     endif
     !! Initializing phase 1 of simplewave
-    call ESMF_AttributeSet(importStates(5), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
-      exportState=importStates(5), clock=clock, rc=localrc)
-    call ESMF_LogFlush()
     if (phaseCountList( 5)>=1) then
       call ESMF_GridCompInitialize(gridCompList(5), importState=importStates(5), &
         exportState=exportStates(5), clock=clock, phase=1, rc=localrc)
@@ -599,6 +593,12 @@ module toplevel_component
       endif
     endif
     !! Initializing phase 2 of simplewave
+    call ESMF_AttributeSet(importStates(5), name="foreign_grid_field_name", value="temperature_at_soil_surface", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(1), &
+      exportState=importStates(5), clock=clock, rc=localrc)
+
     if (phaseCountList( 5)>=2) then
       call ESMF_GridCompInitialize(gridCompList(5), importState=importStates(5), &
         exportState=exportStates(5), clock=clock, phase=2, rc=localrc)
