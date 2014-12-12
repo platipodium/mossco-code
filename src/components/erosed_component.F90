@@ -184,8 +184,8 @@ contains
     type(ESMF_FieldBundle)                    :: upward_flux_bundle,downward_flux_bundle,fieldBundle
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     character(len=ESMF_MAXSTR)                :: foreignGridFieldName
-  
-    
+
+
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_INDEX_Flag)   :: indexFlag
 
@@ -207,11 +207,8 @@ contains
     type(ESMF_Time)        :: currTime
 
     logical                :: clockIsPresent, isPresent
-    
+
     integer(ESMF_KIND_I4)  :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount
-
-    integer(ESMF_KIND_I4)  :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
-
 
 
     namelist /globaldata/g, rhow
@@ -566,12 +563,12 @@ contains
     if (isPresent) then
       call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(1), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else  
+    else
       write(message,'(A,I1,A,I1)') trim(name)//' no external index attribute found for SPM fraction //', 1
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       external_idx_by_nfrac(:)=1
-    endif 
-    
+    endif
+
     if (nfrac /= 1) then
       write(message,'(A)') trim(name)//' mapped all fractions to one SPM fraction.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -579,10 +576,10 @@ contains
   elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
     call ESMF_StateGet(importState,"concentration_of_SPM_in_water",fieldBundle,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+
     call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+
     if (fieldCount==1 .and. nfrac>1) then
       write(message,'(A)') trim(name)//' mapped all fractions to one SPM fraction.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -591,15 +588,15 @@ contains
       write(message,'(A)') trim(name)//' cannot map 1 fraction to multiple SPM fractions, yet.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    elseif (nfrac /= fieldCount) then   
+    elseif (nfrac /= fieldCount) then
       write(message,'(A)') trim(name)//' cannot map unequal size and SPM fractions'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-    
+
       if (allocated(fieldlist) .and. size(fieldList)<fieldcount) deallocate(fieldlist)
       if (.not.allocated(fieldList)) allocate(fieldlist(fieldCount))
-    
+
       call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -610,7 +607,7 @@ contains
         if (isPresent) then
           call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        else  
+        else
           write(message,'(A,I1,A,I1)') trim(name)//' no external index attribute found for SPM fraction //', n
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           external_idx_by_nfrac(n)=n
@@ -619,8 +616,8 @@ contains
     endif
   else
     write(message,'(A)') trim(name)//' required "concentration_of_SPM_in_water" is not field or fieldBundle.'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR) 
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   end if
 
   !> @todo change mapping from order of SPM fields in fieldbundle to trait-related
@@ -675,9 +672,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
-    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, u_mean
-    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: depth,hbot,u2d,v2d,ubot,vbot
-    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, u_mean,turb_difz
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth,hbot,u2d,v2d,ubot,vbot
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2, u_mean,turb_difz
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration,grid_height
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
@@ -897,7 +893,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             call ESMF_AttributeGet(fieldlist(n),'external_index',external_index, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
-          
+
           do j=1,jnum
             do i= 1, inum
               ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1)
