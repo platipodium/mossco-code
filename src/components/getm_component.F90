@@ -68,6 +68,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
 
   type :: ptrarray3D
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
@@ -207,6 +208,7 @@ module getm_component
     use initialise,  only: init_model,dryrun
     use integration, only: MinN,MaxN
     use meteo      ,only: met_method
+    use waves      ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE,WAVES_FROMEXT
 #ifdef GETM_PARALLEL
     use halo_mpi, only: comm_getm
 #endif
@@ -333,6 +335,35 @@ module getm_component
         end if
         if (associated(windV)) then
           call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,importState)
+        end if
+    end select
+
+    select case (waveforcing_method)
+      case(WAVES_FROMWIND,WAVES_FROMFILE)
+        if (associated(waveH)) then
+          call getmCmp_StateAddPtr("wave_height",waveH,exportState)
+        end if
+        if (associated(waveT)) then
+          call getmCmp_StateAddPtr("wave_period",waveT,exportState)
+        end if
+        if (associated(waveK)) then
+          call getmCmp_StateAddPtr("wave_number",waveK,exportState)
+        end if
+        if (associated(waveDir)) then
+          call getmCmp_StateAddPtr("wave_direction",waveDir,exportState)
+        end if
+      case(WAVES_FROMEXT)
+        if (associated(waveH)) then
+          call getmCmp_StateAddPtr("wave_height",waveH,importState)
+        end if
+        if (associated(waveT)) then
+          call getmCmp_StateAddPtr("wave_period",waveT,importState)
+        end if
+        if (associated(waveK)) then
+          call getmCmp_StateAddPtr("wave_number",waveK,importState)
+        end if
+        if (associated(waveDir)) then
+          call getmCmp_StateAddPtr("wave_direction",waveDir,importState)
         end if
     end select
 
@@ -629,20 +660,22 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain      ,only: imin,jmin,imax,jmax,kmax
-   use domain      ,only: az,ax
-   use domain      ,only: xcord,ycord,xx,yx,lonx,latx
-   use domain      ,only: xxcord,yxcord,xc,yc,lonc,latc
-   use domain      ,only: grid_type
-   use initialise  ,only: runtype
-   use variables_2d,only: D
+   use domain         ,only: imin,jmin,imax,jmax,kmax
+   use domain         ,only: az,ax
+   use domain         ,only: xcord,ycord,xx,yx,lonx,latx
+   use domain         ,only: xxcord,yxcord,xc,yc,lonc,latc
+   use domain         ,only: grid_type
+   use initialise     ,only: runtype
+   use variables_2d   ,only: D
 #ifndef NO_3D
-   use variables_3d,only: hn
+   use variables_3d   ,only: hn
 #ifndef NO_BAROCLINIC
-   use variables_3d,only: T
+   use variables_3d   ,only: T
 #endif
 #endif
-   use meteo       ,only: metforcing,met_method,calc_met,u10,v10
+   use meteo          ,only: metforcing,met_method,calc_met,u10,v10
+   use waves          ,only: waveforcing_method,NO_WAVES
+   use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -718,6 +751,11 @@ module getm_component
          allocate(windV(E2DFIELD))
       end if
       end if
+      if (waveforcing_method .ne. NO_WAVES) then
+         allocate(waveH  (E2DFIELD))
+         allocate(waveT  (E2DFIELD))
+         allocate(waveK  (E2DFIELD))
+      end if
    else
       select case (grid_type)
          case(1)
@@ -765,6 +803,11 @@ module getm_component
          windV => v10
       end if
       end if
+      if (waveforcing_method .ne. NO_WAVES) then
+         waveH   => waveH_
+         waveT   => waveT_
+         waveK   => waveK_
+      end if
    end if
 
    select case (grid_type)
@@ -806,6 +849,10 @@ module getm_component
    else
       allocate(Ubot(E2DFIELD))
       allocate(Vbot(E2DFIELD))
+   end if
+
+   if (waveforcing_method .ne. NO_WAVES) then
+      allocate(waveDir(E2DFIELD))
    end if
 
 
@@ -1205,24 +1252,27 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain      ,only: imin,imax,jmin,jmax,kmax
-   use domain      ,only: az
-   use domain      ,only: grid_type,xc,xu,xv,yc,yu,yv
+   use domain         ,only: imin,imax,jmin,jmax,kmax
+   use domain         ,only: az
+   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv
 #if defined(CURVILINEAR) || defined(SPHERICAL)
-   use domain      ,only: dxv,dyu,arcd1
+   use domain         ,only: dxv,dyu,arcd1
 #else
-   use domain      ,only: dx,dy,ard1
+   use domain         ,only: dx,dy,ard1
 #endif
-   use initialise  ,only: runtype
-   use variables_2d,only: zo,z,D,Dvel,U,DU,V,DV
+   use initialise     ,only: runtype
+   use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
-   use variables_3d,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
+   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
 #ifndef NO_BAROCLINIC
-   use variables_3d,only: T
+   use variables_3d   ,only: T
 #endif
 #endif
-   use m2d         ,only: dtm
-   use meteo       ,only: metforcing,met_method,calc_met,u10,v10
+   use m2d            ,only: dtm
+   use meteo          ,only: metforcing,met_method,calc_met,u10,v10
+   use waves          ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE
+   use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
+   use variables_waves,only: coswavedir,sinwavedir
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1268,6 +1318,11 @@ module getm_component
          windU = u10
          windV = v10
       end if
+      end if
+      if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
+         waveH   = waveH_
+         waveT   = waveT_
+         waveK   = waveK_
       end if
    end if
 
@@ -1356,6 +1411,11 @@ module getm_component
    end if
 #endif
 
+   if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
+      waveDir = atan2(sinwavedir,coswavedir)
+   end if
+
+
 #ifdef DEBUG
    write(debug,*) 'getmCmp_update_exportState()'
    write(debug,*)
@@ -1377,7 +1437,10 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use meteo       ,only: metforcing,met_method,calc_met,u10,v10
+   use meteo          ,only: metforcing,met_method,calc_met,u10,v10
+   use waves          ,only: waveforcing_method,WAVES_FROMEXT
+   use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
+   use variables_waves,only: coswavedir,sinwavedir
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1403,6 +1466,16 @@ module getm_component
          v10 = windV
       end if
       end if
+      if (waveforcing_method .eq. WAVES_FROMEXT) then
+         waveH_   = waveH
+         waveT_   = waveT
+         waveK_   = waveK
+      end if
+   end if
+
+   if (waveforcing_method .eq. WAVES_FROMEXT) then
+      coswavedir = cos(waveDir)
+      sinwavedir = sin(waveDir)
    end if
 
 #ifdef DEBUG
