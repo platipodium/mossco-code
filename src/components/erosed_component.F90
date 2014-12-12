@@ -24,7 +24,7 @@ module erosed_component
   use esmf
   use mossco_component
   use mossco_variable_types
-  
+
   use erosed_driver !, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
   use mossco_state
@@ -106,13 +106,13 @@ contains
     integer, intent(out) :: rc
 
     integer              :: localrc
-    
+
     rc=ESMF_SUCCESS
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -128,9 +128,9 @@ contains
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
- 
+
     implicit none
-  
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -152,7 +152,7 @@ contains
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -184,7 +184,7 @@ contains
     type(ESMF_FieldBundle)                    :: upward_flux_bundle,downward_flux_bundle,fieldBundle
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     character(len=ESMF_MAXSTR)                :: foreignGridFieldName
-    
+  
     
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_INDEX_Flag)   :: indexFlag
@@ -205,9 +205,12 @@ contains
     character(ESMF_MAXSTR) :: name, message, timeString
     type(ESMF_Clock)       :: clock
     type(ESMF_Time)        :: currTime
+
     logical                :: clockIsPresent, isPresent
     
     integer(ESMF_KIND_I4)  :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount
+
+    integer(ESMF_KIND_I4)  :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
 
 
 
@@ -225,7 +228,7 @@ contains
                                 !  1: all mud to fluff layer, burial to bed layers
                                 !  2: part mud to fluff layer, other part to bed layers (no burial)
     namelist /benthic/    anymud       != .true.
- 
+
 
 
 
@@ -285,33 +288,33 @@ contains
         write(message,*) 'foreign grid must be of rank 2 or 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-      end if 
+      end if
 
-      if (rank==2) then 
+      if (rank==2) then
         call ESMF_FieldGet(field, grid=grid, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
         call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            
+
         inum=ubnd2(1)-lbnd2(1)+1
-        jnum=ubnd2(2)-lbnd2(2)+1     
+        jnum=ubnd2(2)-lbnd2(2)+1
       endif
-      
-      if (rank==3) then 
+
+      if (rank==3) then
         write(message,*) 'foreign grid of rank 3 not yet implemented'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         call ESMF_FieldGet(field, grid=foreign_grid, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
         call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            
+
         inum=ubnd3(1)-lbnd3(1)+1
-        jnum=ubnd3(2)-lbnd3(2)+1  
-        
+        jnum=ubnd3(2)-lbnd3(2)+1
+
         grid = ESMF_GridCreateNoPeriDim(minIndex=lbnd3(1:2), &
                    maxIndex=ubnd3(1:2), &
                    regDecomp=(/1,1/), &
@@ -323,7 +326,7 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_GridAddCoord(grid, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          
+
       endif
     endif
 
@@ -643,7 +646,7 @@ contains
     write(message,'(A)') trim(name)//' creates field'
     call MOSSCO_FieldString(upward_flux_field, message)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-    
+
     call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   end do
@@ -671,8 +674,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
+
     real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, u_mean
     real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: depth,hbot,u2d,v2d,ubot,vbot
+    real(kind=ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, u_mean,turb_difz
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration,grid_height
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
@@ -710,7 +715,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
-
+    if (.not.associated(turb_difz)) allocate(turb_difz(inum,jnum))
+    turb_difz = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
     !> get import state
     if (forcing_from_coupler) then
 
@@ -800,7 +806,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
                            Macrofauna_critical_bed_shearstress ,rc=localrc)
-                           
+
       if (localrc==0) then
          if (.not.associated(BioEffects%TauEffect)) then
 
@@ -819,7 +825,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       !> get spm concentrations
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
-      
+
       if(localrc /= ESMF_SUCCESS) then
         !> run without SPM forcing from pelagic component
 #ifdef DEBUG
@@ -839,27 +845,27 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1)
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          
+
           call ESMF_AttributeGet(field,'mean_particle_diameter', isPresent=isPresent, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          
+
           if (isPresent) then
             call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
             sedd50(nfrac_by_external_idx(external_index))=0.0
           endif
-          
+
           call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          
+
           if (isPresent) then
             call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
             rhosol(nfrac_by_external_idx(external_index))=0.0
           endif
-          
+
           !> @todo unclear which localrc is excpected here
           if (localrc == ESMF_SUCCESS) then
             spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(:,:,1)
@@ -918,7 +924,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
                 & umod   , h0     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud , wave,     uorb, &
-                & tper   , teta   , spm_concentration , BioEffects     )
+                & tper   , teta   , spm_concentration , BioEffects     , turb_difz    )
 
 
     !   Updating sediment concentration in water column over cells
@@ -932,8 +938,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
              write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
 
        size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
-          sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)
-          !sour(l,nm) *1000.0_fp - sink(l,nm)*spm_concentration(i,j,l)
+       sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
+
     enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
@@ -962,13 +968,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !            enddo
 !    enddo
         !
-        
-    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)    
+
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)    
+
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1044,9 +1050,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   function d90_from_d50(d50)
     real(ESMF_KIND_R8)            :: d90_from_d50
     real(ESMF_KIND_R8),intent(in) :: d50
-    
+
     d90_from_d50 = 2.0_ESMF_KIND_R8 * d50
-    
+
   end function d90_from_d50
 
 end module erosed_component

@@ -280,7 +280,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
                  & ws       , umod    , h        , chezy  , taub               , &
                  & nfrac    , rhosol  , sedd50   , sedd90 , sedtyp             , &
                  & sink     , sinkf   , sour     , sourf  , anymud , wave      , &
-                 & uorb     , tper    , teta     ,spm_concentration, Bioeffects  )
+                 & uorb     , tper    , teta     ,spm_concentration, Bioeffects, &
+                 & turb_difz  )
 
 !
 !    Function: Computes sedimentation and erosion fluxes
@@ -302,6 +303,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
     type (compbsskin_argument)                             :: compbsskin_arguments
     !
     real(fp)    , dimension(:,:,:)          , pointer      :: spm_concentration
+    real(fp)    , dimension(:,:)            , pointer      :: turb_difz
     real(fp)    , dimension(:,:)            , pointer      :: mfluff        ! composition of fluff layer: mass of mud fractions [kg/m2]
     integer                                 , intent(in)   :: flufflyr      ! switch for fluff layer concept
     integer                                 , intent(in)   :: nfrac         ! number of sediment fractions
@@ -388,13 +390,12 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
 
 ! soursin_3D
 
-    real(fp)                                    :: seddif   !@ToDO : sediment diffusion coefficent of teh loweset element should be received from GoTM
-    real(fp)                                    :: sigsed
+    real(fp)                                    :: seddif   !@ToDO : sediment diffusion coefficent of the loweset element (calculted here from turbulent eddy eceived from GoTM
+    real(fp)     , dimension(nmlb:nmub)         :: sigsed   ! elevation of the center of the loweset element below the water surface in sigma coordiante [-1 0]
     real(fp)                                    :: sigmol
-    real(fp)                                    :: thicksed
     real(fp)                                    :: thick0
     real(fp)                                    :: thick1
-    real(fp)                                    :: thick
+    real(fp)     , dimension(nmlb:nmub)         :: thick   ! Relative thickness of the lowest element
 
 !
 !! executable statements ------------------
@@ -435,14 +436,13 @@ iopkcw=1
 iopsus = 1
 vonkar = 0.4_fp
 tauadd = 0.0_fp
-iform = 1
+iform = -1   ! van Rijn 1993
 g = 9.81_fp
 factcr = 1.0
 !+++++++++++TEST Soursin_3D++++++++++++++
 sigsed = 0.1_fp
 sigmol = 1.e-5_fp
 seddif = 1.e-3_fp
-thicksed = 1.0_fp
 thick0  = 1.0_fp
 thick1 = 1.0_fp
 thick = 0.25_fp ! thickness of bed layer bed cell!?
@@ -464,7 +464,8 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
     inum = Size(Bioeffects%ErodibilityEffect,1)
     jnum = Size(Bioeffects%ErodibilityEffect,2)
 
-    allocate (spm_concentration (inum,jnum,nfrac))
+   ! allocate (spm_concentration (inum,jnum,nfrac))
+
     kssilt = 0.0_fp
     kssand = 0.0_fp
     i = 0
@@ -673,13 +674,15 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
                  call bedbc1993_arguments%run
 
 
-                 call  bedbc1993_arguments%get (aks, ce_nm, taubcw, ta)
+                 call  bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
 
                  ce_nm =ce_nm * frac(l,nm)
 
-                 call soursin3d_arguments%set (h (nm) ,thick0   ,thick1 , sigsed ,thick , &
-                                   &  spm_concentration(i,j,l)  , vicmol, sigmol ,seddif, &
-                                   &  rhosol (l)      ,ce_nm    , ws (l,nm)      , aks  )
+                 call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
+
+                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,thick(nm) , &
+                                   &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
+                                   &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
 
                  call soursin3d_arguments%run ()
 
@@ -817,7 +820,39 @@ endif
 end subroutine getfrac_dummy
 
 
+subroutine calc_seddif (seddif, ws_surface, tauwav, tauc, turb_dif, ustarc)
 
+implicit none
+
+real (fp)      , intent (in)  :: ws_surface, tauwav, tauc, turb_dif, ustarc
+real (fp)      , intent (out) :: seddif
+
+real (fp)                   :: epsilon, beta, betaef
+
+epsilon = 1.0e-8_fp
+
+    if (ustarc>epsilon) then
+       !
+       ! Beta factor assumed constant over the depth, using ws at
+       ! water surface (approx. clear water). Beta limited to
+       ! range 1 - 1.5 following Van Rijn (1993)
+       !
+       beta = 1.0 + 2.0*(ws_surface/ustarc)**2.0
+       beta = max(1.0_fp, beta)
+       beta = min(1.5_fp, beta)
+    else
+       beta = 1.0
+    endif
+
+    if (tauwav + tauc>epsilon) then
+        betaef = (1.0 + (beta - 1.0)*tauc/(tauwav + tauc))
+    else
+        betaef = beta
+    endif
+
+    seddif = turb_dif *betaef
+
+end subroutine calc_seddif
 
 
 !*****************************************************************
@@ -1314,16 +1349,19 @@ call bedbc1993(          bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb
 
 end subroutine run_bedbc
 
-subroutine get_tau (bedbc1993_arguments, aks, ce_nm, taubcw, ta)
+subroutine get_tau (bedbc1993_arguments, aks, ce_nm, taubcw, ta, ustarc, tauc, tauwav)
 implicit none
 class (bedbc1993_argument) :: bedbc1993_arguments
 
-real (fp) , intent (out)  :: aks, ce_nm, taubcw, ta
+real (fp) , intent (out)  :: aks, ce_nm, taubcw, ta, ustarc, tauc, tauwav
 
 aks    = bedbc1993_arguments%aks
 ce_nm  = bedbc1993_arguments%ce_nm
 taubcw = bedbc1993_arguments%taubcw
 ta     = bedbc1993_arguments%ta
+ustarc = bedbc1993_arguments%ustarc
+tauc   = bedbc1993_arguments%tauc
+tauwav = bedbc1993_arguments%tauwav
 
 end subroutine get_tau
 
