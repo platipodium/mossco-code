@@ -39,13 +39,17 @@ contains
 #define ESMF_METHOD "MOSSCO_CplCompEntry"
   subroutine MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, rc)
   
-    type(ESMF_CplComp), intent(inout)    :: cplComp
-    type(ESMF_Clock), intent(in)         :: parentClock
-    character(ESMF_MAXSTR), intent(out)  :: name
-    type(ESMF_Time), intent(out)         :: currTime
-    integer, intent(out)                 :: rc
+    type(ESMF_CplComp), intent(inout)              :: cplComp
+    type(ESMF_Clock), intent(in)                   :: parentClock
+    character(ESMF_MAXSTR), intent(out), optional  :: name
+    type(ESMF_Time), intent(out), optional         :: currTime
+    integer, intent(out), optional                 :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet, phase, phaseCount, localrc, rc_
+    character(ESMF_MAXSTR)  :: name_
+    type(ESMF_Time)         :: currTime_
+    integer                 :: rc_
+
+    integer(ESMF_KIND_I4)   :: petCount, localPet, phase, phaseCount, localrc
     character(ESMF_MAXSTR)  :: message, timeString
     logical                 :: clockIsPresent, configIsPresent, vmIsPresent
     logical                 :: phaseZeroFlag
@@ -55,9 +59,9 @@ contains
     type(ESMF_Context_Flag) :: context
     type(ESMF_Config)       :: config
     
-    rc=ESMF_SUCCESS
+    rc_=ESMF_SUCCESS
     
-    call ESMF_CplCompGet(cplComp, name=name, clockIsPresent=clockIsPresent, &
+    call ESMF_CplCompGet(cplComp, name=name_, clockIsPresent=clockIsPresent, &
       configIsPresent=configIsPresent, vmIsPresent=vmIsPresent, localPet=localPet, &
       petCount=petCount, currentMethod=method, currentPhase=phase, contextFlag=context, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -91,17 +95,20 @@ contains
       !!> @todo: what todo with this information?
     endif
 
-    !! Synchronize clock with parent clock
-    call ESMF_ClockGet(parentClock, currTime=currTime, rc=localrc)
+    !! Synchronize clock with parent clock if local clock is present
+    call ESMF_ClockGet(parentClock, currTime=currTime_, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_ClockSet(clock, currTime=currTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (clockIsPresent) then
+      call ESMF_ClockSet(clock, currTime=currTime_, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
+      call ESMF_ClockGet(clock, currTime=currTime_, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+    
+    call ESMF_TimeGet(currTime_,timeStringISOFrac=timestring)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
+    write(message,'(A)') name_(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     
     if (method == ESMF_METHOD_RUN) then
       write(message,'(A)') trim(message)//' running'
@@ -118,7 +125,15 @@ contains
     if (phaseCount>1 .or. phase==0) then
       write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
     endif
+    
+    if (present(rc)) rc=rc_
+    if (present(currTime)) currTime=currTime_
+    if (present(name)) name=trim(name_)
+
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
+    call ESMF_LogFlush()  
+    
+    return
 
   end subroutine MOSSCO_CplCompEntry
 
