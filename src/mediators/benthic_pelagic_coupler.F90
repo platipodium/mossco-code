@@ -119,7 +119,9 @@ module benthic_pelagic_coupler
     integer              :: nmlunit=127, localrc
     namelist /benthic_pelagic_coupler/ dinflux_const,dipflux_const
 
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !read namelist

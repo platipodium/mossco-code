@@ -141,40 +141,47 @@ contains
 #define ESMF_METHOD "MOSSCO_GridCompEntry"
   subroutine MOSSCO_GridCompEntry(GridComp, parentClock, name, currTime, rc)
   
-    type(ESMF_GridComp), intent(inout)    :: GridComp
-    type(ESMF_Clock), intent(in)         :: parentClock
-    character(ESMF_MAXSTR), intent(out)  :: name
-    type(ESMF_Time), intent(out)         :: currTime
-    integer, intent(out)                 :: rc
+    type(ESMF_GridComp), intent(inout)             :: gridComp
+    type(ESMF_Clock), intent(in)                   :: parentClock
+    character(ESMF_MAXSTR), intent(out), optional  :: name
+    type(ESMF_Time), intent(out), optional         :: currTime
+    integer, intent(out), optional                 :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet, phase, localrc, rc_
+    character(ESMF_MAXSTR)  :: name_
+    type(ESMF_Time)         :: currTime_
+    integer                 :: rc_
+
+    integer(ESMF_KIND_I4)   :: petCount, localPet, phase, localrc
     logical                 :: clockIsPresent, configIsPresent, vmIsPresent
     type(ESMF_Clock)        :: clock
     type(ESMF_Vm)           :: vm
     type(ESMF_Method_Flag)  :: method
     type(ESMF_Context_Flag) :: context
     type(ESMF_Config)       :: config
+    character(len=ESMF_MAXSTR) :: message
 
-    rc=ESMF_SUCCESS
-    
-    
-    call MOSSCO_GridCompEntryLog(gridComp,name=name,currentMethod=method,currentPhase=phase, &
-                                 clockIsPresent=clockIsPresent,clock=clock,currTime=currTime)
-
+    rc_=ESMF_SUCCESS
+        
     call ESMF_GridCompGet(GridComp, &
       configIsPresent=configIsPresent, vmIsPresent=vmIsPresent, localPet=localPet, &
       petCount=petCount, contextFlag=context, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Check for clock presence and add if necessary
+    call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (.not. clockIsPresent) then
       clock = ESMF_ClockCreate(parentClock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(clock, name=trim(name_), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_GridCompSet(GridComp, clock=clock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=localrc)
+
+    call MOSSCO_GridCompEntryLog(gridComp,name=name_,currentMethod=method,currentPhase=phase, &
+      clockIsPresent=clockIsPresent, clock=clock, currTime=currTime_)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Check for config presence
@@ -193,7 +200,12 @@ contains
       !!> @todo: what todo with this information?
     endif
 
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (present(rc)) rc=rc_
+    if (present(currTime)) currTime=currTime_
+    if (present(name)) name=trim(trim(name_))
+
+    call ESMF_LogFlush()  
+    return
 
   end subroutine MOSSCO_GridCompEntry
 
