@@ -276,21 +276,18 @@ save
 contains
 
 
-subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   , &
-                 & ws       , umod    , h        , chezy  , taub               , &
-                 & nfrac    , rhosol  , sedd50   , sedd90 , sedtyp             , &
-                 & sink     , sinkf   , sour     , sourf  , anymud , wave      , &
-                 & uorb     , tper    , teta     ,spm_concentration, Bioeffects, &
-                 & turb_difz  )
+subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac   , &
+                 & ws       , umod    , h        , chezy   , taub                , &
+                 & nfrac    , rhosol  , sedd50   , sedd90  , sedtyp              , &
+                 & sink     , sinkf   , sour     , sourf   , anymud  , wave      , &
+                 & uorb     , tper    , teta     , spm_concentration , Bioeffects, &
+                 & turb_difz, thick   , u_bottom , v_bottom, u2d     , v2d ,h0)
 
 !
 !    Function: Computes sedimentation and erosion fluxes
 !
 !!--declarations----------------------------------------------------------------
 
-
-
-    !
     implicit none
 
 
@@ -305,6 +302,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
     real(fp)    , dimension(:,:,:)          , pointer      :: spm_concentration
     real(fp)    , dimension(:,:)            , pointer      :: turb_difz
     real(fp)    , dimension(:,:)            , pointer      :: mfluff        ! composition of fluff layer: mass of mud fractions [kg/m2]
+    real(fp)    , dimension(:,:)            , pointer      :: u2d, v2d      ! Depth-averaged velocity in u and v or x and y directions
     integer                                 , intent(in)   :: flufflyr      ! switch for fluff layer concept
     integer                                 , intent(in)   :: nfrac         ! number of sediment fractions
     integer                                 , intent(in)   :: nmlb          ! first cell number
@@ -318,7 +316,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
     real(fp)    , dimension(nfrac)          , intent(in)   :: sedd50        ! 50% diameter sediment fraction [m]
     real(fp)    , dimension(nfrac)          , intent(in)   :: sedd90        ! 90% diameter sediment fraction [m]
     real(fp)    , dimension(nmlb:nmub)      , intent(inout):: taub          ! bottom shear stress [N/m2]
-    real(fp)    , dimension(nmlb:nmub)      , intent(in)   :: umod          ! velocity magnitude (in bottom cell) [m/s]
+    real(fp)    , dimension(nmlb:nmub)      , intent(in)   :: umod          ! Depth-averaged flow velocity[m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub), intent(in)   :: ws            ! sediment settling velocity (hindered) [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub), intent(out)  :: sink          ! sediment sink flux [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub), intent(out)  :: sinkf         ! sediment sink flux fluff layer [m/s]
@@ -326,13 +324,14 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
     real(fp)    , dimension(nfrac,nmlb:nmub), intent(out)  :: sourf         ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(nfrac,nmlb:nmub), intent (in)  :: frac          ! sediment (mass) fraction [-]
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: mudfrac       ! mud fraction [-]
-    type (BioturbationEffect)               , intent (in)  :: Bioeffects    ! Biological effects on the sediment flux
+    type (BioturbationEffect)               , intent (in)  :: Bioeffects    ! Biological effects on the sediment flux [-]
     logical                                 , intent (in)  :: anymud, wave  ! if wave effect on sheare stress is requiried set to .true.
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: uorb          ! wave orbital velocity (rms)
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: tper          ! wave period
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: teta          ! angle between wave and current (radian)
-
-!
+    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: thick         ! Thickness of the lowest element [m]
+    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: u_bottom, v_bottom ! flow velocity at the bottom cell (middle height) at x- and y-direction [m/s]
+    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: h0            ! water depth in old time step [m]
 ! Local variables
 !
     integer                                     :: l            ! sediment counter
@@ -391,11 +390,10 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
 ! soursin_3D
 
     real(fp)                                    :: seddif   !@ToDO : sediment diffusion coefficent of the loweset element (calculted here from turbulent eddy eceived from GoTM
-    real(fp)     , dimension(nmlb:nmub)         :: sigsed   ! elevation of the center of the loweset element below the water surface in sigma coordiante [-1 0]
+    real(fp)     , dimension(nmlb:nmub)         :: sigsed   ! elevation of the center of the loweset element from  water surface in sigma coordiante [-1 0]
     real(fp)                                    :: sigmol
     real(fp)                                    :: thick0
     real(fp)                                    :: thick1
-    real(fp)     , dimension(nmlb:nmub)         :: thick   ! Relative thickness of the lowest element
 
 !
 !! executable statements ------------------
@@ -421,8 +419,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff , frac   , mudfrac   ,
 
    !++++++++++ TEST Bedbc_1993 ++++++++++
 flow2d = .true.
-ubed = 0.35_fp
-zubed = 0.50_fp
+!ubed = 0.35_fp
+zubed = thick /2.0_fp
 eps = 1e-6
 z0cur = sedd50/12._fp
 z0rou = z0cur
@@ -440,12 +438,12 @@ iform = -1   ! van Rijn 1993
 g = 9.81_fp
 factcr = 1.0
 !+++++++++++TEST Soursin_3D++++++++++++++
-sigsed = 0.1_fp
+sigsed = -(1.0_fp - thick /h /2.0_fp)      ! Dimensionless distance of the middle of the lowest cell to the water surface
 sigmol = 1.e-5_fp
 seddif = 1.e-3_fp
-thick0  = 1.0_fp
-thick1 = 1.0_fp
-thick = 0.25_fp ! thickness of bed layer bed cell!?
+!thick0  = 1.0_fp
+!thick1 = 1.0_fp
+!thick = 0.25_fp ! thickness of bed layer bed cell!?
 !+++++++++++TEST++++++++++++++
 
 
@@ -486,6 +484,9 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
        kssand     = kssand /(j *1.0_fp)
        i          = 0
        j          = 0
+
+       ubed = sqrt (u_bottom*u_bottom +v_bottom * v_bottom)
+
 ! Main loop over elements organized in vector form
  elements: do nm = nmlb, nmub
 
@@ -505,23 +506,21 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
         ! For non-cohesive sediment in 3D, tau current is calculated using zocur (roughness length)
         ! within bedbc1993. For calculation of tau wave, z0rou is used as bed roughness in bedbc1993.
 
-
-
  fractions: do l = 1, nfrac
             if (sedtyp(l)==SEDTYP_COHESIVE) then
 
 
                 !   Compute source and sink fluxes for cohesive sediment (mud)
 
-                call compbsskin_arguments%set (umod(nm), 0.0_fp    , h(nm)   , wave  ,       &
-                                             & uorb(nm), tper  (nm), teta(nm), kssilt,       &
-                                             & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
+                 call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
+                                              & uorb(nm), tper  (nm), teta(nm), kssilt,       &
+                                              & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
 
-                call compbsskin_arguments%run ()
-                call compbsskin_arguments%get(taub(nm))
+                 call compbsskin_arguments%run ()
+                 call compbsskin_arguments%get(taub(nm))
 
-                fracf   = 0.0_fp
-                if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
+                 fracf   = 0.0_fp
+                 if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
 
 #ifdef DEBUG
                  write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (i,j)
@@ -680,7 +679,9 @@ thick = 0.25_fp ! thickness of bed layer bed cell!?
 
                  call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
 
-                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,thick(nm) , &
+                 thick0 = thick (nm) * h0(nm)
+                 thick1 = thick (nm) * h (nm)
+                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,thick(nm)/h(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
 
