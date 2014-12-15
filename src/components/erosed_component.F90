@@ -81,6 +81,9 @@ module erosed_component
     real(fp)    , dimension(:)  , allocatable   :: sedd90       ! 90% diameter sediment fraction [m]
     real(fp)    , dimension(:)  , allocatable   :: taub         ! bottom shear stress [N/m2]
     real(fp)    , dimension(:)  , allocatable   :: umod         ! depth averaged flow magnitude [m/s]
+    real(fp)    , dimension(:)  , allocatable   :: u_bot        ! velocity at the (center of the) bottom cell in u-direction
+    real(fp)    , dimension(:)  , allocatable   :: v_bot        ! velocity at the (center of the) bottom cell in v-direction
+    real(fp)    , dimension(:)  , allocatable   :: thick        ! thickness of the bottom cell layer
     real(fp)    , dimension(:,:), allocatable   :: mass         ! change in sediment composition of top layer, [kg/m2]
     real(fp)    , dimension(:,:), allocatable   :: massfluff    ! change in sediment composition of fluff layer [kg/m2]
 !   real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
@@ -92,7 +95,7 @@ module erosed_component
     real(fp)    , dimension(:,:), allocatable   :: sourf        ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
-    logical                                     ::lexist, anymud, wave
+    logical                                     :: lexist, anymud, wave
     real(fp)    , dimension(:)  , allocatable   :: uorb, tper, teta ! Orbital velocity [m/s], Wave period, angle between current and wave
 
 
@@ -380,6 +383,9 @@ contains
     allocate (h0        (nmlb:nmub))
     allocate (h1        (nmlb:nmub))
     allocate (umod      (nmlb:nmub))
+    allocate (u_bot     (nmlb:nmub))
+    allocate (v_bot     (nmlb:nmub))
+    allocate (thick     (nmlb:nmub))
     allocate (taub      (nmlb:nmub))
 !    allocate (r0        (nfrac,nmlb:nmub))
 !    allocate (r1        (nfrac,nmlb:nmub))
@@ -476,8 +482,10 @@ contains
     h1      = 3.0_fp        ! water depth [m]
     umod    = 0.1_fp        ! depth averaged flow magnitude [m/s]
     ws      = 0.001_fp      ! Settling velocity [m/s]
-!    r1(:,:) = 2.0e-1_fp     ! sediment concentration [kg/m3]
-
+!    r1(:,:) = 2.0e-1_fp    ! sediment concentration [kg/m3]
+    u_bot   = 0.1_fp        ! flow velocity in u-direction at (center of the ) bottm cell
+    v_bot   = 0.1_fp        ! flow velocity in v-direction at (center of the ) bottm cell
+    thick   = 0.25_fp       ! height of the bottom cell
 
     do nm = nmlb, nmub
         taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
@@ -659,7 +667,7 @@ contains
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
 subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    use BioTypes , only :  BioturbationEffect
+    use BioTypes , only      :  BioturbationEffect
 
     type(ESMF_GridComp)      :: gridComp
     type(ESMF_State)         :: importState, exportState
@@ -674,10 +682,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth,hbot,u2d,v2d,ubot,vbot
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2, u_mean,turb_difz
-    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,u,v,spm_concentration,grid_height
+    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,spm_concentration
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
-    &                            Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
+                              & Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
     integer                  :: n, i, j, localrc
     type(ESMF_Field)         :: field
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
@@ -693,15 +701,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Time)          :: currTime
     type(ESMF_Clock)         :: clock
     integer                  :: external_index
-    real(kind=ESMF_KIND_R8)  :: vonkar, ustar, z0cur, cdr, cds, summ, rhowat,vicmol, reynold
-    integer    :: ubnd(3),lbnd(3),ubnd2(2),lbnd2(2)
+    integer                  :: ubnd(3),lbnd(3),ubnd2(2),lbnd2(2)
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridCompGet(gridComp, petCount=petCount,localPet=localPet,clock=clock, rc=localrc)
 
-    !> @todo how are inum and jnum set?  These should be local vars and obtained from the grid
-    allocate (u_mean(inum,jnum))
+    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum),v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
 
     call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
       runTimeStepCount=runTimeStepCount, timeStep=timeStep, rc=localrc)
@@ -712,14 +718,21 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
     if (.not.associated(turb_difz)) allocate(turb_difz(inum,jnum))
+
     turb_difz = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
     !> get import state
     if (forcing_from_coupler) then
 
       !> get water depth
       call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),depth,lbnd=lbnd2,ubnd=ubnd2,rc=localrc)
+
       if (localrc == 0) then
-        h0 = depth(1,1)
+         do j=1,jnum
+          do i= 1, inum
+           h0(inum*(j -1)+i) = depth(i,j)
+           h1(inum*(j -1)+i) = depth(i,j)
+          end do
+         end do
       else
         h0=h1
       endif
@@ -741,7 +754,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         do j=1,jnum
           do i= 1, inum
-            umod (inum*(j -1)+i) = u_mean(i,j)
+            umod  (inum*(j -1)+i) = u_mean(i,j)
+            thick (inum*(j -1)+i) = hbot (i,j)
+            u_bot (inum*(j -1)+i) = ubot (i,j)
+            v_bot (inum*(j -1)+i) = vbot (i,j)
           end do
         end do
 
@@ -908,19 +924,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !      r0=r1
     end if
 
-! Soulsby
-
-    summ = 0.0_fp
-    rhowat = 1000.0_fp
-    vicmol     = 1e-6_fp
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
 
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
-                & umod   , h0     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
-                & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud , wave,     uorb, &
-                & tper   , teta   , spm_concentration , BioEffects     , turb_difz    )
+                & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
+                & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
+                & tper   , teta   , spm_concentration , BioEffects     , turb_difz, thick, u_bot, &
+                & v_bot  , u2d    , v2d      , h0    )
 
 
     !   Updating sediment concentration in water column over cells
@@ -929,19 +941,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
-             j= 1+ mod(nm,inum)
-             i= nm - inum*(j -1)
-             write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+        j= 1+ mod(nm,inum)
+        i= nm - inum*(j -1)
+        write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
 
-       size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
-       sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
+        size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
+        sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
 
-    enddo
+     enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
 
-   enddo
+    enddo
 
         !
         !   Compute change in sediment composition of top layer and fluff layer
@@ -1009,6 +1021,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (h0)
     deallocate (h1)
     deallocate (umod)
+    deallocate (u_bot)
+    deallocate (v_bot)
+    deallocate (thick)
     deallocate (taub)
 !    deallocate (r0)
 !    deallocate (r1)
@@ -1027,10 +1042,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (mudfrac)
 
     deallocate (uorb, tper,teta)
-
-    !! @todo uncomment next line
-    !deallocate (pmcrit , depeff,  depfac, eropar, parfluff0,  parfluff1, &
-    !             & tcrdep,  tcrero, tcrfluff)
 
 
     call ESMF_ClockDestroy(clock, rc=localrc)
