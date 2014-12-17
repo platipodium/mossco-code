@@ -385,6 +385,9 @@ fid.write('''
     logical, allocatable   :: hasPhaseZeroList(:)
     logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
+    
+    integer(ESMF_KIND_I4), allocatable      :: intValueList(:)
+    character(len=ESMF_MAXSTR), allocatable :: charValueList(:)
 
     rc = ESMF_SUCCESS
 
@@ -509,7 +512,33 @@ fid.write('''
       !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
       !! contains information on the phases defined in the component.
     enddo
+
+    !! Declare all dependencies
 ''')
+
+for item in gridCompList:
+  ifrom=gridCompList.index(item)
+  ito=ifrom
+  for j in range(0, len(couplingList)):
+    jtem=couplingList[j]
+    if jtem[-1]==item:
+      ifrom=gridCompList.index(jtem[0])
+  j=gridCompList.index(item)
+  if (foreignGrid.has_key(item)):
+    print item
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+  
+  if dependencyDict.has_key(item):
+    fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
+    for jtem in dependencyDict[item]:
+      fid.write('    charValueList(i) = \'' + jtem + '\'\n')
+      fid.write('    intValueList(i) = ' + str(ifrom + 1) + '\n')
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on", valueList=charValueList, rc=rc)\n')  
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on-id", valueList=intValueList, rc=rc)\n')  
+    fid.write('    deallocate(charValueList)\n')
+    fid.write('    deallocate(intValueList)\n')
+
 
 if len(cplCompList)>0:
     fid.write('''
@@ -922,7 +951,9 @@ fid.write('''
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+''')
 
+fid.write('''
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
             exportState=expState, clock=clock, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
