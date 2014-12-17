@@ -100,7 +100,7 @@ libmossco_benthos: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
 
 microphytobenthos_class.o: criticalsheareffect.o benthoseffect_class.o biotypes.o erodibilityeffect.o
-mbalthica_class.o: macrofauna_class.o
+mbalthica_class.o: biotypes.o macrofauna_class.o criticalsheareffect.o erodibilityeffect.o
 macrofauna_class.o: benthoseffect_class.o biotypes.o
 benthoseffect_class.o: biotypes.o
 macrofauna_interface.o: mbalthica_class.o biotypes.o
