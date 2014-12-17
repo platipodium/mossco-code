@@ -290,6 +290,7 @@ fid.write('''
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
@@ -321,10 +322,8 @@ fid.write('''
   type(ESMF_CplComp),dimension(:), save, allocatable :: cplCompList
   type(ESMF_State), dimension(:),  save, allocatable :: exportStates, importStates
   type(ESMF_Alarm), dimension(:),  save, allocatable :: cplAlarmList
-  type(ESMF_Clock), dimension(:),  save, allocatable :: gridCompClockList
-  character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames
-  character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplCompNames
-  character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplNames
+  type(ESMF_Clock), dimension(:),  save, allocatable :: gridCompClockList, cplCompClockList
+  character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames, cplCompNames, cplNames
 ''')
 
 for item in cplCompList:
@@ -335,7 +334,6 @@ for item in gridCompList:
     fid.write('  type(ESMF_State), save    :: ' + item + 'ExportState, ' + item + 'ImportState\n')
 
 fid.write('''
-
   contains
 
 #undef  ESMF_METHOD
@@ -474,6 +472,8 @@ fid.write('''
     do i = 1, numGridComp
       gridCompClockList(i) = ESMF_ClockCreate(clock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(gridCompClockList(i), name=trim(gridCompNames(i)), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
 ''')
@@ -518,13 +518,19 @@ if len(cplCompList)>0:
     fid.write('''
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
+    allocate(cplCompClockList(numCplComp))
 ''')
 
 for i in range(0, len(cplCompList)):
     fid.write('    cplCompNames(' + str(i+1) + ') = \'' + cplCompList[i] + '\'\n')
 fid.write('''
+
     do i = 1, numCplComp
-      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), rc=localrc)
+      cplCompClockList(i) = ESMF_ClockCreate(clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(cplCompClockList(i), name=trim(cplCompNames(i)), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), clock=cplCompClockList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
