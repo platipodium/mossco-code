@@ -428,10 +428,10 @@ fid.write('''
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
 
-    integer(ESMF_KIND_I4)  :: phase, phaseCount
+    integer(ESMF_KIND_I4)  :: phase, phaseCount, j, itemCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: phaseCountList
     logical, allocatable   :: hasPhaseZeroList(:)
-    logical                :: hasPhaseZero
+    logical                :: hasPhaseZero, isPresent
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
     
     integer(ESMF_KIND_I4), allocatable      :: intValueList(:)
@@ -590,19 +590,10 @@ for item in gridCompList:
     for jtem in dependencyDict[item]:
       fid.write('    charValueList(i) = \'' + jtem + '\'\n')
       fid.write('    intValueList(i) = ' + str(ifrom + 1) + '\n')
-    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on", valueList=charValueList, rc=localrc)\n')  
-    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on-id", valueList=intValueList, rc=localrc)\n')  
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends_on", valueList=charValueList, rc=localrc)\n')  
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends_on_id", valueList=intValueList, rc=localrc)\n')  
     fid.write('    deallocate(charValueList)\n')
     fid.write('    deallocate(intValueList)\n')
-
-
-if len(cplCompList)>0:
-    fid.write('''
-    !! Initialize the link coupler phase 1
-    call ESMF_CplCompInitialize(cplCompList(1), importState=importStates(1), &
-      exportState=exportStates(1), clock=clock, phase=1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)   
-''')
 
 fid.write('''
     !! Go through all phases:
@@ -634,7 +625,7 @@ for phase in range(1,maxPhases+1):
       if dependencyDict.has_key(item):
         for jtem in dependencyDict[item]:
           ifrom=gridCompList.index(jtem)
-          fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
+          fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
           fid.write('      exportState=importStates(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
           fid.write('    call ESMF_LogFlush()\n')
 
@@ -645,20 +636,36 @@ for phase in range(1,maxPhases+1):
     fid.write('        exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=localrc)\n')
     fid.write('    endif\n')
     fid.write('''
-    if (rc /= ESMF_SUCCESS) then
-      if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
-        write(message,'(A,I4)') 'There is no initialization defined for phase=', phase
-        write(message,'(A,A)') trim(message),' For now, ignore errors  immediately above'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      else
-        write(message,'(A,I4)') 'Initializing failed with error code ', rc
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_LogFlush()
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      endif
-    endif
 ''')
-  for icpl in range(1,len(cplCompList)):
+
+fid.write('''
+    do phase=1, -9
+      do i=1, numGridComp
+        if (phaseCountList(i) < phase) cycle
+        call ESMF_AttributeGet(importStates(i), 'depends_on_id', isPresent=isPresent, rc=localrc)  
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (isPresent) then
+          call ESMF_AttributeGet(importStates(i), 'depends_on_id', itemCount=itemCount, rc=localrc)  
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          allocate(intValueList(itemCount))
+          call ESMF_AttributeGet(importStates(i), 'depends_on_id', valueList=intValueList, rc=localrc)  
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)          
+          do j=1, itemCount
+            call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(intValueList(j)), &
+              exportState=importStates(i), clock=clock, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)          
+          enddo
+          deallocate(intValueList)
+        endif
+      
+        call ESMF_GridCompInitialize(gridCompList(i), importState=importStates(i), exportState=exportStates(i), &
+          clock=clock, phase=phase, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
+    enddo
+''')
+
+for icpl in range(1,len(cplCompList)):
     item=cplCompList[icpl]
     for i in range(0, len(couplingList)):
         jtem=couplingList[i]
@@ -1333,6 +1340,8 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'erosed'     : ['mossco_erosed'],
+        'hamsom'     : ['mossco_hamsom'],
+        'tracer'     : ['mossco_tracer'],
         'netcdf'     : ['mossco_netcdf'],
         'test'       : ['mossco_test'],
         'simplewave' : ['mossco_simplewave'],
@@ -1355,6 +1364,8 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
 
 deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthos'    : ['libmossco_benthos'],
+        'hamsom'     : ['libmossco_hamsom'],
+        'tracer'     : ['libmossco_tracer'],
         'erosed'     : ['libmossco_erosed'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm_sediment' : ['libsediment', 'libmossco_sediment', 'libsolver'],
