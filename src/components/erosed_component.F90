@@ -28,7 +28,7 @@ module erosed_component
   use erosed_driver !, only : initerosed, erosed, getfrac_dummy
   use precision, only : fp
   use mossco_state
-
+  use BioTypes , only :  BioturbationEffect
   implicit none
 
   public :: SetServices
@@ -49,8 +49,9 @@ module erosed_component
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
   type(ESMF_Field)                              :: upward_flux_Field, downward_flux_Field
+  type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
-  integer                     :: ubnd(4),lbnd(4)
+  integer                                       :: ubnd(4),lbnd(4)
 
 
    integer                                      :: nmlb           ! first cell number
@@ -59,8 +60,8 @@ module erosed_component
    integer                                      :: flufflyr       ! switch for fluff layer concept
    integer                                      :: iunderlyr      ! Underlayer mechanism
    integer                                      :: nfrac          ! number of sediment fractions
-   real(fp)    , dimension(:,:)    , pointer    :: mfluff         ! composition of fluff layer: mass of mud fractions [kg/m2]
-   real(fp)    , dimension(:,:)    , pointer    :: frac
+   real(fp)    , dimension(:,:)    , pointer    :: mfluff=>null() ! composition of fluff layer: mass of mud fractions [kg/m2]
+   real(fp)    , dimension(:,:)    , pointer    :: frac=>null()
     !
     ! Local variables
     !
@@ -134,11 +135,11 @@ contains
 
     implicit none
 
-    type(ESMF_GridComp)   :: gridComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
+    type(ESMF_GridComp)         :: gridComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: parentClock
+    integer, intent(out)        :: rc
 
     character(len=10)           :: InitializePhaseMap(1)
     character(len=ESMF_MAXSTR)  :: name, message
@@ -182,56 +183,52 @@ contains
     type(ESMF_ArraySpec)   :: arrayspec
     type(ESMF_Array)       :: array
     type(ESMF_Field)       :: field
-    real(ESMF_KIND_R8),dimension(:)  ,pointer :: LonCoord,LatCoord,DepthCoord
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2, ptr2_f2
-    type(ESMF_FieldBundle)                    :: upward_flux_bundle,downward_flux_bundle,fieldBundle
-    type(ESMF_Field),dimension(:),allocatable :: fieldlist
-    character(len=ESMF_MAXSTR)                :: foreignGridFieldName
+    real(ESMF_KIND_R8),dimension(:)  ,pointer   :: LonCoord=>null(),LatCoord=>null(),DepthCoord=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer   :: ptr_f2=>null(), ptr2_f2=>null()
+    type(ESMF_FieldBundle)                      :: upward_flux_bundle,downward_flux_bundle,fieldBundle
+    type(ESMF_Field)  ,dimension(:),allocatable :: fieldlist
+    character(len=ESMF_MAXSTR)                  :: foreignGridFieldName
 
 
     type(ESMF_StateItem_Flag) :: itemType
-    type(ESMF_INDEX_Flag)   :: indexFlag
+    type(ESMF_INDEX_Flag)     :: indexFlag
 
-    integer , allocatable  :: maxIndex(:)
-    integer                :: rank
+    integer , allocatable     :: maxIndex(:)
+    integer                   :: rank
 
-    type(ESMF_Time)        :: wallTime, clockTime
-    type(ESMF_TimeInterval):: timeInterval
-    real(ESMF_KIND_R8)     :: dt
-    character(len=80)      :: title
-    character(len=256)     :: din_variable='',pon_variable=''
-    integer(ESMF_KIND_I8)  :: nlev,n
+    type(ESMF_Time)           :: wallTime, clockTime
+    type(ESMF_TimeInterval)   :: timeInterval
+    real(ESMF_KIND_R8)        :: dt
+    character(len=80)         :: title
+    character(len=256)        :: din_variable='',pon_variable=''
+    integer(ESMF_KIND_I8)     :: nlev,n
 
-    integer                :: UnitNr, istat,ii,j
-    logical                :: opnd, exst
+    integer                   :: UnitNr, istat,ii,j
+    logical                   :: opnd, exst
 
-    character(ESMF_MAXSTR) :: name, message, timeString
-    type(ESMF_Clock)       :: clock
-    type(ESMF_Time)        :: currTime
+    character(ESMF_MAXSTR)    :: name, message, timeString
+    type(ESMF_Clock)          :: clock
+    type(ESMF_Time)           :: currTime
 
-    logical                :: clockIsPresent, isPresent
+    logical                   :: clockIsPresent, isPresent
 
-    integer(ESMF_KIND_I4)  :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount
+    integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount
 
 
     namelist /globaldata/g, rhow
-    namelist /benthic/   nmlb   ! = 1                 ! first cell number
-    namelist /benthic/   nmub   ! = 1                 ! last cell number
-    namelist /benthic/   morfac ! = 1.0               ! morphological scale factor [-]
+    namelist /benthic/   nmlb       ! = 1  ! first cell number
+    namelist /benthic/   nmub       ! = 1  ! last cell number
+    namelist /benthic/   morfac     ! = 1.0! morphological scale factor [-]
     !
     ! -----------------------------------------------------------
     !
-    namelist /benthic/   nfrac      ! = 2             ! number of sediment fractions
-    namelist /benthic/   iunderlyr  ! = 2             ! Underlayer mechanism (default = 1)
-    namelist /benthic/   flufflyr   ! = 1             ! switch for fluff layer concept
-                                !  0: no fluff layer (default)
-                                !  1: all mud to fluff layer, burial to bed layers
-                                !  2: part mud to fluff layer, other part to bed layers (no burial)
-    namelist /benthic/    anymud       != .true.
-
-
-
-
+    namelist /benthic/   nfrac      ! = 2  ! number of sediment fractions
+    namelist /benthic/   iunderlyr  ! = 2  ! Underlayer mechanism (default = 1)
+    namelist /benthic/   flufflyr   ! = 1  ! switch for fluff layer concept
+                                    !  0: no fluff layer (default)
+                                    !  1: all mud to fluff layer, burial to bed layers
+                                    !  2: part mud to fluff layer, other part to bed layers (no burial)
+    namelist /benthic/   anymud     != .true.
 
 
 !    namelist /sedparams/ sedtyp(1)   !1= SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
@@ -342,9 +339,8 @@ contains
   end if
 !    g       = 9.81_fp   ! gravitational acceleration [m/s2]
 !    rhow    = 1000.0_fp ! density of water [kg/m3]
-    !
 
-    !
+
   inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
 
   if (exst.and.(.not.opnd)) then
@@ -372,6 +368,8 @@ contains
     nmub = inum * jnum
     call initerosed( nmlb, nmub, nfrac)
 
+    if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
+    if (.not.associated(BioEffects%TauEffect))         allocate (BioEffects%TauEffect(inum,jnum))
 
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
@@ -420,6 +418,8 @@ contains
     tper = 0.0_fp
     teta = 0.0_fp
     wave = .false.
+    BioEffects%TauEffect =1.0_fp
+    BioEffects%ErodibilityEffect = 1.0_fp
 
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
   !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
@@ -480,6 +480,7 @@ contains
     !
     chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
     h1      = 3.0_fp        ! water depth [m]
+    h0      = h1            ! @ToDo : read h0 from input data
     umod    = 0.1_fp        ! depth averaged flow magnitude [m/s]
     ws      = 0.001_fp      ! Settling velocity [m/s]
 !    r1(:,:) = 2.0e-1_fp    ! sediment concentration [kg/m3]
@@ -667,7 +668,6 @@ contains
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
 subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    use BioTypes , only      :  BioturbationEffect
 
     type(ESMF_GridComp)      :: gridComp
     type(ESMF_State)         :: importState, exportState
@@ -680,9 +680,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
-    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth,hbot,u2d,v2d,ubot,vbot
-    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2, u_mean,turb_difz
-    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3,spm_concentration
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null(), u_mean=>null(),turb_difz=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null(),spm_concentration=>null()
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
                               & Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
@@ -693,7 +693,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical                  :: forcing_from_coupler=.true.
     real(kind=ESMF_KIND_R8),parameter :: porosity=0.1 !> @todo make this an import field (e.g. by bed component)
     real(kind=ESMF_KIND_R8),parameter :: ws_convention_factor=-1.0
-    type (BioturbationEffect):: BioEffects
 
     integer                  :: petCount, localPet
     character(ESMF_MAXSTR)   :: name, message, timeString, fieldName
@@ -702,25 +701,37 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Clock)         :: clock
     integer                  :: external_index
     integer                  :: ubnd(3),lbnd(3),ubnd2(2),lbnd2(2)
+    logical                  :: First_entry = .true.
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridCompGet(gridComp, petCount=petCount,localPet=localPet,clock=clock, rc=localrc)
 
-    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum),v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
-
-    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
-      runTimeStepCount=runTimeStepCount, timeStep=timeStep, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+! Initialization
+    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum), &
+    &         v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
 
     if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
     if (.not.associated(turb_difz)) allocate(turb_difz(inum,jnum))
 
     turb_difz = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
-    !> get import state
+
+
+    call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, petCount=petCount,localPet=localPet,clock=clock, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
+         runTimeStepCount=runTimeStepCount, timeStep=timeStep, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+       !> get import state
     if (forcing_from_coupler) then
 
       !> get water depth
@@ -729,24 +740,30 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (localrc == 0) then
          do j=1,jnum
           do i= 1, inum
-           h0(inum*(j -1)+i) = depth(i,j)
            h1(inum*(j -1)+i) = depth(i,j)
           end do
          end do
       else
-        h0=h1
+        h1=h0
       endif
 
+      if (first_entry) h0 = h1
+      !> get velocity and layerheight
       call mossco_state_get(importState,(/'layerheight_at_soil_surface'/),hbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'depth_averaged_x_velocity_in_water'/),u2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'depth_averaged_y_velocity_in_water'/),v2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'x_velocity_at_soil_surface'/),ubot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'y_velocity_at_soil_surface'/),vbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (localrc == 0) then
 
@@ -765,78 +782,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         umod = 0.2
       end if
 
-      !> get bio effects
-
-      call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
-                                                    Microphytobenthos_erodibility,rc=localrc)
-      if (localrc==0) then
-
-       if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
-
-       call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
-
-        BioEffects%ErodibilityEffect = ptr_f2
-#ifdef DEBUG
-        write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
-#endif
-      end if
-
-      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
-                                                           Macrofauna_erodibility,rc=localrc)
-      if (localrc==0) then
-
-        if (.not. associated (BioEffects%ErodibilityEffect)) then
-
-            allocate (BioEffects%ErodibilityEffect(inum, jnum))
-
-            BioEffects%ErodibilityEffect = 1.0
-
-        end if
-
-        call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
-#ifdef DEBUG
-        write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
-#endif
-
-      end if
-
-      call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
-                                      Microphytobenthos_critical_bed_shearstress ,rc=localrc)
-      if (localrc==0) then
-
-         if (.not.associated(BioEffects%TauEffect)) allocate (BioEffects%TauEffect(inum,jnum))
-
-         call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-         BioEffects%TauEffect = ptr_f2
-
-      endif
-
-      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
-                           Macrofauna_critical_bed_shearstress ,rc=localrc)
-
-      if (localrc==0) then
-         if (.not.associated(BioEffects%TauEffect)) then
-
-            allocate (BioEffects%TauEffect(inum,jnum))
-
-            BioEffects%TauEffect =1.0
-
-          end if
-
-         call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-         BioEffects%TauEffect = ptr_f2 * BioEffects%TauEffect
-
-      endif
-
-      !> get spm concentrations
+       !> get spm concentrations, particle sizes and density
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if(localrc /= ESMF_SUCCESS) then
         !> run without SPM forcing from pelagic component
@@ -846,14 +795,21 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
            ESMF_LOGMSG_INFO)
 #endif
       else
+
         call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (allocated(fieldlist)) deallocate(fieldlist)
         allocate(fieldlist(n))
+
         call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         do n=1,size(fieldlist)
+
           field = fieldlist(n)
+
           call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1)
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -885,9 +841,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             write(0,*) 'cannot find SPM fraction',n
           end if
         end do
-
-        !> this is not good, but should work:
-!        r0(:,nmub) = spm_concentration(1,1,:)
 
         !> get sinking velocities
         call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity_in_water',fieldBundle,rc=localrc)
@@ -921,9 +874,74 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     else
       !> use initial values
       h0=h1
-!      r0=r1
     end if
 
+     !> get bio effects
+
+      call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
+   &  Microphytobenthos_erodibility,rc=localrc)
+      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (localrc==0) then
+
+        call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
+        if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        BioEffects%ErodibilityEffect = ptr_f2
+#ifdef DEBUG
+        write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+#endif
+      end if
+
+      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
+   &  Macrofauna_erodibility,rc=localrc)
+      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (localrc==0) then
+
+        call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
+#ifdef DEBUG
+        write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+#endif
+
+      end if
+
+      call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
+   &  Microphytobenthos_critical_bed_shearstress ,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (localrc==0) then
+
+        call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         BioEffects%TauEffect = ptr_f2
+
+      endif
+
+      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
+   &  Macrofauna_critical_bed_shearstress ,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (localrc==0) then
+
+         call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         BioEffects%TauEffect = ptr_f2 * BioEffects%TauEffect
+
+      endif
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
@@ -954,6 +972,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! sediment density.
 
     enddo
+
+    !> save current water level to the old water level for the next time step
+     h1 = h0
 
         !
         !   Compute change in sediment composition of top layer and fluff layer
@@ -1042,7 +1063,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (mudfrac)
 
     deallocate (uorb, tper,teta)
-
+    deallocate (BioEffects%TauEffect)
+    deallocate (BioEffects%ErodibilityEffect)
 
     call ESMF_ClockDestroy(clock, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
