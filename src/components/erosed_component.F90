@@ -751,19 +751,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !> get velocity and layerheight
       call mossco_state_get(importState,(/'layerheight_at_soil_surface'/),hbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'depth_averaged_x_velocity_in_water'/),u2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'depth_averaged_y_velocity_in_water'/),v2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'x_velocity_at_soil_surface'/),ubot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'y_velocity_at_soil_surface'/),vbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (localrc == 0) then
 
@@ -785,7 +785,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
        !> get spm concentrations, particle sizes and density
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if(localrc /= ESMF_SUCCESS) then
         !> run without SPM forcing from pelagic component
@@ -798,7 +798,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (allocated(fieldlist)) deallocate(fieldlist)
         allocate(fieldlist(n))
@@ -881,13 +881,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
    &  Microphytobenthos_erodibility,rc=localrc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (localrc==0) then
 
         call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
         if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         BioEffects%ErodibilityEffect = ptr_f2
 #ifdef DEBUG
@@ -898,13 +898,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
    &  Macrofauna_erodibility,rc=localrc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (localrc==0) then
 
         call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
 #ifdef DEBUG
@@ -916,13 +916,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
    &  Microphytobenthos_critical_bed_shearstress ,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (localrc==0) then
 
         call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          BioEffects%TauEffect = ptr_f2
 
@@ -931,13 +931,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
    &  Macrofauna_critical_bed_shearstress ,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (localrc==0) then
 
          call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   &       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          BioEffects%TauEffect = ptr_f2 * BioEffects%TauEffect
 
@@ -1065,6 +1065,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (uorb, tper,teta)
     deallocate (BioEffects%TauEffect)
     deallocate (BioEffects%ErodibilityEffect)
+    deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
+    deallocate (size_classes_of_downward_flux_of_pim_at_bottom)
 
     call ESMF_ClockDestroy(clock, rc=localrc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
