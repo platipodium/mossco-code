@@ -67,6 +67,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Ubot(:,:)=>NULL(),Vbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: nybot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
 
@@ -319,6 +320,9 @@ module getm_component
     end if
     if (associated(T3D)) then
       call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState)
+    end if
+    if (associated(nybot)) then
+      call getmCmp_StateAddPtr("turbulent_kinematic_viscosity_at_soil_surface",nybot,exportState)
     end if
 
     select case (met_method)
@@ -668,7 +672,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
-   use variables_3d   ,only: hn
+   use variables_3d   ,only: hn,num
 #ifndef NO_BAROCLINIC
    use variables_3d   ,only: T
 #endif
@@ -733,6 +737,7 @@ module getm_component
       else
 #ifndef NO_3D
          allocate(hbot(E2DFIELD))
+         allocate(nybot(I2DFIELD))
 #ifndef NO_BAROCLINIC
          if (runtype .gt. 2) then
             allocate(Tbot(I2DFIELD))
@@ -785,6 +790,11 @@ module getm_component
       else
 #ifndef NO_3D
          hbot(imin-HALO:,jmin-HALO:) => hn(:,:,1)
+#if 0
+         nybot(imin-HALO:,jmin-HALO:) => num(:,:,1)
+#else
+         allocate(nybot(I2DFIELD))
+#endif
 #ifndef NO_BAROCLINIC
          if (runtype .gt. 2) then
             Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
@@ -1268,7 +1278,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
-   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww
+   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num
 #ifndef NO_BAROCLINIC
    use variables_3d   ,only: T
 #endif
@@ -1306,6 +1316,7 @@ module getm_component
 #ifndef NO_3D
       if (runtype .gt. 1) then
          hbot = hn(:,:,1)
+         nybot = num(:,:,1)
 #ifndef NO_BAROCLINIC
          if (runtype .gt. 2) then
             Tbot = T(:,:,1)
@@ -1331,6 +1342,11 @@ module getm_component
       end if
 #if 1
    else
+#ifndef NO_3D
+      if (runtype .gt. 1) then
+         nybot = num(:,:,1)
+      end if
+#endif
       if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
          waveT   = waveT_
          waveK   = waveK_
