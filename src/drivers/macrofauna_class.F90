@@ -4,20 +4,19 @@ module macrofauna_class
 ! override the original methods.
 
 use BenthosEffect_class
-use BioTypes
 
 implicit none
 
-type                    , extends(statevariable)  :: Mc_statevariable
- real (fp)              , pointer :: Intensity=> null ()
+type                       ,extends(statevariable)  :: Mc_statevariable
+ real (fp),dimension (:,:),pointer :: Intensity=> null ()
 end type  Mc_statevariable
 
-type , public , abstract, extends (BenthosEffect) :: Macrofauna
+type , public , abstract   ,extends (BenthosEffect) :: Macrofauna
 
-type (Mc_statevariable)  ,pointer :: StateVar=> null ()
-type (BioturbationEffect),pointer :: Bioturbation=> null ()
-type (BiogenicStrctures) ,pointer :: Biogenic=> null ()
-type (DirectBioeffect)   ,pointer :: DirectBioturbation=> null ()
+type (Mc_statevariable)    ,pointer :: StateVar=> null ()
+type (BioturbationEffect)  ,pointer :: Bioturbation=> null ()
+type (BiogenicStrctures)   ,pointer :: Biogenic=> null ()
+type (DirectBioeffect)     ,pointer :: DirectBioturbation=> null ()
 
 end type Macrofauna
 
