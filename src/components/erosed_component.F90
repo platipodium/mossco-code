@@ -704,8 +704,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
 
 ! Initialization
-    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum), &
-    &         v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
+!    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum), &
+!    &         v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
 
     if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
     if (.not.associated(turb_difz)) allocate(turb_difz(inum,jnum))
