@@ -35,7 +35,7 @@ program main
    type(ESMF_VM)              :: vm
    integer(ESMF_KIND_I4)      :: iostat, localPet, petCount
    logical                    :: ClockIsPresent
-   character(len=ESMF_MAXSTR) :: message
+   character(len=ESMF_MAXSTR) :: message, formatstring
    
 
 !> Read the namelist `mossco_run.nml`and evaluate three parameters:
@@ -58,17 +58,17 @@ program main
    call replace_character(title,'/','-')
    call replace_character(title,' ','_')
 
-
    ! Initialize ESMF, get resources, and log this
    call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
      logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN,&
      vm=vm)
    if (localrc /= ESMF_SUCCESS) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_LogSet(flush=.true.)
-   write(message,'(A)')  trim(title)//" coupled system starts"
+   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
    call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=rc)
-   write(message,'(A,I4,A,I4)') 'Creating multiple logs, this is processor ',localPet,' of ', petCount 
+   write(formatstring,'(A)') '(A,'//intformat(localPet)//',A,'//intformat(petCount)//')'   
+   write(message,formatstring) 'Creating multiple logs, this is processor ',localPet,' of ', petCount 
    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 ! Get the wall clock starting time

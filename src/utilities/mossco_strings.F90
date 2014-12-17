@@ -15,6 +15,18 @@ module mossco_strings
 
 implicit none
 
+  public order, intformat
+
+  interface order
+    module procedure order_i4
+    module procedure order_i8
+  end interface
+	 
+  interface intformat
+    module procedure intformat_i4
+    module procedure intformat_i8
+  end interface
+
 contains
 
    function only_var_name(longname)
@@ -77,24 +89,40 @@ contains
      return
    end subroutine split_string
    
-   integer function order(i)
+   integer function order_i8(i)
      integer(kind=8),intent(in) :: i
-     order=int(log10(i*1.0))
-   end function order
-   
-   function intformat(i)
-     character(len=4) :: intformat
-     integer(kind=8), intent(in) :: i
-     integer             :: o,j
-     character           :: c
-     
-     o=order(i) 
-     if (o<0) o=0
-     if (o>9) o=9   
-     write(intformat,'(A,I1,A,I1)') 'I', order(i)+1, '.', order(i)+1
+     order_i8=int(log10(i*1.0))
+   end function order_i8
 
-  end function intformat
+   integer function order_i4(i)
+     integer(kind=4),intent(in) :: i
+     order_i4=int(log10(i*1.0))
+   end function order_i4
+
+   
+   function intformat_i8(i)
+     character(len=4) :: intformat_i8
+     integer(kind=8), intent(in) :: i
+     integer             :: o
      
+     o=order(i)+1
+     if (o<1) o=1
+     if (o>9) o=9   
+     write(intformat_i8,'(A,I1,A,I1)') 'I', o , '.', o
+
+  end function intformat_i8
+     
+   function intformat_i4(i)
+     character(len=4) :: intformat_i4
+     integer(kind=4), intent(in) :: i
+     integer             :: o
+     
+     o=order(i)+1
+     if (o<1) o=1
+     if (o>9) o=9   
+     write(intformat_i4,'(A,I1,A,I1)') 'I', o , '.', o
+
+  end function intformat_i4
    
 
 end module mossco_strings

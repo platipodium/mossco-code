@@ -21,6 +21,8 @@
 module mossco_component
 
 use esmf
+use mossco_strings
+
 implicit none
 
 interface MOSSCO_CompExit
@@ -74,7 +76,7 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_CplCompSet(cplComp, clock=clock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=localrc)
+      call ESMF_ClockSet(clock, name=trim(name_), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -125,6 +127,7 @@ contains
     if (phaseCount>1 .or. phase==0) then
       write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
     endif
+    write(message,'(A)') trim(message)//' ...'
     
     if (present(rc)) rc=rc_
     if (present(currTime)) currTime=currTime_
@@ -215,7 +218,7 @@ contains
   subroutine MOSSCO_CplCompExit(cplComp, rc)
   
     type(ESMF_CplComp), intent(in)    :: cplComp
-    integer, intent(out)              :: rc
+    integer, intent(out), optional    :: rc
 
     integer(ESMF_KIND_I4)   :: phase, phaseCount, localrc, rc_
     character(ESMF_MAXSTR)  :: message, timeString
@@ -225,7 +228,7 @@ contains
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     
-    rc=ESMF_SUCCESS
+    rc_=ESMF_SUCCESS
     
     call ESMF_CplCompGet(cplComp, name=name, clockIsPresent=clockIsPresent, &
       currentMethod=method, currentPhase=phase, rc=localrc)
@@ -260,7 +263,10 @@ contains
       write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)  
-  
+    
+    if (present(rc)) rc=rc_
+    return
+     
   end subroutine MOSSCO_CplCompExit
   
 #undef  ESMF_METHOD
@@ -268,11 +274,16 @@ contains
   subroutine MOSSCO_GridCompExit(GridComp, rc)
   
     type(ESMF_GridComp), intent(in)    :: GridComp
-    integer, intent(out)              :: rc
+    integer, intent(out), optional     :: rc
+    
+    integer  :: rc_
+
+    rc_ = ESMF_SUCCESS
 
     call MOSSCO_GridCompExitLog(gridComp)
-
-    rc = ESMF_SUCCESS
+    
+    if (present(rc)) rc=rc_    
+    return
       
   end subroutine MOSSCO_GridCompExit
 
@@ -289,7 +300,7 @@ contains
     type(ESMF_Clock)      ,intent(out),optional :: clock
     type(ESMF_Time)       ,intent(out),optional :: currTime
 
-    character(ESMF_MAXSTR) :: myName,timestring,message
+    character(ESMF_MAXSTR) :: myName,timestring,message, formatstring
     type(ESMF_Method_Flag) :: cMethod
     integer                :: cPhase,phaseCount,petCount
     logical                :: have_clock, phaseZeroFlag
@@ -334,7 +345,8 @@ contains
 
     if (cMethod.eq.ESMF_METHOD_INITIALIZE .and. cPhase.eq.1) then
       call ESMF_GridCompGet(gridComp,petCount=petCount)
-      write(message,'(A,I6,A)') trim(message)//' on ',petCount,' PETs'
+      write(formatstring,'(A)') '(A,'//intformat(petCount)//',A)'
+      write(message,formatstring) trim(message)//' on ',petCount,' PETs'
     end if
     write(message,'(A)') trim(message)//' ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
