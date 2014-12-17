@@ -100,14 +100,14 @@ end if
 
  if (units == '-') then
 
-  write (*,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
+  !write (*,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
 
   This%StateVar%intensity = amount
   nullify (This%StateVar%amount)
 
  elseif  (units == 'gCm-2') then
 
-  write (*,*) ' In Mbalthica_class, the biomass of Mbalthica is ', amount
+ ! write (*,*) ' In Mbalthica_class, the biomass of Mbalthica is ', amount
 
   allocate (This%StateVar%amount( this%inum, this%jnum))
 

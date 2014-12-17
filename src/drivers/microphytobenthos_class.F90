@@ -97,7 +97,7 @@ else
 end if
 
  this%UnitNr = UnitNr
- write (*,*) ' In Microphytobenthos_class, the amount of Chl biomass is ', Mass
+ !write (*,*) ' In Microphytobenthos_class, the amount of Chl biomass is ', Mass
  write (*,*) ' Units are ', units
 
  This%BioMass%amount = Mass
