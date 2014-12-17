@@ -214,7 +214,9 @@ module simplewave_component
       if (trim(foreignGridFieldName)/='none') then
         call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(field, grid=grid, rank=rank, rc=rc)
+        call ESMF_FieldGet(field, grid=grid, rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_GridGet(grid, rank=rank, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         if (rank .ne. 2) then
           write(message,*) 'foreign grid must be of rank = 2'
