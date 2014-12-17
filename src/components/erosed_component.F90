@@ -680,7 +680,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null(),nybot=>null()
-    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null(), u_mean=>null(),turb_difz=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null(),turb_difz=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null(),spm_concentration=>null()
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
@@ -701,7 +701,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer                  :: external_index
     integer                  :: ubnd(3),lbnd(3),ubnd2(2),lbnd2(2)
     logical                  :: First_entry = .true.
-
 
 ! Initialization
 !    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum), &
@@ -773,11 +772,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       if (localrc == 0) then
 
-        u_mean(:,:) = sqrt( u2d*u2d + v2d*v2d )
-
         do j=1,jnum
           do i= 1, inum
-            umod  (inum*(j -1)+i) = u_mean(i,j)
+            umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
             thick (inum*(j -1)+i) = hbot (i,j)
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
