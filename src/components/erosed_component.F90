@@ -701,6 +701,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer                  :: external_index
     integer                  :: ubnd(3),lbnd(3),ubnd2(2),lbnd2(2)
     logical                  :: First_entry = .true.
+    type(ESMF_StateItem_Flag) :: itemType
 
 ! Initialization
 !    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum), &
@@ -890,72 +891,86 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       h0=h1
     end if
 
-     !> get bio effects
-
+    !> get bio effects
+    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else 
+    !> Hassan: todo, was passiert im else-Fall
+    call ESMF_StateGet(importState, 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
+      itemType=itemType, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   
+    if (itemType == ESMF_STATEITEM_FIELD) then
       call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
-   &  Microphytobenthos_erodibility,rc=localrc)
+        Microphytobenthos_erodibility,rc=localrc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
+      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (localrc==0) then
-
-        call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
-        if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        BioEffects%ErodibilityEffect = ptr_f2
+      BioEffects%ErodibilityEffect = ptr_f2
 #ifdef DEBUG
         write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
 #endif
-      end if
+    end if
 
+    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else 
+    !> Hassan: todo, was passiert im else-Fall
+    call ESMF_StateGet(importState, 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
+      itemType=itemType, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    if (itemType == ESMF_STATEITEM_FIELD) then
       call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
-   &  Macrofauna_erodibility,rc=localrc)
+        Macrofauna_erodibility,rc=localrc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (localrc==0) then
-
-        call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
+      BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
 #ifdef DEBUG
-        write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
 #endif
+    endif
 
-      end if
+    call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
+      itemType=itemType ,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    if (itemType==ESMF_STATEITEM_FIELD) then
       call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
-   &  Microphytobenthos_critical_bed_shearstress ,rc=localrc)
+        Microphytobenthos_critical_bed_shearstress ,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (localrc==0) then
+      call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      BioEffects%TauEffect = ptr_f2
+    endif
+ 
+    call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
+      itemType=itemType ,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         BioEffects%TauEffect = ptr_f2
-
-      endif
-
+    if (itemType==ESMF_STATEITEM_FIELD) then
       call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
-   &  Macrofauna_critical_bed_shearstress ,rc=localrc)
+        Macrofauna_critical_bed_shearstress ,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (localrc==0) then
+      call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-         BioEffects%TauEffect = ptr_f2 * BioEffects%TauEffect
-
-      endif
+      BioEffects%TauEffect = ptr_f2 * BioEffects%TauEffect
+    endif
 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
@@ -969,7 +984,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
-     do nm = nmlb, nmub
+      do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
@@ -988,7 +1003,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     enddo
 
     !> save current water level to the old water level for the next time step
-     h1 = h0
+    h1 = h0
 
         !
         !   Compute change in sediment composition of top layer and fluff layer
