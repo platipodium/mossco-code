@@ -662,7 +662,7 @@ for phase in range(1,maxPhases+1):
           break
     fid.write('    !! Initializing ' + jtem[1] + '\n')
     fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=localrc)\n')
+    fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, phase=' + str(1) + ', rc=localrc)\n')
     fid.write('''
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
