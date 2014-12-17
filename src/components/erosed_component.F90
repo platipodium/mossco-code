@@ -747,7 +747,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         h1=h0
       endif
 
-      if (first_entry) h0 = h1
+      if (first_entry) then
+         h0 = h1
+         first_entry = .false.
+      end if
+
       !> get velocity and layerheight
       call mossco_state_get(importState,(/'layerheight_at_soil_surface'/),hbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
