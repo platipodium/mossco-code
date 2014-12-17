@@ -290,6 +290,10 @@ fid.write('''
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "toplevel_component.F90"
 ''')
 
 fid.write('module ' + 'toplevel_component\n')
@@ -334,27 +338,73 @@ fid.write('''
 
   contains
 
-  !> Provide an ESMF compliant SetServices routine, which defines
-  !! entry points for Init/Run/Finalize
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    rc = ESMF_SUCCESS
+    integer              :: localrc
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc=ESMF_SUCCESS
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
-  !> Initialize the coupling
-  !!
-  subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
+  subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+
+    implicit none
+
+    type(ESMF_GridComp)         :: gridComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: parentClock
+    integer, intent(out)        :: rc
+
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime
+    integer                     :: localrc
+
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP0
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
+  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
     implicit none
 
@@ -370,7 +420,7 @@ fid.write('''
     real(ESMF_KIND_R8)      :: dt
 
     integer(ESMF_KIND_I4)  :: numGridComp, numCplComp, petCount
-    integer(ESMF_KIND_I4)  :: alarmCount, numCplAlarm, i
+    integer(ESMF_KIND_I4)  :: alarmCount, numCplAlarm, i, localrc
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList !> @todo shoudl this be a pointer?
     character(ESMF_MAXSTR) :: name, message
     type(ESMF_Alarm)       :: childAlarm
@@ -391,11 +441,11 @@ fid.write('''
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     !! Allocate the fields for all gridded components and their names
 ''')
@@ -413,17 +463,17 @@ for i in range(0, len(gridCompList)):
 
 fid.write('''
     !! Create all gridded components, and create import and export states for these
-    call ESMF_GridCompGet(gridComp, vm=vm, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_VmGet(vm, petCount=petCount, rc=rc)
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_VmGet(vm, petCount=petCount, rc=localrc)
     allocate(petList(petCount))
     do i=1,petCount
       petList(i)=i-1
     enddo
 
     do i = 1, numGridComp
-      gridCompClockList(i) = ESMF_ClockCreate(clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      gridCompClockList(i) = ESMF_ClockCreate(clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
 ''')
@@ -431,7 +481,7 @@ for i in range(0, len(gridCompList)):
 
     if (petList[i]=='all'):
         fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + ')),  &\n')
-        fid.write('      petList=petList, clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
+        fid.write('      petList=petList, clock=gridCompClockList(' + str(i+1) + '), rc=localrc)\n')
     else:
        fid.write('    if (petCount<=' + str(max(petList[i])) + ') then\n')
        fid.write('      write(message,\'(A,I4)\') \'This configuration requires more than ' + max(petList[i]) + ' PET, I got only \',petCount\n')
@@ -440,16 +490,16 @@ for i in range(0, len(gridCompList)):
        fid.write('      call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
        fid.write('    endif\n')
        fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + ')),  &\n')
-       fid.write('      petList=(/' + petList[i] + '/), clock=gridCompClockList(' + str(i+1) + '), rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+       fid.write('      petList=(/' + petList[i] + '/), clock=gridCompClockList(' + str(i+1) + '), rc=localrc)\n')
+    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
 fid.write('''
     do i=1, numGridComp
       exportStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNames(i))//'ExportState')
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       importStates(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
         name=trim(gridCompNames(i))//'ImportState')
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
     !! Now register all setServices routines for the gridded components
@@ -459,8 +509,8 @@ for i in range(0, len(gridCompList)):
     item=gridCompList[i]
     if instanceDict.has_key(item):
         item=instanceDict[item]
-    fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' +item + '_SetServices, rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+    fid.write('    call ESMF_GridCompSetServices(gridCompList(' + str(i+1) + '), ' +item + '_SetServices, rc=localrc)\n')
+    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
 
 fid.write('\n    !! Allocate the fields for all coupler components and their names\n')
 fid.write('    numCplComp = ' + str(len(cplCompList)) )
@@ -474,14 +524,14 @@ for i in range(0, len(cplCompList)):
     fid.write('    cplCompNames(' + str(i+1) + ') = \'' + cplCompList[i] + '\'\n')
 fid.write('''
     do i = 1, numCplComp
-      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
 ''')
 for i in range(0,len(cplCompList)):
-    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + cplCompList[i] + '_SetServices, rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+    fid.write('    call ESMF_CplCompSetServices(cplCompList(' + str(i+1) + '), ' + cplCompList[i] + '_SetServices, rc=localrc)\n')
+    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
 
 fid.write('''
     !! Initialize all components, both cpl and grid components, do this
@@ -498,8 +548,8 @@ fid.write('''
 
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_INITIALIZE, &
-        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       phaseCountList(i)=phaseCount
       hasPhaseZeroList(i)=hasPhaseZero
     enddo
@@ -507,8 +557,8 @@ fid.write('''
     !! Go through all phase 0 if components have it
     do i = 1,numGridcomp
       if (.not.hasPhaseZeroList(i)) cycle
-      call ESMF_GridCompInitialize(gridCompList(i), exportState=exportStates(i), phase=0, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_GridCompInitialize(gridCompList(i), exportState=exportStates(i), phase=0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
       !! contains information on the phases defined in the component.
     enddo
@@ -526,16 +576,16 @@ for item in gridCompList:
   j=gridCompList.index(item)
   if (foreignGrid.has_key(item)):
     print item
-    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
+    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
   
   if dependencyDict.has_key(item):
     fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
     for jtem in dependencyDict[item]:
       fid.write('    charValueList(i) = \'' + jtem + '\'\n')
       fid.write('    intValueList(i) = ' + str(ifrom + 1) + '\n')
-    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on", valueList=charValueList, rc=rc)\n')  
-    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on-id", valueList=intValueList, rc=rc)\n')  
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on", valueList=charValueList, rc=localrc)\n')  
+    fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends-on-id", valueList=intValueList, rc=localrc)\n')  
     fid.write('    deallocate(charValueList)\n')
     fid.write('    deallocate(intValueList)\n')
 
@@ -544,8 +594,8 @@ if len(cplCompList)>0:
     fid.write('''
     !! Initialize the link coupler phase 1
     call ESMF_CplCompInitialize(cplCompList(1), importState=importStates(1), &
-      exportState=exportStates(1), clock=clock, phase=1, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)   
+      exportState=exportStates(1), clock=clock, phase=1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)   
 ''')
 
 fid.write('''
@@ -572,21 +622,21 @@ for phase in range(1,maxPhases+1):
     if foreignGrid.has_key(item):
       fid.write('    if (    (phase.eq.1 .and. phaseCountList( ' + str(ito+1) + ').eq.1) &\n')
       fid.write('        .or.(phase.eq.2 .and. phaseCountList( ' + str(ito+1) + ').gt.1) ) then\n')
-      fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=rc)\n')
-      fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n\n')
+      fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
+      fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
       
       if dependencyDict.has_key(item):
         for jtem in dependencyDict[item]:
           ifrom=gridCompList.index(jtem)
           fid.write('    call ESMF_CplCompRun(cplCompList(1), importState=exportStates(' + str(ifrom+1) + '), &\n')
-          fid.write('      exportState=importStates(' + str(ito+1)+'), clock=clock, rc=rc)\n')
+          fid.write('      exportState=importStates(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
           fid.write('    call ESMF_LogFlush()\n')
 
       fid.write('    end if\n\n')
           
     fid.write('    if (phaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
     fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=importStates(' + str(ito+1) + '), &\n')
-    fid.write('        exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
+    fid.write('        exportState=exportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=localrc)\n')
     fid.write('    endif\n')
     fid.write('''
     if (rc /= ESMF_SUCCESS) then
@@ -612,7 +662,7 @@ for phase in range(1,maxPhases+1):
           break
     fid.write('    !! Initializing ' + jtem[1] + '\n')
     fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=exportStates(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=rc)\n')
+    fid.write('      exportState=importStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=localrc)\n')
     fid.write('''
     if (rc /= ESMF_SUCCESS) then
       if ((rc == ESMF_RC_ARG_SAMECOMM .or. rc==506) .and. phase>1) then
@@ -643,8 +693,8 @@ for idx,couplingItem in enumerate(couplingList):
         fid.write("    cplNames(%d)='%s'\n" % (idx+1,couplingItem[1].split('_coupler')[0]))
 fid.write('''
     !! Set the coupling alarm starting from start time of local clock
-    call ESMF_ClockGet(clock,startTime=startTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(clock,startTime=startTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 ''')
 
@@ -662,44 +712,44 @@ for i in range(0,len(couplingList)):
         unit = 'h'
 
 
-    fid.write('    call ESMF_TimeIntervalSet(alarmInterval, startTime, ' + unit + '=' + number + ' ,rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n\n')
+    fid.write('    call ESMF_TimeIntervalSet(alarmInterval, startTime, ' + unit + '=' + number + ' ,rc=localrc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)\n\n')
     fid.write('    cplAlarmList(' + str(i+1) + ')=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &\n')
     alarmName = str(couplingList[i][0]) + '--' + str(couplingList[i][-1]) + '--cplAlarm'
-    fid.write('      ringInterval=alarmInterval, name=\'' + alarmName + '\', rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)\n')
+    fid.write('      ringInterval=alarmInterval, name=\'' + alarmName + '\', rc=localrc)\n')
+    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)\n')
 
     fid.write('''
     !! Copy this alarm to all children as well
     do i=1,numGridComp
-      call ESMF_GridCompGet(gridCompList(i),name=name, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompGet(gridCompList(i),name=name, rc=localrc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     ''')
     fid.write('  if (trim(name)==\'' + str(couplingList[i][0]) + '\' .or. trim(name)==\'' + str(couplingList[i][-1]) + '\') then')
     fid.write('''
-        call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_GridCompGet(gridCompList(i), clockIsPresent=clockIsPresent, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         if (clockIsPresent) then
-          call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=rc)
+          call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
         else
           call ESMF_LOGWRITE('Creating clock for '//trim(name)//', this should have been done by the component.', &
             ESMF_LOGMSG_WARNING)
 
-          childClock=ESMF_ClockCreate(clock=clock, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          childClock=ESMF_ClockCreate(clock=clock, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_GridCompSet(gridCompList(i),clock=childClock, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
         endif
     ''')
-    fid.write('    childAlarm=ESMF_AlarmCreate(cplAlarmList(' + str(i+1) + '), rc=rc)')
+    fid.write('    childAlarm=ESMF_AlarmCreate(cplAlarmList(' + str(i+1) + '), rc=localrc)')
     fid.write('''
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         call ESMF_AlarmSet(childAlarm, clock=childClock)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
       endif
     enddo
@@ -711,17 +761,17 @@ fid.write('''
     !! from local clock into alarmList, find those that contain the string "cplAlarm"
     !! and look for the earliest ringtime in all coupling alarms.  Save that in the
     !! ringTime
-    call ESMF_ClockGet(clock, stopTime=ringTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock, stopTime=ringTime, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-    call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=alarmCount,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmCount=alarmCount,rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     if (.not.allocated(alarmList)) allocate(alarmList(alarmCount))
-    call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     do i=1,ubound(alarmList,1)
-      call ESMF_AlarmGet(alarmList(i), ringTime=time, name=name, rc=rc)
+      call ESMF_AlarmGet(alarmList(i), ringTime=time, name=name, rc=localrc)
 
       call ESMF_TimeGet(time,timeStringISOFrac=timestring)
       write(message,'(A)') trim(name)//' rings at '//trim(timestring)
@@ -734,27 +784,29 @@ fid.write('''
 
     !! Set the timestep such that it corresponds to the time until the
     !! first ringing alarm, log that time
-    call ESMF_ClockGet(clock,currTime=currTime,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockSet(clock,timeStep=ringTime-currTime,rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_ClockGet(clock,currTime=currTime,rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    call ESMF_ClockSet(clock,timeStep=ringTime-currTime,rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-    call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     write(message,'(A)') trim(name)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     !! Flush the log at the end of Initialize()
-    call ESMF_LogFlush(rc=rc)
+    call ESMF_LogFlush(rc=localrc)
 
-  end subroutine Initialize
+  end subroutine InitializeP1
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)  :: gridComp
@@ -781,7 +833,7 @@ fid.write('''
     type(ESMF_ArrayBundle)  :: arrayBundle
     type(ESMF_StateItem_Flag), dimension(:), allocatable :: itemTypeList
     character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
-    integer                  :: itemCount
+    integer(ESMF_KIND_I4)   :: itemCount, localrc
 
     character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName
 
@@ -791,11 +843,13 @@ fid.write('''
     logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc=ESMF_SUCCESS
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     if (.not.allocated(alarmList)) allocate(alarmList(20))
 
@@ -810,14 +864,14 @@ fid.write('''
 
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_RUN, &
-        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       phaseCountList(i)=phaseCount
       hasPhaseZeroList(i)=hasPhaseZero
     enddo
 
     call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-      alarmCount=alarmCount, rc=rc)
+      alarmCount=alarmCount, rc=localrc)
 
     if (allocated(alarmList)) then
       if (size(alarmList)<alarmCount) then
@@ -831,31 +885,31 @@ fid.write('''
     !! Run until the clock's stoptime is reached
     do
 
-      call ESMF_ClockGet(clock,currTime=currTime, stopTime=stopTime, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockGet(clock,currTime=currTime, stopTime=stopTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (currTime>stopTime) then
         call ESMF_LogWrite('Clock out of scope in '//trim(compName), ESMF_LOGMSG_ERROR)
-        call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
       endif
 
       !! Loop through all components and check whether their clock is currently at the
       !! same time as my own clock's currTime, if yes, then run the respective couplers
       do i=1,numGridComp
         !! Determine for each child the clock
-        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         if (.not.clockIsPresent) then
           call ESMF_LogWrite('Required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
-          call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
-        call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-        call ESMF_ClockGet(childClock,currTime=time, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_ClockGet(childClock,currTime=time, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         ! write(message,'(A)') trim(compName)//' now at '//trim(timestring)
         !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
@@ -866,8 +920,8 @@ fid.write('''
         !! have ringing alarms at this stage
 
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-          alarmCount=alarmCount, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          alarmCount=alarmCount, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         if (alarmCount>ubound(alarmList,1)) then
           deallocate(alarmList)
@@ -879,13 +933,13 @@ fid.write('''
           !call ESMF_LogWrite(trim(compName)//' has not ringing alarm at '//trim(timestring),ESMF_LOGMSG_WARNING)
         else
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-             alarmList=alarmList, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+             alarmList=alarmList, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
         do j=1,alarmCount
-          call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=ringTime, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=ringTime, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
           !! Skip this alarm if it is not a cplAlarm
           if (index(trim(alarmName),'cplAlarm') < 1) cycle
@@ -897,7 +951,7 @@ fid.write('''
           !if (ringTime > currTime) cycle
 
           call ESMF_TimeGet(ringTime,timeStringISOFrac=timeString)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !write(0,*) trim(compName)//' ', i,'/',alarmCount,' '//trim(alarmName)//' rings at '//trim(timeString)
           write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
@@ -922,20 +976,20 @@ fid.write('''
           write(message,'(A)') trim(message)//' '//trim(otherName)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-          call ESMF_GridCompGet(gridCompList(i), exportState=impState, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_GridCompGet(gridCompList(i), exportState=impState, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
           !! Search the gridCompList for other's name
           do k=1, ubound(gridCompList,1)
-              call ESMF_GridCompGet(gridCompList(k), name=name, rc=rc)
-              if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+              call ESMF_GridCompGet(gridCompList(k), name=name, rc=localrc)
+              if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
               if (trim(name)==trim(otherName)) exit
           enddo
 
           if (trim(name) /= trim(otherName)) then
             write(message,'(A)') 'Did not find component '//trim(otherName)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
           endif
 
           !! Search the cplCompList for cplName
@@ -944,19 +998,19 @@ fid.write('''
               if (trim(cplCompNames(l))==trim(cplName)//'_coupler') exit
           enddo
 
-          call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 ''')
 
 fid.write('''
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
-            exportState=expState, clock=clock, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            exportState=expState, clock=clock, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
           call ESMF_LogFlush()
 
         enddo
@@ -966,30 +1020,30 @@ fid.write('''
       !! same time as my own clock's currTime, if yes, then run the component
       do i=1,numGridComp
         !! Determine for each child the clock
-        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         if (.not.clockIsPresent) then
           call ESMF_LogWrite('Required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
-          call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
-        call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_GridCompGet(gridCompList(i), clock=childClock, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-        call ESMF_ClockGet(childClock,currTime=time, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_ClockGet(childClock,currTime=time, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (time>currTime) then
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(compName)//' now at '//trim(timestring)//', but'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(name)//' now at '//trim(timestring)//', cycling ...'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
@@ -1000,105 +1054,105 @@ fid.write('''
         !! and run the component for the interval until that alarm
 
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-          alarmCount=alarmCount, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          alarmCount=alarmCount, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         if (alarmCount==0) then
           !call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
           timeInterval=stopTime-currTime
         else
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-             alarmList=alarmList, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+             alarmList=alarmList, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
         !! Set the default ringTime to the stopTime of local clock, then get all Alarms
         !! from local clock into alarmList, find those that contain the string "cplAlarm"
         !! and look for the earliest ringtime in all coupling alarms.  Save that in the
         !! ringTime
-        call ESMF_ClockGet(clock, stopTime=ringTime, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_ClockGet(clock, stopTime=ringTime, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         do j=1,alarmCount
           call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, &
-            ringInterval=ringInterval, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            ringInterval=ringInterval, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
           if (index(trim(alarmName),'cplAlarm')<1) cycle
 
           if (time==currTime) ringTime=currTime+ringInterval
           if (time<ringTime) ringTime=time
         enddo
 
-        !call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
-        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        !call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
+        !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
         !write(message,'(A)') 'Setting child''s stopTime to'//trim(timeString)
-        !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
+        !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
 
-        call ESMF_ClockSet(childClock, stopTime=ringTime, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_ClockSet(childClock, stopTime=ringTime, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_ClockGet(childClock, timeStep=timeInterval, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_ClockGet(childClock, timeStep=timeInterval, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
         if (timeInterval>ringTime-currTime) then
-          call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
         timeInterval=ringTime-currTime
 
-        call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(timeString)//' calling '//trim(compName), &
           ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
         !! Loop over all run phases, disregarding any action that could be taken between
         !! phases
         do phase=1,phaseCountList(i)
           call ESMF_GridCompRun(gridCompList(i),importState=importStates(i),&
-            exportState=exportStates(i), clock=clock, phase=phase, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+            exportState=exportStates(i), clock=clock, phase=phase, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_LogFlush()
         enddo
 
-        call ESMF_ClockGet(childClock, currTime=time, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (time == currTime) then
           !! This child component did not advance its clock in its Run() routine
           !! We do that here
           call ESMF_LogWrite(trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
 
-          call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       enddo
 
       !! Now that all child components have been started, find out the minimum time
       !! to the next coupling and use this as a time step for my own clock Advance
-      call ESMF_GridCompGet(gridComp, name=name, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
       call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-        alarmCount=alarmCount, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        alarmCount=alarmCount, rc=localrc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
       if (alarmCount==0) then
         !call ESMF_LogWrite('No alarm found in '//trim(name), ESMF_LOGMSG_WARNING)
         timeInterval=stopTime-currTime
       else
         call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-          alarmList=alarmList, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          alarmList=alarmList, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-        call ESMF_AlarmGet(alarmList(1), ringTime=ringTime, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_AlarmGet(alarmList(1), ringTime=ringTime, rc=localrc)
+        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
         do j=2,alarmCount
-          call ESMF_AlarmGet(alarmList(j), ringTime=time, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          call ESMF_AlarmGet(alarmList(j), ringTime=time, rc=localrc)
+          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
           if (time<ringTime) ringTime=time
         enddo
@@ -1107,29 +1161,31 @@ fid.write('''
       endif
 
       !> Log current and next ring time
-      call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       write(message,'(A)') trim(timeString)//' '//trim(name)//' stepping to'
-      call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       write(message,'(A)') trim(message)//' '//trim(timeString)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc);
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
       !> Set new time interval and advance clock, stop if end of
       !! simulation reached
-      call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call ESMF_ClockAdvance(clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      if (ESMF_ClockIsStopTime(clock, rc=rc)) exit
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockSet(clock, timeStep=timeInterval, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockAdvance(clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_ClockIsStopTime(clock, rc=localrc)) exit
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
-    call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -1137,7 +1193,7 @@ fid.write('''
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I8)   :: i
-    integer(ESMF_KIND_I4)   :: petCount, localPet,numGridComp, numCplComp
+    integer(ESMF_KIND_I4)   :: petCount, localPet,numGridComp, numCplComp, localrc
     character(ESMF_MAXSTR)  :: name, message, timeString
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
@@ -1149,11 +1205,13 @@ fid.write('''
     logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc=ESMF_SUCCESS
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
@@ -1166,42 +1224,42 @@ fid.write('''
 
     do i = 1, numGridComp
       call ESMF_GridCompGetEPPhaseCount(gridCompList(i), ESMF_METHOD_FINALIZE, &
-        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        phaseCount=phaseCount, phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       phaseCountList(i)=phaseCount
       hasPhaseZeroList(i)=hasPhaseZero
     enddo
 
     do i=1,ubound(cplCompList,1)
-      call ESMF_CplCompFinalize(cplCompList(i), clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_CplCompFinalize(cplCompList(i), clock=clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
     do i=1,ubound(gridCompList,1)
       do phase=1,phaseCountList(i)
-        call ESMF_GridCompFinalize(gridCompList(i), clock=clock, phase=phase, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_GridCompFinalize(gridCompList(i), clock=clock, phase=phase, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
     enddo
     do i=1,ubound(gridCompList,1)
       !!@todo destroy any remaining fields/arrays in states
-      call ESMF_StateDestroy(exportStates(i), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call ESMF_StateDestroy(importStates(i), rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_StateDestroy(exportStates(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateDestroy(importStates(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
 ''')
 i=0
 for item in gridCompList:
 # The clock is already destroyed locally
-#    fid.write('    call ESMF_ClockDestroy(gridCompClockList(' + str(i+1) + '), rc=rc)\n')
-    fid.write('    call ESMF_GridCompDestroy(gridCompList(' + str(i+1) + '), rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+#    fid.write('    call ESMF_ClockDestroy(gridCompClockList(' + str(i+1) + '), rc=localrc)\n')
+    fid.write('    call ESMF_GridCompDestroy(gridCompList(' + str(i+1) + '), rc=localrc)\n')
+    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
     i += 1
 i=0
 for item in cplCompList:
-    fid.write('    call ESMF_CplCompDestroy(cplCompList(' + str(i+1) + '), rc=rc)\n')
-    fid.write('    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
+    fid.write('    call ESMF_CplCompDestroy(cplCompList(' + str(i+1) + '), rc=localrc)\n')
+    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
     i += 1
 fid.write('''
     if (allocated(gridCompClockList)) deallocate(gridCompClockList)
@@ -1211,11 +1269,11 @@ fid.write('''
     if (allocated(importStates)) deallocate(importStates)
     if (allocated(cplAlarmList)) deallocate(cplAlarmList)
 
-    call ESMF_ClockDestroy(clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockDestroy(clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
   end subroutine Finalize
 
