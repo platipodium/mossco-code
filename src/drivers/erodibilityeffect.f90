@@ -20,74 +20,86 @@ end interface
 contains
 
 
-function mircophyto_erodibility_func ( Chl) result (g_erod_microphyto)
+function mircophyto_erodibility_func ( Chl, inum, jnum) result (g_erod_microphyto)
 ! The function to determine the effect of microphytobenthos on the sediment erodibility.
 ! By production of biofilm, this value can be decreased.
 implicit none
-real (fp)                    :: g_erod_microphyto
-type (statevariable)         :: Chl
+integer                            :: inum, jnum  !number of elements in x and y directions
+real (fp), dimension (inum, jnum)  :: g_erod_microphyto
+type (statevariable)               :: Chl
+integer                            :: i, j
 
 !units    ! Unit of Biomass (mgg: microgram/ g dry sediment weight)
           ! or     (mgm-2 :: microgram/ m**2 area)
 
-
-!statements
-
-!if (allocated (Chl%units) ) then
-
+ do j = 1, jnum
+  do i = 1, inum
      if (trim(Chl%units) == 'mgg' ) then
-        g_erod_microphyto= 1. - 0.018 * Chl%amount ! Paarlberg et al (2005)
+        g_erod_microphyto (i,j)= 1. - 0.018 * Chl%amount(i,j) ! Paarlberg et al (2005)
      else
         g_erod_microphyto= 1.0
 
       write (*,*) ' Error: the microphytobenthos effect on the erodibility was calculated base on'// &
                   '  Chlorophyll a content in UNIT microgram /g dry Sediment, and not in microgram/ m**2'// &
                   '  area. Therefroe, the bioeffect was not considered.'
-
+      exit
      end if
+  end do
+end do
 
-!else
-!
-!      g_erod_microphyto= 1. - 0.018 * Chl%amount ! Paarlberg et al (2005)
-!
-!      write (*,*) ' Warning: the microphytobenthos effect on the erodibility has been calculated based on the assumaption of  &
-!          &        Chlorophyll a content in UNIT microgram /g dry Sediment, and not in microgram/ m**2 area.'
-!
-!end if
 return
 end function mircophyto_erodibility_func
 
 !************************************************************
 
-function Mbalthica_erodibility_func (Mbalthica)  result (g_erod_macrofauna)
+function Mbalthica_erodibility_func (Mbalthica, inum, jnum)  result (g_erod_macrofauna)
 ! Effect of Macoma balthica on the sediment erodibility.
-use macrofauna_class
 implicit none
-real (fp)                            :: g_erod_macrofauna
-type (Mc_statevariable)              :: Mbalthica
 
-!Intensity ! unit (-) : meaning dimensionless-> indv. /m-2 / 1 indiv. /m-2
+type (Mc_statevariable)              :: Mbalthica
+integer                              :: inum, jnum
+real (fp) , dimension (inum,jnum)    :: g_erod_macrofauna
+
+integer                              :: i,j
+!Amount    ! unit (-) : meaning dimensionless-> indv. /m-2 / 1 indiv. /m-2
 !Biomass   ! unit (gcm: meaning gC/m-2)
 
 ! local variables from Paarlberg et al. 2005
 
 real (fp)    :: gammaa = 6.0e-7
-real (fp)    :: I = 4.68e-8
-real (fp)    :: b1 = 0.995
-real (fp)    :: b2 = 5.08e-8
+real (fp)    :: II     = 4.68e-8
+real (fp)    :: b1     = 0.995
+real (fp)    :: b2     = 5.08e-8
 
 
 !statements
 
+ do j = 1, jnum
+  do i = 1, inum
 
-    if ((Mbalthica%Intensity==0.0_fp) ) then
+    if (trim(Mbalthica%units) == '-' )  then
+      if ((Mbalthica%intensity (i,j)==0.0_fp) ) then
 
-      g_erod_Macrofauna = 1.0
+        g_erod_Macrofauna = 1.0
 
-    elseif (trim(Mbalthica%units) == '-' )  then
+      else
 
-      g_erod_Macrofauna =    b2 * gammaa /I/(b2 + gammaa * b1** Mbalthica%Intensity) ! Paarlberg et al (2005)
+        g_erod_Macrofauna (i,j)=    b2 * gammaa /II/(b2 + gammaa * b1** Mbalthica%intensity(i,j)) ! Paarlberg et al (2005)
 
+      end if
+
+    else if(trim(Mbalthica%units) == 'gCm-2' ) then
+      if (Mbalthica%amount(i,j) == 0.0_fp ) then
+
+        g_erod_Macrofauna = 1.0
+
+      else
+
+        g_erod_Macrofauna = 1.0
+        write (*,*) ' WARNING!! At the moment computation of bioeffect of macrofauna on critical shear stress as a function of gCm-2 is not implemented yet.'// &
+                    ' Therefore, it is ignored !!!!!!!'
+      endif
+      exit
     else if (trim(Mbalthica%units) == '' ) then    ! according to Borsje et al. (2008)
 
        g_erod_Macrofauna = 1.0
@@ -95,9 +107,10 @@ real (fp)    :: b2 = 5.08e-8
       write (*,*) ' Error: the Macoma balthica effect on the erodibility can be calculated at the moment based'// &
                   ' on intensity (refer to Paarlberg et al. (2005)), therefore, the effect based on Biomass'// &
                   '  was set to 1.0'
-
+      exit
     end if
-
+  end do
+end do
 return
 end function Mbalthica_erodibility_func
 
