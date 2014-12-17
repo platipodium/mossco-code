@@ -517,7 +517,7 @@ module fabm_pelagic_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       bfl(n)%p = 0.0_rk
       attribute_name=trim(varname)
-      call set_item_flags(importState,attribute_name,requiredFlag=.false.,optionalFlag=.true.,requiredRank=3)
+      call set_item_flags(importState,attribute_name,requiredFlag=.false.,optionalFlag=.true.,requiredRank=2)
 
       !> add to importState
       call ESMF_StateGet(importState, trim(varname), itemType,rc=rc)
