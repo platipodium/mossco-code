@@ -680,7 +680,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
-    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null(),nybot=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null(), u_mean=>null(),turb_difz=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null(),spm_concentration=>null()
     real(kind=ESMF_KIND_R8)  :: diameter
@@ -766,6 +766,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'y_velocity_at_soil_surface'/),vbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call mossco_state_get(importState,(/'turbulent_kinematic_viscosity_at_soil_surface'/),nybot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
