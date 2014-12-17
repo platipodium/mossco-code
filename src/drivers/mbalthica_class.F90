@@ -5,8 +5,10 @@ module Mbalthica_class
 ! However, for M. balthicas only the biological effect on the critical bed shear stress
 ! and erodibility has been activated.
 
+use BioTypes
 use macrofauna_class
-
+use Bio_critical_shear_stress
+use Bio_erodibility
 
 type , extends (Macrofauna),public  :: Mbalthica_Object
 
@@ -32,8 +34,8 @@ integer, intent (in)     :: inum, jnum ! dimesions of grid in x and y directions
 
 allocate (this%Species)
 allocate (this%StateVar)
-!allocate (This%StateVar%amount)
-!allocate (This%BioMass%units)
+allocate (This%StateVar%amount(inum,jnum))
+allocate (This%StateVar%intensity(inum,jnum))
 allocate (this%Bioturbation)
 allocate (this%Bioturbation%TauEffect(inum,jnum))
 allocate (this%Bioturbation%ErodibilityEffect(inum,jnum))
@@ -52,20 +54,19 @@ end subroutine init_Mbalthica
 
 subroutine set_Mbalthica(this)
 
-use BioTypes
 implicit none
 
 class (Mbalthica_Object)  :: this
-real (fp)                 :: Mass,intensity
+real (fp), dimension (:,:), allocatable :: amount
 character (len = 10)      :: units
 integer                   :: StringLength, UnitNr,istat
 logical                   :: opnd, exst
 
-namelist /Macrofaun/  units, Intensity
+namelist /Macrofaun/  units, amount
+allocate ( amount ( this%inum, this%jnum ) )
 
 units = ''
-Mass = 0.0
-Intensity = 0.0
+amount = 0.0_fp
 
 this%Species='Mbalthica'
 
@@ -81,7 +82,6 @@ if (exst.and.(.not.opnd)) then
  read (UnitNr, nml=Macrofaun, iostat = istat)
  if (istat /= 0 ) write (*,*) ' Error in reading Mbalthica data'
 
-
 elseif (opnd) then
 
   write (*,*)  ' In Mbalthica the file unit ', UnitNr, ' alreday opened'
@@ -89,28 +89,30 @@ elseif (opnd) then
   read (UnitNr, nml=Macrofaun, iostat = istat)
   if (istat /= 0 ) write (*,*)' Error in reading Mbalthica data'
 
-  write (*,*) ' units and  intensity are ', units, Intensity
+  write (*,*) ' units and  amount are ', units, amount
 
 else
 
- write (*,*) 'Warning: The input file for Mbalthica doesnot exists!'
+ write (*,*) ' Warning: The input file for Mbalthica doesnot exists!'
  write (*,*) ' Biological effects on erodibility and bed shear stress are set to 1.'
 
 end if
 
  if (units == '-') then
 
-  write (*,*) ' In Mbalthica_class, the intensity of Mbalthica is ', Intensity
+  write (*,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
 
-  allocate (This%StateVar%Intensity)
-  This%StateVar%Intensity = intensity
+  This%StateVar%intensity = amount
+  nullify (This%StateVar%amount)
 
  elseif  (units == 'gCm-2') then
 
-  write (*,*) ' In Mbalthica_class, the Mass of Mbalthica is ', Mass
-  allocate (This%StateVar%amount)
-  This%StateVar%amount = Mass
+  write (*,*) ' In Mbalthica_class, the biomass of Mbalthica is ', amount
 
+  allocate (This%StateVar%amount( this%inum, this%jnum))
+
+  This%StateVar%amount = amount
+  nullify (This%StateVar%intensity)
  end if
 
 
@@ -126,23 +128,18 @@ end subroutine set_Mbalthica
 
 subroutine run_Mbalthica(this)
 
-use Bio_critical_shear_stress
-use Bio_erodibility
-
-
 implicit none
 
 class (Mbalthica_Object) :: this
 
 integer                  :: i,j
 
-do j = 1, this%jnum
- do i = 1, this%inum
-    this%Bioturbation%TauEffect(i,j)         =  Crit_shear_bioeffect(this%StateVar)
-    this%Bioturbation%ErodibilityEffect(i,j) = erodibility_bioeffect(this%StateVar)
- end do
-end do
-
+!do j = 1, this%jnum
+ !do i = 1, this%inum
+    this%Bioturbation%TauEffect         =  Crit_shear_bioeffect (this%StateVar, this%inum, this%jnum)
+    this%Bioturbation%ErodibilityEffect =  erodibility_bioeffect(this%StateVar, this%inum, this%jnum)
+ !end do
+!end do
 
 #ifdef DEBUG
 write (*,*)
@@ -160,13 +157,13 @@ subroutine fin_Mbalthica (this)
 
 implicit none
 
-class (Mbalthica_Object) :: this
+class (Mbalthica_Object)  :: this
 integer                   :: UnitNr
 logical                   :: opnd, exst
 
 if (This%StateVar%units == '-') then
 
-  deallocate (This%StateVar%Intensity)
+  deallocate (This%StateVar%amount)
 
 elseif  (This%StateVar%units == 'gCm-2') then
 
