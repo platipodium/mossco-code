@@ -816,8 +816,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         do n=1,size(fieldlist)
 
           field = fieldlist(n)
+          call ESMF_AttributeGet(field,'external_index', isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1)
+          if (isPresent) then 
+            call ESMF_AttributeGet(field,'external_index',external_index, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          else
+            write(message,'(A)')  trim(name)//' did not find "external_index" attribute in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            external_index=1
+          endif
+
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
