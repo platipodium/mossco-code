@@ -18,6 +18,8 @@ dependencies:
     - component: getm
       grid: temperature_at_soil_surface 
   - getm: fabm_pelagic
+  - pelagic_benthic_coupler: constant
+  - pelagic_benthic_coupler: getm
 
 # todo find a mechansim to feed constant/getm into pelagic_benthic_coupler
 
