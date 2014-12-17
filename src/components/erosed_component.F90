@@ -47,8 +47,7 @@ module erosed_component
 
   ! Dimensions (x,y,depth layer, fraction index)
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_downward_flux_of_pim_at_bottom
-  type(ESMF_Field)                              :: upward_flux_Field, downward_flux_Field
+  type(ESMF_Field)                              :: upward_flux_Field
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
@@ -819,7 +818,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_AttributeGet(field,'external_index', isPresent=isPresent, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          if (isPresent) then 
+          if (isPresent) then
             call ESMF_AttributeGet(field,'external_index',external_index, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
@@ -1083,7 +1082,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (BioEffects%TauEffect)
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
-    deallocate (size_classes_of_downward_flux_of_pim_at_bottom)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
