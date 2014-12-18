@@ -464,9 +464,9 @@ module getm_component
                      call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n))
                      call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n),rc=rc)
                      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-                     call ESMF_LogWrite(' will transport fieldbundle '//trim(itemName),ESMF_LOGMSG_INFO)
                      n = n + 1
                   end do
+                  call ESMF_LogWrite(' will transport fieldbundle '//trim(itemName),ESMF_LOGMSG_INFO)
                end if
             end do
 
