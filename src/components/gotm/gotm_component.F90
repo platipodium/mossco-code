@@ -53,7 +53,6 @@ module gotm_component
  
   real(ESMF_KIND_R8), allocatable, target :: variables_3d(:,:,:,:)
   real(ESMF_KIND_R8), allocatable, target :: variables_2d(:,:,:)
-  real(ESMF_KIND_R8),dimension(1:1,1:1),target   :: H_2d
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables_3d
   type(MOSSCO_VariableFArray2d), dimension(:), allocatable :: export_variables_2d
   real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
@@ -313,6 +312,18 @@ module gotm_component
 
     allocate(variables_2d(farray_shape(1),farray_shape(2),nexport_2d))
     
+    !!> @todo bound checking and not restricting to 1 column in the following calls
+    variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
+    variables_2d(1,1,2) = variables_3d(1,1,1,2)
+    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5))
+    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6))
+    variables_2d(1,1,5) = variables_3d(1,1,1,5)
+    variables_2d(1,1,6) = variables_3d(1,1,1,6)
+    variables_2d(1,1,7) = variables_3d(1,1,1,1)
+    
+    !!>@ todo : how to get TK nu from GOTM?
+    variables_2d(1,1,8) = 0.0
+    
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
@@ -327,30 +338,6 @@ module gotm_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
     
- 
-    H_2d(1,1) = sum(variables_3d(1,1,:,2))
-    ptr_f2 => H_2d
-    field =  ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name='water_depth_at_soil_surface', &
-        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    H_2d(1,1) = sum(variables_3d(1,1,:,2))
-    ptr_f2 => H_2d
-    field =  ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name='water_depth_at_soil_surface', &
-        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-  
-    !> Specify water temperature information from T0 field
-    !variables_3d(:,:,:,1) =  T(1:nlev)
-    !> Specify a grid_height 
-    !variables_3d(:,:,:,2) = h(1:nlev)
-    !> Specify salinity
-    !variables_3d(:,:,:,3) = S(1:nlev)
-
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
   end subroutine Initialize
@@ -456,8 +443,16 @@ module gotm_component
       variables_3d(:,:,k,5) = gotm_u(k)
       variables_3d(:,:,k,6) = gotm_v(k)
     end do
-    H_2d(1,1) = sum(gotm_heights(:))
-
+ 
+    !!> @todo bound checking and not restricting to 1 column in the following calls
+    variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
+    variables_2d(1,1,2) = variables_3d(1,1,1,2)
+    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5))
+    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6))
+    variables_2d(1,1,5) = variables_3d(1,1,1,5)
+    variables_2d(1,1,6) = variables_3d(1,1,1,6)
+    variables_2d(1,1,7) = variables_3d(1,1,1,1)
+   
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
