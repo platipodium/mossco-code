@@ -416,6 +416,7 @@
   real(rk),allocatable :: wstmp(:,:,:,:)
   type(export_state_type),pointer :: export_state
   integer :: n,i,j,k
+  integer,dimension(4) :: lbnd
   logical,optional :: update_sinking
   logical :: update_sinking_eff
 
@@ -432,9 +433,10 @@
       end do
     end do
   end if
+  lbnd = lbound(pf%conc)
   do n=1,size(pf%export_states)
     export_state => pf%export_states(n)
-    export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
+    export_state%conc(lbnd(1):,lbnd(2):,lbnd(3):) => pf%conc(:,:,:,export_state%fabm_id)
     export_state%ws(RANGE3D) = wstmp(:,:,:,export_state%fabm_id)
   end do
   deallocate(wstmp)
