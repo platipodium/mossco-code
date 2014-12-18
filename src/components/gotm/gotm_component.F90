@@ -141,8 +141,14 @@ module gotm_component
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
+    use meanflow, only : gotm_temperature => T
+    use meanflow, only : gotm_salinity => S
+    use meanflow, only : gotm_heights => h 
+    use meanflow, only : gotm_radiation => rad
+    use meanflow, only : gotm_u => u
+    use meanflow, only : gotm_v => v
     use meanflow, only: h
-   use turbulence, only : gotm_tknu => num
+    use turbulence, only : gotm_tknu => num
 
     implicit none
 
@@ -322,6 +328,15 @@ module gotm_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
     
+    !> fill export fields
+    do k=1,nlev
+      variables_3d(:,:,k,1) = gotm_temperature(k)
+      variables_3d(:,:,k,2) = gotm_heights(k)
+      variables_3d(:,:,k,3) = gotm_salinity(k)
+      variables_3d(:,:,k,4) = gotm_radiation(k)
+      variables_3d(:,:,k,5) = gotm_u(k)
+      variables_3d(:,:,k,6) = gotm_v(k)
+    end do
 
     !> Create 2d export fields and add them to export state, allocate the space for these
     !> that will be filled later with data, copying of data is necessary to provide 2d fields
@@ -337,13 +352,15 @@ module gotm_component
     export_variables_2d(7)%standard_name="temperature_at_soil_surface"
     export_variables_2d(8)%standard_name="turbulent_kinematic_viscosity_at_soil_surface"
 
+
+
     allocate(variables_2d(farray_shape(1),farray_shape(2),nexport_2d))
     
     !!> @todo bound checking and not restricting to 1 column in the following calls
     variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
     variables_2d(1,1,2) = variables_3d(1,1,1,2)
-    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5))
-    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6))
+    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
+    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
     variables_2d(1,1,5) = variables_3d(1,1,1,5)
     variables_2d(1,1,6) = variables_3d(1,1,1,6)
     variables_2d(1,1,7) = variables_3d(1,1,1,1)
@@ -475,8 +492,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     !!> @todo bound checking and not restricting to 1 column in the following calls
     variables_2d(1,1,1) = sum(variables_3d(1,1,:,2))
     variables_2d(1,1,2) = variables_3d(1,1,1,2)
-    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5))
-    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6))
+    variables_2d(1,1,3) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,5)) / variables_2d(1,1,1)
+    variables_2d(1,1,4) = sum (variables_3d(1,1,:,2) * variables_3d(1,1,:,6)) / variables_2d(1,1,1)
     variables_2d(1,1,5) = variables_3d(1,1,1,5)
     variables_2d(1,1,6) = variables_3d(1,1,1,6)
     variables_2d(1,1,7) = variables_3d(1,1,1,1)
