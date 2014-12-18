@@ -104,6 +104,10 @@
   ! Send information on spatial domain
   call fabm_set_domain(pf%model,inum,jnum,knum)
 
+! Note (KK): Why don't we provide the totalDomain to FABM and mask the
+!            HALO zones with fabm_set_mask???
+  !call fabm_set_mask(pf%model,...)
+
   ! Allocate array for photosynthetically active radiation (PAR).
   allocate(pf%par(1:inum,1:jnum,1:knum))
   call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
