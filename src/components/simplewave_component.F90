@@ -29,6 +29,7 @@ module simplewave_component
   public :: SetServices
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList,exportList
+  integer(ESMF_KIND_I4),dimension(:,:),pointer :: mask=>NULL()
 
   contains
 
@@ -186,7 +187,7 @@ module simplewave_component
     integer              :: rank
     real(ESMF_KIND_R8), pointer           :: coordX(:), coordY(:)
     integer,target :: coordDimCount(2),coordDimMap(2,2)
-    logical                         :: gridIsPresent,fileIsPresent,labelIsPresent
+    logical                         :: isPresent
     character(ESMF_MAXSTR)          :: configFileName, gridFileName
     type(ESMF_Config)               :: config
     integer(ESMF_KIND_I4)           :: lbnd(2), ubnd(2)
@@ -203,8 +204,8 @@ module simplewave_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !!! Create Grid
-    call ESMF_GridCompGet(gridComp,gridIsPresent=gridIsPresent)
-    if (gridIsPresent) then
+    call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent)
+    if (isPresent) then
       call ESMF_GridCompGet(gridComp,grid=grid)
     else
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
@@ -227,13 +228,13 @@ module simplewave_component
         !! Check whether there is a config file with the same name as this component
         !! If yes, load it. 
         configFileName=trim(name)//'.cfg'
-        inquire(FILE=trim(configFileName), exist=fileIsPresent)   
-        if (fileIsPresent) then 
+        inquire(FILE=trim(configFileName), exist=isPresent)
+        if (isPresent) then
           config = ESMF_ConfigCreate(rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_ConfigFindLabel(config, label='grid:', isPresent=labelIsPresent, rc=localrc)
+          call ESMF_ConfigFindLabel(config, label='grid:', isPresent=isPresent, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_ConfigGetAttribute(config, gridFileName, rc=localrc, default=trim(name)//'_grid.nc')
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -282,6 +283,15 @@ module simplewave_component
         end if
       end do
     end do
+
+   call ESMF_GridGetItem(grid,ESMF_GRIDITEM_MASK,isPresent=isPresent)
+   if (isPresent) then
+      call ESMF_GridGetItem(grid,ESMF_GRIDITEM_MASK,farrayPtr=mask)
+   else
+      allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+      mask = 0
+      mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
+   end if
 
 !   Complete Import Fields
     do i=1,size(importList)
@@ -374,6 +384,7 @@ module simplewave_component
 
     do j=totalLBound(2),totalUBound(2)
       do i=totalLBound(1),totalUBound(1)
+        if (mask(i,j) .ne. 0) then
         wind = sqrt( windx(i,j)*windx(i,j) + windy(i,j)*windy(i,j) )
         wwind = max( min_wind , wind )
         wdepth = min( depth(i,j) , max_depth_windwaves )
@@ -381,6 +392,7 @@ module simplewave_component
         waveT(i,j) = wind2wavePeriod(wwind,wdepth)
         waveK(i,j) = wavePeriod2waveNumber(waveT(i,j),depth(i,j))
         waveDir(i,j) = atan2(windy(i,j),windx(i,j)) ! cartesian convention and in radians
+        end if
       end do
     end do
     
