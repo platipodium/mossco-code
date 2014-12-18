@@ -142,6 +142,8 @@ module gotm_component
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
     use meanflow, only: h
+   use turbulence, only : gotm_tknu => num
+
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -345,9 +347,8 @@ module gotm_component
     variables_2d(1,1,5) = variables_3d(1,1,1,5)
     variables_2d(1,1,6) = variables_3d(1,1,1,6)
     variables_2d(1,1,7) = variables_3d(1,1,1,1)
-    
-    !!>@ todo : how to get TK nu from GOTM?
-    variables_2d(1,1,8) = 0.0
+    variables_2d(1,1,8) = gotm_tknu(1)
+
     
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -380,6 +381,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     use meanflow, only : gotm_radiation => rad
     use meanflow, only : gotm_u => u
     use meanflow, only : gotm_v => v
+    use turbulence, only : gotm_tknu => num
 
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -478,6 +480,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     variables_2d(1,1,5) = variables_3d(1,1,1,5)
     variables_2d(1,1,6) = variables_3d(1,1,1,6)
     variables_2d(1,1,7) = variables_3d(1,1,1,1)
+    variables_2d(1,1,8) = gotm_tknu(1)
  
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
