@@ -106,7 +106,9 @@
 
 ! Note (KK): Why don't we provide the totalDomain to FABM and mask the
 !            HALO zones with fabm_set_mask???
-  !call fabm_set_mask(pf%model,...)
+!            _FABM_MASK_TYPE_ and _FABM_UNMASKED_VALUE_ must be defined in fabm_driver.h
+!            extensions must match those provided to set_domain()
+  !call fabm_set_mask(pf%model,mask)
 
   ! Allocate array for photosynthetically active radiation (PAR).
   allocate(pf%par(1:inum,1:jnum,1:knum))
