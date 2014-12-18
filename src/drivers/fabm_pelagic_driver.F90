@@ -114,6 +114,7 @@
   allocate(pf%par(1:inum,1:jnum,1:knum))
   call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
 
+#if 0
   do n=1,size(pf%export_states)
     export_state => pf%export_states(n)
     !! memory handling should be shifted to component, which has total grid layout
@@ -122,6 +123,7 @@
       export_state%ws = 0.0d0
     end if
   end do
+#endif
 
   end subroutine initialize_domain
 
@@ -415,15 +417,13 @@
 
   subroutine update_export_states(pf,update_sinking)
   class(type_mossco_fabm_pelagic) :: pf
-  real(rk),allocatable :: wstmp(:,:,:,:)
+  real(rk),dimension(pf%inum,pf%jnum,pf%knum,pf%nvar) :: wstmp
   type(export_state_type),pointer :: export_state
   integer :: n,i,j,k
   integer,dimension(4) :: lbnd
   logical,optional :: update_sinking
   logical :: update_sinking_eff
 
-  allocate(wstmp(pf%inum,pf%jnum,pf%knum,pf%nvar))
-  wstmp=0.0_rk
   update_sinking_eff=.true.
   if (present(update_sinking)) update_sinking_eff=update_sinking
   if (update_sinking_eff) then
@@ -439,9 +439,10 @@
   do n=1,size(pf%export_states)
     export_state => pf%export_states(n)
     export_state%conc(lbnd(1):,lbnd(2):,lbnd(3):) => pf%conc(:,:,:,export_state%fabm_id)
-    export_state%ws(RANGE3D) = wstmp(:,:,:,export_state%fabm_id)
+    if (update_sinking_eff) then
+      export_state%ws(RANGE3D) = wstmp(:,:,:,export_state%fabm_id)
+    end if
   end do
-  deallocate(wstmp)
   !> @todo add benthic state variables
   end subroutine update_export_states
 
