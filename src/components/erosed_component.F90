@@ -751,8 +751,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          first_entry = .false.
       end if
 
-      !> get velocity and layerheight
-      call mossco_state_get(importState,(/'layerheight_at_soil_surface'/),hbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      !> get velocity and layer_height
+      call mossco_state_get(importState,(/'layer_height_at_soil_surface'/),hbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call mossco_state_get(importState,(/'depth_averaged_x_velocity_in_water'/),u2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)

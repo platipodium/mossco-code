@@ -301,7 +301,7 @@ module getm_component
       call getmCmp_StateAddPtr("water_depth_at_soil_surface",depth,exportState)
     end if
     if (associated(hbot)) then
-      call getmCmp_StateAddPtr("layerheight_at_soil_surface",hbot,exportState)
+      call getmCmp_StateAddPtr("layer_height_at_soil_surface",hbot,exportState)
     end if
     if (associated(U2D)) then
       call getmCmp_StateAddPtr("depth_averaged_x_velocity_in_water",U2D,exportState)
