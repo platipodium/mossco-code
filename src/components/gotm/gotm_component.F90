@@ -6,7 +6,7 @@
 !> @export water_temperature, grid_height, (FABM variables)
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -16,6 +16,10 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "gotm_component.F90"
 
 #ifndef GOTM_REALTYPE
 #define GOTM_REALTYPE real(kind=selected_real_kind(13))
@@ -47,9 +51,11 @@ module gotm_component
 
   private
  
-  real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
+  real(ESMF_KIND_R8), allocatable, target :: variables_3d(:,:,:,:)
+  real(ESMF_KIND_R8), allocatable, target :: variables_2d(:,:,:)
   real(ESMF_KIND_R8),dimension(1:1,1:1),target   :: H_2d
-  type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
+  type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables_3d
+  type(MOSSCO_VariableFArray2d), dimension(:), allocatable :: export_variables_2d
   real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: coordZ
 
@@ -106,7 +112,7 @@ module gotm_component
     real(ESMF_KIND_R8) :: dt
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     integer                     :: myrank,i,j,k
-    integer                     :: nimport,nexport
+    integer                     :: nimport,nexport_3d, nexport_2d
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
     
     logical                    :: clockIsPresent
@@ -119,7 +125,7 @@ module gotm_component
     type(ESMF_Grid)      :: grid,grid2d
     type(ESMF_ArraySpec) :: arrayspec
     
-    type(ESMF_Field), dimension(:), allocatable  :: exportField, importField
+    type(ESMF_Field), dimension(:), allocatable  :: exportFieldList
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr  
     type(ESMF_Field) :: field
       
@@ -135,7 +141,6 @@ module gotm_component
     read(921,nml=model_setup)
     read(921,nml=station)
     close(921)
-
 
     !! Check whether there is already a clock (it might have been set 
     !! with a prior ESMF_gridCompCreate() call.  If not, then create 
@@ -201,13 +206,13 @@ module gotm_component
     !> This example grid is a 1 x 1 x nlev grid 
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,nlev/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="ocean grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      name=trim(name)//'3d',coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
    
     grid2d = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
       regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
-      name="ocean 2d grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
+      name=trim(name)//'2d',coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
       coorddep2=(/2/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -260,35 +265,70 @@ module gotm_component
       totalCount=farray_shape,rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    !> Create export fields and add them to export state, allocate the space for these
+    nexport_3d = 6
+    nexport_2d = 8
+    allocate(exportFieldList(nexport_3d + nexport_2d))
+
+    !> Create 3d export fields and add them to export state, allocate the space for these
     !> that will be filled later with data, copying of data is necessary to provide 3d fields
     !> for ESMF
-    nexport = 6
-    allocate(export_variables(nexport))
-    export_variables(1)%standard_name="temperature"
-    export_variables(2)%standard_name="grid_height"
-    export_variables(3)%standard_name="salinity"
-    export_variables(4)%standard_name="radiation"
-    export_variables(5)%standard_name="x_velocity"
-    export_variables(6)%standard_name="y_velocity"
-    allocate(exportField(nexport))
-    allocate(variables(farray_shape(1),farray_shape(2),0:farray_shape(3),nexport))
+    
+    allocate(export_variables_3d(nexport_3d))
+    export_variables_3d(1)%standard_name="temperature"
+    export_variables_3d(2)%standard_name="grid_height"
+    export_variables_3d(3)%standard_name="salinity"
+    export_variables_3d(4)%standard_name="radiation"
+    export_variables_3d(5)%standard_name="x_velocity"
+    export_variables_3d(6)%standard_name="y_velocity"
+    allocate(variables_3d(farray_shape(1),farray_shape(2),0:farray_shape(3),nexport_3d))
     
     call ESMF_ArraySpecSet(arrayspec, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     
-    do k=1,nexport
-      farrayPtr => variables(:,:,:,k)
-      exportField(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables(k)%standard_name)//'_in_water', &
+    do k=1,nexport_3d
+      farrayPtr => variables_3d(:,:,:,k)
+      exportFieldList(k) = ESMF_FieldCreate(grid, farrayPtr=farrayPtr, name=trim(export_variables_3d(k)%standard_name)//'_in_water', &
         staggerloc=ESMF_STAGGERLOC_CENTER, &
         totalLWidth=(/0,0,1/), rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-      call ESMF_StateAddReplace(exportState,(/exportField(k)/),rc=rc)
+      call ESMF_StateAddReplace(exportState,(/exportFieldList(k)/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     enddo
+    
 
-    H_2d(1,1) = sum(variables(1,1,:,2))
+    !> Create 2d export fields and add them to export state, allocate the space for these
+    !> that will be filled later with data, copying of data is necessary to provide 2d fields
+    !> for ESMF
+    
+    allocate(export_variables_2d(nexport_2d))
+    export_variables_2d(1)%standard_name="water_depth_at_soil_surface"
+    export_variables_2d(2)%standard_name="layer_height_at_soil_surface"
+    export_variables_2d(3)%standard_name="depth_averaged_x_velocity_in_water"
+    export_variables_2d(4)%standard_name="depth_averaged_y_velocity_in_water"
+    export_variables_2d(5)%standard_name="x_velocity_at_soil_surface"
+    export_variables_2d(6)%standard_name="y_velocity_at_soil_surface"
+    export_variables_2d(7)%standard_name="temperature_at_soil_surface"
+    export_variables_2d(8)%standard_name="turbulent_kinematic_viscosity_at_soil_surface"
+
+    allocate(variables_2d(farray_shape(1),farray_shape(2),nexport_2d))
+    
+    call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    
+    do k=1,nexport_2d
+      ptr_f2 => variables_2d(:,:,k)
+      exportFieldList(k) = ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name=trim(export_variables_2d(k)%standard_name), &
+        staggerloc=ESMF_STAGGERLOC_CENTER, &
+        totalLWidth=(/0,0/), rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+      call ESMF_StateAddReplace(exportState,(/exportFieldList(k)/),rc=rc)
+      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    enddo
+    
+ 
+    H_2d(1,1) = sum(variables_3d(1,1,:,2))
     ptr_f2 => H_2d
     field =  ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name='water_depth_at_soil_surface', &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
@@ -296,13 +336,20 @@ module gotm_component
 
     call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    H_2d(1,1) = sum(variables_3d(1,1,:,2))
+    ptr_f2 => H_2d
+    field =  ESMF_FieldCreate(grid2d, farrayPtr=ptr_f2, name='water_depth_at_soil_surface', &
+        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
+    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
   
     !> Specify water temperature information from T0 field
-    !variables(:,:,:,1) =  T(1:nlev)
+    !variables_3d(:,:,:,1) =  T(1:nlev)
     !> Specify a grid_height 
-    !variables(:,:,:,2) = h(1:nlev)
+    !variables_3d(:,:,:,2) = h(1:nlev)
     !> Specify salinity
-    !variables(:,:,:,3) = S(1:nlev)
+    !variables_3d(:,:,:,3) = S(1:nlev)
 
     call ESMF_LogWrite("GOTM ocean component initialized.",ESMF_LOGMSG_INFO)
     
@@ -402,12 +449,12 @@ module gotm_component
 
     !> update export fields
     do k=1,nlev
-      variables(:,:,k,1) = gotm_temperature(k)
-      variables(:,:,k,2) = gotm_heights(k)
-      variables(:,:,k,3) = gotm_salinity(k)
-      variables(:,:,k,4) = gotm_radiation(k)
-      variables(:,:,k,5) = gotm_u(k)
-      variables(:,:,k,6) = gotm_v(k)
+      variables_3d(:,:,k,1) = gotm_temperature(k)
+      variables_3d(:,:,k,2) = gotm_heights(k)
+      variables_3d(:,:,k,3) = gotm_salinity(k)
+      variables_3d(:,:,k,4) = gotm_radiation(k)
+      variables_3d(:,:,k,5) = gotm_u(k)
+      variables_3d(:,:,k,6) = gotm_v(k)
     end do
     H_2d(1,1) = sum(gotm_heights(:))
 
@@ -460,7 +507,7 @@ module gotm_component
 
     if (allocated(itemNameList)) deallocate(itemNameList)
     if (allocated(itemTypeList)) deallocate(itemTypeList)
-    if (allocated(variables)) deallocate(variables)
+    if (allocated(variables_3d)) deallocate(variables_3d)
 
     !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
     !! previously, thus, we comment the clock destruction code while this has not
