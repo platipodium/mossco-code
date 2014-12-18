@@ -587,9 +587,9 @@ for item in gridCompList:
   
   if dependencyDict.has_key(item):
     fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
-    for jtem in dependencyDict[item]:
-      fid.write('    charValueList(i) = \'' + jtem + '\'\n')
-      fid.write('    intValueList(i) = ' + str(ifrom + 1) + '\n')
+    for i,jtem in enumerate(dependencyDict[item]):
+      fid.write('    charValueList(' + str(i+1) + ') = \'' + jtem + '\'\n')
+      fid.write('    intValueList (' + str(i+1) + ') = ' + str(ifrom + 1) + '\n')
     fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends_on", valueList=charValueList, rc=localrc)\n')  
     fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="depends_on_id", valueList=intValueList, rc=localrc)\n')  
     fid.write('    deallocate(charValueList)\n')
