@@ -851,7 +851,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
           !> @todo unclear which localrc is excpected here
           if (localrc == ESMF_SUCCESS) then
-            spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(:,:,1)
+            spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1)
           else
             write(0,*) 'cannot find SPM fraction',n
           end if
