@@ -688,6 +688,7 @@ module getm_component
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES
+   REALTYPE,dimension(:,:),pointer :: p2d
    REALTYPE :: getmreal
    integer  :: k,klen
 !
@@ -789,7 +790,12 @@ module getm_component
          hbot => D
       else
 #ifndef NO_3D
+#if 0
          hbot(imin-HALO:,jmin-HALO:) => hn(:,:,1)
+#else
+         p2d => hn(:,:,1)
+         hbot(imin-HALO:,jmin-HALO:) => p2d
+#endif
 #if 0
          nybot(imin-HALO:,jmin-HALO:) => num(:,:,1)
 #else
@@ -797,7 +803,12 @@ module getm_component
 #endif
 #ifndef NO_BAROCLINIC
          if (runtype .gt. 2) then
+#if 0
             Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
+#else
+            p2d => T(:,:,1)
+            Tbot(imin-HALO:,jmin-HALO:) => p2d
+#endif
 #ifdef FOREIGN_GRID
             T3D => T
 #else
@@ -1628,13 +1639,15 @@ module getm_component
    write(debug,*) 'getmCmp_StateAddPtr2D() # ',Ncall
 #endif
 
+!  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
+#if 1
+!  Note (KK): in former times ESMF_FieldCreateGridDataPtr<rank><type><kind>() failed
+   field = ESMF_FieldCreate(getmGrid2D,farrayPtr=p2d,                    &
+#else
 !  internal call to ESMF_FieldCreateGridData<rank><type><kind>()
 !  forced by indexflag argument.
-!  KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
-!           (maybe only in case of non-1-based indices?)
-!  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
-
    field = ESMF_FieldCreate(getmGrid2D,p2d,indexflag=ESMF_INDEX_DELOCAL, &
+#endif
                             totalLWidth=int((/imin,jmin/)-lbound(p2d)),  &
                             totalUWidth=int(ubound(p2d)-(/imax,jmax/)),  &
                             name=name,rc=rc)
@@ -1690,19 +1703,21 @@ module getm_component
    write(debug,*) 'getmCmp_StateAddPtr3D() # ',Ncall
 #endif
 
-!  internal call to ESMF_FieldCreateGridData<rank><type><kind>()
-!  forced by indexflag argument.
-!  KK-TODO: ESMF_FieldCreateGridDataPtr<rank><type><kind>() fails
-!           (maybe only in case of non-1-based indices?)
-!  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
-
    if (runtype .eq. 1) then
       klen = 1
    else
       klen = kmax
    end if
 
+!  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
+#if 1
+!  Note (KK): in former times ESMF_FieldCreateGridDataPtr<rank><type><kind>() failed
+   field = ESMF_FieldCreate(getmGrid3D,farrayPtr=p3d,                        &
+#else
+!  internal call to ESMF_FieldCreateGridData<rank><type><kind>()
+!  forced by indexflag argument.
    field = ESMF_FieldCreate(getmGrid3D,p3d,indexflag=ESMF_INDEX_DELOCAL,     &
+#endif
                             totalLWidth=int((/1,1,1/)-lbound(p3d)),          &
                             totalUWidth=int(ubound(p3d)-(/imax,jmax,klen/)), &
                             name=name,rc=rc)
