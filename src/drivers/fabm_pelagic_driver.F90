@@ -418,6 +418,7 @@
   subroutine update_export_states(pf,update_sinking)
   class(type_mossco_fabm_pelagic) :: pf
   real(rk),dimension(pf%inum,pf%jnum,pf%knum,pf%nvar) :: wstmp
+  real(rk),dimension(:,:,:),pointer :: p3d
   type(export_state_type),pointer :: export_state
   integer :: n,i,j,k
   integer,dimension(4) :: lbnd
@@ -438,7 +439,12 @@
   lbnd = lbound(pf%conc)
   do n=1,size(pf%export_states)
     export_state => pf%export_states(n)
+#if 0
     export_state%conc(lbnd(1):,lbnd(2):,lbnd(3):) => pf%conc(:,:,:,export_state%fabm_id)
+#else
+    p3d => pf%conc(:,:,:,export_state%fabm_id)
+    export_state%conc(lbnd(1):,lbnd(2):,lbnd(3):) => p3d
+#endif
     if (update_sinking_eff) then
       export_state%ws(RANGE3D) = wstmp(:,:,:,export_state%fabm_id)
     end if
