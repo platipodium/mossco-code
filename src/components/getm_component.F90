@@ -1139,6 +1139,7 @@ module getm_component
    !array = ESMF_ArrayCreate(getmDistGrid3D,maskC,indexflag=ESMF_INDEX_DELOCAL)
    array = ESMF_ArrayCreate(getmDistGrid3D,maskC3D,indexflag=ESMF_INDEX_DELOCAL)
    call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+!  KK-TODO: add attribute with un-/mask value?
 
    StaggerLoc = ESMF_STAGGERLOC_CORNER
 !  2D grid
@@ -1156,6 +1157,7 @@ module getm_component
    array = ESMF_ArrayCreate(getmDistGrid3D,maskX3D,indexflag=ESMF_INDEX_DELOCAL,     &
                             totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/))
    call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+!  KK-TODO: add attribute with un-/mask value?
 
    array = ESMF_ArrayCreate(getmDistGrid3D,zw,indexflag=ESMF_INDEX_DELOCAL,          &
                             totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/))
