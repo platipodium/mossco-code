@@ -284,14 +284,28 @@ module simplewave_component
       end do
     end do
 
-   call ESMF_GridGetItem(grid,ESMF_GRIDITEM_MASK,isPresent=isPresent)
+   !> The preferred interface would be to use isPresent, but htis only works in ESMF from Nov 2014
+   !> @todo replace if 0 by ESMF_VERSION macros
+#if 0  
+   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
    if (isPresent) then
-      call ESMF_GridGetItem(grid,ESMF_GRIDITEM_MASK,farrayPtr=mask)
+#else
+   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
+   !! Do not check for success here as NOT_FOUND is expected behaviour, @todo: check for NOT_FOUND flag
+   if (localrc == ESMF_SUCCESS) then
+#endif
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    else
       allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
       mask = 0
       mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
    end if
+   
+   
+   
 
 !   Complete Import Fields
     do i=1,size(importList)
