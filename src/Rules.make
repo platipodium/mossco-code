@@ -380,7 +380,7 @@ EXTRA_CPP=
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
-EXTRA_CPP= -stand f03
+EXTRA_CPP=-DNO_ISO_FORTRAN_ENV
 else
 ifeq ($(FORTRAN_COMPILER),PGF90)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
@@ -388,7 +388,7 @@ EXTRA_CPP=
 else
 ifeq ($(FORTRAN_COMPILER),XLF)
 F90FLAGS += -qmoddir=$(MOSSCO_MODULE_PATH) -qstrict
-EXTRA_CPP=
+EXTRA_CPP=-DNO_ISO_FORTRAN_ENV
 else
 $(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER).)
 endif
