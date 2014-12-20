@@ -23,6 +23,7 @@
   implicit none
   private
 
+  public :: rk
   public mossco_create_fabm_pelagic
 
   type, extends(type_rhs_driver), public :: type_mossco_fabm_pelagic

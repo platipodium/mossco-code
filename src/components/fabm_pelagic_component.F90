@@ -13,7 +13,6 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
-#include "fabm_driver.h"
 
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
@@ -24,8 +23,6 @@
 module fabm_pelagic_component
 
   use esmf
-  use fabm
-  use fabm_types
   use mossco_fabm_pelagic
   use solver_library
   use mossco_strings
