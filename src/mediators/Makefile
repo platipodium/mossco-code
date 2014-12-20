@@ -45,8 +45,8 @@ libremtc: prefix $(MOSSCO_LIBRARY_PATH)/libremtc.a(remtc_atmos_ocean_coupler.o)
 liboceansedimentcoupler: prefix $(MOSSCO_LIBRARY_PATH)/liboceansedimentcoupler.a
 libverticalmeancoupler: prefix $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 libsurfacescoupler: prefix $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o)
-pelagicbenthiccoupler: prefix libsediment $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
-benthicpelagiccoupler: prefix libsediment $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(benthic_pelagic_coupler.o)
+pelagicbenthiccoupler: prefix libmossco_util libsediment $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
+benthicpelagiccoupler: prefix libmossco_util libsediment $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(benthic_pelagic_coupler.o)
 
 libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
@@ -82,6 +82,9 @@ $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o): surfaces_couple
 
 $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o benthic_pelagic_coupler.o
 	$(AR) cruvs $@ $?
+
+libmossco_util:
+	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 subdirs:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done
