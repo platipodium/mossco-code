@@ -36,6 +36,8 @@ module fabm_sediment_component
   implicit none
 
   private
+
+  public :: rk
  
   real(rk)  :: dzmin,dt,dt_spinup
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
