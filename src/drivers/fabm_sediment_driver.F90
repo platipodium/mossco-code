@@ -15,6 +15,7 @@
 module fabm_sediment_driver
 
 use fabm
+use fabm_types, only: rk
 use solver_library, only: type_rhs_driver
 use mossco_variable_types
 use mossco_strings
@@ -22,7 +23,9 @@ use mossco_strings
 implicit none
 private
 
-integer, public, parameter :: rk=selected_real_kind(12) !< real kind
+! Note (KK): we take rk from fabm_types
+!integer, public, parameter :: rk=selected_real_kind(12) !< real kind
+public :: rk
 
 !> grid_type-s to be
 integer, public, parameter :: LOCAL_GRID=0

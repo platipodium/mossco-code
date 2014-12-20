@@ -13,7 +13,6 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
-#include "fabm_driver.h"
 #define _GRID_ sed%grid
 #define _INUM_ _GRID_%inum
 #define _JNUM_ _GRID_%jnum
@@ -28,7 +27,6 @@
 module fabm_sediment_component
 
   use esmf
-  use fabm
   use fabm_sediment_driver
   use solver_library!, only : ode_solver
   use mossco_strings
