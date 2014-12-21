@@ -559,6 +559,9 @@ module fabm_pelagic_component
 
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
+
+    implicit none
+
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
@@ -566,7 +569,7 @@ module fabm_pelagic_component
 
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
-    integer           :: i,j
+    integer           :: i,j,k,n
     integer(8)     :: t
 
     character(len=ESMF_MAXSTR) :: name
