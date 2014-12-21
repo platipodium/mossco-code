@@ -19,7 +19,6 @@
 module benthic_pelagic_coupler
     
   use esmf
-  use fabm_sediment_component, only : rk
   use mossco_state
   use mossco_component
 
@@ -128,7 +127,7 @@ module benthic_pelagic_coupler
     open(nmlunit,file='benthic_pelagic_coupler.nml',action='read',status='old')
     read(nmlunit,benthic_pelagic_coupler)
     close(nmlunit)
-    if (dipflux_const < 0.0) dipflux_const=dinflux_const/16.0_rk
+    if (dipflux_const < 0.0) dipflux_const=dinflux_const/16.0d0
 
     ! create exchange fields
     !> @todo: get grid size from exportState (so far using 1x1 horizontal grid
@@ -193,8 +192,8 @@ module benthic_pelagic_coupler
     character (len=ESMF_MAXSTR) :: timestring
     type(ESMF_Field)            :: field
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
-    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
-    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
+    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20d0
+    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

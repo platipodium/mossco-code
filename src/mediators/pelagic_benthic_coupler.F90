@@ -18,7 +18,6 @@
 module pelagic_benthic_coupler
     
   use esmf
-  use fabm_sediment_component, only : rk
   use mossco_state
   use mossco_component
 
@@ -221,8 +220,8 @@ module pelagic_benthic_coupler
     real(ESMF_KIND_R8),parameter      :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
     real(ESMF_KIND_R8),dimension(:,:),pointer :: CN_det=>null()
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
-    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
-    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
+    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20d0
+    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
@@ -300,7 +299,7 @@ module pelagic_benthic_coupler
       call mossco_state_get(importState,(/'Detritus_Carbon_detC_in_water'/),DETC,lbnd=Clbnd,ubnd=Cubnd,rc=localrc)
 
       if (localrc /= 0) then
-         CN_det=106.0_rk/16.0_rk
+         CN_det=106.0d0/16.0d0
       else
         if ( Cubnd(1)-Clbnd(1)<0 .or. Cubnd(2)-Clbnd(2)<0 .or. Cubnd(3)-Clbnd(3)<0 ) then
           write(message,'(A)')  trim(name)//' received zero-length data for detritus carbon'
@@ -314,8 +313,8 @@ module pelagic_benthic_coupler
         CN_det = DETC(Clbnd(1):Cubnd(1),Clbnd(2):Cubnd(2),Clbnd(3))/ &
                    DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
-      fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
-      fac_sdet = (1.0_rk-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
+      fac_fdet = (1.0d0-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
+      fac_sdet = (1.0d0-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
       call mossco_state_get(exportState, &
         (/'fast_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
@@ -396,7 +395,7 @@ module pelagic_benthic_coupler
           'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'/),DIP,lbnd=Plbnd,ubnd=Pubnd,rc=localrc)
     if (localrc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1))
-        DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = 1.0_rk/16.0_rk * DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = 1.0d0/16.0d0 * DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
         Plbnd(3)=1
     end if
 
