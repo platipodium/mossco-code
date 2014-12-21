@@ -17,7 +17,7 @@
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 
-#define RANGE2D 1:pel%inum,i:pel%jnum
+#define RANGE2D 1:pel%inum,1:pel%jnum
 #define RANGE3D RANGE2D,1:pel%knum
 
 module fabm_pelagic_component
