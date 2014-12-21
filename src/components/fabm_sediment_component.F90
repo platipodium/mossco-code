@@ -58,7 +58,7 @@ module fabm_sediment_component
                      dt_min,relative_change_min,ugrid_name, output, &
                      bcup_dissolved_variables
  
-  public :: SetServices,bdys,fluxes,rk
+  public SetServices
   
   contains
 

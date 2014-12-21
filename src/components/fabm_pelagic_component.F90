@@ -52,7 +52,7 @@ module fabm_pelagic_component
 
   type(type_mossco_fabm_pelagic),save :: pel
 
-  public :: SetServices,rk
+  public SetServices
 
   contains
 
