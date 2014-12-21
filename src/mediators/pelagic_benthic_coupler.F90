@@ -262,11 +262,11 @@ module pelagic_benthic_coupler
     if (.not.associated(oxy)) allocate(oxy(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
     if (.not.associated(odu)) allocate(odu(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
 
-    do i=lbnd(1),ubnd(1)
-        do j=ubnd(2),ubnd(2)
+    do j=lbnd(2),ubnd(2)
+       do i=lbnd(1),ubnd(1)
           oxy = max(0.0d0,ptr_f3(i,j,lbnd(3)))
           odu = max(0.0d0,-ptr_f3(i,j,lbnd(3)))
-        end do
+       end do
     end do
     ptr_f2 = oxy(:,:)
 
