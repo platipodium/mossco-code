@@ -187,7 +187,7 @@ allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
 allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
 do k=1,_KNUM_
-   sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dzc(:,:,1:k)))
+   sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dz(:,:,1:k)))
    ! pom_flux_max units have to be unified - need to come in mg/m2/d and then scaled in
    ! transport routine with the molar mass
    sed%flux_cap(:,:,k) = pom_flux_max/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dzc(:,:,k)
