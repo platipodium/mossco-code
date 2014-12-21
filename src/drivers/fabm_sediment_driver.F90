@@ -312,7 +312,7 @@ I_0 = 1.0 ! W/m2
 do k=1,rhs_driver%knum
    rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
    rhs_driver%par(:,:,k) = &
-           I_0 * exp(-sum(rhs_driver%grid%dzc(:,:,1:k))/rhs_driver%k_par)
+           I_0 * exp(-sum(rhs_driver%grid%dz(:,:,1:k))/rhs_driver%k_par)
 end do
 
 !   link state variables
