@@ -36,8 +36,7 @@ pelagicfabm1d: toplevel_component.o ../../common/main.o
 	@echo "Created example binary $(PWD)/$@"
 
 libmossco_gotmfabm:
-	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm libgotm
-	$(MAKE) -C $(MOSSCO_DIR)/src/components libmossco_fabmpelagic
+	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
