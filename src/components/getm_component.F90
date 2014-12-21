@@ -430,6 +430,7 @@ module getm_component
          do i=1,itemCount
 !           identify items to be transported by suffix
             namelenList(i) = len_trim(itemNameList(i))
+            if ( namelenList(i) .le. len_trim(ws_suffix) ) cycle
             if (itemNameList(i)(namelenList(i)-len_trim(ws_suffix)+1:namelenList(i)) .ne. trim(ws_suffix)) cycle
             if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
