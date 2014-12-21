@@ -321,11 +321,14 @@ contains
       phaseZeroFlag=phaseZeroFlag, rc=localrc)
 
     if (have_clock) then
-      call ESMF_GridCompGet(gridComp,clock=myClock)
+      call ESMF_GridCompGet(gridComp,clock=myClock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (present(clock)) clock = myClock
-      call ESMF_ClockGet(myClock,currTime=cTime)
+      call ESMF_ClockGet(myClock,currTime=cTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (present(currTime)) currTime = cTime
-      call ESMF_TimeGet(cTime,timeStringISOFrac=timestring)
+      call ESMF_TimeGet(cTime,timeStringISOFrac=timestring, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
       write(timestring,'(A)') '-------------------'
     end if
