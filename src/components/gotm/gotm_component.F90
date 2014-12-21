@@ -239,7 +239,7 @@ module gotm_component
     grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,nlev/), &
       regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
       name=trim(name)//'3d',coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
-      coorddep2=(/2/),gridAlign=(/1,1,1/),rc=localrc)
+      coorddep2=(/2/),gridAlign=(/1,1,1/),gridEdgeLWidth=(/1,1,1/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    
     grid2d = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
@@ -284,6 +284,7 @@ module gotm_component
       staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
       farrayPtr=coordZ, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     coordZ(1,1,0) = -depth
     do i=1,nlev 
       coordZ(1,1,i) = coordZ(1,1,i-1) + h(i)
