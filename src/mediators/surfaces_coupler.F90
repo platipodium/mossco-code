@@ -72,8 +72,14 @@ module surfaces_coupler
     call ESMF_StateGet(importState, itemCount=itemCount, nestedFlag=.false., rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
+
+    if (itemCount .gt. 0) then
+
     allocate(itemNames(itemCount))
     allocate(itemTypeList(itemCount))
+
+    call ESMF_StateGet(importState,itemNameList=itemNames, &
+                       itemTypeList=itemTypeList)
 
     do i=1,itemCount
       
@@ -199,8 +205,11 @@ module surfaces_coupler
         call ESMF_StateAdd(exportState, (/dstField/), rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       endif    
-    enddo 
-      
+    enddo
+
+    end if
+
+
     call ESMF_LogWrite("surfaces coupler initialized", ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
