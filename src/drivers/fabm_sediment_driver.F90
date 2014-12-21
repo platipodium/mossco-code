@@ -192,7 +192,11 @@ do k=1,_KNUM_
    ! transport routine with the molar mass
    sed%flux_cap(:,:,k) = pom_flux_max/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dzc(:,:,k)
    if (k .gt. 2) then
-     if (sed%flux_cap(:,:,k) .gt. sed%flux_cap(:,:,k-1)) sed%flux_cap(:,:,k) = sed%flux_cap(:,:,k-1)
+     do j=1,_JNUM_
+       do i=1,_INUM_
+         if (sed%flux_cap(i,j,k) .gt. sed%flux_cap(i,j,k-1)) sed%flux_cap(i,j,k) = sed%flux_cap(i,j,k-1)
+       end do
+     end do
    end if
    select case (bioturbation_profile)
    case (1) ! linear decrease
