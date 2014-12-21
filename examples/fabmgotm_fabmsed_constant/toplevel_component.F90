@@ -16,7 +16,6 @@ module toplevel_component
 
   ! Registration routines for fabm
   use fabm_sediment_component, only : fabmsed_SetServices => SetServices
-  use fabm_sediment_component, only : bdys,fluxes,rk
   use constant_component, only : constant_SetServices => SetServices
   use gotm_component, only : gotm_SetServices => SetServices
   use fabm_gotm_component, only : fabm_gotm_SetServices => SetServices
@@ -153,7 +152,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
+    ptr_f3 = 0.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -162,7 +161,7 @@ module toplevel_component
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
+    ptr_f3 = 0.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -172,7 +171,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
+    ptr_f3 = 0.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -182,7 +181,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
+    ptr_f3 = 0.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -192,7 +191,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
+    ptr_f3 = 0.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -202,7 +201,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 0.0_rk
+    ptr_f3 = 0.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -212,7 +211,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 1.0_rk
+    ptr_f3 = 1.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -222,7 +221,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 1.0_rk
+    ptr_f3 = 1.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -232,7 +231,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f3, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f3 = 1.0_rk
+    ptr_f3 = 1.0d0
     call ESMF_StateAddReplace(pelagicstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -253,7 +252,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f2 = 0.0_rk
+    ptr_f2 = 0.0d0
     call ESMF_StateAddReplace(sedimentstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -263,7 +262,7 @@ module toplevel_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    ptr_f2 = 0.0_rk
+    ptr_f2 = 0.0d0
     call ESMF_StateAddReplace(sedimentstate,(/newfield/),rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 #endif
@@ -280,10 +279,10 @@ module toplevel_component
     integer, intent(out)  :: rc
     type(ESMF_Field)      :: field
     real(ESMF_KIND_R8),parameter    :: sinking_factor=0.3d0 !30% of Det sinks into sediment
-    real(ESMF_KIND_R8)    :: CN_det=106.0_rk/16.0_rk
+    real(ESMF_KIND_R8)    :: CN_det=106.0d0/16.0d0
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
-    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20_rk
-    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04_rk
+    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20d0
+    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
     real(ESMF_KIND_R8)    :: fac_fdet
     real(ESMF_KIND_R8)    :: fac_sdet
     !> fdet + sdet = CN_det*det
@@ -339,15 +338,15 @@ module toplevel_component
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
       call mossco_state_get(pelagicstate,(/'Detritus_Carbon_detC'/),DETC,rc=rc)
       if (rc /= 0) then
-         CN_det=106.0_rk/16.0_rk
+         CN_det=106.0d0/16.0d0
       else
          CN_det = DETC(1,1,1)/DETN(1,1,1)
          call mossco_state_get(sedimentstate,(/ &
               'Detritus_Carbon_detC_upward_flux'/),DETCflux,rc=rc)
          DETCflux(1,1) = sinking_factor * DETC(1,1,1) * vDETN(1,1,1)
       end if
-      fac_fdet = (1.0_rk-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
-      fac_sdet = (1.0_rk-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
+      fac_fdet = (1.0d0-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
+      fac_sdet = (1.0d0-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
       call ESMF_StateGet(pelagicstate,'fast_detritus_C',field,rc=rc)
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f3,rc=rc)
@@ -394,7 +393,7 @@ module toplevel_component
       call mossco_state_get(pelagicstate,(/'Dissolved_Inorganic_Phosphorus_DIP_nutP'/),DIP,rc=rc)
       if (rc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(1,1,1))
-        DIP(1,1,1) = 1.0_rk/16.0_rk * DIN(1,1,1)
+        DIP(1,1,1) = 1.0d0/16.0d0 * DIN(1,1,1)
       end if
       call ESMF_StateGet(pelagicstate,'dissolved_phosphate',field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -442,7 +441,7 @@ module toplevel_component
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call ESMF_FieldGet(field=newfield, localDe=0, farrayPtr=ptr_f2, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      ptr_f2 = 0.0_rk
+      ptr_f2 = 0.0d0
       call ESMF_StateAddReplace(outputstate,(/newfield/),rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     end if
