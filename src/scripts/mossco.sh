@@ -18,4 +18,4 @@ test -x ${EXE} || exit 1
 
 rm -rf PET?.${TITLE} ${TITLE}.stdout
 ${EXE} | tee ${TITLE}.stdout
-tail -f 300 PET0.${TITLE}
+tail -n 300 PET0.${TITLE}
