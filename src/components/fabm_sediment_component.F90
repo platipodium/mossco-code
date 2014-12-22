@@ -39,7 +39,7 @@ module fabm_sediment_component
  
   real(rk)  :: dzmin,dt,dt_spinup
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
-  integer   :: t,tnum,funit,output=-1,k,n,numyears,numlayers
+  integer   :: tnum,funit,output=-1,k,n,numyears,numlayers
   integer   :: ode_method=_ADAPTIVE_EULER_
   integer   :: presimulation_years=-1
   integer   :: bcup_dissolved_variables=2
@@ -525,6 +525,9 @@ module fabm_sediment_component
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
+
+    implicit none
+
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
@@ -540,7 +543,6 @@ module fabm_sediment_component
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
     integer           :: fieldcount, i
-    integer(8)     :: t
     character(len=ESMF_MAXSTR)  :: string
     type(ESMF_Alarm)           :: outputAlarm
  
@@ -594,21 +596,21 @@ module fabm_sediment_component
         end do
       end do
 
-      call ESMF_ClockGet(clock, advanceCount=t, rc=rc)
+      call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=rc)
 
       if (sed%do_output) then
         !! Check if the output alarm is ringing, if so, quiet it and 
-        !! get the current advance count (formerly t) from clock
+        !! get the current advance count from clock
         !if (ESMF_AlarmIsRinging(outputAlarm)) then
         !  call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
         if (mod(advanceCount,output)==0) then
-          !write(string,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
-          !write(*,'(A,F7.1,A)') 'Elapsed ',t*dt/86400,' days'
+          !write(string,'(A,F7.1,A)') 'Elapsed ',advanceCount*dt/86400,' days'
+          !write(*,'(A,F7.1,A)') 'Elapsed ',advanceCount*dt/86400,' days'
           !call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
-          write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
+          write(funit,*) advanceCount*dt,'fluxes',fluxes(1,1,:)
           do k=1,_KNUM_
             write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3,A,E15.4E3)',advance='no') &
-              t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k),  &
+              advanceCount*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k),  &
               ' ',sed%porosity(1,1,k)
             do n=1,sed%nvar
               write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
@@ -623,7 +625,7 @@ module fabm_sediment_component
       end if
 
 #ifdef WRITE_PROGRESS
-      if (mod(t*dt,(365.*86400.)).eq.0) write(0,*) '  elapsed [d]',dt*t/86400.
+      if (mod(advanceCount*dt,(365.*86400.)).eq.0) write(0,*) '  elapsed [d]',dt*t/86400.
 #endif
 
       call ESMF_ClockAdvance(clock, rc=rc)
