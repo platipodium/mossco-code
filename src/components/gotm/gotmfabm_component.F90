@@ -207,7 +207,6 @@ module gotmfabm_component
 #endif
 
     call ESMF_LogWrite("GOTM/FABM component finalized",ESMF_LOGMSG_INFO)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
    
     rc=ESMF_SUCCESS
   
