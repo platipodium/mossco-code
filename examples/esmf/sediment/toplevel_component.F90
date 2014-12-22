@@ -16,7 +16,6 @@ module toplevel_component
 
   ! Registration routines for fabm
   use fabm_sediment_component, only : fabmsed_SetServices => SetServices
-  use fabm_sediment_component, only : bdys,fluxes,rk
   use constant_component, only : constant_SetServices => SetServices
 
   implicit none
@@ -69,19 +68,21 @@ module toplevel_component
     call ESMF_GridCompInitialize(constantComp, importState=fabmExp, exportState=fabmImp,clock=parentClock,rc=rc)
     call ESMF_GridCompInitialize(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
 
+#if 0
     ! same boundary conditions as for the standalone omexdia_p example:
-    bdys(1,1,1:9) = 0.0_rk
-    bdys(1,1,1) = 10._rk   ! degC temperature
-    bdys(1,1,5) = 1.0_rk   ! mmolP/m**3 po4
-    bdys(1,1,6) = 10.0_rk  ! mmolN/m**3 no3
-    bdys(1,1,7) = 0.0_rk   ! mmolN/m**3 nh3
-    bdys(1,1,8) = 250.0_rk ! mmolO2/m**3 oxy
-    bdys(1,1,9) = 0.0_rk   ! odu
+    bdys(1,1,1:9) = 0.0d0
+    bdys(1,1,1) = 10.d0   ! degC temperature
+    bdys(1,1,5) = 1.0d0   ! mmolP/m**3 po4
+    bdys(1,1,6) = 10.0d0  ! mmolN/m**3 no3
+    bdys(1,1,7) = 0.0d0   ! mmolN/m**3 nh3
+    bdys(1,1,8) = 250.0d0 ! mmolO2/m**3 oxy
+    bdys(1,1,9) = 0.0d0   ! odu
 
-    fluxes(1,1,1:8) = 0.0_rk
-    fluxes(1,1,1) = 5.0_rk/86400.0_rk !fdet
-    fluxes(1,1,2) = 5.0_rk/86400.0_rk !sdet
-    fluxes(1,1,3) = 0.08/86400.0_rk !pdet
+    fluxes(1,1,1:8) = 0.0d0
+    fluxes(1,1,1) = 5.0d0/86400.0d0 !fdet
+    fluxes(1,1,2) = 5.0d0/86400.0d0 !sdet
+    fluxes(1,1,3) = 0.08/86400.0d0 !pdet
+#endif
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
     call ESMF_LogFlush()
