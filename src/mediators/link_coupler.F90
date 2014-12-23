@@ -498,7 +498,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount, count, len
-    character (len=ESMF_MAXSTR) :: message, creatorName, name, fieldName, attributeName
+    character (len=ESMF_MAXSTR) :: message, creatorName, name, fieldName, attributeName, stateName
     type(ESMF_Time)             :: currTime
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
@@ -534,24 +534,42 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         
         if (.not.isNeeded) cycle
       endif       
-      
+
+      !call ESMF_LogWrite('Looking for '//trim(attributeName)//' '//trim(fieldName), ESMF_LOGMSG_INFO)
+            
       ! Check whether it is already there
       call ESMF_StateGet(exportState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
       if (itemCount>0) then
         ! If it does exist, check for GRIDSET status and return silently, otherwise continue
-        call ESMF_StateGet(exportState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
-        call ESMF_StateGet(exportState, trim(fieldName), exportField, rc=localrc)
+         
+        call ESMF_StateGet(exportState, trim(fieldName), itemType=itemType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
-        call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (itemType==ESMF_STATEITEM_FIELD) then
+          call ESMF_StateGet(exportState, trim(fieldName), exportField, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
-        !! If this contains grid information, then return silently
-        if (.not. (fieldStatus == ESMF_FIELDSTATUS_EMPTY)) return
+          call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  
+          !! If this contains grid information, then return silently
+          if (.not. (fieldStatus == ESMF_FIELDSTATUS_EMPTY)) cycle
+
+        elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
+          call ESMF_StateGet(exportState, trim(fieldName), exportFieldBundle, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+ 
+ 	        call ESMF_FieldBundleGet(exportFieldBundle, fieldCount=fieldCount, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          !! If this bundle contains fields, then return with warning that this case is not fully checked
+				  if (fieldCount>0) then 
+            write(message,'(A)') trim(name)//' requested fieldbundle '//trim(fieldname)//' exists'
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          endif
+				endif       
       endif
      
       ! At this point, the field is not already present or at least GRIDSET in export state, thus we need to find it in 
@@ -559,33 +577,51 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       
       call ESMF_StateGet(importState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(importState, name=stateName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
       if (itemCount<=0) then
-        write(message,'(A)') trim(name)//' requested field '//trim(fieldname)//' not found'
+        write(message,'(A)') trim(name)//' requested field(bundle) '//trim(fieldname)//' not found in '//trim(stateName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        return
+        cycle
       endif
-      
-      call ESMF_StateGet(importState, trim(fieldName), importField, rc=localrc)
+
+      call ESMF_StateGet(importState, trim(fieldName), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+      if (itemType==ESMF_STATEITEM_FIELD) then
+        call ESMF_StateGet(importState, trim(fieldName), importField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
-      call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
-      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-        write(message,'(A)') trim(name)//' requested field '//fieldname//' does not contain grid information'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        return
-      endif
+        if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+          write(message,'(A)') trim(name)//' requested field '//fieldname//' does not contain grid information'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          cycle
+        endif
         
-      call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
-      !call ESMF_FieldDestroy(exportField, rc=localrc)
-      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+        !call ESMF_FieldDestroy(exportField, rc=localrc)
+        !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
-      write(message,'(A)') trim(name)//' replaced empty/added field '
-      call MOSSCO_FieldString(importField, message)
+        write(message,'(A)') trim(name)//' replaced empty/added field '
+        call MOSSCO_FieldString(importField, message)
+      elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
+        call ESMF_StateGet(importState, trim(fieldName), importFieldBundle, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  
+        call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        write(message,'(A)') trim(name)//' replaced/added fieldbundle '//trim(fieldName)
+      else
+        cycle
+      endif
+            
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
     
