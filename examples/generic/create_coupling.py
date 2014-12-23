@@ -622,6 +622,11 @@ for phase in range(1,maxPhases+1):
       fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
       fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
       
+      if (item == 'erosed') :
+        fid.write('    call ESMF_AttributeSet(importStates(' + str(ito+1)+'), name="concentration_of_SPM_in_water:needed", value=.true., rc=localrc)\n')
+        fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+       
+      
       if dependencyDict.has_key(item):
         for jtem in dependencyDict[item]:
           ifrom=gridCompList.index(jtem)
