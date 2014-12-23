@@ -329,6 +329,7 @@ module fabm_gotm_component
     
     integer(ESMF_KIND_I4)    :: localPet, petCount, hours, seconds, minutes
     logical                  :: clockIsPresent
+    integer                  :: alarmCount
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
@@ -438,15 +439,19 @@ module fabm_gotm_component
 !      Note (KK): We must check the parentClock, because in the present
 !                 implementation GOTM can only communicate the alarm via
 !                 the parentClock...
+       call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_RINGING,alarmCount=alarmCount)
+       if (alarmCount .gt. 0) then
+!      TODO: (re)allocate and inquire ringing AlarmList, check whether GOTM alarm is included
        call ESMF_ClockGetAlarm(parentClock, alarmname="GOTM output Alarm", alarm=outputAlarm, rc=rc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
+       if(rc .eq. ESMF_SUCCESS) then
        if (ESMF_AlarmIsRinging(outputAlarm)) then
          call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
          call prepare_output(n)
          call do_gotm_mossco_fabm_output()
        endif
+       end if
+       end if
 
       call ESMF_ClockAdvance(clock,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
