@@ -435,6 +435,9 @@ module fabm_gotm_component
        call do_gotm_mossco_fabm(dt)
 
        ! Introduced dependency from FABM component, which use the same name for the alarm
+!      Note (KK): We must check the parentClock, because in the present
+!                 implementation GOTM can only communicate the alarm via
+!                 the parentClock...
        call ESMF_ClockGetAlarm(parentClock, alarmname="GOTM output Alarm", alarm=outputAlarm, rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
