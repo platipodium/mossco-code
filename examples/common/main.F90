@@ -147,13 +147,10 @@ program main
   call ESMF_GridCompGet(topComp,clockIsPresent=ClockIsPresent, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
      
-  if (clockIsPresent) then
-    call ESMF_GridCompInitialize(topComp,importState=topState,exportState=topState,clock=mainClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  else
-    call ESMF_GridCompInitialize(topComp,importState=topState,exportState=topState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  call ESMF_GridCompInitialize(topComp,importState=topState,exportState=topState,clock=mainClock, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  if (iostat .ne. 0) then
     call ESMF_GridCompGet(topComp,clockIsPresent=ClockIsPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
      
