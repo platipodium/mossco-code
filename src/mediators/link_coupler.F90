@@ -111,8 +111,18 @@ module link_coupler
     call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    
-    call  link_fields_and_fieldbundles_in_states(importState, exportState, rc)
+    call link_empty_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call link_foreign_grid_field_in_states(importState, exportState, rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call link_foreign_grid_field_in_states(exportState, importState, rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 
     call MOSSCO_CplCompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -145,8 +155,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
    
     call link_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     !!> @todo the following call creates a problem:
     !!call ESMF_ClockAdvance(clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -187,7 +199,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "link_fields_and_fieldbundles_in_states"
-
   subroutine  link_fields_and_fieldbundles_in_states(importState, exportState, rc)
 
     type(ESMF_State), intent(in)    :: importState
@@ -478,8 +489,91 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     enddo
   end subroutine link_empty_fields_and_fieldbundles_in_states
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "link_foreign_grid_field_in_states"
+  subroutine  link_foreign_grid_field_in_states(importState, exportState, rc)
 
+    type(ESMF_State), intent(in)    :: importState
+    type(ESMF_State), intent(inout) :: exportState
+    integer, intent(out)            :: rc   
+    
+    integer              :: localrc
+    integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount
+    character (len=ESMF_MAXSTR) :: message, creatorName, name, fieldName
+    type(ESMF_Time)             :: currTime
+    type(ESMF_Field)            :: importField, exportField
+    type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
+    type(ESMF_StateItem_Flag)   :: itemType
+    logical                     :: isPresent
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    
+    rc = ESMF_SUCCESS
+    name='link_coupler'
+  
+    call ESMF_AttributeGet(exportState, 'foreign_grid_field_name', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    if (.not.isPresent) return
 
+    call ESMF_AttributeGet(exportState, 'foreign_grid_field_name', value=fieldName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    ! Check whether it is already there
+    call ESMF_StateGet(exportState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    if (itemCount>0) then
+      ! If it does exist, check for GRIDSET status and return silently, otherwise continue
+      call ESMF_StateGet(exportState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+      call ESMF_StateGet(exportState, trim(fieldName), exportField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !! If this contains grid information, then return silently
+      if (.not. (fieldStatus == ESMF_FIELDSTATUS_EMPTY)) return
+    endif
+   
+    ! At this point, the field is not already present or at least GRIDSET in export state, thus we need to find it in 
+    ! import state and link it
+    
+    call ESMF_StateGet(importState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    if (itemCount<=0) then
+      write(message,'(A)') trim(name)//' requested field '//fieldname//' not found'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+    
+    call ESMF_StateGet(importState, trim(fieldName), importField, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') trim(name)//' requested field '//fieldname//' does not contain grid information'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+      
+    call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    !call ESMF_FieldDestroy(exportField, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') trim(name)//' replaced empty/added field '
+    call MOSSCO_FieldString(importField, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
+    call ESMF_LogFlush()
+
+  end subroutine link_foreign_grid_field_in_states
 
 end module link_coupler
 
