@@ -211,7 +211,7 @@ contains
 
     logical                   :: clockIsPresent, isPresent
 
-    integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount
+    integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount, itemCount
 
 
     namelist /globaldata/g, rhow
@@ -539,6 +539,8 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
+    deallocate(importList)
+
   end if
 
 ! Complete Import Fields
@@ -553,7 +555,7 @@ contains
   !                                 totalUWidth=totalUBound-exclusiveUBound)
   !  end do
   !end if
-
+    
 
     !> create export fields
 
@@ -658,6 +660,41 @@ contains
 
   call ESMF_StateAddReplace(exportState,(/upward_flux_bundle,downward_flux_bundle/),rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! Prepare import state for fields needed in run  
+    allocate(importList(7))
+
+    importList(1)%name  = 'layer_height_at_soil_surface'
+    importList(1)%units = 'm'
+    importList(2)%name  = 'depth_averaged_x_velocity_in_water'
+    importList(2)%units = 'm s**-1'
+    importList(3)%name  = 'depth_averaged_y_velocity_in_water'
+    importList(3)%units = 'm s**-1'
+    importList(4)%name  = 'x_velocity_at_soil_surface'
+    importList(4)%units = 'm s**-1'
+    importList(5)%name  = 'y_velocity_at_soil_surface'
+    importList(5)%units = 'm s**-1'
+    importList(6)%name  = 'turbulent_kinematic_viscosity_at_soil_surface'
+    importList(6)%units = ' '
+    importList(7)%name  = 'concentration_of_SPM_z_velocity_in_water'
+    importList(7)%units = 'mg m l**-1 s**-1'
+    
+
+    do i=1,size(importList)
+      call ESMF_StateGet(importState, itemSearch=trim(importList(1)%name), itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemCount>0) cycle
+      
+      field = ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(importState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+    deallocate(importList)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
