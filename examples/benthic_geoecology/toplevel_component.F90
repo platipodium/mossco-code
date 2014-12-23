@@ -10,9 +10,15 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "toplevel_component.F90"
+
 module toplevel_component
 
   use esmf
+  use mossco_component
 
   ! Registration routines for fabm
   use benthos_component, only : benthos_SetServices => SetServices
@@ -36,6 +42,8 @@ module toplevel_component
 
   contains
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
     type(ESMF_GridComp)  :: gridcomp
@@ -47,6 +55,8 @@ module toplevel_component
 
   end subroutine SetServices
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Initialize"
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     
     type(ESMF_GridComp)   :: gridComp
@@ -61,38 +71,48 @@ module toplevel_component
     integer               :: petCount, localPet
     real(ESMF_KIND_R8),dimension(:,:),allocatable :: farray
     type(ESMF_TimeInterval) :: cplInterval
+    type(ESMF_Time)       :: currTime
+    type(ESMF_Clock)      :: clock
+    
 
-    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2, localrc
     integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
     logical                :: hasPhaseZero
+    character(len=ESMF_MAXSTR) :: name, message
 
-    call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
+    rc = ESMF_SUCCESS
 
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   
     call ESMF_TimeIntervalSet(cplInterval,s_r8=360.0d0)
-    call ESMF_ClockSet(parentClock,timeStep=cplInterval)
+    call ESMF_ClockSet(clock,timeStep=cplInterval)
 
     ! Create component, call setservices, and create states
-    gotmComp = ESMF_GridCompCreate(name="gotmComp", rc=rc)
+    gotmComp = ESMF_GridCompCreate(name="gotmComp", clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(gotmComp,gotm_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    fabmgotmComp = ESMF_GridCompCreate(name="fabmgotmComp", rc=rc)
+    fabmgotmComp = ESMF_GridCompCreate(name="fabmgotmComp", clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(fabmgotmComp,fabm_gotm_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    constantComp = ESMF_GridCompCreate(name="constantComp",rc=rc)
+    constantComp = ESMF_GridCompCreate(name="constantComp",clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    erosedComp = ESMF_GridCompCreate(name="erosedComp",rc=rc)
+    erosedComp = ESMF_GridCompCreate(name="erosedComp",clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(erosedComp,erosed_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    benthosComp = ESMF_GridCompCreate(name="benthosComp",rc=rc)
+    benthosComp = ESMF_GridCompCreate(name="benthosComp",clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(benthosComp,benthos_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    netcdfComp = ESMF_GridCompCreate(name="netcdfComp",rc=rc)
+    netcdfComp = ESMF_GridCompCreate(name="netcdfComp",clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(netcdfComp,netcdf_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -105,23 +125,25 @@ module toplevel_component
     call ESMF_AttributeSet(state,name='filename',value='benthic_geoecology.nc',rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompInitialize(constantComp, importState=state, exportState=state,clock=parentClock,rc=rc)
+    call ESMF_GridCompInitialize(constantComp, importState=state, exportState=state,clock=clock,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompInitialize(gotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+    call ESMF_GridCompInitialize(gotmComp, importState=state, exportState=state, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompInitialize(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+    call ESMF_GridCompInitialize(fabmgotmComp, importState=state, exportState=state, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompInitialize(benthosComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+    call ESMF_GridCompInitialize(benthosComp, importState=state, exportState=state, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompInitialize(erosedComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+    call ESMF_GridCompInitialize(erosedComp, importState=state, exportState=state, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_GridCompInitialize(netcdfComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+    call ESMF_GridCompInitialize(netcdfComp, importState=state, exportState=state, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     
     type(ESMF_GridComp)   :: gridComp
@@ -136,9 +158,10 @@ module toplevel_component
     logical :: clockIsPresent
     integer(ESMF_KIND_I8) :: advanceCount
 
-    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2
+    integer(ESMF_KIND_I4)  :: phase, maxPhaseCount=2, localrc
     integer(ESMF_KIND_I4), allocatable  :: phaseCountList(:)
     logical                :: hasPhaseZero
+    character(len=ESMF_MAXSTR) :: name, message
 
     call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
 
@@ -201,6 +224,8 @@ module toplevel_component
  
   end subroutine Run
 
+#undef  ESMF_METHOD 
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     
     type(ESMF_GridComp)   :: gridComp
