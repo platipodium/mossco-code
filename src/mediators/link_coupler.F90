@@ -123,7 +123,6 @@ module link_coupler
     call link_foreign_grid_or_needed_field_in_states(exportState, importState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
     call MOSSCO_CplCompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -526,9 +525,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       else
         !! Otherwise look at the name and see whether it ends in ':needed', then expect a logical value
         len=len_trim(attributeName)
-        if (.not.attributeName(len-7:len) == ':needed') cycle
+        if (.not.attributeName(len-6:len) == ':needed') cycle
 
-        fieldName = trim(attributeName(1:len-1))
+        fieldName = trim(attributeName(1:len-7))
 
         call ESMF_AttributeGet(exportState, trim(attributeName), value=isNeeded, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -562,7 +561,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
       if (itemCount<=0) then
-        write(message,'(A)') trim(name)//' requested field '//fieldname//' not found'
+        write(message,'(A)') trim(name)//' requested field '//trim(fieldname)//' not found'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         return
       endif
