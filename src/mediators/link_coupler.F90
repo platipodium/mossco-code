@@ -417,11 +417,17 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
             write(message,'(A)') trim(name)//' replaced empty field with field '
             call MOSSCO_FieldString(importField, message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
-            write(message,'(A)') trim(name)//' not yet implemented replace field with fieldBundle '
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            call ESMF_StateRemove(exportState,(/trim(itemNameList(i))/), rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+ 			 	    call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)          
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        
+            write(message,'(A)') trim(name)//' replaced empty field with fieldBundle '
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         else 
           write(message,'(A)') trim(name)//' cannot replace this empty field.'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
