@@ -1132,11 +1132,17 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
 
+    call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
+
+    if (clockIsPresent) then
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockDestroy(clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
