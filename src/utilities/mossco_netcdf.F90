@@ -315,7 +315,7 @@ module mossco_netcdf
 
 
   function mossco_netcdfOpen(filename, timeUnit, rc) result(nc)
-  character(len=ESMF_MAXSTR)    :: filename
+  character(len=*)              :: filename
   type(type_mossco_netcdf)      :: nc
   character(len=*),optional     :: timeUnit
   integer, intent(out),optional :: rc
@@ -341,7 +341,7 @@ module mossco_netcdf
     use iso_fortran_env
     implicit none
 
-    character(len=ESMF_MAXSTR)    :: filename
+    character(len=*)              :: filename
     type(type_mossco_netcdf)      :: nc
     integer, intent(out),optional :: rc
     integer                       :: ncStatus
@@ -382,7 +382,7 @@ module mossco_netcdf
 
   subroutine mossco_netcdf_init_time(self,timeUnit,rc)
     class(type_mossco_netcdf)      :: self
-    character(len=ESMF_MAXSTR)     :: timeUnit
+    character(len=*)               :: timeUnit
     integer, optional, intent(out) :: rc
     integer                        :: ncStatus,varid,rc_
     type(type_mossco_netcdf_variable), pointer :: var
