@@ -151,7 +151,7 @@ module toplevel_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
     type(ESMF_Field)      :: field
-    type(ESMF_Clock)      :: childClock
+    type(ESMF_Clock)      :: clock,childClock
     type(ESMF_TimeInterval)   :: cplInterval
     type(ESMF_Time)       :: currtime, ringTime
     type(ESMF_Alarm)      :: alarm
@@ -163,7 +163,11 @@ module toplevel_component
     logical                :: hasPhaseZero
     character(len=ESMF_MAXSTR) :: name, message
 
-    call ESMF_LogWrite("Toplevel component running ... ",ESMF_LOGMSG_INFO)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
 
@@ -178,7 +182,7 @@ module toplevel_component
       else
         childClock = parentClock
       endif
-      call ESMF_GridCompRun(gotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(gotmComp, importState=state, exportState=state, clock=clock, rc=rc)
 
       call ESMF_GridCompGet(benthosComp,clockIsPresent=clockIsPresent)
       if (clockIsPresent) then 
@@ -187,7 +191,7 @@ module toplevel_component
       else
         childClock = parentClock
       endif
-      call ESMF_GridCompRun(benthosComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(benthosComp, importState=state, exportState=state, clock=clock, rc=rc)
 
       call ESMF_GridCompGet(erosedComp,clockIsPresent=clockIsPresent)
       if (clockIsPresent) then 
@@ -196,7 +200,7 @@ module toplevel_component
       else
         childClock = parentClock
       endif
-      call ESMF_GridCompRun(erosedComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(erosedComp, importState=state, exportState=state, clock=clock, rc=rc)
 
       call ESMF_GridCompGet(fabmgotmComp,clockIsPresent=clockIsPresent)
       if (clockIsPresent) then 
@@ -205,12 +209,12 @@ module toplevel_component
       else
         childClock = parentClock
       endif
-      call ESMF_GridCompRun(fabmgotmComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(fabmgotmComp, importState=state, exportState=state, clock=clock, rc=rc)
       
       call ESMF_GridCompGet(netcdfComp,clock=childClock)
       call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
       if (mod(advanceCount,5)==0) then
-        call ESMF_GridCompRun(netcdfComp, importState=state, exportState=state, clock=parentClock, rc=rc)
+        call ESMF_GridCompRun(netcdfComp, importState=state, exportState=state, clock=clock, rc=rc)
       else
         call ESMF_ClockSet(childClock,currTime=currTime+cplInterval)     
       endif
