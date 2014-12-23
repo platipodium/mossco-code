@@ -2,7 +2,7 @@
 
 TAGS=""
 
-TAGS=ESMF_7_0_0_beta_snapshot_27
+TAGS=ESMF_7_0_0_beta_snapshot_34
 #TAGS=ESMF_6_3_0rp2_beta_snapshot_02
 #TAGS=ESMF_6_3_0rp1
 #TAGS="ESMF_5_3_1_beta_snapshot_18
@@ -11,7 +11,7 @@ TAGS=ESMF_7_0_0_beta_snapshot_27
 export TAGS
 
 COMPS="gfortran gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
-COMMS="mpich2 openmpi mpiuni" #"openmpi" #  mpiuni mpich2
+COMMS="mpich2" #"openmpi" #  mpiuni mpich2
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull origin master
