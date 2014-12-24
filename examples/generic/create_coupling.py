@@ -430,7 +430,7 @@ fid.write('''
     type(ESMF_VM)          :: vm
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount, j, itemCount
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: GridCompPhaseCountList
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: GridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
     logical                :: hasPhaseZero, isPresent
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
@@ -581,6 +581,19 @@ fid.write('''
       !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
       !! contains information on the phases defined in the component.
     enddo
+
+    allocate(CplCompPhaseCountList(numCplComp))
+
+    do i = 1, numCplComp
+      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_INITIALIZE, &
+        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not.hasPhaseZero) cycle
+      call ESMF_CplCompInitialize(cplCompList(i), exportState=cplExportStates(i), phase=0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
+      !! contains information on the phases defined in the component.
+    end do
 
     !! Declare all dependencies
 ''')
@@ -927,7 +940,7 @@ fid.write('''
     character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: GridCompPhaseCountList
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: GridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
     logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
@@ -943,6 +956,7 @@ fid.write('''
     if (.not.allocated(alarmList)) allocate(alarmList(20))
 
     numGridComp=ubound(gridCompList,1)-lbound(gridCompList,1)+1
+    numCplComp =ubound(cplCompList ,1)-lbound(cplCompList ,1)+1
 
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
@@ -957,6 +971,15 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       GridCompPhaseCountList(i)=phaseCount
       GridCompHasPhaseZeroList(i)=hasPhaseZero
+    enddo
+
+    allocate(CplCompPhaseCountList(numCplComp))
+
+    do i = 1, numCplComp
+      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_RUN, &
+        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not.hasPhaseZero) cycle
     enddo
 
     call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
@@ -1292,7 +1315,7 @@ fid.write('''
     type(ESMF_Clock)        :: clock
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: GridCompPhaseCountList
+    integer(ESMF_KIND_I4), dimension(:), allocatable :: GridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
     logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
@@ -1310,6 +1333,7 @@ fid.write('''
     !! be integrated with GridCompGet
 
     numGridComp=size(gridCompList)
+    numCplComp=size(cplCompList)
 
     allocate(GridCompHasPhaseZeroList(numGridComp))
     allocate(GridCompPhaseCountList(numGridComp))
@@ -1320,6 +1344,15 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       GridCompPhaseCountList(i)=phaseCount
       GridCompHasPhaseZeroList(i)=hasPhaseZero
+    enddo
+
+    allocate(CplCompPhaseCountList(numCplComp))
+
+    do i = 1, numCplComp
+      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_FINALIZE, &
+        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not. hasPhaseZero) cycle
     enddo
 
     do i=1,ubound(cplCompList,1)
