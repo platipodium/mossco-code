@@ -641,10 +641,13 @@ fid.write('''
 
 maxPhases=2
 
-for phase in range(1,maxPhases+1):
-  fid.write('    phase = %i \n'%phase)
+#for phase in range(1,maxPhases+1):
+#  fid.write('    phase = %i \n'%phase)
+if (True):
+  fid.write('    do phase = 1,' + str(maxPhases) + '\n\n')
   for item in gridCompList:
-    fid.write('    !! Initializing phase '  + str(phase) + ' of ' + item + '\n')
+    #fid.write('    !! Initializing phase '  + str(phase) + ' of ' + item + '\n')
+    fid.write('    !! Initializing ' + item + '\n')
     ifrom=gridCompList.index(item)
     ito=ifrom
     for j in range(0, len(couplingList)):
@@ -672,10 +675,13 @@ for phase in range(1,maxPhases+1):
 
       fid.write('    end if\n\n')
           
-    fid.write('    if (GridCompPhaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
+    #fid.write('    if (GridCompPhaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
+    fid.write('    if (GridCompPhaseCountList( ' + str(ito+1) + ')>= phase) then\n')
     fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=gridImportStates(' + str(ito+1) + '), &\n')
-    fid.write('        exportState=gridExportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=localrc)\n')
+    #fid.write('        exportState=gridExportStates(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=localrc)\n')
+    fid.write('        exportState=gridExportStates(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
     fid.write('    endif\n\n')
+  fid.write('    end do\n\n')
 
 fid.write('    !! Finally reconcile all states\n')
 for item in gridCompList:
