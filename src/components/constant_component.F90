@@ -60,6 +60,10 @@ module constant_component
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
+      userRoutine=InitializeP2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -195,6 +199,7 @@ module constant_component
       endif
     endif
 
+#ifdef CONSTANT_OLD
 	  if (numNodes==0) then
       grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
         regDecomp=(/petCount,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
@@ -250,6 +255,7 @@ module constant_component
       call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+#endif
 
     !> create list of export_variables, that will come from a function
     !> which reads a text file
@@ -342,6 +348,7 @@ module constant_component
     cur_item => variable_items%next
     if (file_readable .and. numNodes==0) then
       do
+#ifdef CONSTANT_OLD
         if (cur_item%rank==3) then
 
           cur_item%field = ESMF_FieldCreate(grid3, arraySpec3, &
@@ -372,13 +379,17 @@ module constant_component
           call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
         endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#else
+        cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
 
         if (len_trim(unitString)>0) then
           call ESMF_AttributeSet(cur_item%field,'units',trim(unitString))
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-        call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=localrc)
+        call ESMF_StateAdd(exportState,(/cur_item%field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (associated(cur_item%next)) then
@@ -419,6 +430,80 @@ module constant_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(gridComp, importState, exportState, parentClock, rc)
+
+    implicit none
+
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    integer                    :: localrc
+    character(len=ESMF_MAXSTR) :: name
+    type(ESMF_Time)            :: currTime
+
+    type(ESMF_Field)                            :: field
+    type(ESMF_FieldStatus_Flag)                 :: status
+    integer                                     :: rank
+    real(ESMF_KIND_R8),dimension(:,:)  ,pointer :: farrayPtr2
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farrayPtr3
+
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#ifndef CONSTANT_OLD
+!   Complete Export Fields
+    cur_item => variable_items
+    do
+      if (associated(cur_item%next)) then
+        cur_item => cur_item%next
+      else
+        exit
+      end if
+      call ESMF_StateGet(exportState,trim(cur_item%standard_name),field)
+      call ESMF_FieldGet(field,status=status)
+      if (status .eq. ESMF_FIELDSTATUS_EMPTY) then
+        !call ESMF_StateRemove(exportState,(/trim(cur_item%standard_name)/),rc)
+        !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+        !call ESMF_FieldDestroy(cur_item%field,rc)
+        !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+        call ESMF_LogWrite(' neglecting empty field '//trim(cur_item%standard_name),ESMF_LOGMSG_INFO)
+      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field,rank=rank)
+        select case(rank)
+          case(2)
+            call ESMF_FieldGet(field,farrayPtr=farrayPtr2,rc=rc)
+            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+            farrayPtr2 = cur_item%value
+          case(3)
+            call ESMF_FieldGet(field,farrayPtr=farrayPtr3,rc=rc)
+            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+            farrayPtr3 = cur_item%value
+          case default
+            call ESMF_LogWrite('rank not implemented yet',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+            call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        end select
+        call ESMF_LogWrite(' setting external field '//trim(cur_item%standard_name),ESMF_LOGMSG_INFO)
+      else
+        call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      end if
+    end do
+#endif
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP2
+
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
