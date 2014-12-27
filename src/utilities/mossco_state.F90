@@ -46,12 +46,15 @@ contains
     type(ESMF_StateItem_Flag)     :: itemType
     type(ESMF_Field), allocatable :: fieldList(:)
     logical                       :: isPresent
-    character(len=ESMF_MAXSTR)    :: message  
+    character(len=ESMF_MAXSTR)    :: message, name  
     
     nullify(fpointer)
     
     ubnd_(:)=-1
     lbnd_(:)=0
+    
+    call ESMF_StateGet(state, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     
     do i=1,size(fieldName)
       call ESMF_StateGet(state,trim(fieldName(i)),itemType, rc=localrc)
@@ -93,15 +96,18 @@ contains
     end do
     
     if (associated(fpointer)) then
-      write(message, '(A)') 'Found field '//trim(fieldName(i))
+      write(message, '(A)') '  found field '//trim(fieldName(i))//' in '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
-      write(message, '(A)') 'Did not find field '//trim(fieldName(i))
-    endif
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    
-    if (present(rc)) then
-      rc = ESMF_SUCCESS
-      if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
+      write(message, '(A)') '  did not find in '//trim(name)//' any of those field(s):'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      do i=1,size(fieldName)
+        write(message, '(A)') '   - '//trim(fieldName(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      end do
+      call MOSSCO_StateLog(state)
+      ubnd_(:)=-1
+      lbnd_(:)=0
     endif
     
     if (present(ubnd)) ubnd=ubnd_
@@ -126,11 +132,12 @@ contains
     type(ESMF_StateItem_Flag)     :: itemType
     type(ESMF_Field), allocatable :: fieldList(:)
     logical                       :: isPresent
-    character(len=ESMF_MAXSTR)    :: message  
+    character(len=ESMF_MAXSTR)    :: message, name 
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
-    
-    
+        
     nullify(fpointer)
+    call ESMF_StateGet(state, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     
     do i=1,size(fieldName)
       call ESMF_StateGet(state,trim(fieldName(i)),itemType, rc=localrc)
@@ -175,16 +182,22 @@ contains
     
       exit
     end do
-    
+
     if (associated(fpointer)) then
-      write(message, '(A)') 'Found field '//trim(fieldName(i))
+      write(message, '(A)') '  found field '//trim(fieldName(i))//' in '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
-      write(message, '(A)') 'Did not find field '//trim(fieldName(1))
+      write(message, '(A)') '  did not find in '//trim(name)//' any of those field(s):'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      do i=1,size(fieldName)
+        write(message, '(A)') '   - '//trim(fieldName(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      end do
+      call MOSSCO_StateLog(state)
       ubnd_(:)=-1
       lbnd_(:)=0
     endif
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    
+        
     if (present(rc)) then
       rc = ESMF_SUCCESS
       if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
@@ -212,10 +225,13 @@ contains
     type(ESMF_StateItem_Flag)     :: itemType
     type(ESMF_Field), allocatable :: fieldList(:)
     logical                       :: isPresent
-    character(len=ESMF_MAXSTR)    :: message  
+    character(len=ESMF_MAXSTR)    :: message, name
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
     
     nullify(fpointer)
+
+    call ESMF_StateGet(state, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ubnd_(:)=-1
     lbnd_(:)=0
@@ -262,15 +278,18 @@ contains
     end do
     
     if (associated(fpointer)) then
-      write(message, '(A)') 'Found field '//trim(fieldName(i))
+      write(message, '(A)') '  found field '//trim(fieldName(i))//' in '//trim(name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
-      write(message, '(A)') 'Did not find field(s):'
+      write(message, '(A)') '  did not find in '//trim(name)//' any of those field(s):'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       do i=1,size(fieldName)
-        write(message, '(A)') ' '//trim(fieldName(i))
+        write(message, '(A)') '   - '//trim(fieldName(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
+      call MOSSCO_StateLog(state)
+      ubnd_(:)=-1
+      lbnd_(:)=0
     endif
 
     if (present(rc)) then
@@ -635,7 +654,7 @@ contains
     call ESMF_FieldGet(field, name=name, status=fieldStatus, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    
-  	write(message,'(A)') trim(message)//' '//trim(name)
+  	write(message,'(A)') trim(message)//' '//name(1:len(message)-1-len_trim(message))
 
     if (fieldStatus==ESMF_FIELDSTATUS_EMPTY) then
      	write(message,'(A)') trim(message)//' (empty) '
