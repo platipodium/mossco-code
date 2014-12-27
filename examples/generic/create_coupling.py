@@ -718,6 +718,22 @@ fid.write('''
     enddo
 ''')
 
+fid.write('''
+    !!> Check all states for remaining incomplete fields
+    !!>@todo find segfault this is causing
+    do i=1, -numGridComp
+      call MOSSCO_StateCheckFields(gridImportStates(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call MOSSCO_StateCheckFields(gridExportStates(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+    do i=1, -numCplComp
+      call MOSSCO_StateCheckFields(cplImportStates(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call MOSSCO_StateCheckFields(cplExportStates(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+''')
   
 fid.write('''
     do phase=1, -9
