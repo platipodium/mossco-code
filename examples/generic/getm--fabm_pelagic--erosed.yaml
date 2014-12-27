@@ -1,0 +1,24 @@
+# configuration dependencies:
+dependencies:
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - erosed: 
+    - component: getm
+      grid: water_depth_at_soil_surface
+  - erosed: fabm_pelagic
+  - getm: fabm_pelagic
+
+coupling:
+  - components: 
+     - getm
+     - fabm_pelagic
+  - components:
+     - fabm_pelagic
+     - erosed
+  - components:
+     - getm
+     - erosed
+  - components:
+     - erosed
+     - fabm_pelagic
