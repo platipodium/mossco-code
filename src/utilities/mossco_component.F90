@@ -306,7 +306,9 @@ contains
     logical                :: have_clock, phaseZeroFlag
     type(ESMF_Clock)       :: myClock
     type(ESMF_Time)        :: cTime
-    integer                :: rc, localrc, rc_
+    integer(ESMF_KIND_I4)  :: rc, localrc, rc_, days, hours, minutes, seconds
+    integer(ESMF_KIND_I8)  :: advanceCount
+    type(ESMF_TimeInterval) :: timeStep
 
     rc=ESMF_SUCCESS
     
@@ -324,10 +326,12 @@ contains
       call ESMF_GridCompGet(gridComp,clock=myClock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (present(clock)) clock = myClock
-      call ESMF_ClockGet(myClock,currTime=cTime, rc=localrc)
+      call ESMF_ClockGet(myClock,currTime=cTime, timeStep=timeStep, advanceCount=advanceCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (present(currTime)) currTime = cTime
       call ESMF_TimeGet(cTime,timeStringISOFrac=timestring, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_TimeIntervalGet(timeStep, h=hours, m=minutes, s=seconds, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
       write(timestring,'(A)') '-------------------'
@@ -350,6 +354,9 @@ contains
       call ESMF_GridCompGet(gridComp,petCount=petCount)
       write(formatstring,'(A)') '(A,'//intformat(petCount)//',A)'
       write(message,formatstring) trim(message)//' on ',petCount,' PETs'
+    elseif (cMethod.eq.ESMF_METHOD_RUN .and. have_clock) then
+      write(formatstring,'(A)') '(A,'//intformat(advanceCount)//',A,'//intformat(hours)//',A,I2.2,A,I2.2,A)'
+      write(message, formatstring) trim(message)//' step ',advanceCount,' dt=',hours,':',minutes,':',seconds,' hours'      
     end if
     write(message,'(A)') trim(message)//' ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
