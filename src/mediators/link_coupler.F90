@@ -572,8 +572,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
           !! If this bundle contains fields, then return with warning that this case is not fully checked
 				  if (fieldCount>0) then 
-            write(message,'(A)') trim(name)//' requested fieldbundle '//trim(fieldname)//' exists'
+            write(message,'(A)') trim(name)//' requested fieldbundle '//trim(fieldname)//' exists (not fully checked)'
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            cycle
           endif
 				endif       
       endif
@@ -604,7 +605,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       
         if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-          write(message,'(A)') trim(name)//' requested field '//fieldname//' does not contain grid information'
+          write(message,'(A)') trim(name)//' requested field '//trim(fieldname)//' does not contain grid information'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
