@@ -684,7 +684,7 @@ if (True):
     fid.write('    endif\n\n')
   fid.write('    end do\n\n')
 
-fid.write('    !! Finally reconcile all states\n')
+fid.write('    !! Link all remaining empty fields in states\n')
 for item in gridCompList:
   ito=gridCompList.index(item)
   for j in range(0, len(couplingList)):
@@ -721,13 +721,13 @@ fid.write('''
 fid.write('''
     !!> Check all states for remaining incomplete fields
     !!>@todo find segfault this is causing
-    do i=1, -numGridComp
+    do i=1, numGridComp
       call MOSSCO_StateCheckFields(gridImportStates(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_StateCheckFields(gridExportStates(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
-    do i=1, -numCplComp
+    do i=1, numCplComp
       call MOSSCO_StateCheckFields(cplImportStates(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_StateCheckFields(cplExportStates(i), rc=localrc)

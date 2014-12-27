@@ -809,7 +809,7 @@ contains
     type(ESMF_FieldBundle)                  :: fieldBundle
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)  
-    character(len=ESMF_MAXSTR)              :: name 
+    character(len=ESMF_MAXSTR)              :: name, fieldName
     
     rc_=ESMF_SUCCESS
     status_=ESMF_FIELDSTATUS_COMPLETE
@@ -828,8 +828,9 @@ contains
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(state, trim(itemNameList(i)), field, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_FieldGet(field, status=status_, rc=localrc)
+          call ESMF_FieldGet(field, name=fieldName, status=status_, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          !write(0,*) trim(name), trim(fieldName), status_
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           call ESMF_StateGet(state, trim(itemNameList(i)), fieldBundle, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -857,7 +858,7 @@ contains
     if (present(status)) then
       status=status_              
     else
-      if (present(rc) .and. status /= ESMF_FIELDSTATUS_COMPLETE) rc = 999
+      if (present(rc) .and. status_ /= ESMF_FIELDSTATUS_COMPLETE) rc = 999
     endif
     
     return
