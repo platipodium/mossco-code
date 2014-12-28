@@ -15,6 +15,11 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "fabm0d_component.F90"
+
 module fabm0d_component
 
   use esmf
@@ -49,14 +54,25 @@ module fabm0d_component
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
+    
+    integer(ESMF_KIND_I4) :: localrc
+  
+    rc=ESMF_SUCCESS
+    
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
@@ -64,6 +80,8 @@ module fabm0d_component
   !!
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Initialize"
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     use time, only: start,stop
     implicit none
@@ -85,32 +103,19 @@ module fabm0d_component
     logical            :: input_from_namelist = .true.
     character(len=256) :: din_variable='gotm_npzd_nut',pon_variable='gotm_npzd_det'
     character(len=ESMF_MAXSTR) :: message, timestring, name
+    integer(ESMF_KIND_I4) :: localrc
 
     namelist /model_setup/ title,start,stop,dt,ode_method, &
                            din_variable, pon_variable
     namelist /mossco_fabm0d/ forcing_from_coupler,din_variable,pon_variable
   
-    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
-    ! Create a local clock, set its parameters to those of the parent clock
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
-    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! initialize from namelists (called by driver with *wrong* time info)
     call init_0d(forcing_from_coupler=forcing_from_coupler)
@@ -124,17 +129,25 @@ module fabm0d_component
     ! set the timestep from the namelist, but overwrite the namelist's 
     ! start and stop times with the ones from the local clock
     gotm_time_timestep=dt
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=rc)
-    call ESMF_ClockSet(clock,timeStep=timeInterval,rc=rc)
+    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_time_timestep,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockSet(clock,timeStep=timeInterval,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     
     write(message,'(A,F8.0,A)') trim(name)//' internal timestep is ',gotm_time_timestep,' seconds'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)    
     
-    call ESMF_ClockGet(clock,startTime=startTime, stopTime=stopTime)
-    call ESMF_TimeGet(startTime,timeStringISOFrac=timestring)
+    call ESMF_ClockGet(clock,startTime=startTime, stopTime=stopTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeGet(startTime,timeStringISOFrac=timestring, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     gotm_time_start=timestring(1:10)//" "//timestring(12:19)
      
-    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     gotm_time_stop=timestring(1:10)//" "//timestring(12:19)
 
 
@@ -144,31 +157,43 @@ module fabm0d_component
 
     !> create grid
     distgrid =  ESMF_DistGridCreate(minIndex=(/1,1,1/), maxIndex=(/1,1,1/), &
-                                    indexflag=ESMF_INDEX_GLOBAL, rc=rc)
+                                    indexflag=ESMF_INDEX_GLOBAL, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                                    
+    call ESMF_AttributeSet(distgrid,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> create export fields
     dinarray = ESMF_ArrayCreate(distgrid=distgrid,farray=din%conc, &
                    indexflag=ESMF_INDEX_GLOBAL, &
-                   name="dissolved_inorganic_nitrogen_in_water", rc=rc)
+                   name="dissolved_inorganic_nitrogen_in_water", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(dinarray,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     ponarray = ESMF_ArrayCreate(distgrid,farray=pon%conc, &
                    indexflag=ESMF_INDEX_GLOBAL, &
-                   name="particulare_organic_nitrogen_in_water", rc=rc)
+                   name="particulare_organic_nitrogen_in_water", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(ponarray,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     wsarray = ESMF_ArrayCreate(distgrid,farray=pon%ws, &
                    indexflag=ESMF_INDEX_GLOBAL, &
-                   name="pon_sinking_velocity_in_water", rc=rc)
+                   name="pon_sinking_velocity_in_water", rc=localrc)
+    call ESMF_AttributeSet(wsarray,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     !> set export state
-    call ESMF_StateAddReplace(exportState,(/dinarray,ponarray,wsarray/),rc=rc)
+    call ESMF_StateAddReplace(exportState,(/dinarray,ponarray,wsarray/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
  
-    call ESMF_ClockGet(clock,currTime=currTime)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' initialized.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc);
-   
-    rc = ESMF_SUCCESS
+    call MOSSCO_CompExit()
     
   end subroutine Initialize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -181,27 +206,30 @@ module fabm0d_component
     type(ESMF_Time)            :: currTime, startTime, stopTime
     integer(ESMF_KIND_I8)      :: seconds, advanceCount, dt
     type(ESMF_TimeInterval)    :: timeStep
+    integer(ESMF_KIND_I4)      :: localrc
     
+    rc = ESMF_SUCCESS
+
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      clock=clock, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
  
     call ESMF_ClockGet(clock,startTime=startTime, currTime=currTime, &
-      stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' running'
      
-    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeIntervalGet(stopTime-currTime, s_i8=seconds, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeIntervalGet(stopTime-currTime, s_i8=seconds, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeIntervalGet(timeStep, s_i8=dt, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_TimeIntervalGet(timeStep, s_i8=dt, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     gotm_time_min_n=advanceCount
     gotm_time_max_n=advanceCount + int(seconds/gotm_time_timestep, ESMF_KIND_I8)
@@ -213,13 +241,13 @@ module fabm0d_component
     ! get import state
     if (forcing_from_coupler) then
       call ESMF_StateGet(importState, itemSearch='temperature_in_water', &
-        itemCount=itemCount, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (itemCount==1) then
-        call ESMF_StateGet(importState, 'temperature_in_water', import_field, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(import_field, farrayPtr=water_temperature, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_StateGet(importState, 'temperature_in_water', import_field, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(import_field, farrayPtr=water_temperature, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         zerod%temp = water_temperature(1,1,1)
       else
         write(message,'(A)') 'Required field temperature_in_water not found'
@@ -227,13 +255,13 @@ module fabm0d_component
       endif
 
       call ESMF_StateGet(importState, itemSearch='salinity_in_water', &
-        itemCount=itemCount, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (itemCount==1) then 
-        call ESMF_StateGet(importState, 'salinity_in_water', import_field, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_StateGet(importState, 'salinity_in_water', import_field, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         zerod%salt = salinity(1,1,1)
       else
         call ESMF_LogWrite('Salinity field not found, '// &
@@ -243,13 +271,13 @@ module fabm0d_component
       
       
       call ESMF_StateGet(importState, itemSearch='radiation_in_water', &
-        itemCount=itemCount, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (itemCount==1) then 
-        call ESMF_StateGet(importState, 'radiation_in_water', import_field, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_StateGet(importState, 'radiation_in_water', import_field, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(import_field, farrayPtr=salinity, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           zerod%par  = radiation(1,1,1)
       else
         call ESMF_LogWrite('PAR field not found, '// &
@@ -269,18 +297,18 @@ module fabm0d_component
     call update_export_states( (/din,pon/) ) 
 
     do while (.not.ESMF_ClockIsStopTime(clock))
-      call ESMF_ClockAdvance(clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockAdvance(clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
     
-    call ESMF_GridCompGet(gridComp, name=name, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(clock,currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -288,6 +316,8 @@ module fabm0d_component
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     
     type(ESMF_GridComp)   :: gridComp
@@ -300,24 +330,25 @@ module fabm0d_component
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+    integer(ESMF_KIND_I4)      :: localrc
 
 	  !> Obtain information on the component, especially whether there is a local
 	  !! clock to obtain the time from and to later destroy
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      clockIsPresent=clockIsPresent, rc=localrc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     if (.not.clockIsPresent) then
 			clock=parentClock
     else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
     
     !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_ClockGet(clock,currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
    
@@ -326,10 +357,10 @@ module fabm0d_component
     !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finalized'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
@@ -337,11 +368,14 @@ module fabm0d_component
   end subroutine Finalize
 
     !> Actually, this should be an extension of ESMF_TimeSet 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "timeString2ESMF_Time"
   subroutine timeString2ESMF_Time(timestring,time)
     character(len=*), intent(in) :: timestring
     type(ESMF_Time), intent(out) :: time
 
     integer :: yy,mm,dd,h,m,s
+    integer(ESMF_KIND_I4)      :: localrc
 
     read(timestring(1:4),'(i4)') yy
     read(timestring(6:7),'(i2)') mm
