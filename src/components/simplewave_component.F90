@@ -133,6 +133,8 @@ module simplewave_component
     do i=1,size(importList)
       field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_StateAdd(importState,(/field/), rc=localrc)
@@ -151,6 +153,8 @@ module simplewave_component
 
     do i=1,size(exportList)
       field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'units',trim(exportList(i)%units), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -241,12 +245,16 @@ module simplewave_component
           grid = ESMF_GridCreate(trim(gridFileName),ESMF_FILEFORMAT_SCRIP,(/1,1/), &
                                  addCornerStagger=.true., rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_AttributeSet(grid,'creator',trim(name), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A,I6,A)') trim(name)//' uses regular grid from '//trim(gridFileName)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         else
           grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),coordDep1=(/1/),coordDep2=(/2/),name=trim(name)//'Grid',rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
+           call ESMF_AttributeSet(grid,'creator',trim(name), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
              computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX,rc=localrc)
