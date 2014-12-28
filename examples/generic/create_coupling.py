@@ -29,6 +29,7 @@ else:
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='getm--fabm_pelagic--netcdf'
+     filename='benthic_geoecology'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -612,7 +613,7 @@ for item in gridCompList:
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
   
-  if dependencyDict.has_key(item):
+  if dependencyDict.has_key(item) and len(dependencyDict[item]) > 0:
     fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
     for i,jtem in enumerate(dependencyDict[item]):
       fid.write('    charValueList(' + str(i+1) + ') = \'' + jtem + '\'\n')
