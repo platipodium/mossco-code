@@ -689,7 +689,7 @@ contains
     
 
     do i=1,size(importList)
-      call ESMF_StateGet(importState, itemSearch=trim(importList(1)%name), itemCount=itemCount, rc=localrc)
+      call ESMF_StateGet(importState, itemSearch=trim(importList(i)%name), itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemCount>0) cycle
@@ -759,6 +759,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     turb_difz = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
 
+    rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
