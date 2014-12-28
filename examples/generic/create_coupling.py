@@ -726,12 +726,16 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_StateCheckFields(gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
+      call MOSSCO_StateLog(gridImportStateList(i)) 
+      call MOSSCO_StateLog(gridExportStateList(i)) 
+   enddo
     do i=1, numCplComp
       call MOSSCO_StateCheckFields(cplImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_StateCheckFields(cplExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call MOSSCO_StateLog(cplImportStateList(i)) 
+      call MOSSCO_StateLog(cplExportStateList(i)) 
     enddo
 ''')
   
