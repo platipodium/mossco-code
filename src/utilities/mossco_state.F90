@@ -660,17 +660,17 @@ contains
     if (isPresent) then
       call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    	write(message,'(A)') trim(message)//' ['//stringValue(1:len(message)-3-len_trim(message))//']'
-  	  write(message,'(A)') trim(message)//name(1:len(message)-1-len_trim(message))
+      call MOSSCO_MessageAdd(message, ' ['//stringValue)
+      call MOSSCO_MessageAdd(message, ']'//name)
     else
-      write(message,'(A)') trim(message)//' '//name(1:len(message)-1-len_trim(message))
+      call MOSSCO_MessageAdd(message,' '//name)
     endif
 
     if (fieldStatus==ESMF_FIELDSTATUS_EMPTY) then
-     	write(message,'(A)') trim(message)//' (empty) '
+      call MOSSCO_MessageAdd(message,' (empty)')
      	return
     elseif (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then
-     	write(message,'(A)') trim(message)//' (gridset) '
+      call MOSSCO_MessageAdd(message,' (gridset)')
     endif
 
     call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
@@ -681,18 +681,15 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_GridGet(grid, name=geomName, rc=localrc)  
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
-      if (len_trim(message) + len_trim(geomName) + 1 <= len(message)) then
-     	  write(message,'(A)') trim(message)//' '//trim(geomName)
-     	else 
-     	  message(len_trim(message)+1:len(message)) = ' '//geomName(1:len(message)-len_trim(message)-1)
-     	endif
+ 
+      call MOSSCO_MessageAdd(message,' '//geomName)     
     elseif (geomtype==ESMF_GEOMTYPE_MESH) then
      	write(message,'(A)') trim(message)//' mesh'
+      call MOSSCO_MessageAdd(message,' mesh')     
     elseif (geomtype==ESMF_GEOMTYPE_LOCSTREAM) then
-     	write(message,'(A)') trim(message)//' locstream'
+      call MOSSCO_MessageAdd(message,' locstream')     
     elseif (geomtype==ESMF_GEOMTYPE_XGRID) then
-     	write(message,'(A)') trim(message)//' xgrid'
+      call MOSSCO_MessageAdd(message,' xgrid')     
     else
       write(0,*) 'ERROR: geomtype not defined'
     endif
@@ -713,8 +710,6 @@ contains
     !else
     !  write(0,*) 'NOT implemented: rank > 4'
     !endif
-    
-    if (len_trim(message)>len(message)-3) message(len(message)-3:len(message))='.'
     
     length=len_trim(message)	
     if (present(length_)) length_=length

@@ -11,7 +11,15 @@
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
 
+
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "mossco_strings.F90"
+
 module mossco_strings
+
+  use esmf
 
 implicit none
 
@@ -29,6 +37,8 @@ implicit none
 
 contains
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "only_var_name"
    function only_var_name(longname)
       character(:),allocatable     :: only_var_name
       character(len=*), intent(in) :: longname
@@ -45,6 +55,8 @@ contains
    end function only_var_name
 
    !> replace char_old by char_new in string
+#undef  ESMF_METHOD
+#define ESMF_METHOD "replace_character"
    subroutine replace_character(string,char_old,char_new)
       character(len=*), intent(inout) :: string
       character(len=1), intent(in)    :: char_old,char_new
@@ -65,6 +77,8 @@ contains
       end do
    end subroutine replace_character
    
+#undef  ESMF_METHOD
+#define ESMF_METHOD "split_string"
    subroutine split_string(string,remainder, char)
      character(len=*), intent(out)   :: remainder
      character(len=*), intent(inout) :: string
@@ -89,17 +103,23 @@ contains
      return
    end subroutine split_string
    
+#undef  ESMF_METHOD
+#define ESMF_METHOD "order_i8"
    integer function order_i8(i)
      integer(kind=8),intent(in) :: i
      order_i8=int(log10(i*1.0))
    end function order_i8
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "order_i4"
    integer function order_i4(i)
      integer(kind=4),intent(in) :: i
      order_i4=int(log10(i*1.0))
    end function order_i4
 
    
+#undef  ESMF_METHOD
+#define ESMF_METHOD "intformat_i8"
    function intformat_i8(i)
      character(len=4) :: intformat_i8
      integer(kind=8), intent(in) :: i
@@ -112,6 +132,8 @@ contains
 
   end function intformat_i8
      
+#undef  ESMF_METHOD
+#define ESMF_METHOD "intformat_i4"
    function intformat_i4(i)
      character(len=4) :: intformat_i4
      integer(kind=4), intent(in) :: i
@@ -124,5 +146,31 @@ contains
 
   end function intformat_i4
    
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_MessageAdd"
+  subroutine MOSSCO_MessageAdd(message, string)
+  
+    character(ESMF_MAXSTR), intent(inout)  :: message
+    character(len=*), intent(in)     :: string
+    
+    integer(ESMF_KIND_I4)                  :: len1, len2, len0
+    
+    len0=len(message)
+    len1=len_trim(message)
+    len2=len_trim(string)
+    
+    
+    
+    if (len1 + len2 <= len0) then
+      write(message, '(A)') trim(message)//trim(string)
+    elseif (len1 > len0 - 2 ) then
+      return
+    else
+      write(message, '(A)') trim(message)//string(1:len0-len1-2)//'..'
+    endif
+    
+    return
+  
+  end subroutine MOSSCO_MessageAdd
 
 end module mossco_strings
