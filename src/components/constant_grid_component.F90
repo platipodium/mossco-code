@@ -226,6 +226,8 @@ module constant_component
       do
         cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (len_trim(cur_item%units)>0) then
           call ESMF_AttributeSet(cur_item%field,'units',trim(cur_item%units))

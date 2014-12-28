@@ -283,6 +283,8 @@ contains
       name="Effect_of_MPB_on_sediment_erodibility_at_soil_surface", &
       staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(Microphytobenthos_erodibility, 'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(Effect_of_MPB_on_critical_bed_shearstress(inum,jnum))
 
@@ -299,6 +301,8 @@ contains
 
     Microphytobenthos_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
       name="Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(Microphytobenthos_critical_bed_shearstress, 'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate( Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(inum,jnum))
@@ -317,6 +321,8 @@ contains
     Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
       name="Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(Macrofauna_erodibility, 'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(Effect_of_Mbalthica_on_critical_bed_shearstress(inum,jnum))
 
@@ -333,6 +339,8 @@ contains
 
     Macrofauna_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
       name="Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(Macrofauna_critical_bed_shearstress, 'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> set export state

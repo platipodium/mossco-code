@@ -18,6 +18,8 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "constant_component.F90"
 
+#define CONSTANT_OLD
+
 module constant_component
 
   use esmf
@@ -355,6 +357,8 @@ module constant_component
             indexflag=ESMF_INDEX_DELOCAL, &
             staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (localDeCount3>0) then
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, &
@@ -365,6 +369,8 @@ module constant_component
           cur_item%field = ESMF_FieldCreate(grid2, arraySpec2, &
             indexflag=ESMF_INDEX_DELOCAL, &
             staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (localDeCount2>0) then
@@ -381,6 +387,8 @@ module constant_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #else
         cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
@@ -402,6 +410,8 @@ module constant_component
       do 
         cur_item%field = ESMF_FieldCreate(mesh, typekind=ESMF_TYPEKIND_R8, &
           meshloc=ESMF_MESHLOC_ELEMENT, name=trim(cur_item%standard_name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 				do localDe=0,localDeCount-1
