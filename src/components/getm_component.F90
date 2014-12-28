@@ -94,23 +94,23 @@ module getm_component
     call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
                                     userRoutine=InitializeP0, &
                                     phase=0,rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
                                     userRoutine=InitializeP1, &
                                     phase=1,rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp,ESMF_METHOD_INITIALIZE, &
                                     userRoutine=InitializeP2, &
                                     phase=2,rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
@@ -190,11 +190,15 @@ module getm_component
    InitializePhaseMap(2) = "IPDv00p2=2"
 
    !call NUOPC_CompAttributeAdd(gridComp)
-   call ESMF_AttributeAdd(gridComp,convention="NUOPC",purpose="General", &
-                          attrList=(/"InitializePhaseMap"/))
-   call ESMF_AttributeSet(gridComp,name="InitializePhaseMap",           &
+    call ESMF_AttributeAdd(gridComp,convention="NUOPC",purpose="General", &
+                          attrList=(/"InitializePhaseMap"/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                          
+                                                  
+    call ESMF_AttributeSet(gridComp,name="InitializePhaseMap",           &
                                    valueList=InitializePhaseMap,        &
                                    convention="NUOPC",purpose="General",rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    call MOSSCO_GridCompExitLog(gridComp)
 
@@ -250,7 +254,7 @@ module getm_component
     call ESMF_GridCompGet(gridComp,vmIsPresent=vmIsPresent,       &
                                    clockIsPresent=clockIsPresent, &
                                    rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.vmIsPresent) then
       call ESMF_LogWrite('no VM present',ESMF_LOGMSG_ERROR, &
@@ -260,8 +264,13 @@ module getm_component
 
 #ifdef GETM_PARALLEL
     call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
-    call ESMF_VMGet(vm,mpiCommunicator=comm)
-    call MPI_COMM_DUP(comm,comm_getm,rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_VMGet(vm,mpiCommunicator=comm, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MPI_COMM_DUP(comm,comm_getm,localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
     call date_and_time(datestr,timestr)
@@ -269,9 +278,14 @@ module getm_component
 
       ! use startTime and stopTime from already initialised getmClock
       call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-      call ESMF_ClockGet(myClock,startTime=startTime,stopTime=stopTime)
-      call ESMF_TimeGet(startTime,timeStringISOFrac=start_external)
-      call ESMF_TimeGet(stopTime,timeStringISOFrac=stop_external)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+      call ESMF_ClockGet(myClock,startTime=startTime,stopTime=stopTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_TimeGet(startTime,timeStringISOFrac=start_external, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_TimeGet(stopTime,timeStringISOFrac=stop_external, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call preinit_model(datestr,timestr)
       call init_time(MinN,MaxN,start_external=start_external, &
@@ -279,9 +293,11 @@ module getm_component
       call postinit_model()
 
       ! use internal GETM time step
-      call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep)
+      call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ClockSet(myClock,name='getmClock',timeStep=timeInterval)
+      call ESMF_ClockSet(myClock,name='getmClock',timeStep=timeInterval, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     else
 
@@ -291,7 +307,8 @@ module getm_component
 
       TimeStrISOFrac=getm_time_start(1:10)//"T"//getm_time_start(12:19)
       call TimeStringISOFrac2ESMFtime(TimeStrISOFrac,getmRefTime)
-      call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep)
+      call ESMF_TimeIntervalSet(timeInterval,s_r8=getm_time_timestep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       getmStartTime = getmRefTime + (MinN-1)*timeInterval
       getmStopTime  = getmRefTime + MaxN*timeInterval
@@ -301,8 +318,10 @@ module getm_component
                                    runTimeStepCount=getmRunTimeStepCount, &
                                    refTime=getmRefTime,                   &
                                    name='getmClock', rc=localrc)
-      call ESMF_GridCompSet(gridComp,clock=myClock)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_GridCompSet(gridComp,clock=myClock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call getmCmp_init_variables()
@@ -391,7 +410,6 @@ module getm_component
     end if
 
     call MOSSCO_GridCompExitLog(gridComp)
-    rc = ESMF_SUCCESS
 
   end subroutine InitializeP1
 
@@ -426,8 +444,8 @@ module getm_component
 
       call MOSSCO_GridCompEntryLog(gridComp)
 
-      call ESMF_StateGet(importState,itemCount=itemCount)
-
+      call ESMF_StateGet(importState,itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemCount .gt. 0) then
 
@@ -439,7 +457,8 @@ module getm_component
          transportFieldCountList = 0
 
          call ESMF_StateGet(importState,itemNameList=itemNameList, &
-                                   itemTypeList=itemTypeList)
+                                   itemTypeList=itemTypeList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          do i=1,itemCount
 !           identify items to be transported by suffix
@@ -449,8 +468,10 @@ module getm_component
             if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
             else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-               call ESMF_StateGet(importState,itemNameList(i),fieldBundleList(i))
-               call ESMF_FieldBundleGet(fieldBundleList(i),fieldCount=transportFieldCountList(i))
+               call ESMF_StateGet(importState,itemNameList(i),fieldBundleList(i), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+               call ESMF_FieldBundleGet(fieldBundleList(i),fieldCount=transportFieldCountList(i), rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
             end if
          end do
 
@@ -466,19 +487,26 @@ module getm_component
             do i=1,itemCount
                if (transportFieldCountList(i) .eq. 0) cycle
                if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
-                  call ESMF_StateGet(importState,itemNameList(i),fieldList_ws(n))
+                  call ESMF_StateGet(importState,itemNameList(i),fieldList_ws(n), rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
                   itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
                   call ESMF_StateGet(importState,itemName,fieldList_conc(n),rc=localrc)
-                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
                   call ESMF_LogWrite(' will transport field '//trim(itemName),ESMF_LOGMSG_INFO)
                   n = n + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
                   itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
-                  call ESMF_StateGet(importState,itemName,fieldBundle)
+                  call ESMF_StateGet(importState,itemName,fieldBundle, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
                   do ii=1,transportFieldCountList(i)
-                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n))
+                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n), rc=localrc)
+                     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
+
                      call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n),rc=localrc)
-                     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+                     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                      n = n + 1
                   end do
                   call ESMF_LogWrite(' will transport fieldbundle '//trim(itemName),ESMF_LOGMSG_INFO)
@@ -491,7 +519,8 @@ module getm_component
 
             do n=1,transportFieldCount
 
-               call ESMF_FieldGet(fieldList_ws(n),status=status)
+               call ESMF_FieldGet(fieldList_ws(n),status=status, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) 
 
                if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
 !                 Coupler called ESMF_FieldEmptyCreate(name),
@@ -505,13 +534,13 @@ module getm_component
                                                staggerloc=ESMF_STAGGERLOC_CENTER, &
                                                totalLWidth=(/HALO,HALO,1/),       &
                                                totalUWidth=(/HALO,HALO,0/),rc=localrc)
-                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
 !                 Coupler linked completed field from fabm_pelagic,
 !                 because GETM's grid was provided to fabm_pelagic.
 !                 The field MUST include the HALO zones and k=0 !!!
                   call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr,rc=localrc)
-                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else
                   call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
                                      line=__LINE__,file=__FILE__,method='InitializeP2()')
@@ -528,10 +557,10 @@ module getm_component
                                                staggerloc=ESMF_STAGGERLOC_CENTER, &
                                                totalLWidth=(/HALO,HALO,1/),       &
                                                totalUWidth=(/HALO,HALO,0/),rc=localrc)
-                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
                   call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr,rc=localrc)
-                  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                end if
 
             end do
@@ -577,11 +606,11 @@ module getm_component
     call getmCmp_update_importState()
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(myClock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeInterval, stopTime=stopTime, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
     !  use clock to do determine time of calling routine
@@ -589,7 +618,8 @@ module getm_component
     if (rc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
-      call ESMF_ClockGet(myClock,stopTime=NextTime)
+      call ESMF_ClockGet(myClock,stopTime=NextTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end if
 
 
@@ -610,15 +640,16 @@ module getm_component
 !     Call transport routine every macro timestep
       if (mod(n,M).eq.0) call getmCmp_transport()
 
-      call ESMF_ClockAdvance(myClock)
-      call ESMF_ClockGet(myClock,currtime=currTime,advanceCount=advanceCount)
+      call ESMF_ClockAdvance(myClock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockGet(myClock,currtime=currTime,advanceCount=advanceCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
     call getmCmp_update_grid(gridComp)
     call getmCmp_update_exportState()
 
     call MOSSCO_GridCompExitLog(gridComp)
-    rc = ESMF_SUCCESS
 
   end subroutine Run
 
@@ -651,20 +682,27 @@ module getm_component
     call ESMF_GridCompGet(gridComp,clockIsPresent=ClockIsPresent, &
                                    gridIsPresent=GridIsPresent,   &
                                    rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (ClockIsPresent) then
-      call ESMF_GridCompGet(gridComp,clock=myClock)
-      call ESMF_ClockDestroy(myClock)
+      call ESMF_GridCompGet(gridComp,clock=myClock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockDestroy(myClock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end if
 
     if (GridIsPresent) then
-      call ESMF_GridCompGet(gridComp,grid=getmGrid)
+      call ESMF_GridCompGet(gridComp,grid=getmGrid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !call ESMF_GridGet(getmGrid,distgrid=getmDistGrid)
       !call ESMF_GridGetCoord(getmGrid,coordDim=...,staggerloc=...,array=array)
       !call ESMF_ArrayDestroy(array)
-      call ESMF_DistGridDestroy(getmDistGrid2D)
-      call ESMF_DistGridDestroy(getmDistGrid3D)
-      call ESMF_GridDestroy(getmGrid)
+      call ESMF_DistGridDestroy(getmDistGrid2D, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_DistGridDestroy(getmDistGrid3D, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_GridDestroy(getmGrid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end if
 
     call MOSSCO_GridCompExitLog(gridComp)
@@ -965,12 +1003,14 @@ module getm_component
     write(debug,*) 'getmCmp_init_grid() # ',Ncall
 #endif
 
-    call ESMF_GridCompGet(gridComp,vm=getmVM, name=name, petCount=getmPetCount)
+    call ESMF_GridCompGet(gridComp,vm=getmVM, name=name, petCount=getmPetCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     myedges = (/ ioff , joff , imax , jmax /)
     allocate(alledges(4*getmPetCount))
 !  syncflag=ESMF_SYNC_BLOCKING (default)
-    call ESMF_VMAllGather(getmVM,myedges,alledges,4)
+    call ESMF_VMAllGather(getmVM,myedges,alledges,4, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    if (runtype .eq. 1) then
       klen = 1
@@ -995,13 +1035,15 @@ module getm_component
 !  internal call to ESMF_DistGridCreateDB()
    getmDistGrid2D = ESMF_DistGridCreate(minval(deBlockList(1:2,1,:),2), &
                                         maxval(deBlockList(1:2,2,:),2), &
-                                        int(deBlockList(1:2,:,:)))
+                                        int(deBlockList(1:2,:,:)), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(getmDistGrid2D,'creator', trim(name), rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    getmDistGrid3D = ESMF_DistGridCreate(minval(deBlockList(:,1,:),2), &
                                         maxval(deBlockList(:,2,:),2), &
-                                        deBlockList)
+                                        deBlockList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(getmDistGrid3D,'creator', trim(name), rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #else
@@ -1011,7 +1053,8 @@ module getm_component
 !             accept subarrays as arguments
 !  internal call to ESMF_DistGridCreateRDT()
    getmDistGrid2D = ESMF_DistGridCreate(int(deBlockList(1:2,1,:)), &
-                                        int(deBlockList(1:2,2,:)))
+                                        int(deBlockList(1:2,2,:)), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(getmDistGrid2D,'creator', trim(name), rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    getmDistGrid3D = ESMF_DistGridCreate(int(deBlockList(:,1,:)), &
@@ -1037,28 +1080,33 @@ module getm_component
 !        Note (KK): These ArrayCreate()'s only work for 1DE per PET!!!
 !                   Automatically determined coordDimMap for rectilinear
 !                   coordinates is incorrect!
-         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,xc1D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,xc1D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xcArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,yc1D,indexflag=ESMF_INDEX_DELOCAL, &
-                                      distgridToArrayMap=(/0,1/))
+                                      distgridToArrayMap=(/0,1/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,xc1D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,xc1D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xcArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,yc1D,indexflag=ESMF_INDEX_DELOCAL, &
-                                      distgridToArrayMap=(/0,1,0/))
+                                      distgridToArrayMap=(/0,1,0/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,xx1D,          &
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1066,14 +1114,16 @@ module getm_component
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       distgridToArrayMap=(/0,1/),   &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,xx1D,          &
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1081,7 +1131,8 @@ module getm_component
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       distgridToArrayMap=(/0,1,0/), &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1089,28 +1140,32 @@ module getm_component
          coordSys = ESMF_COORDSYS_SPH_DEG    ! (default)
          coordDimCount = (/ 1 , 1 , 3 /)     ! rectilinear horizontal coordinates
          coordDimMap = reshape( (/1,2,1,0,0,2,0,0,3/) , (/3,3/) )
-         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonc1D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonc1D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
          call ESMF_AttributeSet(xcArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,latc1D,indexflag=ESMF_INDEX_DELOCAL, &
-                                      distgridToArrayMap=(/0,1/))
+                                      distgridToArrayMap=(/0,1/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc1D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc1D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xcArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc1D,indexflag=ESMF_INDEX_DELOCAL, &
-                                      distgridToArrayMap=(/0,1,0/))
+                                      distgridToArrayMap=(/0,1,0/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonx1D,        &
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1118,14 +1173,16 @@ module getm_component
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       distgridToArrayMap=(/0,1/),   &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonx1D,        &
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1133,7 +1190,8 @@ module getm_component
                                       indexflag=ESMF_INDEX_DELOCAL, &
                                       distgridToArrayMap=(/0,1,0/), &
                                       totalLWidth=(/HALO+1/),       &
-                                      totalUWidth=(/HALO/))
+                                      totalUWidth=(/HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1146,44 +1204,52 @@ module getm_component
          xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,xx2D,           &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          yxArray2D = ESMF_ArrayCreate(getmDistGrid2D,yx2D,           &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,xx2D,           &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          yxArray3D = ESMF_ArrayCreate(getmDistGrid3D,yx2D,           &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,xc2D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,xc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xcArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          
-         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,yc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,yc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,xc2D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,xc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xcArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,yc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,yc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1194,44 +1260,52 @@ module getm_component
          xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonx2D,         &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          yxArray2D = ESMF_ArrayCreate(getmDistGrid2D,latx2D,         &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonx2D,         &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          yxArray3D = ESMF_ArrayCreate(getmDistGrid3D,latx2D,         &
                                       indexflag=ESMF_INDEX_DELOCAL,  &
                                       totalLWidth=(/HALO+1,HALO+1/), &
-                                      totalUWidth=(/HALO,HALO/))
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(yxArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonc2D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xcArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,latc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,latc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray2D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc2D,indexflag=ESMF_INDEX_DELOCAL)
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(xcArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc2D,indexflag=ESMF_INDEX_DELOCAL)
+         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1248,7 +1322,8 @@ module getm_component
                                 gridAlign=(/1,1/),                     &
                                 coordSys=coordSys,                     &
                                 coordDimCount=int(coordDimCount(1:2)), &
-                                coordDimMap=int(coordDimMap(1:2,1:2)))
+                                coordDimMap=int(coordDimMap(1:2,1:2)), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(getmGrid2D,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1256,71 +1331,95 @@ module getm_component
                                 gridAlign=(/1,1,1/),              &
                                 coordSys=coordSys,                &
                                 coordDimCount=coordDimCount,      &
-                                coordDimMap=coordDimMap)
+                                coordDimMap=coordDimMap, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(getmGrid2D,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
    StaggerLoc = ESMF_STAGGERLOC_CENTER ! (default)
 !  2D grid
-   call ESMF_GridSetCoord(getmGrid2D,1,array=xcArray2D,staggerloc=StaggerLoc)
-   call ESMF_GridSetCoord(getmGrid2D,2,array=ycArray2D,staggerloc=StaggerLoc)
-   array = ESMF_ArrayCreate(getmDistGrid2D,maskC,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetCoord(getmGrid2D,1,array=xcArray2D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_GridSetCoord(getmGrid2D,2,array=ycArray2D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   array = ESMF_ArrayCreate(getmDistGrid2D,maskC,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridSetItem(getmGrid2D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+   call ESMF_GridSetItem(getmGrid2D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !  3D grid
-   call ESMF_GridSetCoord(getmGrid3D,1,array=xcArray3D,staggerloc=StaggerLoc)
-   call ESMF_GridSetCoord(getmGrid3D,2,array=ycArray3D,staggerloc=StaggerLoc)
-   array = ESMF_ArrayCreate(getmDistGrid3D,zc,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetCoord(getmGrid3D,1,array=xcArray3D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_GridSetCoord(getmGrid3D,2,array=ycArray3D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   array = ESMF_ArrayCreate(getmDistGrid3D,zc,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=StaggerLoc)
-   !array = ESMF_ArrayCreate(getmDistGrid3D,maskC,indexflag=ESMF_INDEX_DELOCAL)
-   array = ESMF_ArrayCreate(getmDistGrid3D,maskC3D,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   !array = ESMF_ArrayCreate(getmDistGrid3D,maskC,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+   array = ESMF_ArrayCreate(getmDistGrid3D,maskC3D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !  KK-TODO: add attribute with un-/mask value?
 
    StaggerLoc = ESMF_STAGGERLOC_CORNER
 !  2D grid
-   call ESMF_GridSetCoord(getmGrid2D,1,array=xxArray2D,staggerloc=StaggerLoc)
-   call ESMF_GridSetCoord(getmGrid2D,2,array=yxArray2D,staggerloc=StaggerLoc)
-   array = ESMF_ArrayCreate(getmDistGrid2D,maskX,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetCoord(getmGrid2D,1,array=xxArray2D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_GridSetCoord(getmGrid2D,2,array=yxArray2D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   array = ESMF_ArrayCreate(getmDistGrid2D,maskX,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridSetItem(getmGrid2D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+   call ESMF_GridSetItem(getmGrid2D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !  3D grid
-   call ESMF_GridSetCoord(getmGrid3D,1,array=xxArray3D,staggerloc=StaggerLoc)
-   call ESMF_GridSetCoord(getmGrid3D,2,array=yxArray3D,staggerloc=StaggerLoc)
+   call ESMF_GridSetCoord(getmGrid3D,1,array=xxArray3D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_GridSetCoord(getmGrid3D,2,array=yxArray3D,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    array = ESMF_ArrayCreate(getmDistGrid3D,zx,indexflag=ESMF_INDEX_DELOCAL,              &
-                            totalLWidth=(/HALO+1,HALO+1,1/),totalUWidth=(/HALO,HALO,0/))
+                            totalLWidth=(/HALO+1,HALO+1,1/),totalUWidth=(/HALO,HALO,0/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=StaggerLoc)
-   !array = ESMF_ArrayCreate(getmDistGrid3D,maskX,indexflag=ESMF_INDEX_DELOCAL)
+   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   !array = ESMF_ArrayCreate(getmDistGrid3D,maskX,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
    array = ESMF_ArrayCreate(getmDistGrid3D,maskX3D,indexflag=ESMF_INDEX_DELOCAL,     &
-                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/))
+                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc)
+   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_MASK,array=array,staggerloc=StaggerLoc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !  KK-TODO: add attribute with un-/mask value?
 
    array = ESMF_ArrayCreate(getmDistGrid3D,zw,indexflag=ESMF_INDEX_DELOCAL,          &
-                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/))
+                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE)
+   call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call ESMF_GridCompSet(gridComp,grid=getmGrid3D)
+   call ESMF_GridCompSet(gridComp,grid=getmGrid3D, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call getmCmp_update_grid(gridComp)
 
    deallocate(alledges)
@@ -1816,14 +1915,14 @@ module getm_component
                             totalLWidth=int((/imin,jmin/)-lbound(p2d)),  &
                             totalUWidth=int(ubound(p2d)-(/imax,jmax/)),  &
                             name=name,rc=localrc)
-   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
    call ESMF_StateAdd(state,(/field/),rc=localrc)
-   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
    write(debug,*) 'Leaving getmCmp_StateAddPtr2D()'
@@ -1892,12 +1991,12 @@ module getm_component
                             totalLWidth=int((/1,1,1/)-lbound(p3d)),          &
                             totalUWidth=int(ubound(p3d)-(/imax,jmax,klen/)), &
                             name=name,rc=localrc)
-   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    call ESMF_StateAdd(state,(/field/),rc=localrc)
-   if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
    write(debug,*) 'Leaving getmCmp_StateAddPtr3D()'
@@ -1934,7 +2033,7 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    integer                       :: yy,mm,dd,h,m,s
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4) :: localrc, rc
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -1953,7 +2052,8 @@ module getm_component
     read(TimeStrISOFrac(18:19),'(i2)') s
 
     call ESMF_TimeSet(ESMFtime,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s,          &
-                      calkindflag=ESMF_CALKIND_GREGORIAN)
+                      calkindflag=ESMF_CALKIND_GREGORIAN, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
    write(debug,*) 'Leaving TimeStringISOFrac2ESMFtime()'
