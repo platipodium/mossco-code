@@ -24,6 +24,11 @@
 #define _RK4_ 1
 #define _ADAPTIVE_EULER_ 2
 
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "fabm_sediment_component.F90"
+
 module fabm_sediment_component
 
   use esmf
@@ -65,10 +70,13 @@ module fabm_sediment_component
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
   
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
+    integer(ESMF_KIND_I4)      :: localrc
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
@@ -80,6 +88,8 @@ module fabm_sediment_component
   !!
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Initialize"
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
@@ -119,9 +129,10 @@ module fabm_sediment_component
     logical                    :: clockIsPresent
     integer                    :: numElements,numNodes, exclusiveCount(2), rank
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
+    integer(ESMF_KIND_I4)      :: localrc
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! read namelist input for control of timestepping  
     open(33,file='run_sed.nml',action='read',status='old')
@@ -129,11 +140,11 @@ module fabm_sediment_component
 
     !! Set the time step end stop time
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_TimeIntervalSet(timeInterval, s_r8=dt, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_ClockSet(clock, timeStep=timeInterval, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
  
     !! also from namelist, the output timestep is read and
     !! used to create an alarm
@@ -143,10 +154,10 @@ module fabm_sediment_component
 #if 0
     if (sed%do_output) then
       call ESMF_TimeIntervalSet(alarmInterval,s_i8=int(dt*output,kind=ESMF_KIND_I8),rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       outputAlarm = ESMF_AlarmCreate(clock,ringTime=startTime+alarmInterval, &
         name='outputAlarm', ringInterval=alarmInterval,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end if
 #endif
 
@@ -159,9 +170,9 @@ module fabm_sediment_component
       surface_mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh', &
                                   filename=ugrid_name, &
                                   filetypeflag=ESMF_FILEFORMAT_UGRID,rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_MeshGet(surface_mesh,numOwnedElements=numElements,numOwnedNodes=numNodes)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       sed%grid%inum=numElements
       sed%grid%jnum=1
       write(message,*) trim(name)//': use unstructured grid, number of local elements:',numElements
@@ -169,7 +180,7 @@ module fabm_sediment_component
     else
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
            value=foreignGridFieldName, defaultValue='none',rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (trim(foreignGridFieldName)=='none') then 
         sed%grid%type=LOCAL_GRID
       else
@@ -183,18 +194,18 @@ module fabm_sediment_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       call ESMF_StateGet(importState,foreignGridFieldName, field, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field, grid=flux_grid, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field, rank=rank, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (rank/=2) then
         write(message,*) '  foreign horizontal grid rank <> 2'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       end if
       call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       sed%grid%inum=ubnd2(1)-lbnd2(1)+1
       sed%grid%jnum=ubnd2(2)-lbnd2(2)+1
 
@@ -289,7 +300,7 @@ module fabm_sediment_component
       !! create state mesh
 #if 0
       state_mesh = ESMF_MeshCreate(surface_mesh,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
       !! create state and flux fields
@@ -299,17 +310,17 @@ module fabm_sediment_component
                   typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, &
                   ungriddedLBound=(/1/), ungriddedUBound=(/sed%grid%knum/), &
                   gridToFieldMap=(/1,2/), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_FieldGet(field=field, farrayPtr=statemesh_ptr, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         do k=1,sed%grid%knum
           statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
         end do
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (sed%export_states(n)%fabm_id/=-1) then
           !> add boundary upward fluxes
@@ -317,16 +328,16 @@ module fabm_sediment_component
                     name=trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
                     typekind=ESMF_TYPEKIND_R8, &
                     meshloc=ESMF_MESHLOC_ELEMENT,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_FieldGet(field=field, farrayPtr=fluxmesh_ptr, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           fluxmesh_ptr = -fluxes(:,1,sed%export_states(n)%fabm_id)
           call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
           
           
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         end if
       end do
 #if 0
@@ -335,12 +346,12 @@ module fabm_sediment_component
         statemesh_ptr => diag(:,1,:)
         field = ESMF_FieldCreate(state_mesh,farrayPtr=statemesh_ptr, &
                    name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end do
 #endif
 
@@ -348,79 +359,79 @@ module fabm_sediment_component
       field = ESMF_FieldCreate(surface_mesh, &
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       fluxmesh_ptr(1:numElements)=bdys(1:numElements,1,1)
       call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       do n=1,size(sed%export_states)
         if (sed%export_states(n)%fabm_id/=-1) then
           field = ESMF_FieldCreate(surface_mesh, &
                    name=trim(sed%export_states(n)%standard_name)//'_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           fluxmesh_ptr(1:numElements)=bdys(:,1,sed%export_states(n)%fabm_id+1)
           call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (sed%model%info%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
             ! overwrite states with fluxes and set z_velocity to -1.0
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             fluxmesh_ptr(1:numElements)=fluxes(:,1,sed%export_states(n)%fabm_id)
 
             field = ESMF_FieldCreate(surface_mesh, &
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             fluxmesh_ptr(1:numElements)=-1.0_rk
             call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
         end if
       end do  
     else ! sed%grid%use_ugrid
       if (sed%grid%type==LOCAL_GRID) then
         call ESMF_ArraySpecSet(flux_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_ArraySpecSet(state_array, rank=3, typekind=ESMF_TYPEKIND_R8, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         flux_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/_INUM_,_JNUM_/), &
           regDecomp=(/1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
           name="sediment fluxes grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
           coorddep2=(/2/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(flux_grid, 'creator', trim(name), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_GridAddCoord(flux_grid, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         ! skip state grid -> use ungridded dimension
         state_grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/_INUM_,_JNUM_,sed%grid%knum/), &
           regDecomp=(/1,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_GLOBAL,  &
           name="sediment states grid",coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/),&
           coorddep2=(/2/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(state_grid, 'creator', trim(name), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_GridAddCoord(state_grid, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end if
       ! by here, have flux_grid available
       call ESMF_GridGet(flux_grid, indexflag=indexflag,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       ! put concentration array into export state
       ! it might be enough to do this once in initialize(?)
@@ -431,17 +442,17 @@ module fabm_sediment_component
                          staggerloc=ESMF_STAGGERLOC_CENTER, &
                          ungriddedLBound=(/1/), ungriddedUBound=(/sed%grid%knum/), &
                          gridToFieldMap=(/1,2/), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units))
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, &
                        totalLBound=lbnd3,totalUBound=ubnd3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         ptr_f3 = sed%export_states(n)%data ! initialize with 0.0
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (sed%export_states(n)%fabm_id/=-1) then
           !> add boundary upward fluxes
@@ -451,15 +462,15 @@ module fabm_sediment_component
                          staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
           !> fluxes are defined in concentration*m/s
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units)//'/s')
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, &
                        totalLBound=lbnd2,totalUBound=ubnd2, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
           call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         end if
       end do
       do n=1,size(sed%model%info%diagnostic_variables)
@@ -470,47 +481,47 @@ module fabm_sediment_component
                    ungriddedUBound=(/sed%grid%knum/), &
                    gridToFieldMap=(/1,2/), &
                    name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
        call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
        call ESMF_AttributeSet(field,'units',trim(sed%model%info%diagnostic_variables(n)%units))
         
         call ESMF_StateAddReplace(exportState,(/field/),rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end do
 
       !! create boundary fields in import State
       field = ESMF_FieldCreate(flux_grid, &
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'units','degC')
       call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       do n=1,size(sed%export_states)
         if (sed%export_states(n)%fabm_id/=-1) then
           field = ESMF_FieldCreate(flux_grid, &
                    name=trim(sed%export_states(n)%standard_name)//'_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units))
           call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (sed%model%info%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
             field = ESMF_FieldCreate(flux_grid, &
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
                    typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_AttributeSet(field, 'creator', trim(name), rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_AttributeSet(field,'units','m/s')
             call ESMF_StateAddReplace(importState,(/field/),rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
         end if
       end do  
@@ -520,10 +531,12 @@ module fabm_sediment_component
     !call ESMF_StatePrint(exportState)
 
     call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Initialize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     implicit none
@@ -557,25 +570,26 @@ module fabm_sediment_component
     type(ESMF_Alarm), allocatable :: alarmList(:)
     integer(ESMF_KIND_I4)      :: alarmCount
     character(len=ESMF_MAXSTR) :: alarmName
+    integer(ESMF_KIND_I4)      :: localrc
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     sed%bdys   => bdys
     sed%fluxes => fluxes
 
 	  call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_ClockGet(clock, alarmCount=alarmCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (alarmCount>0) then
       if (.not.allocated(alarmList)) allocate(alarmList(alarmCount))
       call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_ALL, alarmList=alarmList, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       do i=1,alarmCount
         call ESMF_AlarmGet(alarmList(i), name=alarmName, rc=rc)
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (trim(alarmName)=='outputAlarm') then
            outputAlarm=alarmList(i)
            exit
@@ -629,7 +643,7 @@ module fabm_sediment_component
 #endif
 
       call ESMF_ClockAdvance(clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
    
     ! write back fluxes into export State
@@ -639,9 +653,9 @@ module fabm_sediment_component
         call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_in_soil', &
              field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=statemesh_ptr, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         do k=1,sed%grid%knum
           statemesh_ptr(k,:) = sed%export_states(n)%data(:,1,k)
         end do
@@ -649,26 +663,26 @@ module fabm_sediment_component
           call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
              field,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_FieldGet(field=field, localDe=0, farrayPtr=fluxmesh_ptr, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           fluxmesh_ptr = -fluxes(:,1,sed%export_states(n)%fabm_id)
         end if
       else
         call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_in_soil', &
              field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f3, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         ptr_f3 = sed%export_states(n)%data
         if (sed%export_states(n)%fabm_id /= -1) then
           call ESMF_StateGet(exportState, &
              trim(sed%export_states(n)%standard_name)//'_upward_flux_at_soil_surface', &
              field,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_FieldGet(field=field, localDe=0, farrayPtr=ptr_f2, rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
         end if
       end if ! sed%grid%use_ugrid
@@ -677,11 +691,13 @@ module fabm_sediment_component
     if (allocated(fieldList)) deallocate(fieldlist)
     
     call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
   end subroutine Run
 
-   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
+  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
@@ -693,9 +709,10 @@ module fabm_sediment_component
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+    integer(ESMF_KIND_I4)      :: localrc
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    
     close(funit)
 
@@ -709,12 +726,14 @@ module fabm_sediment_component
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
-    !if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call MOSSCO_CompExit(gridComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_boundary_conditions"
   subroutine get_boundary_conditions(sed,importState,bdys,fluxes)
     
     real(rk),dimension(:,:,:),target :: bdys,fluxes
@@ -728,11 +747,10 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR) :: string
     character(len=ESMF_MAXSTR) :: varname
     real(rk),dimension(_IRANGE_,_JRANGE_),target :: vs,pom
-
-
+    integer(ESMF_KIND_I4)      :: localrc
 
     call ESMF_StateGet(importState,itemSearch="temperature_at_soil_surface",itemCount=itemcount,rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemcount==0) then
 #ifdef DEBUG
@@ -742,7 +760,7 @@ module fabm_sediment_component
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
     else 
       call ESMF_StateGet(importState,"temperature_at_soil_surface",field,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #ifdef DEBUG
       write(string,'(A)') "Water temperature information found"
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
@@ -750,11 +768,11 @@ module fabm_sediment_component
       ptr_f2 => bdys(:,:,1)
       if (sed%grid%use_ugrid) then
         call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         ptr_f2(:,1) = fluxmesh_ptr(:)
       else
         call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         bdys(:,:,1) = ptr_f2(:,:)   ! get lowest vertical index for near-bed temperature
       end if
     endif
@@ -770,7 +788,7 @@ module fabm_sediment_component
       end if
       call ESMF_StateGet(importState,itemSearch=trim(varname)//'_at_soil_surface', &
                          itemCount=itemcount,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemcount==0) then
 #ifdef DEBUG
@@ -779,9 +797,9 @@ module fabm_sediment_component
 #endif
       else
         call ESMF_StateGet(importState,trim(varname)//'_at_soil_surface',field,rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #ifdef DEBUG
-        if (rc == ESMF_SUCCESS) write(0,*) 'found field ',trim(varname)
+        if (localrc == ESMF_SUCCESS) write(0,*) 'found field ',trim(varname)
 #endif
 
         if (sed%model%info%state_variables(i)%properties%get_logical( &
@@ -789,29 +807,29 @@ module fabm_sediment_component
           !write(0,*) 'try to get ',trim(varname)//'_z_velocity'
           call ESMF_StateGet(importState,trim(varname)//'_z_velocity_at_soil_surface', &
                              vs_field,rc=rc)
-          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (sed%grid%use_ugrid) then
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_FieldGet(vs_field,farrayPtr=fluxmesh_ptr_vs,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             fluxes(_IRANGE_,1,i) = -fluxmesh_ptr(:)*fluxmesh_ptr_vs(:) ! downward flux is positive
           else
             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_FieldGet(vs_field,farrayPtr=ptr_vs_2d,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             fluxes(_IRANGE_,_JRANGE_,i) = -ptr_f2(:,:)*ptr_vs_2d(:,:) ! downward flux is positive
           end if
         else
           ptr_f2 => bdys(:,:,i+1)
           if (sed%grid%use_ugrid) then
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             ptr_f2(:,1) = fluxmesh_ptr(:)
           else
             call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=rc)
-            if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             bdys(:,:,i+1) = ptr_f2(:,:)
           end if
           if (sed%bcup_dissolved_variables .eq. 1) then
@@ -832,11 +850,14 @@ module fabm_sediment_component
 
   !> set ESMF attributes "required_flag", "required" and "optional" for
   !! all boundary conditions in the importState
+#undef  ESMF_METHOD
+#define ESMF_METHOD "set_boundary_flags"
   subroutine set_boundary_flags(sed,state)
     type(type_sed)             :: sed
     type(ESMF_State)           :: state
     character(len=ESMF_MAXSTR) :: name,varname,attbasename
     integer                    :: n
+    integer(ESMF_KIND_I4)      :: localrc
 
     name='temperature_at_soil_surface'
     call set_item_flags(state,name,requiredFlag=.true.,requiredRank=2)
