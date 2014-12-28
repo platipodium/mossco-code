@@ -23,6 +23,8 @@
 module fabm0d_component
 
   use esmf
+  use mossco_component
+  
   use time, only: gotm_time_min_n => MinN, gotm_time_max_n => MaxN
   use time, only: gotm_time_timestep => timestep
   use time, only: gotm_time_start => start, gotm_time_stop => stop
@@ -111,7 +113,7 @@ module fabm0d_component
   
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
@@ -188,7 +190,7 @@ module fabm0d_component
     call ESMF_StateAddReplace(exportState,(/dinarray,ponarray,wsarray/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
  
-    call MOSSCO_CompExit()
+    call MOSSCO_CompExit(gridComp, localrc)
     
   end subroutine Initialize
 
@@ -209,6 +211,8 @@ module fabm0d_component
     integer(ESMF_KIND_I4)      :: localrc
     
     rc = ESMF_SUCCESS
+    call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clock=clock, rc=localrc)
@@ -301,18 +305,7 @@ module fabm0d_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
     
-    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_ClockGet(clock,currTime=currTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finished running'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    
+    call MOSSCO_CompExit(gridComp, localrc)
 
   end subroutine Run
 
@@ -332,38 +325,13 @@ module fabm0d_component
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)      :: localrc
 
-	  !> Obtain information on the component, especially whether there is a local
-	  !! clock to obtain the time from and to later destroy
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    if (.not.clockIsPresent) then
-			clock=parentClock
-    else 
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    endif
-    
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=localrc)
+    call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
    
     call finalize_0d()
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
+    call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
 
   end subroutine Finalize
 
