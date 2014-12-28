@@ -223,6 +223,7 @@ module getm_component
     use meteo      ,only: met_method
     use waves      ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE,WAVES_FROMEXT
 #ifdef GETM_PARALLEL
+    use mpi
     use halo_mpi, only: comm_getm
 #endif
 
@@ -238,13 +239,14 @@ module getm_component
     logical               :: vmIsPresent,clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
     type(ESMF_VM)         :: vm
-    integer               :: comm
+    integer               :: comm,length
 
     type(ESMF_Time)         :: getmRefTime,getmStartTime,getmStopTime
     integer                 :: getmRunTimeStepCount
     character(len=8)        :: datestr
     character(len=10)       :: timestr
     character(len=19)       :: TimeStrISOFrac,start_external,stop_external
+    character(len=MPI_MAX_ERROR_STRING) :: mpierrmsg
     integer(ESMF_KIND_I4) :: localrc
 
 	  rc=ESMF_SUCCESS
@@ -269,8 +271,13 @@ module getm_component
     call ESMF_VMGet(vm,mpiCommunicator=comm, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MPI_COMM_DUP(comm,comm_getm,localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MPI_COMM_DUP(comm,comm_getm,rc)
+    if (rc .ne. MPI_SUCCESS) then
+!     need depends on specified mpi error handler (i.e. not MPI_ERRORS_ARE_FATAL)
+      call MPI_ERROR_STRING(rc,mpierrmsg,length,rc)
+      call ESMF_LogWrite(mpierrmsg(1:length),ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    end if
 #endif
 
     call date_and_time(datestr,timestr)
