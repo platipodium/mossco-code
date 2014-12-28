@@ -643,18 +643,28 @@ contains
     integer(ESMF_KIND_I4)   :: rc, length, rank, localrc
     integer(ESMF_KIND_I4)   :: ubnd1(1), ubnd2(2), ubnd3(3), ubnd4(4)
     integer(ESMF_KIND_I4)   :: lbnd1(1), lbnd2(2), lbnd3(3), lbnd4(4)
-    character(ESMF_MAXSTR)  :: geomName, name
+    character(ESMF_MAXSTR)  :: geomName, stringValue, name
     type(ESMF_Grid)         :: grid
     
     type(ESMF_GeomType_Flag) :: geomType
     type(ESMF_FieldStatus_Flag) :: fieldStatus
+    logical                     :: isPresent
    
     rc=ESMF_SUCCESS
  
     call ESMF_FieldGet(field, name=name, status=fieldStatus, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    
-  	write(message,'(A)') trim(message)//' '//name(1:len(message)-1-len_trim(message))
+    call ESMF_AttributeGet(field, name='creator', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (isPresent) then
+      call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    	write(message,'(A)') trim(message)//' ['//stringValue(1:len(message)-3-len_trim(message))//']'
+  	  write(message,'(A)') trim(message)//name(1:len(message)-1-len_trim(message))
+    else
+      write(message,'(A)') trim(message)//' '//name(1:len(message)-1-len_trim(message))
+    endif
 
     if (fieldStatus==ESMF_FIELDSTATUS_EMPTY) then
      	write(message,'(A)') trim(message)//' (empty) '
