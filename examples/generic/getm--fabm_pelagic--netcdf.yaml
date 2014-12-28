@@ -12,4 +12,4 @@ coupling:
   - components: 
      - fabm_pelagic
      - netcdf
-    interval: 12 h
+    interval: 3 h
