@@ -144,7 +144,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     integer              :: localrc
     character (len=ESMF_MAXSTR) :: name
-    type(ESMF_Time)             :: currTime
+    type(ESMF_Time)             :: currTime, stopTime
     type(ESMF_Clock)            :: clock
 
     rc = ESMF_SUCCESS
@@ -158,8 +158,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !!> @todo the following call creates a problem:
-    !!call ESMF_ClockAdvance(clock, rc=localrc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (stopTime>currTime) call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     
     call MOSSCO_CplCompExit(cplComp, localrc)
