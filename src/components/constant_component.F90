@@ -51,13 +51,13 @@ module constant_component
     integer, intent(out) :: rc
 
     integer              :: localrc
-    
+
     rc=ESMF_SUCCESS
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -77,9 +77,9 @@ module constant_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
- 
+
     implicit none
-  
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -101,7 +101,7 @@ module constant_component
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -148,7 +148,7 @@ module constant_component
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
     type(ESMF_VM)                        :: vm
     integer                              :: petCount, localPet
-    
+
     integer                     :: localrc
     character(ESMF_MAXPATHLEN)  :: configFileName, fileName
     type(ESMF_Config)           :: config
@@ -160,18 +160,18 @@ module constant_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+
     call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Check whether there is a config file with the same name as this component
-    !! If yes, load it. 
+    !! If yes, load it.
     configfilename=trim(name)//'.cfg'
-    inquire(FILE=trim(configfilename), exist=fileIsPresent)   
-    if (fileIsPresent) then 
+    inquire(FILE=trim(configfilename), exist=fileIsPresent)
+    if (fileIsPresent) then
       config = ESMF_ConfigCreate(rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
 	    call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -184,10 +184,10 @@ module constant_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default='constant_ugrid.nc')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       inquire(file=trim(fileName), exist=fileIsPresent)
       if (fileIsPresent) then
-        
+
         mesh = ESMF_MeshCreate(meshname=trim(meshName),filename=trim(fileName), &
           filetypeflag=ESMF_FILEFORMAT_UGRID, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -197,7 +197,7 @@ module constant_component
 
         write(message,'(A,I6,A)') trim(name)//' uses unstructured grid from '//trim(fileName)//' with ',numElements,' local elements.'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        
+
       endif
     endif
 
@@ -223,7 +223,7 @@ module constant_component
         do i=1,ubound(farrayPtr3,1)
           farrayPtr3(i,:,:)=6.0D0+1.0D0 * i
         enddo
-        call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=0, farrayPtr=farrayPtr3, rc=localrc) 
+        call ESMF_GridGetCoord(grid3, coordDim=2,  localDE=0, farrayPtr=farrayPtr3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         farrayPtr3(:,:,:)=54.1D0
       endif
@@ -329,6 +329,10 @@ module constant_component
           cur_item%rank=cur_item%rank - 1
           start = index(cur_item%standard_name(start:),'_at_')+1
         enddo
+        do while (index(cur_item%standard_name(start:),'_averaged_')>0)
+          cur_item%rank=cur_item%rank - 1
+          start = index(cur_item%standard_name(start:),'_averaged_')+1
+        enddo
 
         if ((cur_item%rank == 3 .and. localDeCount3>0) &
           .or. (cur_item%rank == 2 .and. localDeCount2>0) &
@@ -357,7 +361,7 @@ module constant_component
             indexflag=ESMF_INDEX_DELOCAL, &
             staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
+          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (localDeCount3>0) then
@@ -370,7 +374,7 @@ module constant_component
             indexflag=ESMF_INDEX_DELOCAL, &
             staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
+          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (localDeCount2>0) then
@@ -388,14 +392,16 @@ module constant_component
 #else
         cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
+        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
         if (len_trim(unitString)>0) then
-          call ESMF_AttributeSet(cur_item%field,'units',trim(unitString))
+          call ESMF_AttributeSet(cur_item%field,'units',trim(unitString), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+        endif
+          call ESMF_AttributeSet(cur_item%field,'default_value',cur_item%value, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_StateAdd(exportState,(/cur_item%field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -407,11 +413,11 @@ module constant_component
         end if
       end do
     else
-      do 
+      do
         cur_item%field = ESMF_FieldCreate(mesh, typekind=ESMF_TYPEKIND_R8, &
           meshloc=ESMF_MESHLOC_ELEMENT, name=trim(cur_item%standard_name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
+        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 				do localDe=0,localDeCount-1
@@ -419,11 +425,14 @@ module constant_component
               computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=localrc)
           farrayPtr1(:)=cur_item%value
         enddo
-          
+
         if (len_trim(unitString)>0) then
             call ESMF_AttributeSet(cur_item%field,'units',trim(unitString))
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
+
+        call ESMF_AttributeSet(cur_item%field,'default_value',cur_item%value, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -433,7 +442,7 @@ module constant_component
         else
           exit
         end if
-      enddo       
+      enddo
     endif
 
     call MOSSCO_CompExit(gridComp, localrc)
@@ -532,7 +541,7 @@ module constant_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc) 
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 	  call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
@@ -541,7 +550,7 @@ module constant_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 	  call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
- 
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
