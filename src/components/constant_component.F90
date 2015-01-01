@@ -130,23 +130,24 @@ module constant_component
     type(ESMF_TimeInterval) :: timeInterval, alarmInterval
 
     integer(ESMF_KIND_I4) :: nexport,lbnd(3),ubnd(3),farray_shape(3)
-    integer(ESMF_KIND_I4) :: i,j,k
+    integer(ESMF_KIND_I4) :: i,j,k, inum, jnum, knum, rank
     type(ESMF_Field), dimension(:), allocatable :: exportField
+    type(ESMF_Field)                            :: field
     type(ESMF_Grid)                             :: grid2, grid3
     type(ESMF_Mesh)                             :: mesh
     type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
-    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:), farrayPtr1(:)
+    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:), farrayPtr1(:), coord(:)
     character(len=ESMF_MAXSTR)                  :: varname, meshname
     integer, parameter                          :: fileunit=21
     logical                                     :: file_readable=.true., clockIsPresent
     integer(ESMF_KIND_I4)                       :: start
 
-    character(len=ESMF_MAXSTR)                  :: timeString, unitString
+    character(len=ESMF_MAXSTR)                  :: timeString, unitString, foreignGridFieldName
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
-    integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2
-    integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
+    integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2, ubnd2, lbnd2
+    integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3, ubnd3, lbnd3
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
     type(ESMF_VM)                        :: vm
     integer                              :: petCount, localPet
@@ -164,6 +165,10 @@ module constant_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+           value=foreignGridFieldName, defaultValue='none',rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Check whether there is a config file with the same name as this component
@@ -188,7 +193,7 @@ module constant_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       inquire(file=trim(fileName), exist=fileIsPresent)
-      if (fileIsPresent) then
+      if (fileIsPresent .and. trim(foreignGridFieldName) == 'none') then
 
         mesh = ESMF_MeshCreate(meshname=trim(meshName),filename=trim(fileName), &
           filetypeflag=ESMF_FILEFORMAT_UGRID, rc=localrc)
@@ -204,7 +209,7 @@ module constant_component
     endif
 
 #ifdef CONSTANT_OLD
-	  if (numNodes==0) then
+	  if (numNodes==0 .and. trim(foreignGridFieldName) == 'none') then
       grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/4,4,2/), &
         regDecomp=(/petCount,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
         name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=localrc)
@@ -261,6 +266,107 @@ module constant_component
     endif
 #endif
 
+    if (trim(foreignGridFieldName) /= 'none') then
+      write(message,*) trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank<2 .or. rank>3) then
+        write(message,*) 'foreign grid must be of rank 2 or 3'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+      end if
+
+      if (rank==2) then
+        call ESMF_FieldGet(field, grid=grid2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        inum=ubnd2(1)-lbnd2(1)+1
+        jnum=ubnd2(2)-lbnd2(2)+1
+        knum=1
+
+        grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/inum,jnum,knum/), &
+          regDecomp=(/petCount,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
+          name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8, &
+          coordDep1=(/1/), &
+          coorddep2=(/2/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridAddCoord(grid3, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !! Copy 1st coordinate dimension
+        call ESMF_GridGetCoord(grid3,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd3, computationalUBound=ubnd3, farrayPtr=coord,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridGetCoord(grid2,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd2, computationalUBound=ubnd2, farrayPtr=farrayPtr1,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        coord(lbnd3(1):ubnd3(1)) = farrayPtr1(lbnd2(1):ubnd2(1))
+
+        !! Copy 2nd coordinate dimension
+        call ESMF_GridGetCoord(grid3,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd3, computationalUBound=ubnd3, farrayPtr=coord,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridGetCoord(grid2,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd2, computationalUBound=ubnd2, farrayPtr=farrayPtr1,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        coord(lbnd3(2):ubnd3(2)) = farrayPtr1(lbnd2(2):ubnd2(2))
+      endif
+
+      if (rank==3) then
+
+        call ESMF_FieldGet(field, grid=grid3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        inum=ubnd3(1)-lbnd3(1)+1
+        jnum=ubnd3(2)-lbnd3(2)+1
+        knum=ubnd3(3)-lbnd3(3)+1
+
+        grid2 = ESMF_GridCreateNoPeriDim(minIndex=lbnd3(1:2), &
+                   maxIndex=ubnd3(1:2), &
+                   regDecomp=(/petCount,1/), &
+                   coordSys=ESMF_COORDSYS_SPH_DEG, &
+                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   name="constant_2d", &
+                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                   coorddep2=(/2/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+        call ESMF_GridAddCoord(grid2, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !! Copy 1st coordinate dimension
+        call ESMF_GridGetCoord(grid3,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd3, computationalUBound=ubnd3, farrayPtr=coord,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridGetCoord(grid2,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd2, computationalUBound=ubnd2, farrayPtr=farrayPtr1,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        farrayPtr1(lbnd2(1):ubnd2(1)) = coord(lbnd3(1):ubnd3(1))
+
+        !! Copy 2nd coordinate dimension
+        call ESMF_GridGetCoord(grid3,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd3, computationalUBound=ubnd3, farrayPtr=coord,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridGetCoord(grid2,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+             computationalLBound=lbnd2, computationalUBound=ubnd2, farrayPtr=farrayPtr1,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        farrayPtr1(lbnd2(2):ubnd2(2)) = coord(lbnd3(2):ubnd3(2))
+      endif
+    endif
     !> create list of export_variables, that will come from a function
     !> which reads a text file
 
