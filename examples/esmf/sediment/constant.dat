@@ -1,0 +1,14 @@
+dissolved_oxygen_at_soil_surface       250.0
+temperature_at_soil_surface 10.0  degree_C
+mole_concentration_of_phosphate_at_soil_surface    1.0
+mole_concentration_of_nitrate_at_soil_surface    5.0
+mole_concentration_of_ammonium_at_soil_surface    5.0
+dissolved_reduced_substances_at_soil_surface    0.0
+fast_detritus_C_at_soil_surface -5.787e-5
+slow_detritus_C_at_soil_surface -5.787e-5
+detritus-P_at_soil_surface -9.26e-7
+fast_detritus_C_z_velocity_at_soil_surface 1.0
+slow_detritus_C_z_velocity_at_soil_surface 1.0
+detritus-P_z_velocity_at_soil_surface 1.0
+
+

@@ -1,0 +1,5 @@
+&mossco_run
+ title = 'SedimentTest'
+ start= "2002-01-01 00:00:00"
+ stop= "2012-01-01 00:00:00"
+/

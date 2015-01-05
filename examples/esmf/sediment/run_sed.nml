@@ -7,7 +7,6 @@
 ! numlayers - number of sediment layers (#)
 !--------------
 &run_nml
-  numyears=10
   dt=3600.
   output=720
   numlayers=24
