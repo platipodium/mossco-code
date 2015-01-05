@@ -827,6 +827,9 @@ module fabm_sediment_component
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             fluxes(_IRANGE_,_JRANGE_,i) = -ptr_f2(:,:)*ptr_vs_2d(:,:) ! downward flux is positive
           end if
+#ifdef DEBUG
+            write(0,*) '  flux',-fluxes(1,1,i)
+#endif
         else
           ptr_f2 => bdys(:,:,i+1)
           if (sed%grid%use_ugrid) then
@@ -846,6 +849,9 @@ module fabm_sediment_component
             !> reset fluxes to zero
             fluxes(_IRANGE_,_JRANGE_,i) = 0.0d0
           end if
+#ifdef DEBUG
+            write(0,*) '  bdys',ptr_f2(1,1)
+#endif
         end if
       endif
  
