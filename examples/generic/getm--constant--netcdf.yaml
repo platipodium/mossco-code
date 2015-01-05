@@ -1,0 +1,15 @@
+dependencies:
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - getm: fabm_pelagic
+
+coupling:
+  - components: 
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components: 
+     - fabm_pelagic
+     - netcdf
+    interval: 3 h

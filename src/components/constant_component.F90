@@ -158,6 +158,7 @@ module constant_component
     logical                     :: fileIsPresent, labelIsPresent
     integer(ESMF_KIND_I4)       :: numNodes=0, numElements=0
     integer(ESMF_KIND_I4)       :: localDeCount, localDe
+    type(ESMF_StateItem_Flag)   :: itemType
 
     rc=ESMF_SUCCESS
 
@@ -267,8 +268,19 @@ module constant_component
 #endif
 
     if (trim(foreignGridFieldName) /= 'none') then
-      write(message,*) trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
+      write(message,'(A)') trim(name)
+      call MOSSCO_MessageAdd(message,' uses foreign grid '//trim(foreignGridFieldName))
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+       write(message,'(A)') trim(name)
+        call MOSSCO_MessageAdd(message,' cannot find field '//trim(foreignGridFieldName))
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+      endif
 
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -600,12 +612,13 @@ module constant_component
       call ESMF_FieldGet(field,status=status, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      write(message,'(A)') trim(name)
       if (status .eq. ESMF_FIELDSTATUS_EMPTY) then
         !call ESMF_StateRemove(exportState,(/trim(cur_item%standard_name)/),rc)
         !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
         !call ESMF_FieldDestroy(cur_item%field,rc)
         !if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        call MOSSCO_MessageAdd(message,trim(name)//' skips field ')
+        call MOSSCO_MessageAdd(message,' skips field ')
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else if (status .eq. ESMF_FIELDSTATUS_GRIDSET) then
@@ -623,16 +636,16 @@ module constant_component
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             farrayPtr3 = cur_item%value
           case default
-            call MOSSCO_MessageAdd(message,trim(name)//' rank not implemented for field ')
+            call MOSSCO_MessageAdd(message,' rank not implemented for field ')
             call MOSSCO_FieldString(field, message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end select
-        call MOSSCO_MessageAdd(message,trim(name)//' completed field ')
+        call MOSSCO_MessageAdd(message,' completed field ')
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
-        call MOSSCO_MessageAdd(message,trim(name)//' skips complete field ')
+        call MOSSCO_MessageAdd(message,' skips complete field ')
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end if
