@@ -1,15 +1,15 @@
-dependencies:
-  - fabm_pelagic:
-    - component: getm
-      grid: temperature_in_water
-  - getm: fabm_pelagic
+# This generic example tests
+# 1. wheter netcdf obtains grid from getm
+# 2. whether getm transports fields from constant
+# 3. whether netcdf correctly writes 2D and 3D fields from constant and getm
 
 coupling:
-  - components: 
+  - components:
      - getm
-     - fabm_pelagic
-    interval: 30 m
-  - components: 
-     - fabm_pelagic
+     - constant
+  - components:
+     - getm
      - netcdf
-    interval: 3 h
+  - components:
+     - constant
+     - netcdf
