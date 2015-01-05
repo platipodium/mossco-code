@@ -336,76 +336,76 @@ module getm_component
     call getmCmp_init_grid(gridComp)
 
     if (associated(depth)) then
-      call getmCmp_StateAddPtr("water_depth_at_soil_surface",depth,exportState,name)
+      call getmCmp_StateAddPtr("water_depth_at_soil_surface",depth,exportState,"m",name)
     end if
     if (associated(hbot)) then
-      call getmCmp_StateAddPtr("layer_height_at_soil_surface",hbot,exportState,name)
+      call getmCmp_StateAddPtr("layer_height_at_soil_surface",hbot,exportState,"m",name)
     end if
     if (associated(U2D)) then
-      call getmCmp_StateAddPtr("depth_averaged_x_velocity_in_water",U2D,exportState,name)
+      call getmCmp_StateAddPtr("depth_averaged_x_velocity_in_water",U2D,exportState,"m s-1",name)
     end if
     if (associated(V2D)) then
-      call getmCmp_StateAddPtr("depth_averaged_y_velocity_in_water",V2D,exportState,name)
+      call getmCmp_StateAddPtr("depth_averaged_y_velocity_in_water",V2D,exportState,"m s-1",name)
     end if
     if (associated(Ubot)) then
-      call getmCmp_StateAddPtr("x_velocity_at_soil_surface",Ubot,exportState,name)
+      call getmCmp_StateAddPtr("x_velocity_at_soil_surface",Ubot,exportState,"m s-1",name)
     end if
     if (associated(Vbot)) then
-      call getmCmp_StateAddPtr("y_velocity_at_soil_surface",Vbot,exportState,name)
+      call getmCmp_StateAddPtr("y_velocity_at_soil_surface",Vbot,exportState,"m s-1",name)
     end if
     if (associated(Tbot)) then
-      call getmCmp_StateAddPtr("temperature_at_soil_surface",Tbot,exportState,name)
+      call getmCmp_StateAddPtr("temperature_at_soil_surface",Tbot,exportState,"degC",name)
     end if
     if (associated(T3D)) then
-      call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState,name)
+      call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState,"degC",name)
     end if
     if (associated(nybot)) then
-      call getmCmp_StateAddPtr("turbulent_kinematic_viscosity_at_soil_surface",nybot,exportState,name)
+      call getmCmp_StateAddPtr("turbulent_kinematic_viscosity_at_soil_surface",nybot,exportState,"m2 s-1",name)
     end if
 
     select case (met_method)
       case(2)
         if (associated(windU)) then
-          call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,exportState,name)
+          call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,exportState,"m s-1",name)
         end if
         if (associated(windV)) then
-          call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,exportState,name)
+          call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,exportState,"m s-1",name)
         end if
       case(3)
         if (associated(windU)) then
-          call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,importState,name)
+          call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,importState,"m s-1",name)
         end if
         if (associated(windV)) then
-          call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,importState,name)
+          call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,importState,"m s-1",name)
         end if
     end select
 
     select case (waveforcing_method)
       case(WAVES_FROMWIND,WAVES_FROMFILE)
         if (associated(waveH)) then
-          call getmCmp_StateAddPtr("wave_height",waveH,exportState,name)
+          call getmCmp_StateAddPtr("wave_height",waveH,exportState,"m",name)
         end if
         if (associated(waveT)) then
-          call getmCmp_StateAddPtr("wave_period",waveT,exportState,name)
+          call getmCmp_StateAddPtr("wave_period",waveT,exportState,"s",name)
         end if
         if (associated(waveK)) then
-          call getmCmp_StateAddPtr("wave_number",waveK,exportState,name)
+          call getmCmp_StateAddPtr("wave_number",waveK,exportState,"m-1",name)
         end if
         if (associated(waveDir)) then
-          call getmCmp_StateAddPtr("wave_direction",waveDir,exportState,name)
+          call getmCmp_StateAddPtr("wave_direction",waveDir,exportState,"deg",name)
         end if
       case(WAVES_FROMEXT)
         if (associated(waveH)) then
-          call getmCmp_StateAddPtr("wave_height",waveH,importState,name)
+          call getmCmp_StateAddPtr("wave_height",waveH,importState,"m",name)
         end if
         if (associated(waveT)) then
-          call getmCmp_StateAddPtr("wave_period",waveT,importState,name)
+          call getmCmp_StateAddPtr("wave_period",waveT,importState,"s",name)
         end if
         if (associated(waveK)) then
-          call getmCmp_StateAddPtr("wave_number",waveK,importState,name)
+          call getmCmp_StateAddPtr("wave_number",waveK,importState,"m-1",name)
         end if
         if (associated(waveDir)) then
-          call getmCmp_StateAddPtr("wave_direction",waveDir,importState,name)
+          call getmCmp_StateAddPtr("wave_direction",waveDir,importState,"deg",name)
         end if
     end select
 
@@ -1879,7 +1879,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_StateAddPtr2D"
-  subroutine getmCmp_StateAddPtr2D(name,p2d,state,componentName)
+  subroutine getmCmp_StateAddPtr2D(name,p2d,state,units,componentName)
 !
 ! !DESCRIPTION:
 !
@@ -1888,7 +1888,7 @@ module getm_component
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
-   character(len=*),intent(in)                          :: name, componentName
+   character(len=*),intent(in)                          :: name,units,componentName
    real(ESMF_KIND_R8),dimension(:,:),pointer,intent(in) :: p2d
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1924,6 +1924,7 @@ module getm_component
                             totalUWidth=int(ubound(p2d)-(/imax,jmax/)),  &
                             name=name,rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_AttributeSet(field,'units',trim(units))
 
     call ESMF_AttributeSet(field,'creator', trim(componentName), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1948,7 +1949,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_StateAddPtr3D"
-  subroutine getmCmp_StateAddPtr3D(name,p3d,state,componentName)
+  subroutine getmCmp_StateAddPtr3D(name,p3d,state,units,componentName)
 !
 ! !DESCRIPTION:
 !
@@ -1958,7 +1959,7 @@ module getm_component
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
-   character(len=*),intent(in)                            :: name, componentName
+   character(len=*),intent(in)                            :: name,units,componentName
    real(ESMF_KIND_R8),dimension(:,:,:),pointer,intent(in) :: p3d
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -2000,6 +2001,8 @@ module getm_component
                             totalUWidth=int(ubound(p3d)-(/imax,jmax,klen/)), &
                             name=name,rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_AttributeSet(field,'units',trim(units))
+
     call ESMF_AttributeSet(field,'creator', trim(componentName), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
