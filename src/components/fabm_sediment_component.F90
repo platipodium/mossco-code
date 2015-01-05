@@ -645,7 +645,7 @@ module fabm_sediment_component
       end if
 
 #ifdef WRITE_PROGRESS
-      if (mod(advanceCount*dt,(365.*86400.)).eq.0) write(0,*) '  elapsed [d]',dt*t/86400.
+      if (mod(advanceCount*dt,(365.*86400.)).eq.0) write(0,*) '  elapsed [d]',dt*advanceCount/86400.
 #endif
 
       call ESMF_ClockAdvance(clock, rc=localrc)
