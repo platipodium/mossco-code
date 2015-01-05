@@ -25,7 +25,7 @@ module toplevel_component
   public SetServices
 
   type(ESMF_GridComp),save  :: fabmComp,constantComp
-  type(ESMF_State),save     :: fabmExp, fabmImp
+  type(ESMF_State),save     :: fabmExp, fabmImp, constExp
 
   contains
 
@@ -64,25 +64,11 @@ module toplevel_component
     
     fabmImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmImp")
     fabmExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmExp")
+    constExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="constExp")
 
     call ESMF_GridCompInitialize(constantComp, importState=fabmExp, exportState=fabmImp,clock=parentClock,rc=rc)
     call ESMF_GridCompInitialize(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
-
-#if 0
-    ! same boundary conditions as for the standalone omexdia_p example:
-    bdys(1,1,1:9) = 0.0d0
-    bdys(1,1,1) = 10.d0   ! degC temperature
-    bdys(1,1,5) = 1.0d0   ! mmolP/m**3 po4
-    bdys(1,1,6) = 10.0d0  ! mmolN/m**3 no3
-    bdys(1,1,7) = 0.0d0   ! mmolN/m**3 nh3
-    bdys(1,1,8) = 250.0d0 ! mmolO2/m**3 oxy
-    bdys(1,1,9) = 0.0d0   ! odu
-
-    fluxes(1,1,1:8) = 0.0d0
-    fluxes(1,1,1) = 5.0d0/86400.0d0 !fdet
-    fluxes(1,1,2) = 5.0d0/86400.0d0 !sdet
-    fluxes(1,1,3) = 0.08/86400.0d0 !pdet
-#endif
+    call ESMF_GridCompInitialize(constantComp, importState=fabmExp, exportState=constExp,clock=parentClock,rc=rc)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
     call ESMF_LogFlush()
@@ -100,7 +86,7 @@ module toplevel_component
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
       
-      call ESMF_GridCompRun(fabmComp, importState=fabmImp, exportState=fabmExp, clock=parentClock, rc=rc)
+      call ESMF_GridCompRun(fabmComp, importState=constExp, exportState=fabmExp, clock=parentClock, rc=rc)
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
