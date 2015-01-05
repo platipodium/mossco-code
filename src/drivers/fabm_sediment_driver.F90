@@ -34,6 +34,8 @@ integer, public, parameter :: FOREIGN_GRID=2
 
 
 type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
+   ! dz - layer heights (difference between interface depths zi)
+   ! dzc - distance between layer center positions zc
    real(rk),dimension(:,:,:),pointer :: zi,dz,zc,dzc
    integer  :: knum,inum=-1,jnum=-1
    real(rk) :: dzmin
@@ -187,8 +189,10 @@ allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
 allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
 do k=1,_KNUM_
-   sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sum(sed%grid%dz(:,:,1:k)))
-   ! pom_flux_max units have to be unified - need to come in mg/m2/d and then scaled in
+   !> set porosity, located at cell centers
+   sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sed%grid%zc(:,:,k))
+
+   ! todo: pom_flux_max units have to be unified - need to come in mg/m2/d and then scaled in
    ! transport routine with the molar mass
    sed%flux_cap(:,:,k) = pom_flux_max/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dz(:,:,k)
    if (k .gt. 2) then
@@ -198,14 +202,16 @@ do k=1,_KNUM_
        end do
      end do
    end if
+
+   !> set bioturbation_factor, located at layer interfaces
    select case (bioturbation_profile)
    case (1) ! linear decrease
      sed%bioturbation_factor(:,:,k) = &
        max(bioturbation_min, &
-       max(bioturbation_depth-100.0d0*sum(sed%grid%dz(:,:,1:k)),0.0d0)/bioturbation_depth)
+       max(bioturbation_depth-100.0d0*sed%grid%zi(:,:,k),0.0d0)/bioturbation_depth)
    case (2) ! exponential decrease
      sed%bioturbation_factor(:,:,k) = &
-       exp(-100.0d0*sum(sed%grid%dz(:,:,1:k))/bioturbation_depth)
+       exp(-100.0d0*sed%grid%zi(:,:,k)/bioturbation_depth)
    case default
    end select
 end do
