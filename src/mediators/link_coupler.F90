@@ -731,7 +731,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (.not.allocated(totalCount)) allocate(totalCount(rank))
     if (.not.allocated(ubnd)) allocate(ubnd(rank))
     if (.not.allocated(lbnd)) allocate(lbnd(rank))
- 		call ESMF_FieldGetBounds(exportField, exclusiveLBound=lbnd,exclusiveUBound=ubnd, rc=localrc)
+      call ESMF_FieldGetBounds(exportField, totalLBound=lbnd,totalUBound=ubnd, rc=localrc)
  		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (rank==1) then
