@@ -161,7 +161,7 @@ module constant_component
       config = ESMF_ConfigCreate(rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-	    call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
+      call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ConfigFindLabel(config, label='meshname:', isPresent=labelIsPresent, rc = rc)
@@ -190,7 +190,7 @@ module constant_component
       endif
     endif
 
-	  if (numNodes==0) then
+    if (numNodes==0) then
       grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
         regDecomp=(/petCount,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
         name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=localrc)
@@ -368,7 +368,7 @@ module constant_component
         call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-				do localDe=0,localDeCount-1
+        do localDe=0,localDeCount-1
           call ESMF_FieldGet(cur_item%field, localDe=localDe, farrayPtr=farrayPtr1, &
               computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=localrc)
           farrayPtr1(:)=cur_item%value
@@ -418,11 +418,11 @@ module constant_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-	  call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-	  call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-	  call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
