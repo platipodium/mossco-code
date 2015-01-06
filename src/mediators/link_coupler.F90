@@ -334,9 +334,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     enddo
   end subroutine link_fields_and_fieldbundles_in_states
 
-
-
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "link_empty_and_111_fields_and_fieldbundles_in_states"
   subroutine  link_empty_and_111_fields_and_fieldbundles_in_states(importState, exportState, rc)
 
     type(ESMF_State), intent(in)    :: importState
@@ -356,7 +355,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
     logical                     :: isPresent
-    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    type(ESMF_FieldStatus_Flag) :: fieldStatus, exportFieldStatus
 
     rc = ESMF_SUCCESS
     name='link_coupler'
@@ -389,23 +388,26 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
+        call ESMF_FieldGet(exportField, status=exportFieldStatus, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !! don't deal with gridset fields here
-        if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) cycle
+        if (exportFieldStatus == ESMF_FIELDSTATUS_GRIDSET) cycle
 
         !! only deal with 1x1x1 COMPLETE fields or empty fields
-        if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+        !! if complete and 1x1x1 then set values in export state
+        if (exportFieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
           call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (.not.allocated(totalCount)) allocate(totalCount(rank))
           call ESMF_FieldGetBounds(exportField, totalCount=totalCount, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           !! don't deal with fields that have all degenerate dimensions
-          if (any(totalCount>1)) cycle
+          if (any(totalCount>1)) then
+            if (allocated(totalCount)) deallocate(totalCount)
+            cycle
+          endif
           if (allocated(totalCount)) deallocate(totalCount)
-
         endif
 
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
@@ -431,12 +433,19 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               cycle
             endif
 
+            !! Introduce here ifelse COPMLETE
+            if (exportFieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+              call copy_1x1x1_field_to_field(exportField, importField, rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              write(message,'(A)') trim(name)//' replaced 1x1x1 field with field '
+            else
+              write(message,'(A)') trim(name)//' replaced empty field with field '
+            endif
+
             call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_FieldDestroy(exportField, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            write(message,'(A)') trim(name)//' replaced empty field with field '
             call MOSSCO_FieldString(importField, message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
@@ -656,6 +665,90 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     call ESMF_LogFlush()
 
   end subroutine link_foreign_grid_or_needed_field_in_states
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "copy_1x1x1_field_to_field"
+  subroutine  copy_1x1x1_field_to_field(importField, exportField, rc)
+
+    type(ESMF_Field), intent(in)    :: importField
+    type(ESMF_Field), intent(inout) :: exportField
+    integer, intent(out), optional  :: rc
+
+    integer              :: localrc, rc_
+    integer(ESMF_KIND_I4)       :: rank
+    integer(ESMF_KIND_I4),allocatable :: totalcount(:), ubnd(:), lbnd(:)
+    character (len=ESMF_MAXSTR) :: message, name
+
+    real(ESMF_KIND_R8), pointer :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
+    real(ESMF_KIND_R8)          :: defaultValue
+
+    rc_ = ESMF_SUCCESS
+    name='link_coupler'
+
+ 		call ESMF_FieldGet(importField, rank=rank, rc=localrc)
+ 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+ 		if (rank<1 .or. rank > 3) then
+ 		  write(message,'(A,I1)') trim(name)//' cannot handle field with rank ',rank
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (.not.allocated(totalCount)) allocate(totalCount(rank))
+ 		call ESMF_FieldGetBounds(importField, totalCount=totalCount, rc=localrc)
+ 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+ 		if (any(totalcount>1)) then
+ 		  write(message,'(A,I1)') trim(name)//' cannot handle non-degenerate field'
+ 		  call MOSSCO_FieldString(importField,message)
+ 		  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (rank==1) then
+      call ESMF_FieldGet(importField, localDE=0, farrayPtr=farrayPtr1, rc=localrc)
+      defaultvalue=farrayPtr1(1)
+    elseif (rank==2) then
+      call ESMF_FieldGet(importField, localDE=0, farrayPtr=farrayPtr2, rc=localrc)
+      defaultvalue=farrayPtr2(1,1)
+    elseif (rank==3) then
+      call ESMF_FieldGet(importField, localDE=0, farrayPtr=farrayPtr3, rc=localrc)
+      defaultvalue=farrayPtr3(1,1,1)
+    endif
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if(allocated(totalCount)) deallocate(totalCount)
+
+ 		call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
+ 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+ 		if (rank<1 .or. rank > 3) then
+ 		  write(message,'(A,I1)') trim(name)//' cannot handle field with rank ',rank
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (.not.allocated(totalCount)) allocate(totalCount(rank))
+    if (.not.allocated(ubnd)) allocate(ubnd(rank))
+    if (.not.allocated(lbnd)) allocate(lbnd(rank))
+ 		call ESMF_FieldGetBounds(exportField, exclusiveLBound=lbnd,exclusiveUBound=ubnd, rc=localrc)
+ 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rank==1) then
+      call ESMF_FieldGet(exportField, localDE=0, farrayPtr=farrayPtr1, rc=localrc)
+      farrayPtr1(lbnd(1):ubnd(1)) = defaultValue
+    elseif (rank==2) then
+      call ESMF_FieldGet(exportField, localDE=0, farrayPtr=farrayPtr2, rc=localrc)
+      farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) = defaultValue
+    elseif (rank==3) then
+      call ESMF_FieldGet(exportField, localDE=0, farrayPtr=farrayPtr3, rc=localrc)
+      farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = defaultValue
+    endif
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+	  if (present(rc)) rc=rc_
+
+  end subroutine  copy_1x1x1_field_to_field
 
 end module link_coupler
 
