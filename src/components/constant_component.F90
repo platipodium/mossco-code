@@ -36,7 +36,7 @@ module constant_component
     type(variable_item_type), pointer     :: next => null()
     type(ESMF_Field)                      :: field
     integer :: rank
-    real(ESMF_KIND_R4) :: value
+    real(ESMF_KIND_R8) :: value
   end type
 
   type(variable_item_type), pointer :: cur_item,variable_items
