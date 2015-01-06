@@ -584,8 +584,10 @@ fid.write('''
     enddo
 
     allocate(CplCompPhaseCountList(numCplComp))
+    cplCompPhaseCountList(:)=1
 
-    do i = 1, numCplComp
+    !!> The code below is not working in ESMF 6, thus not executed for now
+    do i = 1, -numCplComp
       call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_INITIALIZE, &
         phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
