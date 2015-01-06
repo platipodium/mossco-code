@@ -1,6 +1,6 @@
 !> @brief Implementation of an ESMF link coupling
 !>
-!> This computer program is part of MOSSCO. 
+!> This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
@@ -17,7 +17,7 @@
 #define ESMF_FILENAME "link_coupler.F90"
 
 module link_coupler
-    
+
   use esmf
   use mossco_state
   use mossco_component
@@ -40,7 +40,7 @@ module link_coupler
     integer, intent(out) :: rc
 
     integer              :: localrc
-    
+
     rc = ESMF_SUCCESS
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
@@ -59,9 +59,9 @@ module link_coupler
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
-  
+
     implicit none
-  
+
     type(ESMF_cplComp)    :: cplComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -110,11 +110,11 @@ module link_coupler
 
     call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
-    call link_empty_fields_and_fieldbundles_in_states(importState, exportState, rc)
+
+    call link_empty_and_111_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
+    call link_empty_and_111_fields_and_fieldbundles_in_states(exportState, importState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call link_foreign_grid_or_needed_field_in_states(importState, exportState, rc)
@@ -130,7 +130,7 @@ module link_coupler
 
   !> the Run() routine of this coupler copies all fields that are found
   !! in the importState into the exportState.  If the field exists in the
-  !! exportState, then it will be replaced. 
+  !! exportState, then it will be replaced.
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
@@ -151,7 +151,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
     call link_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -163,7 +163,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     if (stopTime>currTime) call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+
     call MOSSCO_CplCompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -172,7 +172,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
  subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_CplComp)    :: cplComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -187,7 +187,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     call MOSSCO_CplCompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_ClockDestroy(clock, rc=localrc)
@@ -204,8 +204,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     type(ESMF_State), intent(in)    :: importState
     type(ESMF_State), intent(inout) :: exportState
-    integer, intent(out)            :: rc   
-    
+    integer, intent(out)            :: rc
+
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount
     character (len=ESMF_MAXSTR) :: message, creatorName
@@ -218,13 +218,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     logical                     :: isPresent
 
     rc = ESMF_SUCCESS
-  
+
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate/reallocate list do hold item information
     if (itemCount > 0) then
-    
+
       if (.not.allocated(itemTypeList)) then
         allocate(itemTypeList(itemCount))
         if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
@@ -234,25 +234,25 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         deallocate(itemNameList)
         allocate(itemNameList(itemCount))
       endif
-    
+
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
-    
-    !! Loop over items 
+
+    !! Loop over items
     do i=1, itemCount
-      
+
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
         call ESMF_StateGet(importState, trim(itemNameList(i)), importField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      
+
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=exportItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        
+
         if (exportItemCount>0) then
           call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=localrc)
@@ -265,41 +265,41 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
               if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
-              call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)        
-       
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
+
             else
               write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
-              !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
-            endif            
-          endif          
-        else     
+              !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            endif
+          endif
+        else
           write(message,'(A)') '    added field '
-          call MOSSCO_FieldString(importField,message)  
+          call MOSSCO_FieldString(importField,message)
           !call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
           !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           !if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
-          call ESMF_StateAdd(exportState,(/importField/), rc=localrc)  
-        endif      
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)      
-        
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          call ESMF_StateAdd(exportState,(/importField/), rc=localrc)
+        endif
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       elseif (itemTypeList(i)==ESMF_STATEITEM_FIELDBUNDLE) then
         call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=exportItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          
+
         if (exportItemCount==0) then
           write(message,'(A)') '    added fieldbundle '//trim(itemNameList(i))
           call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
-          call ESMF_StateAdd(exportState,(/importFieldBundle/), rc=localrc)  
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)  
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          call ESMF_StateAdd(exportState,(/importFieldBundle/), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         else
           call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=localrc)
@@ -312,36 +312,41 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               call ESMF_AttributeGet(importFieldBundle, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
               if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)     
-              call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)               
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)
             else
               write(message,'(A)') '    skipped existing fieldbundle '//trim(itemNameList(i))
-              !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
-            endif            
-          endif          
+              !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            endif
+          endif
           if (exportItemCount>1) then
             write(message,'(A)') '    found multiple fieldbundles with name '//trim(itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)     
-              call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)     
-          endif                      
-        endif       
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)    
-       
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)
+          endif
+        endif
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       else
         write(message,'(A)') '    did not link non-field item '//trim(itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)            
-      endif   
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
     enddo
   end subroutine link_fields_and_fieldbundles_in_states
 
-  subroutine  link_empty_fields_and_fieldbundles_in_states(importState, exportState, rc)
+
+
+
+  subroutine  link_empty_and_111_fields_and_fieldbundles_in_states(importState, exportState, rc)
 
     type(ESMF_State), intent(in)    :: importState
     type(ESMF_State), intent(inout) :: exportState
-    integer, intent(out)            :: rc   
-    
+    integer, intent(out)            :: rc
+
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount
+    integer(ESMF_KIND_I4)       :: rank
+    integer(ESMF_KIND_I4),allocatable :: totalcount(:)
     character (len=ESMF_MAXSTR) :: message, creatorName, name
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList, fieldNameList
@@ -352,16 +357,16 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_StateItem_Flag)   :: itemType
     logical                     :: isPresent
     type(ESMF_FieldStatus_Flag) :: fieldStatus
-    
+
     rc = ESMF_SUCCESS
     name='link_coupler'
-  
+
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate/reallocate list to hold item information
     if (itemCount > 0) then
-    
+
       if (.not.allocated(itemTypeList)) then
         allocate(itemTypeList(itemCount))
         if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
@@ -371,34 +376,48 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         deallocate(itemNameList)
         allocate(itemNameList(itemCount))
       endif
-    
+
       call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
-    
-    !! Loop over items 
+
+    !! Loop over items
     do i=1, itemCount
-      
+
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
         call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (fieldStatus /= ESMF_FIELDSTATUS_EMPTY) cycle
-        
+        !! don't deal with gridset fields here
+        if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) cycle
+
+        !! only deal with 1x1x1 COMPLETE fields or empty fields
+        if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+          call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (.not.allocated(totalCount)) allocate(totalCount(rank))
+          call ESMF_FieldGetBounds(exportField, totalCount=totalCount, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          !! don't deal with fields that have all degenerate dimensions
+          if (any(totalCount>1)) cycle
+          if (allocated(totalCount)) deallocate(totalCount)
+
+        endif
+
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
           itemCount=importItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       	if (importItemCount<=0) cycle
-          
+
         call ESMF_StateGet(importState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
         if (itemType == ESMF_STATEITEM_FIELD) then
             call ESMF_StateGet(importState, trim(itemNameList(i)), importField, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -411,7 +430,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
               cycle
             endif
-            
+
             call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_FieldDestroy(exportField, rc=localrc)
@@ -425,40 +444,40 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
- 			 	    call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)          
+ 			 	    call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
             write(message,'(A)') trim(name)//' replaced empty field with fieldBundle '
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        else 
+        else
           write(message,'(A)') trim(name)//' cannot replace this empty field.'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-          
+
       elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportFieldBundle, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
- 
+
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
-          itemCount=exportItemCount, rc=localrc)  
+          itemCount=exportItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-     
+
         if (exportItemCount==0) cycle
-        
+
         call ESMF_StateGet(importState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=localrc)
-        
+
         if (itemType == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), importField, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
           call ESMF_FieldBundleAdd(exportFieldBundle, (/importField/), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 	      elseif (itemType /= ESMF_STATEITEM_FIELDBUNDLE) then
 	        cycle
 	      endif
-           
+
         call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -470,21 +489,21 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_FieldBundleDestroy(exportFieldBundle, rc=localrc)
 				  cycle
 				endif
-				
+
 				allocate(fieldList(fieldCount), fieldNameList(fieldCount))
 				call ESMF_FieldBundleGet(exportFieldBundle, fieldList=fieldList, fieldNameList=fieldNameList, rc=localrc)
-				
+
 				do j=1, fieldCount
 				  call ESMF_FieldGet(fieldList(j), status=fieldStatus, rc=localrc)
 				  if (fieldStatus /= ESMF_FIELDSTATUS_EMPTY) cycle
-				  
+
 				  call ESMF_FieldBundleGet(importFieldBundle, fieldNameList(j), isPresent=isPresent, rc=localrc)
 				  if (isPresent) then
   				  call ESMF_FieldBundleGet(importFieldBundle, fieldNameList(j), field=importfield, rc=localrc)
 				    call ESMF_FieldBundleAddReplace(exportFieldBundle, (/importField/), rc=localrc)
 	          cycle
 	        endif
-	        
+
 	        call ESMF_StateGet(importState, fieldNameList(j), itemType=itemType, rc=localrc)
 	        if (itemType == ESMF_STATEITEM_FIELD) then
 	          call ESMF_StateGet(importState, trim(fieldNameList(j)), importField, rc=localrc)
@@ -492,9 +511,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 	        endif
 				enddo
 				deallocate(fieldList, fieldNameList)
-      endif    
+      endif
     enddo
-  end subroutine link_empty_fields_and_fieldbundles_in_states
+  end subroutine link_empty_and_111_fields_and_fieldbundles_in_states
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "link_foreign_grid_field_in_states"
@@ -502,8 +521,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     type(ESMF_State), intent(in)    :: importState
     type(ESMF_State), intent(inout) :: exportState
-    integer, intent(out)            :: rc   
-    
+    integer, intent(out)            :: rc
+
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, j, itemCount, exportItemCount, importItemCount, fieldCount, count, len
     character (len=ESMF_MAXSTR) :: message, creatorName, name, fieldName, attributeName, stateName
@@ -514,10 +533,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     logical                     :: isPresent, isNeeded
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_TypeKind_Flag)    :: typekind
-    
+
     rc = ESMF_SUCCESS
     name='link_coupler'
-  
+
     call ESMF_AttributeGet(exportState, count=count, attcountflag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -539,57 +558,57 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         call ESMF_AttributeGet(exportState, trim(attributeName), value=isNeeded, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
         if (.not.isNeeded) cycle
-      endif       
+      endif
 
       !call ESMF_LogWrite('Looking for '//trim(attributeName)//' '//trim(fieldName), ESMF_LOGMSG_INFO)
-            
+
       ! Check whether it is already there
       call ESMF_StateGet(exportState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       if (itemCount>0) then
         ! If it does exist, check for GRIDSET status and return silently, otherwise continue
-         
+
         call ESMF_StateGet(exportState, trim(fieldName), itemType=itemType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
         if (itemType==ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(exportState, trim(fieldName), exportField, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
           call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
           !! If this contains grid information, then return silently
           if (.not. (fieldStatus == ESMF_FIELDSTATUS_EMPTY)) cycle
 
         elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
           call ESMF_StateGet(exportState, trim(fieldName), exportFieldBundle, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
- 
+
  	        call ESMF_FieldBundleGet(exportFieldBundle, fieldCount=fieldCount, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !! If this bundle contains fields, then return with warning that this case is not fully checked
-				  if (fieldCount>0) then 
+				  if (fieldCount>0) then
             write(message,'(A)') trim(name)//' requested fieldbundle '//trim(fieldname)//' exists (not fully checked)'
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             cycle
           endif
-				endif       
+				endif
       endif
-     
-      ! At this point, the field is not already present or at least GRIDSET in export state, thus we need to find it in 
+
+      ! At this point, the field is not already present or at least GRIDSET in export state, thus we need to find it in
       ! import state and link it
-      
+
       call ESMF_StateGet(importState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(importState, name=stateName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       if (itemCount<=0) then
         write(message,'(A)') trim(name)//' requested field(bundle) '//trim(fieldname)//' not found in '//trim(stateName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -598,42 +617,42 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
       call ESMF_StateGet(importState, trim(fieldName), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       if (itemType==ESMF_STATEITEM_FIELD) then
         call ESMF_StateGet(importState, trim(fieldName), importField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
         call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
         if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
           write(message,'(A)') trim(name)//' requested field '//trim(fieldname)//' does not contain grid information'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
-        
+
         call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+
         !call ESMF_FieldDestroy(exportField, rc=localrc)
         !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
         write(message,'(A)') trim(name)//' replaced empty/added field '
         call MOSSCO_FieldString(importField, message)
       elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
         call ESMF_StateGet(importState, trim(fieldName), importFieldBundle, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
         call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         write(message,'(A)') trim(name)//' replaced/added fieldbundle '//trim(fieldName)
       else
         cycle
       endif
-            
+
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
-    
+
     call ESMF_LogFlush()
 
   end subroutine link_foreign_grid_or_needed_field_in_states
