@@ -85,7 +85,7 @@ module constant_component
     integer, intent(out)  :: rc
 
     character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
 
@@ -120,32 +120,22 @@ module constant_component
     integer, intent(out)  :: rc
 
     character(len=ESMF_MAXSTR)     :: name, message, line
-    type(ESMF_Alarm)      :: alarm
-    type(ESMF_Clock)      :: clock
-    type(ESMF_Time)       :: time
-    type(ESMF_TimeInterval) :: timeInterval, alarmInterval
 
-    integer(ESMF_KIND_I4) :: nexport,lbnd(3),ubnd(3),farray_shape(3)
-    integer(ESMF_KIND_I4) :: i,j,k, inum, jnum, knum, rank
-    type(ESMF_Field), dimension(:), allocatable :: exportField
-    type(ESMF_Field)                            :: field
     type(ESMF_Grid)                             :: grid2, grid3
     type(ESMF_Mesh)                             :: mesh
-    type(ESMF_DistGrid)                         :: distgrid
     type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
-    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:), farrayPtr1(:), coord(:)
+    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:), farrayPtr1(:)
     character(len=ESMF_MAXSTR)                  :: varname, meshname
     integer, parameter                          :: fileunit=21
-    logical                                     :: file_readable=.true., clockIsPresent
+    logical                                     :: file_readable=.true.
     integer(ESMF_KIND_I4)                       :: start
 
-    character(len=ESMF_MAXSTR)                  :: timeString, unitString, foreignGridFieldName
+    character(len=ESMF_MAXSTR)                  :: unitString, foreignGridFieldName
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
-    integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2, ubnd2, lbnd2
-    integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3, ubnd3, lbnd3
+    integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2
+    integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
-    type(ESMF_VM)                        :: vm
     integer                              :: petCount, localPet
 
     integer                     :: localrc
@@ -154,7 +144,6 @@ module constant_component
     logical                     :: fileIsPresent, labelIsPresent
     integer(ESMF_KIND_I4)       :: numNodes=0, numElements=0
     integer(ESMF_KIND_I4)       :: localDeCount, localDe
-    type(ESMF_StateItem_Flag)   :: itemType
 
     rc=ESMF_SUCCESS
 
@@ -451,9 +440,7 @@ module constant_component
     integer, intent(out)  :: rc
 
     integer                 :: localrc
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
+    character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
