@@ -587,17 +587,17 @@ fid.write('''
     cplCompPhaseCountList(:)=1
 
     !!> The code below is not working in ESMF 6, thus not executed for now
-    do i = 1, -numCplComp
-      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_INITIALIZE, &
-        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.hasPhaseZero) cycle
+    !do i = 1, numCplComp
+    !  call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_INITIALIZE, &
+    !    phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !  if (.not.hasPhaseZero) cycle
 !     TODO: clock provided during Create() seems to be not recognized?!
       !call ESMF_CplCompInitialize(cplCompList(i), exportState=cplExportStateList(i), phase=0, rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
       !! contains information on the phases defined in the component.
-    end do
+    !end do
 
     !! Declare all dependencies
 ''')
