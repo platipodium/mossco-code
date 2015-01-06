@@ -135,7 +135,6 @@ module constant_component
     real(ESMF_KIND_R8)                          :: floatValue
     integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2
     integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
-    integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
     integer                              :: petCount, localPet
 
     integer                     :: localrc
@@ -289,15 +288,11 @@ module constant_component
           start = index(cur_item%standard_name(start:),'_averaged_')+1
         enddo
 
-        if ((cur_item%rank == 3 .and. localDeCount3>0) &
-          .or. (cur_item%rank == 2 .and. localDeCount2>0) &
-          .or. (numNodes > 0)) then
           write(0,*) trim(name)//' creates field ', &
               trim(varname),' =',cur_item%value
           write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
             ' rank(',cur_item%rank,'), value ',cur_item%value
           call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
-        endif
         nullify(cur_item%next)
       end do
     close(fileunit)
@@ -318,11 +313,9 @@ module constant_component
           call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          if (localDeCount3>0) then
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, &
               computationalLBound=computationalLBound3, computationalUBound=computationalUBound3, rc=localrc)
             farrayPtr3(:,:,:)=cur_item%value
-          endif
         elseif (cur_item%rank==2) then
           cur_item%field = ESMF_FieldCreate(grid2, arraySpec2, &
             indexflag=ESMF_INDEX_DELOCAL, &
@@ -331,11 +324,9 @@ module constant_component
           call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          if (localDeCount2>0) then
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, &
               computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=localrc)
             farrayPtr2(:,:)=cur_item%value
-          endif
         else
           write(0,*) cur_item%rank, trim(varname), cur_item%rank
           write(message,'(A,I1,A)') trim(name)//' not implemented reading rank(', &
@@ -369,7 +360,7 @@ module constant_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         do localDe=0,localDeCount-1
-          call ESMF_FieldGet(cur_item%field, localDe=localDe, farrayPtr=farrayPtr1, &
+          call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr1, &
               computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=localrc)
           farrayPtr1(:)=cur_item%value
         enddo
