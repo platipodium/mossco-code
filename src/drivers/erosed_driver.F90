@@ -418,8 +418,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                         ! stress for cohesive soil
 
    !++++++++++ TEST Bedbc_1993 ++++++++++
-flow2d = .true.
-!ubed = 0.35_fp
+flow2d = .false.
 zubed = thick /2.0_fp
 eps = 1e-6
 z0cur = sedd50/12._fp
@@ -619,21 +618,6 @@ seddif = 1.e-3_fp
               else
                 !(3D)
 
-                ! Find bottom cell for SAND sediment calculations and store for use
-                ! in DIFU and DIF_WS
-                !
-!                kmaxsd = 1
-!                 do k = kmax - 1, 1, -1
-!                   !
-!                   ! Calculate level of lower cell interface
-!                   !
-!                   lci = (1.0_fp + sig(k) - thick(k)/2.0_fp) * h1
-!                   if (lci >= aks) then
-!                      kmaxsd = k
-!                      exit
-!                   endif
-!                 enddo
-
                  drho     = (rhosol(l)-rhowat) / rhowat
                  dstar(l) = sedd50(l) * (drho*g/vicmol**2)**0.3333_fp
 
@@ -673,7 +657,7 @@ seddif = 1.e-3_fp
                  call bedbc1993_arguments%run
 
 
-                 call  bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
+                 call bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
 
                  ce_nm =ce_nm * frac(l,nm)
 
@@ -828,7 +812,7 @@ implicit none
 real (fp)      , intent (in)  :: ws_surface, tauwav, tauc, turb_dif, ustarc
 real (fp)      , intent (out) :: seddif
 
-real (fp)                   :: epsilon, beta, betaef
+real (fp)                     :: epsilon, beta, betaef
 
 epsilon = 1.0e-8_fp
 
