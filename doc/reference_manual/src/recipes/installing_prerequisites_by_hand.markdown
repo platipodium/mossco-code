@@ -137,8 +137,8 @@ If you do not have CMake, it is quite easy to install
 	cd cmake
 	git checkout --track -b release origin/release
 	./configure --prefix=$PREFIX
+	make
 	make && make install
-	
 	
 
 
