@@ -4,6 +4,7 @@ These instructions should get you started on building your own coupled system wi
 
 - Python with YAML support (any version)
 - Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC >= 4.8.2)
+- CMake (>= 2.8.6)
 - ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 6.3.0)
 
 for you to use at this point. If not, you have to do it now (ESMF cannot be installed from the package manager). You will find some help at [www.mossco.de/doc](http://www.mossco.de/doc/index.html#installing-esmf).
@@ -14,6 +15,7 @@ compilers              | gcc, gfortran, g++ | gcc-4_8-branch revision 202388  | 
 NetCDF                 | libnetcdf-dev, netcdf-bin | libnetcdf-dev    |               | netcdf-c7, netcdf-fortran4, netcdf-cxx4
 MPI                    | libmpich2-dev, mpich2     | openmpi-dev      | mpich-gcc48 *or* openmpi-gcc48   | openmpi
 YAML                   | python-yaml   |Python-yaml | py27-yaml  | yaml-py27
+cmake                  | cmake         | cmake      | cmake      | cmake
 
 The ESMF installation finally provides a file `esmf.mk`, this location must be provided to MOSSCO, e.g.:
 
@@ -23,7 +25,7 @@ Depending on your shell, the above definition of environment variables could als
 
 	setenv ESMFMKFILE <path_to_esmf_install>/lib/lib0/Linux.gfortran.64.mpich2.esmf6/esmf.mk
 
-Throughout this document, however, we will show the `bash` style commands only; you may freely substitute these with equivalent `csh` statements. 
+Throughout this document, however, we will show the `bash` style commands only; you may freely substitute these with equivalent `csh` statements.
 
 We will build a system that connects a pelagic ecosystem, running in a 1D ocean model to a benthic pelagic ecosystem, using two external models
 
@@ -34,7 +36,7 @@ For these models, we will combine several MOSSCO components (you can find them i
 
 - constant (Delivers constants to other components)
 - gotm     (Hydrology using GOTM)
-- fabm_gotm (Ecology of FABM running in GOTM context)
+- fabm_pelagic (Ecology of FABM running in ocean)
 - fabm_sediment (Ecology of FABM running in ocean soil)
 
 # Building MOSSCO
@@ -43,7 +45,7 @@ First, define the directories where MOSSCO should be located on your system, and
 
 	export MOSSCO_DIR=$HOME/MOSSCO/mossco-code # for bash users
 	export MOSSCO_SETUPDIR=$HOME/MOSSCO/mossco-setups
-	
+
 	git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 	git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
 
@@ -52,10 +54,10 @@ For those not already working with their own FABM and GOTM codes, the easiest wa
     cd $MOSSCO_DIR
     make external
 
-This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system. 
+This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system.
 
 [Alternatively, MOSSCO checks for the environment variables `MOSSCO_FABMDIR`, `MOSSCO_GOTMDIR`, `FABMDIR` and `GOTMDIR`, the latter ones usually already set for the individual work with these models. `MOSSCO_FABMDIR` and `MOSSCO_GOTMDIR` (which can be different from `FABMDIR` and `GOTMDIR`) indicate that MOSSCO is allowed to initiate compilations within these model directories. If only `FABMDIR` and `GOTMDIR` are available, the user is responsible for the proper compilation of the models.]
-	
+
 Next, define all environment variables that are needed for FABM, GOTM and MOSSCO (these may vary on your system), e.g.:
 
 	export FORTRAN_COMPILER=GFORTRAN # for FABM/GETM/GOTM
@@ -64,28 +66,28 @@ Next, define all environment variables that are needed for FABM, GOTM and MOSSCO
 Finally, build the MOSSCO infrastructure
 
 	make
-	
+
 # Configuring your example
 
 One way to create coupled systems in MOSSCO is to specify the coupling, i.e., the participating components and the coupling intervals in a text file (in a human-readable `.yaml` format) and let MOSSCO take care of creating an executable based on this configuration.
 
-Go to the folder `$MOSSCO_DIR/examples/generic`.  There, you will find a file called `maecs_omexdia.yaml` 
+Go to the folder `$MOSSCO_DIR/examples/generic`.  There, you will find a file called `maecs_omexdia.yaml`
 
 	cd $MOSSCO_DIR/examples/generic
 	cat maecs_omexdia.yaml
-	
+
 The first lines of this file are:
 
-    coupling:   
+    coupling:
       - components:
-        - gotm       # The ocean in 1D (physics)
-        - fabm_gotm  # The ocean biogeochemistry, choose models in fabm.nml
+        - gotm          # The ocean in 1D (physics)
+        - fabm_pelagic  # The ocean biogeochemistry, choose models in fabm.nml
         interval: 360 s # The coupling interval of these two components
       - components:
-        - fabm_gotm
+        - fabm_pelagic
         - pelagic_benthic_coupler # The special coupler between pelagial and benthos
         - fabm_sediment
-        
+
 The coupled system, or coupling, is described as a list of coupling pairs, where each pair is the name of the component.  Optionally, a special coupler component can be named between a coupling pair; also optionally, a coupling interval can be chosen.
 
 You can now create the source code for a coupled system (which will end up in the file `toplevel_component.F90` and a special `Makefile.coupling` snippet) by invoking the create_coupling script
@@ -94,8 +96,8 @@ You can now create the source code for a coupled system (which will end up in th
 
 This will give an output information about seven components to process.
 
-	Components to process: ['link_coupler', 'pelagic_benthic_coupler', 'fabm_sediment', 'constant', 'gotm', 'fabm_gotm', 'benthic_pelagic_coupler']
-	
+	Components to process: ['link_coupler', 'pelagic_benthic_coupler', 'fabm_sediment', 'constant', 'gotm', 'fabm_pelagic', 'benthic_pelagic_coupler']
+
 Now type make to create an executable for your home-brew coupled system
 
 	make
