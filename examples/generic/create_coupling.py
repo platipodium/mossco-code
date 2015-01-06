@@ -1020,13 +1020,15 @@ fid.write('''
     enddo
 
     allocate(CplCompPhaseCountList(numCplComp))
+    !!> @todo reenable if ESMF new enough
+    CplCompPHaseCountList(:)=1
 
-    do i = 1, numCplComp
-      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_RUN, &
-        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.hasPhaseZero) cycle
-    enddo
+    !do i = 1, numCplComp
+    !  call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_RUN, &
+    !    phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !  if (.not.hasPhaseZero) cycle
+    !enddo
 
     call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=localrc)
@@ -1393,13 +1395,15 @@ fid.write('''
     enddo
 
     allocate(CplCompPhaseCountList(numCplComp))
-
-    do i = 1, numCplComp
-      call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_FINALIZE, &
-        phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not. hasPhaseZero) cycle
-    enddo
+    !> @todo reenable if implemented in ESMF versions
+    CplCompPhaseCountList(:)=1
+    
+    !do i = 1, numCplComp
+    !  call ESMF_CplCompGetEPPhaseCount(cplCompList(i), ESMF_METHOD_FINALIZE, &
+    !    phaseCount=CplCompPhaseCountList(i), phaseZeroFlag=hasPhaseZero, rc=localrc)
+    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !  if (.not. hasPhaseZero) cycle
+    !enddo
 
     do i=1,ubound(cplCompList,1)
       call ESMF_CplCompFinalize(cplCompList(i), clock=clock, rc=localrc)
