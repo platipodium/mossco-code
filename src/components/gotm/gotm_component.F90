@@ -351,7 +351,7 @@ module gotm_component
     export_variables_2d(5)%standard_name="x_velocity_at_soil_surface"
     export_variables_2d(6)%standard_name="y_velocity_at_soil_surface"
     export_variables_2d(7)%standard_name="temperature_at_soil_surface"
-    export_variables_2d(8)%standard_name="turbulent_kinematic_viscosity_at_soil_surface"
+    export_variables_2d(8)%standard_name="turbulent_diffusivity_of_momentum_at_soil_surface"
 
 
 

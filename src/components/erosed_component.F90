@@ -685,7 +685,7 @@ contains
     importList(4)%units = 'm s**-1'
     importList(5)%name  = 'y_velocity_at_soil_surface'
     importList(5)%units = 'm s**-1'
-    importList(6)%name  = 'turbulent_kinematic_viscosity_at_soil_surface'
+    importList(6)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
     importList(6)%units = ' '
     importList(7)%name  = 'concentration_of_SPM_z_velocity_in_water'
     importList(7)%units = 'mg m l**-1 s**-1'
@@ -818,7 +818,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call mossco_state_get(importState,(/'y_velocity_at_soil_surface'/),vbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'turbulent_kinematic_viscosity_at_soil_surface'/),turb_difz,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      call mossco_state_get(importState,(/'turbulent_diffusivity_of_momentum_at_soil_surface'/),turb_difz,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

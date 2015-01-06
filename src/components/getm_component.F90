@@ -360,7 +360,7 @@ module getm_component
       call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState,"degC",name)
     end if
     if (associated(nybot)) then
-      call getmCmp_StateAddPtr("turbulent_kinematic_viscosity_at_soil_surface",nybot,exportState,"m2 s-1",name)
+      call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",nybot,exportState,"m2 s-1",name)
     end if
 
     select case (met_method)
