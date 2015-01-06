@@ -126,3 +126,20 @@ and later the fortran library. Issue
 
 You now have your system ready to be used with ESMF and recent Fortran 2003 requirements.
 
+## Installing CMake
+
+Recent versions of FABM require `CMake`,  an alternative to the autotools sytem (`configure`).  GETM, GOTM, and possibly MOSSCO will also move in the future to this configuration program.
+
+If you do not have CMake, it is quite easy to install
+
+	cd $(WORK)
+	git clone git://cmake.org/cmake.git
+	cd cmake
+	git checkout --track -b release origin/release
+	./configure --prefix=$PREFIX
+	make && make install
+	
+	
+
+
+
