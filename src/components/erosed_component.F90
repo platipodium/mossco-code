@@ -451,6 +451,9 @@ contains
       if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
       if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
       close (UnitNr)
+    else
+      Write (0,*) 'Error: sedparams.txt for use in erosed does not exit.!!'
+      stop
     end if
     ! ================================================================================
     !   USER INPUT
@@ -557,7 +560,7 @@ contains
   !                                 totalUWidth=totalUBound-exclusiveUBound)
   !  end do
   !end if
-    
+
 
     !> create export fields
 
@@ -669,7 +672,7 @@ contains
   call ESMF_StateAddReplace(exportState,(/upward_flux_bundle,downward_flux_bundle/),rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Prepare import state for fields needed in run  
+    !! Prepare import state for fields needed in run
     allocate(importList(7))
 
     importList(1)%name  = 'layer_height_at_soil_surface'
@@ -686,14 +689,14 @@ contains
     importList(6)%units = ' '
     importList(7)%name  = 'concentration_of_SPM_z_velocity_in_water'
     importList(7)%units = 'mg m l**-1 s**-1'
-    
+
 
     do i=1,size(importList)
       call ESMF_StateGet(importState, itemSearch=trim(importList(i)%name), itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemCount>0) cycle
-      
+
       field = ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
@@ -755,9 +758,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !    &         v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
 
     if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
-    if (.not.associated(turb_difz)) allocate(turb_difz(inum,jnum))
+  !  if (.not.associated(turb_difz)) allocate(turb_difz(inum,jnum))
 
-    turb_difz = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
+    !turb_difz = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
 
     rc=ESMF_SUCCESS
 
@@ -815,7 +818,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call mossco_state_get(importState,(/'y_velocity_at_soil_surface'/),vbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'turbulent_kinematic_viscosity_at_soil_surface'/),nybot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      call mossco_state_get(importState,(/'turbulent_kinematic_viscosity_at_soil_surface'/),turb_difz,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -827,6 +830,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             thick (inum*(j -1)+i) = hbot (i,j)
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
+
           end do
         end do
 
@@ -940,13 +944,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     end if
 
     !> get bio effects
-    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else 
+    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else
     !> Hassan: todo, was passiert im else-Fall
     call ESMF_StateGet(importState, 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
       itemType=itemType, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
     if (itemType == ESMF_STATEITEM_FIELD) then
       call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
         Microphytobenthos_erodibility,rc=localrc)
@@ -962,13 +966,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 #endif
     end if
 
-    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else 
+    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else
     !> Hassan: todo, was passiert im else-Fall
     call ESMF_StateGet(importState, 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
       itemType=itemType, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+
     if (itemType == ESMF_STATEITEM_FIELD) then
       call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
         Macrofauna_erodibility,rc=localrc)
@@ -1001,7 +1005,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       BioEffects%TauEffect = ptr_f2
     endif
- 
+
     call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
       itemType=itemType ,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
