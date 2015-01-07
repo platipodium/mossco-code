@@ -255,11 +255,11 @@ module pelagic_benthic_coupler
 
 
 		! Create gridset field in import that needs to be filled
-		call ESMF_StateGet(importState, 'concentration_of_dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
+		call ESMF_StateGet(importState, 'dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 		if (itemType==ESMF_STATEITEM_NOTFOUND) then
-			field = ESMF_FieldEmptyCreate(name='concentration_of_dissolved_oxygen_in_water', rc=localrc)
+			field = ESMF_FieldEmptyCreate(name='dissolved_oxygen_in_water', rc=localrc)
 		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 		  call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
