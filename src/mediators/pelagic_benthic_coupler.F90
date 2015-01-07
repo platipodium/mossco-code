@@ -1,6 +1,6 @@
 !> @brief Implementation of an ESMF link coupling
 !>
-!> This computer program is part of MOSSCO. 
+!> This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
 !
@@ -16,7 +16,7 @@
 #define ESMF_FILENAME "pelagic_benthic_coupler.F90"
 
 module pelagic_benthic_coupler
-    
+
   use esmf
   use mossco_state
   use mossco_component
@@ -46,7 +46,7 @@ module pelagic_benthic_coupler
     integer, intent(out) :: rc
 
     integer              :: localrc
-    
+
     rc = ESMF_SUCCESS
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
@@ -65,9 +65,9 @@ module pelagic_benthic_coupler
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
-  
+
     implicit none
-  
+
     type(ESMF_cplComp)    :: cplComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -114,11 +114,11 @@ module pelagic_benthic_coupler
     integer                     :: localrc, i
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_STATEITEM_Flag), allocatable  :: itemTypeList(:)
-    type(ESMF_STATEITEM_Flag)   :: stateItem
+    type(ESMF_STATEITEM_Flag)   :: stateItem, itemType
     type(ESMF_FIELDSTATUS_Flag) :: fieldStatus
     type(ESMF_GEOMTYPE_Flag)    :: geomType
     logical                     :: found = .false.
-    
+
     type(ESMF_Grid)             :: grid
     type(ESMF_Field)            :: field
     integer(ESMF_KIND_I4)       :: rank, ubnd2(2), lbnd2(2), itemCount
@@ -139,29 +139,29 @@ module pelagic_benthic_coupler
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
-    
+
     allocate(itemNameList(itemCount), itemTypeList(itemCount))
     call ESMF_StateGet(exportState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, itemCount
       if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
-      
+
       call ESMF_StateGet(exportState, itemNameList(i), field=field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
-      
+
       call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (geomType == ESMF_GEOMTYPE_GRID) then
         call ESMF_FieldGet(field, grid=grid, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
         call ESMF_GridGet(grid, rank=rank, name=geomName, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (rank /= 2) cycle
@@ -170,16 +170,16 @@ module pelagic_benthic_coupler
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
-      
+
       write(message,'(A)') trim(name)//' uses grid '//trim(geomName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      
+
       pelagic_bdy_grid=grid
       found=.true.
       exit
-          
+
     enddo
-    
+
     deallocate(itemNameList)
     deallocate(itemTypeList)
 
@@ -191,6 +191,18 @@ module pelagic_benthic_coupler
 
     ! create omexdia_p-related fields, if not existing
     call create_required_fields(exportState,pelagic_bdy_grid)
+
+		! Create empty field in import that needs to be filled
+		call ESMF_StateGet(importState, 'concentration_of_dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
+		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+		if (itemType==ESMF_STATEITEM_NOTFOUND) then
+			field = ESMF_FieldEmptyCreate(name='concentration_of_dissolved_oxygen_in_water', rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateAdd(importState,(/field/), rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     call MOSSCO_CompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -226,16 +238,16 @@ module pelagic_benthic_coupler
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
-    
+
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc
-    
+
     rc = ESMF_SUCCESS
-  
+
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
     !> fdet + sdet = CN_det*det
     !> NC_fdet*fdet + NC_sdet*sdet = det
     !> fdet = fac_fdet*det
@@ -279,9 +291,9 @@ module pelagic_benthic_coupler
     if ( ubnd(1)-lbnd(1)<0 .or. ubnd(2)-lbnd(2)<0 .or. ubnd(3)-lbnd(3)<0 ) then
       write(message,'(A)')  trim(name)//' received zero-length data for detritus nitrogen'
       write(0,*) 'lbnd = ', lbnd, 'ubnd = ', ubnd
-      
+
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)     
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call mossco_state_get(importState,(/ &
@@ -304,10 +316,10 @@ module pelagic_benthic_coupler
         if ( Cubnd(1)-Clbnd(1)<0 .or. Cubnd(2)-Clbnd(2)<0 .or. Cubnd(3)-Clbnd(3)<0 ) then
           write(message,'(A)')  trim(name)//' received zero-length data for detritus carbon'
           write(0,*) 'Clbnd = ', lbnd, 'Cubnd = ', ubnd
-      
+
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
           call ESMF_LogFlush()
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)     
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
 
         CN_det = DETC(Clbnd(1):Cubnd(1),Clbnd(2):Cubnd(2),Clbnd(3))/ &
@@ -349,7 +361,7 @@ module pelagic_benthic_coupler
       else
         ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
- 
+
       ! DIM concentrations:
       !  oxygen is coming from constant component
       !  set reduced substances to zero
@@ -364,13 +376,13 @@ module pelagic_benthic_coupler
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/),DIN,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       end if
       call mossco_state_get(importState,(/'ammonium_in_water'/),amm,lbnd=AMMlbnd,ubnd=AMMubnd,rc=ammrc)
-      
+
       call ESMF_StateGet(exportState,'mole_concentration_of_ammonium_at_soil_surface',field,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       if (ammrc == 0) then
         ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
       else
@@ -378,10 +390,10 @@ module pelagic_benthic_coupler
       end if
       call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface',field,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
       if (nitrc == 0) then
         ptr_f2 = nit(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       else
@@ -401,10 +413,10 @@ module pelagic_benthic_coupler
 
     call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface',field,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     ptr_f2 = DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),Plbnd(3))
 
     call MOSSCO_CompExit(cplComp, localrc)
@@ -423,8 +435,8 @@ module pelagic_benthic_coupler
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
-    integer                     :: localrc 
-     
+    integer                     :: localrc
+
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
