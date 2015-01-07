@@ -399,8 +399,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet(exportField, status=exportFieldStatus, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !! don't deal with non-complete fields here
-      if (exportFieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+      !! don't deal with empty fields here
+      if (exportFieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
 
       call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
         itemCount=importItemCount, rc=localrc)
@@ -438,7 +438,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 			call copy_1x1x1_field_to_field(importField, exportField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)') trim(name)//' overwrote data in field'
+      if (exportFieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
+        write(message,'(A)') trim(name)//' completed with data field'
+      else
+        write(message,'(A)') trim(name)//' overwrote data in field'
+      endif
+
       call MOSSCO_FieldString(exportField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -797,6 +802,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     real(ESMF_KIND_R8), pointer :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
     real(ESMF_KIND_R8)          :: defaultValue
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
 
     rc_ = ESMF_SUCCESS
     name='link_coupler'
@@ -834,6 +840,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if(allocated(totalCount)) deallocate(totalCount)
+
+ 		call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
+ 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+		if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
+		  call ESMF_FieldEmptyComplete(exportField, typekind=ESMF_TYPEKIND_R8, rc=localrc)
+   		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+		endif
 
  		call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
  		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

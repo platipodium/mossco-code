@@ -1,8 +1,9 @@
 !> @brief Implementation of an ESMF link coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
+!> @author Carsten Lemmen
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -106,9 +107,9 @@ module pelagic_benthic_coupler
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
-    type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
 
+    type(ESMF_Field)            :: newfield
     character(len=ESMF_MAXSTR)  :: name, message, stateName, fieldName, geomName
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc, i
@@ -192,12 +193,76 @@ module pelagic_benthic_coupler
     ! create omexdia_p-related fields, if not existing
     call create_required_fields(exportState,pelagic_bdy_grid)
 
-		! Create empty field in import that needs to be filled
+    ! Search for suitable 3D field in import state (first found will be used)
+    found = .false.
+
+    call ESMF_StateGet(importState, itemCount=itemCount, name=stateName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount == 0) then
+      write(message,'(A)') trim(name)//' needs at least one field in its import state '//trim(stateName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    allocate(itemNameList(itemCount), itemTypeList(itemCount))
+    call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, itemCount
+      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(importState, itemNameList(i), field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
+
+      call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (geomType == ESMF_GEOMTYPE_GRID) then
+        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridGet(grid, rank=rank, name=geomName, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (rank /= 3) cycle
+      else
+        write(message,'(A)') trim(name)//' not yet implemented obtaining geo information from non-grids. Skipped.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      write(message,'(A)') trim(name)//' uses grid '//trim(geomName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      found=.true.
+      exit
+
+    enddo
+
+    deallocate(itemNameList)
+    deallocate(itemTypeList)
+
+    if (.not.found) then
+      write(message,'(A)') trim(name)//' found no suitable 3D field with grid in state '//trim(stateName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+
+		! Create gridset field in import that needs to be filled
 		call ESMF_StateGet(importState, 'concentration_of_dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 		if (itemType==ESMF_STATEITEM_NOTFOUND) then
 			field = ESMF_FieldEmptyCreate(name='concentration_of_dissolved_oxygen_in_water', rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+		  call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
 		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateAdd(importState,(/field/), rc=localrc)
@@ -264,8 +329,9 @@ module pelagic_benthic_coupler
 
     ! dissolved_oxygen:
     call mossco_state_get(importState,(/ &
-        'oxygen_in_water          ', &
-        'dissolved_oxygen_in_water'/),ptr_f3,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+        'concentration_of_dissolved_oxygen_in_water', &
+        'oxygen_in_water                           ', &
+        'dissolved_oxygen_in_water                 '/),ptr_f3,lbnd=lbnd,ubnd=ubnd,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/),ptr_f2,rc=localrc)
