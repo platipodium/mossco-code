@@ -549,6 +549,12 @@ module getm_component
 !                 The field MUST include the HALO zones and k=0 !!!
                   call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr,rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  if (.not. (      all(lbound(transport_ws(n)%ptr) .eq. (/imin-HALO,jmin-HALO,0   /)) &
+                             .and. all(ubound(transport_ws(n)%ptr) .eq. (/imax+HALO,jmax+HALO,kmax/)) ) ) then
+                     call ESMF_LogWrite('invalid field bounds', &
+                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+                  end if
                else
                   call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
                                      line=__LINE__,file=__FILE__,method='InitializeP2()')
@@ -569,6 +575,12 @@ module getm_component
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
                   call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr,rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  if (.not. (      all(lbound(transport_ws(n)%ptr) .eq. (/imin-HALO,jmin-HALO,0   /)) &
+                             .and. all(ubound(transport_ws(n)%ptr) .eq. (/imax+HALO,jmax+HALO,kmax/)) ) ) then
+                     call ESMF_LogWrite('invalid field bounds', &
+                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+                  end if
                end if
 
             end do
