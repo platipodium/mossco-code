@@ -800,6 +800,15 @@ for icpl in range(1,len(cplCompList)):
   fid.write('    call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=cplImportStateList(' + str(icpl+1) + '), &\n')
   fid.write('      exportState=cplExportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
 
+  fid.write('     call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
+  fid.write('        exportState=cplImportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
+  fid.write('     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')         
+
+  fid.write('     call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(' + str(ito+1) + '), &\n')
+  fid.write('        exportState=cplExportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
+  fid.write('     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')          
+
+
 #fid.write('''
 #    do i=2, numCplComp
 #      call ESMF_AttributeGet(cplImportStateList(i), 'depends_on_id', isPresent=isPresent, rc=localrc)  
@@ -1516,6 +1525,7 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
         'link_coupler' : ['linkcoupler'],
+        'transport_coupler' : ['mossco_coupler'],
         'copy_coupler' : ['copycoupler'],
         'regrid_coupler' : ['regridcoupler'],
         'remtc_atmosphere' : ['remtc'],
@@ -1547,6 +1557,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_coupler' : ['liblinkcoupler'],
+        'transport_coupler' : ['libmossco_coupler'],
         'copy_coupler' : ['libcopycoupler'],
         'regrid_coupler' : ['libregridcoupler'],
         'remtc_atmosphere' : ['libremtc'],
@@ -1629,7 +1640,7 @@ libmossco_info libmossco_test:
 libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler:
+libsurfacescoupler libaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler libmossco_coupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:

@@ -18,7 +18,8 @@ EXTRA_DIST=README
 
 TARGETS=
 ifeq ($(MOSSCO_ESMF),true)
-TARGETS += libremtc liblinkcoupler libxgridcoupler libredistcoupler libcopycoupler libregridcoupler libinoutcoupler
+TARGETS += libremtc liblinkcoupler libxgridcoupler libredistcoupler
+TARGETS += libcopycoupler libregridcoupler libinoutcoupler libmossco_coupler
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
@@ -35,6 +36,9 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
+libmossco_coupler: libtransport_coupler
+
+libtransport_coupler: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_coupler.a(transport_coupler.o)
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 libxgridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
 liblinkcoupler: prefix $(MOSSCO_LIBRARY_PATH)/liblinkcoupler.a
@@ -68,6 +72,9 @@ $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a: copy_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/liblinkcoupler.a: link_coupler.o
 	$(AR) cruvs $@ link_coupler.o
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_coupler.a(transport_coupler.o): transport_coupler.o
+	$(AR) cruvs $@ transport_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a: xgrid_coupler.o
 	$(AR) cruvs $@ xgrid_coupler.o

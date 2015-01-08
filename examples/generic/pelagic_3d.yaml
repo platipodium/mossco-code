@@ -29,6 +29,10 @@ coupling:
      - simplewave
      - erosed
   - components:
+     - fabm_pelagic
+     - transport_coupler
+     - getm
+  - components:
      - getm
      - fabm_pelagic
   - components:
