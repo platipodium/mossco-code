@@ -153,7 +153,7 @@ module getm_component
 !-----------------------------------------------------------------------
 !BOC
 
-	   rc=ESMF_SUCCESS
+   rc=ESMF_SUCCESS
 	   
 #ifdef DEBUG
    integer, save :: Ncall = 0
@@ -250,7 +250,7 @@ module getm_component
     integer(ESMF_KIND_I4) :: localrc
     character(ESMF_MAXSTR)  :: name
 
-	  rc=ESMF_SUCCESS
+    rc=ESMF_SUCCESS
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
@@ -448,7 +448,7 @@ module getm_component
       character(len=*),parameter :: conc_suffix="_in_water"
     integer(ESMF_KIND_I4) :: localrc
 
-	  rc=ESMF_SUCCESS
+      rc=ESMF_SUCCESS
 
       call MOSSCO_GridCompEntryLog(gridComp)
 
@@ -619,7 +619,7 @@ module getm_component
     integer                 :: n
     integer(ESMF_KIND_I4) :: localrc
 
-	  rc=ESMF_SUCCESS
+    rc=ESMF_SUCCESS
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
@@ -693,7 +693,7 @@ module getm_component
     logical               :: ClockIsPresent,GridIsPresent
     integer(ESMF_KIND_I4) :: localrc
 
-	  rc=ESMF_SUCCESS
+    rc=ESMF_SUCCESS
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
