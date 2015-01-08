@@ -1010,7 +1010,7 @@ module getm_component
     integer,dimension(3,3)   :: coordDimMap
     integer,dimension(:,:,:),allocatable                  :: deBlockList
     integer(ESMF_KIND_I4)    :: localrc, rc
-    character(ESMF_MAXSTR)   :: name, message
+    character(ESMF_MAXSTR)   :: name
 !
 !EOP
 !-----------------------------------------------------------------------
