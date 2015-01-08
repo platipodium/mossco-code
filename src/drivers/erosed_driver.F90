@@ -654,6 +654,15 @@ seddif = 1.e-3_fp
                            & taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax   , &
                            & rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd )
 
+!                 write (*,*) 'tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm)'
+!                 write (*,*) tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm)
+!                 write (*,*)' zubed(nm)   ,sedd50(l),l,     sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l)'
+!                 write (*,*) zubed(nm)   ,sedd50(l) ,l,    sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l)
+!                 write (*,*) ' taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax '
+!                 write (*,*)  taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax
+!                 write(*,*) ' rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd '
+!                write(*,*)  rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd
+
                  call bedbc1993_arguments%run
 
 

@@ -61,8 +61,9 @@ real (fp), dimension (:,:), allocatable :: amount
 character (len = 10)      :: units
 integer                   :: StringLength, UnitNr,istat
 logical                   :: opnd, exst
-
-namelist /Macrofaun/  units, amount
+real (fp)                 :: amounttmp
+!namelist /Macrofaun/  units, amount
+namelist /Macrofaun/  units, amounttmp
 allocate ( amount ( this%inum, this%jnum ) )
 
 units = ''
@@ -101,7 +102,7 @@ end if
  if (units == '-') then
 
   !write (*,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
-
+  amount(:,:)= amounttmp
   This%StateVar%intensity = amount
   nullify (This%StateVar%amount)
 
@@ -110,7 +111,7 @@ end if
  ! write (*,*) ' In Mbalthica_class, the biomass of Mbalthica is ', amount
 
   allocate (This%StateVar%amount( this%inum, this%jnum))
-
+  amount(:,:)= amounttmp
   This%StateVar%amount = amount
   nullify (This%StateVar%intensity)
  end if

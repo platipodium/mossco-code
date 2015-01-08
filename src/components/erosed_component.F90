@@ -212,7 +212,10 @@ contains
     logical                   :: clockIsPresent, isPresent
 
     integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount, itemCount
-
+! local variables
+    real(fp),dimension(:), allocatable :: eropartmp, tcrdeptmp,tcrerotmp,depefftmp,depfactmp, &
+                             &   parfluff0tmp,parfluff1tmp,tcrflufftmp, fractmp
+    real (fp)                 :: pmcrittmp
 
     namelist /globaldata/g, rhow
     namelist /benthic/   nmlb       ! = 1  ! first cell number
@@ -361,7 +364,6 @@ contains
 !                                !  0: no fluff layer (default)
 !                                !  1: all mud to fluff layer, burial to bed layers
 !                                !  2: part mud to fluff layer, other part to bed layers (no burial)
- !   nlev=nmub-nmlb+1
 
     nmlb=1
     nmub = inum * jnum
@@ -404,6 +406,12 @@ contains
     allocate (tper      (nmlb:nmub))
     allocate (teta      (nmlb:nmub))
 
+    !allocation of temporal variables
+    allocate ( eropartmp (nfrac),tcrdeptmp(nfrac),tcrerotmp(nfrac),fractmp(nfrac), &
+             & depefftmp(nfrac), depfactmp(nfrac),parfluff0tmp(nfrac), &
+             & parfluff1tmp(nfrac), tcrflufftmp(nfrac),stat =istat)
+    if (istat /= 0) stop 'ERROR in allocation of temporal variables in InitializeP1'
+
     !Initialization
     sink = 0.0_fp
     sour = 0.0_fp
@@ -432,29 +440,54 @@ contains
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (rhosol(i), i=1, nfrac)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd50(i), i=1, nfrac)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (sedd90(i), i=1, nfrac)
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (fractmp(i), i=1, nfrac)
+      !if (istat ==0 ) read (UnitNr,*, iostat = istat) ((frac(i,j), i=1, nfrac), j=nmlb,nmub)    ! fraction of each sedimt class from the whole
  ! cohesive sediment
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (eropartmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrdeptmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrerotmp(i), i=1, nfrac)
+
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
+
  ! cohesive sediment
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
+    if (istat ==0 ) read (UnitNr,*, iostat = istat) pmcrittmp
+      !if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
  ! sediment transport formulation
       if (istat ==0 ) read (UnitNr,*, iostat = istat) alf1                                       ! calibration coefficient van Rijn (1984) [-]
       if (istat ==0 ) read (UnitNr,*, iostat = istat) rksc
  ! fluff layer
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
-      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
-      if (istat /=0) write (*,*) ' Error in reading sedparams !!!!'
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (depefftmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (depfactmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (parfluff0tmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (parfluff1tmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrflufftmp(i), i=1, nfrac)
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
+!      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+      if (istat /=0) stop ' Error in reading sedparams !!!!'
       close (UnitNr)
+      do i =nmlb, nmub
+        eropar   (:,i) = eropartmp   (:)
+        tcrdep   (:,i) = tcrdeptmp   (:)
+        tcrero   (:,i) = tcrerotmp   (:)
+        frac     (:,i) = fractmp     (:)
+        pmcrit   (  i) = pmcrittmp
+        depeff   (:,i) = depefftmp   (:)
+        depfac   (:,i) = depfactmp   (:)
+        parfluff0(:,i) = parfluff0tmp(:)
+        parfluff1(:,i) = parfluff1tmp(:)
+        tcrfluff (:,i) = tcrflufftmp (:)
+      end do
     else
       Write (0,*) 'Error: sedparams.txt for use in erosed does not exit.!!'
       stop
     end if
+
     ! ================================================================================
     !   USER INPUT
     ! ================================================================================
@@ -791,6 +824,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          do j=1,jnum
           do i= 1, inum
            h1(inum*(j -1)+i) = depth(i,j)
+           write (*,*) ' water depth ',depth(i,j)
           end do
          end do
       else
@@ -822,15 +856,27 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+write (*,*) 'layer_height_at_soil_surface', hbot
+
+write (*,*)'depth_averaged_x_velocity_in_water', u2d
+
+write (*,*)'turbulent_diffusivity_of_momentum_at_soil_surface',turb_difz
+
       if (localrc == 0) then
 
         do j=1,jnum
           do i= 1, inum
+            if (u2d(i,j)==-9999.0)u2d(i,j)=0.0_fp
+            if (v2d(i,j)==-9999.0)v2d(i,j)=0.0_fp
             umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
             thick (inum*(j -1)+i) = hbot (i,j)
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
-
+            if (ubot (i,j)==-9999.0) u_bot (inum*(j -1)+i) =0.0_fp
+            if (vbot (i,j)==-9999.0) v_bot (inum*(j -1)+i) =0.0_fp
+     !       write (*,*) 'ubot', ubot(i,j)
+     !       write (*,*) 'vbot', vbot(i,j)
+            write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
           end do
         end do
 
@@ -876,6 +922,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             call MOSSCO_FieldString(field, message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             external_index=1
+            write (*,*) 'external_index is not present, therefore set to 1)'
           endif
 
           call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=localrc)
@@ -887,8 +934,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           if (isPresent) then
             call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            write (*,*) 'mean particle diameter is present',sedd50(nfrac_by_external_idx(external_index))
           else
             sedd50(nfrac_by_external_idx(external_index))=0.0
+            write (*,*) 'mean particle diameter is not present',sedd50(nfrac_by_external_idx(external_index))
+            write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           endif
 
           call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, rc=localrc)
@@ -899,6 +951,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
             rhosol(nfrac_by_external_idx(external_index))=0.0
+            write(message,'(A)')  trim(name)//' did not find "rhosol" attribute in field. It has bee set to zero'
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           endif
 
           !> @todo unclear which localrc is excpected here
@@ -1046,7 +1101,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
         sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
-
+        !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and

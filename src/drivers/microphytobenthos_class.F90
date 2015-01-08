@@ -62,10 +62,10 @@ real (fp), dimension (:,:), allocatable  :: Mass
 character (len = 10)       :: units
 integer                    :: StringLength, UnitNr, istat
 logical                    :: opnd, exst
+real (fp)                  :: masstmp
 
-
-namelist /Microphyto/ units, Mass
-
+!namelist /Microphyto/ units, Mass
+namelist /Microphyto/ units, Masstmp
 allocate ( Mass ( this%inum , this%jnum ) )
 
 this%Species='Microphytobenthos'
@@ -97,6 +97,7 @@ else
 end if
 
  this%UnitNr = UnitNr
+ Mass(:,:) = masstmp
  !write (*,*) ' In Microphytobenthos_class, the amount of Chl biomass is ', Mass
  write (*,*) ' Units are ', units
 
