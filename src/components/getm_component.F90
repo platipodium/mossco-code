@@ -759,6 +759,7 @@ module getm_component
    use meteo          ,only: metforcing,met_method,calc_met,u10,v10
    use waves          ,only: waveforcing_method,NO_WAVES
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
+
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -770,8 +771,6 @@ module getm_component
    REALTYPE,dimension(:,:),pointer :: p2d
    REALTYPE :: getmreal
    integer  :: k,klen
-    integer(ESMF_KIND_I4) :: localrc
-!
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -1471,6 +1470,7 @@ module getm_component
    use domain      , only: imin,imax,jmin,jmax,kmax,az,au,av,H
    use variables_2d, only: z
    use variables_3d, only: ssen,hn
+
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1482,8 +1482,6 @@ module getm_component
 ! !LOCAL VARIABLES
    REALTYPE,dimension(E2DFIELD) :: zwu
    integer :: i,j,k,klen
-    integer(ESMF_KIND_I4) :: localrc
-!
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -1579,6 +1577,7 @@ module getm_component
    use waves          ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
+
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1592,8 +1591,6 @@ module getm_component
    REALTYPE,dimension(:,:),pointer      :: p_vel
    integer                              :: klen
    REALTYPE,parameter                   :: vel_missing=-9999.0
-    integer(ESMF_KIND_I4) :: localrc
-!
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -1761,6 +1758,7 @@ module getm_component
    use waves          ,only: waveforcing_method,WAVES_FROMEXT
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
+
    IMPLICIT NONE
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1768,8 +1766,7 @@ module getm_component
 ! !REVISION HISTORY:
 !  Original Author(s): Knut Klingbeil
 !
-! !LOCAL VARIABLES
-    integer(ESMF_KIND_I4) :: localrc
+! !LOCAL VARIABLES:
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -1828,6 +1825,7 @@ module getm_component
 !
 ! !USES:
    use domain, only: imin,imax,jmin,jmax,kmax
+
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
@@ -1841,8 +1839,6 @@ module getm_component
    REALTYPE,dimension(I3DFIELD),target  :: t_conc,t_ws
    REALTYPE,dimension(:,:,:)   ,pointer :: p_conc,p_ws
    integer                              :: n
-    integer(ESMF_KIND_I4) :: localrc
-!
 !EOP
 !-----------------------------------------------------------------------
 !BOC
