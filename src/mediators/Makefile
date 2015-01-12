@@ -23,6 +23,7 @@ TARGETS += libcopycoupler libregridcoupler libinoutcoupler
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
+TARGETS += libmossco_mediator
 TARGETS += benthicpelagiccoupler
 endif
 ifeq ($(MOSSCO_GOTM),true)
@@ -35,6 +36,9 @@ SUBDIRS=
 .PHONY: default all subdirs $(TARGETS)
 
 all: subdirs $(TARGETS)
+
+libmossco_mediator: libpelagicbenthic_mediator
+libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 libxgridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
@@ -53,6 +57,9 @@ libsediment:
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o):
+	$(AR) cruvs $@ pelagic_benthic_mediator.o
 
 $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a: regrid_coupler.o
 	$(AR) cruvs $@ regrid_coupler.o
@@ -89,6 +96,7 @@ subdirs:
 clean: extraclean
 
 extraclean:
+	@rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a
