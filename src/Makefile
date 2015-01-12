@@ -16,10 +16,10 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README Rules.make
 
-SUBDIRS=include utilities drivers
+SUBDIRS=include utilities drivers 
 
 ifeq ($(MOSSCO_ESMF),true)
-SUBDIRS += components mediators
+SUBDIRS += components mediators connectors
 endif
 
 .PHONY: subdirs $(SUBDIRS)
