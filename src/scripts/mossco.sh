@@ -1,27 +1,25 @@
 #!/bin/bash
 
-set -e
+# Uses getopts functionality, initialize variables
+OPTIND=1         # Reset in case getopts has been used previously in the shell.
+GENERIC=0
+REMAKE=0
 
-if [[ "x${1}" == "x-g" ]]; then 
-  GENERIC=1
-  REMAKE=0
-elif [[ "x${1}" == "x-gr" ]]; then 
-  GENERIC=1
-  REMAKE=1
-elif [[ "x${1}" == "x-rg" ]]; then 
-  GENERIC=1
-  REMAKE=1
-elif [[ "x${1}" == "x-r" ]]; then 
-  GENERIC=0
-  REMAKE=1
-fi
+while getopts "rg:" opt; do
+    case "$opt" in
+    r)  REMAKE=1
+        ;;
+    g)  GENERIC=1
+        ;;
+    esac
+done
 
-shift
+shift $((OPTIND-1))
 
 # Give default argument is none is provided
 if [[ "x${1}" == "x" ]]; then ARG=benthic_geoecology ; else ARG=${1}; fi
 
-if [[ ${GENERIC} == 1 ]] ; then 
+if [[ ${GENERIC} == 1 ]] ; then
   DIR=${MOSSCO_DIR}/examples/generic
 else
   DIR=${MOSSCO_DIR}/examples/${ARG}
