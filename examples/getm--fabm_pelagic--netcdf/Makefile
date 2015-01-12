@@ -22,7 +22,7 @@ ifneq ($(MOSSCO_GETM),true)
 $(error This example only works with MOSSCO_GETM = true)
 endif
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)
-LDFLAGS += -llinkcoupler
+LDFLAGS += -lmossco_connector
 LDFLAGS += -lmossco_netcdf
 LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)
 LDFLAGS += -lmossco_fabmpelagic -lutil -lsolver $(FABM_LDFLAGS)
@@ -32,7 +32,7 @@ LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
 
 all: exec
 
-exec: libmossco_util  liblinkcoupler libmossco_netcdf libmossco_getm libmossco_fabmpelagic libmossco_util libsolver $(TARGET)
+exec: libmossco_util  libmossco_connector libmossco_netcdf libmossco_getm libmossco_fabmpelagic libmossco_util libsolver $(TARGET)
 
 $(TARGET): toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
@@ -59,8 +59,11 @@ libmossco_info libmossco_test:
 libmossco_sediment libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler libgridcoupler libregridcoupler libcopycoupler:
+libsurfacescoupler libaocoupler libgridcoupler libregridcoupler libcopycoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
+
+libmossco_connector:
+	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@

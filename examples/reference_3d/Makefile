@@ -29,7 +29,7 @@ LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)
 LDFLAGS += -lconstant
 LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)
 LDFLAGS += -lsediment -lmossco_sediment -lsolver $(FABM_LDFLAGS)
-LDFLAGS += -llinkcoupler
+LDFLAGS += -lmossco_connector
 LDFLAGS += -lpelagicbenthiccoupler
 LDFLAGS += -lpelagicbenthiccoupler
 LDFLAGS += -lmossco_simplewave
@@ -38,15 +38,15 @@ LDFLAGS += -lmossco_clm
 LDFLAGS += -lmossco_benthos
 LDFLAGS += -lmossco_fabmpelagic -lutil -lsolver $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_erosed
-LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) 
+LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)
 
 .PHONY: all exec reference_3d
 
 all: exec
 
-toplevel_component.o : toplevel_component.F90 libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver liblinkcoupler libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed 
+toplevel_component.o : toplevel_component.F90 libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver libmossco_connector libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed
 
-exec: libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver liblinkcoupler libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed reference_3d
+exec: libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment libsolver libmossco_connector libpelagicbenthiccoupler libpelagicbenthiccoupler libmossco_simplewave libmossco_netcdf libmossco_clm libmossco_benthos libmossco_fabmpelagic libsolver libmossco_erosed reference_3d
 
 reference_3d: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
@@ -74,8 +74,11 @@ libmossco_info libmossco_test:
 libmossco_sediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
-libsurfacescoupler libaocoupler liblinkcoupler libxgridcoupler libregridcoupler libcopycoupler:
+libsurfacescoupler libaocoupler libxgridcoupler libregridcoupler libcopycoupler:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
+
+libmossco_connector:
+	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@

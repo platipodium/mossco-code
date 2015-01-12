@@ -24,18 +24,18 @@ module toplevel_component
   use mossco_state
   use mossco_component
 
-  use getm_component, only : getm_SetServices => SetServices 
-  use fabm_pelagic_component, only : fabm_pelagic_SetServices => SetServices 
-  use constant_component, only : constant_SetServices => SetServices 
-  use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices 
-  use simplewave_component, only : simplewave_SetServices => SetServices 
-  use netcdf_component, only : netcdf_SetServices => SetServices 
-  use clm_netcdf_component, only : clm_netcdf_SetServices => SetServices 
-  use benthos_component, only : benthos_SetServices => SetServices 
-  use erosed_component, only : erosed_SetServices => SetServices 
-  use link_coupler, only : link_coupler_SetServices => SetServices 
-  use benthic_pelagic_coupler, only : benthic_pelagic_coupler_SetServices => SetServices 
-  use pelagic_benthic_coupler, only : pelagic_benthic_coupler_SetServices => SetServices 
+  use getm_component, only : getm_SetServices => SetServices
+  use fabm_pelagic_component, only : fabm_pelagic_SetServices => SetServices
+  use constant_component, only : constant_SetServices => SetServices
+  use fabm_sediment_component, only : fabm_sediment_SetServices => SetServices
+  use simplewave_component, only : simplewave_SetServices => SetServices
+  use netcdf_component, only : netcdf_SetServices => SetServices
+  use clm_netcdf_component, only : clm_netcdf_SetServices => SetServices
+  use benthos_component, only : benthos_SetServices => SetServices
+  use erosed_component, only : erosed_SetServices => SetServices
+  use link_connector, only : link_connector_SetServices => SetServices
+  use benthic_pelagic_coupler, only : benthic_pelagic_coupler_SetServices => SetServices
+  use pelagic_benthic_coupler, only : pelagic_benthic_coupler_SetServices => SetServices
 
   implicit none
 
@@ -51,7 +51,7 @@ module toplevel_component
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplNames
-  type(ESMF_CplComp), save  :: link_couplerComp
+  type(ESMF_CplComp), save  :: link_connectorComp
   type(ESMF_CplComp), save  :: benthic_pelagic_couplerComp
   type(ESMF_CplComp), save  :: pelagic_benthic_couplerComp
   type(ESMF_GridComp), save :: getmComp
@@ -84,7 +84,7 @@ module toplevel_component
 
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
-    
+
     integer :: localrc
 
     rc = ESMF_SUCCESS
@@ -236,7 +236,7 @@ module toplevel_component
     numCplComp = 3
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
-    cplCompNames(1) = 'link_coupler'
+    cplCompNames(1) = 'link_connector'
     cplCompNames(2) = 'benthic_pelagic_coupler'
     cplCompNames(3) = 'pelagic_benthic_coupler'
 
@@ -245,7 +245,7 @@ module toplevel_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
-    call ESMF_CplCompSetServices(cplCompList(1), link_coupler_SetServices, rc=localrc)
+    call ESMF_CplCompSetServices(cplCompList(1), link_connector_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_CplCompSetServices(cplCompList(2), benthic_pelagic_coupler_SetServices, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -284,14 +284,14 @@ module toplevel_component
     !! Initialize the link coupler phase 1
     call ESMF_CplCompInitialize(cplCompList(1), importState=importStates(1), &
       exportState=exportStates(1), clock=clock, phase=1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)   
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Go through all phases:
     !! IPDv00p1 = phase 1: Advertise Fields in import and export States. These can be
     !!   empty fields that are later completed with FieldEmptyComplete
     !! IPDv00p2 = phase 2: Realize Fields (that have not been completed in phase 1)
 
-    phase = 1 
+    phase = 1
     !! Initializing phase 1 of getm
     if (phaseCountList( 1)>=1) then
       call ESMF_GridCompInitialize(gridCompList(1), importState=importStates(1), &
@@ -519,7 +519,7 @@ module toplevel_component
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     endif
-    phase = 2 
+    phase = 2
     !! Initializing phase 2 of getm
     if (phaseCountList( 1)>=2) then
       call ESMF_GridCompInitialize(gridCompList(1), importState=importStates(1), &
@@ -1271,7 +1271,7 @@ module toplevel_component
 
       endif
     enddo
-    
+
     !! Set the default ringTime to the stopTime of local clock, then get all Alarms
     !! from local clock into alarmList, find those that contain the string "cplAlarm"
     !! and look for the earliest ringtime in all coupling alarms.  Save that in the
@@ -1357,7 +1357,7 @@ module toplevel_component
     logical, allocatable   :: hasPhaseZeroList(:)
     logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
-    
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
@@ -1734,7 +1734,7 @@ module toplevel_component
     logical, allocatable   :: hasPhaseZeroList(:)
     logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
-    
+
     integer                 :: localrc
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
