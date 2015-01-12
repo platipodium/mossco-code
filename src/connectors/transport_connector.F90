@@ -1,4 +1,4 @@
-!> @brief Implementation of an ESMF transport coupling
+!> @brief Implementation of an ESMF connector coupling
 !> This coupler selectively looks at variables in its import state
 !> that satisfy a condition layed out in a "filter_suffix" attribute,
 !> (by default "z_velocity_in_water"), looks at matching fields without this
@@ -21,9 +21,9 @@
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
-#define ESMF_FILENAME "transport_coupler.F90"
+#define ESMF_FILENAME "transport_connector.F90"
 
-module transport_coupler
+module transport_connector
 
   use esmf
   use mossco_state
@@ -283,5 +283,5 @@ module transport_coupler
 
   end subroutine create_empty_fields_for_filter_value
 
-end module transport_coupler
+end module transport_connector
 

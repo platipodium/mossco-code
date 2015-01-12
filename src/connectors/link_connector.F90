@@ -14,9 +14,9 @@
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
-#define ESMF_FILENAME "link_coupler.F90"
+#define ESMF_FILENAME "link_connector.F90"
 
-module link_coupler
+module link_connector
 
   use esmf
   use mossco_state
@@ -424,16 +424,17 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       !! don't deal with non-complete fields
   		if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
-      write(message,'(A)') trim(name)//' dealing with field'
-      call MOSSCO_FieldString(exportField, message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
 
 			!> @todo: this should check for a non-geogridded grid, but I found no
 			!> way to check this. Instead, it uses the default_value attribute for now
       call ESMF_AttributeGet(importField,'default_value', isPresent=isPresent, rc=localrc)
 			if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (.not.isPresent) cycle
+
+      write(message,'(A)') trim(name)//' dealing with field'
+      call MOSSCO_FieldString(exportField, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
 
 			call copy_1x1x1_field_to_field(importField, exportField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -647,7 +648,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
     logical                     :: isPresent, isNeeded
-    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    type(ESMF_FieldStatus_Flag) :: fieldStatus, exportFieldStatus
     type(ESMF_TypeKind_Flag)    :: typekind
 
     rc = ESMF_SUCCESS
@@ -694,11 +695,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_StateGet(exportState, trim(fieldName), exportField, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
+          call ESMF_FieldGet(exportField, status=exportfieldStatus, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !! If this contains grid information, then return silently
-          if (.not. (fieldStatus == ESMF_FIELDSTATUS_EMPTY)) cycle
+          if (.not. (exportfieldStatus == ESMF_FIELDSTATUS_EMPTY)) cycle
 
         elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
           call ESMF_StateGet(exportState, trim(fieldName), exportFieldBundle, rc=localrc)
@@ -753,7 +754,14 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_AttributeGet(importField,'default_value', isPresent=isPresent, rc=localrc)
 			  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (isPresent) then
-          write(message,'(A)') trim(name)//' did not replace with constant field '
+
+          if (exportFieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
+            call copy_1x1x1_field_to_field(importField, exportField, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            write(message,'(A)') trim(name)//' completed from constant field '
+          else
+            write(message,'(A)') trim(name)//' did not replace with constant field '
+          endif
           call MOSSCO_FieldString(importField,message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -879,5 +887,5 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
   end subroutine  copy_1x1x1_field_to_field
 
-end module link_coupler
+end module link_connector
 

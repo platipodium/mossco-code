@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -18,8 +18,8 @@ EXTRA_DIST=README
 
 TARGETS=
 ifeq ($(MOSSCO_ESMF),true)
-TARGETS += libremtc liblinkcoupler libxgridcoupler libredistcoupler
-TARGETS += libcopycoupler libregridcoupler libinoutcoupler libmossco_coupler
+TARGETS += libremtc  libxgridcoupler libredistcoupler
+TARGETS += libcopycoupler libregridcoupler libinoutcoupler
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
@@ -36,12 +36,8 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
-libmossco_coupler: libtransport_coupler
-
-libtransport_coupler: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_coupler.a(transport_coupler.o)
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 libxgridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
-liblinkcoupler: prefix $(MOSSCO_LIBRARY_PATH)/liblinkcoupler.a
 libcopycoupler: prefix $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a
 libredistcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libredistcoupler.a
 libregridcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a
@@ -70,12 +66,6 @@ $(MOSSCO_LIBRARY_PATH)/libredistcoupler.a: redist_coupler.o
 $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a: copy_coupler.o
 	$(AR) cruvs $@ copy_coupler.o
 
-$(MOSSCO_LIBRARY_PATH)/liblinkcoupler.a: link_coupler.o
-	$(AR) cruvs $@ link_coupler.o
-
-$(MOSSCO_LIBRARY_PATH)/libmossco_coupler.a(transport_coupler.o): transport_coupler.o
-	$(AR) cruvs $@ transport_coupler.o
-
 $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a: xgrid_coupler.o
 	$(AR) cruvs $@ xgrid_coupler.o
 
@@ -100,7 +90,6 @@ clean: extraclean
 
 extraclean:
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libxgridcoupler.a
-	@rm -f $(MOSSCO_LIBRARY_PATH)/liblinkcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libcopycoupler.a
 	@rm -f $(MOSSCO_LIBRARY_PATH)/libredistcoupler.a
