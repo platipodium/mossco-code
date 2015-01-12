@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -22,7 +22,7 @@ module toplevel_component
   use getm_component, only : getm_SetServices => SetServices 
   use netcdf_component, only : netcdf_SetServices => SetServices 
   use fabm_pelagic_component, only : fabm_pelagic_SetServices => SetServices 
-  use link_coupler, only : link_coupler_SetServices => SetServices 
+  use link_connector, only : link_SetServices => SetServices 
 
   implicit none
 
@@ -183,14 +183,14 @@ module toplevel_component
     numCplComp = 1
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
-    cplCompNames(1) = 'link_coupler'
+    cplCompNames(1) = 'link_connector'
 
     do i = 1, numCplComp
       cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
 
-    call ESMF_CplCompSetServices(cplCompList(1), link_coupler_SetServices, rc=rc)
+    call ESMF_CplCompSetServices(cplCompList(1), link_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Get phase count information from all components

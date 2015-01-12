@@ -4,7 +4,7 @@
 !> the configuration given in coupling.yaml
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, 2015, Helmholtz-Zentrum Geesthacht 
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

@@ -3,7 +3,7 @@
 !> This module 3-way coupled system between ocean, sediment, and 0d biogeochemistry
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht 
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
