@@ -1,26 +1,12 @@
 # This generic example is trying to reproduce the manually coded example in $MOSSCO_DIR/examples/fabm_benthic_pelagic
 
 coupling:
-#  - components:
-#     - clm_netcdf
-#     - gotm
-#  - components:
-#     - gotm
-#     - simplewave
-#  - components:
-#     - clm_netcdf
-#     - simplewave
-#  - components:
-#     - simplewave
-#     - erosed
   - components:
      - gotmfabm
      - pelagic_benthic_mediator
-    interval: 6 m
   - components:
      - pelagic_benthic_mediator
      - fabm_sediment
-    interval: 6 m
   - components:
      - constant
      - fabm_sediment

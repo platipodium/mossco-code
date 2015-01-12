@@ -11,11 +11,13 @@ dependencies:
 # todo find a mechansim to feed constant/getm into pelagic_benthic_coupler
 
 coupling:
-  - components: 
+  - components:
      - getm
      - fabm_pelagic
   - components:
      - fabm_pelagic
+     - pelagic_benthic_coupler
+  - components:
      - pelagic_benthic_coupler
      - fabm_sediment
   - components:

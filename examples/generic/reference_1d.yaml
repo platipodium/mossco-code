@@ -1,7 +1,7 @@
 # configuration dependencies:
 dependencies:
   - fabm_gotm: gotm
-  - erosed: 
+  - erosed:
     - gotm
     - fabm_gotm
     - simplewave
@@ -17,32 +17,34 @@ dependencies:
 # Knut: clm -> gotm/getm
 
 coupling:
-  - components: 
+  - components:
      - clm_netcdf
      - gotm
-  - components: 
+  - components:
      - gotm
      - simplewave
-  - components: 
+  - components:
      - clm_netcdf
      - simplewave
-  - components: 
+  - components:
      - simplewave
      - erosed
-  - components: 
-     - gotm
-     - fabm_gotm
-  - components:
-     - fabm_gotm
-     - erosed
   - components:
      - gotm
+     - fabm_gotm
+  - components:
+     - fabm_gotm
+     - erosed
+  - components:
+     - gotm
      - erosed
   - components:
      - erosed
      - fabm_gotm
   - components:
      - fabm_gotm
+     - pelagic_benthic_coupler
+  - components:
      - pelagic_benthic_coupler
      - fabm_sediment
   - components:

@@ -4,18 +4,18 @@ dependencies:
  - fabm_gotm: gotm
  - fabm_sediment: constant
  - benthic_pelagic_coupler: fabm_gotm
- - pelagic_benthic_coupler: 
-   - fabm_sediment
-   - fabm_gotm
 
 coupling:
- - components: 
+ - components:
    - gotm       # The ocean in 1D (physics)
    - fabm_gotm  # The ocean biogeochemistry, choose models in fabm.nml
    interval: 360 s # The coupling interval of these two components
  - components:
    - fabm_gotm
-   - pelagic_benthic_coupler # The special coupler between pelagial and benthos
+   - pelagic_benthic_mediator # The special coupler between pelagial and benthos
+   interval: 6 m
+ - components:
+   - pelagic_benthic_mediator # The special coupler between pelagial and benthos
    - fabm_sediment
    interval: 6 m
  - components:

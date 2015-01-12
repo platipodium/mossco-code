@@ -29,7 +29,7 @@ else:
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='getm--fabm_pelagic--netcdf'
-     filename='benthic_geoecology'
+     filename='reference_3d'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -206,9 +206,8 @@ for key, value in dependencyDict.iteritems():
 
 
 if 'link_connector' in componentList:
-    c=componentList.pop(componentList.index('link_connector'))
-    componentList.insert(0,c)
-
+  c=componentList.pop(componentList.index('link_connector'))
+  componentList.insert(0,c)
 
 # Create dictionary for component names (instanceDict) and for petLists that
 # instances of these components run on.  Get this information from the
@@ -310,7 +309,10 @@ for jtem in gridCompList:
     if instanceDict.has_key(jtem):
         item=instanceDict[jtem]
     else: item=jtem
-    fid.write('  use ' + item + '_component, only : ' + item + '_SetServices => SetServices \n')
+    
+    if item.find('mediator')>0:
+      fid.write('  use ' + item + ', only : ' + item + '_SetServices => SetServices \n')
+    else: fid.write('  use ' + item + '_component, only : ' + item + '_SetServices => SetServices \n')
 for jtem in cplCompList:
     if instanceDict.has_key(jtem):
         item=instanceDict[jtem]
@@ -322,7 +324,6 @@ fid.write('''
   type(ESMF_GridComp),dimension(:),save, allocatable :: gridCompList
   type(ESMF_CplComp),dimension(:), save, allocatable :: cplCompList
   type(ESMF_State), dimension(:),  save, allocatable :: gridExportStateList, gridImportStateList
-  type(ESMF_State), dimension(:),  save, allocatable :: cplExportStateList, cplImportStateList
   type(ESMF_Alarm), dimension(:),  save, allocatable :: cplAlarmList
   type(ESMF_Clock), dimension(:),  save, allocatable :: gridCompClockList, cplCompClockList
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames, cplCompNames, cplNames
@@ -521,8 +522,6 @@ if len(cplCompList)>0:
     allocate(cplCompList(numCplComp))
     allocate(cplCompNames(numCplComp))
     allocate(cplCompClockList(numCplComp))
-    allocate(cplImportStateList(numCplComp))
-    allocate(cplExportStateList(numCplComp))
 ''')
 
 for i in range(0, len(cplCompList)):
@@ -537,14 +536,6 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), clock=cplCompClockList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      cplExportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
-        name=trim(cplCompNames(i))//'Export')
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      cplImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
-        name=trim(cplCompNames(i))//'Import')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
@@ -593,7 +584,7 @@ fid.write('''
     !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !  if (.not.hasPhaseZero) cycle
 !     TODO: clock provided during Create() seems to be not recognized?!
-      !call ESMF_CplCompInitialize(cplCompList(i), exportState=cplExportStateList(i), phase=0, rc=localrc)
+      !call ESMF_CplCompInitialize(cplCompList(i), phase=0, rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !!> @todo expect the Attribute InitializePhaseMap in this state, this attribute
       !! contains information on the phases defined in the component.
@@ -713,13 +704,7 @@ fid.write('''
       call ESMF_StateReconcile(gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
-    do i=1, numCplComp
-      call ESMF_StateReconcile(cplImportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateReconcile(cplExportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-''')
+ ''')
 
 fid.write('''
     !!> Check all states for remaining incomplete fields
@@ -732,14 +717,6 @@ fid.write('''
       call MOSSCO_StateLog(gridImportStateList(i))
       call MOSSCO_StateLog(gridExportStateList(i))
    enddo
-    do i=1, numCplComp
-      call MOSSCO_StateCheckFields(cplImportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call MOSSCO_StateCheckFields(cplExportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call MOSSCO_StateLog(cplImportStateList(i))
-      call MOSSCO_StateLog(cplExportStateList(i))
-    enddo
 ''')
 
 fid.write('''
@@ -789,25 +766,9 @@ for icpl in range(1,len(cplCompList)):
     ifrom=gridCompList.index(jtem[0])
     ito  =gridCompList.index(jtem[2])
 
-    fid.write('     call ESMF_CplCompRun(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-    fid.write('        exportState=cplImportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
+    fid.write('     call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
+    fid.write('        exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
     fid.write('     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
-
-    fid.write('     call ESMF_CplCompRun(cplCompList(1), importState=gridImportStateList(' + str(ito+1) + '), &\n')
-    fid.write('        exportState=cplExportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
-    fid.write('     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
-
-  fid.write('      call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=cplImportStateList(' + str(icpl+1) + '), &\n')
-  fid.write('      exportState=cplExportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
-
-  fid.write('     call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-  fid.write('        exportState=cplImportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
-  fid.write('     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
-
-  fid.write('     call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(' + str(ito+1) + '), &\n')
-  fid.write('        exportState=cplExportStateList(' + str(icpl+1) + '), clock=clock, phase=1, rc=localrc)\n')
-  fid.write('     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
-
 
 #fid.write('''
 #    do i=2, numCplComp
@@ -1176,12 +1137,9 @@ fid.write('''
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 ''')
 
-#fid.write('''
-#          call ESMF_CplCompRun(cplCompList(l), importState=impState, &
-#            exportState=expState, clock=clock, rc=localrc)
 fid.write('''
-          call ESMF_CplCompRun(cplCompList(l), importState=cplImportStateList(l), &
-            exportState=cplExportStateList(l), clock=clock, rc=localrc)
+          call ESMF_CplCompRun(cplCompList(l), importState=impState, &
+            exportState=expState, clock=clock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_LogFlush()
 
@@ -1521,6 +1479,7 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
         'info'       : ['mossco_info'],
         'fabm0d'     : ['mossco_fabm0d', 'solver', 'airsea_prod',
                         'input_prod', 'util_prod', 'fabm'],
+        'pelagic_benthic_mediator' : ['mossco_mediator'],
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
@@ -1553,6 +1512,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'gotm'       : ['libgotm', 'libsolver'],
         'fabm_gotm'       : ['libmossco_fabmgotm', 'libsolver', 'libgotm'],
         'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
+        'pelagic_benthic_mediator' : ['libmossco_mediator'],
         'pelagic_benthic_coupler' : ['libpelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'xgrid_coupler' : ['libxgridcoupler'],
@@ -1645,6 +1605,9 @@ libsurfacescoupler libaocoupler liblinkcoupler libxgridcoupler libregridcoupler 
 
 libmossco_connector:
 	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
+
+libmossco_mediator:
+	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@

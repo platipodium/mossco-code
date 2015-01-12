@@ -1,0 +1,33 @@
+dependencies:
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - fabm_sediment:
+    - component: getm
+      grid: temperature_at_soil_surface
+
+instances:
+  - netcdf_sediment: netcdf
+  - netcdf_pelagic: netcdf
+
+coupling:
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - pelagic_benthic_coupler
+    interval: 12 h
+  - components:
+     - pelagic_benthic_coupler
+     - netcdf_sediment
+    interval: 12 h
+  - components:
+     - fabm_pelagic
+     - netcdf_pelagic
+    interval: 12 h
+  - components:
+     - fabm_sediment
+     - netcdf_sediment
+    interval: 12 h

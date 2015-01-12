@@ -6,51 +6,57 @@ dependencies:
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
-  - erosed: 
+  - pelagic_benthic_mediator:
+    - component: getm
+      grid: temperature_in_water
+  - erosed:
     - component: getm
       grid: water_depth_at_soil_surface
   - erosed: fabm_pelagic
   - simplewave:
     - component: getm
       grid: water_depth_at_soil_surface
-#  - benthic_pelagic_coupler: fabm_pelagic
   - benthos:
     - component: getm
-      grid: temperature_at_soil_surface 
+      grid: temperature_at_soil_surface
   - getm: fabm_pelagic
-  - pelagic_benthic_coupler: constant
-  - pelagic_benthic_coupler: getm
 
 # todo find a mechansim to feed constant/getm into pelagic_benthic_coupler
 
 coupling:
-  - components: 
+  - components:
      - clm_netcdf
      - getm
-  - components: 
+  - components:
      - getm
      - simplewave
-  - components: 
+  - components:
      - clm_netcdf
      - simplewave
-  - components: 
+  - components:
      - simplewave
      - erosed
-  - components: 
-     - getm
-     - fabm_pelagic
-  - components:
-     - fabm_pelagic
-     - erosed
   - components:
      - getm
+     - fabm_pelagic
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+  - components:
+     - fabm_pelagic
+     - erosed
+  - components:
+     - getm
      - erosed
   - components:
      - erosed
      - fabm_pelagic
   - components:
      - fabm_pelagic
-     - pelagic_benthic_coupler
+     - pelagic_benthic_mediator
+  - components:
+     - pelagic_benthic_mediator
      - fabm_sediment
   - components:
      - constant
