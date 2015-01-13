@@ -329,6 +329,11 @@ module simplewave_component
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
+        if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
+                   .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
+          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        end if
       else
         call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
                            line=__LINE__,file=__FILE__,method='InitializeP2()')
@@ -350,6 +355,11 @@ module simplewave_component
         call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
         call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
+        if (.not. (      all(lbound(exportList(i)%data) .eq. totalLBound) &
+                   .and. all(ubound(exportList(i)%data) .eq. totalUBound) ) ) then
+          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        end if
       else
         call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
                            line=__LINE__,file=__FILE__,method='InitializeP2()')
