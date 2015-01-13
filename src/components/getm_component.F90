@@ -1332,7 +1332,8 @@ module getm_component
 !              was created). If gridEdgeWidth's are not set, they are set
 !             automatically based on gridAlign.
 !  internal call to ESMF_GridCreateFrmDistGrid()
-   getmGrid2D = ESMF_GridCreate(getmDistGrid2D,name="getmGrid2D",      &
+   getmGrid2D = ESMF_GridCreate(getmDistGrid2D,                        &
+                                name="getmGrid2D ("//trim(name)//")",  &
                                 gridAlign=(/1,1/),                     &
                                 coordSys=coordSys,                     &
                                 coordDimCount=int(coordDimCount(1:2)), &
@@ -1341,10 +1342,11 @@ module getm_component
     call ESMF_AttributeSet(getmGrid2D,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   getmGrid3D = ESMF_GridCreate(getmDistGrid3D,name="getmGrid3D", &
-                                gridAlign=(/1,1,1/),              &
-                                coordSys=coordSys,                &
-                                coordDimCount=coordDimCount,      &
+   getmGrid3D = ESMF_GridCreate(getmDistGrid3D,                       &
+                                name="getmGrid3D ("//trim(name)//")", &
+                                gridAlign=(/1,1,1/),                  &
+                                coordSys=coordSys,                    &
+                                coordDimCount=coordDimCount,          &
                                 coordDimMap=coordDimMap, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(getmGrid2D,'creator', trim(name), rc=localrc)
