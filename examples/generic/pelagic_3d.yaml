@@ -30,7 +30,7 @@ coupling:
      - erosed
   - components:
      - fabm_pelagic
-     - transport_coupler
+     - transport_connector
      - getm
   - components:
      - getm
