@@ -24,13 +24,17 @@ export ESMF_ABI=64
 
 #`which sed` && export SED=$(which sed)
 #`which gsed` && export SED=$(which gsed)
-export SED=$(which gsed)
+export SED=$(which sed)
+SED=sed
 
 echo Using SED=${SED}
 echo Using ESMF_OS=${ESMF_OS}
 echo Using ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 
 #echo y        | module clear
+
+git stash && git stash drop
+git pull
 
 for C in $COMMS ; do
   echo "Iterating for Communicator $C ============================================="
@@ -42,7 +46,7 @@ for C in $COMMS ; do
 
     ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
-    
+
     if [ $G = intel ]; then
       source /opt/intel/bin/ifortvars.sh intel64
       source /opt/intel/bin/iccvars.sh intel64
@@ -52,7 +56,7 @@ for C in $COMMS ; do
       NETCDF_PATH=/opt/intel/netcdf4
       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
       ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
-    else    
+    else
       ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
       ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
     fi
@@ -67,17 +71,16 @@ for C in $COMMS ; do
        echo "Iterating for Tag $T ============================================="
        ESMF_SITE=$T
        ESMF_STRING=${ESMF_OS}.${ESMF_COMPILER}.${ESMF_ABI}.${ESMF_COMM}.${ESMF_SITE}
-       git stash
-       git stash drop
+       git stash && git stash drop
        git checkout  -f $T
-       
+
        # Fix -lmpi_f77 on recent Darwin/MacPorts
        ${SED} -i 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
-       
+
        ln -sf ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.default ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}
-       
+
        echo ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/$ESMF_STRING/esmf.mk
-       #test -f $ESMFMKFILE && continue 
+       #test -f $ESMFMKFILE && continue
 
 cat << EOT > $HOME/.esmf_${ESMF_STRING}
 export ESMF_DIR=${ESMF_DIR}
@@ -104,17 +107,18 @@ EOT
 
        #test -f $ESMFMKFILE || (make distclean && make -j12 lib && make install)
        (make distclean && make -j12 lib && make install)
-       
+
        test -f $ESMFMKFILE || continue
-       test -f ${ESMF_INSTALL_PREFIX}/lib/libg/${ESMF_STRING}/libesmf.a || continue 
+       test -f ${ESMF_INSTALL_PREFIX}/lib/libg/${ESMF_STRING}/libesmf.a || continue
        mkdir -p $ESMF_INSTALL_PREFIX/etc
        mv $HOME/.esmf_${ESMF_STRING} $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}
-       
+       make info > $ESMF_INSTALL_PREFIX/etc/${ESMF_STRING}.info
+
        # Fix dylib relocation on Darwin
        which install_name_tool || continue
-       
-       #install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib  $ESMF_DIR/lib/libg/${ESMF_STRING}/libesmf.dylib  
-       install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib  
+
+       #install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib  $ESMF_DIR/lib/libg/${ESMF_STRING}/libesmf.dylib
+       install_name_tool -id $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib
         for F in $ESMF_INSTALL_PREFIX/bin/bing/${ESMF_STRING}/* ; do
           install_name_tool -change $ESMF_DIR/lib/libg/${ESMF_STRING}/libesmf.dylib $ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/libesmf.dylib  $F
         done
