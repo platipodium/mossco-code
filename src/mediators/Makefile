@@ -58,7 +58,7 @@ libsediment:
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o):
+$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o): pelagic_benthic_mediator.F90 pelagic_benthic_mediator.o
 	$(AR) cruvs $@ pelagic_benthic_mediator.o
 
 $(MOSSCO_LIBRARY_PATH)/libregridcoupler.a: regrid_coupler.o
