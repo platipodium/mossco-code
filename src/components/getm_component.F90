@@ -905,13 +905,8 @@ module getm_component
       end if
       if (waveforcing_method .ne. NO_WAVES) then
          waveH   => waveH_
-#if 0
          waveT   => waveT_
          waveK   => waveK_
-#else
-         allocate(waveT(E2DFIELD))
-         allocate(waveK(E2DFIELD))
-#endif
       end if
    end if
 
@@ -1636,10 +1631,6 @@ module getm_component
          nybot = num(:,:,1)
       end if
 #endif
-      if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
-         waveT   = waveT_
-         waveK   = waveK_
-      end if
 #endif
    end if
 
@@ -1789,13 +1780,6 @@ module getm_component
          waveT_   = waveT
          waveK_   = waveK
       end if
-#if 1
-   else
-      if (waveforcing_method .eq. WAVES_FROMEXT) then
-         waveT_   = waveT
-         waveK_   = waveK
-      end if
-#endif
    end if
 
    if (waveforcing_method .eq. WAVES_FROMEXT) then
