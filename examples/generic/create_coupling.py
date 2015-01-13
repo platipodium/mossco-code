@@ -808,7 +808,7 @@ for idx,couplingItem in enumerate(couplingList):
     if couplingItem[1][:4] == 'link':
         continue
     else:
-        fid.write("    cplNames(%d)='%s'\n" % (idx+1,couplingItem[1].split('_coupler')[0]))
+        fid.write("    cplNames(%d)='%s'\n" % (idx+1,couplingItem[1].split('_connector')[0]))
 fid.write('''
     !! Set the coupling alarm starting from start time of local clock
     call ESMF_ClockGet(clock,startTime=startTime, rc=localrc)
