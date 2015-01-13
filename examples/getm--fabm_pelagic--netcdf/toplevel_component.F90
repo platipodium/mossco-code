@@ -542,8 +542,8 @@ module toplevel_component
 
           !! Search the cplCompList for cplName
           do l=1, ubound(cplCompNames,1)
-              !write(0,*) l,trim(cplCompNames(l))//' ?= '//trim(cplName)//'_coupler'
-              if (trim(cplCompNames(l))==trim(cplName)//'_coupler') exit
+              !write(0,*) l,trim(cplCompNames(l))//' ?= '//trim(cplName)//'_connector'
+              if (trim(cplCompNames(l))==trim(cplName)//'_connector') exit
           enddo
 
           call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=rc)
