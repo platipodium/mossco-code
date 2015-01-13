@@ -38,7 +38,7 @@ module toplevel_component
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplCompNames
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: cplNames
-  type(ESMF_CplComp), save  :: link_couplerComp
+  type(ESMF_CplComp), save  :: link_connectorComp
   type(ESMF_GridComp), save :: getmComp
   type(ESMF_GridComp), save :: netcdfComp
   type(ESMF_GridComp), save :: fabm_pelagicComp
@@ -226,7 +226,7 @@ module toplevel_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     enddo
 
-    !! Initializing link_coupler
+    !! Initializing link_connector
     call ESMF_CplCompInitialize(cplCompList(1), importState=exportStates(1), &
       exportState=importStates(3), clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)

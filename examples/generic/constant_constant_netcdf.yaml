@@ -15,6 +15,6 @@ coupling:
     interval: 17 h
   - components: 
      - constant2
-     - link_coupler
+     - link_connector
      - netcdf
     interval: 30 d
