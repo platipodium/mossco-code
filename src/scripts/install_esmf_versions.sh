@@ -102,7 +102,6 @@ export ESMF_LAPACK=internal
 export ESMF_NETCDF=split
 export ESMF_NETCDF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_LIBPATH}
-export ESMF_XERCES=standard
 export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
 unset ESMF_PIO
 export ESMF_SITE=$T
@@ -110,6 +109,13 @@ export ESMF_COMPILER=$G
 export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
 EOT
+
+       if [ $(hostname) = ocean-fe.fzg.local] ; then
+          echo "unset ESMF_XERCES" >> $HOME/.esmf_${ESMF_STRING}
+       else
+          echo "export ESMF_XERCES=standard" >> $HOME/.esmf_${ESMF_STRING}
+       fi
+
        source $HOME/.esmf_${ESMF_STRING}
        cat $HOME/.esmf_${ESMF_STRING}
        echo $PATH
