@@ -21,7 +21,7 @@ module toplevel_component
 
   type(ESMF_Clock)    :: topClock
   type(ESMF_GridComp) :: getmCmp
-  type(ESMF_State)    :: getmEState
+  type(ESMF_State)    :: getmExportState
 
   contains
 
@@ -74,8 +74,8 @@ module toplevel_component
       getmCmp = ESMF_GridCompCreate(name="getmCmp")
     end if
     call ESMF_GridCompSetServices(getmCmp,SetServices)
-    getmEState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="getmEState")
-    call ESMF_GridCompInitialize(getmCmp,clock=topClock,exportState=getmEState)
+    getmExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="getmExportState")
+    call ESMF_GridCompInitialize(getmCmp,clock=topClock,exportState=getmExportState)
 
     if (.not. ClockIsPresent) then
       call ESMF_GridCompGet(getmCmp,clockIsPresent=ClockIsPresent)
@@ -158,7 +158,7 @@ module toplevel_component
 !   Destruction of child components
     call ESMF_GridCompDestroy(getmCmp)
 
-    call ESMF_StateDestroy(getmEState)
+    call ESMF_StateDestroy(getmExportState)
 
     call ESMF_ClockDestroy(topClock)
 
