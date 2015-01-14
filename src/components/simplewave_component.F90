@@ -326,13 +326,7 @@ module simplewave_component
     do i=1,size(importList)
       call ESMF_StateGet(importState,trim(importList(i)%name),field)
       call ESMF_FieldGet(field,status=status)
-      if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
-        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,grid,importList(i)%data,     &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
-      else if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+      if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
         call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
                                      ESMF_INDEX_DELOCAL,                      &
@@ -348,7 +342,7 @@ module simplewave_component
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
+        call ESMF_LogWrite('empty field: '//trim(importList(i)%name),ESMF_LOGMSG_ERROR, &
                            line=__LINE__,file=__FILE__,method='InitializeP2()')
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
@@ -358,13 +352,7 @@ module simplewave_component
     do i=1,size(exportList)
       call ESMF_StateGet(exportState,trim(exportList(i)%name),field)
       call ESMF_FieldGet(field,status=status)
-      if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
-        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,grid,exportList(i)%data,     &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
-      else if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+      if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
         call ESMF_FieldEmptyComplete(field,exportList(i)%data,                &
                                      ESMF_INDEX_DELOCAL,                      &
@@ -380,7 +368,7 @@ module simplewave_component
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
+        call ESMF_LogWrite('empty field: '//trim(exportList(i)%name),ESMF_LOGMSG_ERROR, &
                            line=__LINE__,file=__FILE__,method='InitializeP2()')
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
