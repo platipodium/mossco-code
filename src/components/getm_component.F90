@@ -1333,21 +1333,23 @@ module getm_component
 !             automatically based on gridAlign.
 !  internal call to ESMF_GridCreateFrmDistGrid()
    getmGrid2D = ESMF_GridCreate(getmDistGrid2D,                        &
-                                name="getmGrid2D ("//trim(name)//")",  &
+                                name="getmGrid2D_"//trim(name),        &
                                 gridAlign=(/1,1/),                     &
                                 coordSys=coordSys,                     &
                                 coordDimCount=int(coordDimCount(1:2)), &
-                                coordDimMap=int(coordDimMap(1:2,1:2)), rc=localrc)
+                                coordDimMap=int(coordDimMap(1:2,1:2)), &
+                                rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(getmGrid2D,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   getmGrid3D = ESMF_GridCreate(getmDistGrid3D,                       &
-                                name="getmGrid3D ("//trim(name)//")", &
-                                gridAlign=(/1,1,1/),                  &
-                                coordSys=coordSys,                    &
-                                coordDimCount=coordDimCount,          &
-                                coordDimMap=coordDimMap, rc=localrc)
+   getmGrid3D = ESMF_GridCreate(getmDistGrid3D,                 &
+                                name="getmGrid3D_"//trim(name), &
+                                gridAlign=(/1,1,1/),            &
+                                coordSys=coordSys,              &
+                                coordDimCount=coordDimCount,    &
+                                coordDimMap=coordDimMap,        &
+                                rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(getmGrid2D,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
