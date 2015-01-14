@@ -41,13 +41,13 @@ module toplevel_component
 
   end subroutine SetServices
 
-  subroutine topCmp_init(topCmp,iState,eState,pClock,rc)
+  subroutine topCmp_init(topCmp,iState,exportState,pClock,rc)
 
     use getm_component, only : SetServices
     IMPLICIT NONE
 
     type(ESMF_GridComp) :: topCmp
-    type(ESMF_State)    :: iState,eState
+    type(ESMF_State)    :: iState,exportState
     type(ESMF_Clock)    :: pClock
     integer,intent(out) :: rc
 
@@ -96,12 +96,12 @@ module toplevel_component
 
   end subroutine topCmp_init
 
-  subroutine topCmp_run(topCmp,iState,eState,pClock,rc)
+  subroutine topCmp_run(topCmp,iState,exportState,pClock,rc)
 
     IMPLICIT NONE
 
     type(ESMF_GridComp) :: topCmp
-    type(ESMF_State)    :: iState,eState
+    type(ESMF_State)    :: iState,exportState
     type(ESMF_Clock)    :: pClock
     integer,intent(out) :: rc
 
@@ -141,12 +141,12 @@ module toplevel_component
 
   end subroutine topCmp_run
 
-  subroutine topCmp_finalize(topCmp,iState,eState,pClock,rc)
+  subroutine topCmp_finalize(topCmp,iState,exportState,pClock,rc)
 
     IMPLICIT NONE
 
     type(ESMF_GridComp) :: topCmp
-    type(ESMF_State)    :: iState,eState
+    type(ESMF_State)    :: iState,exportState
     type(ESMF_Clock)    :: pClock
     integer,intent(out) :: rc
 
