@@ -1628,14 +1628,18 @@ module getm_component
          waveT   = waveT_
          waveK   = waveK_
       end if
-#if 1
    else
+#if 1
 #ifndef NO_3D
       if (runtype .gt. 1) then
          nybot = num(:,:,1)
       end if
 #endif
 #endif
+!     Note (KK): update pointer because of pointer swap within GETM
+      if (waveforcing_method .eq. WAVES_FROMFILE) then
+         waveH => waveH_
+      end if
    end if
 
 
