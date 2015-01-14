@@ -250,7 +250,8 @@ module simplewave_component
           write(message,'(A,I6,A)') trim(name)//' uses regular grid from '//trim(gridFileName)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         else
-          grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),coordDep1=(/1/),coordDep2=(/2/),name=trim(name)//'Grid',rc=localrc)
+          grid = ESMF_GridCreateNoPeriDim(maxIndex=(/1,1/),coordDep1=(/1/),coordDep2=(/2/), &
+                                          name="simplewaveGrid2D_"//trim(name),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
            call ESMF_AttributeSet(grid,'creator',trim(name), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
