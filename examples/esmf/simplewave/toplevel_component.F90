@@ -51,7 +51,7 @@ module toplevel_component
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_TRACE)
 
 !   create child component
-    simplewave_Comp = ESMF_GridCompCreate(name="simplewave_GridComp",         &
+    simplewave_Comp = ESMF_GridCompCreate(name="simplewave",                  &
                                           contextflag=ESMF_CONTEXT_PARENT_VM, &
                                           rc=rc)
     call ESMF_GridCompSetServices(simplewave_comp, simplewave_SetServices, rc=rc)
