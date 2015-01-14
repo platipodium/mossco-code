@@ -21,7 +21,7 @@ module toplevel_component
 
   type(ESMF_Clock)    :: topClock
   type(ESMF_GridComp) :: getmCmp
-  type(ESMF_State)    :: getmExportState
+  type(ESMF_State)    :: getmImportState,getmExportState
 
   contains
 
@@ -74,8 +74,11 @@ module toplevel_component
       getmCmp = ESMF_GridCompCreate(name="getmCmp")
     end if
     call ESMF_GridCompSetServices(getmCmp,SetServices)
+    getmImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="getmImportState")
     getmExportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="getmExportState")
-    call ESMF_GridCompInitialize(getmCmp,clock=topClock,exportState=getmExportState)
+    call ESMF_GridCompInitialize(getmCmp,clock=topClock,      &
+                                 importState=getmImportState, &
+                                 exportState=getmExportState)
 
     if (.not. ClockIsPresent) then
       call ESMF_GridCompGet(getmCmp,clockIsPresent=ClockIsPresent)
@@ -130,7 +133,9 @@ module toplevel_component
       end if
 
 !     Run of child components
-      call ESMF_GridCompRun(getmCmp,clock=topClock)
+      call ESMF_GridCompRun(getmCmp,clock=topClock,      &
+                            importState=getmImportState, &
+                            exportState=getmExportState)
 
       call ESMF_ClockAdvance(topClock)
       call ESMF_ClockGet(topClock,currtime=topTime)
@@ -153,11 +158,14 @@ module toplevel_component
     call ESMF_LogWrite("Toplevel component finalizing ... ",ESMF_LOGMSG_TRACE)
 
 !   Finalize of child components
-    call ESMF_GridCompFinalize(getmCmp,clock=topClock)
+    call ESMF_GridCompFinalize(getmCmp,clock=topClock,      &
+                               importState=getmImportState, &
+                               exportState=getmExportState)
 
 !   Destruction of child components
     call ESMF_GridCompDestroy(getmCmp)
 
+    call ESMF_StateDestroy(getmImportState)
     call ESMF_StateDestroy(getmExportState)
 
     call ESMF_ClockDestroy(topClock)
