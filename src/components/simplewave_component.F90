@@ -109,100 +109,22 @@ module simplewave_component
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR) :: name
-    type(ESMF_Time)        :: currTime
-    integer                :: localrc
-
-    type(ESMF_Field)       :: field
-    integer                :: i
-
-    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    allocate(exportList(4))
-    allocate(importList(3))
-
-!!! Advertise Import Fields
-    importList(1)%name  = 'water_depth_at_soil_surface'
-    importList(1)%units = 'm'
-    importList(2)%name  = 'wind_x_velocity_at_10m'
-    importList(2)%units = 'm/s'
-    importList(3)%name  = 'wind_y_velocity_at_10m'
-    importList(3)%units = 'm/s'
-
-    do i=1,size(importList)
-      field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAdd(importState,(/field/), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    end do
-
-!!! Advertise Export Fields
-    exportList(1)%name  = 'wave_height'
-    exportList(1)%units = 'm'
-    exportList(2)%name  = 'wave_period'
-    exportList(2)%units = 's'
-    exportList(3)%name  = 'wave_number'
-    exportList(3)%units = '1/m'
-    exportList(4)%name  = 'wave_direction'
-    exportList(4)%units = 'rad'
-
-    do i=1,size(exportList)
-      field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(exportList(i)%units), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    end do
-
-    !> @todo add optional fields (see Run method)
-
-    call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine InitializeP1
-
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "InitializeP2"
-  subroutine InitializeP2(gridComp, importState, exportState, clock, rc)
-    implicit none
-
-    type(ESMF_GridComp)  :: gridComp
-    type(ESMF_State)     :: importState, exportState
-    type(ESMF_Clock)     :: clock
-    integer, intent(out) :: rc
-
-    character(ESMF_MAXSTR)  :: name,message
-    character(len=ESMF_MAXSTR) :: foreignGridFieldName
-    type(ESMF_Time)         :: currTime
-
-    type(ESMF_Field), target     :: field
-    type(ESMF_Grid)      :: grid
-    type(ESMF_FieldStatus_Flag)     :: status
-    integer              :: localrc
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName,message
     integer              :: rank
     real(ESMF_KIND_R8), pointer           :: coordX(:), coordY(:)
-    integer,target :: coordDimCount(2),coordDimMap(2,2)
     logical                         :: isPresent
     character(ESMF_MAXSTR)          :: configFileName, gridFileName
     type(ESMF_Config)               :: config
     integer(ESMF_KIND_I4)           :: lbnd(2), ubnd(2)
-    integer,dimension(2)            :: totalLBound,totalUBound
-    integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
-    integer                         :: i,j
-    type :: allocatable_integer_array
-      integer,dimension(:),allocatable :: data
-    end type
-    type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
-    
+
+
+    character(ESMF_MAXSTR) :: name
+    type(ESMF_Time)        :: currTime
+    integer                :: localrc
+
+    type(ESMF_Grid)        :: grid
+    type(ESMF_Field)       :: field
+    integer                :: i
 
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -230,7 +152,7 @@ module simplewave_component
         end if
       else
         !! Check whether there is a config file with the same name as this component
-        !! If yes, load it. 
+        !! If yes, load it.
         configFileName=trim(name)//'.cfg'
         inquire(FILE=trim(configFileName), exist=isPresent)
         if (isPresent) then
@@ -260,13 +182,13 @@ module simplewave_component
           call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
              computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          do i=lbnd(1),ubnd(1) 
+          do i=lbnd(1),ubnd(1)
             coordX(i) = i
           enddo
           call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
              computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          do i=lbnd(1),ubnd(1) 
+          do i=lbnd(1),ubnd(1)
             coordY(i) = i
           enddo
         end if
@@ -274,7 +196,94 @@ module simplewave_component
       call ESMF_GridCompSet(gridComp,grid=grid)
     end if
 
+    allocate(exportList(4))
+    allocate(importList(3))
+
+!!! Advertise Import Fields
+    importList(1)%name  = 'water_depth_at_soil_surface'
+    importList(1)%units = 'm'
+    importList(2)%name  = 'wind_x_velocity_at_10m'
+    importList(2)%units = 'm/s'
+    importList(3)%name  = 'wind_y_velocity_at_10m'
+    importList(3)%units = 'm/s'
+
+    do i=1,size(importList)
+      field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldEmptySet(field,grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(importState,(/field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+!!! Advertise Export Fields
+    exportList(1)%name  = 'wave_height'
+    exportList(1)%units = 'm'
+    exportList(2)%name  = 'wave_period'
+    exportList(2)%units = 's'
+    exportList(3)%name  = 'wave_number'
+    exportList(3)%units = '1/m'
+    exportList(4)%name  = 'wave_direction'
+    exportList(4)%units = 'rad'
+
+    do i=1,size(exportList)
+      field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldEmptySet(field,grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'units',trim(exportList(i)%units), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+    !> @todo add optional fields (see Run method)
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP1
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(gridComp, importState, exportState, clock, rc)
+    implicit none
+
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+
+    character(ESMF_MAXSTR)  :: name
+    type(ESMF_Time)         :: currTime
+
+    type(ESMF_Field), target     :: field
+    type(ESMF_Grid)      :: grid
+    type(ESMF_FieldStatus_Flag)     :: status
+    integer              :: localrc
+
+    integer,target :: coordDimCount(2),coordDimMap(2,2)
+    integer,dimension(2)            :: totalLBound,totalUBound
+    integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
+    integer                         :: i,j
+    type :: allocatable_integer_array
+      integer,dimension(:),allocatable :: data
+    end type
+    type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
+    
+
+    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 !   Get the total domain size from the coordinates associated with the Grid
+    call ESMF_GridCompGet(gridComp,grid=grid)
     call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,                                   &
                       exclusiveLBound=exclusiveLBound,exclusiveUBound=exclusiveUBound)
     call ESMF_GridGet(grid,coordDimCount=coordDimCount,coordDimMap=coordDimMap)
@@ -312,9 +321,6 @@ module simplewave_component
       mask = 0
       mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
    end if
-   
-   
-   
 
 !   Complete Import Fields
     do i=1,size(importList)
@@ -323,6 +329,12 @@ module simplewave_component
       if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
         allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
         call ESMF_FieldEmptyComplete(field,grid,importList(i)%data,     &
+                                     ESMF_INDEX_DELOCAL,                      &
+                                     totalLWidth=exclusiveLBound-totalLBound, &
+                                     totalUWidth=totalUBound-exclusiveUBound)
+      else if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
                                      ESMF_INDEX_DELOCAL,                      &
                                      totalLWidth=exclusiveLBound-totalLBound, &
                                      totalUWidth=totalUBound-exclusiveUBound)
@@ -349,6 +361,12 @@ module simplewave_component
       if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
         allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
         call ESMF_FieldEmptyComplete(field,grid,exportList(i)%data,     &
+                                     ESMF_INDEX_DELOCAL,                      &
+                                     totalLWidth=exclusiveLBound-totalLBound, &
+                                     totalUWidth=totalUBound-exclusiveUBound)
+      else if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        call ESMF_FieldEmptyComplete(field,exportList(i)%data,                &
                                      ESMF_INDEX_DELOCAL,                      &
                                      totalLWidth=exclusiveLBound-totalLBound, &
                                      totalUWidth=totalUBound-exclusiveUBound)
