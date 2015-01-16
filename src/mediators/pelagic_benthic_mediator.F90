@@ -56,6 +56,9 @@ module pelagic_benthic_mediator
     call ESMF_GridCompSetEntryPoint(GridComp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompSetEntryPoint(GridComp, ESMF_METHOD_INITIALIZE, phase=2, &
+      userRoutine=InitializeP2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetEntryPoint(GridComp, ESMF_METHOD_RUN, Run, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetEntryPoint(GridComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
@@ -76,7 +79,7 @@ module pelagic_benthic_mediator
     integer, intent(out)  :: rc
 
     integer              :: localrc
-    character(len=10)           :: InitializePhaseMap(1)
+    character(len=10)           :: InitializePhaseMap(2)
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)       :: currTime
 
@@ -86,6 +89,7 @@ module pelagic_benthic_mediator
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
+    InitializePhaseMap(1) = "IPDv00p2=2"
 
     call ESMF_AttributeAdd(GridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
@@ -102,6 +106,101 @@ module pelagic_benthic_mediator
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(Gridcomp, importState, exportState, externalclock, rc)
+
+    type(ESMF_GridComp)   :: Gridcomp
+    type(ESMF_State)     :: importState
+    type(ESMF_State)     :: exportState
+    type(ESMF_Clock)     :: externalclock
+    integer, intent(out) :: rc
+
+    type(ESMF_Field)            :: newfield
+    character(len=ESMF_MAXSTR)  :: name, message, stateName, fieldName, geomName
+    type(ESMF_Time)             :: currTime, stopTime
+    integer                     :: localrc, i
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), fieldNames(:)
+    type(ESMF_STATEITEM_Flag), allocatable  :: itemTypeList(:)
+    type(ESMF_STATEITEM_Flag)   :: stateItem, itemType
+    type(ESMF_FIELDSTATUS_Flag) :: fieldStatus
+    type(ESMF_GEOMTYPE_Flag)    :: geomType
+    logical                     :: found = .false.
+
+    type(ESMF_Grid)             :: grid
+    type(ESMF_Field)            :: field
+    integer(ESMF_KIND_I4)       :: rank, ubnd2(2), lbnd2(2), itemCount
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
+
+    rc = ESMF_SUCCESS
+
+
+		! Create empty field in import that needs to be filled
+		call ESMF_StateGet(importState, 'dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
+		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+		if (itemType==ESMF_STATEITEM_NOTFOUND) then
+			field = ESMF_FieldEmptyCreate(name='dissolved_oxygen_in_water', rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateAdd(importState,(/field/), rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call MOSSCO_CompExit(GridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    allocate(fieldNames(2))
+	  fieldNames(1)='dissolved_oxygen_in_water'
+	  fieldNames(2)='detritus_nitrogen_in_water'
+
+		! Create empty field in import that needs to be filled
+    do i=1,size(fieldNames)
+
+  		call ESMF_StateGet(importState, trim(fieldNames(i)), itemType=itemType, rc=localrc)
+	  	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+		  if (itemType /= ESMF_STATEITEM_NOTFOUND) cycle
+
+			field = ESMF_FieldEmptyCreate(name=trim(fieldNames(i)), rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateAdd(importState,(/field/), rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
+    deallocate(fieldNames)
+
+    allocate(fieldNames(3))
+	  fieldNames(1)='dissolved_oxygen_at_soil_surface'
+	  fieldNames(2)='detritus_nitrogen_at_soil_surface'
+	  fieldNames(3)='temperature_at_soil_surface'
+
+		! Create empty field in import that needs to be filled
+    do i=1,size(fieldNames)
+
+  		call ESMF_StateGet(exportState, trim(fieldNames(i)), itemType=itemType, rc=localrc)
+	  	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+		  if (itemType /= ESMF_STATEITEM_NOTFOUND) cycle
+
+			field = ESMF_FieldEmptyCreate(name=trim(fieldNames(i)), rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
+    deallocate(fieldNames)
+
+
+    call MOSSCO_CompExit(GridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+  end subroutine InitializeP1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(Gridcomp, importState, exportState, externalclock, rc)
 
     type(ESMF_GridComp)   :: Gridcomp
     type(ESMF_State)     :: importState
@@ -254,7 +353,7 @@ module pelagic_benthic_mediator
     endif
 
 
-		! Create gridset field in import that needs to be filled
+		! Create empty field in import that needs to be filled
 		call ESMF_StateGet(importState, 'dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -272,7 +371,7 @@ module pelagic_benthic_mediator
     call MOSSCO_CompExit(GridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  end subroutine InitializeP1
+  end subroutine InitializeP2
 
 
 #undef  ESMF_METHOD
@@ -318,15 +417,6 @@ module pelagic_benthic_mediator
     !> fdet = fac_fdet*det
     !> sdet = fac_sdet*det
 
-    ! water temperature:
-    call mossco_state_get(importState,(/'temperature_in_water'/),ptr_f3,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call mossco_state_get(exportState,(/'temperature_at_soil_surface'/),ptr_f2,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    ptr_f2 = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
-
     ! dissolved_oxygen:
     call mossco_state_get(importState,(/ &
         'concentration_of_dissolved_oxygen_in_water', &
@@ -350,9 +440,11 @@ module pelagic_benthic_mediator
 
       !   Det flux:
     call mossco_state_get(importState,(/ &
-            'detritus_in_water              ', &
-            'detN_in_water                  ', &
-            'Detritus_Nitrogen_detN_in_water'/),DETN,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+      'concentration_of_detritus_nitrogen_in_water', &
+      'detritus_nitrogen_in_water                 ', &
+      'detritus_in_water                          ', &
+      'detN_in_water                              ', &
+      'Detritus_Nitrogen_detN_in_water            '/),DETN,lbnd=lbnd,ubnd=ubnd,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if ( ubnd(1)-lbnd(1)<0 .or. ubnd(2)-lbnd(2)<0 .or. ubnd(3)-lbnd(3)<0 ) then
       write(message,'(A)')  trim(name)//' received zero-length data for detritus nitrogen'
