@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF link coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -114,8 +114,6 @@ module link_connector
     call link_foreign_grid_or_needed_field_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_foreign_grid_or_needed_field_in_states(exportState, importState, rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call copy_nongridded_fieldvalue_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -849,43 +847,108 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     if(allocated(totalCount)) deallocate(totalCount)
 
- 		call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
- 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-		if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
-		  call ESMF_FieldEmptyComplete(exportField, typekind=ESMF_TYPEKIND_R8, rc=localrc)
-   		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-		endif
-
- 		call ESMF_FieldGet(exportField, rank=rank, rc=localrc)
- 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
- 		if (rank<1 .or. rank > 3) then
- 		  write(message,'(A,I1)') trim(name)//' cannot handle field with rank ',rank
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
+    if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then
+      call MOSSCO_FieldSetValue(exportField, value=defaultValue, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
-
-    if (.not.allocated(totalCount)) allocate(totalCount(rank))
-    if (.not.allocated(ubnd)) allocate(ubnd(rank))
-    if (.not.allocated(lbnd)) allocate(lbnd(rank))
-      call ESMF_FieldGetBounds(exportField, totalLBound=lbnd,totalUBound=ubnd, rc=localrc)
- 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (rank==1) then
-      call ESMF_FieldGet(exportField, localDE=0, farrayPtr=farrayPtr1, rc=localrc)
-      farrayPtr1(lbnd(1):ubnd(1)) = defaultValue
-    elseif (rank==2) then
-      call ESMF_FieldGet(exportField, localDE=0, farrayPtr=farrayPtr2, rc=localrc)
-      farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) = defaultValue
-    elseif (rank==3) then
-      call ESMF_FieldGet(exportField, localDE=0, farrayPtr=farrayPtr3, rc=localrc)
-      farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = defaultValue
-    endif
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 	  if (present(rc)) rc=rc_
 
   end subroutine  copy_1x1x1_field_to_field
+
+!> This subroutine sets a default real8 value for a non-empty field.
+!> The default value is 0.0 if not provided
+!> GRIDSET fields are promoted to complete with this subroutine
+#undef  ESMF_METHOD
+#define ESMF_METHOD "FieldSetValue"
+  subroutine MOSSCO_FieldSetValue(field, value, rc)
+
+  	implicit none
+
+  	type(ESMF_Field), intent(inout)              :: field
+  	real(ESMF_KIND_R8), intent(in), optional     :: value
+  	integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    real(ESMF_KIND_R8)                   :: value_
+    integer(ESMF_KIND_I4)                :: rc_, localrc, rank
+    integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
+    type(ESMF_FieldStatus_Flag)          :: fieldStatus
+    real(ESMF_KIND_R8), pointer          :: farrayPtr1(:), farrayPtr2(:,:), farrayPtr3(:,:,:)
+    real(ESMF_KIND_R8), pointer          :: farrayPtr4(:,:,:,:), farrayPtr5(:,:,:,:,:)
+    real(ESMF_KIND_R8), pointer          :: farrayPtr6(:,:,:,:,:,:), farrayPtr7(:,:,:,:,:,:,:)
+	  character(len=ESMF_MAXSTR)           :: message, name
+
+  	if (present(value)) then
+  	  value_ = value
+  	else
+  	  value_ = 0.0_ESMF_KIND_R8
+  	endif
+
+    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+   	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  	if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') 'cannot assign a value to empty field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    !> If the field status is gridset, then complete the field with real8 typekind
+    if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
+  	  call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=localrc)
+     	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  	endif
+
+   	call ESMF_FieldGet(field, rank=rank, rc=localrc)
+   	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+   	if (rank<1 .or. rank > 7) then
+   		write(message,'(A,I1,A)') trim(name)//' cannot handle rank ',rank,' in field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (.not.allocated(ubnd)) allocate(ubnd(rank))
+    if (.not.allocated(lbnd)) allocate(lbnd(rank))
+
+    call ESMF_FieldGetBounds(field, totalLBound=lbnd, totalUBound=ubnd, rc=localrc)
+   	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rank==1) then
+      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr1, rc=localrc)
+      farrayPtr1(lbnd(1):ubnd(1)) = value_
+    elseif (rank==2) then
+      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr2, rc=localrc)
+      farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) = value_
+    elseif (rank==3) then
+      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr3, rc=localrc)
+      farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = value_
+    elseif (rank==4) then
+      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr4, rc=localrc)
+      farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) = value_
+    elseif (rank==5) then
+      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr5, rc=localrc)
+      farrayPtr5(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4),lbnd(5):ubnd(5)) = value_
+    elseif (rank==6) then
+      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr6, rc=localrc)
+      farrayPtr6(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4),lbnd(5):ubnd(5),lbnd(6):ubnd(6)) = value_
+    elseif (rank==7) then
+      call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr7, rc=localrc)
+      farrayPtr7(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4), &
+        lbnd(5):ubnd(5),lbnd(6):ubnd(6),lbnd(7):ubnd(7)) = value_
+    endif
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+  	if (present(rc)) rc=rc_
+  	return
+
+  end subroutine MOSSCO_FieldSetValue
 
 end module link_connector
 
