@@ -29,7 +29,7 @@ else:
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='getm--fabm_pelagic--netcdf'
-     filename='reference_3d'
+     filename='pelagic_3d'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -309,7 +309,7 @@ for jtem in gridCompList:
     if instanceDict.has_key(jtem):
         item=instanceDict[jtem]
     else: item=jtem
-    
+
     if item.find('mediator')>0:
       fid.write('  use ' + item + ', only : ' + item + '_SetServices => SetServices \n')
     else: fid.write('  use ' + item + '_component, only : ' + item + '_SetServices => SetServices \n')
@@ -326,7 +326,7 @@ fid.write('''
   type(ESMF_State), dimension(:),  save, allocatable :: gridExportStateList, gridImportStateList
   type(ESMF_Alarm), dimension(:),  save, allocatable :: cplAlarmList
   type(ESMF_Clock), dimension(:),  save, allocatable :: gridCompClockList, cplCompClockList
-  character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNames, cplCompNames, cplNames
+  character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNameList, cplCompNameList, cplNames
 ''')
 
 for item in cplCompList:
@@ -454,13 +454,13 @@ fid.write('    numGridComp = ' + str(len(gridCompList)) )
 fid.write('''
     allocate(gridCompList(numGridComp))
     allocate(gridCompClockList(numGridComp))
-    allocate(gridCompNames(numGridComp))
+    allocate(gridCompNameList(numGridComp))
     allocate(gridImportStateList(numGridComp))
     allocate(gridExportStateList(numGridComp))
 
 ''')
 for i in range(0, len(gridCompList)):
-    fid.write('    gridCompNames(' + str(i+1) + ') = \'' + gridCompList[i] + '\'\n')
+    fid.write('    gridCompNameList(' + str(i+1) + ') = \'' + gridCompList[i] + '\'\n')
 
 fid.write('''
     !! Create all gridded components, and create import and export states for these
@@ -475,7 +475,7 @@ fid.write('''
     do i = 1, numGridComp
       gridCompClockList(i) = ESMF_ClockCreate(clock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_ClockSet(gridCompClockList(i), name=trim(gridCompNames(i)), rc=localrc)
+      call ESMF_ClockSet(gridCompClockList(i), name=trim(gridCompNameList(i)), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
@@ -483,7 +483,7 @@ fid.write('''
 for i in range(0, len(gridCompList)):
 
     if (petList[i]=='all'):
-        fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + ')),  &\n')
+        fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNameList(' + str(i+1) + ')),  &\n')
         fid.write('      petList=petList, clock=gridCompClockList(' + str(i+1) + '), rc=localrc)\n')
     else:
        fid.write('    if (petCount<=' + str(max(petList[i])) + ') then\n')
@@ -492,16 +492,16 @@ for i in range(0, len(gridCompList)):
        fid.write('      write(0,\'(A)\') trim(message)\n')
        fid.write('      call ESMF_Finalize(endflag=ESMF_END_ABORT)\n')
        fid.write('    endif\n')
-       fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNames(' + str(i+1) + ')),  &\n')
+       fid.write('    gridCompList(' + str(i+1) + ') = ESMF_GridCompCreate(name=trim(gridCompNameList(' + str(i+1) + ')),  &\n')
        fid.write('      petList=(/' + petList[i] + '/), clock=gridCompClockList(' + str(i+1) + '), rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
 fid.write('''
     do i=1, numGridComp
       gridExportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
-        name=trim(gridCompNames(i))//'Export')
+        name=trim(gridCompNameList(i))//'Export')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       gridImportStateList(i) = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED, &
-        name=trim(gridCompNames(i))//'Import')
+        name=trim(gridCompNameList(i))//'Import')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
@@ -520,22 +520,22 @@ fid.write('    numCplComp = ' + str(len(cplCompList)) )
 if len(cplCompList)>0:
     fid.write('''
     allocate(cplCompList(numCplComp))
-    allocate(cplCompNames(numCplComp))
+    allocate(cplCompNameList(numCplComp))
     allocate(cplCompClockList(numCplComp))
 ''')
 
 for i in range(0, len(cplCompList)):
-    fid.write('    cplCompNames(' + str(i+1) + ') = \'' + cplCompList[i] + '\'\n')
+    fid.write('    cplCompNameList(' + str(i+1) + ') = \'' + cplCompList[i] + '\'\n')
 fid.write('''
 
     do i = 1, numCplComp
       cplCompClockList(i) = ESMF_ClockCreate(clock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ClockSet(cplCompClockList(i), name=trim(cplCompNames(i)), rc=localrc)
+      call ESMF_ClockSet(cplCompClockList(i), name=trim(cplCompNameList(i)), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNames(i)), clock=cplCompClockList(i), rc=localrc)
+      cplCompList(i) = ESMF_CplCompCreate(name=trim(cplCompNameList(i)), clock=cplCompClockList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
@@ -660,10 +660,11 @@ if (True):
         fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="concentration_of_SPM_in_water:needed", value=.true., rc=localrc)\n')
         fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
-
       if dependencyDict.has_key(item):
         for jtem in dependencyDict[item]:
           ifrom=gridCompList.index(jtem)
+          fid.write('    write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(ifrom+1) +'))//" to "//trim(gridCompNameList(' + str(ito+1)+'))\n')
+          fid.write('    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
           fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
           fid.write('      exportState=gridImportStateList(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
           fid.write('    call ESMF_LogFlush()\n')
@@ -672,11 +673,14 @@ if (True):
 
     #fid.write('    if (gridCompPhaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
     fid.write('    if (gridCompPhaseCountList( ' + str(ito+1) + ')>= phase) then\n')
+    fid.write('      call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
+    fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
     fid.write('      call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
-    #fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=' + str(phase) + ', rc=localrc)\n')
     fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
+    fid.write('      call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
+    fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
     fid.write('    endif\n\n')
-  fid.write('    end do\n\n')
+  fid.write('    enddo\n\n')
 
 fid.write('    !! Link all remaining empty fields in states\n')
 for item in gridCompList:
@@ -1123,9 +1127,9 @@ fid.write('''
           endif
 
           !! Search the cplCompList for cplName
-          do l=1, ubound(cplCompNames,1)
-              !write(0,*) l,trim(cplCompNames(l))//' ?= '//trim(cplName)//'_connector'
-              if (trim(cplCompNames(l))==trim(cplName)//'_connector') exit
+          do l=1, ubound(cplCompNameList,1)
+              !write(0,*) l,trim(cplCompNameList(l))//' ?= '//trim(cplName)//'_connector'
+              if (trim(cplCompNameList(l))==trim(cplName)//'_connector') exit
           enddo
 
           call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=localrc)
@@ -1133,7 +1137,7 @@ fid.write('''
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNames(l))
+          write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNameList(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 ''')
 
@@ -1241,9 +1245,11 @@ fid.write('''
         !! Loop over all run phases, disregarding any action that could be taken between
         !! phases
         do phase=1,gridCompPhaseCountList(i)
+          call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
             exportState=gridExportStateList(i), clock=clock, phase=phase, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           call ESMF_LogFlush()
         enddo
 
