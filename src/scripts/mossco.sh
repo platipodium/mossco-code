@@ -4,12 +4,27 @@
 OPTIND=1         # Reset in case getopts has been used previously in the shell.
 GENERIC=0
 REMAKE=0
+BUILD_ONLY=0
+DEFAULT=benthic_geoecology
 
-while getopts "rg" opt; do
+
+usage(){
+	echo "Usage: $0 [options] [example]"
+	echo "Accepted options are -r, -b, -g"
+	echo "If not provided, the default example is ${DEFAULT}"
+	exit 1
+}
+
+
+while getopts "rgb" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
   g)  GENERIC=1
+      ;;
+  b)  BUILD_ONLY=1; REMAKE=1
+      ;;
+  \?) usage
       ;;
   esac
 done
@@ -17,7 +32,7 @@ done
 shift $((OPTIND-1))
 
 # Give default argument is none is provided
-if [[ "x${1}" == "x" ]]; then ARG=benthic_geoecology ; else ARG=${1}; fi
+if [[ "x${1}" == "x" ]]; then ARG=${DEFAULT} ; else ARG=${1}; fi
 
 if [[ ${GENERIC} == 1 ]] ; then
   DIR=${MOSSCO_DIR}/examples/generic
@@ -51,11 +66,25 @@ fi
 
 test -x  ${EXE} || ( echo "ERROR, could not create executable ${EXE}" ; exit 1)
 
+if [[ ${BUILD_ONLY} == 1 ]] ; then
+  exit 0
+fi
+
 test -f mossco_run.nml || (echo "ERROR, need file mossco_run.nml to run" ; exit 1)
 TITLE=$(cat mossco_run.nml | grep title | cut -f2 -d "'")
 
-echo ${EXE}  ${TITLE}
+echo ${EXE} ${TITLE}
 
-rm -rf PET?.${TITLE} ${TITLE}.stdout
-${EXE} | tee ${TITLE}.stdout
-tail -n 300 PET0.${TITLE}
+STDERR=${ARG}-${TITLE}.stderr
+STDOUT=${ARG}-${TITLE}.stdout
+
+rm -rf PET?.${TITLE} ${TITLE}.stdout ${STDERR} ${STDOUT}
+${EXE} 1>  ${STDOUT} 2> ${STDERR}
+
+tail -n 20 ${STDOUT}
+tail -n 20 ${STDERR}
+tail -n 100 PET0.${TITLE}
+
+
+
+
