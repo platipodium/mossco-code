@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component for simplewave
 !!
-!! This computer program is part of MOSSCO. 
-!! @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
+!! This computer program is part of MOSSCO.
+!! @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
 !! @author Knut Klingbeil, IOW
 !! @author Carsten Lemmen, HZG
 
@@ -22,6 +22,7 @@ module simplewave_component
   use simplewave_driver
   use mossco_variable_types
   use mossco_component
+  use mossco_state
 
   implicit none
   private
@@ -45,7 +46,7 @@ module simplewave_component
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -65,9 +66,9 @@ module simplewave_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(gridComp, importState, exportState, clock, rc)
- 
+
     implicit none
-  
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -88,7 +89,7 @@ module simplewave_component
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -134,17 +135,15 @@ module simplewave_component
     if (isPresent) then
       call ESMF_GridCompGet(gridComp,grid=grid)
     else
-      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
-                             value=foreignGridFieldName, defaultValue='none',rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (trim(foreignGridFieldName)/='none') then
-        call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_FieldGet(field, grid=grid, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        call ESMF_GridGet(grid, rank=rank, rc=rc)
-        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      if (isPresent) then
+        call MOSSCO_StateGetForeignGrid(importState, grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridGet(grid, rank=rank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (rank .ne. 2) then
           write(message,*) 'foreign grid must be of rank = 2'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -277,7 +276,7 @@ module simplewave_component
       integer,dimension(:),allocatable :: data
     end type
     type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
-    
+
 
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -304,7 +303,7 @@ module simplewave_component
 
    !> The preferred interface would be to use isPresent, but htis only works in ESMF from Nov 2014
    !> @todo replace if 0 by ESMF_VERSION macros
-#if 0  
+#if 0
    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -434,16 +433,16 @@ module simplewave_component
         end if
       end do
     end do
-    
+
     call ESMF_ClockAdvance(myClock, timeStep=nextTime-currTime, rc=localrc)
- 
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, clock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: clock
@@ -462,14 +461,14 @@ module simplewave_component
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
     !! Here comes your own finalization code
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Deallocate all your model's internal allocated memory    
+    !! 2. Deallocate all your model's internal allocated memory
     !! 3. Destroy your clock
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
     call ESMF_ClockDestroy(myClock, rc=localrc)
