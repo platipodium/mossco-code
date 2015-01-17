@@ -429,18 +429,24 @@ contains
 
   subroutine MOSSCO_GridCompFieldsTable(gridComp, importState, exportState, rc)
 
-    type(ESMF_GridComp), intent(in)           :: gridComp
-    !type(ESMF_State), intent(in)              :: importState
-    !type(ESMF_State), intent(in)              :: exportState
+    type(ESMF_GridComp), intent(in)              :: gridComp
+    type(ESMF_State), intent(in), optional       :: importState
+    type(ESMF_State), intent(in), optional       :: exportState
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)                    :: rc_, localrc, itemCount, phase
-    type(ESMF_State)                         :: importState, exportState
+    integer(ESMF_KIND_I4)                    :: rc_, localrc, itemCount, phase, i, j
+    integer(ESMF_KIND_I4)                    :: fieldCount, k
+    type(ESMF_State)                         :: state
     logical                                  :: isPresent
     type(ESMF_FieldStatus_Flag)              :: fieldStatus
     character(len=4047)                      :: row
-    character(len=ESMF_MAXSTR)               :: message, name
+    character(len=ESMF_MAXSTR)               :: message, name, itemName
     type(ESMF_Method_Flag)                   :: method
+    type(ESMF_StateItem_Flag), allocatable   :: itemTypeList(:)
+    character(len=ESMF_MAXSTR), allocatable  :: itemNameList(:)
+    type(ESMF_Field)                         :: field
+    type(ESMF_FieldBundle)                   :: fieldBundle
+    type(ESMF_Field), allocatable            :: fieldList(:)
 
     call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
     write(row,'(A)') '| '//trim(name)//' |'
@@ -455,20 +461,82 @@ contains
     else
       write(row,'(A)') trim(row)//' O'
     endif
-    write(row,'(A,I1,A)') trim(row),phase,' |'
+    write(row,'(A,I1,A)') trim(row)//' ',phase,' |'
 
-    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
-    if (isPresent) then
-    else
-      write(row,'(A)') trim(row)//' |'
-    endif
+    do i=1,2
+      if (i==1) then
+        if (present(importState)) then
+          state=importState
+        else
+          call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
+          if (.not.isPresent) then
+            write(row,'(A)') trim(row)//' (none) | (empty) |'
+            cycle
+          endif
+          call ESMF_GridCompGet(gridComp, importState=state, rc=localrc)
+        endif
+      endif
+      if (i==2) then
+        if (present(exportState)) then
+          state=exportState
+        else
+          call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+          if (.not.isPresent) then
+            write(row,'(A)') trim(row)//' (none) | (empty) |'
+            cycle
+          endif
+          call ESMF_GridCompGet(gridComp, exportState=state, rc=localrc)
+        endif
+      endif
+
+      call ESMF_StateGet(state, name=name, rc=localrc)
+      write(row,'(A)') trim(row)//' '//trim(name)//' |'
+
+      call ESMF_StateGet(state, itemCount=itemCount, rc=localrc)
+
+      if (itemCount < 1) then
+        write(row,'(A)') trim(row)//' (empty) |'
+        cycle
+      endif
+
+      allocate(itemTypeList(itemCount))
+      allocate(itemNameList(itemCount))
+      call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
+
+      do j=1, itemCount
+        itemName=itemNameList(j)
+        if (itemTypeList(j)==ESMF_STATEITEM_FIELD) then
+          call ESMF_StateGet(state, trim(itemName), field, rc=localrc)
+          write(row,'(A)') trim(row)//' '//trim(itemName(1:20))
+          call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+          if (fieldStatus==ESMF_FIELDSTATUS_EMPTY)  write(row,'(A)') trim(row)//' E'
+          if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET)  write(row,'(A)') trim(row)//' G'
+          if (fieldStatus==ESMF_FIELDSTATUS_COMPLETE)  write(row,'(A)') trim(row)//' C'
+        endif
+        if (itemTypeList(j)==ESMF_STATEITEM_FIELDBUNDLE) then
+          call ESMF_StateGet(state, trim(itemName), fieldBundle, rc=localrc)
+          call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
+          if (fieldCount==0) cycle
+          allocate(fieldList(fieldcount))
+          call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldList, rc=localrc)
+          do k=1, fieldCount
+            call ESMF_FieldGet(fieldList(k), name=name, rc=localrc)
+            write(row,'(A)') trim(row)//' '//trim(name(1:20))
+            call ESMF_FieldGet(fieldList(k), status=fieldStatus, rc=localrc)
+            if (fieldStatus==ESMF_FIELDSTATUS_EMPTY)  write(row,'(A)') trim(row)//' E'
+            if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET)  write(row,'(A)') trim(row)//' G'
+            if (fieldStatus==ESMF_FIELDSTATUS_COMPLETE)  write(row,'(A)') trim(row)//' C'
+          enddo
+          deallocate(fieldList)
+        endif
+      enddo
+
+      deallocate(itemTypeList)
+      deallocate(itemNameList)
+    enddo
     write(row,'(A)') trim(row)//' |'
 
-    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
-    if (isPresent) then
-    else
-      write(row,'(A)') trim(row)//' |'
-    endif
+    write(0,'(A)') trim(row)
 
     if (present(rc)) rc=rc_
     return
