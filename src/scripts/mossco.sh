@@ -118,6 +118,14 @@ cat << EOT > moab.sh
 #MSUB -m abe
 #MSUB -N ${TITLE}
 
+# Go to the current working directory (from where you submitted the job
+cd \$PBS_O_WORKDIR
+cat \$PBS_NODEFILE  \$PBS_O_WORKDIR/\$PBSJOBID.nodes
+echo $\PBS_O_QUEUE >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
+echo $\PBS_NUMPPN >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
+echo $\PBS_JOBNAME >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
+echo $\PBS_JOBID >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
+
 ${MPI_PREFIX} ${EXE} > \$PBS_O_WORKDIR/\$PBSJOBID.stdout 2> \$PBS_O_WORKDIR/\$PBSJOBID.stderr
 EOT
 
