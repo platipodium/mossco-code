@@ -187,7 +187,7 @@ module transport_connector
 
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount
-    character (len=ESMF_MAXSTR) :: message, itemName, filter_suffix, name
+    character (len=ESMF_MAXSTR) :: message, itemName, filter_suffix, name, replace_suffix
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_Field)            :: importField, field
@@ -214,6 +214,10 @@ module transport_connector
       defaultValue='_z_velocity_in_water', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_AttributeGet(importState, 'replace_suffix', value=replace_suffix, &
+      defaultValue='_in_water', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 	  suffix_length=len_trim(filter_suffix)
 
     !! Loop over items
@@ -225,11 +229,16 @@ module transport_connector
       if (itemName(length-suffix_length+1:length) /= trim(filter_suffix)) cycle
 
       !> Get the field name without the suffix, and make sure it is a field
-      itemName=trim(itemName(1:length-suffix_length))
+      itemName=trim(itemName(1:length-suffix_length))//trim(replace_suffix)
 
 	    call ESMF_StateGet(importState, itemName=trim(itemName), &
           itemType=importItemState, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (importItemState == ESMF_STATEITEM_FIELDBUNDLE) then
+        write(message,'(A)') trim(name)//' transport of field bundles not yet implemented'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
 
       if (importItemState /= ESMF_STATEITEM_FIELD) cycle
 
