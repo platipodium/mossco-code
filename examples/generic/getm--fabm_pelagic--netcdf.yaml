@@ -5,11 +5,16 @@ dependencies:
   - getm: fabm_pelagic
 
 coupling:
-  - components: 
+  - components:
      - getm
      - fabm_pelagic
     interval: 30 m
-  - components: 
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
      - fabm_pelagic
      - netcdf
-    interval: 3 h
+    interval: 60 h

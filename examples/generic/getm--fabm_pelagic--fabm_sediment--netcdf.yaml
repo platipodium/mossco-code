@@ -5,6 +5,9 @@ dependencies:
   - fabm_sediment:
     - component: getm
       grid: temperature_at_soil_surface
+  - pelagic_benthic_mediator:
+    - component: getm
+      grid: temperature_at_soil_surface
 
 instances:
   - netcdf_sediment: netcdf
@@ -17,17 +20,23 @@ coupling:
     interval: 30 m
   - components:
      - fabm_pelagic
-     - pelagic_benthic_coupler
-    interval: 12 h
-  - components:
-     - pelagic_benthic_coupler
-     - netcdf_sediment
-    interval: 12 h
+     - transport_connector
+     - getm
+    interval: none
   - components:
      - fabm_pelagic
-     - netcdf_pelagic
-    interval: 12 h
+     - pelagic_benthic_mediator
+    interval: 30 m
+  - components:
+     - pelagic_benthic_mediator
+     - fabm_sediment
+    interval:  30 m
+  - components:
+     - fabm_sediment
+     - benthic_pelagic_coupler
+     - fabm_pelagic
+    interval: 30 m
   - components:
      - fabm_sediment
      - netcdf_sediment
-    interval: 12 h
+    interval: 60 h
