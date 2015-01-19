@@ -6,7 +6,7 @@ GENERIC=0
 REMAKE=0
 BUILD_ONLY=0
 NP=1
-DEFAULT=benthic_geoecology
+DEFAULT=getm--fabm_pelagic--netcdf
 SYSTEM=INTERACTIVE
 
 usage(){
@@ -23,7 +23,7 @@ while getopts "rgbn:s:" opt; do
       ;;
   g)  GENERIC=1
       ;;
-  b)  BUILD_ONLY=1; REMAKE=1
+  b)  BUILD_ONLY=1
       ;;
   n)  NP=${OPTARG}
       ;;
@@ -87,13 +87,9 @@ if [[ ${NP} == 0 ]]; then
   NP=1
 fi
 
-test -f mossco_run.nml || (echo "ERROR, need file mossco_run.nml to run" ; exit 1)
-TITLE=$(cat mossco_run.nml | grep title | cut -f2 -d "'")
+SETUP=${PWD##*/}
 
-echo ${MPI_PREFIX} ${EXE} ${TITLE}
 
-STDERR=${ARG}-${TITLE}.stderr
-STDOUT=${ARG}-${TITLE}.stdout
 
 NODES=1
 PPN=${NP}
@@ -106,13 +102,16 @@ case ${SYSTEM} in
   *)     ;;
 esac
 
+TITLE=${SETUP}-${NODES}x${PPN}-${ARG}
+STDERR=${TITLE}.stderr
+STDOUT=${TITLE}.stdout
 MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
 
 cat << EOT > moab.sh
 #!/bin/bash -x
 
 #MSUB -l nodes=${NODES}:ppn=${PPN}
-#MSUB -l walltime=0:30:00
+#MSUB -l walltime=0:06:00
 
 #MSUB -M carsten.lemmen@hzg.de
 #MSUB -m abe
@@ -120,13 +119,14 @@ cat << EOT > moab.sh
 
 # Go to the current working directory (from where you submitted the job
 cd \$PBS_O_WORKDIR
-cat \$PBS_NODEFILE  \$PBS_O_WORKDIR/\$PBSJOBID.nodes
-echo $\PBS_O_QUEUE >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
-echo $\PBS_NUMPPN >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
-echo $\PBS_JOBNAME >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
-echo $\PBS_JOBID >> \$PBS_O_WORKDIR/\$PBSJOBID.nodes
+cat \$PBS_NODEFILE > \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
+echo \$PBS_O_QUEUE >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
+echo \$PBS_NUMPPN >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
+echo \$PBS_JOBNAME >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
+echo \$PBS_JOBID >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
+cat moab.sh >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
 
-${MPI_PREFIX} ${EXE} > \$PBS_O_WORKDIR/\$PBSJOBID.stdout 2> \$PBS_O_WORKDIR/\$PBSJOBID.stderr
+${MPI_PREFIX} ${EXE} > \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stdout 2> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stderr
 EOT
 
 cat << EOT > sge.sh
@@ -145,17 +145,28 @@ cat \$PE_HOSTFILE
 ${MPI_PREFIX} ${EXE} > ${STDOUT} 2> ${STDERR}
 EOT
 
-
 rm -rf PET?.${TITLE} ${TITLE}.stdout ${STDERR} ${STDOUT}
+
+
+# Write title to mossco title and getm runid
+if test -f getm.inp ; then
+  sed -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+fi
+
+if test -f mossco_run.nml ; then
+  sed -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
+fi
+
+test -f mossco_run.nml || (echo "ERROR, need file mossco_run.nml to run" ; exit 1)
 
 if [[ ${BUILD_ONLY} == 1 ]] ; then
   exit 0
 fi
 
 case ${SYSTEM} in
-  MOAB)  if test -x msub ; then msub moab.sh ; else cat moab.sh ; fi
+  MOAB)  if test $(which msub 2> /dev/null)  ; then msub moab.sh ; else cat moab.sh ; fi
          ;;
-  SGE)   if test -x qsub ; then qsub sge.sh ; else cat sge.sh ; fi
+  SGE)   if test $(which qsub 2> /dev/null) ; then qsub sge.sh ; else cat sge.sh ; fi
          ;;
   *)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
          ;;
