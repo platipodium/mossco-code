@@ -1,25 +1,25 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
-# 
+#
 # Copyright (C) 2013, 2014 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
 # 0. Execute the preamble only if we are calling Rules make for the first time
 # this is detected by the presence of the variabl MOSSCO_PREFIX
-# All variables that should be passed to submakes need to be exported, 
+# All variables that should be passed to submakes need to be exported,
 # including all variables that appear in the rules at the end of this file
 
 ifndef MOSSCO_PREFIX
 
-# 1. Checking that we're using GNU make 
+# 1. Checking that we're using GNU make
 #    Of course, this command already requires gmake, so a better solution is required here
 ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
-endif 
+endif
 
 MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 
@@ -28,7 +28,7 @@ MOSSCO_INSTALL_PREFIX ?= /opt/mossco
 # Rules.make is executed at MAKELEVEL 1, unless directly called in $(MOSSCODIR)/src
 #ifneq (,$(filter $(MAKELEVEL),0 1))
 
-# 2. ESMF stuff, only if ESMFMKFILE is declared. 
+# 2. ESMF stuff, only if ESMFMKFILE is declared.
 #
 ifndef ESMFMKFILE
   FORTRAN_COMPILER ?= $(shell echo $(F90) | tr a-z A-Z)
@@ -166,7 +166,7 @@ MOSSCO_GOTM=true
 else
 ifdef GOTMDIR
 MOSSCO_GOTM=true
-$(warning Assuming you have a working GOTM in ${GOTMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GOTMDIR explicitly to enable the build system to take  care of the GOTM build) 
+$(warning Assuming you have a working GOTM in ${GOTMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GOTMDIR explicitly to enable the build system to take  care of the GOTM build)
 endif
 endif
 
@@ -311,7 +311,7 @@ ifndef MOSSCO_DIR
 endif
 export MOSSCO_DIR
 
-ifeq ($(wildcard $(MOSSCO_DIR)),) 
+ifeq ($(wildcard $(MOSSCO_DIR)),)
 $(error the directory MOSSCO_DIR=$(MOSSCO_DIR) does not exist)
 endif
 
@@ -327,7 +327,7 @@ export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
 export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
 export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
 
-# 7. Putting everything together. 
+# 7. Putting everything together.
 # This is the list of ESMF-supported compilers:
 # absoft absoftintel cce default g95 gfortran gfortranclang intel intelcl intelgcc
 # lahey nag nagintel pathscale pgi pgigcc sxcross xlf xlfgcc
@@ -376,7 +376,7 @@ ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
-EXTRA_CPP= 
+EXTRA_CPP=
 else
 ifeq ($(FORTRAN_COMPILER),IFORT)
 F90FLAGS += -module $(MOSSCO_MODULE_PATH)
@@ -405,20 +405,20 @@ ifndef HAVE_LD_FORCE_LOAD
     HAVE_LD_FORCE_LOAD=false
   endif
   export HAVE_LD_FORCE_LOAD
-endif 
+endif
 
 export ESMF_LIBRARY_PATH=$(ESMF_F90LINKPATHS)
 export ESMF_LINKOPTS=$(ESMF_F90LINKRPATHS)
 export ESMF_LIBS=$(ESMF_F90ESMFLINKLIBS)
 export ESMF_LDFLAGS = $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) $(ESMF_F90ESMFLINKLIBS)
 
-LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) 
+LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
 export LIBRARY_PATHS
 
 export LIBS := $(ESMF_F90ESMFLINKLIBS)
 
-CPPFLAGS = $(DEFINES)  
+CPPFLAGS = $(DEFINES)
 ifeq ($(FORTRAN_COMPILER),XLF)
 CPPFLAGS += -WF,-DESMF_VERSION_MAJOR=$(ESMF_VERSION_MAJOR) -WF,-DESMF_VERSION_MINOR=$(ESMF_VERSION_MINOR)
 else
@@ -476,18 +476,18 @@ info:
 	@echo LINKDIRS = $(LINKDIRS)
 	@echo FC = $(FC)
 	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
-	@env | grep ^F90 | sort 
+	@env | grep ^F90 | sort
 ifeq ($(MOSSCO_FABM),true)
-	@env | grep ^FABM | sort 
+	@env | grep ^FABM | sort
 endif
 ifeq ($(MOSSCO_GOTM),true)
-	@env | grep ^GOTM | sort 
+	@env | grep ^GOTM | sort
 endif
 ifeq ($(MOSSCO_GETM),true)
 	@env | grep ^GETM | sort
 	@echo STATIC = $(STATIC)
 endif
-	@env | grep ^MOSSCO_ | sort 
+	@env | grep ^MOSSCO_ | sort
 
 
 # External libraries
@@ -538,8 +538,8 @@ ifdef MOSSCO_GETMDIR
 	( unset FABM ; $(MAKE) -C $(GETMDIR)/src GIT FORTRAN ../VERSION makedirs subdirs )
 endif
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
-	
-	
+
+
 #install:
 #	@test -d  $(MOSSCO_INSTALL_PREFIX) || mkdir -p $(MOSSCO_INSTALL_PREFIX) || $(warning No permission to create #$(MOSSCO_INSTALL_PREFIX))
 #	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/lib
@@ -585,7 +585,7 @@ mossco_clean: distclean fabm_clean
 
 %.o: %.F90
 	@echo "Compiling $<"
-	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@	
+	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 %.o: %.f90
 	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
@@ -606,7 +606,7 @@ mossco_clean: distclean fabm_clean
 sha:
 	@-git log | head -1 | awk '{print "character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = \""$$2"\"" }' \
 	> $(MOSSCO_DIR)/src/include/git-sha.h
- 
+
  help:
 
 help:

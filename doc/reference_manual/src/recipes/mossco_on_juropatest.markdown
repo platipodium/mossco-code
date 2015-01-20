@@ -1,21 +1,27 @@
-# Recipe #10: MOSSCO on Juropa
+# Recipe #11: MOSSCO on juropatest
 
-Juropa is one of the courrent supercomputers at FZ Jülich. The name is short for "Jülich Research on Petaflop Architectures".  You can apply for a testaccount by contacting their support at <dispatch.jsc@fz-juelich.de>.
+Juropatest is the test environment for the next supercomputer at FZ Jülich.  You can apply for a testaccount by contacting their support at <dispatch.jsc@fz-juelich.de>.
+
+
+## System description
+
+See <http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPATEST/Configuration/Configuration_node.html> for the configuration.  The batch system currently allows the use of 16 nodes with 2 CPU x 14 core processors, i.e. a total of 448 cores.
 
 
 ## Preparing your environment
 
-Load the appropriate modules (Intel 11 is the default, we need a higher version)
+Load the appropriate modules
 
 	module purge
-	module load intel/13.1.3 parastation/mpi-intel13-5.1.0
-	module load netcdf autotools cmake git/1.8.3
+    module load intel/2014.11
+    module load CMake/3.0.0 Doxygen/1.8.2 Python/2.7.8
+    module load git/2.1.3 zlib/1.2.8
+    module load netCDF/4.2.1.1 netCDF-Fortran/4.2 parallel-netcdf/1.5.0
 
-    export ESMFMKFILE=${HOME}/opt/esmf/lib/libO/Linux.intel.64.mpich2.default/esmf.mk
+    export ESMFMKFILE=$HOME/opt/esmf/lib/libg/Linux.intel.64.mpich2.default/esmf.mk
 
     export NETCDF=NETCDF4
     export NETCDF_VERSION=$NETCDF
-    #export NETCDFINC=$(nc-config --includedir)
     export FORTRAN_COMPILER=IFORT
 
 This example also assumes that you have downloaded or `git clone`ed MOSSCO into a directory referred to by the environment variable `$MOSSCO_DIR`
@@ -36,8 +42,10 @@ You should not have to do this, it is documented here for administrators.
 	export ESMF_OPTLEVEL=2
 	export ESMF_COMM=mpich2
 	export ESMF_NETCDF=split
+    export ESMF_PNETCDF=standard
 	export ESMF_INSTALL_PREFIX=${HOME}/opt/esmf
 	export ESMF_COMPILER=intel
+	export ESMF_OS=Linux
 	
 	export ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
 	export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
