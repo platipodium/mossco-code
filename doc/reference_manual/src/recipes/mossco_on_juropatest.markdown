@@ -13,8 +13,8 @@ See <http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPATEST/Con
 Load the appropriate modules
 
 	module purge
-    module load intel/2014.11
-    module load CMake/3.0.0 Doxygen/1.8.2 Python/2.7.8
+	module load intel-para/2014.11
+    module load CMake/3.0.0 Doxygen/1.8.2 Python/2.7.8 PyYAML/3.10-Python-2.7.8
     module load git/2.1.3 zlib/1.2.8
     module load netCDF/4.2.1.1 netCDF-Fortran/4.2 parallel-netcdf/1.5.0
 
@@ -51,4 +51,4 @@ You should not have to do this, it is documented here for administrators.
 	export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 	export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
 
-	(cd $ESMF_DIR; make && make install)
+	(cd $ESMF_DIR; make esmflib && make install)
