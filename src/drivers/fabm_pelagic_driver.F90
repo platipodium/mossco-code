@@ -34,6 +34,7 @@
     real(rk),dimension(:,:,:),pointer  :: zi=>null() !> layer interface depth
     real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0=>null()
     real(rk)                           :: decimal_yearday
+    integer                            :: day_of_year,seconds_of_day
     real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
     integer                            :: ndiag
     logical                            :: fabm_ready
@@ -43,6 +44,7 @@
     procedure :: get_rhs
     procedure :: get_dependencies
     procedure :: set_environment
+    procedure :: set_time
     procedure :: light
     procedure :: check_ready
     procedure :: get_export_state_by_id
@@ -126,6 +128,12 @@
   end do
 #endif
 
+  ! link global time information
+  pf%decimal_yearday=-999.0d0
+  call fabm_link_scalar_data(pf%model, &
+    standard_variables%number_of_days_since_start_of_the_year, &
+    pf%decimal_yearday)
+
   end subroutine initialize_domain
 
   subroutine initialize_concentrations(pf)
@@ -144,6 +152,7 @@
       call fabm_link_bulk_state_data(pf%model,n,pf%conc(RANGE3D,n))
     end do
     call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
+    ! evtl. also update pointer to pf%decimal_yearday
   end subroutine
 
 
@@ -314,6 +323,18 @@
   end do
 
   end subroutine
+
+
+  !> set global time
+  subroutine set_time(pf,day_of_year,seconds_of_day)
+  class(type_mossco_fabm_pelagic) :: pf
+  integer :: day_of_year, seconds_of_day
+  
+  pf%day_of_year = day_of_year
+  pf%seconds_of_day = seconds_of_day
+  pf%decimal_yearday = day_of_year-1.0d0 + dble(seconds_of_day)/86400
+
+  end subroutine set_time
 
 
   !> set environment forcing for FABM

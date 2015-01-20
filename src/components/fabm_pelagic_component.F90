@@ -233,6 +233,7 @@ module fabm_pelagic_component
     integer,dimension(3,3)     :: coordDimMap
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
+    integer                    :: day_of_year, day, seconds_of_day
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
 
@@ -241,6 +242,11 @@ module fabm_pelagic_component
 
     !! Get the time step
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! get time information
+    call ESMF_TimeGet(currTime, dd=day, s=seconds_of_day, &
+                      dayOfYear=day_of_year, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! read namelist input for control of timestepping
@@ -629,6 +635,11 @@ module fabm_pelagic_component
 
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
+
+    !> set global time, such that fabm can calculate initial diagnostics
+    call pel%set_time(day_of_year, seconds_of_day)
+    
+    !> check consistency of fabm setup
     call pel%check_ready()
     !> also update export states again with sinking velocities
     !! todo: this has to go into a second init phase,
@@ -657,7 +668,8 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
     integer           :: i,j,k,n
-    integer(8)     :: t
+    integer(8)        :: t
+    integer           :: seconds_of_day, day_of_year, day
 
     character(len=ESMF_MAXSTR) :: name
     type(ESMF_Clock)           :: clock
@@ -666,6 +678,12 @@ module fabm_pelagic_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! set global time information
+    call ESMF_TimeGet(currTime, dd=day, s=seconds_of_day, &
+                      dayOfYear=day_of_year, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call pel%set_time(day_of_year, seconds_of_day)
 
     ! calculate layer_heights
     call pel%update_grid()
