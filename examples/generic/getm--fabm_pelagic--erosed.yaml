@@ -1,20 +1,35 @@
 # This example tests the interaction of erosed with fabm_pelagic
 #
 # configuration dependencies:
+
 dependencies:
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
+  - getm: fabm_pelagic
   - erosed:
     - component: getm
       grid: water_depth_at_soil_surface
   - erosed: fabm_pelagic
-  - getm: fabm_pelagic
+
+instances:
+  - netcdf_sediment: netcdf
+  - netcdf_pelagic: netcdf
 
 coupling:
   - components:
      - getm
      - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - netcdf_pelagic
+    interval: 60 h
   - components:
      - fabm_pelagic
      - erosed
@@ -24,3 +39,7 @@ coupling:
   - components:
      - erosed
      - fabm_pelagic
+  - components:
+     - erosed
+     - netcdf_sediment
+    interval: 60 h
