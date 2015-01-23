@@ -25,13 +25,6 @@ module pelagic_benthic_mediator
   implicit none
 
   private
-  type(ESMF_GRID) :: pelagic_bdy_grid
-  type(ESMF_ARRAYSPEC) :: pelagic_bdy_array
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN,DIN,vDETN
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP,vDETP
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
 
   public SetServices
 
@@ -116,7 +109,7 @@ module pelagic_benthic_mediator
     type(ESMF_Field)            :: newfield
     character(len=ESMF_MAXSTR)  :: name, message, stateName, fieldName, geomName
     type(ESMF_Time)             :: currTime, stopTime
-    integer                     :: localrc, i
+    integer                     :: localrc, i, j
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), fieldNames(:)
     type(ESMF_STATEITEM_Flag), allocatable  :: itemTypeList(:)
     type(ESMF_STATEITEM_Flag)   :: stateItem, itemType
@@ -129,72 +122,46 @@ module pelagic_benthic_mediator
     integer(ESMF_KIND_I4)       :: rank, ubnd2(2), lbnd2(2), itemCount
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
+    type(ESMF_STATE)            :: state
 
     rc = ESMF_SUCCESS
 
+    !! Loop over the two states (import + export)
+		!! Create empty fields that need to be filled
+    do j=1,2
 
-		! Create empty field in import that needs to be filled
-		call ESMF_StateGet(importState, 'dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
-		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      allocate(fieldNames(2))
+      if (j==1) then
+	      fieldNames(1)='dissolved_oxygen_in_water'
+	      fieldNames(2)='detritus_nitrogen_in_water'
+	      state=importState
+      else
+   	    fieldNames(1)='dissolved_oxygen_at_soil_surface'
+	      fieldNames(2)='detritus_nitrogen_at_soil_surface'
+        state=exportState
+      endif
 
-		if (itemType==ESMF_STATEITEM_NOTFOUND) then
-			field = ESMF_FieldEmptyCreate(name='dissolved_oxygen_in_water', rc=localrc)
-		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      do i=1,size(fieldNames)
 
-      call ESMF_StateAdd(importState,(/field/), rc=localrc)
-		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+  		  call ESMF_StateGet(state, trim(fieldNames(i)), itemType=itemType, rc=localrc)
+	  	  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+		    if (itemType /= ESMF_STATEITEM_NOTFOUND) cycle
+
+			  field = ESMF_FieldEmptyCreate(name=trim(fieldNames(i)), rc=localrc)
+		    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_StateAdd(state,(/field/), rc=localrc)
+		    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
+
+      deallocate(fieldNames)
+    enddo
 
     call MOSSCO_CompExit(GridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(fieldNames(2))
-	  fieldNames(1)='dissolved_oxygen_in_water'
-	  fieldNames(2)='detritus_nitrogen_in_water'
-
-		! Create empty field in import that needs to be filled
-    do i=1,size(fieldNames)
-
-  		call ESMF_StateGet(importState, trim(fieldNames(i)), itemType=itemType, rc=localrc)
-	  	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-		  if (itemType /= ESMF_STATEITEM_NOTFOUND) cycle
-
-			field = ESMF_FieldEmptyCreate(name=trim(fieldNames(i)), rc=localrc)
-		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_StateAdd(importState,(/field/), rc=localrc)
-		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-
-    deallocate(fieldNames)
-
-    allocate(fieldNames(3))
-	  fieldNames(1)='dissolved_oxygen_at_soil_surface'
-	  fieldNames(2)='detritus_nitrogen_at_soil_surface'
-	  fieldNames(3)='temperature_at_soil_surface'
-
-		! Create empty field in import that needs to be filled
-    do i=1,size(fieldNames)
-
-  		call ESMF_StateGet(exportState, trim(fieldNames(i)), itemType=itemType, rc=localrc)
-	  	if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-		  if (itemType /= ESMF_STATEITEM_NOTFOUND) cycle
-
-			field = ESMF_FieldEmptyCreate(name=trim(fieldNames(i)), rc=localrc)
-		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_StateAdd(exportState,(/field/), rc=localrc)
-		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-
-    deallocate(fieldNames)
-
-
-    call MOSSCO_CompExit(GridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+	  return
 
   end subroutine InitializeP1
 
@@ -209,7 +176,7 @@ module pelagic_benthic_mediator
     integer, intent(out) :: rc
 
     type(ESMF_Field)            :: newfield
-    character(len=ESMF_MAXSTR)  :: name, message, stateName, fieldName, geomName
+    character(len=ESMF_MAXSTR)  :: name, message, stateName, itemName, geomName
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc, i
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
@@ -217,13 +184,13 @@ module pelagic_benthic_mediator
     type(ESMF_STATEITEM_Flag)   :: stateItem, itemType
     type(ESMF_FIELDSTATUS_Flag) :: fieldStatus
     type(ESMF_GEOMTYPE_Flag)    :: geomType
-    logical                     :: found = .false.
+    logical                     :: found = .false., isPresent
 
-    type(ESMF_Grid)             :: grid
+    type(ESMF_Grid)             :: grid3, grid2
     type(ESMF_Field)            :: field
-    integer(ESMF_KIND_I4)       :: rank, ubnd2(2), lbnd2(2), itemCount
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
-    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
+    integer(ESMF_KIND_I4)       :: rank, itemCount
+    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:) => null()
+	  real(ESMF_KIND_R8)          :: default_value
 
     rc = ESMF_SUCCESS
 
@@ -233,12 +200,6 @@ module pelagic_benthic_mediator
     ! Search for suitable 2D field in export state (first found will be used)
     call ESMF_StateGet(exportState, itemCount=itemCount, name=stateName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemCount == 0) then
-      write(message,'(A)') trim(name)//' needs at least one field in its export state '//trim(stateName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
 
     allocate(itemNameList(itemCount), itemTypeList(itemCount))
     call ESMF_StateGet(exportState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
@@ -259,10 +220,10 @@ module pelagic_benthic_mediator
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (geomType == ESMF_GEOMTYPE_GRID) then
-        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        call ESMF_FieldGet(field, grid=grid2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_GridGet(grid, rank=rank, name=geomName, rc=localrc)
+        call ESMF_GridGet(grid2, rank=rank, name=geomName, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (rank /= 2) cycle
       else
@@ -274,7 +235,6 @@ module pelagic_benthic_mediator
       write(message,'(A)') trim(name)//' uses grid '//trim(geomName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      pelagic_bdy_grid=grid
       found=.true.
       exit
 
@@ -290,19 +250,13 @@ module pelagic_benthic_mediator
     endif
 
     ! create omexdia_p-related fields, if not existing
-    call create_required_fields(exportState,pelagic_bdy_grid)
+    call create_required_fields(exportState,grid2)
 
     ! Search for suitable 3D field in import state (first found will be used)
     found = .false.
 
     call ESMF_StateGet(importState, itemCount=itemCount, name=stateName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemCount == 0) then
-      write(message,'(A)') trim(name)//' needs at least one field in its import state '//trim(stateName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
 
     allocate(itemNameList(itemCount), itemTypeList(itemCount))
     call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
@@ -323,10 +277,10 @@ module pelagic_benthic_mediator
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (geomType == ESMF_GEOMTYPE_GRID) then
-        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        call ESMF_FieldGet(field, grid=grid3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_GridGet(grid, rank=rank, name=geomName, rc=localrc)
+        call ESMF_GridGet(grid3, rank=rank, name=geomName, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (rank /= 3) cycle
       else
@@ -352,20 +306,43 @@ module pelagic_benthic_mediator
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-
 		! Create empty field in import that needs to be filled
 		call ESMF_StateGet(importState, 'dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
 		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-		if (itemType==ESMF_STATEITEM_NOTFOUND) then
-			field = ESMF_FieldEmptyCreate(name='dissolved_oxygen_in_water', rc=localrc)
+		if (itemType /= ESMF_STATEITEM_FIELD) then
+ 	      write(message,'(A)') trim(name)//' expected item '//trim(itemName)//' to be a field '
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(importState, 'dissolved_oxygen_in_water', field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+	  if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+	    call ESMF_AttributeGet(field, 'default_value', isPresent=isPresent, rc=localrc)
+
+	    if (.not.isPresent) then
+	      write(message,'(A)') trim(name)//' found no default value attribute for field '
+	      call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+	    endif
+
+		  call ESMF_FieldEmptySet(field, grid3, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+		endif
+
+    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+      call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=localrc)
 		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-		  call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+		  call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
 		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_StateAdd(importState,(/field/), rc=localrc)
-		  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+		  farrayPtr3(:,:,:)=default_value
     endif
 
     call MOSSCO_CompExit(GridComp, localrc)
@@ -406,6 +383,12 @@ module pelagic_benthic_mediator
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc
+
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN,DIN,vDETN
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP,vDETP
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
 
     rc = ESMF_SUCCESS
 
@@ -599,7 +582,6 @@ module pelagic_benthic_mediator
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !call ESMF_ArraySpecDestroy(pelagic_bdy_array, rc)
-    call ESMF_GridDestroy(pelagic_bdy_grid, rc=localrc)
 
     call MOSSCO_CompExit(GridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
