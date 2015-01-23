@@ -129,6 +129,9 @@ module link_connector
     call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call copy_default_values(importState, exportState, rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 
     call MOSSCO_CplCompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -951,6 +954,81 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
   	return
 
   end subroutine MOSSCO_FieldSetValue
+
+
+  subroutine MOSSCO_state_copy_default_values(importState, exportState, rc)
+
+    implicit none
+
+  	type(ESMF_State), intent(in)              :: importState
+  	type(ESMF_State), intent(in)              :: exportState
+  	integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, i
+	  character(len=ESMF_MAXSTR)                :: message, name
+	  character(len=ESMF_MAXSTR), allocatable   :: itemNameList(:)
+	  type(ESMF_StateItem_Flag), allocatable    :: itemTypeList(:)
+	  integer(ESMF_KIND_I4)                     :: itemCount
+	  type(ESMF_StateItem_Flag)                 :: itemType
+	  type(ESMF_FieldBundle)                    :: importFieldBundle, exportFieldBundle
+	  type(ESMF_Field)                          :: importField, exportField
+
+    call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount > 0) then
+      allocate(itemTypeList(itemCount))
+      allocate(itemNameList(itemCount))
+
+      call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
+        itemNameList=itemNameList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    !! Loop over items
+    do i=1, itemCount
+
+      if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
+
+        call ESMF_StateGet(importState, trim(itemNameList(i)), itemType=itemType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (itemType /= ESMF_STATEITEM_FIELD) cycle
+
+        call ESMF_StateGet(importState, trim(itemNameList(i)), importField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !call MOSSCO_field_copy_default_values(importField, exportField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+     elseif (itemTypeList(i)==ESMF_STATEITEM_FIELDBUNDLE) then
+
+        call ESMF_StateGet(importState, trim(itemNameList(i)), itemType=itemType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (itemType /= ESMF_STATEITEM_FIELDBUNDLE) cycle
+
+        call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_StateGet(exportState, trim(itemNameList(i)), exportFieldBundle, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !call MOSSCO_fieldbundle_copy_default_values(importFieldBundle, exportFieldBundle, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    enddo
+
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+
+  	if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_state_copy_default_values
+
+
 
 end module link_connector
 
