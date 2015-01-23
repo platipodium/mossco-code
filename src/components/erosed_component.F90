@@ -824,7 +824,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          do j=1,jnum
           do i= 1, inum
            h1(inum*(j -1)+i) = depth(i,j)
-           write (*,*) ' water depth ',depth(i,j)
+           !write (*,*) ' water depth ',depth(i,j)
           end do
          end do
       else
@@ -856,11 +856,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-write (*,*) 'layer_height_at_soil_surface', hbot
+!write (*,*) 'layer_height_at_soil_surface', hbot
 
-write (*,*)'depth_averaged_x_velocity_in_water', u2d
+!write (*,*)'depth_averaged_x_velocity_in_water', u2d
 
-write (*,*)'turbulent_diffusivity_of_momentum_at_soil_surface',turb_difz
+!write (*,*)'turbulent_diffusivity_of_momentum_at_soil_surface',turb_difz
 
       if (localrc == 0) then
 
@@ -876,7 +876,7 @@ write (*,*)'turbulent_diffusivity_of_momentum_at_soil_surface',turb_difz
             if (vbot (i,j)==-9999.0) v_bot (inum*(j -1)+i) =0.0_fp
      !       write (*,*) 'ubot', ubot(i,j)
      !       write (*,*) 'vbot', vbot(i,j)
-            write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
+            !write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
           end do
         end do
 
