@@ -57,17 +57,17 @@ subroutine set_Mbalthica(this)
 implicit none
 
 class (Mbalthica_Object)  :: this
-real (fp), dimension (:,:), allocatable :: amount
+real (fp), dimension (:,:), allocatable :: amounts
 character (len = 10)      :: units
 integer                   :: StringLength, UnitNr,istat
 logical                   :: opnd, exst
-real (fp)                 :: amounttmp
-!namelist /Macrofaun/  units, amount
-namelist /Macrofaun/  units, amounttmp
-allocate ( amount ( this%inum, this%jnum ) )
+real (fp)                 :: amount
+
+namelist /Macrofaun/  units, amount
+allocate ( amounts ( this%inum, this%jnum ) )
 
 units = ''
-amount = 0.0_fp
+amounts = 0.0_fp
 
 this%Species='Mbalthica'
 
@@ -81,14 +81,14 @@ if (exst.and.(.not.opnd)) then
  !write (*,*) ' in Mbalthica the file unit ', UnitNr, ' was just opened'
 
  read (UnitNr, nml=Macrofaun, iostat = istat)
- if (istat /= 0 ) write (*,*) ' Error in reading Mbalthica data'
+ if (istat /= 0 ) stop ' Error in reading Mbalthica data'
 
 elseif (opnd) then
 
   write (*,*)  ' In Mbalthica the file unit ', UnitNr, ' alreday opened'
 
   read (UnitNr, nml=Macrofaun, iostat = istat)
-  if (istat /= 0 ) write (*,*)' Error in reading Mbalthica data'
+  if (istat /= 0 ) stop 'Error in reading Mbalthica data'
 
   write (*,*) ' units and  amount are ', units, amount
 
@@ -102,18 +102,20 @@ end if
  if (units == '-') then
 
   !write (*,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
-  amount(:,:)= amounttmp
-  This%StateVar%intensity = amount
+  amounts(:,:)= amount
+  This%StateVar%intensity = amounts
   nullify (This%StateVar%amount)
+  write (*,*) ' in mbalthica_class: intensity = ', This%StateVar%intensity
 
  elseif  (units == 'gCm-2') then
 
  ! write (*,*) ' In Mbalthica_class, the biomass of Mbalthica is ', amount
 
   allocate (This%StateVar%amount( this%inum, this%jnum))
-  amount(:,:)= amounttmp
-  This%StateVar%amount = amount
+  amounts(:,:)= amount
+  This%StateVar%amount = amounts
   nullify (This%StateVar%intensity)
+
  end if
 
 
