@@ -58,15 +58,15 @@ subroutine set_microphyt (this)
 implicit none
 
 class (Microphytobenthos)  :: this
-real (fp), dimension (:,:), allocatable  :: Mass
+real (fp), dimension (:,:), allocatable  :: Biomass
 character (len = 10)       :: units
 integer                    :: StringLength, UnitNr, istat
 logical                    :: opnd, exst
-real (fp)                  :: masstmp
+real (fp)                  :: Mass
 
-!namelist /Microphyto/ units, Mass
-namelist /Microphyto/ units, Masstmp
-allocate ( Mass ( this%inum , this%jnum ) )
+namelist /Microphyto/ units, Mass
+
+allocate ( Biomass ( this%inum , this%jnum ) )
 
 this%Species='Microphytobenthos'
 
@@ -80,14 +80,14 @@ if (exst.and.(.not.opnd)) then
 ! write (*,*) ' in Microphytobenthos the file unit ', UnitNr, ' was just opened'
 
  read (UnitNr, nml=Microphyto, iostat = istat)
- if (istat /= 0 ) write (*,*) ' Error in reading Microphytobenthos data'
+ if (istat /= 0 ) stop ' Error in reading Microphytobenthos data'
 
 elseif (opnd) then
 
  write (*,*) ' In Microphytobenthos the file unit ', UnitNr, ' already opened'
  read (UnitNr, nml=Microphyto, iostat = istat)
 
- if (istat /= 0 ) write (*,*) ' Error in reading Microphytobenthos data'
+ if (istat /= 0 ) stop ' Error in reading Microphytobenthos data'
 
 else
 
@@ -97,11 +97,11 @@ else
 end if
 
  this%UnitNr = UnitNr
- Mass(:,:) = masstmp
+ Biomass(:,:) = Mass
  !write (*,*) ' In Microphytobenthos_class, the amount of Chl biomass is ', Mass
  write (*,*) ' Units are ', units
 
- This%BioMass%amount = Mass
+ This%BioMass%amount = Biomass
 
  StringLength = len_trim (units)
 
