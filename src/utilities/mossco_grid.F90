@@ -19,10 +19,12 @@
 module mossco_grid
 
   use esmf
+  use mossco_strings
 
   implicit none
 
   public MOSSCO_GridCopyCoords
+  public MOSSCO_GridCreateFromOtherGrid
 
 contains
 

@@ -172,6 +172,10 @@ module pelagic_benthic_mediator
 #define ESMF_METHOD "InitializeP2"
   subroutine InitializeP2(Gridcomp, importState, exportState, externalclock, rc)
 
+    use mossco_grid
+
+	  implicit none
+
     type(ESMF_GridComp)   :: Gridcomp
     type(ESMF_State)     :: importState
     type(ESMF_State)     :: exportState
@@ -200,60 +204,6 @@ module pelagic_benthic_mediator
     call MOSSCO_CompEntry(GridComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! Search for suitable 2D field in export state (first found will be used)
-    call ESMF_StateGet(exportState, itemCount=itemCount, name=stateName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    allocate(itemNameList(itemCount), itemTypeList(itemCount))
-    call ESMF_StateGet(exportState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    do i=1, itemCount
-      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
-
-      call ESMF_StateGet(exportState, itemNameList(i), field=field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
-
-      call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (geomType == ESMF_GEOMTYPE_GRID) then
-        call ESMF_FieldGet(field, grid=grid2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_GridGet(grid2, rank=rank, name=geomName, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (rank /= 2) cycle
-      else
-        write(message,'(A)') trim(name)//' not yet implemented obtaining geo information from non-grids. Skipped.'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        cycle
-      endif
-
-      write(message,'(A)') trim(name)//' uses grid '//trim(geomName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      found=.true.
-      exit
-
-    enddo
-
-    deallocate(itemNameList)
-    deallocate(itemTypeList)
-
-    if (.not.found) then
-      write(message,'(A)') trim(name)//' found no suitable 2D field with grid in state '//trim(stateName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    ! create omexdia_p-related fields, if not existing
-    call create_required_fields(exportState,grid2)
 
     ! Search for suitable 3D field in import state (first found will be used)
     found = .false.
@@ -306,8 +256,66 @@ module pelagic_benthic_mediator
     if (.not.found) then
       write(message,'(A)') trim(name)//' found no suitable 3D field with grid in state '//trim(stateName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call MOSSCO_StateLog(importState)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    ! Search for suitable 2D field in export state (first found will be used)
+    call ESMF_StateGet(exportState, itemCount=itemCount, name=stateName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    allocate(itemNameList(itemCount), itemTypeList(itemCount))
+    call ESMF_StateGet(exportState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, itemCount
+      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(exportState, itemNameList(i), field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) cycle
+
+      call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (geomType == ESMF_GEOMTYPE_GRID) then
+        call ESMF_FieldGet(field, grid=grid2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridGet(grid2, rank=rank, name=geomName, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (rank /= 2) cycle
+      else
+        write(message,'(A)') trim(name)//' not yet implemented obtaining geo information from non-grids. Skipped.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      write(message,'(A)') trim(name)//' uses grid '//trim(geomName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      found=.true.
+      exit
+
+    enddo
+
+    deallocate(itemNameList)
+    deallocate(itemTypeList)
+
+    if (.not.found) then
+
+      grid2 = MOSSCO_GridCreateFromOtherGrid(grid3, localrc)
+  		if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    endif
+
+    ! create omexdia_p-related fields, if not existing
+    call create_required_fields(exportState,grid2)
+
 
 		! Create empty field in import that needs to be filled
 		call ESMF_StateGet(importState, 'dissolved_oxygen_in_water', itemType=itemType, rc=localrc)
