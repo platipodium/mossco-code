@@ -1036,11 +1036,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
   	type(ESMF_FieldBundle), intent(inout)           :: exportFieldBundle
   	integer(ESMF_KIND_I4), intent(out), optional    :: rc
 
-    integer(ESMF_KIND_I4)                     :: rc_, localrc, i
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, i,j
 	  character(len=ESMF_MAXSTR)                :: message, name
 	  character(len=ESMF_MAXSTR), allocatable   :: fieldNameList(:)
-	  type(ESMF_Field), allocatable             :: fieldList(:)
-	  integer(ESMF_KIND_I4)                     :: fieldCount
+	  type(ESMF_Field), allocatable             :: fieldList(:), itemList(:)
+	  integer(ESMF_KIND_I4)                     :: fieldCount, itemCount
 	  type(ESMF_Field)                          :: importField
 	  logical                                   :: isPresent
 
@@ -1059,18 +1059,28 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     !! Loop over items
     do i=1, fieldCount
 
-      call ESMF_FieldBundleGet(importFieldBundle, trim(fieldNameList(i)), isPresent=isPresent, rc=localrc)
+			!! @todo: find a working way to do this, at the moment, the implementation fails
+			write(message,'(A)') 'Not implented: copying default values in fieldBundles'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      cycle
+
+      call ESMF_FieldBundleGet(importFieldBundle, trim(fieldNameList(i)), fieldCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (.not.isPresent) cycle
+      if (itemCount==0) cycle
+      allocate(itemList(itemCount))
 
-      call ESMF_FieldBundleGet(importFieldBundle, fieldName=trim(fieldNameList(i)), field=importField, rc=localrc)
+      call ESMF_FieldBundleGet(importFieldBundle, fieldName=trim(fieldNameList(i)), fieldList=itemlist, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_field_copy_default_values(importField, fieldList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      do j=1, itemCount
+        call MOSSCO_field_copy_default_values(importField, itemList(j), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
 
+      deallocate(itemList)
     enddo
+
 
     if (allocated(fieldList)) deallocate(fieldList)
     if (allocated(fieldNameList)) deallocate(fieldNameList)
@@ -1091,6 +1101,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 	  character(len=ESMF_MAXSTR)                :: message, name, attributeName
 	  logical                                   :: isPresent
 	  real(ESMF_KIND_R8)                        :: value_R8
+
+		attributeName='default_value'
 
 	  call ESMF_AttributeGet(importField, trim(attributeName), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
