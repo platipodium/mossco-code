@@ -125,14 +125,18 @@ module simplewave_component
     type(ESMF_Grid)        :: grid
     type(ESMF_Field)       :: field
     integer                :: i
+    type(ESMF_StateItem_Flag) :: itemType
 
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !!! Create Grid
-    call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent)
+    call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (isPresent) then
-      call ESMF_GridCompGet(gridComp,grid=grid)
+      call ESMF_GridCompGet(gridComp,grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
     else
       call ESMF_AttributeGet(importState, 'foreign_grid_field_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -146,6 +150,7 @@ module simplewave_component
         if (rank .ne. 2) then
           write(message,*) 'foreign grid must be of rank = 2'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          call MOSSCO_StateLog(importState)
           call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         end if
       else
@@ -191,8 +196,9 @@ module simplewave_component
           enddo
         end if
       end if
-      call ESMF_GridCompSet(gridComp,grid=grid)
-    end if
+      call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     allocate(exportList(4))
     allocate(importList(3))
@@ -206,9 +212,19 @@ module simplewave_component
     importList(3)%units = 'm/s'
 
     do i=1,size(importList)
+
+      call ESMF_StateGet(importState, trim(importList(i)%name), itemType=itemType, rc=localrc)
+      if (itemType == ESMF_STATEITEM_FIELD) cycle
+      if (itemType /= ESMF_STATEITEM_NOTFOUND) then
+        write(message,'(A)')  trim(name)//' got other than field type for item '//trim(importList(i)%name)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call MOSSCO_StateLog(importState)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      endif
+
       field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldEmptySet(field,grid, rc=localrc)
+      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -229,9 +245,19 @@ module simplewave_component
     exportList(4)%units = 'rad'
 
     do i=1,size(exportList)
+
+      call ESMF_StateGet(exportState, trim(importList(i)%name), itemType=itemType, rc=localrc)
+      if (itemType == ESMF_STATEITEM_FIELD) cycle
+      if (itemType /= ESMF_STATEITEM_NOTFOUND) then
+        write(message,'(A)')  trim(name)//' got other than field type for item '//trim(importList(i)%name)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call MOSSCO_StateLog(exportState)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      endif
+
       field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldEmptySet(field,grid, rc=localrc)
+      call ESMF_FieldEmptySet(field,grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
