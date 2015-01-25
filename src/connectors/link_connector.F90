@@ -129,7 +129,7 @@ module link_connector
     call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call copy_default_values(importState, exportState, rc)
+    call MOSSCO_state_copy_default_values(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
@@ -1001,7 +1001,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !call MOSSCO_field_copy_default_values(importField, exportField, rc=localrc)
+        call MOSSCO_field_copy_default_values(importField, exportField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
      elseif (itemTypeList(i)==ESMF_STATEITEM_FIELDBUNDLE) then
@@ -1027,7 +1027,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
   	if (present(rc)) rc=rc_
 
   end subroutine MOSSCO_state_copy_default_values
-
 
  subroutine MOSSCO_fieldbundle_copy_default_values(importFieldBundle, exportFieldBundle, rc)
 
@@ -1068,7 +1067,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_FieldBundleGet(importFieldBundle, fieldName=trim(fieldNameList(i)), field=importField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !call MOSSCO_field_copy_default_values(importField, fieldList(i), rc=localrc)
+      call MOSSCO_field_copy_default_values(importField, fieldList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     enddo
@@ -1080,7 +1079,40 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
   end subroutine MOSSCO_fieldbundle_copy_default_values
 
+ subroutine MOSSCO_field_copy_default_values(importField, exportField, rc)
 
+    implicit none
+
+  	type(ESMF_Field), intent(in)              :: importField
+  	type(ESMF_Field), intent(inout)           :: exportField
+  	integer(ESMF_KIND_I4), intent(out), optional    :: rc
+
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, i
+	  character(len=ESMF_MAXSTR)                :: message, name, attributeName
+	  logical                                   :: isPresent
+	  real(ESMF_KIND_R8)                        :: value_R8
+
+	  call ESMF_AttributeGet(importField, trim(attributeName), isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+	  if (isPresent) then
+
+	    call ESMF_AttributeGet(importField, trim(attributeName), value=value_R8, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+	    call ESMF_AttributeGet(exportField, trim(attributeName), isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (.not.isPresent) then
+	      call ESMF_AttributeSet(exportField, trim(attributeName), value=value_R8, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+    endif
+
+  	if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_field_copy_default_values
 
 end module link_connector
 

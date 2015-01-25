@@ -153,6 +153,9 @@ module pelagic_benthic_mediator
 
         call ESMF_StateAdd(state,(/field/), rc=localrc)
 		    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_AttributeSet(state, trim(fieldNames(1))//':needed', .true., rc=localrc)
+		    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
 
       deallocate(fieldNames)
