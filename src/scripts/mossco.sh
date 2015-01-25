@@ -99,7 +99,6 @@ fi
 SETUP=${PWD##*/}
 
 
-
 NODES=1
 PPN=${NP}
 
@@ -157,13 +156,16 @@ EOT
 rm -rf PET?.${TITLE} ${TITLE}.stdout ${STDERR} ${STDOUT}
 
 
+SED=${SED:-$(which gsed)}
+SED=${SED:-$(which sed)}
+
 # Write title to mossco title and getm runid
 if test -f getm.inp ; then
-  sed -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+  ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
 fi
 
 if test -f mossco_run.nml ; then
-  sed -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
+  ${SED} -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
 fi
 
 test -f mossco_run.nml || (echo "ERROR, need file mossco_run.nml to run" ; exit 1)
