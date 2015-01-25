@@ -81,7 +81,7 @@ integer                          :: i,j
 
          fcr_macrofauna (i,j)= 0.0016 * log (Mbalthica%intensity(i,j) * Mbalthica%intensity(i,j)) &
                             & -0.085  * log (Mbalthica%intensity(i,j)) +1.0    ! Knaapen et al (2003)
-
+write (*,*) ' in cshearfunction mbalthica%intesnity = ',Mbalthica%intensity(i,j)
         endif
 
     elseif (trim(Mbalthica%units) == 'gCm-2' ) then
@@ -96,7 +96,7 @@ integer                          :: i,j
                       ' Therefore, it is ignored !!!!!!!'
          endif
          exit
-    else if (trim(Mbalthica%units) == '' ) then    ! according to Borsje et al. (2008)
+    else if (trim(Mbalthica%units) == '' ) then
 
       fcr_macrofauna = 1.0
 
