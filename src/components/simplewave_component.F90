@@ -118,7 +118,6 @@ module simplewave_component
     type(ESMF_Config)               :: config
     integer(ESMF_KIND_I4)           :: lbnd(2), ubnd(2)
 
-
     character(ESMF_MAXSTR) :: name
     type(ESMF_Time)        :: currTime
     integer                :: localrc

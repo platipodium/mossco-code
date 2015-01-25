@@ -910,9 +910,9 @@ contains
       isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (.not.isPresent) then
-      call MOSSCO_StateLog(state)
       write(message, '(A)')  'Requested attribute '//trim(attributeName)//' not found.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call MOSSCO_StateLog(state)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
@@ -922,16 +922,16 @@ contains
     call ESMF_StateGet(state, trim(attributeValue), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (itemType == ESMF_STATEITEM_NOTFOUND) then
-      call MOSSCO_StateLog(state)
       write(message, '(A)')  'Requested item '//trim(attributeValue)//' not found.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call MOSSCO_StateLog(state)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
-      call MOSSCO_StateLog(state)
       write(message, '(A)')  'Requested item '//trim(attributeName)//' ist not a field.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call MOSSCO_StateLog(state)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
@@ -940,9 +940,9 @@ contains
 
     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-      call MOSSCO_StateLog(state)
       write(message, '(A)')  'Requested field '//trim(attributeName)//' is empty.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call MOSSCO_StateLog(state)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 

@@ -650,34 +650,31 @@ if (True):
             ifrom=gridCompList.index(jtem[0])
     j=gridCompList.index(item)
     if foreignGrid.has_key(item):
-      fid.write('      if (    (phase.eq.1 .and. gridCompPhaseCountList( ' + str(ito+1) + ').eq.1) &\n')
-      fid.write('        .or.(phase.eq.2 .and. gridCompPhaseCountList( ' + str(ito+1) + ').gt.1) ) then\n')
-      fid.write('      call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
-      fid.write('      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+      fid.write('      if (    (phase.eq.1 .and. gridCompPhaseCountList( ' + str(ito+1) + ').gt.0)) then\n')
+      fid.write('        call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
+      fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
       if (item == 'erosed') :
-        fid.write('      call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="concentration_of_SPM_in_water:needed", value=.true., rc=localrc)\n')
-        fid.write('      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+        fid.write('        call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="concentration_of_SPM_in_water:needed", value=.true., rc=localrc)\n')
+        fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+      fid.write('      endif\n')
 
-      if dependencyDict.has_key(item):
-        for jtem in dependencyDict[item]:
-          ifrom=gridCompList.index(jtem)
-          fid.write('      write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(ifrom+1) +'))//" to "//trim(gridCompNameList(' + str(ito+1)+'))\n')
-          fid.write('      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
-          fid.write('      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-          fid.write('        exportState=gridImportStateList(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
-          fid.write('      call ESMF_LogFlush()\n')
+    if dependencyDict.has_key(item):
+      for jtem in dependencyDict[item]:
+        ifrom=gridCompList.index(jtem)
+        fid.write('      write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(ifrom+1) +'))//" to "//trim(gridCompNameList(' + str(ito+1)+'))\n')
+        fid.write('      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
+        fid.write('      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
+        fid.write('        exportState=gridImportStateList(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
+        fid.write('      call ESMF_LogFlush()\n')
 
-      fid.write('      endif\n\n')
-
-    #fid.write('    if (gridCompPhaseCountList( ' + str(ito+1) + ')>=' + str(phase) + ') then\n')
     fid.write('      if (gridCompPhaseCountList( ' + str(ito+1) + ')>= phase) then\n')
-    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
-    fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
+#    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
+#    fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
     fid.write('        call ESMF_GridCompInitialize(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
     fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
-    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
-    fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
+#    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
+#    fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
     fid.write('      endif\n\n')
 
   for item in cplCompList:
