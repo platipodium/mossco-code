@@ -10,23 +10,26 @@ DEFAULT=getm--fabm_pelagic--netcdf
 SYSTEM=INTERACTIVE
 
 usage(){
+  echo
 	echo "Usage: $0 [options] [example]"
+	echo
 	echo "Accepted options are -r, -b, -g, -n <numproc>, -s <system> <example>"
 	echo "If not provided, the default <example> is ${DEFAULT}"
-	echo .
-	echo [-r] : Rebuilds the [generic] example and MOSSCO coupled system
-	echo [-b] : build-only.  Does not execute the example
-	echo [-g] : build a generic, not a hardcoded example
-	echo [-n X]: build for or/and run on X processors
-	echo [-s M|S]: exeute batch queue for a specific system
 	echo
-	echo [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes `moab.sh`
-	echo [-s S]: SGE system, e.g. ocean.hzg.de, writes `sge.sh`
+	echo "    [-r] : Rebuilds the [generic] example and MOSSCO coupled system"
+	echo "    [-b] : build-only.  Does not execute the example"
+	echo "    [-g] : build a generic, not a hardcoded example"
+	echo "    [-n X]: build for or/and run on X processors"
+	echo "    [-s M\|S]: exeute batch queue for a specific system"
+	echo
+	echo "    [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
+	echo "    [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
+	echo
 	exit
 }
 
 
-while getopts "rgbn:s:" opt; do
+while getopts ":rgbn:s:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
