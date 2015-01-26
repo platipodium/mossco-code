@@ -259,8 +259,9 @@ ifeq ($(MOSSCO_GETM),true)
   endif
   GETM_LIBS += -lturbulence_prod -lutil_prod
 
-# always compile for SPHERICAL
-  export STATIC += -DSPHERICAL
+# default compile for SPHERICAL
+  GETM_GEOMETRY ?= SPHERICAL
+  export STATIC += -D$(GETM_GEOMETRY) $(GETM_STATIC_DEFINES)
   export GETM_CPPFLAGS = $(STATIC)
   ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
     export GETM_CPPFLAGS += -DGETM_PARALLEL
