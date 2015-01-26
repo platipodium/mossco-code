@@ -82,7 +82,7 @@ module pelagic_benthic_mediator
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
-    InitializePhaseMap(1) = "IPDv00p2=2"
+    InitializePhaseMap(2) = "IPDv00p2=2"
 
     call ESMF_AttributeAdd(GridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
