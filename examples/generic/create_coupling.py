@@ -173,8 +173,7 @@ for component in componentSet:
       dependencyDict[item]=compdeps
 
   elif type(dependencies) is list:
-    for i in range(0,len(dependencies)):
-        item=dependencies[i]
+    for item in dependencies:
         compdeps=[]
         if type(item) is dict:
           for jtem in item.values():
@@ -201,8 +200,12 @@ for component in componentSet:
   else:
     print 'The dependencies specification must be list or dictionary'
 
-for key, value in dependencyDict.iteritems():
-    dependencyDict[key]=list(set(value))
+for key,value in dependencyDict.iteritems():
+    unique=[]
+    for item in value:
+      if item not in unique:
+        unique.append(item)
+    dependencyDict[key]=unique
 
 
 if 'link_connector' in componentList:
