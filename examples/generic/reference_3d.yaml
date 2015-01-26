@@ -21,7 +21,8 @@ dependencies:
       grid: temperature_at_soil_surface
   - getm: fabm_pelagic
   - pelagic_benthic_mediator: fabm_pelagic
-  - pelatic_benthic_mediator: fabm_sediment
+  - pelagic_benthic_mediator: fabm_sediment
+  - pelagic_benthic_mediator: constant
   - getm: fabm_pelagic
 
 # todo find a mechansim to feed constant/getm into pelagic_benthic_coupler
@@ -60,6 +61,9 @@ coupling:
      - fabm_pelagic
   - components:
      - fabm_pelagic
+     - pelagic_benthic_mediator
+  - components:
+     - constant
      - pelagic_benthic_mediator
   - components:
      - pelagic_benthic_mediator
