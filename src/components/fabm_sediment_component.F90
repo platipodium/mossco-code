@@ -3,8 +3,8 @@
 !> The ESMF/FABM sediment driver component module provides infrastructure for the
 !! MOSSCO sediment component.
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -41,7 +41,7 @@ module fabm_sediment_component
   implicit none
 
   private
- 
+
   real(rk)  :: dzmin,dt,dt_spinup
   real(rk)  :: dt_min=1.0e-8_rk,relative_change_min=-0.9_rk
   integer   :: tnum,funit,output=-1,k,n,numyears,numlayers
@@ -56,15 +56,15 @@ module fabm_sediment_component
   real(rk),dimension(:), pointer    :: fluxmesh_ptr_vs
   real(rk),dimension(:,:), pointer  :: statemesh_ptr
   character(len=ESMF_MAXSTR) :: ugrid_name=''
- 
+
   type(type_sed),save :: sed
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
                      dt_min,relative_change_min,ugrid_name, output, &
                      bcup_dissolved_variables
- 
+
   public SetServices
-  
+
   contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
@@ -73,7 +73,7 @@ module fabm_sediment_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
     integer(ESMF_KIND_I4)      :: localrc
@@ -119,7 +119,7 @@ module fabm_sediment_component
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I8) :: tidx
     type(ESMF_Alarm)      :: outputAlarm
-  
+
     character(len=ESMF_MAXSTR) :: timestring, name, message, units
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
     type(ESMF_Clock)           :: clock
@@ -134,7 +134,7 @@ module fabm_sediment_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! read namelist input for control of timestepping  
+    !! read namelist input for control of timestepping
     open(33,file='run_sed.nml',action='read',status='old')
     read(33,nml=run_nml)
 
@@ -145,7 +145,7 @@ module fabm_sediment_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_ClockSet(clock, timeStep=timeInterval, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
- 
+
     !! also from namelist, the output timestep is read and
     !! used to create an alarm
     !! no output, if output <= 0
@@ -185,7 +185,7 @@ module fabm_sediment_component
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
            value=foreignGridFieldName, defaultValue='none',rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (trim(foreignGridFieldName)=='none') then 
+      if (trim(foreignGridFieldName)=='none') then
         sed%grid%type=LOCAL_GRID
       else
         sed%grid%type=FOREIGN_GRID
@@ -229,8 +229,8 @@ module fabm_sediment_component
     call sed%grid%init_grid()
     call sed%initialize()
     close(33)
-    !! Allocate all arrays conc, bdys, fluxes 
-    allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar)) 
+    !! Allocate all arrays conc, bdys, fluxes
+    allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
     ! link conc to fabm_sediment_driver
     sed%conc => conc
     ! initialise values
@@ -247,12 +247,12 @@ module fabm_sediment_component
     call sed%get_all_export_states()
 
     !> run for some years into quasi-steady-state
-    if (presimulation_years.gt.0) then 
+    if (presimulation_years.gt.0) then
       write(0,*) '  postinit run sediment model on initial profiles for ',presimulation_years,' years'
       write(message,'(A,I3,A)') trim(name)//' runs ', presimulation_years, ' spinup years'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     endif
-    
+
     dt_spinup=3600.0_rk
     sed%bdys   => bdys
     sed%fluxes => fluxes
@@ -341,8 +341,8 @@ module fabm_sediment_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           fluxmesh_ptr = -fluxes(:,1,sed%export_states(n)%fabm_id)
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
-          
-          
+
+
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         end if
       end do
@@ -407,7 +407,7 @@ module fabm_sediment_component
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
         end if
-      end do  
+      end do
     else ! sed%grid%use_ugrid
       if (sed%grid%type==LOCAL_GRID) then
         call ESMF_ArraySpecSet(flux_array, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)
@@ -491,7 +491,7 @@ module fabm_sediment_component
        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
        call ESMF_AttributeSet(field,'units',trim(sed%model%info%diagnostic_variables(n)%units))
-        
+
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end do
@@ -530,7 +530,7 @@ module fabm_sediment_component
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
         end if
-      end do  
+      end do
     endif ! self%use_ugrid
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     !call ESMF_StatePrint(importState)
@@ -551,7 +551,7 @@ module fabm_sediment_component
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
- 
+
     character(len=19) :: timestring1,timestring2
     type(ESMF_Time)   :: wallTime, clockTime
     type(ESMF_TimeInterval) :: timeInterval
@@ -564,7 +564,7 @@ module fabm_sediment_component
     integer           :: fieldcount, i
     character(len=ESMF_MAXSTR)  :: string
     type(ESMF_Alarm)           :: outputAlarm
- 
+
     character(len=ESMF_MAXSTR) :: timestring, name, message
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
     type(ESMF_Clock)           :: clock
@@ -572,7 +572,7 @@ module fabm_sediment_component
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
     logical                    :: clockIsPresent
-    
+
     type(ESMF_Alarm), allocatable :: alarmList(:)
     integer(ESMF_KIND_I4)      :: alarmCount
     character(len=ESMF_MAXSTR) :: alarmName
@@ -599,8 +599,8 @@ module fabm_sediment_component
         if (trim(alarmName)=='outputAlarm') then
            outputAlarm=alarmList(i)
            exit
-        endif 
-      enddo     
+        endif
+      enddo
     endif
 
     do while (.not.ESMF_ClockIsStopTime(clock))
@@ -619,7 +619,7 @@ module fabm_sediment_component
       call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
 
       if (sed%do_output) then
-        !! Check if the output alarm is ringing, if so, quiet it and 
+        !! Check if the output alarm is ringing, if so, quiet it and
         !! get the current advance count from clock
         !if (ESMF_AlarmIsRinging(outputAlarm)) then
         !  call ESMF_AlarmRingerOff(outputAlarm,rc=localrc)
@@ -651,7 +651,7 @@ module fabm_sediment_component
       call ESMF_ClockAdvance(clock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
-   
+
     ! write back fluxes into export State
 
     do n=1,size(sed%export_states)
@@ -693,18 +693,18 @@ module fabm_sediment_component
         end if
       end if ! sed%grid%use_ugrid
     end do
- 
+
     if (allocated(fieldList)) deallocate(fieldlist)
-    
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
   end subroutine Run
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -719,7 +719,7 @@ module fabm_sediment_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
     close(funit)
 
     call sed%finalize()
@@ -728,7 +728,7 @@ module fabm_sediment_component
     if (allocated(fluxes)) deallocate(fluxes)
 
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
@@ -741,7 +741,7 @@ module fabm_sediment_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_boundary_conditions"
   subroutine get_boundary_conditions(sed,importState,bdys,fluxes)
-    
+
     real(rk),dimension(:,:,:),target :: bdys,fluxes
     type(type_sed)      :: sed
     type(ESMF_State)    :: importState
@@ -764,7 +764,7 @@ module fabm_sediment_component
       call ESMF_LogWrite(string,ESMF_LOGMSG_WARNING)
 #endif
       bdys(1:_INUM_,1:_JNUM_,1) = 10._rk   ! degC temperature
-    else 
+    else
       call ESMF_StateGet(importState,"temperature_at_soil_surface",field,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #ifdef DEBUG
@@ -854,8 +854,8 @@ module fabm_sediment_component
 #endif
         end if
       endif
- 
-  
+
+
     end do
 
   end subroutine get_boundary_conditions

@@ -1,14 +1,28 @@
 #!/bin/bash
 
-# Uses getopts functionality, initialize variables
-OPTIND=1         # Reset in case getopts has been used previously in the shell.
-GENERIC=0
-REMAKE=0
-BUILD_ONLY=0
-NP=1
-DEFAULT=getm--fabm_pelagic--netcdf
-SYSTEM=INTERACTIVE
+# @brief A MOSSCO startup script to facilitate compiling and running
+#        You may want to link this script into directory within your $PATH
+#
+# This computer program is part of MOSSCO.
+# @copyright Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen, <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
+# Initialize variables, set options with default values
+OPTIND=1           # Reset in case getopts has been used previously in the shell.
+GENERIC=0          # By default, use a hardcoded example
+REMAKE=0           # Do not recompile if not necessary
+BUILD_ONLY=0       # Executed, don't stop after build
+NP=1               # Run on one processor
+DEFAULT=getm--fabm_pelagic--netcdf  # Default example
+SYSTEM=INTERACTIVE                  # Interactive shell as default system
+RETITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
+
+# Function for printing usage of this script
 usage(){
   echo
 	echo "Usage: $0 [options] [example]"
@@ -16,20 +30,22 @@ usage(){
 	echo "Accepted options are -r, -b, -g, -n <numproc>, -s <system> <example>"
 	echo "If not provided, the default <example> is ${DEFAULT}"
 	echo
-	echo "    [-r] : Rebuilds the [generic] example and MOSSCO coupled system"
-	echo "    [-b] : build-only.  Does not execute the example"
-	echo "    [-g] : build a generic, not a hardcoded example"
-	echo "    [-n X]: build for or/and run on X processors"
+	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
+	echo "    [-b] :  build-only.  Does not execute the example"
+	echo "    [-g] :  build a generic, not a hardcoded example"
+	echo "    [-t] :  do not retitle mossco_run.nml and getm.inp"
+	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then
+	echo "            MPI is not used at all. Default is n=1
 	echo "    [-s M\|S]: exeute batch queue for a specific system"
 	echo
-	echo "    [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
-	echo "    [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
+	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
+	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
 	echo
 	exit
 }
 
-
-while getopts ":rgbn:s:" opt; do
+# Getopts parsing of command line arguments
+while getopts ":rgtbn:s:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -57,7 +73,16 @@ else
   DIR=${MOSSCO_DIR}/examples/${ARG}
 fi
 
-test -d ${DIR} || ( echo "ERROR, directory ${DIR} does not exist" ; exit 1)
+if ! test -d ${DIR} ; then
+  echo
+  if [[ ${GENERIC} == 0 ]] ; then
+    echo "ERROR:  \"${ARG}\" is not a valid hardcoded example, ${DIR} does not exist."
+  else
+    echo "ERROR:	${DIR} does not exist. Check your MOSSCO installation."
+  fi
+  usage
+fi
+
 EXE=${DIR}/${ARG}
 
 if [[ ${GENERIC} == 1 ]] ; then
@@ -65,8 +90,21 @@ if [[ ${GENERIC} == 1 ]] ; then
     test -x  ${EXE} || REMAKE=1
   fi
   if  [[ ${REMAKE} == 1 ]] ; then
-    test -f ${DIR}/create_coupling.py || ( echo "ERROR, script create_coupling.py does not exist"; exit 1)
-    test -f ${EXE}.yaml || ( echo "ERROR, coupling spec ${EXE}.yaml does not exist"; exit 1)
+    if ! test -f ${DIR}/create_coupling.py ; then
+      echo
+      echo "ERROR: Script create_coupling.py does not exist, check your MOSSCO installation."
+      exit 1
+    fi
+    if ! test -x ${DIR}/create_coupling.py ; then
+      echo
+      echo "ERROR: Script create_coupling.py is not executable, please chmod +x this file."
+      exit 1
+    fi
+    if ! test -f ${EXE}.yaml ; then
+      echo
+      echo "ERROR: coupling spec ${EXE}.yaml does not exist"
+      exit 1
+    fi
     (cd ${DIR}; python create_coupling.py ${ARG})
     rm -f ${EXE}
     make -C ${DIR}
@@ -81,8 +119,13 @@ else
   fi
 fi
 
-test -x  ${EXE} || ( echo "ERROR, could not create executable ${EXE}" ; exit 1)
+if ! test -x  ${EXE} ; then
+  echo
+  echo "ERROR: Could not create executable ${EXE}"
+  exit 1
+fi
 
+# Adapt to different MPI implementations
 case ${SYSTEM} in
   moab|MOAB|M)  MPI_PREFIX="mpiexec"
                 SYSTEM=MOAB
@@ -118,7 +161,8 @@ STDERR=${TITLE}.stderr
 STDOUT=${TITLE}.stdout
 MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
 
-cat << EOT > moab.sh
+case ${SYSTEM} in
+  MOAB) cat << EOT > moab.sh
 #!/bin/bash -x
 
 #MSUB -l nodes=${NODES}:ppn=${PPN}
@@ -139,8 +183,8 @@ cat moab.sh >> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.nodes
 
 ${MPI_PREFIX} ${EXE} > \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stdout 2> \$PBS_O_WORKDIR/$TITLE.\$PBS_JOBID.stderr
 EOT
-
-cat << EOT > sge.sh
+;;
+  SGE) cat << EOT > sge.sh
 #!/bin/bash
 
 #$ -N ${TITLE}
@@ -155,23 +199,36 @@ cat \$PE_HOSTFILE
 
 ${MPI_PREFIX} ${EXE} > ${STDOUT} 2> ${STDERR}
 EOT
+;;
+esac
 
-rm -rf PET?.${TITLE} ${TITLE}.stdout ${STDERR} ${STDOUT}
+rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
 
+if [[ RETITLE == 1 ]] ; then
 
-SED=${SED:-$(which gsed)}
-SED=${SED:-$(which sed)}
+  SED=${SED:-$(which gsed) 2> /dev/null}
+  SED=${SED:-$(which sed)  2> /dev/null}
 
-# Write title to mossco title and getm runid
-if test -f getm.inp ; then
-  ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+  if ! test -x ${SED}; then
+    echo
+    echo "ERROR: Cannot execute the sed program $SED"
+    exit 1
+  fi
+
+  if test -f getm.inp ; then
+    ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+  fi
+
+  if test -f mossco_run.nml ; then
+    ${SED} -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
+  fi
 fi
 
-if test -f mossco_run.nml ; then
-  ${SED} -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
+if ! test -f mossco_run.nml ; then
+  echo
+  echo "ERROR: Need file mossco_run.nml to run"
+  exit 1
 fi
-
-test -f mossco_run.nml || (echo "ERROR, need file mossco_run.nml to run" ; exit 1)
 
 if [[ ${BUILD_ONLY} == 1 ]] ; then
   exit 0
