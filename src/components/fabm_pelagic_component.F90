@@ -195,7 +195,7 @@ module fabm_pelagic_component
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Field)     :: field,wsfield,concfield,tmpField
     type(ESMF_Array)     :: array
-    integer              :: i
+    integer              :: i,j,k
     integer              :: rank
     integer, allocatable :: maxIndex(:)
     type(ESMF_DELayout)  :: delayout
@@ -234,6 +234,8 @@ module fabm_pelagic_component
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
     integer                    :: day_of_year, day, seconds_of_day
+    logical, dimension(:,:,:), pointer :: mask=>null()
+    integer, dimension(:,:,:), pointer :: gridmask=>null()
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
 
@@ -361,10 +363,27 @@ module fabm_pelagic_component
                       1-totalLWidth3(2):jnum+totalUWidth3(2), &
                       1-totalLWidth3(3):numlayers+totalUWidth3(3), &
                       1:pel%nvar))
-    call pel%initialize_domain(inum,jnum,numlayers,dt)
+    !! get mask
+    allocate(mask(1:inum,1:jnum,1:numlayers))
+    mask = .false.
+    call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
+    if (localrc == ESMF_SUCCESS) then
+      do i=1,inum
+        do j=1,jnum
+          do k=1,numlayers
+            mask(i,j,k) = gridmask(i,j,k)==0
+          end do
+        end do
+      end do
+    end if
+
+    call pel%initialize_domain(inum,jnum,numlayers,dt,mask=mask)
     call pel%update_pointers()
     call pel%initialize_concentrations()
     call pel%update_export_states(update_sinking=.false.)
+
+    ! done with mask here
+    deallocate(mask); nullify(mask)
 
     !! allocate local arrays
     allocate(bfl(pel%nvar))

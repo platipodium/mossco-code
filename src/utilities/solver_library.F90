@@ -35,7 +35,8 @@ type, public :: type_rhs_driver !< base driver class
    integer :: nvar
    real(selected_real_kind(13)) :: dt_min=1.d-9 ! minimum timestep
    real(selected_real_kind(13)) :: relative_change_min=-0.9d0 ! minimum relative change
-   real(selected_real_kind(13)),dimension(:,:,:,:),pointer :: conc
+   real(selected_real_kind(13)),dimension(:,:,:,:),pointer :: conc=>null()
+   logical, dimension(:,:,:), pointer :: mask=>null()
 contains
    procedure :: get_rhs => base_get_rhs
 end type

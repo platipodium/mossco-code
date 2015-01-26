@@ -234,6 +234,10 @@ sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
 ! set fabm domain
 call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
 
+! set mask
+allocate(sed%mask(_INUM_,_JNUM_,_KNUM_))
+sed%mask = .false.
+
 ! allocate state variables
 sed%nvar = size(sed%model%info%state_variables)
 sed%ndiag = size(sed%model%info%diagnostic_variables)

@@ -93,11 +93,12 @@
 
   
   !> initialize domain of pelagic fabm class
-  subroutine initialize_domain(pf,inum,jnum,knum,dt)
+  subroutine initialize_domain(pf,inum,jnum,knum,dt,mask)
   class(type_mossco_fabm_pelagic) :: pf
   integer  :: inum,jnum,knum,n
   real(rk) :: dt
   type(export_state_type), pointer :: export_state
+  logical, dimension(1:inum,1:jnum,1:knum), optional :: mask
 
   pf%fabm_ready=.false.
   pf%inum=inum
@@ -107,11 +108,15 @@
   ! Send information on spatial domain
   call fabm_set_domain(pf%model,inum,jnum,knum)
 
-! Note (KK): Why don't we provide the totalDomain to FABM and mask the
-!            HALO zones with fabm_set_mask???
-!            _FABM_MASK_TYPE_ and _FABM_UNMASKED_VALUE_ must be defined in fabm_driver.h
-!            extensions must match those provided to set_domain()
-  !call fabm_set_mask(pf%model,mask)
+  ! set mask (valid data point: mask=.false.)
+  ! fabm_set_mask is not used, since MOSSCO does not use a
+  ! particular vectorized dimension
+  allocate(pf%mask(1:inum,1:jnum,1:knum))
+  if (present(mask)) then
+    pf%mask=mask
+  else
+    pf%mask(:,:,:) = .false.
+  end if
 
   ! Allocate array for photosynthetically active radiation (PAR).
   allocate(pf%par(1:inum,1:jnum,1:knum))
@@ -224,7 +229,7 @@
   do k=1,rhs_driver%knum
     do j=1,rhs_driver%jnum
       do i=1,rhs_driver%inum
-         call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
+        if (.not.rhs_driver%mask(i,j,k)) call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
       end do
     end do
   end do

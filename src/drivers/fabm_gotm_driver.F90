@@ -170,6 +170,10 @@ end type
       gotmfabm%nvar_ben=size(gotmfabm%model%info%state_variables_ben)
       gotmfabm%nvar=gotmfabm%nvar_pel + gotmfabm%nvar_ben
 
+      ! set mask
+      allocate(gotmfabm%mask(1,1,nlev))
+      gotmfabm%mask(:,:,:) = .false.
+
       ! Report prognostic variable descriptions
       LEVEL2 'FABM pelagic state variables:'
       do i=1,size(gotmfabm%model%info%state_variables)
