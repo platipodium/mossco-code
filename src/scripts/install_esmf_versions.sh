@@ -2,7 +2,7 @@
 
 TAGS=""
 
-TAGS=ESMF_7_0_0_beta_snapshot_34
+TAGS=ESMF_7_0_0_beta_snapshot_36
 #TAGS=ESMF_6_3_0rp2_beta_snapshot_02
 #TAGS=ESMF_6_3_0rp1
 #TAGS="ESMF_5_3_1_beta_snapshot_18
@@ -10,8 +10,8 @@ TAGS=ESMF_7_0_0_beta_snapshot_34
 #TAGS=ESMF_3_1_0rp5
 export TAGS
 
-COMPS="intel" #gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
-COMMS="openmpi" #"openmpi" #  mpiuni mpich2
+COMPS="gfortran gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+COMMS="mpich2" # openmpi" #"openmpi" #  mpiuni mpich2
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull origin master
@@ -31,7 +31,7 @@ echo Using ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 #echo y        | module clear
 
 git stash && git stash drop
-git pull
+git pull origin master
 
 for C in $COMMS ; do
   echo "Iterating for Communicator $C ============================================="
@@ -43,16 +43,11 @@ for C in $COMMS ; do
 
     ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
-<<<<<<< HEAD
 
-    if [ $G = intel ]; then
-=======
-   
     if [ $(hostname) = ocean-fe.fzg.local ]; then
       ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/${G}/include
- 
+
     elif [ $G = intel ]; then
->>>>>>> Added ocean specific netcdf to install script
       source /opt/intel/bin/ifortvars.sh intel64
       source /opt/intel/bin/iccvars.sh intel64
 
@@ -60,21 +55,17 @@ for C in $COMMS ; do
       export PATH=$MPI_PATH/bin:$PATH
       NETCDF_PATH=/opt/intel/netcdf4
       ESMF_NETCDF_INCLUDE=${NETCDF_PATH}/include
-<<<<<<< HEAD
-      ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
     else
-=======
-    else    
->>>>>>> Added ocean specific netcdf to install script
       ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
     fi
+
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
+
 #    echo y  | module clear
 #    module load ${ESMF_COMPILER} || continue
 #    module load openmpi_ib || continue
 #    module load netcdf/3.6.2 || continue
 #    module list
-
 
     for T in $TAGS; do
        echo "Iterating for Tag $T ============================================="
@@ -84,7 +75,10 @@ for C in $COMMS ; do
        git checkout  -f $T
 
        # Fix -lmpi_f77 on recent Darwin/MacPorts
-       ${SED} -i 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk || continue
+       if [[ ${ESMF_OS} == Darwin ]] ; then
+         sed 's#-lmpi_f77##g' ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk  > tmp_rules.mk
+         mv tmp_rules.mk ${ESMF_DIR}/build_config/Darwin.gfortran.default/build_rules.mk
+       fi
 
        ln -sf ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.default ${ESMF_DIR}/build_config/${ESMF_OS}.${ESMF_COMPILER}.${ESMF_SITE}
 
@@ -121,14 +115,8 @@ EOT
        echo $PATH
 
        #test -f $ESMFMKFILE || (make distclean && make -j12 lib && make install)
-<<<<<<< HEAD
        (make distclean && make -j12 lib && make install)
 
-=======
-       #(make distclean && make -j12 lib && make install)
-       (make -j12 lib && make install)
-       
->>>>>>> Added ocean specific netcdf to install script
        test -f $ESMFMKFILE || continue
        test -f ${ESMF_INSTALL_PREFIX}/lib/libg/${ESMF_STRING}/libesmf.a || continue
        mkdir -p $ESMF_INSTALL_PREFIX/etc
