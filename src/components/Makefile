@@ -1,14 +1,14 @@
 # This Makefile is part of MOSSCO
-# 
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+#
+# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
-# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde  
+# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /src/components$,,$(PWD))
@@ -23,7 +23,7 @@ SUBDIRS=gotm remtc
 TARGETS=libempty libconstant libmossco_inout libmossco_simplewave libmossco_info # libconstant_grid
 
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS += libmossco_netcdf libmossco_clm
+  TARGETS += libmossco_netcdf libmossco_clm #libmossco_river
 endif
 ifeq ($(MOSSCO_BENTHOS),true)
   TARGETS+=libmossco_benthos
@@ -53,16 +53,22 @@ libmossco_constant: libconstant
 libmossco_constant_grid: libconstant_grid
 libmossco_empty: libempty
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
-libmossco_clm: libmossco_clm_driver libmossco_clm_component 
+libmossco_river: libmossco_river_driver libmossco_river_component
 
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 
-libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
-libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
+
+libmossco_river_component: libmossco_river_driver libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_component.o)
+libmossco_river_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_driver.o)
 
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
    $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+
+libmossco_clm: libmossco_clm_driver  \
+   $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
+
+libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_netcdf: prefix libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o) \

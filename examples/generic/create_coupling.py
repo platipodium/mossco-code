@@ -732,11 +732,13 @@ fid.write('''
 fid.write('''
     !!> Check all states for remaining incomplete fields
     !!>@todo find segfault this is causing
+    call ESMF_LogWrite(trim(name)//' listing all import and export states', ESMF_LOGSMG_INFO)
+
     do i=1, numGridComp
       call MOSSCO_StateCheckFields(gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call MOSSCO_StateCheckFields(gridExportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call MOSSCO_StateCheckFields(gridExportStateList(i), rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_StateLog(gridImportStateList(i))
       call MOSSCO_StateLog(gridExportStateList(i))
    enddo
@@ -1499,6 +1501,7 @@ libs = {'gotm'       : ['solver', 'gotm'] ,
         'netcdf'     : ['mossco_netcdf'],
         'test'       : ['mossco_test'],
         'simplewave' : ['mossco_simplewave'],
+        'river'      : ['mossco_river'],
         'empty'      : ['empty'],
         'inout'      : ['mossco_inout'],
         'info'       : ['mossco_info'],
@@ -1532,6 +1535,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'test'       : ['libmossco_test'],
         'info'       : ['libmossco_info'],
         'empty'      : ['libempty'],
+        'river'      : ['libmossco_river'],
         'inout'      : ['libmossco_inout'],
         'constant'   : ['libconstant'],
         'constant_grid'  : ['libconstant_grid'],
@@ -1621,7 +1625,7 @@ libmossco_fabm0d libmossco_fabmpelagic:
 libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libmossco_info libmossco_test:
+libmossco_info libmossco_test libmossco_river:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment:
