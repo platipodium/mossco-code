@@ -32,7 +32,7 @@ module soil_pelagic_connector
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2,val1_f2,val2_f2
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux,DETPflux,DETCflux,DINflux,DIPflux,OXYflux
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux,fDETCflux,omexDETPflux
-  real(ESMF_KIND_R8) :: dinflux_const
+  real(ESMF_KIND_R8) :: dinflux_const=0.0
   real(ESMF_KIND_R8) :: dipflux_const=-1.
   public SetServices
 
@@ -127,7 +127,7 @@ module soil_pelagic_connector
     close(nmlunit)
     if (dipflux_const < 0.0) dipflux_const=dinflux_const/16.0d0
 
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
@@ -156,6 +156,7 @@ module soil_pelagic_connector
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
     integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
 
+    rc = ESMF_SUCCESS
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -163,7 +164,7 @@ module soil_pelagic_connector
       call mossco_state_get(importState,(/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/),val1_f2,rc=localrc)
        if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(importState,(/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/),val2_f2,rc=localrc)
-       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+       if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       
       call mossco_state_get(exportState, &
              (/'nitrate_upward_flux_at_soil_surface'/), &
@@ -180,8 +181,8 @@ module soil_pelagic_connector
               'nutrients_upward_flux_at_soil_surface                            ', &
               'DIN_upward_flux_at_soil_surface                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux_at_soil_surface'/), &
-              DINflux,ubnd=ubnd,lbnd=lbnd,rc=rc)
-        if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+              DINflux,ubnd=ubnd,lbnd=lbnd,rc=localrc)
+        if(localrc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         DINflux = val1_f2 + val2_f2
         ! add constant boundary flux of DIN (through groundwater, advection, rain
         DINflux = DINflux + dinflux_const/(86400.0*365.0)
