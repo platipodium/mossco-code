@@ -219,6 +219,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
+    type(ESMF_FieldStatus_Flag) :: fieldstatus
     logical                     :: isPresent
 
     rc = ESMF_SUCCESS
@@ -265,13 +266,16 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (exportField /= importField) then
-              write(message,'(A)') '    replaced existing field '//trim(itemNameList(i))
-              call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
+              call ESMF_FieldGet(importField, status=fieldstatus,rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-              if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-              call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
-
+              if (fieldstatus==ESMF_FIELDSTATUS_COMPLETE) then
+                write(message,'(A)') '    replaced existing field '//trim(itemNameList(i))
+                call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
+                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
+              end if
             else
               write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
               !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -711,8 +715,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     call ESMF_FieldGetBounds(field, totalLBound=lbnd, totalUBound=ubnd, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-write(0,*) 'set values for rank',rank,'to',value_
 
     if (rank==1) then
       call ESMF_FieldGet(field, localDE=0, farrayPtr=farrayPtr1, rc=localrc)
