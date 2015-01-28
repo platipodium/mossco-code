@@ -84,6 +84,9 @@ if ! test -d ${DIR} ; then
 fi
 
 EXE=${DIR}/${ARG}
+OWD=${PWD}
+SETUP=${PWD##*/}
+
 
 if [[ ${GENERIC} == 1 ]] ; then
   if [[ ${REMAKE} == 0 ]] ; then
@@ -105,7 +108,10 @@ if [[ ${GENERIC} == 1 ]] ; then
       echo "ERROR: coupling spec ${EXE}.yaml does not exist"
       exit 1
     fi
-    (cd ${DIR}; python create_coupling.py ${ARG})
+    cd ${DIR};
+    python create_coupling.py ${ARG} || exit 1
+    cd ${OWD}
+
     rm -f ${EXE}
     make -C ${DIR}
   fi
@@ -141,9 +147,6 @@ if [[ ${NP} == 0 ]]; then
   MPI_PREFIX=""
   NP=1
 fi
-
-SETUP=${PWD##*/}
-
 
 NODES=1
 PPN=${NP}
