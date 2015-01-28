@@ -342,26 +342,43 @@ module mossco_netcdf
   if (present(rc)) rc=ncStatus
   end subroutine mossco_netcdf_close
 
+  function MOSSCO_NetcdfOpen(filename, timeUnit, mode, rc) result(nc)
 
-  function mossco_netcdfOpen(filename, timeUnit, rc) result(nc)
-  character(len=*)              :: filename
-  type(type_mossco_netcdf)      :: nc
-  character(len=*),optional     :: timeUnit
-  integer, intent(out),optional :: rc
-  integer                       :: ncStatus
-  ncStatus = nf90_open(trim(filename), mode=NF90_WRITE, ncid=nc%ncid)
+    character(len=*), intent(in)               :: filename
+    type(type_mossco_netcdf)                   :: nc
+    character(len=*), optional, intent(inout)  :: timeUnit
+    character(len=1), optional, intent(in)     :: mode
+    integer, intent(out), optional             :: rc
 
-  if (ncStatus /= NF90_NOERR) then
-    if (present(timeUnit))  then
-      nc = MOSSCO_NetcdfCreate(trim(filename), timeUnit=trim(timeUnit), rc = rc)
+    integer                       :: ncStatus
+    character(len=1)              :: mode_
+
+    if (present(mode)) then
+      mode_= mode
     else
-      nc = MOSSCO_NetcdfCreate(trim(filename), rc = rc)
+      mode_ = 'W'
     endif
-  endif
 
-  ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
-  call nc%update_variables()
-  if (present(rc)) rc=ncStatus
+    if (mode_ == 'W') then
+      ncStatus = nf90_open(trim(filename), mode=NF90_WRITE, ncid=nc%ncid)
+
+      if (ncStatus /= NF90_NOERR) then
+        if (present(timeUnit))  then
+          nc = MOSSCO_NetcdfCreate(trim(filename), timeUnit=trim(timeUnit), rc = rc)
+        else
+          nc = MOSSCO_NetcdfCreate(trim(filename), rc = rc)
+        endif
+      endif
+      ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
+    else
+      ncStatus = nf90_open(trim(filename), mode=NF90_NOWRITE, ncid=nc%ncid)
+      ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
+    endif
+
+    call nc%update_variables()
+
+    if (present(rc)) rc=ncStatus
+
   end function mossco_netcdfOpen
 
 
@@ -806,7 +823,7 @@ module mossco_netcdf
     class(type_mossco_netcdf)   :: self
     integer, intent(in)         :: length
 
-    integer                     :: ncStatus 
+    integer                     :: ncStatus
     integer                     :: dimid
     character(len=ESMF_MAXSTR)  :: message, dimName
 
