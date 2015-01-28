@@ -1,8 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen
+# @author Richard Hofmeister
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -20,6 +20,7 @@ EXTRA_DIST=README
 TARGETS = libmossco_benthos libmossco_simplewave
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS+=libmossco_clm
+  #TARGETS+=libmossco_river
 endif
 
 ifeq ($(MOSSCO_FABM),true)
@@ -48,6 +49,9 @@ all: $(TARGETS)
 
 libmossco_simplewave: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_driver.o)
+
+libmossco_river: prefix libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_driver.o)
 
 # FABM/sediment section
 

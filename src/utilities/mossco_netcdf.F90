@@ -352,6 +352,7 @@ module mossco_netcdf
 
     integer                       :: ncStatus
     character(len=1)              :: mode_
+    character(len=255)            :: timeUnit_
 
     if (present(mode)) then
       mode_= mode
@@ -373,6 +374,10 @@ module mossco_netcdf
     else
       ncStatus = nf90_open(trim(filename), mode=NF90_NOWRITE, ncid=nc%ncid)
       ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
+      ncStatus = nf90_get_att(nc%ncid, nc%timeDimId, 'unit', timeUnit_)
+
+      if (present(timeUnit)) write(timeUnit,'(A)') trim(timeUnit_)
+
     endif
 
     call nc%update_variables()

@@ -26,6 +26,8 @@ module river_component
   use mossco_strings
   use mossco_state
 
+  use river_driver
+
   implicit none
 
   private
@@ -124,7 +126,13 @@ module river_component
     type(ESMF_Config)           :: config
     logical                     :: fileIsPresent, labelIsPresent
     integer(ESMF_KIND_I4)       :: numNodes=0, numElements=0
-    integer(ESMF_KIND_I4)       :: localDeCount, localDe
+    integer(ESMF_KIND_I4)       :: localDeCount, localDe, itemCount, i, locationCount
+    type(MOSSCO_RiverNetcdf)    :: nc
+
+    real(ESMF_KIND_R8), pointer :: lat(:), lon(:)
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), locationNameList(:), unitNameList(:)
+    type(ESMF_Field)            :: field
+    type(ESMF_LocStream)        :: locStream
 
     rc=ESMF_SUCCESS
 
@@ -155,65 +163,75 @@ module river_component
 
     inquire(file=trim(fileName), exist=fileIsPresent)
     if (.not.fileIsPresent) then
-      write(message,'(A)')  'Requested river file '//trim(fileName)//' does not exist.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGSMG_ERROR)
+      write(message,'(A)')  trim(name)//' cannot find requested file '//trim(fileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
-		call MOSSCO_NetcdfGet(trim(fileName), ncid=ncid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    nc = read_river_file(trim(filename))
+    call unique_rivers_and_quantities(nc, locationCount, itemCount)
 
-		call MOSSCO_NetcdfGet(ncid, itemCount=itemCount)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemCount==0) then
-      write(message,'(A)') trim(name)//' found no data in file '//trim(fileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGSMG_WARNING)
-    else
-      allocate(itemNameList(itemCount))
-	 	  call MOSSCO_NetcdfGet(ncid, itemNameList=itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      locStream=ESMF_LocStreamCreate(name='riverLocStream', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    if (locationCount <= 0) then
+      call nc%close()
+      write(message,'(A)')  trim(name)//' cannot find any location data in file '//trim(fileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
-	  do i=1, itemCount
-      call MOSSCO_NetcdfGet(ncid, itemNameList(i), rank=rank, rc=localrc)
+    allocate(locationNameList(locationCount))
+    allocate(itemNameList(itemCount))
+    allocate(unitNameList(itemCount))
+
+    call lon_lat_names(nc, lon, lat, locationNameList)
+    call quantity_names_units(nc, itemNameList, unitNameList)
+
+    call nc%close()
+
+    !!> Create a locstream and keys for lat/lon of this stream
+    locStream=ESMF_LocStreamCreate (minIndex=1, maxIndex=locationCount, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_LocStreamAddKey(locstream, keyName="Lat", KeyTypeKind=ESMF_TYPEKIND_R8, &
+      keyUnits="Degrees", keyLongName="Latitude", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_LocStreamAddKey(locstream,  keyName="Lon", KeyTypeKind=ESMF_TYPEKIND_R8, &
+      keyUnits="Degrees", keyLongName="Longitude", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_LocStreamGetKey(locstream, localDE=0, keyName="Lat", farray=lat, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_LocStreamGetKey(locstream, localDE=0, keyName="Lon", farray=lon, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+    do i=1, itemCount
+      field = ESMF_FieldCreate(locstream, name=trim(itemNameList(i)), typeKind=ESMF_TYPEKIND_R8, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (rank == 0) cycle
-      allocate(ubnd(rank))
-
-      call MOSSCO_NetcdfGet(ncid, itemNameList(i), totalUBound=ubnd, rc=localrc)
+			!call AttributeSet(field, 'units', trim(nc%variables(i)%units), rc=localrc)
+	    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+		  !call AttributeSet(field, 'standard_name', trim(itemNameList(i)), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (rank /= 2) then
-        write(message,'(A,I1)') trim(name)//' skipped data '//trim(itemNameList(i))// ' of rank ',rank
-        call ESMF_LogWrite(trim(message), ESMF_LOGSMG_WARNING)
-      endif
+      call ESMF_StateAdd(exportState, (/field/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      field=ESMF_FieldEmptyCreate(trim(itemNameList(i)), rc=localrc)
+    enddo
 
-			call AttributeSet(field, 'units', trim(unitString), rc=localrc)
-			call AttributeSet(field, 'standard_name', trim(itemNameList(i)), rc=localrc)
-
-      call ESMF_FieldSet(field, locStream=locStream, rc=localrc)
+    deallocate(locationNameList)
+    deallocate(itemNameList, unitNameList)
+#if 0
 
 
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, &
               computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=localrc)
             farrayPtr2(:,:)=cur_item%value
 
+#endif
 
-			call ESMF_StateAdd(exportState,(/field/), rc=localrc)
-
-      deallocate(ubnd)
-	  enddo
-
-    call MOSSCO_NetcdfClose(nc, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!    call nc%close()
 
     call ESMF_AttributeSet(exportState, 'file_name', trim(fileName), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

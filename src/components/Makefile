@@ -53,17 +53,16 @@ libmossco_constant: libconstant
 libmossco_constant_grid: libconstant_grid
 libmossco_empty: libempty
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
-libmossco_river: libmossco_river_driver libmossco_river_component
 
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
 
-
-libmossco_river_component: libmossco_river_driver libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_component.o)
-libmossco_river_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_driver.o)
-
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
    $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+
+libmossco_river: libmossco_river_driver libmossco_util \
+   $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_component.o)
+libmossco_river_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_driver.o)
 
 libmossco_clm: libmossco_clm_driver  \
    $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
