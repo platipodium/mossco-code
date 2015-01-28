@@ -18,6 +18,8 @@ module mossco_netcdf
   use esmf
   use netcdf
 
+  implicit none
+
   private
 
   public MOSSCO_NetcdfCreate, MOSSCO_NetcdfOpen
@@ -45,6 +47,7 @@ module mossco_netcdf
     procedure :: put_variable => mossco_netcdf_variable_put
     procedure :: create_coordinate =>mossco_netcdf_coordinate_create
     procedure :: create_mesh_coordinate =>mossco_netcdf_mesh_coordinate_create
+    procedure :: ungridded_dimension_id => mossco_netcdf_ungridded_dimension_id
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -180,16 +183,18 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)     :: units='', attributeName, string, message
     integer                        :: ncStatus,esmfrc,rc_,varid,dimcheck=0
     integer                        :: dimids_1d(2),dimids_2d(3),dimids_3d(4),rank
-    integer, dimension(:),pointer  :: dimids
+    integer, dimension(:),pointer  :: dimids,tmpDimids
     integer, optional              :: rc
     character(len=1), dimension(3) :: coordNames = (/'x','y','z'/)
     integer                        :: external_index=-1
     real(ESMF_KIND_R8)             :: mean_diameter, real8
     real(ESMF_KIND_R4)             :: real4
-    integer(ESMF_KIND_I4)          :: i, attributeCount, int4
+    integer(ESMF_KIND_I4)          :: i, attributeCount, int4, dimCount, ungriddedDimCount
     integer(ESMF_KIND_I8)          :: int8
     type(ESMF_TypeKind_Flag)       :: typekind
     type(ESMF_GeomType_Flag)       :: geomType
+    integer                        :: ungriddedID, ungriddedLength,dimrank
+    integer(ESMF_KIND_I4), allocatable, dimension(:) :: uubnd,ulbnd
 
 
     call ESMF_FieldGet(field,name=fieldname,rc=esmfrc)
@@ -199,7 +204,7 @@ module mossco_netcdf
 
     if (.not.self%variable_present(varname)) then
 
-      call ESMF_FieldGet(field,geomType=geomType,rc=esmfrc)
+      call ESMF_FieldGet(field,geomType=geomType,dimCount=dimCount,rc=esmfrc)
       if (geomType==ESMF_GEOMTYPE_GRID) then
         call ESMF_FieldGet(field,grid=grid,rc=esmfrc)
         if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -234,8 +239,32 @@ module mossco_netcdf
         enddo
       endif
 
-      !! define variable
       ncStatus = nf90_redef(self%ncid)
+      !! add ungridded dimension
+      ! ask field for ungridded dimension
+      dimrank=ubound(dimids,1)
+      ungriddedDimCount=dimCount-dimrank+1
+      if (ungriddedDimCount .ge. 1) then
+        allocate(ulbnd(ungriddedDimCount))
+        allocate(uubnd(ungriddedDimCount))
+        call ESMF_FieldGet(field,ungriddedLBound=ulbnd,ungriddedUBound=uubnd,rc=esmfrc)
+        if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        ! re-allocate dimids and add dimension-id(s) of ungridded dimension
+        allocate(tmpDimids(1:dimrank))
+        tmpDimids = dimids
+        deallocate(dimids)
+        allocate(dimids(dimrank+ungriddedDimCount))
+        dimids(1:dimrank-1) = tmpDimids(1:dimrank-1)
+        dimids(dimrank+ungriddedDimCount) = tmpDimids(dimrank)
+        do i=1,ungriddedDimCount
+          ! get id or create non-existing ungridded dimension
+          dimids(dimrank-1+i) = self%ungridded_dimension_id(uubnd(i)-ulbnd(i)+1)
+          ! evtl. add ungridded dimension to coordinates
+        end do
+        deallocate(tmpDimids)
+      end if
+
+      !! define variable
       ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
       if (ncStatus /= NF90_NOERR) call &
         ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
@@ -513,7 +542,7 @@ module mossco_netcdf
     integer,allocatable           :: ubounds(:),lbounds(:)
     integer,pointer,dimension(:)  :: dimids
 
-    integer(ESMF_KIND_I4)         :: dimCount, dimid, rank
+    integer(ESMF_KIND_I4)         :: dimCount, dimid, rank, i
     character(len=ESMF_MAXSTR)    :: message
 
     rc_ = MOSSCO_NC_NOERR
@@ -592,7 +621,7 @@ module mossco_netcdf
       rc=esmfrc)
     call replace_character(geomName, ' ', '_')
     !if (dimCount<1) return
-    write(0,*) parametricDim, spatialDim, numOwnedNodes
+    !write(0,*) parametricDim, spatialDim, numOwnedNodes
 
     !if (coordSys == ESMF_COORDSYS_CART) then
     !  coordnames=(/'lon   ','lat   ','radius'/)
@@ -771,6 +800,23 @@ module mossco_netcdf
   end subroutine mossco_netcdf_coordinate_create
 
 
+  function mossco_netcdf_ungridded_dimension_id(self,length) result(dimid)
+
+    implicit none
+    class(type_mossco_netcdf)   :: self
+    integer, intent(in)         :: length
+
+    integer                     :: ncStatus 
+    integer                     :: dimid
+    character(len=ESMF_MAXSTR)  :: message, dimName
+
+    dimid = -1
+    write(dimName,'(A9,I5.5)')  'ungridded',length
+    ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),dimid)
+    if (ncStatus /= NF90_NOERR) then
+      ncStatus = nf90_def_dim(self%ncid,trim(dimName),length,dimid=dimid)
+    end if
+  end function mossco_netcdf_ungridded_dimension_id
 
 
 end module

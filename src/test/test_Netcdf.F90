@@ -10,14 +10,16 @@ program test_Netcdf
 use mossco_netcdf
 use esmf
 
+implicit none
+
 type(type_mossco_netcdf)   :: nc
 character(len=ESMF_MAXSTR) :: filename='test.nc'
 character(len=ESMF_MAXSTR) :: timeUnit='seconds since 2000-01-01 00:00:00'
 integer                    :: rc
 type(ESMF_Grid)            :: grid,grid2
-type(ESMF_Field)           :: field3d,field2d,field3d_c
+type(ESMF_Field)           :: field3d,field2d,field3d_c, field2dplus1
 integer, dimension(:),pointer :: dimids => null()
-real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farray3d
+real(ESMF_KIND_R8),dimension(:,:,:),pointer :: farray3d,fptr3
 real(ESMF_KIND_R8),dimension(:,:),pointer :: farray2d
 
 call esmf_initialize()
@@ -48,6 +50,14 @@ farray2d(1,1) = 53.53d0
 ! create fields to write into netcdf
 field2d = ESMF_FieldCreate(grid2,name='my_standard_name_2d',farrayPtr=farray2d)
 
+! create field with ungridded dimensions to write into netcdf
+field2dplus1 = ESMF_FieldCreate(grid2,name='my_standard_name_2dplus1', &
+                  ungriddedLBound=(/1/), ungriddedUBound=(/25/), &
+                  gridToFieldMap=(/1,2/), typekind=ESMF_TYPEKIND_R8, &
+                  staggerloc=ESMF_STAGGERLOC_CENTER)
+call ESMF_FieldGet(field2dplus1,farrayPtr=fptr3)
+fptr3=farray3d(1,1,25)
+
 nc = mossco_netcdfCreate(filename,timeUnit=timeUnit,rc=rc)
 write(0,*) 'created netcdf file: ',trim(filename)
 call nc%close()
@@ -61,7 +71,13 @@ write(0,*) 'open netcdf and create variable from field3d,field3d_c on 1x4x25 gri
 nc = mossco_netcdfOpen(filename,rc=rc)
 call nc%create_variable(field3d)
 call nc%add_timestep(3600.d0)
+call nc%put_variable(field3d)
 call nc%put_variable(field3d_c)
+
+! write field with ungridded dimension
+write(0,*) 'write field with ungridded dimension'
+call nc%create_variable(field2dplus1)
+call nc%put_variable(field2dplus1)
 
 call nc%update_variables()
 write(0,*) '  ',trim(filename),' now has ',size(nc%variables),'variables'
