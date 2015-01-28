@@ -23,7 +23,7 @@ TARGETS += libcopycoupler libregridcoupler libinoutcoupler
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
-TARGETS += pelagicsoilconnector
+TARGETS += pelagicsoilconnector soilpelagicconnector
 TARGETS += libmossco_mediator
 TARGETS += benthicpelagiccoupler
 endif
@@ -38,7 +38,7 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
-libmossco_mediator: libpelagicbenthic_mediator pelagicsoilconnector
+libmossco_mediator: libpelagicbenthic_mediator pelagicsoilconnector soilpelagicconnector
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
@@ -52,6 +52,7 @@ libverticalmeancoupler: prefix $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a
 libsurfacescoupler: prefix $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o)
 pelagicbenthiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
 pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_soil_connector.o)
+pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_connector.o)
 benthicpelagiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(benthic_pelagic_coupler.o)
 
 libsediment:
@@ -89,10 +90,10 @@ $(MOSSCO_LIBRARY_PATH)/libverticalmeancoupler.a: vertical_mean_coupler.o
 
 $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_coupler.o): surfaces_coupler.o
 
-$(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o benthic_pelagic_coupler.o pelagic_soil_connector.o
+$(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o benthic_pelagic_coupler.o pelagic_soil_connector.o soil_pelagic_connector.o
 	$(AR) cruvs $@ $?
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a: pelagic_soil_connector.o pelagic_benthic_mediator.o
+$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a: pelagic_soil_connector.o pelagic_benthic_mediator.o soil_pelagic_connector.o
 	$(AR) cruvs $@ $?
 
 subdirs:
