@@ -80,11 +80,11 @@ coupling:
      - erosed
      - netcdf
     interval: 1 h
-  - components:
-     - fabm_sediment
-     - benthic_pelagic_coupler
-     - fabm_pelagic
-    interval: 6 m
+#  - components:
+#     - fabm_sediment
+#     - benthic_pelagic_coupler
+#     - fabm_pelagic
+#    interval: 6 m
   - components:
      - benthos
      - erosed
