@@ -691,7 +691,7 @@ if (True):
       icpl=cplCompList.index(item)
       if icpl==0: continue
 
-      fid.write('      if (cplCompPhaseCountList( ' + str(ito+1) + ')>= phase) then\n')
+      fid.write('      if (cplCompPhaseCountList( ' + str(icpl+1) + ')>= phase) then\n')
       fid.write('        call MOSSCO_StateLog(gridExportStateList(' + str(ifrom+1) + '), rc=localrc)\n')
       fid.write('        call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
       fid.write('          exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
