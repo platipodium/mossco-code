@@ -4,8 +4,9 @@
 !> @export all variables that are located in a file read by this component
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -152,6 +153,9 @@ module constant_component
     call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_AttributeGet(importState,'foreignGridFieldName',value=foreignGridFieldName,defaultvalue='none',rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     !! Check whether there is a config file with the same name as this component
     !! If yes, load it.
     configfilename=trim(name)//'.cfg'
@@ -185,33 +189,15 @@ module constant_component
 
         write(message,'(A,I6,A)') trim(name)//' uses unstructured grid from '//trim(fileName)//' with ',numElements,' local elements.'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-
       endif
     endif
 
-    if (numNodes==0) then
-      grid3 = ESMF_GridCreate2PeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-        regDecomp=(/petCount,1,1/),coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-        name="constant_3d",coordTypeKind=ESMF_TYPEKIND_R8,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_AttributeSet(grid3,'creator',trim(name))
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      grid2 = ESMF_GridCreate2PeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
-        coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL,  &
-        regDeComp=(/1,1/),name="constant_2d",coordTypeKind=ESMF_TYPEKIND_R8,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_AttributeSet(grid2,'creator',trim(name))
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      !> Create ArraySpecs for both grids
-      call ESMF_ArraySpecSet(arraySpec2, 2, ESMF_TYPEKIND_R8, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_ArraySpecSet(arraySpec3, 3, ESMF_TYPEKIND_R8, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+    ! TODO: get foreign grid
+    if (trim(foreignGridFieldName) /= 'none') then
+      write(message,'(A)') 'foreign grid not implemented'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end if
 
     !> create list of export_variables, that will come from a function
     !> which reads a text file
@@ -288,11 +274,6 @@ module constant_component
           start = index(cur_item%standard_name(start:),'_averaged_')+1
         enddo
 
-          write(0,*) trim(name)//' creates field ', &
-              trim(varname),' =',cur_item%value
-          write(message,'(A,I1,A,ES9.2E2)') trim(name)//' created field '//trim(varname)// &
-            ' rank(',cur_item%rank,'), value ',cur_item%value
-          call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
         nullify(cur_item%next)
       end do
     close(fileunit)
@@ -305,28 +286,34 @@ module constant_component
     if (file_readable .and. numNodes==0) then
       do
         if (cur_item%rank==3) then
-
+#if 0
           cur_item%field = ESMF_FieldCreate(grid3, arraySpec3, &
             indexflag=ESMF_INDEX_DELOCAL, &
             staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
+#else
+          cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=localrc)
+#endif
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#if 0
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr3, &
               computationalLBound=computationalLBound3, computationalUBound=computationalUBound3, rc=localrc)
             farrayPtr3(:,:,:)=cur_item%value
+#endif
         elseif (cur_item%rank==2) then
+#if 0
           cur_item%field = ESMF_FieldCreate(grid2, arraySpec2, &
             indexflag=ESMF_INDEX_DELOCAL, &
             staggerloc=ESMF_STAGGERLOC_CENTER, name=cur_item%standard_name, rc=localrc)
+#else
+          cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=localrc)
+#endif
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+#if 0
             call ESMF_FieldGet(cur_item%field, localDe=0, farrayPtr=farrayPtr2, &
               computationalLBound=computationalLBound2, computationalUBound=computationalUBound2, rc=localrc)
             farrayPtr2(:,:)=cur_item%value
+#endif
         else
           write(0,*) cur_item%rank, trim(varname), cur_item%rank
           write(message,'(A,I1,A)') trim(name)//' not implemented reading rank(', &
@@ -339,8 +326,14 @@ module constant_component
           call ESMF_AttributeSet(cur_item%field,'units',trim(unitString), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-          call ESMF_AttributeSet(cur_item%field,'default_value',cur_item%value, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(cur_item%field,'default_value',cur_item%value, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' just created field '
+        call mossco_fieldstring(cur_item%field, message)
+        call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
 
         call ESMF_StateAdd(exportState,(/cur_item%field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -375,6 +368,10 @@ module constant_component
 
         call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' mesh just created field '
+        call mossco_fieldstring(cur_item%field, message)
+        call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
 
         if (associated(cur_item%next)) then
             cur_item => cur_item%next
