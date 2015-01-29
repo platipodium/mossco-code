@@ -4,6 +4,9 @@ dependencies:
       grid: temperature_in_water
   - getm: fabm_pelagic
 
+instances:
+  - mossco_gfn : netcdf
+
 coupling:
   - components:
      - getm
@@ -15,6 +18,10 @@ coupling:
      - getm
     interval: none
   - components:
+     - getm
+     - mossco_gfn
+    interval: 60 h
+  - components:
      - fabm_pelagic
-     - netcdf
+     - mossco_gfn
     interval: 60 h

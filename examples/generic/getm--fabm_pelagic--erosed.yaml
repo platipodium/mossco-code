@@ -13,8 +13,7 @@ dependencies:
   - erosed: fabm_pelagic
 
 instances:
-  - netcdf_sediment: netcdf
-  - netcdf_pelagic: netcdf
+  - mossco_gfen: netcdf
 
 coupling:
   - components:
@@ -28,7 +27,7 @@ coupling:
     interval: none
   - components:
      - fabm_pelagic
-     - netcdf_pelagic
+     - mossco_gfen
     interval: 60 h
   - components:
      - fabm_pelagic
@@ -41,5 +40,5 @@ coupling:
      - fabm_pelagic
   - components:
      - erosed
-     - netcdf_sediment
+     - mossco_gfen
     interval: 60 h

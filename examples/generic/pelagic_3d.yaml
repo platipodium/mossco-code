@@ -16,6 +16,9 @@ dependencies:
   - getm: fabm_pelagic
   - simplewave: getm
 
+instances:
+  - mossco_pel3d: netcdf
+
 coupling:
   - components:
      - clm_netcdf
@@ -46,9 +49,17 @@ coupling:
      - erosed
      - fabm_pelagic
   - components:
+     - simplewave
+     - mossco_pel3d
+    interval: 60 h
+  - components:
+     - fabm_pelagic
+     - mossco_pel3d
+    interval: 60 h
+  - components:
      - erosed
-     - netcdf
-    interval: 1 h
+     - mossco_pel3d
+    interval: 60 h
   - components:
      - benthos
      - erosed

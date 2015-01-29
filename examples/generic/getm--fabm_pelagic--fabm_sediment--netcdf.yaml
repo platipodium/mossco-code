@@ -7,8 +7,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - netcdf_sediment: netcdf
-  - netcdf_pelagic: netcdf
+  - mossco_gffn : netcdf
 
 coupling:
   - components:
@@ -39,6 +38,14 @@ coupling:
      - fabm_pelagic
     interval: 30 m
   - components:
+     - getm
+     - mossco_gffn
+    interval: 60 h
+  - components:
+     - fabm_pelagic
+     - mossco_gffn
+    interval: 60 h
+  - components:
      - fabm_sediment
-     - netcdf_sediment
-    interval: 30 m
+     - mossco_gffn
+    interval: 60 h
