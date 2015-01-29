@@ -105,7 +105,7 @@ end if
   amounts(:,:)= amount
   This%StateVar%intensity = amounts
   nullify (This%StateVar%amount)
-  write (*,*) ' in mbalthica_class: intensity = ', This%StateVar%intensity
+ ! write (*,*) ' in mbalthica_class: intensity = ', This%StateVar%intensity
 
  elseif  (units == 'gCm-2') then
 
