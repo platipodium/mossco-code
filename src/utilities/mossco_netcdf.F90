@@ -195,6 +195,7 @@ module mossco_netcdf
     type(ESMF_GeomType_Flag)       :: geomType
     integer                        :: ungriddedID, ungriddedLength,dimrank
     integer(ESMF_KIND_I4), allocatable, dimension(:) :: uubnd,ulbnd
+    logical                        :: isPresent
 
 
     call ESMF_FieldGet(field,name=fieldname,rc=esmfrc)
@@ -280,9 +281,11 @@ module mossco_netcdf
       call ESMF_AttributeGet(field,'external_index',external_index,defaultvalue=-1,rc=rc)
       if (external_index > -1) &
         ncStatus = nf90_put_att(self%ncid,varid,'external_index',external_index)
-      call ESMF_AttributeGet(field,'mean_particle_diameter',mean_diameter,defaultvalue=-1.0d0,rc=rc)
-      if (mean_diameter > 0.0d0) &
+      call ESMF_AttributeGet(field,'mean_particle_diameter',isPresent=isPresent, rc=rc)
+      if (isPresent) then
+        call ESMF_AttributeGet(field,'mean_particle_diameter',mean_diameter,rc=rc)
         ncStatus = nf90_put_att(self%ncid,varid,'mean_particle_diameter',mean_diameter)
+      endif
       call ESMF_AttributeGet(field,'units',units,defaultvalue='',rc=rc)
       ncStatus = nf90_put_att(self%ncid,varid,'units',trim(units))
 
