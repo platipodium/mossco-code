@@ -1,6 +1,7 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
 #
-# Copyright (C) 2013, 2014 Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# Author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -21,7 +22,8 @@ ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
 endif
 
-MOSSCO_INSTALL_PREFIX ?= /opt/mossco
+MOSSCO_INSTALL_PREFIX ?= $(PREFIX)/
+MOSSCO_INSTALL_PREFIX ?= $(HOME)/opt/bin/
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the preamble section of this Rules.make in repeated calls.  In most circumstances,
@@ -540,13 +542,10 @@ ifdef MOSSCO_GETMDIR
 endif
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
-
-#install:
-#	@test -d  $(MOSSCO_INSTALL_PREFIX) || mkdir -p $(MOSSCO_INSTALL_PREFIX) || $(warning No permission to create #$(MOSSCO_INSTALL_PREFIX))
-#	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/lib
-#	@mkdir -p $(MOSSCO_INSTALL_PREFIX)/include
-#	@cp $(MOSSCO_LIBRARY_PATH)/*.*  $(MOSSCO_INSTALL_PREFIX)/lib
-#	@cp $(MOSSCO_MODULE_PATH)/*.mod  $(MOSSCO_INSTALL_PREFIX)/include
+install:
+	mkdir -p $(MOSSCO_DIR)/bin
+	ln -sf $(MOSSCO_DIR)/src/scripts/mossco.sh  $(MOSSCO_DIR)/src/scripts/mossco
+	install  $(MOSSCO_DIR)/src/scripts/mossco $(MOSSCO_INSTALL_PREFIX)/mossco
 
 .PHONY: mossco_clean
 mossco_clean: distclean fabm_clean
