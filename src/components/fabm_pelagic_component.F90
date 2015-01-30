@@ -673,6 +673,33 @@ module fabm_pelagic_component
   end subroutine InitializeP1
 
 
+
+  subroutine update_import_pointers(importState)
+  implicit none
+  type(ESMF_State)          :: importState
+  type(ESMF_StateItem_Flag) :: itemType
+  type(ESMF_Field)          :: field
+  real(ESMF_KIND_R8), dimension(:,:), pointer :: ptr_f2=>null()
+  integer                   :: localrc
+
+    ! todo: add bulk dependencies
+
+    ! link horizontal dependencies
+    if (associated(pel%horizontal_dependencies)) then
+      do n=1,size(pel%horizontal_dependencies)
+        !> check for existing field
+        call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), itemType,rc=localrc)
+        if (itemType == ESMF_STATEITEM_FIELD) then
+          call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), field=field, rc=localrc)
+          call ESMF_FieldGet(field, farrayPtr=ptr_f2, rc=localrc)
+          call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
+        end if
+      end do
+    end if
+  end subroutine
+
+
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
@@ -706,6 +733,9 @@ module fabm_pelagic_component
 
     ! calculate layer_heights
     call pel%update_grid()
+
+    ! update pointers from import
+    call update_import_pointers(importState)
 
     ! calculate PAR
     call pel%light()
