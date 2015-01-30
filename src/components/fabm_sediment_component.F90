@@ -105,7 +105,7 @@ module fabm_sediment_component
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Field)     :: field
     type(ESMF_Array)     :: array
-    integer              :: i
+    integer              :: i,j,k
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
     type(ESMF_Grid)      :: state_grid,flux_grid
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
@@ -130,6 +130,7 @@ module fabm_sediment_component
     integer                    :: numElements,numNodes, exclusiveCount(2), rank
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     integer(ESMF_KIND_I4)      :: localrc
+    integer, dimension(:,:), pointer :: gridmask=>null()
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -226,6 +227,27 @@ module fabm_sediment_component
     !! Write log entries
     write(message,*) trim(name)//' initialise grid with [inum x jnum x knum]',_INUM_,' x ',_JNUM_,' x ',_KNUM_
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    !! get grid mask
+    allocate(sed%mask(1:sed%grid%inum,1:sed%grid%jnum,1:sed%grid%knum))
+    sed%mask = .false.
+    if (sed%grid%type==FOREIGN_GRID) then
+      call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
+      if (localrc == ESMF_SUCCESS) then
+        do i=1,sed%grid%inum
+          do j=1,sed%grid%jnum
+            do k=1,sed%grid%knum
+              sed%mask(i,j,k) = gridmask(i,j)==0
+            end do
+          end do
+        end do
+      else
+        write(0,*) 'no mask found',localrc
+        stop
+      end if
+    end if
+
+
     call sed%grid%init_grid()
     call sed%initialize()
     close(33)

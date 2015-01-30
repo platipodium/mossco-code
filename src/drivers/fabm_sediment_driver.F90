@@ -180,6 +180,11 @@ sed%inum = sed%grid%inum
 sed%jnum = sed%grid%jnum
 sed%knum = sed%grid%knum
 
+if (.not.associated(sed%mask)) then
+  allocate(sed%mask(sed%grid%inum,sed%grid%jnum,sed%grid%knum))
+  sed%mask = .false.
+end if
+
 ! set porosity
 allocate(sed%porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%intf_porosity(_INUM_,_JNUM_,_KNUM_))
@@ -234,10 +239,6 @@ sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
 ! set fabm domain
 call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
 
-! set mask
-allocate(sed%mask(_INUM_,_JNUM_,_KNUM_))
-sed%mask = .false.
-
 ! allocate state variables
 sed%nvar = size(sed%model%info%state_variables)
 sed%ndiag = size(sed%model%info%diagnostic_variables)
@@ -267,11 +268,18 @@ subroutine init_concentrations(sed)
 implicit none
 
 class(type_sed) :: sed
-integer         :: n
+integer         :: n,i,j,k
 
 do n=1,sed%nvar
    sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value/sed%porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
+end do
+do k=1,sed%knum
+   do j=1,sed%jnum
+      do i=1,sed%inum
+         if (sed%mask(i,j,k)) sed%conc(i,j,k,:)=1.d20
+      end do
+   end do
 end do
 end subroutine init_concentrations
 
@@ -371,7 +379,13 @@ rhs=0.0_rk
 do k=1,rhs_driver%knum
    do j=1,rhs_driver%jnum
       do i=1,rhs_driver%inum
-         call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
+         if (.not.rhs_driver%mask(i,j,k)) then 
+           call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
+         else
+           ! set transport to 0.0 - evtl. skip calculation of transport completely
+           rhs(i,j,k,:) = 0.0d0
+           rhs_driver%transport(i,j,k,:) = 0.0d0
+         end if
       end do
    end do
 end do
