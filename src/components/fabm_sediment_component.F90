@@ -58,6 +58,7 @@ module fabm_sediment_component
   character(len=ESMF_MAXSTR) :: ugrid_name=''
 
   type(type_sed),save :: sed
+  type(type_sed),save :: sed1d
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
                      dt_min,relative_change_min,ugrid_name, output, &
@@ -224,6 +225,12 @@ module fabm_sediment_component
     !! this component, numlayers and dzmin are read from nml
     sed%grid%knum=numlayers
     sed%grid%dzmin=dzmin
+
+    sed1d%grid%inum=1
+    sed1d%grid%jnum=1
+    sed1d%grid%knum=numlayers
+    sed1d%grid%dzmin=dzmin
+
     !! Write log entries
     write(message,*) trim(name)//' initialise grid with [inum x jnum x knum]',_INUM_,' x ',_JNUM_,' x ',_KNUM_
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
@@ -269,6 +276,12 @@ module fabm_sediment_component
     call sed%get_all_export_states()
 
     !> run for some years into quasi-steady-state
+    open(33,file='run_sed.nml',action='read',status='old')
+    call sed1d%grid%init_grid()
+    call sed1d%initialize()
+    close(33)
+    allocate(sed1d%conc(1,1,1:sed%knum,1:sed%nvar))
+    call sed1d%init_concentrations()
     if (presimulation_years.gt.0) then
       write(0,*) '  postinit run sediment model on initial profiles for ',presimulation_years,' years'
       write(message,'(A,I3,A)') trim(name)//' runs ', presimulation_years, ' spinup years'
@@ -282,6 +295,10 @@ module fabm_sediment_component
     ! set solver_settings:
     sed%dt_min=dt_min
     sed%relative_change_min=relative_change_min
+    sed1d%dt_min=dt_min
+    sed1d%relative_change_min=relative_change_min
+    sed1d%bdys   => bdys(1:1,1:1,:)
+    sed1d%fluxes => fluxes(1:1,1:1,:)
 
     ! set boundary conditions for pre-simulation
     bdys(:,:,1) = 5.0 !degC
@@ -300,8 +317,15 @@ module fabm_sediment_component
 
     ! use Dirichlet boundary condition for pre-simulation
     sed%bcup_dissolved_variables = 2
+    sed1d%bcup_dissolved_variables = 2
     do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
-      call ode_solver(sed,dt_spinup,ode_method)
+      call ode_solver(sed1d,dt_spinup,ode_method)
+    end do
+    do i=1,sed%inum
+      do j=1,sed%jnum
+        if (.not.sed%mask(i,j,1)) &
+          sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
+      end do
     end do
     !> it is possible to use flux-boundary condition for dissolved variables
     !> as calculated in get_boundary_conditions after presimulation,
