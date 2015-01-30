@@ -246,10 +246,11 @@ module simplewave_component
 
     do i=1,size(exportList)
 
-      call ESMF_StateGet(exportState, trim(importList(i)%name), itemType=itemType, rc=localrc)
+      !! Avoid duplication of fields (this should actually never occur)
+      call ESMF_StateGet(exportState, trim(exportList(i)%name), itemType=itemType, rc=localrc)
       if (itemType == ESMF_STATEITEM_FIELD) cycle
       if (itemType /= ESMF_STATEITEM_NOTFOUND) then
-        write(message,'(A)')  trim(name)//' got other than field type for item '//trim(importList(i)%name)
+        write(message,'(A)')  trim(name)//' got other than field type for item '//trim(exportList(i)%name)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call MOSSCO_StateLog(exportState)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
