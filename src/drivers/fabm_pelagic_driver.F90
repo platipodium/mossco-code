@@ -320,7 +320,6 @@
           if (.not.associated(pf%model%environment%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal) &
               .and.associated(link%target%standard_variable)) then
-            write(0,*) 'global dependencies not implemented yet'
           end if
       end select
     end if
