@@ -1,7 +1,7 @@
 !> @brief Implementation ESMF/NetCDF utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
 !> @author Carsten Lemmen
 
@@ -11,6 +11,12 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "mossco_netcdf.F90"
+
 module mossco_netcdf
 
   use mossco_variable_types, only: mossco_variableInfo
@@ -711,18 +717,20 @@ module mossco_netcdf
   end subroutine mossco_netcdf_mesh_coordinate_create
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_coordinate_create"
   subroutine mossco_netcdf_coordinate_create(self,grid)
 
     implicit none
     class(type_mossco_netcdf)               :: self
     type(ESMF_Grid), intent(in)             :: grid
 
-    integer                     :: ncStatus, varid, rc, esmfrc, rank
-    integer                     :: nDims, nAtts, udimid, dimlen, i, dimid, j
+    integer                     :: ncStatus, varid, rc, esmfrc, rank, localrc
+    integer                     :: nDims, nAtts, udimid, dimlen, dimid, j
     character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName
 
     character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits
-    character(len=ESMF_MAXSTR)               :: standard_name, long_name
+    character(len=ESMF_MAXSTR)               :: attributeName
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
@@ -732,7 +740,17 @@ module mossco_netcdf
     integer :: eUBound1(1),eUBound2(2),eUBound3(3),eUBound4(4)
     type(ESMF_CoordSys_Flag)                         :: coordSys
     integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, exclusiveCount
-    integer(ESMF_KIND_I4)                            :: dimCount
+    integer(ESMF_KIND_I4)                            :: dimCount, attributeCount, i
+    type(ESMF_Array)                                 :: array
+    logical                                          :: isPresent
+
+    type(ESMF_TypeKind_Flag)         :: typekind
+    real(ESMF_KIND_R8)               :: real8
+    real(ESMF_KIND_R4)               :: real4
+    integer(ESMF_KIND_I8)            :: int8
+    integer(ESMF_KIND_I4)            :: int4
+    character(len=ESMF_MAXSTR)       :: string
+
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
       name=geomName, rc=esmfrc)
@@ -741,7 +759,7 @@ module mossco_netcdf
 
     if (coordSys == ESMF_COORDSYS_SPH_DEG) then
       coordnames=(/'lon  ','lat  ','layer'/)
-      coordunits=(/'degree_east ','degree_north','1           '/)
+      coordunits=(/'degree','degree','1     '/)
     elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
       coordnames=(/'lon  ','lat  ','layer'/)
       coordunits=(/'rad','rad','1  '/)
@@ -755,9 +773,6 @@ module mossco_netcdf
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     dimids => self%grid_dimensions(grid)
     do i=1,dimCount
-
-      long_name=trim(coordNames(i))
-      standard_name=trim(coordNames(i))
 
       !write(0,*)  i,dimCount,trim(geomName), trim(coordNames(i)), trim(coordUnits(i))
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
@@ -790,13 +805,42 @@ module mossco_netcdf
       if (ncStatus /= NF90_NOERR) call &
           ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
-      !! Inquire array for attributes and overwrite varName
-
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(standard_name))
-      ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(long_name))
+      !! Write default attributes into netCDF
+      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(varName))
+      ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(varName))
       ncStatus = nf90_put_att(self%ncid,varid,'units',trim(coordUnits(i)))
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
+      ncStatus = nf90_put_att(self%ncid,varid,'horizontal_stagger_location','center')
+
+      !! Inquire array for attributes and create / overwrite attributes
+      call ESMF_GridGetCoord(grid, i, staggerloc=ESMF_STAGGERLOC_CENTER, array=array, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeGet(array, count=attributeCount, rc=rc)
+      do j=1, attributeCount
+         call ESMF_AttributeGet(array, attributeIndex=j, name=attributeName, &
+           typekind=typekind, rc=rc)
+         if (typekind==ESMF_TYPEKIND_I4) then
+           call ESMF_AttributeGet(array, attributeName, int4, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int4)
+         elseif (typekind==ESMF_TYPEKIND_I8) then
+           call ESMF_AttributeGet(array, attributeName, int8, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int8)
+         elseif (typekind==ESMF_TYPEKIND_R4) then
+           call ESMF_AttributeGet(array, attributeName, real4, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real4)
+         elseif (typekind==ESMF_TYPEKIND_R8) then
+           call ESMF_AttributeGet(array, attributeName, real8, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real8)
+         else
+           call ESMF_AttributeGet(array, attributeName, string, rc=rc)
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),trim(string))
+         endif
+      enddo
+
+      !! End definition phase of netcdf
       ncStatus = nf90_enddef(self%ncid)
 
       if (coordDimCount(i) == 1) then
