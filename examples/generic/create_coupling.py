@@ -147,6 +147,23 @@ if len(intervals) == 0:
 # and sort this list
 if type(dependencies) is dict:
   dependencies = list(dependencies)
+
+gridOrder=[]
+for item in dependencies:
+  for key,value in item.iteritems():
+    if type(value) is list:
+      value=value[0]
+    if type(value) is dict:
+      if value.has_key('grid'):
+        donator=value['component']
+        if key not in gridOrder:
+          gridOrder.append(key)
+        if donator not in gridOrder:
+          gridOrder.insert(gridOrder.index(key),donator)
+        if gridOrder.index(donator) > gridOrder.index(key):
+          print "ERROR: cyclic grid dependencies"
+          sys.exit(1)
+
 dependencyDict={}
 for component in componentSet:
     for item in dependencies:
@@ -165,8 +182,11 @@ for component in componentSet:
                     foreignGrid[item.keys()[0]]=jtem['grid']
           for compdep in compdeps:
             if componentList.index(component)< componentList.index(compdep):
-                   c=componentList.pop(componentList.index(component))
-                   componentList.insert(componentList.index(compdep)+1,c)
+              if component in gridOrder and compdep in gridOrder:
+                if gridOrder.index(component) < gridOrder.index(compdep):
+                  continue
+              c=componentList.pop(componentList.index(component))
+              componentList.insert(componentList.index(compdep)+1,c)
           if dependencyDict.has_key(item.keys()[0]):
             dependencyDict[item.keys()[0]].extend(compdeps)
           else:
