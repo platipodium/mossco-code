@@ -897,6 +897,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     logical                                   :: isPresent
     real(ESMF_KIND_R8)                        :: value_R8
 
+    rc_ = ESMF_SUCCESS
     attributeName='default_value'
 
     call ESMF_AttributeGet(importField, trim(attributeName), isPresent=isPresent, rc=localrc)
