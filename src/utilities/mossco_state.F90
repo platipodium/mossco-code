@@ -904,6 +904,7 @@ contains
     type(ESMF_FieldStatus_Flag)         :: fieldStatus
     type(ESMF_StateItem_Flag)           :: itemType
 
+    rc_ = ESMF_SUCCESS
     attributeName='foreign_grid_field_name'
 
     call ESMF_AttributeGet(state, name=trim(attributeName), &
