@@ -817,15 +817,14 @@ module fabm_sediment_component
       write(string,'(A)') "Water temperature information found"
       call ESMF_LogWrite(string,ESMF_LOGMSG_INFO)
 #endif
-      ptr_f2 => bdys(:,:,1)
       if (sed%grid%use_ugrid) then
         call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        ptr_f2(:,1) = fluxmesh_ptr(:)
+        bdys(:,1,1) = fluxmesh_ptr(:)
       else
         call ESMF_FieldGet(field,farrayPtr=ptr_f2,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        bdys(:,:,1) = ptr_f2(:,:)   ! get lowest vertical index for near-bed temperature
+        bdys(1:_INUM_,1:_JNUM_,1) = ptr_f2(1:_INUM_,1:_JNUM_)   ! get lowest vertical index for near-bed temperature
       end if
     endif
 
