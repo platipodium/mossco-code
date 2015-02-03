@@ -90,6 +90,11 @@ module fabm_sediment_component
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
+      userRoutine=InitializeP2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -110,7 +115,7 @@ module fabm_sediment_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(len=10)           :: InitializePhaseMap(1)
+    character(len=10)           :: InitializePhaseMap(2)
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
@@ -121,6 +126,7 @@ module fabm_sediment_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
+    InitializePhaseMap(2) = "IPDv00p2=2"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
@@ -140,7 +146,7 @@ module fabm_sediment_component
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
 #undef  ESMF_METHOD
-#define ESMF_METHOD "Initialize"
+#define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
@@ -636,6 +642,67 @@ module fabm_sediment_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(gridComp, importState, exportState, parentClock, rc)
+    implicit none
+
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
+
+    type(ESMF_Clock)            :: clock
+    type(ESMF_Time)             :: currTime
+    integer(ESMF_KIND_I4)       :: localrc
+    character(len=ESMF_MAXSTR) :: name, message, itemname
+
+    integer(ESMF_KIND_I4)          :: ubnd(2),lbnd(2)
+    real(ESMF_KIND_R8), pointer    :: ptr_f2(:,:)
+    type(ESMF_FieldStatus_Flag)    :: fieldstatus
+    type(ESMF_StateItem_Flag)      :: itemtype
+    type(ESMF_Field)               :: field
+
+    !> here: * @todo: evtl. complete fields here
+    !!       * check for porosity in importState and copy data
+    !!       * check initialize_variables_method for:
+    !!         a) set constant values
+    !!         b) presimulate after setting constant values
+    !!         c) copy 3d data for restarting previous simulation
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> check for porosity
+    itemname='porosity_at_soil_surface'
+    call ESMF_StateGet(importState, trim(itemname), itemType=itemType, rc=localrc)
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(importState, trim(itemname), field=field, rc=localrc)
+      call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
+      if (fieldstatus== ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field, farrayPtr=ptr_f2, &
+               exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+        !> @todo: build profile 
+        sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+      else
+        write(message,'(A)') trim(name)//': incomplete field'
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      end if
+    else
+      write(message,'(A)') trim(name)//': no external porosity information'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    end if
+
+    
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP2
+
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
