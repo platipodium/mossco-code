@@ -113,7 +113,7 @@ module simplewave_component
     character(len=ESMF_MAXSTR) :: foreignGridFieldName,message
     integer              :: rank
     real(ESMF_KIND_R8), pointer           :: coordX(:), coordY(:)
-    logical                         :: isPresent
+    logical                         :: isPresent,foreignGridIsPresent=.false.
     character(ESMF_MAXSTR)          :: configFileName, gridFileName
     type(ESMF_Config)               :: config
     integer(ESMF_KIND_I4)           :: lbnd(2), ubnd(2)
@@ -138,10 +138,12 @@ module simplewave_component
       call ESMF_GridCompGet(gridComp,grid=grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
     else
-      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', isPresent=foreignGridIsPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (isPresent) then
+      if (foreignGridIsPresent) then
+        call ESMF_AttributeGet(importState, name='foreign_grid_field_name', value=foreignGridFieldName, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_StateGetForeignGrid(importState, grid, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_GridGet(grid, rank=rank, rc=localrc)
@@ -213,13 +215,9 @@ module simplewave_component
 
     do i=1,size(importList)
 
-      call ESMF_StateGet(importState, trim(importList(i)%name), itemType=itemType, rc=localrc)
-      if (itemType /= ESMF_STATEITEM_NOTFOUND) then
-        write(message,'(A)')  trim(name)//' got other than field type for item '//trim(importList(i)%name)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call MOSSCO_StateLog(importState)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      endif
+      if (foreignGridIsPresent) then
+        if (trim(importList(i)%name) == foreignGridFieldName) cycle
+      end if
 
       field=ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
