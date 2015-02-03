@@ -166,8 +166,8 @@ for component in componentSet:
         if type(compdeps) is list:
           for compdep in compdeps:
             if componentList.index(component)< componentList.index(compdep):
-                   c=componentList.pop(componentList.index(compdep))
-                   componentList.insert(componentList.index(component),c)
+                   c=componentList.pop(componentList.index(component))
+                   componentList.insert(componentList.index(compdep)+1,c)
         elif componentList.index(component)< componentList.index(compdeps):
               c=componentList.pop(componentList.index(compdeps))
               componentList.insert(componentList.index(component),c)
