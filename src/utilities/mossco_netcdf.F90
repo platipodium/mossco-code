@@ -738,16 +738,16 @@ module mossco_netcdf
     call replace_character(geomName, ' ', '_')
     if (dimCount<1) return
 
-    !if (coordSys == ESMF_COORDSYS_CART) then
-    !  coordnames=(/'lon   ','lat   ','radius'/)
-    !  coordunits=(/'degree_east ','degree_north','m           '/)
-    !elseif (coordSys == ESMF_COORDSYS_CART) then
-    !  coordnames=(/'lon   ','lat   ','radius'/)
-    !  coordunits=(/'rad','rad','m  '/)
-    !else !(coordSys == ESMF_COORDSYS_CART) then
+    if (coordSys == ESMF_COORDSYS_SPH_DEG) then
+      coordnames=(/'lon  ','lat  ','layer'/)
+      coordunits=(/'degree_east ','degree_north','1           '/)
+    elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
+      coordnames=(/'lon  ','lat  ','layer'/)
+      coordunits=(/'rad','rad','1  '/)
+    else
       coordnames=(/'x','y','z'/)
-      coordunits=(/' ',' ','m'/)
-    !endif
+      coordunits=(/'1','1','1'/)
+    endif
 
     allocate(coordDimCount(dimCount))
     call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=esmfrc)
@@ -755,7 +755,7 @@ module mossco_netcdf
     dimids => self%grid_dimensions(grid)
     do i=1,dimCount
 
-      !write(0,*)  i,dimCount,trim(geomName), trim(coordNames(i)), trim(coordUnits(i))
+      write(0,*)  i,dimCount,trim(geomName), trim(coordNames(i)), trim(coordUnits(i))
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
       if (self%variable_present(varName)) then
         write(message,'(A)') 'A variable with this name already exists'
