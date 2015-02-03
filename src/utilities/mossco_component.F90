@@ -538,6 +538,7 @@ contains
 
     write(0,'(A)') trim(row)
 
+    rc_=localrc
     if (present(rc)) rc=rc_
     return
 
