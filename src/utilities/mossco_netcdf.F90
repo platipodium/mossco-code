@@ -722,6 +722,7 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName
 
     character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits
+    character(len=ESMF_MAXSTR)               :: standard_name, long_name
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
@@ -755,7 +756,10 @@ module mossco_netcdf
     dimids => self%grid_dimensions(grid)
     do i=1,dimCount
 
-      write(0,*)  i,dimCount,trim(geomName), trim(coordNames(i)), trim(coordUnits(i))
+      long_name=trim(coordNames(i))
+      standard_name=trim(coordNames(i))
+
+      !write(0,*)  i,dimCount,trim(geomName), trim(coordNames(i)), trim(coordUnits(i))
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
       if (self%variable_present(varName)) then
         write(message,'(A)') 'A variable with this name already exists'
@@ -786,8 +790,11 @@ module mossco_netcdf
       if (ncStatus /= NF90_NOERR) call &
           ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
-      ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
+      !! Inquire array for attributes and overwrite varName
+
+      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(standard_name))
+      ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(long_name))
+      ncStatus = nf90_put_att(self%ncid,varid,'units',trim(coordUnits(i)))
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
       ncStatus = nf90_enddef(self%ncid)
