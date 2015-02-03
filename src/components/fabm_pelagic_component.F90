@@ -4,7 +4,7 @@
 !! MOSSCO pelagic component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -67,15 +67,24 @@ module fabm_pelagic_component
 
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
-    
-    integer(ESMF_KIND_I4)  :: localrc
+
+    integer              :: localrc
+
+    rc=ESMF_SUCCESS
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
@@ -134,7 +143,7 @@ module fabm_pelagic_component
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
-    
+
     call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -424,7 +433,7 @@ module fabm_pelagic_component
       if (attribute_r8 > 0.0d0) &
         call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
       !> add fabm index in concentration array as "external_index" to be used by other components
       call ESMF_AttributeSet(concfield,'external_index',pel%export_states(n)%fabm_id)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -597,7 +606,7 @@ module fabm_pelagic_component
         call pel%set_environment(pel%horizontal_dependencies(n)%name,ptr_horizontal=ptr_f2)
       end do
     end if
-    
+
 
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
@@ -620,7 +629,7 @@ module fabm_pelagic_component
 
       !> add to importState
       call ESMF_StateGet(importState, itemName=trim(varname), itemType=itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)      
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemType == ESMF_STATEITEM_NOTFOUND) then
         !> is not present, just add field
@@ -657,7 +666,7 @@ module fabm_pelagic_component
 
     !> set global time, such that fabm can calculate initial diagnostics
     call pel%set_time(day_of_year, seconds_of_day)
-    
+
     !> check consistency of fabm setup
     call pel%check_ready()
     !> also update export states again with sinking velocities
@@ -798,7 +807,7 @@ module fabm_pelagic_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)   :: localrc
-    
+
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
