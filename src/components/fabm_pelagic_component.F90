@@ -238,7 +238,7 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I8) :: tidx
     type(ESMF_Alarm)      :: outputAlarm
 
-    character(len=ESMF_MAXSTR) :: timestring, name, message, units
+    character(len=ESMF_MAXSTR) :: timestring, name, message, units, esmf_name
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
     type(ESMF_Clock)           :: clock
     type(ESMF_Time)            :: currTime, startTime, stopTime
@@ -571,12 +571,17 @@ module fabm_pelagic_component
     if (associated(pel%horizontal_dependencies)) then
       do n=1,size(pel%horizontal_dependencies)
         !> check for existing field
-        call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), itemType,rc=localrc)
+        if (trim(pel%horizontal_dependencies(n)%name)=='bottom_depth') then
+          esmf_name = 'water_depth_at_soil_surface'
+        else
+          esmf_name = pel%horizontal_dependencies(n)%name
+        end if
+        call ESMF_StateGet(importState, trim(esmf_name), itemType,rc=localrc)
         if (itemType == ESMF_STATEITEM_NOTFOUND) then
-          write(message,*) 'create hor. field ',trim(pel%horizontal_dependencies(n)%name)
+          write(message,*) 'create hor. field ',trim(esmf_name)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
           field = ESMF_FieldCreate(horizontal_grid, &
-               name=trim(pel%horizontal_dependencies(n)%name), &
+               name=trim(esmf_name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_AttributeSet(field,'units',trim(pel%horizontal_dependencies(n)%units))
@@ -587,14 +592,14 @@ module fabm_pelagic_component
           call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         else
-          write(message,*) 'use existing field: ',trim(pel%horizontal_dependencies(n)%name)
+          write(message,*) 'use existing field: ',trim(esmf_name)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,rc=localrc)
         end if
-        attribute_name=trim(pel%horizontal_dependencies(n)%name)
+        attribute_name=trim(esmf_name)
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=2)
         !! set FABM's pointers to dependencies data,
         !! this probably has to be done only once (here) and not in Run
-        call ESMF_StateGet(importState, trim(pel%horizontal_dependencies(n)%name), field=field, rc=localrc)
+        call ESMF_StateGet(importState, trim(esmf_name), field=field, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field, farrayPtr=ptr_f2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -605,7 +610,7 @@ module fabm_pelagic_component
             (lbound(ptr_f2,1).gt.1).or. &
             (lbound(ptr_f2,2).gt.1)) then
           write(message,*) 'upper bounds of possibly existing 2d array for ', &
-                           trim(pel%horizontal_dependencies(n)%name), &
+                           trim(esmf_name), &
                            ' does not fit into domain: ',size(ptr_f2), &
                            'vs.',pel%inum,pel%jnum
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR,rc=localrc)
