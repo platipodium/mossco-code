@@ -214,7 +214,7 @@ contains
     type(ESMF_Clock)          :: clock
     type(ESMF_Time)           :: currTime
 
-    logical                   :: clockIsPresent, isPresent
+    logical                   :: clockIsPresent, isPresent, foreignGridIsPresent=.false.
 
     integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount, itemCount
 ! local variables
@@ -288,6 +288,7 @@ contains
       call ESMF_GridAddCoord(grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
+      foreignGridIsPresent=.true.
       write(message,*) trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -712,10 +713,10 @@ contains
 
 
     do i=1,size(importList)
-      call ESMF_StateGet(importState, itemSearch=trim(importList(i)%name), itemCount=itemCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemCount>0) cycle
+      if (foreignGridIsPresent) then
+        if (trim(importList(i)%name) == foreignGridFieldName) cycle
+      end if
 
       field = ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
