@@ -152,6 +152,8 @@ for component in componentSet:
     for item in dependencies:
         compdeps=[]
         if type(item) is dict:
+          if not item.has_key(component):
+            continue
           for jtem in item.values():
               if type(jtem) is list and len(jtem) == 1:
                   jtem=jtem[0]
