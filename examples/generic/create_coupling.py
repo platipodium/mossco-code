@@ -163,18 +163,14 @@ for component in componentSet:
                  compdeps.append(jtem['component'])
                  if jtem.has_key('grid'):
                     foreignGrid[item.keys()[0]]=jtem['grid']
-        if type(compdeps) is list:
           for compdep in compdeps:
             if componentList.index(component)< componentList.index(compdep):
                    c=componentList.pop(componentList.index(component))
                    componentList.insert(componentList.index(compdep)+1,c)
-        elif componentList.index(component)< componentList.index(compdeps):
-              c=componentList.pop(componentList.index(compdeps))
-              componentList.insert(componentList.index(component),c)
-        if dependencyDict.has_key(item.keys()[0]):
-          dependencyDict[item.keys()[0]].extend(compdeps)
-        else:
-          dependencyDict[item.keys()[0]]=compdeps
+          if dependencyDict.has_key(item.keys()[0]):
+            dependencyDict[item.keys()[0]].extend(compdeps)
+          else:
+            dependencyDict[item.keys()[0]]=compdeps
 
 for key,value in dependencyDict.iteritems():
     unique=[]
