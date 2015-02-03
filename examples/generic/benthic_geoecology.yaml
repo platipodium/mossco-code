@@ -15,7 +15,7 @@ coupling:
   - components:
      - constant
      - gotm
-    interval: 1 yy
+    interval: none
   - components:
      - gotm
      - fabm_gotm

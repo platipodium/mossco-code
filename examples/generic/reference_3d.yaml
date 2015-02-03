@@ -61,17 +61,18 @@ coupling:
      - fabm_pelagic
   - components:
      - fabm_pelagic
-     - pelagic_benthic_mediator
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval:  30 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
+    interval: 30 m
   - components:
      - constant
-     - pelagic_benthic_mediator
-  - components:
-     - pelagic_benthic_mediator
      - fabm_sediment
-  - components:
-     - constant
-     - fabm_sediment
-    interval: 1 yy
+    interval: none
   - components:
      - fabm_sediment
      - netcdf
@@ -80,11 +81,6 @@ coupling:
      - erosed
      - netcdf
     interval: 1 h
-#  - components:
-#     - fabm_sediment
-#     - benthic_pelagic_coupler
-#     - fabm_pelagic
-#    interval: 6 m
   - components:
      - benthos
      - erosed
