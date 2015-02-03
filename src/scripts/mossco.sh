@@ -18,7 +18,7 @@ GENERIC=0          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 NP=1               # Run on one processor
-DEFAULT=getm--fabm_pelagic--netcdf  # Default example
+DEFAULT=getm--fabm_pelagic--fabm_sediment--netcdf  # Default example
 SYSTEM=INTERACTIVE                  # Interactive shell as default system
 RETITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
 

@@ -1,12 +1,12 @@
 # This Makefile is part of MOSSCO
-# 
-# @copyright (C) 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+#
+# @copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
 ifndef MOSSCO_DIR
@@ -56,7 +56,7 @@ fabm0d: create_coupling.py fabm0d_coupling.yaml
 
 fabm_sediment: create_coupling.py fabm_sediment_coupling.yaml
 	python $^
-	
+
 gotm: create_coupling.py gotm_coupling.yaml
 	python $^
 
@@ -75,8 +75,8 @@ empty: create_coupling.py empty_coupling.yaml
 constant: create_coupling.py constant_coupling.yaml
 	python $^
 
-	
-	
-	
+
+
+
 
 
