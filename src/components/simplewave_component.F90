@@ -419,6 +419,7 @@ module simplewave_component
     real(ESMF_KIND_R8)           :: wdepth,wind,wwind
     real(ESMF_KIND_R8),parameter :: min_wind=0.1d0
     real(ESMF_KIND_R8),parameter :: max_depth_windwaves=99999.0
+    real(ESMF_KIND_R8),parameter :: kD_deepthresh = 100.0d0
     integer,dimension(2)         :: totalLBound,totalUBound
     integer                      :: i,j
 
@@ -446,12 +447,19 @@ module simplewave_component
       do i=totalLBound(1),totalUBound(1)
         if (mask(i,j) .ne. 0) then
         wind = sqrt( windx(i,j)*windx(i,j) + windy(i,j)*windy(i,j) )
+        if (wind .gt. 0.0d0) then
         wwind = max( min_wind , wind )
         wdepth = min( depth(i,j) , max_depth_windwaves )
         waveH(i,j) = wind2waveHeight(wwind,wdepth)
         waveT(i,j) = wind2wavePeriod(wwind,wdepth)
         waveK(i,j) = wavePeriod2waveNumber(waveT(i,j),depth(i,j))
         waveDir(i,j) = atan2(windy(i,j),windx(i,j)) ! cartesian convention and in radians
+        else
+          waveH  (i,j) = 0.0d0
+          waveT  (i,j) = 0.0d0
+          waveK  (i,j) = kD_deepthresh / depth(i,j)
+          waveDir(i,j) = 0.0d0
+        end if
         end if
       end do
     end do
