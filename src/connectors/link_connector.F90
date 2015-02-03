@@ -749,7 +749,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
   end subroutine MOSSCO_FieldSetValue
 
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "state_copy_default_values"
   subroutine MOSSCO_state_copy_default_values(importState, exportState, rc)
 
     implicit none
