@@ -145,34 +145,10 @@ if len(intervals) == 0:
 
 # if there are any dependencies specified, go through the list of components
 # and sort this list
-
+if type(dependencies) is dict:
+  dependencies = list(dependencies)
 dependencyDict={}
 for component in componentSet:
-  if type(dependencies) is dict:
-    for item in dependencies:
-        compdeps=[]
-        if type(item) is dict:
-          for jtem in item.values():
-              if type(jtem) is str:
-                 compdeps.append(jtem)
-              elif (type(jtem) is dict) and jtem.has_key('component'):
-                 compdeps.append(jtem['component'])
-                 if jtem.has_key('grid'):
-                    foreignGrid[item.keys()[0]]=jtem['grid']
-        if type(compdeps) is list:
-          for compdep in compdeps:
-            if componentList.index(component)< componentList.index(compdep):
-                   c=componentList.pop(componentList.index(compdep))
-                   componentList.insert(componentList.index(component),c)
-        elif componentList.index(component)< componentList.index(compdeps):
-              c=componentList.pop(componentList.index(compdeps))
-              componentList.insert(componentList.index(component),c)
-    if dependencyDict.has_key(item):
-      dependencyDict[item].extend(compdeps)
-    else:
-      dependencyDict[item]=compdeps
-
-  elif type(dependencies) is list:
     for item in dependencies:
         compdeps=[]
         if type(item) is dict:
@@ -197,8 +173,6 @@ for component in componentSet:
           dependencyDict[item.keys()[0]].extend(compdeps)
         else:
           dependencyDict[item.keys()[0]]=compdeps
-  else:
-    print 'The dependencies specification must be list or dictionary'
 
 for key,value in dependencyDict.iteritems():
     unique=[]
