@@ -688,8 +688,8 @@ module fabm_sediment_component
       if (fieldstatus== ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_FieldGet(field, farrayPtr=ptr_f2, &
                exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-        !> @todo: build profile 
         sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+        call sed%update_porosity(from_surface=.true.)
       else
         write(message,'(A)') trim(name)//': incomplete field'
         call mossco_fieldString(field, message)

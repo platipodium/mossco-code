@@ -60,6 +60,8 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    integer                      :: bcup_particulate_variables=1
    integer                      :: ndiag=0
    logical                      :: do_output=.true.
+   real(rk)                     :: porosity_fac=1.0_rk
+   real(rk)                     :: pom_flux_max=1.0_rk
    type(export_state_type),dimension(:),allocatable :: export_states
 
    real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity,bioturbation_factor
@@ -75,6 +77,7 @@ contains
    procedure :: finalize
    procedure :: init_concentrations
    procedure :: diagnostic_variables
+   procedure :: update_porosity
    procedure :: get_rhs
    procedure :: get_export_state_by_id
    procedure :: get_export_state_by_diag_id
@@ -193,6 +196,8 @@ allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
 allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
+sed%porosity_fac = porosity_fac
+sed%pom_flux_max = pom_flux_max
 do k=1,_KNUM_
    !> set porosity, located at cell centers
    sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sed%grid%zc(:,:,k))
@@ -228,8 +233,7 @@ do i=1,_INUM_
 end do
 #endif
 
-sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
-sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
+call sed%update_porosity(from_surface=.false.)
 
 sed%temp = 5_rk
 
@@ -261,6 +265,53 @@ sed%diff = diffusivity
 
 end subroutine initialize
 
+
+!> update porosity from surface values
+!!   to be used during initialisation
+subroutine update_porosity(sed, from_surface)
+implicit none
+
+class(type_sed)   :: sed
+logical, optional :: from_surface
+logical           :: from_surface_eff
+integer           :: n,i,j,k
+
+from_surface_eff = .false.
+if (present(from_surface)) from_surface_eff=from_surface
+
+if (from_surface_eff) then
+  do k=2,_KNUM_
+    !> set porosity, located at cell centers
+    sed%porosity(:,:,k) = sed%porosity(:,:,1) * &
+      (1_rk - sed%porosity_fac * (sed%grid%zc(:,:,k)-sed%grid%zc(:,:,1)))
+  end do
+
+  do k=1,_KNUM_
+    !> @todo: pom_flux_max units have to be unified -
+    !!        need to come in mg/m2/d and then scaled in
+    !!        transport routine with the molar mass
+    sed%flux_cap(:,:,k) = sed%pom_flux_max/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dz(:,:,k)
+    if (k .gt. 2) then
+      do j=1,_JNUM_
+        do i=1,_INUM_
+          if (sed%flux_cap(i,j,k) .gt. sed%flux_cap(i,j,k-1)) sed%flux_cap(i,j,k) = sed%flux_cap(i,j,k-1)
+        end do
+      end do
+    end if
+  end do
+end if
+
+! update interface porosity
+sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
+sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
+
+! update effective concentrations (scaled per volume pore water)
+if (associated(sed%conc)) call sed%init_concentrations()
+
+end subroutine update_porosity
+
+
+
 !> initialised sediment concentrations from namelist. Initial
 !! concentrations in the namelist are taken as molar mass per
 !! total cell volume
@@ -274,13 +325,15 @@ do n=1,sed%nvar
    sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value/sed%porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
 end do
-do k=1,sed%knum
-   do j=1,sed%jnum
+if(associated(sed%mask)) then
+  do k=1,sed%knum
+    do j=1,sed%jnum
       do i=1,sed%inum
-         if (sed%mask(i,j,k)) sed%conc(i,j,k,:)=1.d20
+        if (sed%mask(i,j,k)) sed%conc(i,j,k,:)=1.d20
       end do
-   end do
-end do
+    end do
+  end do
+end if
 end subroutine init_concentrations
 
 
