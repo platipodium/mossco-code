@@ -552,51 +552,6 @@ contains
 !    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
 !    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
 
-! Advertise Import Fields
-  if (wave) then
-
-    allocate(importList(4))
-
-    importList(1)%name  = 'wave_height'
-    importList(1)%units = 'm'
-    importList(2)%name  = 'wave_period'
-    importList(2)%units = 's'
-    importList(3)%name  = 'wave_number'
-    importList(3)%units = '1/m'
-    importList(4)%name  = 'wave_direction'
-    importList(4)%units = 'rad'
-
-    do i=1,size(importList)
-      field = ESMF_FieldEmptyCreate(name=trim(importList(i)%name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(importList(i)%units), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAdd(importState,(/field/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    end do
-
-    deallocate(importList)
-
-  end if
-
-! Complete Import Fields
-! TODO: should be moved to InitializeP2()
-  !if (wave) then
-  !  do i=1,size(importList)
-  !    call ESMF_StateGet(importState,trim(importList(i)%name),field)
-  !    allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-  !    call ESMF_FieldEmptyComplete(field,grid,importList(i)%data,     &
-  !                                 ESMF_INDEX_DELOCAL,                      &
-  !                                 totalLWidth=exclusiveLBound-totalLBound, &
-  !                                 totalUWidth=totalUBound-exclusiveUBound)
-  !  end do
-  !end if
-
-
-    !> create export fields
-
   allocate(external_idx_by_nfrac(nfrac))
   allocate(nfrac_by_external_idx(nfrac))
 
@@ -706,7 +661,11 @@ contains
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Prepare import state for fields needed in run
-    allocate(importList(7))
+    if (wave) then
+      allocate(importList(11))
+    else
+      allocate(importList(7))
+    end if
 
     importList(1)%name  = 'layer_height_at_soil_surface'
     importList(1)%units = 'm'
@@ -722,6 +681,17 @@ contains
     importList(6)%units = ' '
     importList(7)%name  = 'concentration_of_SPM_z_velocity_in_water'
     importList(7)%units = 'mg m l**-1 s**-1'
+
+    if (wave) then
+       importList(8)%name  = 'wave_height'
+       importList(8)%units = 'm'
+       importList(9)%name  = 'wave_period'
+       importList(9)%units = 's'
+       importList(10)%name  = 'wave_number'
+       importList(10)%units = '1/m'
+       importList(11)%name  = 'wave_direction'
+       importList(11)%units = 'rad'
+    end if
 
 
     do i=1,size(importList)
@@ -739,8 +709,6 @@ contains
       call ESMF_StateAdd(importState,(/field/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
-
-    deallocate(importList)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
