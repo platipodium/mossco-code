@@ -1625,7 +1625,7 @@ for item in gridCompSet.union(cplCompSet):
 fid.write(' ' + coupling_name + '\n\n')
 fid.write(coupling_name + ': toplevel_component.o ../common/main.o\n')
 fid.write('\t$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@\n')
-fid.write('\t@echo "Created example binary $(MOSSCO_DIR)/generic/$@"\n')
+fid.write('\t@echo "Created example binary $(PWD)/$@"\n')
 fid.write('''
 
 # Other subsidiary targets that might not be needed, these should evetually
