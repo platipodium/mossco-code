@@ -120,6 +120,10 @@ contains
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
+      userRoutine=InitializeP2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -140,7 +144,7 @@ contains
     type(ESMF_Clock)            :: parentClock
     integer, intent(out)        :: rc
 
-    character(len=10)           :: InitializePhaseMap(1)
+    character(len=10)           :: InitializePhaseMap(2)
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
@@ -151,6 +155,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
+    InitializePhaseMap(2) = "IPDv00p2=2"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
@@ -255,6 +260,15 @@ contains
     !! in importState
     !! and just take the same grid&distgrid.
 
+!!! Create Grid
+    call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp,grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+    else
+
     call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
            value=foreignGridFieldName, defaultValue='none',rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -327,6 +341,9 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       endif
+    endif
+      call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
   inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
@@ -716,6 +733,88 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(gridComp, importState, exportState, clock, rc)
+    implicit none
+
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: clock
+    integer, intent(out) :: rc
+
+    character(ESMF_MAXSTR)  :: name
+    type(ESMF_Time)         :: currTime
+
+    type(ESMF_Field), target     :: field
+    type(ESMF_Grid)      :: grid
+    type(ESMF_FieldStatus_Flag)     :: status
+    integer              :: localrc
+
+    integer,target :: coordDimCount(2),coordDimMap(2,2)
+    integer,dimension(2)            :: totalLBound,totalUBound
+    integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
+    integer                         :: i,j
+    type :: allocatable_integer_array
+      integer,dimension(:),allocatable :: data
+    end type
+    type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
+
+
+    call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+!   Get the total domain size from the coordinates associated with the Grid
+    call ESMF_GridCompGet(gridComp,grid=grid)
+    call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,                                   &
+                      exclusiveLBound=exclusiveLBound,exclusiveUBound=exclusiveUBound)
+    call ESMF_GridGet(grid,coordDimCount=coordDimCount,coordDimMap=coordDimMap)
+    do i=1,2
+      allocate(coordTotalLBound(i)%data(coordDimCount(i)))
+      allocate(coordTotalUBound(i)%data(coordDimCount(i)))
+      call ESMF_GridGetCoordBounds(grid,coordDim=i,                      &
+                                   totalLBound=coordTotalLBound(i)%data, &
+                                   totalUBound=coordTotalUBound(i)%data)
+      do j=1,coordDimCount(i)
+        if (coordDimMap(i,j) .eq. i) then
+          totalLBound(i) = coordTotalLBound(i)%data(j)
+          totalUBound(i) = coordTotalUBound(i)%data(j)
+          exit
+        end if
+      end do
+    end do
+
+!   Complete Import Fields
+    do i=1,size(importList)
+      call ESMF_StateGet(importState,trim(importList(i)%name),field)
+      call ESMF_FieldGet(field,status=status)
+      if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
+                                     ESMF_INDEX_DELOCAL,                      &
+                                     totalLWidth=exclusiveLBound-totalLBound, &
+                                     totalUWidth=totalUBound-exclusiveUBound)
+      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+        call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
+        if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
+                   .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
+          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        end if
+      else
+        call ESMF_LogWrite('empty field: '//trim(importList(i)%name),ESMF_LOGMSG_ERROR, &
+                           line=__LINE__,file=__FILE__,method='InitializeP2()')
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      end if
+    end do
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP2
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
