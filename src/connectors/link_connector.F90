@@ -768,6 +768,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldBundle)                    :: importFieldBundle, exportFieldBundle
     type(ESMF_Field)                          :: importField, exportField
 
+    rc_ = ESMF_SUCCESS
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -839,6 +840,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 	  type(ESMF_Field)                          :: importField
 	  logical                                   :: isPresent
 
+    rc_ = ESMF_SUCCESS
     call ESMF_FieldBundleGet(exportFieldBundle, fieldCount=fieldCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
