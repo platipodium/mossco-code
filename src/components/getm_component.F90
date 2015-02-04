@@ -1795,7 +1795,7 @@ module getm_component
 !
 ! !USES:
    use meteo          ,only: metforcing,met_method,calc_met,u10,v10
-   use waves          ,only: waveforcing_method,WAVES_FROMEXT
+   use waves          ,only: waveforcing_method,WAVES_FROMEXT,new_waves
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
 
@@ -1832,6 +1832,7 @@ module getm_component
    end if
 
    if (waveforcing_method .eq. WAVES_FROMEXT) then
+      new_waves = .true. ! KK-TODO: should be set by coupler
       coswavedir = cos(waveDir)
       sinwavedir = sin(waveDir)
    end if
