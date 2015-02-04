@@ -49,7 +49,6 @@ module erosed_component
 
   ! Dimensions (x,y,depth layer, fraction index)
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
-  type(ESMF_Field)                              :: upward_flux_Field
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
@@ -190,13 +189,9 @@ contains
     type(ESMF_Array)       :: array
     type(ESMF_Field)       :: field
     real(ESMF_KIND_R8),dimension(:)  ,pointer   :: LonCoord=>null(),LatCoord=>null(),DepthCoord=>null()
-    real(ESMF_KIND_R8),dimension(:,:),pointer   :: ptr_f2=>null(), ptr2_f2=>null()
-    type(ESMF_FieldBundle)                      :: upward_flux_bundle,downward_flux_bundle,fieldBundle
-    type(ESMF_Field)  ,dimension(:),allocatable :: fieldlist
+    type(ESMF_FieldBundle)                      :: fieldBundle
     character(len=ESMF_MAXSTR)                  :: foreignGridFieldName
 
-
-    type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_INDEX_Flag)     :: indexFlag
 
     integer , allocatable     :: maxIndex(:)
@@ -207,7 +202,7 @@ contains
     real(ESMF_KIND_R8)        :: dt
     character(len=80)         :: title
     character(len=256)        :: din_variable='',pon_variable=''
-    integer(ESMF_KIND_I8)     :: nlev,n
+    integer(ESMF_KIND_I8)     :: nlev
 
     integer                   :: UnitNr, istat,ii,j
     logical                   :: opnd, exst
@@ -218,7 +213,7 @@ contains
 
     logical                   :: clockIsPresent, isPresent, foreignGridIsPresent=.false.
 
-    integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3), fieldCount, itemCount
+    integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
 ! local variables
     real(fp),dimension(:), allocatable :: eropartmp, tcrdeptmp,tcrerotmp,depefftmp,depfactmp, &
                              &   parfluff0tmp,parfluff1tmp,tcrflufftmp, fractmp
@@ -575,117 +570,12 @@ contains
   allocate(external_idx_by_nfrac(nfrac))
   allocate(nfrac_by_external_idx(nfrac))
 
-  !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
-  call ESMF_StateGet(importState,"concentration_of_SPM_in_water",itemType=itemType,rc=localrc)
-  if (itemType==ESMF_STATEITEM_FIELD) then
-    call ESMF_StateGet(importState,"concentration_of_SPM_in_water",field,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(1), &
-      isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if (isPresent) then
-      call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(1), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-      write(message,'(A,I1,A,I1)') trim(name)//' no external index attribute found for SPM fraction //', 1
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      external_idx_by_nfrac(:)=1
-    endif
-
-    if (nfrac /= 1) then
-      write(message,'(A)') trim(name)//' mapped all fractions to one SPM fraction.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    endif
-  elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
-    call ESMF_StateGet(importState,"concentration_of_SPM_in_water",fieldBundle,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (fieldCount==1 .and. nfrac>1) then
-      write(message,'(A)') trim(name)//' mapped all fractions to one SPM fraction.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      external_idx_by_nfrac(:)=1
-    elseif (nfrac==1 .and. fieldCount>1) then
-      write(message,'(A)') trim(name)//' cannot map 1 fraction to multiple SPM fractions, yet.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    elseif (nfrac /= fieldCount) then
-      write(message,'(A)') trim(name)//' cannot map unequal size and SPM fractions'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-
-      if (allocated(fieldlist) .and. size(fieldList)<fieldcount) deallocate(fieldlist)
-      if (.not.allocated(fieldList)) allocate(fieldlist(fieldCount))
-
-      call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      do n=1,fieldCount
-        call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n), &
-          isPresent=isPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (isPresent) then
-          call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n), rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        else
-          write(message,'(A,I1,A,I1)') trim(name)//' no external index attribute found for SPM fraction //', n
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          external_idx_by_nfrac(n)=n
-        endif
-      end do
-    endif
-  else
-    write(message,'(A)') trim(name)//' required "concentration_of_SPM_in_water" is not field or fieldBundle.'
-    call mossco_statelog(importState)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  end if
-
-  !> @todo change mapping from order of SPM fields in fieldbundle to trait-related
-  !!       mapping by e.g. d50. It is unknown here, which SPM fraction in water is
-  !!       related to SPM fractions in the bed module
-  !! after having external_index defined by nfrac, create nfrac_by_external_idx:
-
-  do n=1,ubound(external_idx_by_nfrac,1)
-    nfrac_by_external_idx(external_idx_by_nfrac(n))=n
-  end do
-
-  upward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux_at_soil_surface',rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  call ESMF_AttributeSet(upward_flux_bundle,'creator', trim(name), rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  downward_flux_bundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux_at_soil_surface',rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  call ESMF_AttributeSet(downward_flux_bundle,'creator', trim(name), rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  do n=1,nfrac
-    ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
-    upward_flux_field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
-            name='concentration_of_SPM_upward_flux_at_soil_surface', rc=localrc)
-    call ESMF_AttributeSet(upward_flux_field,'external_index',external_idx_by_nfrac(n), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_AttributeSet(upward_flux_field,'creator', trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(name)//' creates field'
-    call MOSSCO_FieldString(upward_flux_field, message)
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-
-    call ESMF_FieldBundleAdd(upward_flux_bundle,(/upward_flux_field/),multiflag=.true.,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  end do
-
-  call ESMF_StateAddReplace(exportState,(/upward_flux_bundle,downward_flux_bundle/),rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Prepare import state for fields needed in run
     if (wave) then
-      allocate(importList(12))
+      allocate(importList(11))
     else
-      allocate(importList(8))
+      allocate(importList(7))
     end if
 
     importList(1)%name  = 'water_depth_at_soil_surface'
@@ -702,18 +592,16 @@ contains
     importList(6)%units = 'm s**-1'
     importList(7)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
     importList(7)%units = 'm**2 s**-1'
-    importList(8)%name  = 'concentration_of_SPM_z_velocity_in_water'
-    importList(8)%units = 'mg m l**-1 s**-1'
 
     if (wave) then
-       importList( 9)%name  = 'wave_height'
-       importList( 9)%units = 'm'
-       importList(10)%name  = 'wave_period'
-       importList(10)%units = 's'
-       importList(11)%name  = 'wave_number'
-       importList(11)%units = 'm**-1'
-       importList(12)%name  = 'wave_direction'
-       importList(12)%units = 'rad'
+       importList( 8)%name  = 'wave_height'
+       importList( 8)%units = 'm'
+       importList( 9)%name  = 'wave_period'
+       importList( 9)%units = 's'
+       importList(10)%name  = 'wave_number'
+       importList(10)%units = 'm**-1'
+       importList(11)%name  = 'wave_direction'
+       importList(11)%units = 'rad'
     end if
 
 
@@ -735,6 +623,42 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
+    fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_in_water',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(importState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_z_velocity_in_water',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(importState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_upward_flux_at_soil_surface',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(exportState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_downward_flux_at_soil_surface',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(exportState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -750,7 +674,7 @@ contains
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name
+    character(ESMF_MAXSTR)  :: name,message
     type(ESMF_Time)         :: currTime
 
     type(ESMF_Field), target     :: field
@@ -766,6 +690,15 @@ contains
       integer,dimension(:),allocatable :: data
     end type
     type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
+
+    type(ESMF_Field)  ,dimension(:),allocatable :: fieldlist
+    type(ESMF_FieldBundle)                      :: fieldBundle
+    integer(ESMF_KIND_I4)                       :: fieldCount
+
+    real(ESMF_KIND_R8),dimension(:,:),pointer   :: ptr_f2=>null()
+
+    integer :: n
+    logical :: isPresent
 
 
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
@@ -816,6 +749,75 @@ contains
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
+
+  !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
+    call ESMF_StateGet(importState,"concentration_of_SPM_in_water",fieldBundle,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldCount==1 .and. nfrac>1) then
+      write(message,'(A)') trim(name)//' mapped all fractions to one SPM fraction.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      external_idx_by_nfrac(:)=1
+    elseif (nfrac==1 .and. fieldCount>1) then
+      write(message,'(A)') trim(name)//' cannot map 1 fraction to multiple SPM fractions, yet.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    elseif (nfrac /= fieldCount) then
+      write(message,'(A)') trim(name)//' cannot map unequal size and SPM fractions'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+
+      if (allocated(fieldlist) .and. size(fieldList)<fieldcount) deallocate(fieldlist)
+      if (.not.allocated(fieldList)) allocate(fieldlist(fieldCount))
+
+      call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do n=1,fieldCount
+        call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n), &
+          isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (isPresent) then
+          call ESMF_AttributeGet(fieldlist(n),'external_index',external_idx_by_nfrac(n), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        else
+          write(message,'(A,I1,A,I1)') trim(name)//' no external index attribute found for SPM fraction //', n
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          external_idx_by_nfrac(n)=n
+        endif
+      end do
+    endif
+
+  !> @todo change mapping from order of SPM fields in fieldbundle to trait-related
+  !!       mapping by e.g. d50. It is unknown here, which SPM fraction in water is
+  !!       related to SPM fractions in the bed module
+  !! after having external_index defined by nfrac, create nfrac_by_external_idx:
+
+  do n=1,ubound(external_idx_by_nfrac,1)
+    nfrac_by_external_idx(external_idx_by_nfrac(n))=n
+  end do
+
+    call ESMF_StateGet(exportState,"concentration_of_SPM_upward_flux_at_soil_surface",fieldBundle,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  do n=1,nfrac
+    ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
+    field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
+            name='concentration_of_SPM_upward_flux_at_soil_surface', rc=localrc)
+    call ESMF_AttributeSet(field,'external_index',external_idx_by_nfrac(n), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(name)//' creates field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  end do
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -902,10 +904,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       nybot => importList(7)%data
 
       if (wave) then
-        waveH   => importList( 9)%data
-        waveT   => importList(10)%data
-        waveK   => importList(11)%data
-        waveDir => importList(12)%data
+        waveH   => importList( 8)%data
+        waveT   => importList( 9)%data
+        waveK   => importList(10)%data
+        waveDir => importList(11)%data
       end if
 
       if (localrc == 0) then
