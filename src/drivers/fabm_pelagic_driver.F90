@@ -19,6 +19,7 @@
   use mossco_strings
   use fabm
   use fabm_types
+  use fabm_expressions
   use fabm_standard_variables
   implicit none
   private
@@ -28,7 +29,7 @@
 
   type, extends(type_rhs_driver), public :: type_mossco_fabm_pelagic
     type(type_model),pointer           :: model
-    type(export_state_type),dimension(:),pointer :: export_states
+    type(export_state_type),dimension(:),pointer :: export_states => null()
     real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
     real(rk),dimension(:,:,:),pointer  :: zi=>null() !> layer interface depth
@@ -38,8 +39,10 @@
     real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
     integer                            :: ndiag
     logical                            :: fabm_ready
-    type(type_bulk_standard_variable),dimension(:),pointer :: bulk_dependencies
-    type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies
+    type(type_bulk_standard_variable),dimension(:),pointer :: bulk_dependencies => null()
+    type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies => null()
+    real(rk), dimension(:,:,:), pointer  :: horizontal_expression_data => null()
+    real(rk), dimension(:,:,:), pointer  :: horizontal_data => null()
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
@@ -55,6 +58,8 @@
     procedure :: update_pointers
     procedure :: initialize_domain
     procedure :: update_grid
+    procedure :: update_expressions
+    procedure :: check_expressions
   end type
 
   type,public :: export_state_type !< pelagic FABM driver type for export states
@@ -139,6 +144,8 @@
     standard_variables%number_of_days_since_start_of_the_year, &
     pf%decimal_yearday)
 
+  call pf%check_expressions()
+
   end subroutine initialize_domain
 
   subroutine initialize_concentrations(pf)
@@ -197,6 +204,7 @@
         end do
       end do
     end do
+    call pf%update_expressions()
   end subroutine check_ready
 
 
@@ -529,6 +537,88 @@
    end do
 
    end subroutine light
+
+
+   subroutine check_expressions(pf)
+     class(type_mossco_fabm_pelagic) :: pf
+     class(type_expression),pointer  :: expression
+     integer                         :: n
+
+      n = 0
+      expression => pf%model%root%first_expression
+      do while (associated(expression))
+         select type (expression)
+            class is (type_vertical_integral)
+               n = n + 1
+         end select
+         expression => expression%next
+      end do
+
+      allocate(pf%horizontal_expression_data(1:pf%inum,1:pf%jnum,n))
+      pf%horizontal_expression_data = 0.0d0
+
+      n = 0
+      expression => pf%model%root%first_expression
+      do while (associated(expression))
+         select type (expression)
+            class is (type_vertical_integral)
+               n = n + 1
+               call fabm_link_horizontal_data(pf%model,trim(expression%output_name),pf%horizontal_expression_data(:,:,n))
+         end select
+         expression => expression%next
+      end do
+   end subroutine check_expressions
+
+   subroutine update_expressions(pf)
+     class(type_mossco_fabm_pelagic) :: pf
+     class(type_expression),pointer  :: expression
+     integer                         :: n
+
+     n = 0
+     expression => pf%model%root%first_expression
+     do while (associated(expression))
+       select type (expression)
+         class is (type_vertical_integral)
+           n = n + 1
+           pf%horizontal_expression_data(:,:,n) = calculate_vertical_mean(expression,pf%inum,pf%jnum)
+       end select
+       expression => expression%next
+     end do
+
+   contains
+
+     function calculate_vertical_mean(expression,inum,jnum) result(vertmean)
+       class(type_vertical_integral),intent(in) :: expression
+       integer, intent(in)                      :: inum,jnum
+       real(rk), dimension(1:inum,1:jnum)       :: vertmean
+!         ! Loop over all levels, surface to bottom, and compute vertical mean.
+!         depth = _ZERO_
+!         weights = _ZERO_
+!         started = .false.
+!         do k=nlev,1,-1
+!            depth = depth + curh(k)
+!            if (.not.started) then
+!               ! Not yet at minimum depth before
+!               if (depth>=expression%minimum_depth) then
+!                  ! Now crossing minimum depth interface
+!                  started = .true.
+!                  weights(k) = depth-expression%minimum_depth
+!               end if
+!            else
+!               ! Beyond minimum depth, not yet at maximum depth before
+!               weights(k) = curh(k)
+!            end if
+!            if (depth>expression%maximum_depth) then
+!               ! Now crossing maximum depth interface; subtract part of layer height that is not included
+!               weights(k) = weights(k) - (depth-expression%maximum_depth)
+!               exit
+!            end if
+!         end do
+!         if (expression%average) weights = weights/(min(expression%maximum_depth,depth)-expression%minimum_depth)
+       vertmean = 0.0d0
+     end function calculate_vertical_mean
+
+   end subroutine update_expressions
 
 
   end module mossco_fabm_pelagic
