@@ -214,7 +214,7 @@ module fabm_pelagic_component
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Field)     :: field,wsfield,concfield,tmpField
     type(ESMF_Array)     :: array
-    integer              :: i,j,k
+    integer              :: i,j,k,n
     integer              :: rank
     integer, allocatable :: maxIndex(:)
     type(ESMF_DELayout)  :: delayout
@@ -248,6 +248,7 @@ module fabm_pelagic_component
     type(ESMF_TimeInterval)    :: timeStep
     logical                    :: clockIsPresent
     integer                    :: deCount,numElements,numNodes
+    integer,dimension(2)       :: distgridToArrayMap
     integer,dimension(3)       :: coordDimCount
     integer,dimension(3,3)     :: coordDimMap
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
@@ -255,6 +256,7 @@ module fabm_pelagic_component
     integer                    :: day_of_year, day, seconds_of_day
     logical, dimension(:,:,:), pointer :: mask=>null()
     integer, dimension(:,:,:), pointer :: gridmask=>null()
+    real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
@@ -367,14 +369,25 @@ module fabm_pelagic_component
                                       coordDimMap=int(coordDimMap(1:2,1:2)),      &
                                       rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridAddCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=1, farrayptr=coord2d, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    coord2d = 0.0d0
-call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=2, farrayptr=coord2d, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    coord2d = 0.0d0
+
+    do n=1,2
+      if (coordDimCount(n) .eq. 1) then
+        call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=n, farrayptr=coord1d, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        distgridToArrayMap = 0
+        distgridToArrayMap(n) = 1
+        array = ESMF_ArrayCreate(distGrid_2D,coord1d,indexflag=ESMF_INDEX_DELOCAL,distgridToArrayMap=distgridToArrayMap, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        call ESMF_GridGetCoord(state_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=n, farrayptr=coord2d, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        array = ESMF_ArrayCreate(distGrid_2D,coord2d,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      end if
+      call ESMF_GridSetCoord(horizontal_grid,n,array=array,staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
