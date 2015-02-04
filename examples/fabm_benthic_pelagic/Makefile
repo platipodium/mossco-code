@@ -29,7 +29,7 @@ else
 EROSED_DEP =
 EROSED_LIB =
 endif
-LIBS := -lsediment -lconstant $(EROSED_LIB) -lmossco_sediment -lmossco_netcdf -lesmf  $(LIBS)
+LIBS := -lsediment -lconstant $(EROSED_LIB) -lmossco_sediment -lmossco_connector -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)

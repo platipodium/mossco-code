@@ -21,6 +21,7 @@ module toplevel_component
   use fabm_gotm_component, only : fabm_gotm_SetServices => SetServices
   use pelagic_benthic_coupler, only : pb_coupler_SetServices => SetServices
   use benthic_pelagic_coupler, only : bp_coupler_SetServices => SetServices
+  use link_connector, only: linkconn_SetServices => SetServices
 #ifdef MOSSCO_EROSED
   use erosed_component, only: erosed_SetServices => SetServices
 #endif
@@ -39,8 +40,8 @@ module toplevel_component
   type(ESMF_GridComp), save    :: erosedComp
 #endif
   type(ESMF_GridComp), save    :: netcdfComp  
-  type(ESMF_CplComp),save      :: pbCplComp,bpCplComp
-  type(ESMF_State),save,target :: state
+  type(ESMF_CplComp),save      :: pbCplComp,bpCplComp, linkConn
+  type(ESMF_State),save,target :: state, constantState
   type(ESMF_State),pointer     :: pelagicstate,sedimentstate
 
   contains
@@ -97,6 +98,10 @@ module toplevel_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(constantComp,constant_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    linkConn = ESMF_CplCompCreate(name="linkConn",rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_CplCompSetServices(linkConn,linkConn_SetServices, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 #ifdef MOSSCO_EROSED
     erosedComp = ESMF_GridCompCreate(name="erosedComp",rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -122,13 +127,16 @@ module toplevel_component
     state = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Exchange state")
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
+    constantState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Constant state")
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+
     !> use fbp_exchange_state.nc as filename when coupling to netcdf_component
     call ESMF_AttributeSet(state,name='filename',value='fbp_exchange_state.nc',rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     pelagicstate => state
     sedimentstate => state
 
-    call ESMF_GridCompInitialize(constantComp, importState=pelagicState, exportState=pelagicState,clock=parentClock,rc=rc)
+    call ESMF_GridCompInitialize(constantComp, importState=pelagicState, exportState=constantState,clock=parentClock,rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompInitialize(gotmComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -153,6 +161,8 @@ module toplevel_component
     call ESMF_CplCompInitialize(pbCplComp, importState=pelagicstate, exportState=pelagicstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_CplCompInitialize(bpCplComp, importState=pelagicstate, exportState=sedimentstate, clock=parentClock, rc=rc)
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_CplCompInitialize(linkConn, importState=constantState, exportState=sedimentstate, clock=parentClock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
@@ -241,8 +251,8 @@ module toplevel_component
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         call ESMF_ClockSet(childClock,stopTime=currTime+outputInterval,rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        call ESMF_GridCompRun(netcdfComp, & 
-          importState=sedimentstate, exportState=sedimentstate, clock=parentClock, rc=rc)
+        !call ESMF_GridCompRun(netcdfComp, & 
+        !  importState=sedimentstate, exportState=sedimentstate, clock=parentClock, rc=rc)
       end if      
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
