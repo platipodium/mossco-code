@@ -2,7 +2,7 @@
 !! This module contains routines of the CLM atmospheric component.
 !!
 !! This computer program is part of MOSSCO. 
-!! @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
+!! @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
 !! @author Hartmut Kapitza, Carsten Lemmen
 
 !
@@ -22,6 +22,8 @@ module clm_netcdf_component
     
   use esmf
   use mossco_component
+  use mossco_field
+  use mossco_state
 
   use clm_driver, only : CLM_init, CLM_final
   use clm_driver, only : CLM_getrecord, CLM_getdata

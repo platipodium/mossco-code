@@ -21,6 +21,8 @@ module benthos_component
   use esmf
   use mossco_component
   use mossco_strings
+  use mossco_state
+  use mossco_field
 
   use Macrofauna_interface
   use Microphytobenthos_class

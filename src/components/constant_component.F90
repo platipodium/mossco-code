@@ -28,6 +28,7 @@ module constant_component
   use mossco_component
   use mossco_strings
   use mossco_state
+  use mossco_field
 
   implicit none
 

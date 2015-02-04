@@ -1,7 +1,7 @@
 !> @brief Implementation of a GETM ocean component
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Knut Klingbeil, IOW
 !> @author Carsten Lemmen, HZG
 
@@ -26,6 +26,8 @@ module getm_component
   use esmf
   use getm_driver
   use mossco_component
+  use mossco_state
+  use mossco_field
 
   implicit none
   private

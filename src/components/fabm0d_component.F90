@@ -5,7 +5,7 @@
 !> The ESMF component contains the 0d driver module
 !
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht 
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !
@@ -24,6 +24,7 @@ module fabm0d_component
 
   use esmf
   use mossco_component
+  use mossco_field
   
   use time, only: gotm_time_min_n => MinN, gotm_time_max_n => MaxN
   use time, only: gotm_time_timestep => timestep

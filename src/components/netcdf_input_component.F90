@@ -15,6 +15,7 @@ module netcdf_component
   use esmf
   use mossco_variable_types
   use mossco_netcdf
+  use mossco_field
   use mossco_strings
 
   implicit none

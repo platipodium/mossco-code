@@ -4,9 +4,9 @@
 !> @export
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
-!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -23,6 +23,8 @@ module erosed_component
 
   use esmf
   use mossco_component
+  use mossco_state
+  use mossco_field
   use mossco_variable_types
 
   use erosed_driver !, only : initerosed, erosed, getfrac_dummy

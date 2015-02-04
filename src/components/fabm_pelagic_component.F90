@@ -32,6 +32,7 @@ module fabm_pelagic_component
   use solver_library
   use mossco_strings
   use mossco_state
+  use mossco_field
   use mossco_component
 
   implicit none

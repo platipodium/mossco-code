@@ -36,6 +36,7 @@ module fabm_sediment_component
   use solver_library!, only : ode_solver
   use mossco_strings
   use mossco_state
+  use mossco_field
   use mossco_component
 
   implicit none

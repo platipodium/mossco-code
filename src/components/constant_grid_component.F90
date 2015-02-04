@@ -4,8 +4,8 @@
 !> @export all variables that are located in a file read by this component
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -16,6 +16,8 @@ module constant_component
 
   use esmf
   use mossco_variable_types
+  use mossco_field
+  use mossco_state
 
   implicit none
 

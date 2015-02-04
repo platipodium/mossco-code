@@ -23,6 +23,7 @@ module netcdf_component
   use mossco_netcdf
   use mossco_strings
   use mossco_component
+  use mossco_field
 
   implicit none
   private

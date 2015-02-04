@@ -15,6 +15,7 @@ module empty_component
 
   use esmf
   use mossco_component
+  use mossco_field
 
   implicit none
 

@@ -23,6 +23,7 @@ module simplewave_component
   use mossco_variable_types
   use mossco_component
   use mossco_state
+  use mossco_field
 
   implicit none
   private
