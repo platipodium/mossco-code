@@ -6,9 +6,6 @@ dependencies:
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
-  - pelagic_benthic_mediator:
-    - component: getm
-      grid: temperature_in_water
   - erosed:
     - component: getm
       grid: water_depth_at_soil_surface
@@ -20,45 +17,57 @@ dependencies:
     - component: getm
       grid: temperature_at_soil_surface
   - getm: fabm_pelagic
-  - pelagic_benthic_mediator: fabm_pelagic
-  - pelagic_benthic_mediator: fabm_sediment
-  - pelagic_benthic_mediator: constant
   - getm: fabm_pelagic
 
-# todo find a mechansim to feed constant/getm into pelagic_benthic_coupler
+instances:
+  - reference_3d: netcdf
 
 coupling:
   - components:
      - constant
      - getm
+    interval: none
   - components:
      - clm_netcdf
      - getm
+    interval: 6 h
   - components:
      - getm
      - simplewave
+    interval: 1 h
+  - components:
+     - simplewave
+     - getm
+    interval: 1 h
   - components:
      - clm_netcdf
      - simplewave
+    interval: 6 h
   - components:
      - simplewave
      - erosed
+    interval: 1 h
   - components:
      - getm
      - fabm_pelagic
+    interval: 6 m
   - components:
      - fabm_pelagic
      - transport_connector
      - getm
+    interval: 6 m
   - components:
      - fabm_pelagic
      - erosed
+    interval: 6 m
   - components:
      - getm
      - erosed
+    interval: 6 m
   - components:
      - erosed
      - fabm_pelagic
+    interval: 6 m
   - components:
      - fabm_pelagic
      - pelagic_soil_connector
@@ -75,16 +84,32 @@ coupling:
     interval: none
   - components:
      - fabm_sediment
-     - netcdf
-    interval: 1 d
+     - reference_3d
+    interval: 60 h
+  - components:
+     - fabm_pelagic
+     - reference_3d
+    interval: 60 h
+  - components:
+     - getm
+     - reference_3d
+    interval: 60 h
+  - components:
+     - simplewave
+     - reference_3d
+    interval: 60 h
+  - components:
+     - benthos
+     - reference_3d
+    interval: 60 h
   - components:
      - erosed
-     - netcdf
-    interval: 1 h
+     - reference_3d
+    interval: 60 h
   - components:
      - benthos
      - erosed
-    interval: 1 h
+    interval: 60 h
   - components:
      - fabm_sediment
      - benthos
