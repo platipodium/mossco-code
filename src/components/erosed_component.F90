@@ -683,35 +683,37 @@ contains
 
     !! Prepare import state for fields needed in run
     if (wave) then
-      allocate(importList(11))
+      allocate(importList(12))
     else
-      allocate(importList(7))
+      allocate(importList(8))
     end if
 
-    importList(1)%name  = 'layer_height_at_soil_surface'
+    importList(1)%name  = 'water_depth_at_soil_surface'
     importList(1)%units = 'm'
-    importList(2)%name  = 'depth_averaged_x_velocity_in_water'
-    importList(2)%units = 'm s**-1'
-    importList(3)%name  = 'depth_averaged_y_velocity_in_water'
+    importList(2)%name  = 'layer_height_at_soil_surface'
+    importList(2)%units = 'm'
+    importList(3)%name  = 'depth_averaged_x_velocity_in_water'
     importList(3)%units = 'm s**-1'
-    importList(4)%name  = 'x_velocity_at_soil_surface'
+    importList(4)%name  = 'depth_averaged_y_velocity_in_water'
     importList(4)%units = 'm s**-1'
-    importList(5)%name  = 'y_velocity_at_soil_surface'
+    importList(5)%name  = 'x_velocity_at_soil_surface'
     importList(5)%units = 'm s**-1'
-    importList(6)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
-    importList(6)%units = 'm**2 s**-1'
-    importList(7)%name  = 'concentration_of_SPM_z_velocity_in_water'
-    importList(7)%units = 'mg m l**-1 s**-1'
+    importList(6)%name  = 'y_velocity_at_soil_surface'
+    importList(6)%units = 'm s**-1'
+    importList(7)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
+    importList(7)%units = 'm**2 s**-1'
+    importList(8)%name  = 'concentration_of_SPM_z_velocity_in_water'
+    importList(8)%units = 'mg m l**-1 s**-1'
 
     if (wave) then
-       importList(8)%name  = 'wave_height'
-       importList(8)%units = 'm'
-       importList(9)%name  = 'wave_period'
-       importList(9)%units = 's'
-       importList(10)%name  = 'wave_number'
-       importList(10)%units = 'm**-1'
-       importList(11)%name  = 'wave_direction'
-       importList(11)%units = 'rad'
+       importList( 9)%name  = 'wave_height'
+       importList( 9)%units = 'm'
+       importList(10)%name  = 'wave_period'
+       importList(10)%units = 's'
+       importList(11)%name  = 'wave_number'
+       importList(11)%units = 'm**-1'
+       importList(12)%name  = 'wave_direction'
+       importList(12)%units = 'rad'
     end if
 
 
@@ -891,8 +893,20 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
        !> get import state
     if (forcing_from_coupler) then
 
-      !> get water depth
-      call mossco_state_get(importState,(/'water_depth_at_soil_surface'/),depth,lbnd=lbnd2,ubnd=ubnd2,rc=localrc)
+      depth => importList(1)%data
+      hbot  => importList(2)%data
+      u2d   => importList(3)%data
+      v2d   => importList(4)%data
+      ubot  => importList(5)%data
+      vbot  => importList(6)%data
+      nybot => importList(7)%data
+
+      if (wave) then
+        waveH   => importList( 9)%data
+        waveT   => importList(10)%data
+        waveK   => importList(11)%data
+        waveDir => importList(12)%data
+      end if
 
       if (localrc == 0) then
          do j=1,jnum
@@ -908,21 +922,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (first_entry) then
          h0 = h1
          first_entry = .false.
-      end if
-
-
-      hbot  => importList(1)%data
-      u2d   => importList(2)%data
-      v2d   => importList(3)%data
-      ubot  => importList(4)%data
-      vbot  => importList(5)%data
-      nybot => importList(6)%data
-
-      if (wave) then
-        waveH   => importList( 8)%data
-        waveT   => importList( 9)%data
-        waveK   => importList(10)%data
-        waveDir => importList(11)%data
       end if
 
 !write (*,*) 'layer_height_at_soil_surface', hbot
