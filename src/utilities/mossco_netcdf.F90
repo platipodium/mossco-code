@@ -63,29 +63,43 @@ module mossco_netcdf
 
   contains
 
-  subroutine mossco_netcdf_variable_put(self,field,seconds,name)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_variable_put"
+  subroutine mossco_netcdf_variable_put(self, field, seconds, name)
 
     implicit none
-    class(type_mossco_netcdf)               :: self
-    type(ESMF_Field), intent(in)            :: field
-    real(ESMF_KIND_R8), intent(in),optional :: seconds
-    character(len=*),optional               :: name
+    class(type_mossco_netcdf)                    :: self
+    type(ESMF_Field), intent(in)                 :: field
+    real(ESMF_KIND_R8), intent(in),optional      :: seconds
+    character(len=*),optional                    :: name
 
-    integer                     :: ncStatus, varid, rc, esmfrc, rank
+    !>@todo make this an optional output var
+    !integer(ESMF_KIND_I4),intent(out),optional  :: rc
+
+    integer                     :: ncStatus, varid, rc_, esmfrc, rank, localrc, rc
     integer                     :: nDims, nAtts, udimid, dimlen
     character(len=ESMF_MAXSTR)  :: varname, message, fmt
 
     integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, exclusiveCount
-    integer(ESMF_KIND_I4)       :: localDeCount
+    integer(ESMF_KIND_I4)       :: localDeCount, i, j
 
     real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: farrayPtr4
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
+    real(ESMF_KIND_R8)                               :: missingValue=-1D30
+
+    integer, pointer                  :: gridmask3(:,:,:)=>null(), gridmask2(:,:)=> null()
+    type(ESMF_Grid)                   :: grid
+    integer(ESMF_KIND_I4)             :: gridRank
+    type(ESMF_GeomType_Flag)          :: geomType
+
+    rc_ = ESMF_SUCCESS
 
     call ESMF_FieldGet(field, name=varname, rank=rank, &
-      localDeCount=localDeCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      localDeCount=localDeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (localDeCount==0) return
 
@@ -93,13 +107,14 @@ module mossco_netcdf
     allocate(ubnd(rank))
     allocate(exclusiveCount(rank))
     call ESMF_FieldGetBounds(field, localDe=0, exclusiveLBound=lbnd, &
-      exclusiveUBound=ubnd, exclusiveCount=exclusiveCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      exclusiveUBound=ubnd, exclusiveCount=exclusiveCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !write(fmt,'(A,I1,A,I1,A,I1,A)') '(A,I2.2,A,',rank, 'I2,A,', rank, 'I2,A,', rank, 'I2)'
     !write(message,fmt) 'localDeCount=', localDeCount,' bounds ',lbnd,' : ', &
     !  ubnd, ' exclusiveCount ', exclusiveCount
-    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, rc=rc)
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     !call ESMF_LogFlush( rc=rc)
 
     if (any(exclusiveCount==0)) return
@@ -114,7 +129,7 @@ module mossco_netcdf
 
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
-      call self%create_variable(field, trim(varname), rc=rc)
+      call self%create_variable(field, trim(varname), rc=localrc)
     endif
     !> @todo what happens if variable exists but on different grid?
 
@@ -136,24 +151,58 @@ module mossco_netcdf
     ncStatus = nf90_inquire_dimension(self%ncid, udimid, len=dimlen)
     if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
 
+    call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
+    if (geomType == ESMF_GEOMTYPE_GRID) then
+      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (gridRank == 2) then
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (gridRank == 3) then
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+gridmask2 => gridmask3(:,:,1)
+      endif
+    end if
+
+    call ESMF_AttributeGet(field, 'missing_value', missingValue, defaultvalue=missingValue, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (rank==4) then
-      call  ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call  ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)), &
         start=(/1,1,1,1,dimlen/))
     elseif (rank==3) then
-      call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), &
         start=(/1,1,1,dimlen/))
     elseif (rank==2) then
-      call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do i=lbnd(1),ubnd(1)
+        do j=lbnd(2),ubnd(2)
+          if (gridmask2(i,j) == 0)  farrayPtr2(i,j)=missingValue
+        enddo
+      enddo
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
         start=(/1,1,dimlen/))
     elseif (rank==1) then
-      call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(lbnd(1):ubnd(1)), &
         start=(/1,dimlen/))
     endif
@@ -163,6 +212,8 @@ module mossco_netcdf
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(exclusiveCount)) deallocate(exclusiveCount)
+
+	  ! if (present(rc)) rc=rc_
 
   end subroutine mossco_netcdf_variable_put
 
