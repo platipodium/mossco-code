@@ -810,6 +810,24 @@ contains
   end subroutine InitializeP2
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "ReadRestart"
+  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
+
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    rc=ESMF_SUCCESS
+
+    !> Here omes your restart code, which in the simplest case copies
+    !> values from all fields in importState to those in exportState
+
+  end subroutine ReadRestart
+
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
 subroutine Run(gridComp, importState, exportState, parentClock, rc)
 

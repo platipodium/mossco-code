@@ -1,6 +1,6 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
-!> This computer program is part of MOSSCO. 
+!> This computer program is part of MOSSCO.
 !> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
@@ -30,7 +30,7 @@ module netcdf_component
   !> Provide an ESMF compliant SetServices routine, which defines
   !! entry points for Init/Run/Finalize
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
@@ -42,7 +42,7 @@ module netcdf_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     rc=ESMF_SUCCESS
-    
+
   end subroutine SetServices
 
   !> Initialize the component
@@ -71,7 +71,7 @@ module netcdf_component
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
- 
+
     call ESMF_ClockGet(clock,startTime=startTime, currTime=currTime, &
       stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -91,8 +91,26 @@ module netcdf_component
 
   end subroutine Initialize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "ReadRestart"
+  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
+
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    rc=ESMF_SUCCESS
+
+    !> Here omes your restart code, which in the simplest case copies
+    !> values from all fields in importState to those in exportState
+
+  end subroutine ReadRestart
+
+
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
- 
+
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
@@ -118,7 +136,7 @@ module netcdf_component
     type(ESMF_Clock)        :: clock
     logical                    :: clockIsPresent
 
-       
+
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
@@ -129,12 +147,12 @@ module netcdf_component
 
     ! This output routine only works on PET0
     !if (localPET>0) return
-    
+
     if (.not.clockIsPresent) then
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     !! Get the local clock and adjust its time step to the parent clock's time steop
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -144,7 +162,7 @@ module netcdf_component
     call ESMF_ClockGet(parentClock, currTime=currTime,  &
       timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    
+
     !! Synchronize local clock with parent clock
     call ESMF_ClockSet(clock, currTime=currTime, timeStep=timeInterval, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -177,7 +195,7 @@ module netcdf_component
     if (itemcount>0) then
       if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
       if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
-      
+
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -197,19 +215,19 @@ module netcdf_component
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       call nc%add_timestep(seconds, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
+
       do i=1,itemCount
-        
+
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-          call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc) 
+          call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        
+
         	call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         	if (localDeCount>0) call nc%put_variable(field)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc) 
+          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
           call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -222,14 +240,14 @@ module netcdf_component
             call ESMF_FieldGet(fieldList(ii),name=fieldName,rc=rc)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
             write(numberstring,'(I0.3)') ii
-            
+
             call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         	  if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
           end do
           deallocate(fieldList)
-        else 
-          write(message,'(A)') 'Item with name '//trim(itemNameList(i))//' not saved to file ' 
+        else
+          write(message,'(A)') 'Item with name '//trim(itemNameList(i))//' not saved to file '
         endif
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -239,12 +257,12 @@ module netcdf_component
       if (allocated(itemNameList)) deallocate(itemNameList)
 
       call nc%close()
-    endif 
-    
+    endif
+
     !! This component has no do loop over an internal timestep, it is advance with the
     !! timestep written into its local clock from a parent component
     call ESMF_ClockAdvance(clock, rc=rc)
-    
+
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
@@ -252,11 +270,11 @@ module netcdf_component
     write(message,'(A,A)') trim(timeString)//' '//trim(name), &
           ' finished running.'
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
- 
+
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -275,11 +293,11 @@ module netcdf_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (.not.clockIsPresent) then
      clock=parentClock
-    else 
+    else
       call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     !> Get the time and log it
     call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -287,15 +305,15 @@ module netcdf_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-   
+
     !! Here comes your own finalization code
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Deallocate all your model's internal allocated memory    
+    !! 2. Deallocate all your model's internal allocated memory
     !! 3. Destroy your clock
 
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)

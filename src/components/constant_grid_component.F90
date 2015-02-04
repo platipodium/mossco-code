@@ -53,7 +53,7 @@ module constant_component
   end subroutine SetServices
 
   subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
-  
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -228,7 +228,7 @@ module constant_component
       do
         cur_item%field = ESMF_FieldEmptyCreate(name=cur_item%standard_name, rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc) 
+        call ESMF_AttributeSet(cur_item%field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (len_trim(cur_item%units)>0) then
@@ -241,7 +241,7 @@ module constant_component
 
         call ESMF_AttributeSet(cur_item%field,'default_value',cur_item%value)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
+
         call ESMF_StateAddReplace(exportState,(/cur_item%field/),rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -291,22 +291,22 @@ module constant_component
     integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2
     integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
     integer(ESMF_KIND_I4)                :: localDeCount2, localDeCount3
-    
+
     character(ESMF_MAXSTR)               :: foreignGridFieldName, attributeName
     integer(ESMF_KIND_I4)                :: localDe, coordDim
     integer(ESMF_KIND_I4), allocatable   :: maxIndex(:)
-    
+
     type(ESMF_FieldStatus_Flag)          :: fieldStatus
     type(ESMF_StateItem_Flag)            :: itemType
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(ESMF_MAXSTR)               :: itemName
     character(ESMF_MAXSTR), allocatable  :: itemNameList(:)
-    
+
     integer(ESMF_KIND_I4)                :: fieldRank, itemCount, rank
     integer                              :: intValue
     real(ESMF_KIND_R8)                   :: real8value
     type(ESMF_Field)                     :: field
-    
+
     rc = ESMF_SUCCESS
 
     !! Log the call to this function
@@ -328,18 +328,18 @@ module constant_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=rc)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_FieldGet(field, grid=grid, rank=rank, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     if (rank<2 .or. rank>3) then
       write(message,'(A)') 'Foreign grid must be of rank = 2 or 3'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     allocate(maxIndex(rank))
     call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDE=0, &
         computationalCount=maxIndex, rc=rc)
@@ -368,11 +368,11 @@ module constant_component
 
       call ESMF_GridAddCoord(grid3, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
       call ESMF_AttributeSet(grid3,'creator',trim(name))
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     deallocate(maxIndex)
 
     call ESMF_GridGet(grid3, localDeCount=localDeCount3, rc=rc)
@@ -386,10 +386,10 @@ module constant_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
-    do localDe=0,localDeCount3-1 
 
-      do coordDim=1,2 
+    do localDe=0,localDeCount3-1
+
+      do coordDim=1,2
         call ESMF_GridGetCoord(grid3, coordDim=coordDim, localDE=localDe, farrayPtr=farrayPtr3, rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -403,18 +403,18 @@ module constant_component
         endif
       enddo
     enddo
-      
+
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=rc)
     allocate(itemTypeList(itemCount))
     allocate(itemNameList(itemCount))
-    
+
     do i=1,itemCount
       if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
-      
+
       call ESMF_StateGet(exportState, itemNameList(i), field, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-  
-      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)    
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 			call ESMF_AttributeGet(field, name='rank',value=fieldRank, defaultValue=1, rc=rc)
@@ -432,19 +432,19 @@ module constant_component
 			if (fieldStatus==ESMF_FIELDSTATUS_EMPTY) then
 			  if (rank==2) then
 				  call ESMF_FieldEmptySet(field, grid2, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
-        else 
+        else
 				  call ESMF_FieldEmptySet(field, grid3, staggerloc=ESMF_STAGGERLOC_CENTER, rc=rc)
         endif
       endif
-      
-      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)    
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 			if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then
 			  call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=rc)
 			endif
-			
-      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)    
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
 			if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
@@ -460,7 +460,7 @@ module constant_component
         call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=rc)
 			  farrayPtr3(:,:,:) = real(intValue,kind=ESMF_KIND_R8)
       endif
-    
+
     enddo
     !! Finally, log the successful completion of this function
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
@@ -469,6 +469,22 @@ module constant_component
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine InitializeP2
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "ReadRestart"
+  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
+
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    rc=ESMF_SUCCESS
+
+    !> @todo implement this routine
+
+  end subroutine ReadRestart
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
