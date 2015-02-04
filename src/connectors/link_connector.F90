@@ -121,8 +121,8 @@ module link_connector
     call link_empty_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_state_copy_default_values(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -363,6 +363,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Field),  allocatable :: fieldList(:)
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
+    type(ESMF_Grid)             :: importGrid,exportGrid
     type(ESMF_StateItem_Flag)   :: itemType
     logical                     :: isPresent
     type(ESMF_FieldStatus_Flag) :: fieldStatus, exportFieldStatus
@@ -401,8 +402,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_FieldGet(exportField, status=exportFieldStatus, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !! don't deal with non-empty fields here
-        if (exportFieldStatus /= ESMF_FIELDSTATUS_EMPTY) cycle
+        !! don't deal with complete fields here
+        if (exportFieldStatus .eq. ESMF_FIELDSTATUS_COMPLETE) cycle
+        !! exclude empty fields because of also called reverse direction
+        if (exportFieldStatus .ne. ESMF_FIELDSTATUS_GRIDSET) cycle
 
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
           itemCount=importItemCount, rc=localrc)
@@ -426,6 +429,20 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             cycle
           endif
+
+          if (exportFieldStatus .eq. ESMF_FIELDSTATUS_GRIDSET) then
+            call ESMF_FieldGet(exportField,grid=exportGrid,rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            call ESMF_FieldGet(importField,grid=importGrid,rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            if (importGrid .ne. exportGrid) then
+              write(message,'(A)') ' grids do not match for '//trim(itemNameList(i))
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              cycle
+            end if
+          end if
 
           call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
