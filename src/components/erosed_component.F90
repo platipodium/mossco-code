@@ -146,7 +146,7 @@ contains
     integer, intent(out)        :: rc
 
     character(len=10)           :: InitializePhaseMap(2)
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
 
@@ -184,34 +184,19 @@ contains
 
     integer                :: localrc
     type(ESMF_Grid)        :: grid, foreign_grid
-    type(ESMF_DistGrid)    :: distgrid
-    type(ESMF_ArraySpec)   :: arrayspec
-    type(ESMF_Array)       :: array
     type(ESMF_Field)       :: field
-    real(ESMF_KIND_R8),dimension(:)  ,pointer   :: LonCoord=>null(),LatCoord=>null(),DepthCoord=>null()
     type(ESMF_FieldBundle)                      :: fieldBundle
     character(len=ESMF_MAXSTR)                  :: foreignGridFieldName
 
-    type(ESMF_INDEX_Flag)     :: indexFlag
-
-    integer , allocatable     :: maxIndex(:)
     integer                   :: rank
-
-    type(ESMF_Time)           :: wallTime, clockTime
-    type(ESMF_TimeInterval)   :: timeInterval
-    real(ESMF_KIND_R8)        :: dt
-    character(len=80)         :: title
-    character(len=256)        :: din_variable='',pon_variable=''
-    integer(ESMF_KIND_I8)     :: nlev
-
-    integer                   :: UnitNr, istat,ii,j
+    integer                   :: UnitNr, istat,j
     logical                   :: opnd, exst
 
-    character(ESMF_MAXSTR)    :: name, message, timeString
+    character(ESMF_MAXSTR)    :: name, message
     type(ESMF_Clock)          :: clock
     type(ESMF_Time)           :: currTime
 
-    logical                   :: clockIsPresent, isPresent, foreignGridIsPresent=.false.
+    logical                   :: isPresent, foreignGridIsPresent=.false.
 
     integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
 ! local variables
@@ -833,8 +818,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Clock)         :: parentClock
     integer, intent(out)     :: rc
 
-    character(len=255)       :: logstring
-    type(ESMF_Time)          :: clockTime, stopTime
+    type(ESMF_Time)          :: stopTime
     type(ESMF_TimeInterval)  :: timestep
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
@@ -843,7 +827,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveH=>null(),waveT=>null(),waveK=>null(),waveDir=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null(),spm_concentration=>null()
-    real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
                               & Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
     integer                  :: n, i, j, localrc
@@ -855,12 +838,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(kind=ESMF_KIND_R8),parameter :: ws_convention_factor=-1.0
 
     integer                  :: petCount, localPet
-    character(ESMF_MAXSTR)   :: name, message, timeString, fieldName
-    logical                  :: clockIsPresent, isPresent
+    character(ESMF_MAXSTR)   :: name, message
+    logical                  :: isPresent
     type(ESMF_Time)          :: currTime
     type(ESMF_Clock)         :: clock
     integer                  :: external_index
-    integer                  :: ubnd(3),lbnd(3),ubnd2(2),lbnd2(2)
     logical                  :: First_entry = .true.
     type(ESMF_StateItem_Flag) :: itemType
 
@@ -1223,14 +1205,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    integer                :: petCount, localPet
-    character(ESMF_MAXSTR) :: name, message, timeString
+    character(ESMF_MAXSTR) :: name
     logical                :: clockIsPresent
     type(ESMF_Time)        :: currTime
     type(ESMF_Clock)       :: clock
     integer                :: localrc
 
-		rc=ESMF_SUCCESS
+    rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
