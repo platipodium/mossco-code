@@ -339,6 +339,8 @@ module simplewave_component
    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
    !! Do not check for success here as NOT_FOUND is expected behaviour, @todo: check for NOT_FOUND flag
    if (localrc == ESMF_SUCCESS) then
+      call ESMF_LogWrite('ignore ERROR messages above related to GridGetItem - waiting for new ESMF release', &
+                         ESMF_LOGMSG_INFO,ESMF_CONTEXT)
 #endif
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
