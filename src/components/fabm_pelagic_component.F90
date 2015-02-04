@@ -485,6 +485,7 @@ module fabm_pelagic_component
       call ESMF_FieldGet(field=wsfield, localDe=0, farrayPtr=pel%export_states(n)%ws, &
                      totalLBound=lbnd3,totalUBound=ubnd3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      pel%export_states(n)%ws = 0.0d0
 
       !> add to state depending on existing items
       call ESMF_StateGet(exportState, trim(varname), itemType, rc=localrc)
@@ -549,19 +550,6 @@ module fabm_pelagic_component
         call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    end do
-
-    do n=1,size(pel%model%horizontal_diagnostic_variables)
-        diag_hz => pel%horizontal_diagnostic_variables(n)
-        field = ESMF_FieldCreate(horizontal_grid,farrayPtr=diag_hz, &
-          name=only_var_name(pel%model%info%horizontal_diagnostic_variables(n)%long_name)//'_hz', rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'units',trim(pel%model%info%horizontal_diagnostic_variables(n)%units))
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
@@ -717,6 +705,22 @@ module fabm_pelagic_component
 
     !> check consistency of fabm setup
     call pel%check_ready()
+
+    !> now initialize diagnostic variables.
+    !! after check_ready FABM's internal pointers are set correctly
+    do n=1,size(pel%model%horizontal_diagnostic_variables)
+        diag_hz => pel%horizontal_diagnostic_variables(n)
+        field = ESMF_FieldCreate(horizontal_grid,farrayPtr=diag_hz, &
+          name=only_var_name(pel%model%info%horizontal_diagnostic_variables(n)%long_name)//'_hz', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'units',trim(pel%model%info%horizontal_diagnostic_variables(n)%units))
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
     !> also update export states again with sinking velocities
     !! todo: this has to go into a second init phase,
     !!       when real forcing is linked. Also diagnostic variables could
@@ -913,7 +917,7 @@ module fabm_pelagic_component
 
       ! link fabm state
       call pel%update_pointers()
-      !call pel%update_expressions()
+      call pel%update_expressions()
 
       call ESMF_ClockGet(clock, advanceCount=t, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
