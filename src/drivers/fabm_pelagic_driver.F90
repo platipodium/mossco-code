@@ -199,11 +199,11 @@
     !> call fabm_do to fill diagnostic variables and pre-fetch data
     do i=1,pf%inum
       do j=1,pf%jnum
-        call fabm_do_surface(pf%model,1,1,pf%knum,rhs(:))
-        call fabm_do_bottom(pf%model,1,1,1,rhs(:),bottom_flux(:))
+        call fabm_do_surface(pf%model,i,j,pf%knum,rhs(:))
+        call fabm_do_bottom(pf%model,i,j,1,rhs(:),bottom_flux(:))
         rhs=0.0_rk
         do k=1,pf%knum
-          call fabm_do(pf%model,1,1,k,rhs(:))
+          call fabm_do(pf%model,i,j,k,rhs(:))
         end do
       end do
     end do
