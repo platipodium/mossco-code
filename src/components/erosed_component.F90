@@ -834,7 +834,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null(),nybot=>null()
-    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null(),turb_difz=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveH=>null(),waveT=>null(),waveK=>null(),waveDir=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null(),spm_concentration=>null()
     real(kind=ESMF_KIND_R8)  :: diameter
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
@@ -862,9 +863,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !    &         v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
 
     if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
-  !  if (.not.associated(turb_difz)) allocate(turb_difz(inum,jnum))
+  !  if (.not.associated(nybot)) allocate(nybot(inum,jnum))
 
-    !turb_difz = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
+    !nybot = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
 
     rc=ESMF_SUCCESS
 
@@ -907,31 +908,26 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          first_entry = .false.
       end if
 
-      !> get velocity and layer_height
-      call mossco_state_get(importState,(/'layer_height_at_soil_surface'/),hbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'depth_averaged_x_velocity_in_water'/),u2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'depth_averaged_y_velocity_in_water'/),v2d,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'x_velocity_at_soil_surface'/),ubot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'y_velocity_at_soil_surface'/),vbot,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call mossco_state_get(importState,(/'turbulent_diffusivity_of_momentum_at_soil_surface'/),turb_difz,lbnd=lbnd,ubnd=ubnd,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      hbot  => importList(1)%data
+      u2d   => importList(2)%data
+      v2d   => importList(3)%data
+      ubot  => importList(4)%data
+      vbot  => importList(5)%data
+      nybot => importList(6)%data
+
+      if (wave) then
+        waveH   => importList( 8)%data
+        waveT   => importList( 9)%data
+        waveK   => importList(10)%data
+        waveDir => importList(11)%data
+      end if
 
 !write (*,*) 'layer_height_at_soil_surface', hbot
 
 !write (*,*)'depth_averaged_x_velocity_in_water', u2d
 
-!write (*,*)'turbulent_diffusivity_of_momentum_at_soil_surface',turb_difz
+!write (*,*)'turbulent_diffusivity_of_momentum_at_soil_surface',nybot
 
       if (localrc == 0) then
 
@@ -1156,7 +1152,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
                 & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
-                & tper   , teta   , spm_concentration , BioEffects     , turb_difz, thick, u_bot, &
+                & tper   , teta   , spm_concentration , BioEffects     , nybot, thick, u_bot, &
                 & v_bot  , u2d    , v2d      , h0    )
 
 
