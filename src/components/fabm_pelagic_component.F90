@@ -54,6 +54,7 @@ module fabm_pelagic_component
   end type
 
   real(rk),dimension(:,:,:),pointer            :: diag=>null()
+  real(rk),dimension(:,:),pointer              :: diag_hz=>null()
   type(type_2d_pointer), dimension(:), pointer :: bfl=>null()
 
   type(type_mossco_fabm_pelagic),save :: pel
@@ -254,6 +255,7 @@ module fabm_pelagic_component
     integer                    :: day_of_year, day, seconds_of_day
     logical, dimension(:,:,:), pointer :: mask=>null()
     integer, dimension(:,:,:), pointer :: gridmask=>null()
+    real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
 
@@ -365,8 +367,14 @@ module fabm_pelagic_component
                                       coordDimMap=int(coordDimMap(1:2,1:2)),      &
                                       rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridAddCoord(horizontal_grid, rc=localrc)
+    call ESMF_GridAddCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=1, farrayptr=coord2d, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    coord2d = 0.0d0
+call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coorddim=2, farrayptr=coord2d, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    coord2d = 0.0d0
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
@@ -528,6 +536,19 @@ module fabm_pelagic_component
         call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+    do n=1,size(pel%model%horizontal_diagnostic_variables)
+        diag_hz => pel%horizontal_diagnostic_variables(n)
+        field = ESMF_FieldCreate(horizontal_grid,farrayPtr=diag_hz, &
+          name=only_var_name(pel%model%info%horizontal_diagnostic_variables(n)%long_name)//'_hz', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'units',trim(pel%model%info%horizontal_diagnostic_variables(n)%units))
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do

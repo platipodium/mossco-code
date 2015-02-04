@@ -38,6 +38,7 @@
     integer                            :: day_of_year,seconds_of_day
     real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
     integer                            :: ndiag
+    integer                            :: ndiag_hz
     logical                            :: fabm_ready
     type(type_bulk_standard_variable),dimension(:),pointer :: bulk_dependencies => null()
     type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies => null()
@@ -54,6 +55,7 @@
     procedure :: get_all_export_states
     procedure :: update_export_states
     procedure :: diagnostic_variables
+    procedure :: horizontal_diagnostic_variables
     procedure :: initialize_concentrations
     procedure :: update_pointers
     procedure :: initialize_domain
@@ -89,6 +91,7 @@
 
   pf%nvar = size(pf%model%info%state_variables)
   pf%ndiag = size(pf%model%info%diagnostic_variables)
+  pf%ndiag_hz = size(pf%model%info%horizontal_diagnostic_variables)
 
   ! initialise the export states and dependencies
   call pf%get_all_export_states()
@@ -501,6 +504,23 @@
 
   diag => fabm_get_bulk_diagnostic_data(pf%model,n)
   end function diagnostic_variables
+
+  !> horizontal_diagnostic_variables
+  !!
+  !! The function returns a pointer to the 2d diagnostic variables.
+  !! So far, only bulk diagnostic variables are supported. The function is a
+  !! wrapper of the related FABM function.
+
+  function horizontal_diagnostic_variables(pf,n) result(diag)
+  implicit none
+
+  class(type_mossco_fabm_pelagic)    :: pf
+  integer,intent(in)                 :: n
+  real(rk),dimension(:,:),pointer    :: diag
+
+  diag => fabm_get_horizontal_diagnostic_data(pf%model,n)
+  end function horizontal_diagnostic_variables
+
 
 
    !> Calculate photosynthetically active radiation (PAR) and short wave
