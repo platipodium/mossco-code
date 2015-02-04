@@ -47,15 +47,15 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
   rc_ = ESMF_SUCCESS
 
   call ESMF_FieldGet(field, name=name, status=fieldStatus, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call ESMF_AttributeGet(field, name='creator', isPresent=isPresent, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   if (isPresent) then
     call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call MOSSCO_MessageAdd(message, ' ['//stringValue)
     call MOSSCO_MessageAdd(message, ']'//name)
@@ -71,19 +71,19 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
 
   if (fieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
     call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (geomtype==ESMF_GEOMTYPE_GRID) then
       call ESMF_FieldGet(field, grid=grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_GridGet(grid, name=geomName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_MessageAdd(message,' '//geomName)
       call ESMF_GridGet(grid, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     elseif (geomtype==ESMF_GEOMTYPE_MESH) then
@@ -101,7 +101,7 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
 
   if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
 
@@ -135,16 +135,84 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
   integer(ESMF_KIND_I4), allocatable       :: fromUbnd(:), fromLbnd(:), toUbnd(:), toLbnd(:)
   character(ESMF_MAXSTR)                   :: fromName, toName
 
+  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr1(:), toFarrayPtr1(:)
+  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr2(:,:), toFarrayPtr2(:,:)
+  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr3(:,:,:), toFarrayPtr3(:,:,:)
+  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr4(:,:,:,:), toFarrayPtr4(:,:,:,:)
+  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr5(:,:,:,:,:), toFarrayPtr5(:,:,:,:,:)
+  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr6(:,:,:,:,:,:), toFarrayPtr6(:,:,:,:,:,:)
+  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr7(:,:,:,:,:,:,:), toFarrayPtr7(:,:,:,:,:,:,:)
+
   type(ESMF_FieldStatus_Flag) :: fromStatus, toStatus
 
   rc_ = ESMF_SUCCESS
 
+	call ESMF_FieldGet(from, status=fromStatus, rank=fromRank, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  if (fromStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+    write(message,'(A)') 'Cannot copy from incomplete field'
+    call MOSSCO_FieldString(from, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
 
+	call ESMF_FieldGet(to, status=toStatus, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+	if (toStatus /= ESMF_FIELDSTATUS_EMPTY) then
+	  call MOSSCO_FieldComplete(to, from, rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+	endif
 
+	call ESMF_FieldGet(to, rank=toRank, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  if (toRank /= fromRank) then
+    write(message,'(A)') 'Cannot copy fields with incompatible rank, field'
+    call MOSSCO_FieldString(from, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
 
+  allocate(fromUbnd(toRank), toUbnd(toRank), fromLbnd(toRank), toLBnd(toRank))
+  call ESMF_FieldGetbounds(from, localDe=0,  exclusiveUBound=fromUBnd, exclusiveLBound=fromLbnd, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (toRank /= fromRank) then
+    write(message,'(A)') 'Cannot copy fields with incompatible rank, field'
+    call MOSSCO_FieldString(from, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
+
+  if (  any(toUbnd-toLBnd /= fromUBnd-fromLBnd) ) then
+    write(message,'(A)') 'Cannot copy fields with incompatible bounds, field'
+    call MOSSCO_FieldString(from, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
+
+  if (toRank == 1) then
+    call ESMF_FieldGet(from, localDe=0,  farrayPtr=fromFarrayPtr1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(from, localDe=0,  farrayPtr=toFarrayPtr1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    toFarrayPtr1(toLbnd(1):toUbnd(1)) = fromFarrayPtr1(fromLbnd(1):fromUbnd(1))
+  else
+    write(message,'(A)') 'Not yet implemented, copy rank>1 field'
+    call MOSSCO_FieldString(from, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+  endif
+
+  deallocate(fromUbnd, toUbnd, fromLbnd, toLbnd)
 
   if (present(rc)) rc = rc_
 
