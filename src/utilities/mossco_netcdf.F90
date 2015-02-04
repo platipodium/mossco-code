@@ -164,7 +164,7 @@ module mossco_netcdf
       if (gridRank == 2) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          write(0,*) 'not present'!call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          nullify(gridmask2)!call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (gridRank == 3) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -194,13 +194,13 @@ gridmask2 => gridmask3(:,:,1)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      do i=lbnd(1),ubnd(1)
-        do j=lbnd(2),ubnd(2)
-          if (associated(gridmask2)) then
+      if (associated(gridmask2)) then
+        do i=lbnd(1),ubnd(1)
+          do j=lbnd(2),ubnd(2)
             if (gridmask2(i,j) == 0)  farrayPtr2(i,j)=missingValue
-          end if
+          enddo
         enddo
-      enddo
+      end if
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
         start=(/1,1,dimlen/))
     elseif (rank==1) then
