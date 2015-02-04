@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
@@ -26,6 +26,7 @@ ifeq ($(MOSSCO_ESMF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_component.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
@@ -41,11 +42,14 @@ all: libsolver libmossco_util
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
+mossco_state.o : mossco_field.o
+mossco_field.o : mossco_strings.o
 
 #@todo there should be a generic rule for the mods
 #$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
 #$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.o
 #$(MOSSCO_MODULE_PATH)/mossco_state.mod: mossco_state.o
+#$(MOSSCO_MODULE_PATH)/mossco_field.mod: mossco_state.o
 #$(MOSSCO_MODULE_PATH)/mossco_time.mod: mossco_time.o
 #$(MOSSCO_MODULE_PATH)/mossco_strings.mod: mossco_strings.o
 #$(MOSSCO_MODULE_PATH)/mossco_netcdf.mod: mossco_netcdf.o mossco_variable_types.o
@@ -58,6 +62,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/solver_library.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_state.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_field.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_time.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
