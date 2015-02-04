@@ -697,7 +697,7 @@ contains
     importList(5)%name  = 'y_velocity_at_soil_surface'
     importList(5)%units = 'm s**-1'
     importList(6)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
-    importList(6)%units = ' '
+    importList(6)%units = 'm**2 s**-1'
     importList(7)%name  = 'concentration_of_SPM_z_velocity_in_water'
     importList(7)%units = 'mg m l**-1 s**-1'
 
@@ -707,7 +707,7 @@ contains
        importList(9)%name  = 'wave_period'
        importList(9)%units = 's'
        importList(10)%name  = 'wave_number'
-       importList(10)%units = '1/m'
+       importList(10)%units = 'm**-1'
        importList(11)%name  = 'wave_direction'
        importList(11)%units = 'rad'
     end if
