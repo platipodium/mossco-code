@@ -1,13 +1,13 @@
 # This Makefile is part of MOSSCO
-# 
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+#
+# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
 EXTRA_DIST = README ACKNOWLEDGEMENTS AUTHORS .gitignore
@@ -25,7 +25,7 @@ all: src
 clean: extraclean
 
 extraclean:
-	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done 
+	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
 	@rm -rf modules lib bin
 
 subdirs: $(SUBDIRS)
@@ -33,7 +33,7 @@ subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	$(MAKE) -C $@
 
-check: 
+check:
 	make -C src check
 
 update:
