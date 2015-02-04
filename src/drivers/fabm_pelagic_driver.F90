@@ -204,7 +204,7 @@
         end do
       end do
     end do
-    call pf%update_expressions()
+    !call pf%update_expressions()
   end subroutine check_ready
 
 
@@ -588,34 +588,47 @@
    contains
 
      function calculate_vertical_mean(expression,inum,jnum) result(vertmean)
-       class(type_vertical_integral),intent(in) :: expression
-       integer, intent(in)                      :: inum,jnum
-       real(rk), dimension(1:inum,1:jnum)       :: vertmean
-!         ! Loop over all levels, surface to bottom, and compute vertical mean.
-!         depth = _ZERO_
-!         weights = _ZERO_
-!         started = .false.
-!         do k=nlev,1,-1
-!            depth = depth + curh(k)
-!            if (.not.started) then
-!               ! Not yet at minimum depth before
-!               if (depth>=expression%minimum_depth) then
-!                  ! Now crossing minimum depth interface
-!                  started = .true.
-!                  weights(k) = depth-expression%minimum_depth
-!               end if
-!            else
-!               ! Beyond minimum depth, not yet at maximum depth before
-!               weights(k) = curh(k)
-!            end if
-!            if (depth>expression%maximum_depth) then
-!               ! Now crossing maximum depth interface; subtract part of layer height that is not included
-!               weights(k) = weights(k) - (depth-expression%maximum_depth)
-!               exit
-!            end if
-!         end do
-!         if (expression%average) weights = weights/(min(expression%maximum_depth,depth)-expression%minimum_depth)
-       vertmean = 0.0d0
+       class(type_vertical_integral),intent(in)    :: expression
+       integer, intent(in)                         :: inum,jnum
+       real(rk), dimension(1:inum,1:jnum)          :: vertmean
+       real(rk), dimension(1:inum,1:jnum)          :: depth
+       real(rk), dimension(1:inum,1:jnum,1:pf%knum):: weights
+       logical, dimension(1:inum,1:jnum)           :: started
+       integer                                     :: i,j,k
+
+       ! Loop over all levels, surface to bottom, and compute vertical mean.
+       depth = 0.0d0
+       weights = 0.0d0
+       started = .false.
+       do k=pf%knum,1,-1
+         depth = depth + pf%layer_height(:,:,k)
+         do i=1,inum
+           do j=1,jnum
+             if (.not.started(i,j)) then
+               ! Not yet at minimum depth before
+               if (depth(i,j)>=expression%minimum_depth) then
+                 ! Now crossing minimum depth interface
+                 started(i,j) = .true.
+                 weights(i,j,k) = depth(i,j)-expression%minimum_depth
+               end if
+             else
+             ! Beyond minimum depth, not yet at maximum depth before
+             weights(i,j,k) = pf%layer_height(i,j,k)
+             end if
+             if (depth(i,j)>expression%maximum_depth) then
+               ! Now crossing maximum depth interface; subtract part of layer height that is not included
+               weights(i,j,k) = weights(i,j,k) - (depth(i,j)-expression%maximum_depth)
+               exit
+             end if
+           end do
+         end do
+       end do
+       do i=1,inum
+         do j=1,jnum
+           if (expression%average) weights(i,j,:) = weights(i,j,:)/(min(expression%maximum_depth,depth(i,j))-expression%minimum_depth)
+         end do
+       end do
+       vertmean = sum(pf%model%environment%data(expression%in)%p(:,:,:)*weights,dim=3)
      end function calculate_vertical_mean
 
    end subroutine update_expressions
