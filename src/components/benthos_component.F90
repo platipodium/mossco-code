@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF component that calculates benthos effects
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Hassan Nasermoaddeli
 !> @author Carsten Lemmen
 !
@@ -20,6 +20,7 @@ module benthos_component
 
   use esmf
   use mossco_component
+  use mossco_strings
 
   use Macrofauna_interface
   use Microphytobenthos_class
@@ -42,7 +43,6 @@ module benthos_component
   type(ESMF_Field), save         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
     &                               Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
   integer                        :: ubnd(3),lbnd(3)
-
 
   type (microphytobenthos) ,save :: Micro
   type (BioturbationEffect),save :: Total_Bioturb
@@ -374,6 +374,94 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "ReadRestart"
+  subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
+
+    implicit none
+
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime
+    integer                     :: localrc, i, itemCount
+
+    type(ESMF_FieldStatus_Flag)    :: fieldstatus
+    type(ESMF_StateItem_Flag)      :: itemtype
+    type(ESMF_Field)               :: exportField, importField
+    character(len=ESMF_MAXSTR), allocatable     :: itemNameList(:)
+
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @todo
+    !> 1. Go through  / create list of variables in export state
+    !> 2. Get these variables from import state
+    !> 2. Get the pointer to these fields
+    !> 3. Copy the values
+
+    itemCount=4
+
+    allocate(itemNameList(itemCount))
+    itemNameList(1)='Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
+    itemNameList(1)='Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
+    itemNameList(1)='Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
+    itemNameList(1)='Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
+
+    do i=1,itemCount
+
+      call ESMF_StateGet(exportState, trim(itemNameList(i)), itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
+      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(exportState, trim(itemNameList(i)), field=exportField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(importState, trim(itemNameList(i)), itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        write(message,'(A)') trim(name)//' skipped hotstart for item '//trim(itemNameList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        cycle
+      endif
+
+      call ESMF_StateGet(importState, trim(itemNameList(i)), field=importField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(importField, status=fieldstatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,   endflag=ESMF_END_ABORT)
+
+      if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
+        write(message,'(A)') trim(name)//' skipped hotstart for incomplete field'
+        call MOSSCO_FieldString(importField, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      !@todo implement MOSSCO_FieldComplete(importField, exportField, rc=localrc)
+      !! implement call MOSSCO_FieldCopyValues(importField, exportField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
+
+    if (allocated(itemNameList)) deallocate(itemNameList)
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine ReadRestart
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"

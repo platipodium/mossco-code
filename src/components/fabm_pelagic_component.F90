@@ -746,8 +746,6 @@ module fabm_pelagic_component
     end if
   end subroutine
 
-
-
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
   subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
@@ -810,8 +808,6 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
-
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
