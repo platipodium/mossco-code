@@ -637,6 +637,7 @@ contains
     endif
   else
     write(message,'(A)') trim(name)//' required "concentration_of_SPM_in_water" is not field or fieldBundle.'
+    call mossco_statelog(importState)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   end if
