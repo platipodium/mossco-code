@@ -158,17 +158,17 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   endif
 
-	call ESMF_FieldGet(to, status=toStatus, rc=localrc)
+  call ESMF_FieldGet(to, status=toStatus, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-	if (toStatus /= ESMF_FIELDSTATUS_EMPTY) then
-	  call MOSSCO_FieldComplete(to, from, rc)
+  if (toStatus /= ESMF_FIELDSTATUS_EMPTY) then
+    !call MOSSCO_FieldComplete(to, from, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-	endif
+  endif
 
-	call ESMF_FieldGet(to, rank=toRank, rc=localrc)
+  call ESMF_FieldGet(to, rank=toRank, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
