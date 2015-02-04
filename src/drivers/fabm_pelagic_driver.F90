@@ -69,8 +69,8 @@
     character(len=256) :: units=''
     integer            :: fabm_id=-1
     logical            :: particulate=.false.
-    real(rk),dimension(:,:,:),pointer   :: conc
-    real(rk),dimension(:,:,:),pointer   :: ws
+    real(rk),dimension(:,:,:),pointer   :: conc => null()
+    real(rk),dimension(:,:,:),pointer   :: ws => null()
   end type
 
   contains
@@ -187,7 +187,7 @@
       stop
     else
       if (.not.associated(pf%layer_height)) then
-        write(0,*) 'allocate layer height'
+        !write(0,*) 'allocate layer height'
         allocate(pf%layer_height(pf%inum,pf%jnum,pf%knum))
         call pf%update_grid()
       end if
@@ -398,7 +398,6 @@
 
   export_state%fabm_id=fabm_id
   export_state%conc => null()
-  export_state%ws => null()
 !  !! memory handling should be shifted to component, which has total grid layout
 !  export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
 !  allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
