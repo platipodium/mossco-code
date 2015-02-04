@@ -20,6 +20,7 @@ module pelagic_benthic_mediator
 
   use esmf
   use mossco_state
+  use mossco_field
   use mossco_component
 
   implicit none

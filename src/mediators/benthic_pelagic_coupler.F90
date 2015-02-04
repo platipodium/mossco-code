@@ -20,6 +20,7 @@ module benthic_pelagic_coupler
     
   use esmf
   use mossco_state
+  use mossco_field
   use mossco_component
 
   implicit none

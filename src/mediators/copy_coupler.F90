@@ -14,6 +14,7 @@ module copy_coupler
     
   use esmf
   use mossco_state
+  use mossco_field
 
   implicit none
 
