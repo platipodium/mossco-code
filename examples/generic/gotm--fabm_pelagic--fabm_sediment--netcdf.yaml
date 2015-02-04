@@ -1,0 +1,38 @@
+dependencies:
+  - fabm_gotm: gotm
+
+coupling:
+  - components:
+     - constant
+     - fabm_sediment
+    interval: none
+  - components:
+     - gotm
+     - fabm_gotm
+    interval: 30 m
+  - components:
+     - gotm
+     - fabm_sediment
+    interval: 30 m
+  - components:
+     - fabm_gotm
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval:  30 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_gotm
+    interval: 30 m
+  - components:
+     - gotm
+     - netcdf
+    interval: 60 h
+  - components:
+     - fabm_gotm
+     - netcdf
+    interval: 60 h
+  - components:
+     - fabm_sediment
+     - netcdf
+    interval: 60 h
