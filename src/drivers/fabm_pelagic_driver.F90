@@ -511,14 +511,14 @@
   !! So far, only bulk diagnostic variables are supported. The function is a
   !! wrapper of the related FABM function.
 
-  function horizontal_diagnostic_variables(pf,n) result(diag)
+  function horizontal_diagnostic_variables(pf,n) result(diag_hz)
   implicit none
 
   class(type_mossco_fabm_pelagic)    :: pf
   integer,intent(in)                 :: n
-  real(rk),dimension(:,:),pointer    :: diag
+  real(rk),dimension(:,:),pointer    :: diag_hz
 
-  diag => fabm_get_horizontal_diagnostic_data(pf%model,n)
+  diag_hz => fabm_get_horizontal_diagnostic_data(pf%model,n)
   end function horizontal_diagnostic_variables
 
 
