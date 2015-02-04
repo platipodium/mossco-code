@@ -99,6 +99,8 @@ module erosed_component
     logical                                     :: lexist, anymud, wave
     real(fp)    , dimension(:)  , allocatable   :: uorb, tper, teta ! Orbital velocity [m/s], Wave period, angle between current and wave
 
+    integer :: unit707
+
 
 contains
 
@@ -224,6 +226,7 @@ contains
     namelist /benthic/   anymud     != .true.
 
 
+
 !    namelist /sedparams/ sedtyp(1)   !1= SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
 !    namelist /sedparams/ sedtyp(2)   !2= SEDTYP_COHESIVE               ! cohesive sediment (mud)
 !    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
@@ -337,7 +340,10 @@ contains
     !write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
   if (exst.and.(.not.opnd)) then
-    UnitNr = 567
+    call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
    !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
    read (UnitNr, nml=globaldata, iostat = istat)
@@ -350,7 +356,9 @@ contains
   inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
 
   if (exst.and.(.not.opnd)) then
-    UnitNr = 568
+    call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
     !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
     read (UnitNr, nml=benthic, iostat = istat)
@@ -436,7 +444,9 @@ contains
   !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
     if (exst.and.(.not.opnd)) then
-      UnitNr = 569
+      call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
  ! non-cohesive sediment
       read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
@@ -532,16 +542,19 @@ contains
     enddo
 
     ! Open file for producing output
+    call ESMF_UtilIOUnitGet(unit707, rc = localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     inquire (file ='delft_sediment.out', exist = lexist)
 
     if (lexist) then
   !      write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
-        open (unit = 707, file = 'delft_sediment.out', status = 'REPLACE', action = 'WRITE')
+        open (unit = unit707, file = 'delft_sediment.out', status = 'REPLACE', action = 'WRITE')
     else
-        open (unit = 707, file = 'delft_sediment.out', status = 'NEW', action = 'WRITE')
+        open (unit = unit707, file = 'delft_sediment.out', status = 'NEW', action = 'WRITE')
     end if
 
-    write (707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
+    write (unit707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
         'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
 
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(inum, jnum,nfrac))
@@ -1171,7 +1184,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         j= 1+ mod(nm,inum)
         i= nm - inum*(j -1)
-        write (707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+        write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
 
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
         sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
@@ -1238,7 +1251,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    close (707)
+    close (unit707)
 
     deallocate (cdryb)
 
