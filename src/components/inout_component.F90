@@ -3,14 +3,19 @@
 !> @file inout_component.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "inout_component.F90"
 
 module inout_component
 
@@ -24,20 +29,40 @@ module inout_component
 
   contains
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
+    integer              :: localrc
+
+    rc=ESMF_SUCCESS
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
-      userRoutine=InitializeP0, rc=rc)
+      userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
-      userRoutine=InitializeP1, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
+      userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
+      userRoutine=ReadRestart, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
 
     implicit none
@@ -67,6 +92,8 @@ module inout_component
 
   end subroutine InitializeP0
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)   :: gridComp
@@ -110,6 +137,8 @@ module inout_component
 
   end subroutine ReadRestart
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)     :: gridComp
@@ -140,6 +169,8 @@ module inout_component
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)   :: gridComp
