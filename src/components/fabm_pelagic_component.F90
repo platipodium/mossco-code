@@ -442,7 +442,7 @@ call ESMF_GridGetCoord(horizontal_grid, staggerloc=ESMF_STAGGERLOC_CENTER, coord
       attribute_name=trim('mean_particle_diameter')
       attribute_r8 = pel%model%info%state_variables(n)%properties%get_real('diameter',default=-99.d0)
       if (attribute_r8 > 0.0d0) &
-        call ESMF_AttributeSet(field,attribute_name, attribute_r8)
+        call ESMF_AttributeSet(concfield, attribute_name, attribute_r8)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       attribute_name=trim('particle_density')
