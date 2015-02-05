@@ -642,17 +642,12 @@ if (True):
     if dependencyDict.has_key(item):
       for jtem in dependencyDict[item]:
         ifrom=gridCompList.index(jtem)
-        fid.write('      write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(ifrom+1) +'))//" to "//trim(gridCompNameList(' + str(ito+1)+'))\n')
+        fid.write('      !! linking ' + jtem + 'Export to ' + item + 'Import\n')
+        fid.write('      write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(ifrom+1) +'))//"Export to "//trim(gridCompNameList(' + str(ito+1)+'))//"Import"\n')
         fid.write('      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
         fid.write('      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
         fid.write('        exportState=gridImportStateList(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
         fid.write('      call ESMF_LogFlush()\n')
-
-    for j in range(0, len(couplingList)):
-        jtem=couplingList[j]
-        if jtem[-1]==item:
-            ifrom=gridCompList.index(jtem[0])
-    j=gridCompList.index(item)
 
     fid.write('      if (gridCompPhaseCountList( ' + str(ito+1) + ')>= phase) then\n')
 #    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
@@ -662,6 +657,37 @@ if (True):
 #    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
 #    fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
     fid.write('      endif\n\n')
+
+  fid.write('      !! Linking\n')
+  for i,item in enumerate(gridCompList):
+    for j,jtem in enumerate(gridCompList):
+      if i<j:
+        fid.write('      !! linking ' + item + ' and ' + jtem + '\n')
+        fid.write('      if (gridCompPhaseCountList( ' + str(i+1) + ')>= phase .or. gridCompPhaseCountList( ' + str(j+1) + ')>= phase) then\n')
+        for c in couplingList:
+          if c[0]==item and c[-1]==jtem:
+            fid.write('        !! linking ' + item + 'Export to ' + jtem + 'Import\n')
+            fid.write('        write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(i+1) +'))//"Export to "//trim(gridCompNameList(' + str(j+1)+'))//"Import"\n')
+            fid.write('        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
+            fid.write('        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(i+1) + '), &\n')
+            fid.write('          exportState=gridImportStateList(' + str(j+1)+'), clock=clock, rc=localrc)\n')
+            fid.write('        !! linking ' + jtem + 'Import to ' + item + 'Export\n')
+            fid.write('        write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(j+1) +'))//"Import to "//trim(gridCompNameList(' + str(i+1)+'))//"Export"\n')
+            fid.write('        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
+            fid.write('        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(' + str(j+1) + '), &\n')
+            fid.write('          exportState=gridExportStateList(' + str(i+1)+'), clock=clock, rc=localrc)\n')
+          if c[0]==jtem and c[-1]==item:
+            fid.write('        !! linking ' + jtem + 'Export to ' + item + 'Import\n')
+            fid.write('        write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(j+1) +'))//"Export to "//trim(gridCompNameList(' + str(i+1)+'))//"Import"\n')
+            fid.write('        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
+            fid.write('        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(j+1) + '), &\n')
+            fid.write('          exportState=gridImportStateList(' + str(i+1)+'), clock=clock, rc=localrc)\n')
+            fid.write('        !! linking ' + item + 'Import to ' + jtem + 'Export\n')
+            fid.write('        write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(i+1) +'))//"Import to "//trim(gridCompNameList(' + str(j+1)+'))//"Export"\n')
+            fid.write('        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
+            fid.write('        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(' + str(i+1) + '), &\n')
+            fid.write('          exportState=gridExportStateList(' + str(j+1)+'), clock=clock, rc=localrc)\n')
+        fid.write('      endif\n\n')
 
   for item in cplCompList:
     fid.write('      !! Initializing ' + item + '\n')
@@ -700,25 +726,6 @@ for item in gridCompList:
   fid.write('    call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
   fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
 fid.write('    !! End of ReadRestart \n\n')
-
-fid.write('    !! Link all remaining empty fields in states\n')
-for item in gridCompList:
-  ito=gridCompList.index(item)
-  for j in range(0, len(couplingList)):
-    jtem=couplingList[j]
-    if jtem[-1]!=item:
-      continue
-    ifrom=gridCompList.index(jtem[0])
-    fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=gridImportStateList(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
-  ifrom=gridCompList.index(item)
-  for j in range(0, len(couplingList)):
-    jtem=couplingList[j]
-    if jtem[0]!=item:
-      continue
-    ito=gridCompList.index(jtem[0])
-    fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-    fid.write('      exportState=gridImportStateList(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
 
 fid.write('''
     do i=1, numGridComp
