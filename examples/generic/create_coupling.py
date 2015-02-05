@@ -662,6 +662,11 @@ if (True):
   for i,item in enumerate(gridCompList):
     for j,jtem in enumerate(gridCompList):
       if i<j:
+        for c in couplingList:
+          if (c[0]==item and c[-1]==jtem) or (c[0]==jtem and c[-1]==item):
+            break
+        else:
+          continue
         fid.write('      !! linking ' + item + ' and ' + jtem + '\n')
         fid.write('      if (gridCompPhaseCountList( ' + str(i+1) + ')>= phase .or. gridCompPhaseCountList( ' + str(j+1) + ')>= phase) then\n')
         for c in couplingList:
