@@ -6,15 +6,12 @@ dependencies:
   - erosed:
     - component: getm
       grid: water_depth_at_soil_surface
-  - erosed: fabm_pelagic
   - simplewave:
     - component: getm
       grid: water_depth_at_soil_surface
   - benthos:
     - component: getm
       grid: temperature_at_soil_surface
-  - getm: fabm_pelagic
-  - simplewave: getm
 
 instances:
   - mossco_pel3d: netcdf
