@@ -644,11 +644,6 @@ if (True):
         if jtem[-1]==item:
             ifrom=gridCompList.index(jtem[0])
     j=gridCompList.index(item)
-    if foreignGrid.has_key(item):
-      fid.write('      if (    (phase.eq.1 .and. gridCompPhaseCountList( ' + str(ito+1) + ').gt.0)) then\n')
-      fid.write('        call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
-      fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
-      fid.write('      endif\n')
 
     if dependencyDict.has_key(item):
       for jtem in dependencyDict[item]:
