@@ -683,6 +683,8 @@ if (True):
             fid.write('        call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(j+1) + '), &\n')
             fid.write('          exportState=gridImportStateList(' + str(i+1)+'), clock=clock, rc=localrc)\n')
             fid.write('        !! linking ' + item + 'Import to ' + jtem + 'Export\n')
+#           Here we require that gridCompList was filled in the order of componentList (ordered by dependencies) !!!
+#           For example, here we link wave fields from getmImport to waveExport *before* waveExport is linked to erosedImport...
             fid.write('        write(message,"(A)") trim(name)//" linking "//trim(gridCompNameList(' + str(i+1) +'))//"Import to "//trim(gridCompNameList(' + str(j+1)+'))//"Export"\n')
             fid.write('        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
             fid.write('        call ESMF_CplCompInitialize(cplCompList(1), importState=gridImportStateList(' + str(i+1) + '), &\n')
