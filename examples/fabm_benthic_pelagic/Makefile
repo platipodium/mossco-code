@@ -42,7 +42,7 @@ LDFLAGS += $(NC_LIBS)
 .PHONY: all exec fabm_benthic_pelagic libsediment libmossco_fabmgotm libmossco_sediment libconstant libgotm $(EROSED_DEP)
 
 all: exec
-exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_netcdf fabm_benthic_pelagic
+exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_connector libmossco_netcdf fabm_benthic_pelagic
 
 fabm_benthic_pelagic: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
@@ -53,6 +53,9 @@ libmossco_fabmgotm libgotm:
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
+
+libmossco_connector:
+	$(MAKE) -C $(MOSSCO_DIR)/src/connectors $@
 
 libsediment libconstant libmossco_erosed libmossco_netcdf:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
