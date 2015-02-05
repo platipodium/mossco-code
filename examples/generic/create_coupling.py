@@ -637,13 +637,7 @@ if (True):
   fid.write('    do phase = 1,' + str(maxPhases) + '\n\n')
   for item in gridCompList:
     fid.write('      !! Initializing ' + item + '\n')
-    ifrom=gridCompList.index(item)
-    ito=ifrom
-    for j in range(0, len(couplingList)):
-        jtem=couplingList[j]
-        if jtem[-1]==item:
-            ifrom=gridCompList.index(jtem[0])
-    j=gridCompList.index(item)
+    ito=gridCompList.index(item)
 
     if dependencyDict.has_key(item):
       for jtem in dependencyDict[item]:
@@ -653,6 +647,12 @@ if (True):
         fid.write('      call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
         fid.write('        exportState=gridImportStateList(' + str(ito+1)+'), clock=clock, rc=localrc)\n')
         fid.write('      call ESMF_LogFlush()\n')
+
+    for j in range(0, len(couplingList)):
+        jtem=couplingList[j]
+        if jtem[-1]==item:
+            ifrom=gridCompList.index(jtem[0])
+    j=gridCompList.index(item)
 
     fid.write('      if (gridCompPhaseCountList( ' + str(ito+1) + ')>= phase) then\n')
 #    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
