@@ -28,6 +28,9 @@ coupling:
      - simplewave
   - components:
      - simplewave
+     - getm
+  - components:
+     - simplewave
      - erosed
   - components:
      - fabm_pelagic
