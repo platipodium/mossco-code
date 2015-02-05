@@ -14,7 +14,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - mossco_pel3d: netcdf
+  - netcdf_pelagic_3d: netcdf
 
 coupling:
   - components:
@@ -47,15 +47,15 @@ coupling:
      - fabm_pelagic
   - components:
      - simplewave
-     - mossco_pel3d
+     - netcdf_pelagic_3d
     interval: 60 h
   - components:
      - fabm_pelagic
-     - mossco_pel3d
+     - netcdf_pelagic_3d
     interval: 60 h
   - components:
      - erosed
-     - mossco_pel3d
+     - netcdf_pelagic_3d
     interval: 60 h
   - components:
      - benthos
