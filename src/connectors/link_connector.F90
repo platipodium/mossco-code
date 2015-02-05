@@ -115,14 +115,14 @@ module link_connector
     call link_foreign_grid_or_needed_field_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_foreign_grid_or_needed_field_in_states(exportState, importState, rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !call link_foreign_grid_or_needed_field_in_states(exportState, importState, rc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call link_empty_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !call link_empty_fields_and_fieldbundles_in_states(exportState, importState, rc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_state_copy_default_values(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -708,8 +708,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
       write(message,'(A)') 'cannot assign a value to empty field'
       call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      return
     endif
 
     !> If the field status is gridset, then complete the field with real8 typekind
