@@ -27,6 +27,8 @@ erosed_benthos_netcdf
 fabm_benthic_pelagic_3d
 fabm_benthic_pelagic+wave
 fabm_gotm_erosed
+getm--fabm_pelagic--erosed
+getm--fabm_pelagic--fabm_sediment--netcdf
 getm--fabm_pelagic--netcdf
 getm--netcdf
 getm_coupling
