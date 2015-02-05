@@ -256,12 +256,9 @@ module fabm_pelagic_component
     integer                    :: day_of_year, day, seconds_of_day
     logical, dimension(:,:,:), pointer :: mask=>null()
     integer, dimension(:,:,:), pointer :: gridmask=>null()
-<<<<<<< HEAD
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
-=======
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
->>>>>>> Fixed bug #255 missing parameter mean_particle_diameter 
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
 
@@ -475,11 +472,7 @@ module fabm_pelagic_component
       attribute_name=trim('mean_particle_diameter')
       attribute_r8 = pel%model%info%state_variables(n)%properties%get_real('diameter',default=-99.d0)
       if (attribute_r8 > 0.0d0) &
-<<<<<<< HEAD
-        call ESMF_AttributeSet(concfield, attribute_name, attribute_r8)
-=======
         call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
->>>>>>> Fixed bug #255 missing parameter mean_particle_diameter 
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       attribute_name=trim('particle_density')
