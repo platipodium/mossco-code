@@ -17,7 +17,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - reference_3d: netcdf
+  - netcdf_reference_3d: netcdf
 
 coupling:
   - components:
@@ -81,27 +81,27 @@ coupling:
     interval: none
   - components:
      - fabm_sediment
-     - reference_3d
+     - netcdf_reference_3d
     interval: 60 h
   - components:
      - fabm_pelagic
-     - reference_3d
+     - netcdf_reference_3d
     interval: 60 h
   - components:
      - getm
-     - reference_3d
+     - netcdf_reference_3d
     interval: 60 h
   - components:
      - simplewave
-     - reference_3d
+     - netcdf_reference_3d
     interval: 60 h
   - components:
      - benthos
-     - reference_3d
+     - netcdf_reference_3d
     interval: 60 h
   - components:
      - erosed
-     - reference_3d
+     - netcdf_reference_3d
     interval: 60 h
   - components:
      - benthos
