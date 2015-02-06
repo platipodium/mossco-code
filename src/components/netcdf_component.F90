@@ -24,6 +24,7 @@ module netcdf_component
   use mossco_strings
   use mossco_component
   use mossco_field
+  use mossco_state
 
   implicit none
   private
@@ -184,7 +185,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-	  call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
+    call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
