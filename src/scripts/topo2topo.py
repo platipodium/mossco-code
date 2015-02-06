@@ -72,52 +72,42 @@ def write_topo_ncdf(filename,lon,lat,value):
   
   nc.type = "GETM topo file" ;
   nc.history = "Created by topo2topo.py"
-  
-  
-  
-  
+
   nc.close()
-# 
-# 
-#  nv = nc.createVariable('nv','i',('element','node_per_element'))
-#  nv.start_index = start_index
-# # nv[:]=elements["nodes"]
-#
-#  lon = nc.createVariable('lon','f8',('node',))
-#  lon.units = 'degrees_east'
-#  #lon[:]=nodes['lon']
-#
-#  lat = nc.createVariable('lat','f8',('node',))
-#  lat.units = 'degrees_north'
-#  #lat[:]=nodes['lat']
-#
-#  nc.close()
-
-
 
 if __name__ == '__main__':
 
   basename = '/Users/lemmen/devel/MOSSCO/setups/deep_lake/topo.nc'
   lon, lat, z = read_topo_ncdf(basename)
   lonx, latx = np.meshgrid(lon, lat)
-   
-  lonlim=lon[[0,-1]]
-  latlim=lat[[0,-1]]
+  
+  nlon = len(lon)
+  nlat = len(lat)
+  dlon=lon[2]-lon[1]
+  dlat=lat[2]-lat[1]
+  mlon=np.mean(lon)
+  mlat=np.mean(lat)
   
 # getm performs best with domains of 25x25, so lets build those systems
 # in 1 x 3 domains up to 
   lon2lat=3
   optimalDomainSize=25
   
-  for i in range(0,10):
+  for i in range(0,20):
       
     ny=optimalDomainSize*(i+1)
     nx=ny*lon2lat
     
-    loni=np.linspace(start=lon[0], stop=lon[-1], num=nx)
-    lati=np.linspace(start=lat[0], stop=lat[-1], num=ny)
-    lony, laty = np.meshgrid(loni, lati)    
+    loni=np.arange(start=0, stop=nx)
+    loni=(loni-nx/2.0+0.5)*dlon + mlon
     
+    lati=np.arange(start=0, stop=ny)
+    lati=(lati-ny/2.0+0.5)*dlat + mlat
+
+    lony, laty = np.meshgrid(loni, lati)  
+    lon=np.linspace(start=loni[0], stop=loni[-1], num=nlon)
+    lat=np.linspace(start=lati[0], stop=lati[-1], num=nlat)
+     
     f=scipy.interpolate.interp2d(lon, lat, z, kind='linear')
     zx = f(loni,lati)
   
