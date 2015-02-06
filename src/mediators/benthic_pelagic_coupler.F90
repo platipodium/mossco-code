@@ -209,9 +209,9 @@ module benthic_pelagic_coupler
       call ESMF_FieldGet(field,localde=0,farrayPtr=val2_f2,rc=rc)
        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       call mossco_state_get(exportState,(/'nitrate_upward_flux_at_soil_surface'/),DINflux,rc=nitrc)
-      if (nitrc == 0) DINflux = val2_f2
-      call mossco_state_get(exportState,(/'ammonium_upward_flux_at_soil_surface'/),DINflux,rc=nitrc)
       if (nitrc == 0) DINflux = val1_f2
+      call mossco_state_get(exportState,(/'ammonium_upward_flux_at_soil_surface'/),DINflux,rc=nitrc)
+      if (nitrc == 0) DINflux = val2_f2
 
       !RH: weak check, needs to be replaced:
       if (nitrc /= 0) then
