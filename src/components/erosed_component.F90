@@ -1182,8 +1182,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !                rn(l,nm) = r0(l,nm) ! explicit
 !!                r1(l,nm) = r0(l,nm) + dt*(sour(l,nm) + sourf(l,nm))/h0(nm) - dt*(sink(l,nm) + sinkf(l,nm))*rn(l,nm)/h1(nm)
 
-        j= 1+ mod(nm,inum)
-        i= nm - inum*(j -1)
+        i=  1+ mod((nm-1),inum)
+        j=  1+int ((nm-1)/inum)
         write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
 
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &

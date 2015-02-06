@@ -495,9 +495,9 @@ seddif = 1.e-3_fp
                 mfltot = mfltot + mfluff(l,nm)
             enddo
         endif
-
-        j= 1+ mod(nm,inum)
-        i= nm - inum*(j -1)
+ 
+        i=  1+ mod((nm-1),inum)
+        j=  1+int ((nm-1)/inum)
 
         ! Taub is the bed shear stress under combined wave and current (Soulsby(2004))
         ! note here that kssilt and kssand could be either skin related roughness (2.5 d50)
