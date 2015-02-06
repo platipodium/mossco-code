@@ -47,7 +47,7 @@ endif
 
 fabm_update:
 ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
-	( cd $(external_FABMDIR) ; git pull )
+	( cd $(external_FABMDIR) ; git pull origin master )
 endif
 
 gotm_clone:
@@ -66,12 +66,12 @@ endif
 
 es_update:
 ifneq ($(wildcard $(MOSSCO_DIR)/external/editscenario/editscenario.py),)
-	( cd $(MOSSCO_DIR)/external/editscenario ; git pull )
+	( cd $(MOSSCO_DIR)/external/editscenario ; git pull origin master)
 endif
 
 gotm_update:
 ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
-	( cd $(external_GOTMDIR) ; git pull )
+	( cd $(external_GOTMDIR) ; git pull origin master )
 endif
 
 gotm_distclean:
@@ -89,7 +89,7 @@ endif
 
 getm_update:
 ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( cd $(external_GETMDIR) ; git pull )
+	( cd $(external_GETMDIR) ; git pull origin iow)
 endif
 
 getm_distclean:
