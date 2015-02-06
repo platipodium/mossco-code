@@ -71,7 +71,7 @@ endif
 
 gotm_update:
 ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
-	( cd $(external_GOTMDIR) ; git pull )
+	( cd $(external_GOTMDIR) ; git pull ; git checkout 0ec242)
 endif
 
 gotm_distclean:
