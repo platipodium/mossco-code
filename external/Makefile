@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -25,8 +25,8 @@ SUBDIRS =
 
 all: clone
 
-clone:  fabm_clone  gotm_clone  getm_clone  #erosed-svn-clone
-update: fabm_update gotm_update getm_update #erosed-svn-update
+clone:  fabm_clone  gotm_clone  getm_clone es_clone #erosed-svn-clone
+update: fabm_update gotm_update getm_update es_update #erosed-svn-update
 
 clean: extraclean
 
@@ -55,6 +55,18 @@ ifeq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
 	git clone git://git.code.sf.net/p/gotm/code $(external_GOTMDIR)
 else
 	$(MAKE) gotm_update
+endif
+
+es_clone:
+ifeq ($(wildcard $(MOSSCO_DIR)/external/editscenario/editscenario.py),)
+	git clone git://git.bolding-burchard.com/editscenario $(MOSSCO_DIR)/external/editscenario
+else
+	$(MAKE) es_update
+endif
+
+es_update:
+ifneq ($(wildcard $(MOSSCO_DIR)/external/editscenario/editscenario.py),)
+	( cd $(MOSSCO_DIR)/external/editscenario ; git pull )
 endif
 
 gotm_update:
@@ -103,8 +115,8 @@ flow2d3d-svn-export:
 	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/bedbc1993.f90 $(MOSSCO_DIR)/external/erosed-svn/source
 	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $(MOSSCO_DIR)/external/erosed-svn/source
 	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $(MOSSCO_DIR)/external/erosed-svn/source
-	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source	
-	
+	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source
+
 
 
 

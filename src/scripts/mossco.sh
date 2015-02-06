@@ -72,7 +72,7 @@ if [[ "x${MOSSCO_DIR}" == "x" ]]; then
   exit 1
 fi
 
-if test -d ${MOSSCO_DIR}; then
+if ! test -d ${MOSSCO_DIR}; then
   echo "Your \$MOSSCO_DIR=$MOSSCO_DIR is not a directory"
   exit 1
 fi
