@@ -67,6 +67,22 @@ shift $((OPTIND-1))
 # Give default argument is none is provided
 if [[ "x${1}" == "x" ]]; then ARG=${DEFAULT} ; else ARG=${1}; fi
 
+if [[ "x${MOSSCO_DIR}" == "x" ]]; then
+  echo "This script requires the environment variable MOSSCO_DIR."
+  exit 1
+fi
+
+if test -d ${MOSSCO_DIR}; then
+  echo "Your \$MOSSCO_DIR=$MOSSCO_DIR is not a directory"
+  exit 1
+fi
+
+if [[ "x${ESMFMKFILE}" == "x" ]]; then
+  echo "This script requires ESMF, pointed to by the environment variable ESMFMKFILE."
+  exit 1
+fi
+
+
 if [[ ${GENERIC} == 1 ]] ; then
   DIR=${MOSSCO_DIR}/examples/generic
 else
