@@ -35,9 +35,9 @@ def write_topo_ncdf(filename,lon,lat,value):
   ny=len(lat)
   
   nc.createDimension('lon',nx)
-  nc.createDimension('lon_x',nx+1)
+# nc.createDimension('lon_x',nx+1)
   nc.createDimension('lat',ny)
-  nc.createDimension('lat_x',ny+1)
+#  nc.createDimension('lat_x',ny+1)
  
   var=nc.createVariable('grid_type','i4',())
   var.long_name="Type of horizontal grid"
@@ -87,16 +87,11 @@ if __name__ == '__main__':
   dlat=lat[2]-lat[1]
   mlon=np.mean(lon)
   mlat=np.mean(lat)
-  
-# getm performs best with domains of 25x25, so lets build those systems
-# in 1 x 3 domains up to 
-  lon2lat=3
-  optimalDomainSize=25
-  
+    
   for i in range(0,20):
       
-    ny=optimalDomainSize*(i+1)
-    nx=ny*lon2lat
+    ny=nlat*(i+1)
+    nx=nlon*(i+1)
     
     loni=np.arange(start=0, stop=nx)
     loni=(loni-nx/2.0+0.5)*dlon + mlon
