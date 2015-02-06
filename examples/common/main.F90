@@ -2,9 +2,10 @@
 !> @file main.F90
 !!
 !  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht 
 !> @author Carsten Lemmen, HZG
 !> @author Knut Klingbeil, IOW
+!> @author Richard Hofmeister, HZG
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -72,10 +73,11 @@ program main
   ! Initialize ESMF, get resources, and log this
   call ESMF_Initialize(defaultLogFileName=trim(title),rc=localrc,&
     logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN,&
-     vm=vm)
+    vm=vm)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     
-  call ESMF_LogSet(flush=.true., rc=localrc)
+  !call ESMF_LogSet(flush=.false., logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING/),rc=localrc)
+  call ESMF_LogSet(flush=.true., logMsgList=(/ESMF_LOGMSG_ALL/),rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
