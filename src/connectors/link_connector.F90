@@ -711,6 +711,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (present(rc)) rc=rc_
       return
     endif
 
