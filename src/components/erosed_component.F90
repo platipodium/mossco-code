@@ -1021,10 +1021,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           if (isPresent) then
             call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            write (*,*) 'mean particle diameter is present',sedd50(nfrac_by_external_idx(external_index))
+!            write (*,*) 'mean particle diameter is present',sedd50(nfrac_by_external_idx(external_index))
           else
             sedd50(nfrac_by_external_idx(external_index))=0.0
-            write (*,*) 'mean particle diameter is not present',sedd50(nfrac_by_external_idx(external_index))
+!            write (*,*) 'mean particle diameter is not present',sedd50(nfrac_by_external_idx(external_index))
             write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
             call MOSSCO_FieldString(field, message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
