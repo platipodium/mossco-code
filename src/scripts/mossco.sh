@@ -14,7 +14,7 @@
 
 # Initialize variables, set options with default values
 OPTIND=1           # Reset in case getopts has been used previously in the shell.
-GENERIC=0          # By default, use a hardcoded example
+GENERIC?=1          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 NP=1               # Run on one processor
@@ -27,16 +27,15 @@ usage(){
   echo
 	echo "Usage: $0 [options] [example]"
 	echo
-	echo "Accepted options are -r, -b, -g, -n <numproc>, -s <system> <example>"
+	echo "Accepted options are -r, -b,  -n <numproc>, -s <system> <example>"
 	echo "If not provided, the default <example> is ${DEFAULT}"
 	echo
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
-	echo "    [-g] :  build a generic, not a hardcoded example"
 	echo "    [-t] :  do not retitle mossco_run.nml and getm.inp"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then
 	echo "            MPI is not used at all. Default is n=1
-	echo "    [-s M\|S]: exeute batch queue for a specific system"
+	echo "    [-s M|S]: exeute batch queue for a specific system"
 	echo
 	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
