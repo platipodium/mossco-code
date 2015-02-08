@@ -14,25 +14,25 @@
 
 # Initialize variables, set options with default values
 OPTIND=1           # Reset in case getopts has been used previously in the shell.
-GENERIC?=1          # By default, use a hardcoded example
+GENERIC=1          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 NP=1               # Run on one processor
 DEFAULT=getm--fabm_pelagic--fabm_sediment--netcdf  # Default example
 SYSTEM=INTERACTIVE                  # Interactive shell as default system
-RETITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
+AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
 
 # Function for printing usage of this script
 usage(){
   echo
 	echo "Usage: $0 [options] [example]"
 	echo
-	echo "Accepted options are -r, -b,  -n <numproc>, -s <system> <example>"
+	echo "Accepted options are -r, -b, -t <title>, -n <numproc>, -s <system> <example>"
 	echo "If not provided, the default <example> is ${DEFAULT}"
 	echo
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
-	echo "    [-t] :  do not retitle mossco_run.nml and getm.inp"
+	echo "    [-t] :  give a title in mossco_run.nml and getm.inp"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then
 	echo "            MPI is not used at all. Default is n=1
 	echo "    [-s M|S]: exeute batch queue for a specific system"
@@ -44,7 +44,7 @@ usage(){
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rgtbn:s:" opt; do
+while getopts ":rt:bn:s:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -53,6 +53,9 @@ while getopts ":rgtbn:s:" opt; do
   b)  BUILD_ONLY=1
       ;;
   n)  NP=${OPTARG}
+      ;;
+  t)  TITLE=${OPTARG}
+      AUTOTITLE=0
       ;;
   s)  SYSTEM=${OPTARG}
       ;;
@@ -154,7 +157,7 @@ case ${SYSTEM} in
   sge|SGE|S)    MPI_PREFIX="mpirun"
                 SYSTEM=SGE
                 ;;
-  *)  MPI_PREFIX="mpirun "
+  *)  MPI_PREFIX="mpirun"
                 ;;
 esac
 
@@ -174,10 +177,27 @@ case ${SYSTEM} in
   *)     ;;
 esac
 
-TITLE=${SETUP}-${NODES}x${PPN}-${ARG}
+if [[ AUTOTITLE -eq 1 ]]; then
+  TITLE=${SETUP}-${NODES}x${PPN}-${ARG}
+fi
+
+RETITLE=1
+if [[ ${TITLE} == 0 ]] ; then
+  RETITLE=0
+  TITTLE=${SETUP}
+fi
+
+if [[ "x${TITLE}" == "x" ]] ; then
+  TITTLE=${SETUP}
+fi
+
+
 STDERR=${TITLE}.stderr
 STDOUT=${TITLE}.stdout
-MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
+
+if [[ "x${MPI_PREFIX}" != "x" ]]; then
+  MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
+fi
 
 case ${SYSTEM} in
   MOAB) cat << EOT > moab.sh
@@ -222,10 +242,10 @@ esac
 
 rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
 
-if [[ RETITLE == 1 ]] ; then
+if [[ RETITLE != 0 ]] ; then
 
-  SED=${SED:-$(which gsed) 2> /dev/null}
-  SED=${SED:-$(which sed)  2> /dev/null}
+  SED=${SED:-$(which gsed)} 2> /dev/null
+  SED=${SED:-$(which sed)} 2> /dev/null
 
   if ! test -x ${SED}; then
     echo
@@ -257,9 +277,13 @@ case ${SYSTEM} in
          ;;
   SGE)   if test $(which qsub 2> /dev/null) ; then qsub sge.sh ; else cat sge.sh ; fi
          ;;
-  *)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
+  INTERACTIVE)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
+         ;;
+  *)     echo "System not defined in $0"; exit 1
          ;;
 esac
+
+echo "Job ${TITLE} submitted for system ${SYSTEM}"
 
 test -f ${STDOUT} && tail -n 20 ${STDOUT}
 test -f ${STDERR} && tail -n 20 ${STDERR}
