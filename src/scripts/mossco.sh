@@ -121,9 +121,25 @@ if [[ ${GENERIC} == 1 ]] ; then
       echo "ERROR: Script create_coupling.py is not executable, please chmod +x this file."
       exit 1
     fi
-    if ! test -f ${EXE}.yaml ; then
+
+    if test -f ${ARG}; then
+      echo "Using local file ${ARG} as coupling specification."
+      if [[ $(dirname ${ARG}) == "." ]] ; then
+        ARG=$(PWD)/$(basename ${ARG})
+      fi
+    elif test -f ${ARG}.yaml; then
+      echo "Using local file ${ARG}.yaml as coupling specification."
+      if [[ $(dirname ${ARG}) == "." ]] ; then
+        ARG=$(PWD)/$(basename ${ARG})
+      fi
+    elif test -f ${EXE} ; then
+      echo "Using generic file ${ARG} as coupling specification."
+    elif test -f ${EXE}.yaml ; then
+      echo "Using generic file ${ARG}.yaml as coupling specification."
+    else
       echo
-      echo "ERROR: coupling spec ${EXE}.yaml does not exist"
+      echo "ERROR: coupling spec ${ARG} or ${EXE}.yaml does not exist"
+      echo
       exit 1
     fi
     cd ${DIR};
@@ -178,7 +194,7 @@ case ${SYSTEM} in
 esac
 
 if [[ AUTOTITLE -eq 1 ]]; then
-  TITLE=${SETUP}-${NODES}x${PPN}-${ARG}
+  TITLE=${SETUP}-${NODES}x${PPN}-$(basename ${ARG})
 fi
 
 RETITLE=1
