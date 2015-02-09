@@ -512,7 +512,6 @@ module getm_component
                   call ESMF_StateGet(importState,itemName,fieldList_conc(n),rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-                  call ESMF_LogWrite(' will transport field '//trim(itemName),ESMF_LOGMSG_INFO)
                   n = n + 1
                else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
                   itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
@@ -527,7 +526,6 @@ module getm_component
                      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                      n = n + 1
                   end do
-                  call ESMF_LogWrite(' will transport fieldbundle '//trim(itemName),ESMF_LOGMSG_INFO)
                end if
             end do
 
@@ -537,7 +535,7 @@ module getm_component
 
             do n=1,transportFieldCount
 
-               call ESMF_FieldGet(fieldList_ws(n),status=status, rc=localrc)
+               call ESMF_FieldGet(fieldList_ws(n),name=itemName,status=status, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
@@ -545,6 +543,7 @@ module getm_component
 !                 because fabm_pelagic ships with its own grid (coupler
 !                 checks whether temperature field in fabm_pelagic's
 !                 importState is already completed).
+                  call ESMF_LogWrite('  will use internal field '//trim(itemName),ESMF_LOGMSG_INFO)
                   allocate(transport_ws(n)%ptr(I3DFIELD))
                   call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,        &
                                                transport_ws(n)%ptr,               &
@@ -557,23 +556,25 @@ module getm_component
 !                 Coupler linked completed field from fabm_pelagic,
 !                 because GETM's grid was provided to fabm_pelagic.
 !                 The field MUST include the HALO zones and k=0 !!!
+                  call ESMF_LogWrite('  will use external field '//trim(itemName),ESMF_LOGMSG_INFO)
                   call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr,rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   if (.not. (      all(lbound(transport_ws(n)%ptr) .eq. (/imin-HALO,jmin-HALO,0   /)) &
                              .and. all(ubound(transport_ws(n)%ptr) .eq. (/imax+HALO,jmax+HALO,kmax/)) ) ) then
-                     call ESMF_LogWrite('invalid field bounds', &
+                     call ESMF_LogWrite('  invalid field bounds', &
                                         ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
                      call ESMF_Finalize(endflag=ESMF_END_ABORT)
                   end if
                else
-                  call ESMF_LogWrite('field neither empty nor complete',ESMF_LOGMSG_ERROR, &
-                                     line=__LINE__,file=__FILE__,method='InitializeP2()')
+                  call ESMF_LogWrite('  field '//trim(itemName)//' neither empty nor complete', &
+                                     ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
                   call ESMF_Finalize(endflag=ESMF_END_ABORT)
                end if
 
-               call ESMF_FieldGet(fieldList_conc(n),status=status)
+               call ESMF_FieldGet(fieldList_conc(n),name=itemName,status=status)
 
                if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
+                  call ESMF_LogWrite('  will transport internal field '//trim(itemName),ESMF_LOGMSG_INFO)
                   allocate(transport_conc(n)%ptr(I3DFIELD))
                   call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,      &
                                                transport_conc(n)%ptr,             &
@@ -583,16 +584,17 @@ module getm_component
                                                totalUWidth=(/HALO,HALO,0/),rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+                  call ESMF_LogWrite('  will transport external field '//trim(itemName),ESMF_LOGMSG_INFO)
                   call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr,rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   if (.not. (      all(lbound(transport_ws(n)%ptr) .eq. (/imin-HALO,jmin-HALO,0   /)) &
                              .and. all(ubound(transport_ws(n)%ptr) .eq. (/imax+HALO,jmax+HALO,kmax/)) ) ) then
-                     call ESMF_LogWrite('invalid field bounds', &
+                     call ESMF_LogWrite('  invalid field bounds', &
                                         ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
                      call ESMF_Finalize(endflag=ESMF_END_ABORT)
                   end if
                else
-                  call ESMF_LogWrite('field neither empty nor complete', &
+                  call ESMF_LogWrite('  field '//trim(itemName)//' neither empty nor complete', &
                                      ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
                   call ESMF_Finalize(endflag=ESMF_END_ABORT)
                end if
