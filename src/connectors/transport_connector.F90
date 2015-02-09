@@ -317,7 +317,7 @@ module transport_connector
     call ESMF_StateGet(exportState, 'transport', exportItemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (exportItemState /= ESMF_STATEITEM_FIELDBUNDLE) return
+    if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
 
     call ESMF_StateGet(exportState, 'transport', exportFieldBundle, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
