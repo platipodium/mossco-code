@@ -254,6 +254,7 @@ module getm_component
     character(len=10)       :: timestr
     character(len=19)       :: TimeStrISOFrac,start_external,stop_external
     character(len=MPI_MAX_ERROR_STRING) :: mpierrmsg
+    type(ESMF_FieldBundle)  :: fieldBundle
     integer(ESMF_KIND_I4) :: localrc
     character(ESMF_MAXSTR)  :: name
 
@@ -419,6 +420,15 @@ module getm_component
         end if
     end select
 
+    fieldBundle = ESMF_FieldBundleCreate(name='transport',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(importState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call getmCmp_update_exportState()
 
     if (.not.dryrun) then
@@ -462,20 +472,20 @@ module getm_component
 
       call MOSSCO_GridCompEntryLog(gridComp)
 
-      call ESMF_StateGet(importState,itemCount=itemCount, rc=localrc)
+      call ESMF_StateGet(importState,"transport",fieldBundle, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(fieldBundle,fieldCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemCount .gt. 0) then
 
-         allocate(itemTypeList           (itemCount))
          allocate(itemNameList           (itemCount))
          allocate(namelenList            (itemCount))
-         allocate(fieldBundleList        (itemCount))
          allocate(transportFieldCountList(itemCount))
          transportFieldCountList = 0
 
-         call ESMF_StateGet(importState,itemNameList=itemNameList, &
-                                   itemTypeList=itemTypeList, rc=localrc)
+         call ESMF_FieldBundleGet(fieldBundle,fieldNameList=itemNameList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          do i=1,itemCount
@@ -483,14 +493,7 @@ module getm_component
             namelenList(i) = len_trim(itemNameList(i))
             if ( namelenList(i) .le. len_trim(ws_suffix) ) cycle
             if (itemNameList(i)(namelenList(i)-len_trim(ws_suffix)+1:namelenList(i)) .ne. trim(ws_suffix)) cycle
-            if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
                transportFieldCountList(i) = 1
-            else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-               call ESMF_StateGet(importState,itemNameList(i),fieldBundleList(i), rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               call ESMF_FieldBundleGet(fieldBundleList(i),fieldCount=transportFieldCountList(i), rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            end if
          end do
 
          transportFieldCount = sum(transportFieldCountList)
@@ -504,29 +507,14 @@ module getm_component
 
             do i=1,itemCount
                if (transportFieldCountList(i) .eq. 0) cycle
-               if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELD) then
-                  call ESMF_StateGet(importState,itemNameList(i),fieldList_ws(n), rc=localrc)
+                  call ESMF_FieldBundleGet(fieldBundle,itemNameList(i),field=fieldList_ws(n), rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                   itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
-                  call ESMF_StateGet(importState,itemName,fieldList_conc(n),rc=localrc)
+                  call ESMF_FieldBundleGet(fieldBundle,itemName,field=fieldList_conc(n),rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                   n = n + 1
-               else if (itemTypeList(i) .eq. ESMF_STATEITEM_FIELDBUNDLE) then
-                  itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
-                  call ESMF_StateGet(importState,itemName,fieldBundle, rc=localrc)
-                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-                  do ii=1,transportFieldCountList(i)
-                     call ESMF_FieldBundleGet(fieldBundleList(i),ii,fieldList_ws(n), rc=localrc)
-                     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-                     call ESMF_FieldBundleGet(fieldBundle,ii,fieldList_conc(n),rc=localrc)
-                     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                     n = n + 1
-                  end do
-               end if
             end do
 
             allocate(transport_ws  (transportFieldCount))
