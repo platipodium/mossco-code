@@ -78,7 +78,7 @@ module transport_connector
 
     integer              :: localrc
     character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)       :: currTime
 
     rc = ESMF_SUCCESS
@@ -142,10 +142,10 @@ module transport_connector
 
     integer              :: localrc
     character (len=ESMF_MAXSTR) :: name
-    type(ESMF_Time)             :: currTime, stopTime
-    type(ESMF_Clock)            :: clock
 
     rc = ESMF_SUCCESS
+
+    call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
 
   end subroutine Run
 
@@ -187,12 +187,10 @@ module transport_connector
     integer, intent(out)            :: rc
 
     integer              :: localrc
-    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount
+    integer(ESMF_KIND_I4)       :: i, itemCount
     character (len=ESMF_MAXSTR) :: message, itemName, filter_suffix, name, replace_suffix
-    type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
-    type(ESMF_Field)            :: importField, field
-    type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
+    type(ESMF_Field)            :: field
     integer(ESMF_KIND_I4)       :: length, suffix_length
     type(ESMF_StateItem_Flag)   :: importItemState, exportItemState
 
@@ -303,15 +301,13 @@ module transport_connector
     integer, intent(out)            :: rc
 
     integer              :: localrc
-    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, fieldCount
-    character (len=ESMF_MAXSTR) :: message, itemName, filter_suffix, name, replace_suffix
-    type(ESMF_Time)             :: currTime
+    integer(ESMF_KIND_I4)       :: i, itemCount
+    character (len=ESMF_MAXSTR) :: itemName, filter_suffix, name, replace_suffix
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
-    type(ESMF_Field)            :: importField, field
-    type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
+    type(ESMF_StateItem_Flag)   :: exportItemType
     integer(ESMF_KIND_I4)       :: length, suffix_length
     type(ESMF_StateItem_Flag)   :: importItemState, exportItemState
-    type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
+    type(ESMF_FieldBundle)      :: exportFieldBundle
 
     rc = ESMF_SUCCESS
 
@@ -391,14 +387,10 @@ module transport_connector
     integer, intent(out)                  :: rc
 
     integer              :: localrc
-    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, fieldCount
-    character (len=ESMF_MAXSTR) :: message, itemName, filter_suffix, name, replace_suffix
-    type(ESMF_Time)             :: currTime
-    character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
-    type(ESMF_Field)            :: importField, field
+    integer(ESMF_KIND_I4)       :: fieldCount
+    character (len=ESMF_MAXSTR) :: message, itemName,  name
+     type(ESMF_Field)            :: importField, field
     type(ESMF_StateItem_Flag)   :: itemType
-    integer(ESMF_KIND_I4)       :: length, suffix_length
-    type(ESMF_StateItem_Flag)   :: importItemState, exportItemState
     type(ESMF_Grid)             :: importGrid, exportGrid
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_GeomType_Flag)    :: exportGeomType, importGeomType
@@ -476,21 +468,15 @@ module transport_connector
     integer, intent(out)                  :: rc
 
     integer              :: localrc
-    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, fieldCount
-    character (len=ESMF_MAXSTR) :: message, itemName, filter_suffix, name, replace_suffix
-    type(ESMF_Time)             :: currTime
-    character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
-    type(ESMF_Field)            :: importField, field
+    integer(ESMF_KIND_I4)       :: i, itemCount
+    character (len=ESMF_MAXSTR) :: message, itemName, name
+    type(ESMF_Field)            :: field
     type(ESMF_StateItem_Flag)   :: itemType
-    integer(ESMF_KIND_I4)       :: length, suffix_length
-    type(ESMF_StateItem_Flag)   :: importItemState, exportItemState
     type(ESMF_Grid)             :: importGrid, exportGrid
     type(ESMF_Field), allocatable :: fieldList(:)
     type(ESMF_FieldBundle)      :: fieldBundle
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_GeomType_Flag)    :: exportGeomType, importGeomType
-
-
 
     rc = ESMF_SUCCESS
 
