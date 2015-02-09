@@ -379,16 +379,16 @@ module transport_connector
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "link_field_in_transport_fieldbundle"
-  subroutine  link_field_in_transport_fieldbundle(importState, importName, exportFieldBundle, rc)
+  subroutine  link_field_in_transport_fieldbundle(importState, itemName, exportFieldBundle, rc)
 
     type(ESMF_State), intent(in)          :: importState
-    character(len=*), intent(in)    :: importName
+    character(len=*), intent(in)    :: itemName
     type(ESMF_FIELDBUNDLE), intent(inout) :: exportFieldBundle
     integer, intent(out)                  :: rc
 
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: fieldCount
-    character (len=ESMF_MAXSTR) :: message, itemName,  name
+    character (len=ESMF_MAXSTR) :: message, name
      type(ESMF_Field)            :: importField, field
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_Grid)             :: importGrid, exportGrid
@@ -460,16 +460,16 @@ module transport_connector
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "link_fieldbundle_in_transport_fieldbundle"
-  subroutine  link_fieldbundle_in_transport_fieldbundle(importState, importName, exportFieldBundle, rc)
+  subroutine  link_fieldbundle_in_transport_fieldbundle(importState, itemName, exportFieldBundle, rc)
 
     type(ESMF_State), intent(in)          :: importState
-    character(len=*), intent(in)    :: importName
+    character(len=*), intent(in)    :: itemName
     type(ESMF_FIELDBUNDLE), intent(inout) :: exportFieldBundle
     integer, intent(out)                  :: rc
 
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, itemCount
-    character (len=ESMF_MAXSTR) :: message, itemName, name
+    character (len=ESMF_MAXSTR) :: message, name
     type(ESMF_Field)            :: field
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_Grid)             :: importGrid, exportGrid
