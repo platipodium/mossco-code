@@ -541,12 +541,14 @@ contains
         taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
     enddo
 
+#ifdef DEBUG
     ! Open file for producing output
     call ESMF_UtilIOUnitGet(unit707, rc = localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     inquire (file ='delft_sediment.out', exist = lexist)
 
+!! This file output is not MPI compatible
     if (lexist) then
   !      write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
         open (unit = unit707, file = 'delft_sediment.out', status = 'REPLACE', action = 'WRITE')
@@ -556,6 +558,7 @@ contains
 
     write (unit707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
         'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
+#endif
 
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(inum, jnum,nfrac))
 
@@ -1184,8 +1187,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
+#ifdef DEBUG
         write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
-
+#endif
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
         sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
@@ -1251,7 +1255,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#ifdef DEBUG
     close (unit707)
+#endif
 
     deallocate (cdryb)
 
