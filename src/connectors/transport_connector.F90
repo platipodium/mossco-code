@@ -434,7 +434,7 @@ module transport_connector
     endif
 
     if (exportGeomType == ESMF_GEOMTYPE_GRID .and. importGeomType == ESMF_GEOMTYPE_GRID .and. (importGrid == exportGrid)) then
-      call ESMF_FieldBundleAdd(exportFieldBundle,(/importField/), rc=localrc)
+      call ESMF_FieldBundleAdd(exportFieldBundle,(/importField/),multiflag=.true., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' linked for transport field'
@@ -447,7 +447,7 @@ module transport_connector
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldBundleAdd(exportfieldBundle,(/field/), rc=localrc)
+      call ESMF_FieldBundleAdd(exportfieldBundle,(/field/),multiflag=.true., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' created for transport empty field'
@@ -521,7 +521,7 @@ module transport_connector
       endif
 
       if (importGeomType == ESMF_GEOMTYPE_GRID .and. exportGeomType == ESMF_GEOMTYPE_GRID .and. (importGrid == exportGrid)) then
-        call ESMF_FieldBundleAdd(exportFieldBundle,(/fieldList(i)/), rc=localrc)
+        call ESMF_FieldBundleAdd(exportFieldBundle,(/fieldList(i)/),multiflag=.true., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' linked for transport field'
@@ -534,7 +534,7 @@ module transport_connector
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_FieldBundleAdd(exportfieldBundle,(/field/), rc=localrc)
+        call ESMF_FieldBundleAdd(exportfieldBundle,(/field/),multiflag=.true., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' created for transport empty field'
