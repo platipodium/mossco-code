@@ -420,7 +420,16 @@ module getm_component
         end if
     end select
 
-    fieldBundle = ESMF_FieldBundleCreate(name='transport',multiflag=.true.,rc=localrc)
+    fieldBundle = ESMF_FieldBundleCreate(name='concentrations_in_water',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(importState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    fieldBundle = ESMF_FieldBundleCreate(name='concentrations_z_velocity_in_water',multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_FieldBundleSet(fieldBundle,getmGrid3D,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -456,7 +465,7 @@ module getm_component
 
       type(ESMF_StateItem_Flag) ,dimension(:),allocatable :: itemTypeList
       type(ESMF_FieldBundle)    ,dimension(:),allocatable :: fieldBundleList
-      type(ESMF_FieldBundle)                              :: fieldBundle
+      type(ESMF_FieldBundle)                              :: concFieldBundle,wsFieldBundle
       type(ESMF_Field)          ,dimension(:),allocatable :: fieldList_ws,fieldList_conc
       type(ESMF_FieldStatus_Flag)                         :: status
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
@@ -472,49 +481,30 @@ module getm_component
 
       call MOSSCO_GridCompEntryLog(gridComp)
 
-      call ESMF_StateGet(importState,"transport",fieldBundle, rc=localrc)
+      call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldBundleGet(fieldBundle,fieldCount=itemCount, rc=localrc)
+      call ESMF_FieldBundleGet(concFieldBundle,fieldCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemCount .gt. 0) then
 
-         allocate(itemNameList           (itemCount))
-         allocate(namelenList            (itemCount))
-         allocate(transportFieldCountList(itemCount))
-         transportFieldCountList = 0
-
-         call ESMF_FieldBundleGet(fieldBundle,fieldNameList=itemNameList, rc=localrc)
+         call ESMF_StateGet(importState,"concentrations_z_velocity_in_water",wsFieldBundle, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         do i=1,itemCount
-!           identify items to be transported by suffix
-            namelenList(i) = len_trim(itemNameList(i))
-            if ( namelenList(i) .le. len_trim(ws_suffix) ) cycle
-            if (itemNameList(i)(namelenList(i)-len_trim(ws_suffix)+1:namelenList(i)) .ne. trim(ws_suffix)) cycle
-               transportFieldCountList(i) = 1
-         end do
-
-         transportFieldCount = sum(transportFieldCountList)
+         transportFieldCount = itemCount
 
 
          if (transportFieldCount .gt. 0) then
 
             allocate(fieldList_ws  (transportFieldCount))
             allocate(fieldList_conc(transportFieldCount))
-            n = 1
 
             do i=1,itemCount
-               if (transportFieldCountList(i) .eq. 0) cycle
-                  call ESMF_FieldBundleGet(fieldBundle,itemNameList(i),field=fieldList_ws(n), rc=localrc)
+                  call ESMF_FieldBundleGet(wsFieldBundle,i,fieldList_ws(i), rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-                  itemName = itemNameList(i)(:namelenList(i)-len_trim(ws_suffix))//conc_suffix
-                  call ESMF_FieldBundleGet(fieldBundle,itemName,field=fieldList_conc(n),rc=localrc)
+                  call ESMF_FieldBundleGet(concFieldBundle,i,fieldList_conc(i),rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-                  n = n + 1
             end do
 
             allocate(transport_ws  (transportFieldCount))
