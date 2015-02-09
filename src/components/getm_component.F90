@@ -573,7 +573,7 @@ module getm_component
 
                call ESMF_FieldGet(fieldList_conc(n),status=status)
 
-               if (status.eq.ESMF_FIELDSTATUS_EMPTY .or. status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
                   allocate(transport_conc(n)%ptr(I3DFIELD))
                   call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,      &
                                                transport_conc(n)%ptr,             &
@@ -591,6 +591,10 @@ module getm_component
                                         ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
                      call ESMF_Finalize(endflag=ESMF_END_ABORT)
                   end if
+               else
+                  call ESMF_LogWrite('field neither empty nor complete', &
+                                     ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                  call ESMF_Finalize(endflag=ESMF_END_ABORT)
                end if
 
             end do
