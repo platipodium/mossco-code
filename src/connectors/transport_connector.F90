@@ -382,7 +382,7 @@ module transport_connector
   subroutine  link_field_in_transport_fieldbundle(importState, importName, exportFieldBundle, rc)
 
     type(ESMF_State), intent(in)          :: importState
-    character(ESMF_MAXSTR), intent(in)    :: importName
+    character(len=*), intent(in)    :: importName
     type(ESMF_FIELDBUNDLE), intent(inout) :: exportFieldBundle
     integer, intent(out)                  :: rc
 
@@ -463,7 +463,7 @@ module transport_connector
   subroutine  link_fieldbundle_in_transport_fieldbundle(importState, importName, exportFieldBundle, rc)
 
     type(ESMF_State), intent(in)          :: importState
-    character(ESMF_MAXSTR), intent(in)    :: importName
+    character(len=*), intent(in)    :: importName
     type(ESMF_FIELDBUNDLE), intent(inout) :: exportFieldBundle
     integer, intent(out)                  :: rc
 
