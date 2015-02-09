@@ -307,19 +307,28 @@ module transport_connector
     type(ESMF_StateItem_Flag)   :: exportItemType
     integer(ESMF_KIND_I4)       :: length, suffix_length
     type(ESMF_StateItem_Flag)   :: importItemState, exportItemState
-    type(ESMF_FieldBundle)      :: exportFieldBundle
+    type(ESMF_FieldBundle)      :: concFieldBundle,wsFieldBundle
 
     rc = ESMF_SUCCESS
 
     write(name,'(A)') 'transport_connector'
 
     !> Check whether there is a fieldbundle named "transport" in the exportState, only continue if there is.
-    call ESMF_StateGet(exportState, 'transport', exportItemType, rc=localrc)
+    call ESMF_StateGet(exportState, 'concentrations_in_water', exportItemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
 
-    call ESMF_StateGet(exportState, 'transport', exportFieldBundle, rc=localrc)
+    call ESMF_StateGet(exportState, 'concentrations_in_water', concFieldBundle, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Check whether there is a fieldbundle named "transport" in the exportState, only continue if there is.
+    call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', exportItemType, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
+
+    call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', concFieldBundle, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Find all complete fields in import state whose names correspond to the filter value
@@ -364,11 +373,11 @@ module transport_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (importItemState == ESMF_STATEITEM_FIELD) then
-        call link_field_in_transport_fieldbundle(importState, trim(itemName), exportFieldBundle, rc=localrc)
-        call link_field_in_transport_fieldbundle(importState, trim(itemNameList(i)), exportFieldBundle, rc=localrc)
+        call link_field_in_transport_fieldbundle(importState, trim(itemName), concFieldBundle, rc=localrc)
+        call link_field_in_transport_fieldbundle(importState, trim(itemNameList(i)), wsFieldBundle, rc=localrc)
       elseif (importItemState == ESMF_STATEITEM_FIELDBUNDLE) then
-        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemName), exportFieldBundle, rc=localrc)
-        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemNameList(i)), exportFieldBundle, rc=localrc)
+        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemName), concFieldBundle, rc=localrc)
+        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemNameList(i)), wsFieldBundle, rc=localrc)
       endif
 
     enddo
