@@ -405,10 +405,10 @@ module transport_connector
 
     if (itemType /= ESMF_STATEITEM_FIELD) return
 
-    call ESMF_StateGet(importState, trim(itemName), field, rc=localrc)
+    call ESMF_StateGet(importState, trim(itemName), importField, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
@@ -438,7 +438,7 @@ module transport_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' linked for transport field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(importField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       field = ESMF_FieldEmptyCreate(name=trim(itemName), rc=localrc)
