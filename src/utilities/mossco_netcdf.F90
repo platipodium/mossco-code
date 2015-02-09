@@ -663,7 +663,7 @@ gridmask2 => gridmask3(:,:,1)
 
   end function mossco_netcdf_mesh_dimensions
 
-  function mossco_netcdf_grid_dimensions(self,grid) result(dimids)
+  recursive function mossco_netcdf_grid_dimensions(self,grid) result(dimids)
     class(type_mossco_netcdf)     :: self
     type(ESMF_Grid)               :: grid
     integer                       :: ncStatus,rc_,esmfrc,dimcheck
