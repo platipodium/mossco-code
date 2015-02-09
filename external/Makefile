@@ -30,6 +30,8 @@ update: fabm_update gotm_update getm_update es_update #erosed-svn-update
 
 clean: extraclean
 
+distclean: getm_distclean gotm_distclean fabm_clean
+
 extraclean:
 
 subdirs: $(SUBDIRS)
