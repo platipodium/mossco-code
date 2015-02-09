@@ -328,7 +328,7 @@ module transport_connector
 
     if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
 
-    call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', concFieldBundle, rc=localrc)
+    call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', wsFieldBundle, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Find all complete fields in import state whose names correspond to the filter value
