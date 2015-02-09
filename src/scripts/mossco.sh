@@ -102,8 +102,9 @@ if ! test -d ${DIR} ; then
 fi
 
 EXE=${DIR}/${ARG}
-OWD=${PWD}
-SETUP=${PWD##*/}
+EXE=${EXE%%.yaml}
+OWD=$(pwd)
+SETUP=${OWD##*/}
 
 
 if [[ ${GENERIC} == 1 ]] ; then
@@ -125,20 +126,20 @@ if [[ ${GENERIC} == 1 ]] ; then
     if test -f ${ARG}; then
       echo "Using local file ${ARG} as coupling specification."
       if [[ $(dirname ${ARG}) == "." ]] ; then
-        ARG=$(PWD)/$(basename ${ARG})
+        ARG=$(pwd)/$(basename ${ARG})
       fi
     elif test -f ${ARG}.yaml; then
       echo "Using local file ${ARG}.yaml as coupling specification."
       if [[ $(dirname ${ARG}) == "." ]] ; then
-        ARG=$(PWD)/$(basename ${ARG})
+        ARG=$(pwd)/$(basename ${ARG})
       fi
-    elif test -f ${EXE} ; then
+    elif test -f ${DIR}/${ARG} ; then
       echo "Using generic file ${ARG} as coupling specification."
-    elif test -f ${EXE}.yaml ; then
+    elif test -f ${DIR}/${ARG}.yaml ; then
       echo "Using generic file ${ARG}.yaml as coupling specification."
     else
       echo
-      echo "ERROR: coupling spec ${ARG} or ${EXE}.yaml does not exist"
+      echo "ERROR: coupling spec ${ARG} or ${DIR}/${ARG}.yaml does not exist"
       echo
       exit 1
     fi
@@ -220,7 +221,7 @@ case ${SYSTEM} in
 #!/bin/bash -x
 
 #MSUB -l nodes=${NODES}:ppn=${PPN}
-#MSUB -l walltime=0:06:00
+#MSUB -l walltime=0:12:00
 
 #MSUB -M carsten.lemmen@hzg.de
 #MSUB -m abe
