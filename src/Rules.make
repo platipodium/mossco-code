@@ -155,27 +155,41 @@ endif
 # 3b. GOTM
 MOSSCO_GOTM=false
 
+#Note (KK): undefine does not work for gnu make <3.8.2
+GOTM_PREFIX=
+GOTM_BINARY_DIR=
+
+ifdef MOSSCO_GOTM_PREFIX
+  export GOTM_PREFIX=$(MOSSCO_GOTM_PREFIX)
+endif
+
+ifdef MOSSCO_GOTM_BINARY_DIR
+  export GOTM_BINARY_DIR=$(MOSSCO_GOTM_BINARY_DIR)
+  export GOTM_PREFIX=$(shell grep CMAKE_INSTALL_PREFIX $(MOSSCO_GOTM_BINARY_DIR)/CMakeCache.txt | cut -d "=" -f2)
+  #export GOTMDIR=$(shell grep fabm_SOURCE_DIR $(MOSSCO_GOTM_BINARY_DIR)/CMakeCache.txt | cut -d "=" -f2)
+endif
+
 export external_GOTMDIR=$(MOSSCO_DIR)/external/gotm/code
-ifndef MOSSCO_GOTMDIR
-ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
-export MOSSCO_GOTMDIR=$(external_GOTMDIR)
-endif
+ifeq ($(GOTM_PREFIX),)
+  ifndef MOSSCO_GOTMDIR
+    ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
+      export MOSSCO_GOTMDIR=$(external_GOTMDIR)
+    endif
+  endif
+  ifdef MOSSCO_GOTMDIR
+    export GOTMDIR=$(MOSSCO_GOTMDIR)
+  endif
+  ifdef GOTMDIR
+    export GOTM_BINARY_DIR=$(MOSSCO_DIR)/external/gotm/build
+    export GOTM_PREFIX=$(MOSSCO_DIR)/external/gotm/install
+  endif
 endif
 
-ifdef MOSSCO_GOTMDIR
-export GOTMDIR=$(MOSSCO_GOTMDIR)
-MOSSCO_GOTM=true
-else
-ifdef GOTMDIR
-MOSSCO_GOTM=true
-$(warning Assuming you have a working GOTM in ${GOTMDIR}, proceed at your own risk or set the environment variable $$MOSSCO_GOTMDIR explicitly to enable the build system to take  care of the GOTM build)
-endif
-endif
-
-ifdef GOTMDIR
-MOSSCO_GOTM=true
+ifneq ($(GOTM_PREFIX),)
+  MOSSCO_GOTM=true
 endif
 export MOSSCO_GOTM
+
 
 # 3c. GETM
 MOSSCO_GETM=false
@@ -534,6 +548,33 @@ ifdef MOSSCO_GOTMDIR
 	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
 	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
+endif
+
+gotm_build:
+ifeq ($(MOSSCO_GOTM),true)
+ifndef MOSSCO_GOTM_BINARY_DIR
+	@mkdir -p $(GOTM_BINARY_DIR)
+	(cd $(GOTM_BINARY_DIR) && cmake $(GOTMDIR)/src -DCMAKE_INSTALL_PREFIX=$(GOTM_PREFIX) -DGOTM_USE_FABM=OFF)
+endif
+endif
+
+gotm_install:
+ifeq ($(MOSSCO_GOTM),true)
+ifdef GOTM_BINARY_DIR
+	@echo Recreating the GOTM library in $(GOTM_PREFIX)
+	$(MAKE) -sC $(GOTM_BINARY_DIR) install
+endif
+endif
+
+gotm_clean:
+ifeq ($(MOSSCO_GOTM),true)
+	@echo Cleaning the GOTM library in $(GOTM_PREFIX)
+ifndef MOSSCO_GOTM_BINARY_DIR
+	$(RM) -rf $(GOTM_BINARY_DIR)
+endif
+ifndef MOSSCO_GOTM_PREFIX
+	$(RM) -rf $(GOTM_PREFIX)
+endif
 endif
 
 libgetm_external: libgotm_external
