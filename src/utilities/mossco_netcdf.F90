@@ -264,6 +264,7 @@ gridmask2 => gridmask3(:,:,1)
 
     integer :: petCount, localPet, vas, ssiId, peCount
     type(ESMF_Vm)                  :: vm
+    integer, allocatable           :: iarray1(:), iarray2(:,:), iarray3(:,:,:), dimlen(:)
 
     rc_ = ESMF_SUCCESS
 
@@ -457,6 +458,30 @@ gridmask2 => gridmask3(:,:,1)
         ncStatus = nf90_put_att(self%ncid,varid,'pet_processing_element_count',peCount)
 
         ncStatus = nf90_enddef(self%ncid)
+
+        allocate(dimlen(ubound(dimids,1)-1))
+        do i=1,ubound(dimids,1)-1
+          ncStatus = nf90_inquire_dimension(self%ncid,dimids(i),len=dimlen(i))
+        enddo
+
+        if (ubound(dimids,1)==2) then
+          allocate(iarray1(dimlen(1)))
+          iarray1(:)=localPet
+          ncStatus = nf90_put_var(self%ncid, varid, iarray1)
+          deallocate(iarray1)
+        elseif (ubound(dimids,1)==3) then
+          allocate(iarray2(dimlen(1),dimlen(2)))
+          iarray2(:,:)=localPet
+          ncStatus = nf90_put_var(self%ncid, varid, iarray2)
+          deallocate(iarray2)
+        elseif (ubound(dimids,1)==4) then
+          allocate(iarray3(dimlen(1),dimlen(2),dimlen(3)))
+          iarray3(:,:,:)=localPet
+          ncStatus = nf90_put_var(self%ncid, varid, iarray3)
+          deallocate(iarray3)
+        endif
+        deallocate(dimlen)
+
       else
         ncStatus = nf90_enddef(self%ncid)
       endif
