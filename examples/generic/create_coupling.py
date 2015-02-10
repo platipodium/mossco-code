@@ -600,6 +600,9 @@ for item in gridCompList:
     print item
     fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="foreign_grid_field_name", value="'+foreignGrid[item]+'", rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+  if (item == 'fabm_pelagic') :
+    fid.write('    call ESMF_AttributeSet(gridImportStateList(' + str(ito+1)+'), name="surface_downwelling_photosynthetic_radiative_flux:needed", value=.true., rc=localrc)\n')
+    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
   if dependencyDict.has_key(item) and len(dependencyDict[item]) > 0:
     fid.write('    allocate(charValueList(' + str(len(dependencyDict[item])) + '), intValueList(' + str(len(dependencyDict[item])) + '))\n')
