@@ -262,6 +262,9 @@ gridmask2 => gridmask3(:,:,1)
     real(ESMF_KIND_R8)             :: missingValue=-1D30
     integer(ESMF_KIND_I4)          :: localrc
 
+    integer :: petCount, localPet, vas, ssiId, peCount
+    type(ESMF_Vm)                  :: vm
+
     rc_ = ESMF_SUCCESS
 
     call ESMF_FieldGet(field,name=fieldname,rc=localrc)
@@ -416,7 +419,48 @@ gridmask2 => gridmask3(:,:,1)
          endif
       enddo
 
-      ncStatus = nf90_enddef(self%ncid)
+      !> @too remove time from dimensions
+      varname='pet_'//trim(geomName)
+      if (.not.self%variable_present(varname)) then
+        if (geomType==ESMF_GEOMTYPE_GRID) then
+          dimids => self%grid_dimensions(grid)
+        elseif (geomType==ESMF_GEOMTYPE_MESH) then
+          dimids => self%mesh_dimensions(field)
+        endif
+
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,dimids(1:ubound(dimids,1)-1),varid)
+        if (ncStatus /= NF90_NOERR) call &
+          ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
+
+        ncStatus = nf90_put_att(self%ncid,varid,'standard_name','persistent_execution_thread')
+        ncStatus = nf90_put_att(self%ncid,varid,'long_name','persistent_execution_thread')
+        ncStatus = nf90_put_att(self%ncid,varid,'coordinates',trim(coordinates))
+        ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-1)
+        ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-1)
+
+        call ESMF_VMGetGlobal(vm=vm, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_VMGet(vm, localPet=localPet, petCount=petCount, peCount=peCount, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        ncStatus = nf90_put_att(self%ncid,varid,'vm_pet_count',petCount)
+        ncStatus = nf90_put_att(self%ncid,varid,'vm_processing_element_count',peCount)
+
+        call ESMF_VMGet(vm, localPet, peCount=peCount, ssiId=ssiId, vas=vas, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        ncStatus = nf90_put_att(self%ncid,varid,'pet_virtual_address_space',vas)
+        ncStatus = nf90_put_att(self%ncid,varid,'pet_single_system_image_id',ssiId)
+        ncStatus = nf90_put_att(self%ncid,varid,'pet_processing_element_count',peCount)
+
+        ncStatus = nf90_enddef(self%ncid)
+      else
+        ncStatus = nf90_enddef(self%ncid)
+      endif
+
     end if
 
     if (present(rc)) rc = ESMF_SUCCESS
