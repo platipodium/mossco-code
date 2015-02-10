@@ -417,25 +417,28 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                         ! z0 roughness for taub in compbsskin. Taub is the combined wave current shear
                         ! stress for cohesive soil
 
-   !++++++++++ TEST Bedbc_1993 ++++++++++
+   !++++++++++ TEST Bedbc_1993 -Initialization++++++++++
 flow2d = .false.
-zubed = thick /2.0_fp
-eps = 1e-6
-z0cur = sedd50/12._fp
-z0rou = z0cur
-aksfac = 1.0_fp
-rwave = 1.0_fp
-camax=0.65_fp
-rdc = 2.5_fp* sedd50(2)
-rdw = rdc
-rwave = 2.0_fp
+rwave = 2.0_fp            ! Default value in Delft-3D
 iopkcw=1
-iopsus = 1
+iopsus = 0                ! calculate suspended sediment size class, if = 1
 vonkar = 0.4_fp
 tauadd = 0.0_fp
-iform = -1   ! van Rijn 1993
+iform = -1                ! van Rijn 1993
 g = 9.81_fp
 factcr = 1.0
+eps = 1e-6
+
+zubed = thick /2.0_fp   ! center of the first element at bed
+z0cur = sedd50/12._fp   ! z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
+!z0rou = z0cur           ! z0 bed roughness height for wave
+
+aksfac = 1.0_fp         ! proportionality factor multiplied by ks (equivalent sand roughness height)
+                        ! to evaluate van Rijn concentration height "a"
+camax=0.65_fp
+rdc = 2.5_fp* sedd50(1)   !it is not used when iopkcw = 1
+rdw = rdc                 !it is not used when iopkcw = 1
+
 !+++++++++++TEST Soursin_3D++++++++++++++
 sigsed = -(1.0_fp - thick /h /2.0_fp)      ! Dimensionless distance of the middle of the lowest cell to the water surface
 sigmol = 1.e-5_fp
@@ -495,7 +498,7 @@ seddif = 1.e-3_fp
                 mfltot = mfltot + mfluff(l,nm)
             enddo
         endif
- 
+
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
 
@@ -510,13 +513,14 @@ seddif = 1.e-3_fp
 
 
                 !   Compute source and sink fluxes for cohesive sediment (mud)
-
+!write (*,*) 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
                  call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
                                               & uorb(nm), tper  (nm), teta(nm), kssilt,       &
                                               & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
 
                  call compbsskin_arguments%run ()
                  call compbsskin_arguments%get(taub(nm))
+!write (*,*) 'taub', taub(nm)
 
                  fracf   = 0.0_fp
                  if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
@@ -649,6 +653,10 @@ seddif = 1.e-3_fp
 
                  taucr(l) = factcr * (rhosol(l)-rhowat) * g * sedd50(l) * tetacr(l)* Bioeffects%TauEffect(i,j)
 
+!write (*,*)'taucr-sand', taucr(l)
+
+                 z0rou = calcZ0rou (vonkar,sedd50(l),h (nm),g)
+
                  call bedbc1993_arguments%set (tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm), &
                            & zubed(nm)   ,sedd50(l)     ,sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l), &
                            & taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax   , &
@@ -667,7 +675,7 @@ seddif = 1.e-3_fp
 
 
                  call bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
-
+!write (*,*) ' taubcw- current wave bed shear', taubcw, 'current-only bed shear stress',tauc(nm), 'wave-only bed shear stress' ,tauwav(nm)
                  ce_nm =ce_nm * frac(l,nm)
 
                  call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
@@ -1553,4 +1561,16 @@ subroutine get_compbsskin (compbsskin_arguments, taumax)
      taumax = compbsskin_arguments%taumax
 
 end subroutine get_compbsskin
+
+function calcZ0rou (vonkar, sedd50, waterdepth,g)
+
+    !calculation of 2D- Chzy coefficient from ks
+    ! It is used lfor calculation of z0rou
+    implicit none
+    real (fp)     :: vonkar,sedd50, waterdepth, calcZ0rou, Chezy2d, ks, g
+    ks = 2.5_fp * sedd50
+    Chezy2d = 18._fp * log10 (12._fp * waterdepth/ks)
+    calcZ0rou   = waterdepth/(exp (1._fp)*(exp(vonkar*chezy2d/sqrt (g)) - 1.0))
+end function calcZ0rou
+
 end module erosed_driver

@@ -928,6 +928,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         waveT   => importList( 9)%data
         waveK   => importList(10)%data
         waveDir => importList(11)%data
+
       end if
 
       if (localrc == 0) then
@@ -967,6 +968,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
      !       write (*,*) 'ubot', ubot(i,j)
      !       write (*,*) 'vbot', vbot(i,j)
             !write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
+            if (wave) then
+                tper (inum*(j -1)+i) = waveT (i,j)
+                teta (inum*(j -1)+i) = WaveDir (i,j)
+                uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
+ !write (*,*) 'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j)
+            endif
+
           end do
         end do
 
@@ -1320,5 +1328,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     d90_from_d50 = 2.0_ESMF_KIND_R8 * d50
 
   end function d90_from_d50
+
+  function CalcOrbitalVelocity (WaveHeight, WaveNumber, WavePeriod, WaterDepth)
+   implicit none
+   real (ESMF_KIND_R8) :: CalcOrbitalVelocity
+   real (ESMF_KIND_R8) :: WaveHeight, WaveNumber, WavePeriod, WaterDepth
+     CalcOrbitalVelocity = 3.14159265359 * WaveHeight / (WavePeriod * sinh (WaveNumber * WaterDepth))
+  end function  CalcOrbitalVelocity
 
 end module erosed_component
