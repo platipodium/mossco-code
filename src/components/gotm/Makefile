@@ -19,7 +19,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST=README
 
 ifeq ($(MOSSCO_GOTM),true)
-TARGETS += libgotm
+TARGETS += libmossco_gotm
 ifeq ($(MOSSCO_FABM),true)
 TARGETS += libmossco_fabmgotm
 TARGETS += libmossco_gotmfabm
@@ -34,14 +34,14 @@ endif
 
 all: $(TARGETS)
 
-libgotm: prefix libgotm_external libmossco_util \
-	$(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_component.o) \
-	$(MOSSCO_LIBRARY_PATH)/libgotm.a(gotm_transport_component.o)
+libmossco_gotm: prefix libgotm_external libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_component.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a(gotm_transport_component.o)
 
 libmossco_fabmgotm: prefix libmossco_fabmgotm_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_component.o)
 
-libmossco_gotmfabm: prefix libmossco_fabmpelagic libgotm libmossco_fabmgotm \
+libmossco_gotmfabm: prefix libmossco_fabmpelagic libmossco_gotm libmossco_fabmgotm \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a(gotmfabm_component.o)
 
 gotm_component.o: gotm_component.F90
@@ -73,6 +73,6 @@ $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod:
 
 clean: extraclean
 extraclean:
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libgotm.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a

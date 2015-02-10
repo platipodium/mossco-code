@@ -21,7 +21,7 @@ ifneq ($(MOSSCO_GOTM_FABM),true)
 $(error This example only works with MOSSCO_GOTM_FABM=true)
 endif
 
-LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_gotmfabm -lmossco_fabmgotm -lgotm -lsolver -lmossco_util
+LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_gotmfabm -lmossco_fabmgotm -lmossco_gotm -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += $(ESMF_LDFLAGS)

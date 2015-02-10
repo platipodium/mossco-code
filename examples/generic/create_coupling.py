@@ -1498,8 +1498,8 @@ for item in gridCompSet.union(cplCompSet):
         fid.write('$(error This example only works with MOSSCO_' + conditionals[item] + ' = true)\n')
         fid.write('endif\n')
 
-libs = {'gotm'       : ['solver', 'gotm'] ,
-        'gotmfabm'   : ['mossco_gotmfabm','mossco_fabmpelagic', 'gotm', 'solver'],
+libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
+        'gotmfabm'   : ['mossco_gotmfabm','mossco_fabmpelagic', 'mossco_gotm', 'solver'],
         'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver',
                   'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
                   'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
@@ -1554,8 +1554,8 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'inout'      : ['libmossco_inout'],
         'constant'   : ['libconstant'],
         'constant_grid'  : ['libconstant_grid'],
-        'gotm'       : ['libgotm', 'libsolver'],
-        'fabm_gotm'       : ['libmossco_fabmgotm', 'libsolver', 'libgotm'],
+        'gotm'       : ['libmossco_gotm', 'libsolver'],
+        'fabm_gotm'       : ['libmossco_fabmgotm', 'libsolver', 'libmossco_gotm'],
         'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
         'pelagic_benthic_mediator' : ['libmossco_mediator'],
         'pelagic_soil_connector' : ['libmossco_mediator'],
@@ -1628,7 +1628,7 @@ fid.write('''
 # Other subsidiary targets that might not be needed, these should evetually
 # end up in some global Rules.make
 
-libmossco_gotmfabm libgotm libmossco_fabmgotm:
+libmossco_gotmfabm libmossco_gotm libmossco_fabmgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util libsolver:

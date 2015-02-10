@@ -22,9 +22,9 @@ NC_LIBS += $(shell nf-config --flibs)
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 ifeq ($(OCEAN),GOTM)
 CPPFLAGS += -D_GOTMOCEAN_
-LIBS :=  -lgotm -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
+LIBS :=  -lmossco_gotm -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 LDFLAGS += $(GOTM_LDFLAGS)
-dep := libgotm
+dep := libmossco_gotm
 else
 LIBS := -lremtc -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
@@ -36,7 +36,7 @@ ifeq ($(HAVE_LD_FORCE_LOAD),true)
 endif
 
 
-.PHONY: all exec ocean_fabm0d libremtc libsediment liboceansedimentcoupler libgotm
+.PHONY: all exec ocean_fabm0d libremtc libsediment liboceansedimentcoupler libmossco_gotm
 
 all: exec
 exec: libmossco_util libmossco_fabm0d $(dep) ocean_fabm0d
@@ -48,7 +48,7 @@ ocean_fabm0d: toplevel_component.o ../common/main.o
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@
 
-libgotm:
+libmossco_gotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_fabm0d:

@@ -33,22 +33,22 @@ LIBS := -lsediment -lconstant $(EROSED_LIB) -lmossco_sediment -lmossco_connector
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lgotm -lmossco_fabmgotm -lpelagicbenthiccoupler -lsolver -lmossco_util
+LDFLAGS += -lmossco_gotm -lmossco_fabmgotm -lpelagicbenthiccoupler -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf
 LDFLAGS += $(NC_LIBS)
 
-.PHONY: all exec fabm_benthic_pelagic libsediment libmossco_fabmgotm libmossco_sediment libconstant libgotm $(EROSED_DEP)
+.PHONY: all exec fabm_benthic_pelagic libsediment libmossco_fabmgotm libmossco_sediment libconstant libmossco_gotm $(EROSED_DEP)
 
 all: exec
-exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconstant libgotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_connector libmossco_netcdf fabm_benthic_pelagic
+exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconstant libmossco_gotm libpelagicbenthiccoupler $(EROSED_DEP) libmossco_connector libmossco_netcdf fabm_benthic_pelagic
 
 fabm_benthic_pelagic: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
 	@echo "Created example binary $(PWD)/$@"
 
-libmossco_fabmgotm libgotm:
+libmossco_fabmgotm libmossco_gotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util:

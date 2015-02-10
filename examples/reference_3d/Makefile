@@ -56,7 +56,7 @@ reference_3d: toplevel_component.o ../common/main.o
 # Other subsidiary targets that might not be needed, these should evetually
 # end up in some global Rules.make
 
-libmossco_gotmfabm libgotm libmossco_fabmgotm:
+libmossco_gotmfabm libmossco_gotm libmossco_fabmgotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util libsolver:

@@ -26,21 +26,21 @@ LIBS := -lconstant -lmossco_erosed -lmossco_benthos -lmossco_netcdf -lesmf  $(LI
 NC_LIBS += $(shell nf-config --flibs)
 
 LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
-LDFLAGS += -lgotm -lmossco_fabmgotm -lsolver -lmossco_util
+LDFLAGS += -lmossco_gotm -lmossco_fabmgotm -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -lmossco_util -lesmf $(NC_LIBS)
 
-.PHONY: all exec benthic_geoecology libmossco_fabmgotm libconstant libgotm libmossco_erosed libmossco_benthos
+.PHONY: all exec benthic_geoecology libmossco_fabmgotm libconstant libmossco_gotm libmossco_erosed libmossco_benthos
 
 all: exec
-exec: libmossco_util libmossco_fabmgotm libconstant libgotm libmossco_erosed libmossco_benthos libmossco_netcdf benthic_geoecology
+exec: libmossco_util libmossco_fabmgotm libconstant libmossco_gotm libmossco_erosed libmossco_benthos libmossco_netcdf benthic_geoecology
 
 benthic_geoecology: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
 	@echo "Created example binary $(PWD)/$@"
 
-libmossco_fabmgotm libgotm:
+libmossco_fabmgotm libmossco_gotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@
 
 libmossco_util:

@@ -23,7 +23,7 @@ ifeq ($(MOSSCO_GOTM_FABM),true)
   LDFLAGS += -lmossco_gotmfabm -lsolver
 endif
 
-LDFLAGS += -lgotm -lmossco_util
+LDFLAGS += -lmossco_gotm -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 ifeq ($(MOSSCO_GOTM_FABM),true)
   LDFLAGS += $(FABM_LDFLAGS)
@@ -31,7 +31,7 @@ endif
   LDFLAGS += $(ESMF_LDFLAGS)
 
 
-.PHONY: all exec gotm libgotm libmossco_util
+.PHONY: all exec gotm libmossco_gotm libmossco_util
 
 all: exec
 exec: libmossco_util libsolver libmossco_gotmfabm gotm
