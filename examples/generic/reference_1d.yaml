@@ -1,15 +1,3 @@
-# configuration dependencies:
-dependencies:
-  - fabm_gotm: gotm
-  - erosed:
-    - gotm
-    - fabm_gotm
-    - simplewave
-  - simplewave:
-    - clm_netcdf
-  - benthic_pelagic_coupler: fabm_gotm
-  - benthos: erosed
-
 # @todo:
 # Knut: simplewave -> erosed
 # Kai+Hassan: fabm_sediment -> bethos
@@ -43,9 +31,9 @@ coupling:
      - fabm_gotm
   - components:
      - fabm_gotm
-     - pelagic_benthic_coupler
+     - pelagic_benthic_mediator
   - components:
-     - pelagic_benthic_coupler
+     - pelagic_benthic_mediator
      - fabm_sediment
   - components:
      - constant
