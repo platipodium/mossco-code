@@ -16,12 +16,10 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-LIBS :=  -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lesmf -lmossco_util $(LIBS)
-NC_LIBS += $(shell nf-config --flibs)
-
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lmossco_util
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
+LDFLAGS += $(ESMF_LDFLAGS)
 
 .PHONY: all exec fabmsed_fabm0d
 
