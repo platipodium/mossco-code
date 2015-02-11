@@ -307,8 +307,8 @@
   ! allocate list of dependencies names (here: required by the driver)
   nullify(pf%horizontal_dependencies)
   nullify(pf%bulk_dependencies)
-  allocate(pf%horizontal_dependencies(1))
-  pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
+  !allocate(pf%horizontal_dependencies(1))
+  !pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
   
   !> add required dependencies
   link => pf%model%links_postcoupling%first
