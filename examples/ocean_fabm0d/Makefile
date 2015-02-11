@@ -18,19 +18,19 @@ OCEAN?=GOTM
 
 include $(MOSSCO_DIR)/src/Rules.make
 
-NC_LIBS += $(shell nf-config --flibs)
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)
 ifeq ($(OCEAN),GOTM)
 CPPFLAGS += -D_GOTMOCEAN_
-LIBS :=  -lmossco_gotm -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
+LDFLAGS += -lmossco_gotm -lmossco_fabm0d -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 dep := libmossco_gotm
 else
-LIBS := -lremtc -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
+LDFLAGS += -lremtc -lmossco_fabm0d -lsolver -lmossco_util
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 dep := libremtc
 endif
 LDFLAGS += $(FABM_LDFLAGS)
+LDFLAGS += $(ESMF_LDFLAGS)
 ifeq ($(HAVE_LD_FORCE_LOAD),true)
 #LDFLAGS += -Wl,-force_load
 endif
