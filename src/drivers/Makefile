@@ -55,18 +55,18 @@ libmossco_river: prefix libmossco_util \
 
 # FABM/sediment section
 
-libmossco_sediment: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a \
+libmossco_sediment: prefix libmossco_util libsolver libfabm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_sediment.a(fabm_sediment_driver.o)
 
-libmossco_fabm0d: prefix libsolver $(FABM_PREFIX)/lib/libfabm.a libgotm_external \
+libmossco_fabm0d: prefix libsolver libfabm_external libgotm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_driver.o)
 
-libmossco_fabmgotm: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a libgotm_external \
+libmossco_fabmgotm: prefix libmossco_util libsolver libfabm_external libgotm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmgotm.a(fabm_gotm_driver.o)
 
 libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
-libmossco_fabmpelagic: prefix libmossco_util libsolver $(FABM_PREFIX)/lib/libfabm.a \
+libmossco_fabmpelagic: prefix libmossco_util libsolver libfabm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
 
 libmossco_getm: prefix libgetm_external \

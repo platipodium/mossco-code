@@ -513,11 +513,6 @@ endif
 
 # External libraries
 
-ifeq ($(MOSSCO_FABM),true)
-$(FABM_PREFIX)/lib/libfabm.a:
-	$(MAKE) -C $(MOSSCO_DIR) libfabm_external
-endif
-
 libfabm_external: fabm_build fabm_install
 
 fabm_build:
