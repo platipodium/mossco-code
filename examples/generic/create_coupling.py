@@ -1574,7 +1574,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
-fid.write('LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)\n')
+fid.write('LDFLAGS += -L$(MOSSCO_LIBRARY_PATH)\n')
 for item in gridCompSet.union(cplCompSet):
     if instanceDict.has_key(item):
         item=instanceDict[item]
@@ -1601,7 +1601,7 @@ for item in gridCompSet.union(cplCompSet):
         fid.write('\n')
 
 #fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
-fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS) \n\n')
+fid.write('LDFLAGS += -lmossco_util $(ESMF_LDFLAGS)  \n\n')
 
 #for item in gridCompSet.union(cplCompSet):
 #    if libs.has_key(item):
