@@ -981,7 +981,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       else
         umod = 0.2
       end if
-
+write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
        !> get spm concentrations, particle sizes and density
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
