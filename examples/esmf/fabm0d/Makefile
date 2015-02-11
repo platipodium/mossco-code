@@ -21,13 +21,10 @@ ifneq ($(MOSSCO_GOTM),true)
 $(error You need GOTM to compile this example)
 endif
 
-
-LIBS := -lesmf $(LIBS)
-NC_LIBS += $(shell nf-config --flibs)
-
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) -lmossco_fabm0d -lsolver -lmossco_util $(LIBS)
+LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_fabm0d -lsolver -lmossco_util
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += $(FABM_LDFLAGS)
+LDFLAGS += $(ESMF_LDFLAGS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)
 #LDFLAGS += -Wl,-force_load
 #endif
