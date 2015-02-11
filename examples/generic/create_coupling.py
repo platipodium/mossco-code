@@ -1503,9 +1503,7 @@ for item in gridCompSet.union(cplCompSet):
 
 libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'gotmfabm'   : ['mossco_gotmfabm','mossco_fabmpelagic', 'mossco_gotm', 'solver'],
-        'fabm_gotm'       : ['gotm', 'mossco_fabmgotm', 'solver',
-                  'gotm', 'gotm_prod', 'airsea_prod', 'meanflow_prod', 'seagrass_prod',
-                  'output_prod', 'observations_prod', 'input_prod', 'turbulence_prod', 'util_prod'],
+        'fabm_gotm'                : ['mossco_fabmgotm','solver'],
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver'],
         'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver'],
         'constant'   : ['constant'],
@@ -1558,7 +1556,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'constant'   : ['libconstant'],
         'constant_grid'  : ['libconstant_grid'],
         'gotm'       : ['libmossco_gotm', 'libsolver'],
-        'fabm_gotm'       : ['libmossco_fabmgotm', 'libsolver', 'libmossco_gotm'],
+        'fabm_gotm'                : ['libmossco_fabmgotm'],
         'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
         'pelagic_benthic_mediator' : ['libmossco_mediator'],
         'pelagic_soil_connector' : ['libmossco_mediator'],
@@ -1595,7 +1593,7 @@ for item in gridCompSet.union(cplCompSet):
         if item=='fabm':
             fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm_gotm':
-            fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
+            fid.write(' $(GOTM_LDFLAGS) $(FABM_LDFLAGS)')
         if item=='gotmfabm':
             fid.write(' $(GOTM_LDFLAGS) $(FABM_LDFLAGS)')
         if item=='fabm0d':
