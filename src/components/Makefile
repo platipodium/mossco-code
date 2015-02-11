@@ -62,7 +62,8 @@ libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
 
 libmossco_river: libmossco_river_driver libmossco_util \
    $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_component.o)
-libmossco_river_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_driver.o)
+libmossco_river_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_river
 
 libmossco_clm: libmossco_clm_driver  \
    $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)

@@ -50,7 +50,7 @@ all: $(TARGETS)
 libmossco_simplewave: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_driver.o)
 
-libmossco_river: prefix libmossco_util \
+libmossco_river: prefix \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_driver.o)
 
 # FABM/sediment section
