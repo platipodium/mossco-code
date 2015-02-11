@@ -6,9 +6,6 @@ dependencies:
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
-  - getm: fabm_pelagic
-
-# todo find a mechansim to feed constant/getm into pelagic_benthic_coupler
 
 coupling:
   - components:
@@ -16,9 +13,9 @@ coupling:
      - fabm_pelagic
   - components:
      - fabm_pelagic
-     - pelagic_benthic_coupler
+     - pelagic_benthic_mediator
   - components:
-     - pelagic_benthic_coupler
+     - pelagic_benthic_mediator
      - fabm_sediment
   - components:
      - constant
