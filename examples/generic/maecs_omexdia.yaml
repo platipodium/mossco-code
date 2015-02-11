@@ -1,9 +1,5 @@
 # This configuration describes a coupling between pelagic and sediment ecology (both
 # implemented through FABM models
-dependencies:
- - fabm_gotm: gotm
- - fabm_sediment: constant
- - benthic_pelagic_coupler: fabm_gotm
 
 coupling:
  - components:
