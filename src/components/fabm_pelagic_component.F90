@@ -643,7 +643,9 @@ module fabm_pelagic_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field, farrayPtr=ptr_f2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (itemType == ESMF_STATEITEM_NOTFOUND) then
         ptr_f2 = 0.0_rk
+        end if
         ! check for valid upper bounds of possibly existing array
         if ((ubound(ptr_f2,1).lt.pel%inum).or. &
             (ubound(ptr_f2,2).lt.pel%jnum).or. &
