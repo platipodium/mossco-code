@@ -69,7 +69,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Ubot(:,:)=>NULL(),Vbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: surface_rad(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: nybot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
@@ -367,8 +367,8 @@ module getm_component
     if (associated(T3D)) then
       call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState,"degC",name)
     end if
-    if (associated(surface_rad)) then
-      call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",surface_rad,exportState,"W m-2",name)
+    if (associated(swr)) then
+      call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",swr,exportState,"W m-2",name)
     end if
     if (associated(nybot)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",nybot,exportState,"m2 s-1",name)
@@ -767,7 +767,7 @@ module getm_component
    use variables_3d   ,only: T
 #endif
 #endif
-   use meteo          ,only: metforcing,met_method,calc_met,u10,v10,swr
+   use meteo          ,only: metforcing,met_method,calc_met,u10,v10,swr_=>swr
    use waves          ,only: waveforcing_method,NO_WAVES
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
 
@@ -841,12 +841,12 @@ module getm_component
 #endif
 #endif
       end if
-      if (metforcing .and. (met_method.eq.2 .or. met_method.eq.3)) then ! still required...
-      if (calc_met) then
+      if (metforcing) then
+         if ((met_method.eq.2 .or. met_method.eq.3) .and. calc_met) then ! still required...
          allocate(windU(E2DFIELD))
          allocate(windV(E2DFIELD))
-         allocate(surface_rad(E2DFIELD))
-      end if
+         end if
+         allocate(swr(E2DFIELD))
       end if
       if (waveforcing_method .ne. NO_WAVES) then
          allocate(waveH  (E2DFIELD))
@@ -909,14 +909,12 @@ module getm_component
 #endif
 #endif
       end if
-      if (metforcing .and. (met_method.eq.2 .or. met_method.eq.3)) then ! still required...
-      if (calc_met) then
+      if (metforcing) then
+         if ((met_method.eq.2 .or. met_method.eq.3) .and. calc_met) then ! still required...
          windU => u10
          windV => v10
-      end if
-      end if
-      if (metforcing .and. (met_method.ge.1)) then
-         surface_rad => swr
+         end if
+         swr => swr_
       end if
       if (waveforcing_method .ne. NO_WAVES) then
          waveH   => waveH_
@@ -1619,7 +1617,7 @@ module getm_component
 #endif
 #endif
    use m2d            ,only: dtm
-   use meteo          ,only: metforcing,met_method,calc_met,u10,v10,swr
+   use meteo          ,only: metforcing,met_method,calc_met,u10,v10,swr_=>swr
    use waves          ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
@@ -1665,10 +1663,10 @@ module getm_component
       end if
 #endif
       if (metforcing) then ! still required...
+         swr = swr_
       if (calc_met .and. met_method.eq.2) then
          windU = u10
          windV = v10
-         surface_rad = swr
       end if
       end if
       if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
@@ -1685,11 +1683,13 @@ module getm_component
 #endif
 #endif
 !     Note (KK): update pointer because of pointer swap within GETM
+      if (metforcing .and. met_method.eq.2) then
+         swr => swr_
+      end if
       if (waveforcing_method .eq. WAVES_FROMFILE) then
          waveH => waveH_
       end if
    end if
-
 
    wrk = _ZERO_
 
