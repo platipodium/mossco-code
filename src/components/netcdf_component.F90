@@ -244,12 +244,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR) :: fieldName
     character(len=3)        :: numberstring
     type(ESMF_Clock)        :: clock
-    logical                 :: clockIsPresent
+    logical                 :: clockIsPresent, isMatch
     character(len=ESMF_MAXSTR) :: form
 
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
+    character(len=ESMF_MAXSTR) :: filterPatternExclude
 
     rc=ESMF_SUCCESS
 
@@ -267,6 +268,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
       write(fileName,form) filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
     endif
+
+    call ESMF_AttributeGet(importState, name='filter_pattern_exclude', value=filterPatternExclude, &
+      defaultValue='do_not_include_me_in_output', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -315,6 +320,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       do i=1,itemCount
 
+        call MOSSCO_StringMatch(trim(itemNameList(i)), filterPatternExclude, isMatch, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (isMatch) cycle
+
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -336,6 +346,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           do ii=1,size(fieldList)
             call ESMF_FieldGet(fieldList(ii),name=fieldName,rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            call MOSSCO_StringMatch(trim(itemNameList(i)), filterPatternExclude, isMatch, localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            if (isMatch) cycle
+
             write(numberstring,'(I0.3)') ii
 
             call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)

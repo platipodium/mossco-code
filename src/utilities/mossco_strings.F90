@@ -1,4 +1,4 @@
-!> @brief Implementation of string utilities 
+!> @brief Implementation of string utilities
 !>
 !> This computer program is part of MOSSCO.
 !> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
@@ -29,7 +29,7 @@ implicit none
     module procedure order_i4
     module procedure order_i8
   end interface
-	 
+
   interface intformat
     module procedure intformat_i4
     module procedure intformat_i8
@@ -48,7 +48,7 @@ contains
       !> remove model name
       pos = INDEX(longname, " ")
 !      allocate(character(len=len_trim(longname)-pos)::only_var_name)
-      only_var_name = repeat (' ',len_trim(longname)-pos) 
+      only_var_name = repeat (' ',len_trim(longname)-pos)
       only_var_name = trim(longname(pos+1:))
 
       call replace_character(only_var_name,' ','_')
@@ -76,33 +76,33 @@ contains
          end if
       end do
    end subroutine replace_character
-   
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "split_string"
    subroutine split_string(string,remainder, char)
      character(len=*), intent(out)   :: remainder
      character(len=*), intent(inout) :: string
      character(len=1), intent(in)    :: char
-     
+
      integer :: pos
-     
+
      !!@implementation needs to be done
-   
+
      remainder=string
      pos=index(string,char)
-     if (pos>0) then 
-       do while (pos==1) 
+     if (pos>0) then
+       do while (pos==1)
          string=string(pos:)
          pos=index(string,char)
        enddo
        if (pos==0) return
-        
+
        remainder=string(pos+1:)
        string=string(1:pos-1)
-     endif   
+     endif
      return
    end subroutine split_string
-   
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "order_i8"
    integer function order_i8(i)
@@ -117,50 +117,50 @@ contains
      order_i4=int(log10(i*1.0))
    end function order_i4
 
-   
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "intformat_i8"
    function intformat_i8(i)
      character(len=4) :: intformat_i8
      integer(kind=8), intent(in) :: i
      integer             :: o
-     
+
      o=order(i)+1
      if (o<1) o=1
-     if (o>9) o=9   
+     if (o>9) o=9
      write(intformat_i8,'(A,I1,A,I1)') 'I', o , '.', o
 
   end function intformat_i8
-     
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "intformat_i4"
    function intformat_i4(i)
      character(len=4) :: intformat_i4
      integer(kind=4), intent(in) :: i
      integer             :: o
-     
+
      o=order(i)+1
      if (o<1) o=1
-     if (o>9) o=9   
+     if (o>9) o=9
      write(intformat_i4,'(A,I1,A,I1)') 'I', o , '.', o
 
   end function intformat_i4
-   
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAdd"
   subroutine MOSSCO_MessageAdd(message, string)
-  
+
     character(ESMF_MAXSTR), intent(inout)  :: message
     character(len=*), intent(in)     :: string
-    
+
     integer(ESMF_KIND_I4)                  :: len1, len2, len0
-    
+
     len0=len(message)
     len1=len_trim(message)
     len2=len_trim(string)
-    
-    
-    
+
+
+
     if (len1 + len2 <= len0) then
       write(message, '(A)') trim(message)//trim(string)
     elseif (len1 > len0 - 2 ) then
@@ -168,9 +168,42 @@ contains
     else
       write(message, '(A)') trim(message)//string(1:len0-len1-2)//'..'
     endif
-    
+
     return
-  
+
   end subroutine MOSSCO_MessageAdd
+
+  subroutine MOSSCO_StringMatch(item, pattern, isMatch, rc)
+
+    character(len=*), intent(in)        :: item
+    character(len=*), intent(in)        :: pattern
+    logical, intent(out)                :: isMatch
+    integer(ESMF_KIND_I4), intent(out)  :: rc
+
+    integer(ESMF_KIND_I4)               :: localrc, i, j
+
+    isMatch = .false.
+
+    i=index(pattern,'*')
+    j=index(pattern,'*',back=.true.)
+
+    if (i>0 .and. j>i+1) then  ! found two asterisks with content in between
+      if (index(item, pattern(i+1:j-1)) > 0) isMatch=.true.
+      write(0,*)  'Match 1', trim(item), trim(pattern), index(item, pattern(i+1:j-1)), ' ?> 0', isMatch
+    elseif (i==1) then         ! found one asterisk at beginning, match end
+      j=index(item, pattern(i+1:len_trim(pattern)))
+      if (j+len_trim(pattern)-2 == len_trim(item)) isMatch=.true.
+      write(0,*)  'Match 2', trim(item), trim(pattern), j+len_trim(pattern)-2, '?=', len_trim(item) , isMatch
+    elseif (i>1) then          ! found one asterisk at end, match beginning
+      if (item(1:i-1)==pattern(1:i-1)) isMatch=.true.
+      write(0,*)  'Match 3', trim(item), trim(pattern), item(1:i-1), '?=', pattern(1:i-1) , isMatch
+    else                       ! found no asterisk
+      if (trim(item)==trim(pattern)) isMatch=.true.
+      write(0,*)  'Match 3', trim(item), trim(pattern), trim(item), '?=', trim(pattern) , isMatch
+    endif
+
+    return
+
+  end subroutine MOSSCO_StringMatch
 
 end module mossco_strings
