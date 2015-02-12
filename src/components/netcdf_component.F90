@@ -115,6 +115,7 @@ module netcdf_component
     integer, intent(out) :: rc
 
     character(len=ESMF_MAXSTR) :: name, configFileName, fileName, message
+    character(len=ESMF_MAXSTR) :: filterPatternExclude
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc
     logical                    :: isPresent, fileIsPresent, labelIsPresent, configIsPresent
@@ -170,6 +171,22 @@ module netcdf_component
       call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ConfigFindLabel(config, label='exclude:', isPresent=labelIsPresent, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ConfigGetAttribute(config, filterPatternExclude, rc = rc, default=trim(name))
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' exclude: '//trim(filterPatternExclude)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_AttributeSet(importState, 'filter_pattern_exclude', trim(filterPatternExclude), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
