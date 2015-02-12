@@ -33,8 +33,6 @@ module netcdf_component
 
   contains
 
-  !> Provide an ESMF compliant SetServices routine, which defines
-  !! entry points for Init/Run/Finalize
 #undef  ESMF_METHOD
 #define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
@@ -42,21 +40,67 @@ module netcdf_component
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, InitializeP1, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-
-
-    !call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
-    !  userRoutine=ReadRestart, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    integer              :: localrc
 
     rc=ESMF_SUCCESS
 
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
+      userRoutine=ReadRestart, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   end subroutine SetServices
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
+  subroutine InitializeP0(gridComp, importState, exportState, parentClock, rc)
+
+    implicit none
+
+    type(ESMF_GridComp)   :: gridComp
+    type(ESMF_State)      :: importState
+    type(ESMF_State)      :: exportState
+    type(ESMF_Clock)      :: parentClock
+    integer, intent(out)  :: rc
+
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime
+    integer                     :: localrc
+
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    InitializePhaseMap(1) = "IPDv00p1=1"
+
+    call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine InitializeP0
+
 
   !> Initialize the component
   !!
@@ -84,13 +128,17 @@ module netcdf_component
 
     rc = ESMF_SUCCESS
 
-    ! call MOSCO_Entry
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_AttributeGet(importState, fileName, isPresent=isPresent, rc=localrc)
-    call ESMF_AttributeGet(importState, fileName, value=fileName, rc=localrc)
+    call ESMF_AttributeGet(importState, 'fileName', isPresent=isPresent, rc=localrc)
+    call ESMF_AttributeGet(importState, 'fileName', value=fileName, rc=localrc)
 
     if (petCount>0) then
       write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
@@ -126,18 +174,21 @@ module netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
+      call MOSSCO_StateGetFieldGrid(importState, trim(foreignGridFieldName), grid, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     endif
 
-    !! open file
+    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
-    !! close file
+    call nc%close(rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit()
+    call MOSSCO_CompExit(gridComp)
     return
 
   end subroutine InitializeP1
