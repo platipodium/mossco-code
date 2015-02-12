@@ -191,9 +191,9 @@ module empty_component
 
     !! Metod 2 when your timestep is equal to outer time step with manipulation of stopTime
 
-	  call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-	  call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! 3. You should not have to do anything with the export state, because the mapping

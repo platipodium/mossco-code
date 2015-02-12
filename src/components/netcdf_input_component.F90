@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -10,6 +10,12 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "netcdf_input.F90"
+
 module netcdf_component
 
   use esmf
@@ -29,12 +35,14 @@ module netcdf_component
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! entry points for Init/Run/Finalize
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=rc)
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, InitializeP1, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -52,7 +60,9 @@ module netcdf_component
 
   !> Initialize the component
   !!
-  subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
+  subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -60,41 +70,77 @@ module netcdf_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timestring, message, name
+    character(len=ESMF_MAXSTR) :: timestring, message, name, fileName
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName, form
     type(ESMF_Time)            :: currTime, stopTime, startTime
     type(ESMF_TimeInterval)    :: timeInterval, timeStep
-    integer(ESMF_KIND_I4)      :: petCount, localPet
+    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc
     integer(ESMF_KIND_I8)      :: advanceCount
     type(ESMF_Clock)           :: clock
 
-    clock = ESMF_ClockCreate(parentClock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    logical                    :: isPresent
+    type(ESMF_Grid)            :: grid
+    type(ESMF_Field)           :: field
 
-    call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc = ESMF_SUCCESS
 
+    ! call MOSCO_Entry
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_ClockGet(clock,startTime=startTime, currTime=currTime, &
-      stopTime=stopTime, advanceCount=advanceCount, timeStep=timeStep, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call ESMF_AttributeGet(importState, fileName, isPresent=isPresent, rc=localrc)
+    call ESMF_AttributeGet(importState, fileName, value=fileName, rc=localrc)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    if (petCount>0) then
+      write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
+      !write(filename,form) trim(strrep(filename,'.nc')),localPet,'.nc'
+    endif
 
-    ! This routine is mostly empty, as everything is done during Run()
+    inquire(file=trim(fileName), exist=isPresent)
 
-    !! Finally, log the successful completion of this function
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' initialized'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    if (.not.isPresent) then
+      write(message,'(A)') trim(name)//' cannot read file '//trim(fileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+    endif
 
-  end subroutine Initialize
+    call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp,grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+      isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+        value=foreignGridFieldName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    endif
+
+    !! open file
+
+
+    !! close file
+
+    call MOSSCO_CompExit()
+    return
+
+  end subroutine InitializeP1
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
@@ -114,6 +160,8 @@ module netcdf_component
   end subroutine ReadRestart
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)  :: gridComp
@@ -227,9 +275,9 @@ module netcdf_component
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-        	call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
+          call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        	if (localDeCount>0) call nc%put_variable(field)
+          if (localDeCount>0) call nc%put_variable(field)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc)
@@ -248,7 +296,7 @@ module netcdf_component
 
             call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        	  if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
+            if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
           end do
           deallocate(fieldList)
         else
@@ -278,6 +326,8 @@ module netcdf_component
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)   :: gridComp

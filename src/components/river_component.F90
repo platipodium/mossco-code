@@ -215,9 +215,9 @@ module river_component
       field = ESMF_FieldCreate(locstream, name=trim(itemNameList(i)), typeKind=ESMF_TYPEKIND_R8, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-			!call AttributeSet(field, 'units', trim(nc%variables(i)%units), rc=localrc)
-	    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-		  !call AttributeSet(field, 'standard_name', trim(itemNameList(i)), rc=localrc)
+      !call AttributeSet(field, 'units', trim(nc%variables(i)%units), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call AttributeSet(field, 'standard_name', trim(itemNameList(i)), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateAdd(exportState, (/field/), rc=localrc)

@@ -217,7 +217,7 @@ gridmask2 => gridmask3(:,:,1)
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(exclusiveCount)) deallocate(exclusiveCount)
 
-	  ! if (present(rc)) rc=rc_
+    ! if (present(rc)) rc=rc_
 
   end subroutine mossco_netcdf_variable_put
 
