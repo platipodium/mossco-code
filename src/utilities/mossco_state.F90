@@ -1227,4 +1227,72 @@ contains
 
   end subroutine MOSSCO_RouteHandleDestroyOwn
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateGetFieldGrid"
+  subroutine MOSSCO_StateGetFieldGrid(state, itemName, grid, rc)
+
+    type(ESMF_State), intent(in)        :: state
+    character(ESMF_MAXSTR),  intent(in) :: itemName
+    type(ESMF_Grid), intent(out)        :: grid
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)               :: rc_, localrc
+    character(ESMF_MAXSTR)              :: message, name
+    logical                             :: isPresent
+    type(ESMF_StateItem_Flag)           :: itemType
+    type(ESMF_FieldStatus_Flag)         :: fieldStatus
+    type(ESMF_GeomType_Flag)            :: geomType
+    type(ESMF_Field)                    :: field
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_StateGet(state, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(state, trim(itemName), itemType, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message,'(A)') trim(itemName)//' is not a field in state '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call MOSSCO_StateLog(state)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(state, trim(itemName), field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') 'Cannot use empty field '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, geomType=geomType, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (geomType /= ESMF_GEOMTYPE_GRID) then
+      write(message,'(A)') 'Cannot use non-gridded field '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, grid=grid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    return
+
+  end subroutine MOSSCO_StateGetFieldGrid
+
 end module mossco_state
