@@ -307,8 +307,8 @@
   ! allocate list of dependencies names (here: required by the driver)
   nullify(pf%horizontal_dependencies)
   nullify(pf%bulk_dependencies)
-  !allocate(pf%horizontal_dependencies(1))
-  !pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
+  allocate(pf%horizontal_dependencies(1))
+  pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
   
   !> add required dependencies
   link => pf%model%links_postcoupling%first
@@ -325,6 +325,7 @@
           if (.not.associated(pf%model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal) &
               .and.associated(link%target%standard_variable)) then
+            if (trim(link%target%standard_variable%name) == "surface_downwelling_photosynthetic_radiative_flux") cycle
             call add_horizontal_dependency(pf%horizontal_dependencies,link%target%standard_variable)
           end if
         case (domain_scalar)
