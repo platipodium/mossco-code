@@ -500,16 +500,13 @@ module getm_component
             allocate(fieldList_ws  (transportFieldCount))
             allocate(fieldList_conc(transportFieldCount))
 
-            do i=1,itemCount
-                  call ESMF_FieldBundleGet(wsFieldBundle,i,fieldList_ws(i),  itemorder=ESMF_ITEMORDER_ADDORDER, rc=localrc)
-                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                  call ESMF_FieldBundleGet(concFieldBundle,i,fieldList_conc(i),  itemorder=ESMF_ITEMORDER_ADDORDER, rc=localrc)
-                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            end do
+            call ESMF_FieldBundleGet(wsFieldBundle, itemorderflag=ESMF_ITEMORDER_ADDORDER, fieldList=fieldList_ws, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            call ESMF_FieldBundleGet(concFieldBundle, fieldList=fieldList_conc,  itemorderflag=ESMF_ITEMORDER_ADDORDER, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             allocate(transport_ws  (transportFieldCount))
             allocate(transport_conc(transportFieldCount))
-
 
             do n=1,transportFieldCount
 
