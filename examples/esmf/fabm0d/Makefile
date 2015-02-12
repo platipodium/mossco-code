@@ -22,7 +22,7 @@ $(error You need GOTM to compile this example)
 endif
 
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_fabm0d -lsolver -lmossco_util
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += $(ESMF_LDFLAGS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)

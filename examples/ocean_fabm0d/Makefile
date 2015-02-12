@@ -26,7 +26,7 @@ LDFLAGS += $(GOTM_LDFLAGS)
 dep := libmossco_gotm
 else
 LDFLAGS += -lremtc -lmossco_fabm0d -lsolver -lmossco_util
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
 dep := libremtc
 endif
 LDFLAGS += $(FABM_LDFLAGS)
