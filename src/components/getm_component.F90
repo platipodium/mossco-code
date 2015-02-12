@@ -501,9 +501,9 @@ module getm_component
             allocate(fieldList_conc(transportFieldCount))
 
             do i=1,itemCount
-                  call ESMF_FieldBundleGet(wsFieldBundle,i,fieldList_ws(i), rc=localrc)
+                  call ESMF_FieldBundleGet(wsFieldBundle,i,fieldList_ws(i),  itemorder=ESMF_ITEMORDER_ADDORDER, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                  call ESMF_FieldBundleGet(concFieldBundle,i,fieldList_conc(i),rc=localrc)
+                  call ESMF_FieldBundleGet(concFieldBundle,i,fieldList_conc(i),  itemorder=ESMF_ITEMORDER_ADDORDER, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             end do
 
