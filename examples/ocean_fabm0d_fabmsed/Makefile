@@ -17,7 +17,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lsediment -lremtc -loceansedimentcoupler -lmossco_fabm0d -lmossco_util -lmossco_sediment -lsolver
-LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea_prod -linput_prod -lutil_prod
+LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += $(ESMF_LDFLAGS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)
