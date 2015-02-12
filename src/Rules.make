@@ -250,18 +250,14 @@ ifeq ($(MOSSCO_FABM),true)
 endif
 
 ifeq ($(MOSSCO_GOTM),true)
-  export GOTM_LIBRARY_PATH=$(GOTM_PREFIX)/lib
-  GOTM_LIBS:=-lgotm -lairsea -lmeanflow -loutput
-  GOTM_LIBS+=-lobservations -linput -lturbulence -lutil
-  #export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
-  #GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
-  #GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
+  export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
+  GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
+  GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
   ifeq ($(MOSSCO_FABM),true)
     DEFINES += -D_GOTM_MOSSCO_FABM_
     export MOSSCO_GOTM_FABM=true
   endif
-  #export GOTM_CPPFLAGS = -I$(GOTMDIR)/include -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
-  export GOTM_CPPFLAGS = -I$(GOTM_PREFIX)/include
+  export GOTM_CPPFLAGS = -I$(GOTMDIR)/include -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
   export GOTM_LDFLAGS = -L$(GOTM_LIBRARY_PATH) $(GOTM_LIBS)
 endif
 
@@ -277,7 +273,7 @@ ifeq ($(MOSSCO_GETM),true)
     GETM_LINKDIRS += -L$(FABM_LIBRARY_PATH)
     GETM_LIBS += -lgotm_fabm_prod $(FABM_LIBS)
   endif
-  GETM_LIBS += -lturbulence -lutil
+  GETM_LIBS += -lturbulence_prod -lutil_prod
 
 # default compile for SPHERICAL
   GETM_GEOMETRY ?= SPHERICAL
@@ -542,12 +538,12 @@ ifndef MOSSCO_FABM_PREFIX
 endif
 endif
 
-libgotm_external: gotm_build gotm_install
-#ifdef MOSSCO_GOTMDIR
-#	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
-#	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
-#	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
-#endif
+libgotm_external:
+ifdef MOSSCO_GOTMDIR
+	@echo Recreating the GOTM library without FABM in $(GOTM_LIBRARY_PATH)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src ../VERSION makedirs subdirs features)
+	(unset FABM ; $(MAKE) -C $(GOTMDIR)/src/gotm $(GOTM_LIBRARY_PATH)/libgotm_prod.a\(gotm.o\))
+endif
 
 gotm_build:
 ifeq ($(MOSSCO_GOTM),true)
@@ -562,10 +558,6 @@ ifeq ($(MOSSCO_GOTM),true)
 ifdef GOTM_BINARY_DIR
 	@echo Recreating the GOTM library in $(GOTM_PREFIX)
 	$(MAKE) -sC $(GOTM_BINARY_DIR) install
-	cp $(GOTM_BINARY_DIR)/*.mod $(GOTM_PREFIX)/include/
-	( for lib in gotm airsea meanflow output observations input ; do \
-       $(AR) rcs $(GOTM_PREFIX)/lib/lib$$lib.a $(GOTM_BINARY_DIR)/CMakeFiles/$$lib.dir/$$lib/*.o ; \
-     done )
 endif
 endif
 
@@ -592,8 +584,8 @@ install:
 	install  $(MOSSCO_DIR)/src/scripts/mossco $(MOSSCO_INSTALL_PREFIX)/mossco
 
 .PHONY: mossco_clean
-mossco_clean: distclean gotm_clean fabm_clean
-	$(MAKE) -C $(MOSSCO_DIR)/external getm_distclean
+mossco_clean: distclean fabm_clean
+	$(MAKE) -C $(MOSSCO_DIR)/external gotm_distclean getm_distclean
 
 # Common rules
 #ifndef EXTRA_CPP
