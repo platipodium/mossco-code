@@ -39,14 +39,14 @@ dimDict={'getmGrid2D_getm_1':'lon','getmGrid2D_getm_2':'lat','getmGrid3D_getm_1'
 varDict={'getmGrid2D_getm_lon':'lon','getmGrid2D_getm_lat':'lat','getmGrid3D_getm_lon':'lon',
          'getmGrid3D_getm_lat':'lat','getmGrid3D_getm_layer':'height'}
 
-
 ncout = netcdf.Dataset('tile.nc', 'w', format='NETCDF4_CLASSIC')
 ncout.createDimension('time',len(time))
 ncout.createDimension('lat',len(ulat))
 ncout.createDimension('lon',len(ulon))
 
 for item in ['getmGrid3D_getm_3','ungridded00024']:
-  ncout.createDimension(dimDict[item],len(nc.dimensions[item]))
+  if nc.variables.has_key(item):
+    ncout.createDimension(dimDict[item],len(nc.dimensions[item]))
 
 for key,value in nc.variables.iteritems():
   dims=list(value.dimensions)
@@ -68,7 +68,6 @@ ncout.variables['lat'][:]=ulat
 ncout.variables['time'][:]=time
 #ncout.variables['height'][:]=nc.variables['getmGrid3D_getm_layer'][:]
 nc.close()
-
 
 for f in files[:]:
   nc=netcdf.Dataset(f,'r')
@@ -92,13 +91,15 @@ for f in files[:]:
     except:
       continue
 
-    print key, value.shape,  y1-y0+1, x1-x0+1
+    print f, key, value.shape,  (y1-y0+1, x1-x0+1)
 
     if (value.shape[-2] == y1-y0+1 and value.shape[-1] == x1-x0+1) :
       if len(value.shape)==4:
          var[:,:,y0:y1+1,x0:x1+1]=value[:,:,:,:]
       elif len(value.shape)==3:
         var[:,y0:y1+1,x0:x1+1]=value[:,:,:]
+      elif len(value.shape)==2:
+        var[y0:y1+1,x0:x1+1]=value[:,:]
     else:
       print 'skipped ' + key
       break
