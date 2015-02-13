@@ -35,10 +35,11 @@ usage(){
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then
 	echo "            MPI is not used at all. Default is n=1
-	echo "    [-s M|S]: exeute batch queue for a specific system"
+	echo "    [-s M|S|J]: exeute batch queue for a specific system"
 	echo
 	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
+	echo "      [-s J]: Slurm system, e.g. juropatest, writes slurm.sh"
 	echo
 	exit
 }
@@ -174,6 +175,9 @@ case ${SYSTEM} in
   sge|SGE|S)    MPI_PREFIX="mpirun"
                 SYSTEM=SGE
                 ;;
+  J|SLURM|slurm)  MPI_PREFIX="srun"
+                  SYSTEM=SLURM
+                ;;
   *)  MPI_PREFIX="mpirun"
                 ;;
 esac
@@ -188,6 +192,10 @@ PPN=${NP}
 
 case ${SYSTEM} in
   MOAB)  NODES=$(expr \( $NP - 1 \) / 8 + 1 )
+         PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
+         NP=$(expr $NODES \* $PPN )
+         ;;
+  SLURM)  NODES=$(expr \( $NP - 1 \) / 28 + 1 )
          PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
          NP=$(expr $NODES \* $PPN )
          ;;
@@ -213,12 +221,35 @@ STDERR=${TITLE}.stderr
 STDOUT=${TITLE}.stdout
 
 if [[ "x${MPI_PREFIX}" != "x" ]] ; then
-  if [[ "x${SYSTEM}" != "xSGE" ]] ; then
-    MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
-  fi
+  case ${SYSTEM} in
+    SGE)  MPI_PREFIX=${MPI_PREFIX}
+        ;;
+    SLURM)  MPI_PREFIX=${MPI_PREFIX}
+        ;;
+    *) MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
+       ;;
+  esac
 fi
 
 case ${SYSTEM} in
+  SLURM) cat << EOT > slurm.sh
+#!/bin/bash -x
+
+#SBATCH --nodes=${NODES}
+#SBATCH --tasks-per-node=${PPN}
+#SBATCH --output=${TITLE}-%j.stdout
+#SBATCH --error=${TITLE}-%j.stderr
+#SBATCH --time=00:00:06
+#SBATCH --partition=batch
+#SBATCH --mailuser=carsten.lemmen@hzg.de
+#SBATCH --mailtype=ALL
+#SBATCH --jobname=${TITLE}
+
+#export OMP_NUM_THREADS=56
+
+${MPI_PREFIX} ${EXE}
+EOT
+;;
   MOAB) cat << EOT > moab.sh
 #!/bin/bash -x
 
@@ -295,6 +326,8 @@ case ${SYSTEM} in
   MOAB)  if test $(which msub 2> /dev/null)  ; then msub moab.sh ; else cat moab.sh ; fi
          ;;
   SGE)   if test $(which qsub 2> /dev/null) ; then qsub sge.sh ; else cat sge.sh ; fi
+         ;;
+  SLURM)   if test $(which sbatch 2> /dev/null) ; then sbatch slurm.sh ; else cat slurm.sh ; fi
          ;;
   INTERACTIVE)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
          ;;
