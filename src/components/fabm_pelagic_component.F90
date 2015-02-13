@@ -747,8 +747,11 @@ module fabm_pelagic_component
     !!       and forcing
     call pel%update_export_states(update_sinking=.true.)
 
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
+
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP2"
