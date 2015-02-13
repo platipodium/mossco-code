@@ -212,8 +212,10 @@ fi
 STDERR=${TITLE}.stderr
 STDOUT=${TITLE}.stdout
 
-if [[ "x${MPI_PREFIX}" != "x" ]]; then
-  MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
+if [[ "x${MPI_PREFIX}" != "x" ]] ; then
+  if [[ "x${SYSTEM}" != "xSGE" ]] ; then
+    MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
+  fi
 fi
 
 case ${SYSTEM} in
