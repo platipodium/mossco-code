@@ -241,9 +241,9 @@ case ${SYSTEM} in
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=00:00:06
 #SBATCH --partition=batch
-#SBATCH --mailuser=carsten.lemmen@hzg.de
-#SBATCH --mailtype=ALL
-#SBATCH --jobname=${TITLE}
+#SBATCH --mail-user=carsten.lemmen@hzg.de
+#SBATCH --mail-type=ALL
+#SBATCH --job-name=${TITLE}
 
 #export OMP_NUM_THREADS=56
 
