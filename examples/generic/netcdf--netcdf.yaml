@@ -1,0 +1,9 @@
+# This generic coupling specification
+# couples the netcdf input to the netcdf output component
+
+
+coupling:
+  - components:
+     - netcdf_input
+     - netcdf
+    interval: 1 h
