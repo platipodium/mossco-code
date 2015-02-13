@@ -325,7 +325,10 @@
           if (.not.associated(pf%model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal) &
               .and.associated(link%target%standard_variable)) then
-            if (trim(link%target%standard_variable%name) == "surface_downwelling_photosynthetic_radiative_flux") cycle
+            if (trim(link%target%standard_variable%name) == "surface_downwelling_photosynthetic_radiative_flux") then
+               link => link%next
+               cycle
+            end if
             call add_horizontal_dependency(pf%horizontal_dependencies,link%target%standard_variable)
           end if
         case (domain_scalar)
