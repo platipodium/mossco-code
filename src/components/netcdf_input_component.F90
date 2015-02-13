@@ -16,13 +16,15 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "netcdf_input.F90"
 
-module netcdf_component
+module netcdf_input_component
 
   use esmf
   use mossco_variable_types
   use mossco_netcdf
   use mossco_field
   use mossco_strings
+  use mossco_component
+  use mossco_state
 
   implicit none
   private
@@ -142,7 +144,7 @@ module netcdf_component
 
     if (petCount>0) then
       write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
-      !write(filename,form) trim(strrep(filename,'.nc')),localPet,'.nc'
+      write(filename,form) filename(1:len_trim(filename)-2),localPet,'.nc'
     endif
 
     inquire(file=trim(fileName), exist=isPresent)
@@ -433,4 +435,4 @@ module netcdf_component
   end subroutine Finalize
 
 
-end module netcdf_component
+end module netcdf_input_component
