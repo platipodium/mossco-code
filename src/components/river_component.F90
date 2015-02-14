@@ -160,7 +160,7 @@ module river_component
       call ESMF_ConfigLoadFile(config, configfilename, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigFindLabel(config, label='file:', isPresent=labelIsPresent, rc = rc)
+      call ESMF_ConfigFindLabel(config, label='filename:', isPresent=labelIsPresent, rc = rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default='rivers.nc')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
