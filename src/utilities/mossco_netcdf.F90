@@ -536,7 +536,7 @@ gridmask2 => gridmask3(:,:,1)
       mode_ = 'W'
     endif
 
-    if (mode_ == 'W') then
+    if (mode_ == 'W' .or. mode_ == 'w') then
       ncStatus = nf90_open(trim(filename), mode=NF90_WRITE, ncid=nc%ncid)
 
       if (ncStatus /= NF90_NOERR) then
@@ -547,10 +547,14 @@ gridmask2 => gridmask3(:,:,1)
         endif
       endif
       ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
     else
       ncStatus = nf90_open(trim(filename), mode=NF90_NOWRITE, ncid=nc%ncid)
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
       ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
-      ncStatus = nf90_get_att(nc%ncid, nc%timeDimId, 'unit', timeUnit_)
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
+      ncStatus = nf90_get_att(nc%ncid, nc%timeDimId, 'units', timeUnit_)
+      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
 
       if (present(timeUnit)) write(timeUnit,'(A)') trim(timeUnit_)
 
@@ -558,7 +562,10 @@ gridmask2 => gridmask3(:,:,1)
 
     call nc%update_variables()
 
-    if (present(rc)) rc=ncStatus
+    if (present(rc)) then
+      rc=ncStatus
+      if (ncStatus == NF90_NOERR) rc=ESMF_SUCCESS
+    endif
 
   end function mossco_netcdfOpen
 
