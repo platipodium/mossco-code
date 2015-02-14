@@ -189,17 +189,17 @@ contains
 
     if (i>0 .and. j>i+1) then  ! found two asterisks with content in between
       if (index(item, pattern(i+1:j-1)) > 0) isMatch=.true.
-      write(0,*)  'Match 1', trim(item), trim(pattern), index(item, pattern(i+1:j-1)), ' ?> 0', isMatch
+      !write(0,*)  'Match 1', trim(item), trim(pattern), index(item, pattern(i+1:j-1)), ' ?> 0', isMatch
     elseif (i==1) then         ! found one asterisk at beginning, match end
       j=index(item, pattern(i+1:len_trim(pattern)))
       if (j+len_trim(pattern)-2 == len_trim(item)) isMatch=.true.
-      write(0,*)  'Match 2', trim(item), trim(pattern), j+len_trim(pattern)-2, '?=', len_trim(item) , isMatch
+      !write(0,*)  'Match 2', trim(item), trim(pattern), j+len_trim(pattern)-2, '?=', len_trim(item) , isMatch
     elseif (i>1) then          ! found one asterisk at end, match beginning
       if (item(1:i-1)==pattern(1:i-1)) isMatch=.true.
-      write(0,*)  'Match 3', trim(item), trim(pattern), item(1:i-1), '?=', pattern(1:i-1) , isMatch
+      !write(0,*)  'Match 3', trim(item), trim(pattern), item(1:i-1), '?=', pattern(1:i-1) , isMatch
     else                       ! found no asterisk
       if (trim(item)==trim(pattern)) isMatch=.true.
-      write(0,*)  'Match 3', trim(item), trim(pattern), trim(item), '?=', trim(pattern) , isMatch
+      !write(0,*)  'Match 3', trim(item), trim(pattern), trim(item), '?=', trim(pattern) , isMatch
     endif
 
     return
