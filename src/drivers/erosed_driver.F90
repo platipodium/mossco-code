@@ -209,7 +209,7 @@ type , public :: soursin3d_argument
     real(fp),  pointer     :: seddif=>null()      ! sediment vertcial diffusion coefficient near the bed
     real(fp),  pointer     :: sigsed=>null()      ! (elevatio) or level (sigma-layer) of the bed layer
     real(fp),  pointer     :: sigmol=>null()     ! molecular Prandtl number
-    real(fp),  pointer     :: thick =>null()      ! relative layer thickness of the near-bed layer
+    real(fp),  pointer     :: relativ_thick=>null()      ! relative layer thickness of the near-bed layer
     real(fp),  pointer     :: thick0=>null()     ! absolute layer thickness of the near-bed layer at present time step
     real(fp),  pointer     :: thick1=>null()     ! absolute layer thickness of the near-bed layer at old time step
     real(fp),  pointer     :: vicmol=>null()      ! moelcular viscosity
@@ -281,7 +281,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                  & nfrac    , rhosol  , sedd50   , sedd90  , sedtyp              , &
                  & sink     , sinkf   , sour     , sourf   , anymud  , wave      , &
                  & uorb     , tper    , teta     , spm_concentration , Bioeffects, &
-                 & turb_difz, thick   , u_bottom , v_bottom, u2d     , v2d ,h0)
+                 & turb_difz, relativ_thick  , u_bottom , v_bottom, u2d     , v2d ,h0)
 
 !
 !    Function: Computes sedimentation and erosion fluxes
@@ -329,7 +329,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: uorb          ! wave orbital velocity (rms)
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: tper          ! wave period
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: teta          ! angle between wave and current (radian)
-    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: thick         ! Thickness of the lowest element [m]
+    real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: relativ_thick ! relative thickness of the lowest element
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: u_bottom, v_bottom ! flow velocity at the bottom cell (middle height) at x- and y-direction [m/s]
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: h0            ! water depth in old time step [m]
 ! Local variables
@@ -391,7 +391,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
 
     real(fp)                                    :: seddif   !@ToDO : sediment diffusion coefficent of the loweset element (calculted here from turbulent eddy eceived from GoTM
     real(fp)     , dimension(nmlb:nmub)         :: sigsed   ! elevation of the center of the loweset element from  water surface in sigma coordiante [-1 0]
-    real(fp)                                    :: sigmol
+    real(fp)                                    :: sigmol   ! (molecular) Prandtl-number (Prandtl-Schmidt Number for diffusion of dissolved matter: 700 for salinity, 6.7 for temprature , ?? for sediment)
     real(fp)                                    :: thick0
     real(fp)                                    :: thick1
 
@@ -411,7 +411,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     sinkf       = 0.0_fp
     sourf       = 0.0_fp
     rhowat      = 1000.0_fp
-    vicmol      = 1.0e-6_fp
+    vicmol      = 1.307e-6_fp
     thcmud      = 0.001_fp ! @ToDO: Total thickness of mud layer [m] should be read from data file
                         ! if thcmud > 0.01 m then the average d50 of sand will be used to calculated
                         ! z0 roughness for taub in compbsskin. Taub is the combined wave current shear
@@ -429,7 +429,7 @@ g = 9.81_fp
 factcr = 1.0
 eps = 1e-6
 
-zubed = thick /2.0_fp   ! center of the first element at bed
+zubed = relativ_thick* h /2.0_fp   ! center of the first element at bed
 z0cur = sedd50/12._fp   ! z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
 !z0rou = z0cur           ! z0 bed roughness height for wave
 
@@ -440,12 +440,12 @@ rdc = 2.5_fp* sedd50(1)   !it is not used when iopkcw = 1
 rdw = rdc                 !it is not used when iopkcw = 1
 
 !+++++++++++TEST Soursin_3D++++++++++++++
-sigsed = -(1.0_fp - thick /h /2.0_fp)      ! Dimensionless distance of the middle of the lowest cell to the water surface
-sigmol = 1.e-5_fp
+sigsed = -(1.0_fp - relativ_thick /2.0_fp)      ! Dimensionless distance of the middle of the lowest cell to the water surface
+sigmol = 6.7_fp     ! Schmidt number
 seddif = 1.e-3_fp
 !thick0  = 1.0_fp
 !thick1 = 1.0_fp
-!thick = 0.25_fp ! thickness of bed layer bed cell!?
+!relativ_thick= 0.25_fp ! thickness of bed layer bed cell!?
 !+++++++++++TEST++++++++++++++
 
 
@@ -680,20 +680,22 @@ seddif = 1.e-3_fp
 
                  call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
 
-                 thick0 = thick (nm) * h0(nm)
-                 thick1 = thick (nm) * h (nm)
-                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,thick(nm)/h(nm) , &
+                 thick0 = relativ_thick(nm) * h0(nm)
+                 thick1 = relativ_thick(nm) * h (nm)
+  !               write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
+                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
 
                  call soursin3d_arguments%run ()
 
                  call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
-    !             write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm)
+ !                write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm), 'l', l, 'nm',nm
 
               end if !(2D/3D)
             endif ! (cohesive /non-cohesive
         enddo     fractions
+ !write (*,*) '------------------------------'
     enddo    elements
     !
 
@@ -823,7 +825,8 @@ end subroutine getfrac_dummy
 
 
 subroutine calc_seddif (seddif, ws_surface, tauwav, tauc, turb_dif, ustarc)
-
+! calculation of vertical mixing coefficient of sediment accroding to van Rijn
+! Eq. 11.23-11.24 p.341 of Delft-3D flow manual
 implicit none
 
 real (fp)      , intent (in)  :: ws_surface, tauwav, tauc, turb_dif, ustarc
@@ -845,14 +848,16 @@ epsilon = 1.0e-8_fp
     else
        beta = 1.0
     endif
-
+!write (*,*) 'beta in seddif', beta
+!write (*,*) 'tauwav + tauc ', tauwav + tauc
     if (tauwav + tauc>epsilon) then
         betaef = (1.0 + (beta - 1.0)*tauc/(tauwav + tauc))
     else
         betaef = beta
     endif
-
+!write (*,*) 'betaef',betaef
     seddif = turb_dif *betaef
+ !   write (*,*) 'turb_dif',turb_dif, 'seddif',seddif
 
 end subroutine calc_seddif
 
@@ -943,21 +948,25 @@ implicit none
     real(fp)                                    , intent(in)   :: ws            ! settling velocity [m/s]
 
 
+    eromud_arguments%flufflyr=flufflyr
+    eromud_arguments%eropar=eropar
     eromud_arguments%depeff=depeff
     eromud_arguments%depfac=depfac
-    eromud_arguments%eropar=eropar
+    eromud_arguments%fixfac=fixfac
+    eromud_arguments%frac=frac
+    eromud_arguments%fracf=fracf
+    eromud_arguments%mfltot=mfltot
     eromud_arguments%parfluff0=parfluff0
     eromud_arguments%parfluff1=parfluff1
+    eromud_arguments%taub=taub
     eromud_arguments%tcrdep=tcrdep
     eromud_arguments%tcrero=tcrero
     eromud_arguments%tcrfluff=tcrfluff
-    eromud_arguments%flufflyr=flufflyr
-    eromud_arguments%frac=frac
     eromud_arguments%ws=ws
-    eromud_arguments%taub=taub
-    eromud_arguments%fracf=fracf
-    eromud_arguments%mfltot=mfltot
-    eromud_arguments%fixfac=fixfac
+
+
+
+
 
 end subroutine
 
@@ -1050,8 +1059,8 @@ class (sand_argument) :: erosand_arguments
     real(fp), intent(in)  :: rsedeq     ! equilibrium concentration [kg/m3]
 
 
-      erosand_arguments%umod   =umod
       erosand_arguments%chezy  =chezy
+      erosand_arguments%umod   =umod
       erosand_arguments%ws     =ws
       erosand_arguments%rsedeq =rsedeq
 
@@ -1201,12 +1210,11 @@ class (sandmud_argument)   :: sandmud_arguments
     real(fp)    , dimension(nfrac)              , intent(in)    :: E        ! sediment erosion velocity [m/s]
 
 sandmud_arguments%nfrac  = nfrac
-sandmud_arguments%E      = E
+sandmud_arguments%sedtyp = sedtyp
 sandmud_arguments%frac   = frac
 sandmud_arguments%mudfrac= mudfrac
-sandmud_arguments%sedtyp = sedtyp
 sandmud_arguments%pmcrit = pmcrit
-
+sandmud_arguments%E      = E
 end subroutine set_sandmud
 
 subroutine run_sandmud(sandmud_arguments)
@@ -1375,7 +1383,7 @@ implicit none
 class (soursin3d_argument)   :: soursin3d_arguments
 
 allocate (soursin3d_arguments%h1 ,soursin3d_arguments%thick0    ,soursin3d_arguments%thick1     , &
-                               &  soursin3d_arguments%sigsed    ,soursin3d_arguments%thick      ,soursin3d_arguments%r0, &
+                               &  soursin3d_arguments%sigsed    ,soursin3d_arguments%relativ_thick     ,soursin3d_arguments%r0, &
                                &  soursin3d_arguments%vicmol    ,soursin3d_arguments%sigmol     ,soursin3d_arguments%seddif, &
                                &  soursin3d_arguments%rhosol    ,soursin3d_arguments%ce_nm      ,soursin3d_arguments%ws , &
                                &  soursin3d_arguments%aks       ,soursin3d_arguments%sour       ,soursin3d_arguments%sink )
@@ -1389,7 +1397,7 @@ implicit none
 class (soursin3d_argument)   :: soursin3d_arguments
 
 deallocate (soursin3d_arguments%h1,soursin3d_arguments%thick0    ,soursin3d_arguments%thick1     , &
-                               &  soursin3d_arguments%sigsed    ,soursin3d_arguments%thick      ,soursin3d_arguments%r0, &
+                               &  soursin3d_arguments%sigsed    ,soursin3d_arguments%relativ_thick     ,soursin3d_arguments%r0, &
                                &  soursin3d_arguments%vicmol    ,soursin3d_arguments%sigmol     ,soursin3d_arguments%seddif, &
                                &  soursin3d_arguments%rhosol    ,soursin3d_arguments%ce_nm      ,soursin3d_arguments%ws , &
                                &  soursin3d_arguments%aks       ,soursin3d_arguments%sour       ,soursin3d_arguments%sink)
@@ -1398,7 +1406,7 @@ deallocate (soursin3d_arguments%h1,soursin3d_arguments%thick0    ,soursin3d_argu
 end subroutine deallocate_soursin3d
 
 subroutine set_soursin3d (soursin3d_arguments           ,h1             ,thick0            ,thick1             , &
-                               &  sigsed            ,thick          ,r0    , &
+                               &  sigsed            ,relativ_thick         ,r0    , &
                                &  vicmol            ,sigmol         ,seddif, &
                                &  rhosol            ,ce_nm          ,ws    , aks  )
 
@@ -1411,7 +1419,7 @@ class (soursin3d_argument)  :: soursin3d_arguments
     real(fp), intent(in)  :: seddif
     real(fp), intent(in)  :: sigsed
     real(fp), intent(in)  :: sigmol
-    real(fp), intent(in)  :: thick
+    real(fp), intent(in)  :: relativ_thick
     real(fp), intent(in)  :: thick0
     real(fp), intent(in)  :: thick1
     real(fp), intent(in)  :: vicmol
@@ -1421,15 +1429,15 @@ class (soursin3d_argument)  :: soursin3d_arguments
 !
 soursin3d_arguments%ce_nm  = ce_nm
 soursin3d_arguments%h1     = h1
+soursin3d_arguments%r0     = r0
+soursin3d_arguments%rhosol = rhosol
+soursin3d_arguments%seddif = seddif
+soursin3d_arguments%sigsed = sigsed
+soursin3d_arguments%sigmol = sigmol
+soursin3d_arguments%relativ_thick = relativ_thick
 soursin3d_arguments%thick0 = thick0
 soursin3d_arguments%thick1 = thick1
-soursin3d_arguments%thick  = thick
-soursin3d_arguments%r0     = r0
-soursin3d_arguments%sigsed = sigsed
 soursin3d_arguments%vicmol = vicmol
-soursin3d_arguments%sigmol = sigmol
-soursin3d_arguments%rhosol = rhosol
-soursin3d_arguments%ce_nm  = ce_nm
 soursin3d_arguments%ws     = ws
 soursin3d_arguments%aks    = aks
 
@@ -1442,7 +1450,7 @@ implicit none
 class (soursin3d_argument)    :: soursin3d_arguments
 
 call   soursin_3d(                soursin3d_arguments%h1            ,soursin3d_arguments%thick0   ,soursin3d_arguments%thick1 , &
-                               &  soursin3d_arguments%sigsed        ,soursin3d_arguments%thick    ,soursin3d_arguments%r0    , &
+                               &  soursin3d_arguments%sigsed        ,soursin3d_arguments%relativ_thick   ,soursin3d_arguments%r0    , &
                                &  soursin3d_arguments%vicmol        ,soursin3d_arguments%sigmol   ,soursin3d_arguments%seddif, &
                                &  soursin3d_arguments%rhosol        ,soursin3d_arguments%ce_nm    ,soursin3d_arguments%ws    , &
                                &  soursin3d_arguments%aks           ,soursin3d_arguments%sour     ,soursin3d_arguments%sink )
