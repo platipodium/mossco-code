@@ -1455,6 +1455,11 @@ call   soursin_3d(                soursin3d_arguments%h1            ,soursin3d_a
                                &  soursin3d_arguments%rhosol        ,soursin3d_arguments%ce_nm    ,soursin3d_arguments%ws    , &
                                &  soursin3d_arguments%aks           ,soursin3d_arguments%sour     ,soursin3d_arguments%sink )
 
+   if (soursin3d_arguments%ce_nm * soursin3d_arguments%rhosol - soursin3d_arguments%r0 .le. 0.0_fp) then
+!     in this case sour is not initialized
+      soursin3d_arguments%sour = 0.0_fp
+   end if
+
 end subroutine run_soursin3d
 
 subroutine get_flux(soursin3d_arguments, source, sink)
