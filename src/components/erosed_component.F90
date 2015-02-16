@@ -960,7 +960,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             if (u2d(i,j)==-9999.0)u2d(i,j)=0.0_fp
             if (v2d(i,j)==-9999.0)v2d(i,j)=0.0_fp
             umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
-            thick (inum*(j -1)+i) = hbot (i,j)
+            thick (inum*(j -1)+i) = hbot (i,j)/depth(i,j)
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
             if (ubot (i,j)==-9999.0) u_bot (inum*(j -1)+i) =0.0_fp
@@ -968,11 +968,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
      !       write (*,*) 'ubot', ubot(i,j)
      !       write (*,*) 'vbot', vbot(i,j)
             !write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
+     !write (*,*) 'thick',thick(inum*(j -1)+i), 'depth', depth(i,j), 'hbot',hbot (i,j)
             if (wave) then
                 tper (inum*(j -1)+i) = waveT (i,j)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
                 uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
- !write (*,*) 'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j)
+    !write (*,*) 'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j)
             endif
 
           end do
@@ -982,6 +983,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         umod = 0.2
       end if
 write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
+!write (*,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
        !> get spm concentrations, particle sizes and density
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1201,6 +1203,9 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
         sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
+
+ !   write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
+
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
