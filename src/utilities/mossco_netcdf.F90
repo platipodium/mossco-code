@@ -54,6 +54,7 @@ module mossco_netcdf
     procedure :: create_coordinate =>mossco_netcdf_coordinate_create
     procedure :: create_mesh_coordinate =>mossco_netcdf_mesh_coordinate_create
     procedure :: ungridded_dimension_id => mossco_netcdf_ungridded_dimension_id
+    procedure :: gridget  => mossco_netcdf_grid_get
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -1050,6 +1051,8 @@ gridmask2 => gridmask3(:,:,1)
   end subroutine mossco_netcdf_coordinate_create
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_ungridded_dimension_id"
   function mossco_netcdf_ungridded_dimension_id(self,length) result(dimid)
 
     implicit none
@@ -1068,5 +1071,38 @@ gridmask2 => gridmask3(:,:,1)
     end if
   end function mossco_netcdf_ungridded_dimension_id
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_grid_get"
+  subroutine mossco_netcdf_grid_get(self, grid, var, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    type(ESMF_Grid), intent(inout)               :: grid
+    type(type_mossco_netcdf_variable)            :: var
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                        :: localrc, i, udimid
+    integer(ESMF_KIND_I4)                        :: rank
+    integer(ESMF_KIND_I4), allocatable           :: dimids(:)
+
+    rc = ESMF_SUCCESS
+
+    rank = var%rank
+    localrc = nf90_inq_dimid(self%ncid, 'time', udimid)
+
+    if (any(var%dimids == udimid)) rank = rank - 1
+    allocate(dimids(rank))
+
+    !TODO from here
+
+!    if (rank == 1) then
+!      grid = ESMF_GridCreateNoPeriDim(minIndex=(/1/), maxIndex=var%dimlen(1), rc=localrc)
+!    if (var%rank == 1) then
+!   endif
+
+
+    return
+
+  end subroutine mossco_netcdf_grid_get
 
 end module
