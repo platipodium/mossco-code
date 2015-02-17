@@ -1,0 +1,26 @@
+# This example tests the interaction of erosed with fabm_pelagic
+#
+# configuration dependencies:
+
+dependencies:
+  - erosed:
+    - component: getm
+      grid: water_depth_at_soil_surface
+
+coupling:
+  - components:
+     - constant
+     - erosed
+    interval: none
+  - components:
+     - constant
+     - getm
+    interval: none
+  - components:
+     - getm
+     - erosed
+    interval: 30 m
+  - components:
+     - erosed
+     - netcdf
+    interval: 1 h
