@@ -1892,12 +1892,21 @@ module getm_component
 
       if (noKindMatch) then
          t_conc = transport_conc(n)%ptr
-         t_ws   = transport_ws  (n)%ptr
          p_conc => t_conc
-         p_ws   => t_ws
+         if (associated(transport_ws(n)%ptr)) then
+            t_ws = transport_ws(n)%ptr
+         else
+            t_ws = _ZERO_
+         end if
+         p_ws => t_ws
       else
          p_conc => transport_conc(n)%ptr
-         p_ws   => transport_ws  (n)%ptr
+         if (associated(transport_ws(n)%ptr)) then
+            p_ws => transport_ws(n)%ptr
+         else
+            t_ws = _ZERO_
+            p_ws => t_ws
+         end if
       end if
 
       call do_transport_3d(p_conc,p_ws)
