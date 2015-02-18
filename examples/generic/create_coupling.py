@@ -708,7 +708,7 @@ if (True):
         break
     else:
         continue
-    fid.write('      !! Initializing ' + item + '\n')
+    fid.write('      !! calling init of ' + item + '\n')
     for j in range(0, len(couplingList)):
       jtem=couplingList[j]
       if jtem[1] != item: continue
@@ -718,6 +718,7 @@ if (True):
       icpl=cplCompList.index(item)
       if icpl==0: continue
 
+      fid.write('      !! coupling ' + jtem[0] + 'Export to ' + jtem[-1] + 'Import\n')
       fid.write('      if (cplCompPhaseCountList( ' + str(icpl+1) + ')>= phase) then\n')
       fid.write('        call MOSSCO_StateLog(gridExportStateList(' + str(ifrom+1) + '), rc=localrc)\n')
       fid.write('        call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
