@@ -801,7 +801,7 @@ fid.write('''
 
 for icpl in range(1,len(cplCompList)):
   item=cplCompList[icpl]
-  fid.write('    !! Initializing ' + jtem[1] + '\n')
+  fid.write('    !! Initializing ' + item + '\n')
 
   if dependencyDict.has_key(item):
     for jtem in dependencyDict[item]:
