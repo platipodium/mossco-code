@@ -699,7 +699,15 @@ if (True):
             fid.write('          exportState=gridExportStateList(' + str(j+1)+'), clock=clock, rc=localrc)\n')
         fid.write('      endif\n\n')
 
-  for item in cplCompList:
+  for i,item in enumerate(cplCompList):
+#   dirty hack for now: skip link_connector
+    if i == 0:
+      continue
+    for jtem in couplingList:
+      if jtem[1] == item:
+        break
+    else:
+        continue
     fid.write('      !! Initializing ' + item + '\n')
     for j in range(0, len(couplingList)):
       jtem=couplingList[j]
