@@ -52,7 +52,7 @@ module erosed_component
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
-
+real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer:: spm_concentration=>null()
 
    integer                                      :: nmlb           ! first cell number
    integer                                      :: nmub           ! last cell number
@@ -207,7 +207,7 @@ contains
     integer(ESMF_KIND_I4)     :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
 ! local variables
     real(fp),dimension(:), allocatable :: eropartmp, tcrdeptmp,tcrerotmp,depefftmp,depfactmp, &
-                             &   parfluff0tmp,parfluff1tmp,tcrflufftmp, fractmp
+                             &   parfluff0tmp,parfluff1tmp,tcrflufftmp, fractmp, wstmp, spm_const
     real (fp)                 :: pmcrittmp
 
     namelist /globaldata/g, rhow
@@ -383,7 +383,7 @@ contains
 
     if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
     if (.not.associated(BioEffects%TauEffect))         allocate (BioEffects%TauEffect(inum,jnum))
-
+    if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,nfrac))
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
     allocate (sedd50    (nfrac))
@@ -421,7 +421,7 @@ contains
     !allocation of temporal variables
     allocate ( eropartmp (nfrac),tcrdeptmp(nfrac),tcrerotmp(nfrac),fractmp(nfrac), &
              & depefftmp(nfrac), depfactmp(nfrac),parfluff0tmp(nfrac), &
-             & parfluff1tmp(nfrac), tcrflufftmp(nfrac),stat =istat)
+             & parfluff1tmp(nfrac), tcrflufftmp(nfrac),wstmp(nfrac),spm_const(nfrac), stat =istat)
     if (istat /= 0) stop 'ERROR in allocation of temporal variables in InitializeP1'
 
     !Initialization
@@ -466,7 +466,7 @@ contains
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
 
  ! cohesive sediment
-    if (istat ==0 ) read (UnitNr,*, iostat = istat) pmcrittmp
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) pmcrittmp
       !if (istat ==0 ) read (UnitNr,*, iostat = istat) (pmcrit (i), i = nmlb,nmub)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) betam                                      ! power factor for adaptation of critical bottom shear stress [-]
  ! sediment transport formulation
@@ -478,6 +478,8 @@ contains
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (parfluff0tmp(i), i=1, nfrac)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (parfluff1tmp(i), i=1, nfrac)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrflufftmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (wstmp(i), i=1, nfrac)
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) (spm_const(i), i=1, nfrac)
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depeff(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition efficiency [-]
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((depfac(i,j), i=1, nfrac), j=nmlb,nmub)   ! deposition factor (flufflayer=2) [-]
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
@@ -496,7 +498,15 @@ contains
         parfluff0(:,i) = parfluff0tmp(:)
         parfluff1(:,i) = parfluff1tmp(:)
         tcrfluff (:,i) = tcrflufftmp (:)
+        ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
+
+      do i = 1, inum
+        do j = 1, jnum
+          spm_concentration (i,j,:) = spm_const (:)
+        end do
+      end do
+
     else
       Write (0,*) 'Error: sedparams.txt for use in erosed does not exit.!!'
       stop
@@ -531,7 +541,7 @@ contains
     h1      = 3.0_fp        ! water depth [m]
     h0      = h1            ! @ToDo : read h0 from input data
     umod    = 0.1_fp        ! depth averaged flow magnitude [m/s]
-    ws      = 0.001_fp      ! Settling velocity [m/s]
+ !   ws      = 0.001_fp      ! Settling velocity [m/s]
 !    r1(:,:) = 2.0e-1_fp    ! sediment concentration [kg/m3]
     u_bot   = 0.1_fp        ! flow velocity in u-direction at (center of the ) bottm cell
     v_bot   = 0.1_fp        ! flow velocity in v-direction at (center of the ) bottm cell
@@ -541,7 +551,7 @@ contains
         taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
     enddo
 
-#ifdef DEBUG
+!#ifdef DEBUG
     ! Open file for producing output
     call ESMF_UtilIOUnitGet(unit707, rc = localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -558,7 +568,7 @@ contains
 
     write (unit707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
         'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
-#endif
+!#endif
 
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(inum, jnum,nfrac))
 
@@ -608,7 +618,6 @@ contains
        importList(11)%name  = 'wave_direction'
        importList(11)%units = 'rad'
     end if
-
 
     do i=1,size(importList)
 
@@ -666,7 +675,6 @@ contains
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
   end subroutine InitializeP1
 
 #undef  ESMF_METHOD
@@ -704,7 +712,6 @@ contains
 
     integer :: n
     logical :: isPresent
-
 
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -770,6 +777,12 @@ contains
       write(message,'(A)') trim(name)//' cannot map 1 fraction to multiple SPM fractions, yet.'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    elseif (nfrac/= 0 .and. fieldCount ==0) then
+      write(message,'(A)') trim(name)//'initial values from sedparams.txt will be used for sediment parameters.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      do i = 1, nfrac
+        external_idx_by_nfrac(i)=i
+      end do
     elseif (nfrac /= fieldCount) then
       write(message,'(A)') trim(name)//' cannot map unequal size and SPM fractions'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
@@ -864,7 +877,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null(),nybot=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveH=>null(),waveT=>null(),waveK=>null(),waveDir=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null()
-    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null(),spm_concentration=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
                               & Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
     integer                  :: n, i, j, localrc
@@ -884,14 +897,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical                  :: First_entry = .true.
     type(ESMF_StateItem_Flag) :: itemType
 
-! Initialization
-!    allocate (u_mean(inum,jnum),depth(inum,jnum),hbot(inum,jnum),u2d(inum,jnum), &
-!    &         v2d(inum,jnum),ubot(inum,jnum),vbot(inum,jnum) )
-
-    if (.not.associated(spm_concentration)) allocate(spm_concentration(inum,jnum,nfrac))
-  !  if (.not.associated(nybot)) allocate(nybot(inum,jnum))
-
-    !nybot = 0.05_fp!@ToDo: get vertical turbulent diffusion at the bottom cell from hydrodynamic model
 
     rc=ESMF_SUCCESS
 
@@ -984,6 +989,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       end if
 write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
 !write (*,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
+
        !> get spm concentrations, particle sizes and density
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -991,11 +997,11 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
 
       if(localrc /= ESMF_SUCCESS) then
         !> run without SPM forcing from pelagic component
-#ifdef DEBUG
+!#ifdef DEBUG
         call ESMF_LogWrite( &
            'field Bundle concentration_of_SPM not found, run without pelagic forcing', &
            ESMF_LOGMSG_INFO)
-#endif
+!#endif
       else
 
         call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
@@ -1004,7 +1010,6 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
 
         if (allocated(fieldlist)) deallocate(fieldlist)
         allocate(fieldlist(n))
-
         call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1034,10 +1039,8 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
           if (isPresent) then
             call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!            write (*,*) 'mean particle diameter is present',sedd50(nfrac_by_external_idx(external_index))
           else
             sedd50(nfrac_by_external_idx(external_index))=0.0
-!            write (*,*) 'mean particle diameter is not present',sedd50(nfrac_by_external_idx(external_index))
             write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
             call MOSSCO_FieldString(field, message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -1100,7 +1103,7 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
 
     !> get bio effects
     !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else
-    !> Hassan: todo, was passiert im else-Fall
+    !> in else-case the initial values equalt to 1.0 are used.
     call ESMF_StateGet(importState, 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
       itemType=itemType, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1122,7 +1125,7 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
     end if
 
     !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else
-    !> Hassan: todo, was passiert im else-Fall
+    !> in else-case the initial values equalt to 1.0 are used.
     call ESMF_StateGet(importState, 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
       itemType=itemType, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1197,14 +1200,14 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
 
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
-#ifdef DEBUG
+!#ifdef DEBUG
         write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
-#endif
+!#endif
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
         sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
 
- !   write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
+  !  write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
 
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
@@ -1306,6 +1309,7 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
     deallocate (BioEffects%TauEffect)
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
+    deallocate (spm_concentration)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 
