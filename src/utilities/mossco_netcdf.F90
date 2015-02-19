@@ -21,6 +21,8 @@ module mossco_netcdf
 
   use mossco_variable_types, only: mossco_variableInfo
   use mossco_strings
+  use mossco_field
+  use mossco_state
   use esmf
   use netcdf
 
@@ -1277,6 +1279,8 @@ gridmask2 => gridmask3(:,:,1)
 
     if (rank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (var%rank==rank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, lbnd, ubnd)
       elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
@@ -1284,6 +1288,10 @@ gridmask2 => gridmask3(:,:,1)
       else
         rc = ESMF_RC_NOT_IMPL
         return
+      endif
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     elseif (rank == 2) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
