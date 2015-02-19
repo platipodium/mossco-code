@@ -614,15 +614,15 @@ for item in gridCompList:
     fid.write('    deallocate(charValueList)\n')
     fid.write('    deallocate(intValueList)\n')
 
-for item in cplCompList:
-  if (item == 'pelagic_benthic_coupler') :
-    ito=cplCompList.index(item)
-    fid.write('    call ESMF_AttributeSet(cplImportStateList(' + str(ito+1)+'), name="temperature_in_water:needed", value=.true., rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
-    fid.write('    call ESMF_AttributeSet(cplImportStateList(' + str(ito+1)+'), name="temperature_at_soil_surface:needed", value=.true., rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
-    fid.write('    call ESMF_AttributeSet(cplImportStateList(' + str(ito+1)+'), name="dissolved_oxygen_in_water:needed", value=.true., rc=localrc)\n')
-    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+#for item in cplCompList:
+#  if (item == 'pelagic_benthic_coupler') :
+#    ito=cplCompList.index(item)
+#    fid.write('    call ESMF_AttributeSet(cplImportStateList(' + str(ito+1)+'), name="temperature_in_water:needed", value=.true., rc=localrc)\n')
+#    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+#    fid.write('    call ESMF_AttributeSet(cplImportStateList(' + str(ito+1)+'), name="temperature_at_soil_surface:needed", value=.true., rc=localrc)\n')
+#    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+#    fid.write('    call ESMF_AttributeSet(cplImportStateList(' + str(ito+1)+'), name="dissolved_oxygen_in_water:needed", value=.true., rc=localrc)\n')
+#    fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
 fid.write('''
     !! Go through all phases:
@@ -803,15 +803,15 @@ fid.write('''
  ''')
 
 
-for icpl in range(1,len(cplCompList)):
-  item=cplCompList[icpl]
-  fid.write('    !! Initializing ' + item + '\n')
-
-  if dependencyDict.has_key(item):
-    for jtem in dependencyDict[item]:
-      ifrom=gridCompList.index(jtem)
-      fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-      fid.write('      exportState=cplImportStateList(' + str(icpl+1)+'), clock=clock, rc=localrc)\n')
+#for icpl in range(1,len(cplCompList)):
+#  item=cplCompList[icpl]
+#  fid.write('    !! Initializing ' + item + '\n')
+#
+#  if dependencyDict.has_key(item):
+#    for jtem in dependencyDict[item]:
+#      ifrom=gridCompList.index(jtem)
+#      fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
+#      fid.write('      exportState=cplImportStateList(' + str(icpl+1)+'), clock=clock, rc=localrc)\n')
 
 #fid.write('''
 #    do i=2, numCplComp
