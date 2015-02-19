@@ -718,17 +718,17 @@ if (True):
       icpl=cplCompList.index(item)
       if icpl==0: continue
 
-      fid.write('      !! coupling ' + jtem[0] + 'Export to ' + jtem[-1] + 'Import\n')
+      fid.write('      !! connecting ' + jtem[0] + 'Export to ' + jtem[-1] + 'Import\n')
       fid.write('      if (gridCompPhaseCountList( ' + str(ifrom+1) + ')>= phase .or. gridCompPhaseCountList( ' + str(ito+1) + ')>= phase) then\n')
-      fid.write('      if (cplCompPhaseCountList( ' + str(icpl+1) + ')>= phase) then\n')
+      fid.write('      !if (cplCompPhaseCountList( ' + str(icpl+1) + ')>= phase) then\n')
       fid.write('        write(message,"(A,I1,A)") trim(name)//" "//trim(gridCompNameList(' + str(ifrom+1) +'))//"Export=>"//trim(cplCompNameList('+str(icpl+1)+'))//"(initP",phase,")=>"//trim(gridCompNameList(' + str(ito+1)+'))//"Import"\n')
       fid.write('        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)\n')
       fid.write('        !call MOSSCO_StateLog(gridExportStateList(' + str(ifrom+1) + '), rc=localrc)\n')
       fid.write('        call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-      fid.write('          exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
+      fid.write('          exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
       fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
       fid.write('        call MOSSCO_StateLog(gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
-      fid.write('      endif\n')
+      fid.write('      !endif\n')
       fid.write('      endif\n')
 
   fid.write('    enddo  ! of loop over Initialize phases\n\n')
@@ -812,18 +812,6 @@ for icpl in range(1,len(cplCompList)):
       ifrom=gridCompList.index(jtem)
       fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
       fid.write('      exportState=cplImportStateList(' + str(icpl+1)+'), clock=clock, rc=localrc)\n')
-
-  for i in range(0, len(couplingList)):
-    jtem=couplingList[i]
-    if item !=jtem [1]:
-      continue
-
-    ifrom=gridCompList.index(jtem[0])
-    ito  =gridCompList.index(jtem[2])
-
-    fid.write('     call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
-    fid.write('        exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
-    fid.write('     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
 
 #fid.write('''
 #    do i=2, numCplComp
