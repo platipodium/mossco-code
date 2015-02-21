@@ -14,7 +14,7 @@
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
-#define ESMF_FILENAME "netcdf_input.F90"
+#define ESMF_FILENAME "netcdf_input_component.F90"
 
 module netcdf_input_component
 
@@ -26,6 +26,7 @@ module netcdf_input_component
   use mossco_component
   use mossco_state
   use mossco_time
+  use mossco_grid
 
   implicit none
   private
@@ -126,12 +127,12 @@ module netcdf_input_component
     type(ESMF_Clock)           :: clock
 
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
-    type(ESMF_Grid)            :: grid, varGrid
+    type(ESMF_Grid)            :: grid2, grid3, varGrid
     type(ESMF_Field)           :: field
-    character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName
+    character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName
     type(ESMF_Config)          :: config
 
-    integer(ESMF_KIND_I4)      :: itemCount, i, timeid, itime
+    integer(ESMF_KIND_I4)      :: itemCount, i, timeid, itime, udimid, gridRank, rank
     type(ESMF_Time)            :: refTime, time
     real(ESMF_KIND_R8)         :: seconds
     type(ESMF_Field), allocatable :: fieldList(:)
@@ -214,9 +215,13 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    ! For multiprocessor applications, try to read cpu-specific input first, default
+    ! back to overall file
     if (petCount>0) then
       write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
-      write(filename,form) filename(1:len_trim(filename)-2),localPet,'.nc'
+      write(petFileName,form) filename(1:len_trim(filename)-2),localPet,'.nc'
+      inquire(file=trim(petFileName), exist=isPresent)
+      if (isPresent) fileName=petFileName
     endif
 
     inquire(file=trim(fileName), exist=isPresent)
@@ -232,7 +237,7 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_GridCompGet(gridComp,grid=grid, rc=localrc)
+      call ESMF_GridCompGet(gridComp,grid=grid2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
       hasGrid=.true.
@@ -249,10 +254,31 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_StateGetFieldGrid(importState, trim(foreignGridFieldName), grid, localrc)
+      call MOSSCO_StateGetFieldGrid(importState, trim(foreignGridFieldName), grid2, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       hasGrid=.true.
+    endif
+
+    if (.not.hasGrid) then
+      write(message,'(A)') trim(name)//' not implemented withut foreing_grid'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_NOT_IMPL
+    endif
+
+    call ESMF_GridGet(grid2, rank=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rank==2) then
+      grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, rc=localrc)
+    elseif (rank==3) then
+      grid3 = grid2
+      grid2 = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
+    else
+      write(message,'(A)') trim(name)//' cannot use grid with rank<2 or >3 for foreign_grid'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
@@ -281,6 +307,7 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       timeunit=trim(nc%variables(i)%units)
+      udimid=nc%variables(i)%dimids(1)
       i=index(timeunit,'since ')
       if (i>0) then
         call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
@@ -324,8 +351,20 @@ module netcdf_input_component
       !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (hasGrid) then
+
+        gridRank=nc%variables(i)%rank
+        if (any(nc%variables(i)%dimids==udimid)) gridRank=gridRank-1
+
         ! todo: test if varGrid conforms to grid
-        call ESMF_FieldEmptySet(fieldList(i), grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+        if (gridRank==2) then
+          call ESMF_FieldEmptySet(fieldList(i), grid2, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+        elseif (gridRank==3) then
+          call ESMF_FieldEmptySet(fieldList(i), grid3, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+        else
+          write(message,'(A)') trim(name)//' not implemented with gridrank <2 or >3'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_NOT_IMPL
+        endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
