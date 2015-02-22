@@ -28,6 +28,7 @@ fabm_gotm_erosed
 getm_coupling
 getm--fabm_pelagic--netcdf
 getm--netcdf
+getm--simplewave--netcdf
 gotm_coupling
 gotm--gotm_fabm--fabm_sediment
 maecs_omexdia

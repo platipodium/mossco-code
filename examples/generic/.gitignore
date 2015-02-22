@@ -36,6 +36,7 @@ getm--fabm_pelagic--fabm_sediment--erosed--netcdf
 getm--fabm_pelagic--fabm_sediment--netcdf
 getm--fabm_pelagic--netcdf
 getm--netcdf
+getm--simplewave--netcdf
 gotm--constant_grid
 gotm_coupling
 gotm--fabm_gotm--fabm_sediment--netcdf
