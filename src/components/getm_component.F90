@@ -643,7 +643,7 @@ module getm_component
 
     !  use clock to do determine time of calling routine
     call ESMF_ClockGetNextTime(clock,nextTime,rc=localrc)
-    if (rc .ne. ESMF_SUCCESS) then
+    if (localrc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
       call ESMF_ClockGet(myClock,stopTime=NextTime, rc=localrc)
