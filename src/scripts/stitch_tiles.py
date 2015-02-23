@@ -16,7 +16,7 @@ import glob as glob
 import numpy as np
 
 # Adjust the file name here (or improve the script to handle cmdline args
-pattern=u"cut_*.nc"
+pattern=u"nsbst-physics*.nc"
 files=glob.glob(pattern)
 
 if len(files)<1:
@@ -95,10 +95,10 @@ for f in files[:]:
   has2d=True
   has3d=True
   nc=netcdf.Dataset(f,'r')
-  if nc.variables.has_key('getmGrid2D_getm_lat'):lat=nc.variables['getmGrid2D_getm_lat'][:]
-  if nc.variables.has_key('getmGrid2D_getm_lon'):lon=nc.variables['getmGrid2D_getm_lon'][:]
-  if nc.variables.has_key('getmGrid3D_getm_lat'):lat2=nc.variables['getmGrid3D_getm_lat'][:]
-  if nc.variables.has_key('getmGrid3D_getm_lon'):lon2=nc.variables['getmGrid3D_getm_lon'][:]
+  if nc.variables.has_key('getmGrid2D_getm_lat'):lat2=nc.variables['getmGrid2D_getm_lat'][:]
+  if nc.variables.has_key('getmGrid2D_getm_lon'):lon2=nc.variables['getmGrid2D_getm_lon'][:]
+  if nc.variables.has_key('getmGrid3D_getm_lat'):lat=nc.variables['getmGrid3D_getm_lat'][:]
+  if nc.variables.has_key('getmGrid3D_getm_lon'):lon=nc.variables['getmGrid3D_getm_lon'][:]
   try:
     x0=np.where(lon[0]==ulon)[0][0]
     x1=np.where(lon[-1]==ulon)[0][0]
@@ -126,6 +126,8 @@ for f in files[:]:
       var=ncout.variables[key]
     except:
       continue
+
+    if len(value.shape)<2: continue
 
     if has2d:
       print f, key, value.shape,  (y21-y20+1, x21-x20+1)
