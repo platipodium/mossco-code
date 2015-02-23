@@ -14,143 +14,170 @@
 import netCDF4 as netcdf
 import glob as glob
 import numpy as np
+import sys
 
-# Adjust the file name here (or improve the script to handle cmdline args
-pattern=u"nsbst-physics*.nc"
-files=glob.glob(pattern)
+if len(sys.argv) > 1:
+  prefix = sys.argv[1]
+else:
+  prefix = u"netcdf_out"
+
+files=glob.glob(prefix + '.[0-9]*.nc')
+outfile=prefix + '_stitched.nc'
 
 if len(files)<1:
   print "Did not find any files for pattern ",pattern
 
-ulon=[]
-ulat=[]
-ulon2=[]
-ulat2=[]
+alat={}
+alon={}
+
+## Find coord variables  
+nc=netcdf.Dataset(files[0],'r')
+for key, value in nc.variables.iteritems():
+  dim=value.dimensions
+  if len(value.dimensions) != 1 : continue
+  if key.endswith('_lat'): alat[key]=[]
+  elif key.endswith('_lon'): alon[key]=[]
+nc.close()
 
 for f in files:
   nc=netcdf.Dataset(f,'r')
-  if nc.variables.has_key('getmGrid2D_getm_lat'): ulat2.extend(nc.variables['getmGrid2D_getm_lat'][:])
-  if nc.variables.has_key('getmGrid2D_getm_lon'): ulon2.extend(nc.variables['getmGrid2D_getm_lon'][:])
-  if nc.variables.has_key('getmGrid3D_getm_lat'): ulat.extend(nc.variables['getmGrid3D_getm_lat'][:])
-  if nc.variables.has_key('getmGrid3D_getm_lon'): ulon.extend(nc.variables['getmGrid3D_getm_lon'][:])
+  
+  for item in alat.keys():
+    if nc.variables.has_key(item) and alat.has_key(item): 
+      alat[item].extend(nc.variables[item][:])
+  for item in alon.keys(): 
+    if nc.variables.has_key(item) and alon.has_key(item):
+      alon[item].extend(nc.variables[item][:])
   time=nc.variables['time'][:]
   nc.close()
 
 nc=netcdf.Dataset(files[0],'r')
-ulon2=set(ulon2)
-ulat2=set(ulat2)
-ulon=set(ulon)
-ulat=set(ulat)
 
-dimDict={'getmGrid2D_getm_1':'lon_2','getmGrid2D_getm_2':'lat_2','getmGrid3D_getm_1':'lon',
-         'getmGrid3D_getm_2':'lat','getmGrid3D_getm_3':'height','ungridded00024':'depth','time':'time'}
+for key,value in alon.iteritems(): alon[key]=np.sort(list(set(value)))
+for key,value in alat.iteritems(): alat[key]=np.sort(list(set(value)))
 
-varDict={'getmGrid2D_getm_lon':'lon_2','getmGrid2D_getm_lat':'lat_2','getmGrid3D_getm_lon':'lon',
-         'getmGrid3D_getm_lat':'lat','getmGrid3D_getm_layer':'height'}
+ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
 
-ncout = netcdf.Dataset('tile.nc', 'w', format='NETCDF4_CLASSIC')
+for key,value in alon.iteritems():
+  dim=nc.variables[key].dimensions[0]
+  if ncout.dimensions.has_key(dim): continue
+  ncout.createDimension(dim,len(alon[key]))
+for key,value in alat.iteritems():
+  dim=nc.variables[key].dimensions[0]
+  if ncout.dimensions.has_key(dim): continue
+  ncout.createDimension(dim,len(alat[key]))
 
 for key,value in nc.dimensions.iteritems():
+  if ncout.dimensions.has_key(key): continue
 
-  newkey=key    
-  if dimDict.has_key(key): newkey = dimDict[key]
+  if key=='time' and len(time)>0: ncout.createDimension('time',len(time))
+  else: ncout.createDimension(key,len(nc.dimensions[key]))
 
-  if ncout.dimensions.has_key(newkey): continue
-
-  if newkey=='time' and len(time)>0: ncout.createDimension('time',len(time))
-  elif newkey=='lat' and len(ulat)>0: ncout.createDimension('lat',len(ulat))
-  elif newkey=='lon' and len(ulon)>0: ncout.createDimension('lon',len(ulon))
-  elif newkey=='lat_2' and len(ulat2)>0: ncout.createDimension('lat_2',len(ulat2))
-  elif newkey=='lon_2' and len(ulon2)>0: ncout.createDimension('lon_2',len(ulon2))
-  else: ncout.createDimension(newkey,len(nc.dimensions[key]))
+# Create all variables that are in nc also in ncout.  Be careful with _FillValue
+# attribute, as adding this after variable creation causes spurious "variable not
+# found" errors.
 
 for key,value in nc.variables.iteritems():
   dims=list(value.dimensions)
-  if varDict.has_key(key): key=varDict[key]
-  for i in range(0,len(dims)): 
-    if dimDict.has_key(dims[i]):
-      dims[i]=dimDict[dims[i]]
+
   try:
-    var=ncout.createVariable(key,value.dtype,tuple(dims))
-    for att in value.ncattrs():
-      if (att != 'coordinates'):
-        var.setncattr(att,value.getncattr(att))
+    var=ncout.createVariable(key,value.dtype,tuple(dims),fill_value=value.getncattr('_FillValue'))
   except:
-    print 'skipped ' + key
+    var=ncout.createVariable(key,value.dtype,tuple(dims))
 
-ulon=np.sort(list(ulon))
-ulat=np.sort(list(ulat))
-ulon2=np.sort(list(ulon2))
-ulat2=np.sort(list(ulat2))
+  for att in value.ncattrs():
+    if att == '_FillValue': continue
+    var.setncattr(att,value.getncattr(att))
 
-if ncout.variables.has_key('lon'): ncout.variables['lon'][:]=ulon
-if ncout.variables.has_key('lat'): ncout.variables['lat'][:]=ulat
-if ncout.variables.has_key('lon_2'): ncout.variables['lon_2'][:]=ulon2
-if ncout.variables.has_key('lat_2'): ncout.variables['lat_2'][:]=ulat2
-if ncout.variables.has_key('time'): ncout.variables['time'][:]=time
-#ncout.variables['height'][:]=nc.variables['getmGrid3D_getm_layer'][:]
 nc.close()
 
+# Now add values to time and coordinate variables, close
+if ncout.variables.has_key('time'): ncout.variables['time'][:]=time
+
+for item in alat.keys():
+  if ncout.variables.has_key(item) and alat.has_key(item): ncout.variables[item][:]=alat[item]
+for item in alon.keys():
+  if ncout.variables.has_key(item) and alon.has_key(item): ncout.variables[item][:]=alon[item]
+
 for f in files[:]:
-  has2d=True
-  has3d=True
   nc=netcdf.Dataset(f,'r')
-  if nc.variables.has_key('getmGrid2D_getm_lat'):lat2=nc.variables['getmGrid2D_getm_lat'][:]
-  if nc.variables.has_key('getmGrid2D_getm_lon'):lon2=nc.variables['getmGrid2D_getm_lon'][:]
-  if nc.variables.has_key('getmGrid3D_getm_lat'):lat=nc.variables['getmGrid3D_getm_lat'][:]
-  if nc.variables.has_key('getmGrid3D_getm_lon'):lon=nc.variables['getmGrid3D_getm_lon'][:]
-  try:
-    x0=np.where(lon[0]==ulon)[0][0]
-    x1=np.where(lon[-1]==ulon)[0][0]
-    y0=np.where(lat[0]==ulat)[0][0]
-    y1=np.where(lat[-1]==ulat)[0][0]
-  except:
-    print '3D coordinates not found in ', f
-    has3d=False
- 
-  try:
-    x20=np.where(lon2[0]==ulon2)[0][0]
-    x21=np.where(lon2[-1]==ulon2)[0][0]
-    y20=np.where(lat2[0]==ulat2)[0][0]
-    y21=np.where(lat2[-1]==ulat2)[0][0]
-  except:
-   print '2D coordinates not found in ', f
-   has2d=False
- 
+  lat={}
+  lon={}
+  meta={}
+
+  for item in alat.keys():
+    if nc.variables.has_key(item): lat[item]=nc.variables[item][:]
+  for item in alon.keys():
+    if ncout.variables.has_key(item): lon[item]=nc.variables[item][:]
+
+  for item in lat.keys():
+    if alat.has_key(item):
+      try:
+        if not meta.has_key(item): meta[item]={}
+        meta[item]['y']= (np.where(lat[item][0]==alat[item])[0][0], np.where(lat[item][-1]==alat[item])[0][0])
+      except:
+        print "Coordinate ", item, ' found not match in ', f
+  for item in lon.keys():
+    if alon.has_key(item):
+      try:
+        if not meta.has_key(item): meta[item]={}
+        meta[item]['x']= (np.where(lon[item][0]==alon[item])[0][0], np.where(lon[item][-1]==alon[item])[0][0])
+      except:
+        print 'Coordinate ', item, ' found no match in ', f
+
+  coords=alon.keys()
+  coords.extend(alat.keys())
+
   for key,value in nc.variables.iteritems():
 
-    if key in set(['getmGrid2D_getm_lat','getmGrid2D_getm_lon','getmGrid3D_getm_layer',
-      'getmGrid3D_getm_lat','getmGrid3D_getm_lon','time']):
+    if key=='time': continue
+    if key in coords: continue
+
+
+    var=ncout.variables[key]
+
+    if (len(value.shape)) <2:
+      #print 'Skipped variable ', key
       continue
-    try:
-      var=ncout.variables[key]
-    except:
-      continue
 
-    if len(value.shape)<2: continue
+    #print f, key, value.shape
 
-    if has2d:
-      print f, key, value.shape,  (y21-y20+1, x21-x20+1)
-    if has3d:
-      print f, key, value.shape,  (y1-y0+1, x1-x0+1)
+    dims=list(value.dimensions)
+    n=len(dims)
+    lbnd=[]
+    ubnd=[]
+    for i in range(0,n):
+      lbnd.append(0)
+      ubnd.append(len(ncout.dimensions[dims[0]]))
+      for item in coords:
+        if ncout.variables[item].dimensions[0]==dims[i]:
+          if alon.has_key(item):
+            lbnd[i]=meta[item]['x'][0]
+            ubnd[i]=meta[item]['x'][1]+1
+          else:
+            lbnd[i]=meta[item]['y'][0]
+            ubnd[i]=meta[item]['y'][1]+1
+      #if lnbd[i]==0: lbnd
 
-    if (has3d and value.shape[-2] == y1-y0+1 and value.shape[-1] == x1-x0+1) :
-      if len(value.shape)==4:
-         var[:,:,y0:y1+1,x0:x1+1]=value[:,:,:,:]
-      elif len(value.shape)==3:
-        var[:,y0:y1+1,x0:x1+1]=value[:,:,:]
-      elif len(value.shape)==2:
-        var[y0:y1+1,x0:x1+1]=value[:,:]
-    elif (has2d and value.shape[-2] == y21-y20+1 and value.shape[-1] == x21-x20+1) :
-      if len(value.shape)==4:
-         var[:,:,y20:y21+1,x20:x21+1]=value[:,:,:,:]
-      elif len(value.shape)==3:
-        var[:,y20:y21+1,x20:x21+1]=value[:,:,:]
-      elif len(value.shape)==2:
-        var[y20:y21+1,x20:x21+1]=value[:,:]
+    #print lbnd, ubnd, value.shape
+
+    if n==1:
+      if (var[lbnd[0]:ubnd[0]]).shape != value.shape: continue
+      var[lbnd[0]:ubnd[0]]=value[:]
+    elif n==2:
+      if (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]).shape != value.shape: continue
+      var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]=value[:,:]
+    elif n==3:
+      if (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]]).shape != value.shape: continue
+      var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]]=value[:,:,:]
+    elif n==4:
+      if (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]]).shape != value.shape: continue
+      var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]]=value[:,:,:,:]
     else:
       print 'skipped ' + key
-      break
+      continue
+
+    print 'Stitched ' + f + ' ' + key, value.shape
 
   nc.close()
 ncout.close()
