@@ -21,11 +21,13 @@ if len(sys.argv) > 1:
 else:
   prefix = u"netcdf_out"
 
-files=glob.glob(prefix + '.[0-9]*.nc')
+pattern=prefix + u'.*.nc'
+files=glob.glob(pattern)
+
 outfile=prefix + '_stitched.nc'
 
 if len(files)<1:
-  print "Did not find any files for pattern ",pattern
+  print "Did not find any files for pattern "+pattern
 
 alat={}
 alon={}
