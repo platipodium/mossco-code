@@ -21,6 +21,8 @@ module mossco_netcdf
 
   use mossco_variable_types, only: mossco_variableInfo
   use mossco_strings
+  use mossco_field
+  use mossco_state
   use esmf
   use netcdf
 
@@ -55,6 +57,8 @@ module mossco_netcdf
     procedure :: create_mesh_coordinate =>mossco_netcdf_mesh_coordinate_create
     procedure :: ungridded_dimension_id => mossco_netcdf_ungridded_dimension_id
     procedure :: gridget  => mossco_netcdf_grid_get
+    procedure :: getvarvar => mossco_netcdf_var_get_var
+    procedure :: getvar => mossco_netcdf_var_get
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -82,7 +86,7 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)  :: varname, message, fmt
 
     integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, exclusiveCount
-    integer(ESMF_KIND_I4)       :: localDeCount, i, j
+    integer(ESMF_KIND_I4)       :: localDeCount, i, j, k
 
     real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: farrayPtr4
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
@@ -170,7 +174,7 @@ module mossco_netcdf
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-gridmask2 => gridmask3(:,:,1)
+          gridmask2 => gridmask3(:,:,1)
       endif
     end if
 
@@ -179,18 +183,55 @@ gridmask2 => gridmask3(:,:,1)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (rank==4) then
+
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (associated(gridmask3)) then
+        do i=lbnd(1),ubnd(1)
+          do j=lbnd(2),ubnd(2)
+            do k=lbnd(3),ubnd(3)
+              if (gridmask3(i,j,k) == 0)  farrayPtr4(i,j,k,lbnd(4):ubnd(4))=missingValue
+            enddo
+          enddo
+        enddo
+      elseif (associated(gridmask2)) then
+        do i=lbnd(1),ubnd(1)
+          do j=lbnd(2),ubnd(2)
+            if (gridmask2(i,j) == 0)  farrayPtr4(i,j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
+          enddo
+        enddo
+      end if
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)), &
         start=(/1,1,1,1,dimlen/))
+
     elseif (rank==3) then
+
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (associated(gridmask3)) then
+        do i=lbnd(1),ubnd(1)
+          do j=lbnd(2),ubnd(2)
+            do k=lbnd(3),ubnd(3)
+              if (gridmask3(i,j,k) == 0)  farrayPtr3(i,j,k)=missingValue
+            enddo
+          enddo
+        enddo
+      elseif (associated(gridmask2)) then
+        do i=lbnd(1),ubnd(1)
+          do j=lbnd(2),ubnd(2)
+            if (gridmask2(i,j) == 0)  farrayPtr3(i,j,lbnd(3):ubnd(3))=missingValue
+          enddo
+        enddo
+      end if
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), &
         start=(/1,1,1,dimlen/))
+
     elseif (rank==2) then
+
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -204,12 +245,15 @@ gridmask2 => gridmask3(:,:,1)
       end if
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
         start=(/1,1,dimlen/))
+
     elseif (rank==1) then
+
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(lbnd(1):ubnd(1)), &
         start=(/1,dimlen/))
+
     endif
     if (ncStatus /= NF90_NOERR) call &
       ESMF_LogWrite(nf90_strerror(ncStatus),ESMF_LOGMSG_ERROR)
@@ -1081,28 +1125,254 @@ gridmask2 => gridmask3(:,:,1)
     type(type_mossco_netcdf_variable)            :: var
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)                        :: localrc, i, udimid
-    integer(ESMF_KIND_I4)                        :: rank
-    integer(ESMF_KIND_I4), allocatable           :: dimids(:)
+    integer(ESMF_KIND_I4)                        :: localrc, i, udimid, varid
+    integer(ESMF_KIND_I4)                        :: rank, j, k, localDeCount, itemCount
+    integer(ESMF_KIND_I4), allocatable           :: dimids(:), ubnd(:), lbnd(:)
+    character(len=ESMF_MAXSTR)                   :: coordinates, units, message
+    character(len=ESMF_MAXSTR), allocatable      :: coordNameList(:)
+    type(type_mossco_netcdf_variable)            :: coordVar
+    type(ESMF_CoordSys_Flag)                     :: coordSys
+    type(ESMF_Array)                             :: array
+    type(ESMF_ArrayBundle)                       :: arrayBundle
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
+    type(ESMF_DistGrid)                          :: distGrid
 
     rc = ESMF_SUCCESS
 
-    rank = var%rank
-    localrc = nf90_inq_dimid(self%ncid, 'time', udimid)
+    !> Ask for coordinates attribute, if not present, then return (@todo: implement alternative solution)
+    localrc = nf90_get_att(self%ncid, var%varid, 'coordinates', coordinates)
+    if (localrc /= NF90_NOERR) then
+      write(message,'(A)') 'Cannot determine grid, "coordinates" attribute is missing from variable '//trim(var%name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      return
+    end if
 
-    if (any(var%dimids == udimid)) rank = rank - 1
-    allocate(dimids(rank))
+    coordSys=ESMF_COORDSYS_CART
 
-    !TODO from here
+    allocate(coordNameList(var%rank))
+    allocate(dimids(var%rank))
+    do i=1, rank
+      j=index(coordinates,' ')
+      if (j<=1) exit
 
-!    if (rank == 1) then
-!      grid = ESMF_GridCreateNoPeriDim(minIndex=(/1/), maxIndex=var%dimlen(1), rc=localrc)
-!    if (var%rank == 1) then
-!   endif
+      coordNameList(i) = trim(adjustl(coordinates(1:j)))
+      coordinates=coordinates(j+1:len_trim(coordinates))
 
+      ! Try to find the corresponding coordinate variable
+      localrc = nf90_inq_varid(self%ncid, trim(coordNameList(i)), varid)
+      if (localrc /= NF90_NOERR) then
+        write(message,'(A)') 'No variable found for coordinate '//trim(coordNameList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        return
+      end if
+
+      ! search for coordinate variable in self%variables
+      do j=1, ubound(self%variables,1)
+        if (trim(self%variables(j)%name) == trim(coordNameList(j))) then
+          coordVar = self%variables(j)
+          exit
+        endif
+      enddo
+
+      do j=1, ubound(coordVar%dimids,1)
+        if (all(var%dimids /= coordVar%dimids(j))) then
+          write(message,'(A)') 'No corresponding dimensions in variable and its coordinate '//trim(coordNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          return
+        end if
+        k=k+1
+        dimids(k)=coordVar%dimids(j)
+      enddo
+
+      localrc = nf90_get_att(self%ncid, coordVar%varid, 'units', units)
+      if (localrc /= NF90_NOERR) then
+        write(message,'(A)') 'Cannot determine unit of coordinate variable '//trim(coordVar%name)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      end if
+
+      if (index(units,'degree')>0) then
+        coordSys = ESMF_COORDSYS_SPH_DEG
+      elseif (index(units,'rad')>0) then
+        coordSys = ESMF_COORDSYS_SPH_RAD
+      endif
+
+      if (localrc /= NF90_NOERR) then
+       ! write(message,'(A)') 'No variable found for coordinate '//trim(coordNameList(i))
+       ! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+       ! return
+      end if
+
+!      array = ESMF_ArrayCreate(name=trim(coordVar%name), typeKind=ESMF_TYPEKIND_R8, &
+!        rank=coordVar%rank, rc=localrc)
+!
+!      call ESMF_ArrayGet(array, localDeCount=localDeCount, rank=rank, rc=localrc)
+!      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!      if (localDeCount==0) return
+!
+!      allocate(lbnd(rank))
+!      allocate(ubnd(rank))
+!
+!      call ESMF_ArrayGetBounds(array, localDe=0, exclusiveLBound=lbnd, &
+!        exclusiveUBound=ubnd, rc=localrc)
+!      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!      if (coordVar%rank == 1) then
+!        call ESMF_ArrayGet(array, farrayPtr=farrayPtr1, rc=localrc)
+!        localrc = nf90_var_get(self%ncid, coordVar%varid, farrayPtr1, lbnd, ubnd)
+!      elseif (coordVar%rank == 2) then
+!        call ESMF_ArrayGet(array, farrayPtr=farrayPtr2, rc=localrc)
+!        localrc = nf90_var_get(self%ncid, coordVar%varid, farrayPtr2, lbnd, ubnd)
+!      else
+!        write(message,'(A)') 'Not implemented: rank>2 coordinate variable '//trim(coordVar%name)
+!        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+!        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!      end if
+!      deallocate(lbnd)
+!      deallocate(ubnd)
+!
+!      call ESMF_ArrayBundleAdd(arrayBundle, (/array/), rc=localrc)
+    enddo
+    deallocate(coordNameList)
+    deallocate(dimids)
+
+!    call ESMF_ArrayBundleGet(arrayBundle, itemCount=itemCount, rc=localrc)
+
+!    grid = ESMF_GridCreateNoPeriDim(rc=localrc)
+!    call ESMF_GridAddCoords(grid, rc=localrc)
+
+!    do i=1, itemCount
+!      call ESMF_ArrayBundleGet(arrayBundle, i, array, rc=localrc)
+!      call ESMF_GridSetCoord(grid, coordDim=i, rc=localrc)
+!    enddo
+
+      rc=ESMF_RC_NOT_IMPL
 
     return
 
   end subroutine mossco_netcdf_grid_get
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_var_get"
+  subroutine mossco_netcdf_var_get(self, field, var, itime, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    type(ESMF_Field), intent(inout)               :: field
+    type(type_mossco_netcdf_variable)            :: var
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4), intent(in), optional  :: itime
+
+    integer(ESMF_KIND_I4)                        :: localrc, i, udimid, localDeCount
+    integer(ESMF_KIND_I4)                        :: rank, itime_
+    integer(ESMF_KIND_I4), allocatable           :: dimids(:)
+    type(ESMF_FieldStatus_Flag)                  :: fieldStatus
+    integer(ESMF_KIND_I4), allocatable           :: ubnd(:), lbnd(:)
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
+    character(len=ESMF_MAXSTR)                   :: message
+
+    rc = ESMF_SUCCESS
+
+    if (present(itime)) then
+      itime_=itime
+    else
+      itime_=1
+    endif
+
+    ! Test for field completeness and terminate if not complete
+    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)')  'Cannot read into non-complete field '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, rank=rank, localDeCount=localDeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (localDeCount==0) return
+
+    if (rank > 4) then
+      write(message, '(A)')  'Rank > 4 not implemented for reading field '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      rc = ESMF_RC_NOT_IMPL
+    endif
+
+    allocate(lbnd(rank))
+    allocate(ubnd(rank))
+    call ESMF_FieldGetBounds(field, localDe=0, exclusiveLBound=lbnd, &
+      exclusiveUBound=ubnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (any(lbnd < ubnd)) return
+
+    if (rank == 1) then
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (var%rank==rank) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, lbnd, ubnd)
+      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, (/itime_,lbnd(1)/), (/itime_, ubnd(1)/))
+      else
+        rc = ESMF_RC_NOT_IMPL
+        return
+      endif
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+    elseif (rank == 2) then
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+    elseif (rank == 3) then
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+    elseif (rank == 4) then
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
+    endif
+
+    return
+
+  end subroutine mossco_netcdf_var_get
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_var_get_var"
+  function mossco_netcdf_var_get_var(self, varname, rc) result(var)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    character(len=ESMF_MAXSTR)                   :: varname
+    type(type_mossco_netcdf_variable)            :: var
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                        :: i
+
+    rc = ESMF_SUCCESS
+
+    do i=1, ubound(self%variables,1)
+      if (trim(self%variables(i)%name) == trim(varname)) then
+        var = self%variables(i)
+        return
+      endif
+      if (trim(self%variables(i)%standard_name) == trim(varname)) then
+        var = self%variables(i)
+        return
+      endif
+    enddo
+
+    rc = ESMF_RC_NOT_FOUND
+    return
+
+  end function mossco_netcdf_var_get_var
 
 end module

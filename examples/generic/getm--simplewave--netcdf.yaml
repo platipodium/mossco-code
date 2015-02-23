@@ -1,0 +1,22 @@
+dependencies:
+  - simplewave:
+    - component: getm
+      grid: water_depth_at_soil_surface
+
+coupling:
+  - components: 
+     - getm
+     - simplewave
+    interval: 5 m
+  - components:
+    - simplewave
+    - getm
+    interval: 5 m
+  - components: 
+     - getm
+     - netcdf
+    interval: 5 m
+  - components: 
+     - simplewave
+     - netcdf
+    interval: 5 m

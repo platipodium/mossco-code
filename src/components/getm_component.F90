@@ -227,7 +227,7 @@ module getm_component
     use time, only : getm_time_timestep => timestep
     use initialise,  only: init_model,dryrun
     use integration, only: MinN,MaxN
-    use meteo      ,only: met_method
+    use meteo      ,only: met_method,METEO_CONST,METEO_FROMFILE,METEO_FROMEXT
     use waves      ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE,WAVES_FROMEXT
 #ifdef GETM_PARALLEL
     use mpi
@@ -375,14 +375,14 @@ module getm_component
     end if
 
     select case (met_method)
-      case(2)
+      case(METEO_CONST,METEO_FROMFILE)
         if (associated(windU)) then
           call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,exportState,"m s-1",name)
         end if
         if (associated(windV)) then
           call getmCmp_StateAddPtr("wind_y_velocity_at_10m",windV,exportState,"m s-1",name)
         end if
-      case(3)
+      case(METEO_FROMEXT)
         if (associated(windU)) then
           call getmCmp_StateAddPtr("wind_x_velocity_at_10m",windU,importState,"m s-1",name)
         end if
@@ -643,7 +643,7 @@ module getm_component
 
     !  use clock to do determine time of calling routine
     call ESMF_ClockGetNextTime(clock,nextTime,rc=localrc)
-    if (rc .ne. ESMF_SUCCESS) then
+    if (localrc .ne. ESMF_SUCCESS) then
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
       call ESMF_ClockGet(myClock,stopTime=NextTime, rc=localrc)
@@ -764,7 +764,8 @@ module getm_component
    use variables_3d   ,only: T
 #endif
 #endif
-   use meteo          ,only: metforcing,met_method,calc_met,u10,v10,swr_=>swr
+   use meteo          ,only: metforcing,met_method,METEO_FROMEXT,calc_met
+   use meteo          ,only: u10,v10,swr_=>swr
    use waves          ,only: waveforcing_method,NO_WAVES
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
 
@@ -839,9 +840,9 @@ module getm_component
 #endif
       end if
       if (metforcing) then
-         if ((met_method.eq.2 .or. met_method.eq.3) .and. calc_met) then ! still required...
-         allocate(windU(E2DFIELD))
-         allocate(windV(E2DFIELD))
+         if (.not. (calc_met .and. met_method.eq.METEO_FROMEXT) ) then
+            allocate(windU(E2DFIELD))
+            allocate(windV(E2DFIELD))
          end if
          allocate(swr(E2DFIELD))
       end if
@@ -907,9 +908,9 @@ module getm_component
 #endif
       end if
       if (metforcing) then
-         if ((met_method.eq.2 .or. met_method.eq.3) .and. calc_met) then ! still required...
-         windU => u10
-         windV => v10
+         if (.not. (calc_met .and. met_method.eq.METEO_FROMEXT) ) then
+            windU => u10
+            windV => v10
          end if
          swr => swr_
       end if
@@ -1614,7 +1615,8 @@ module getm_component
 #endif
 #endif
    use m2d            ,only: dtm
-   use meteo          ,only: metforcing,met_method,calc_met,u10,v10,swr_=>swr
+   use meteo          ,only: metforcing,met_method,METEO_CONST,METEO_FROMFILE
+   use meteo          ,only: u10,v10,swr_=>swr
    use waves          ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
@@ -1660,11 +1662,11 @@ module getm_component
       end if
 #endif
       if (metforcing) then ! still required...
+         if (met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
+            windU = u10
+            windV = v10
+         end if
          swr = swr_
-      if (calc_met .and. met_method.eq.2) then
-         windU = u10
-         windV = v10
-      end if
       end if
       if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
          waveH   = waveH_
@@ -1798,7 +1800,8 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use meteo          ,only: metforcing,met_method,calc_met,u10,v10
+   use meteo          ,only: metforcing,met_method,METEO_FROMEXT,calc_met
+   use meteo          ,only: u10,v10
    use waves          ,only: waveforcing_method,WAVES_FROMEXT,new_waves
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
@@ -1823,10 +1826,10 @@ module getm_component
 
    if (noKindMatch) then
       if (metforcing) then ! still required...
-      if (calc_met .and. met_method.eq.3) then
-         u10 = windU
-         v10 = windV
-      end if
+         if (calc_met .and. met_method.eq.METEO_FROMEXT) then
+            u10 = windU
+            v10 = windV
+         end if
       end if
       if (waveforcing_method .eq. WAVES_FROMEXT) then
          waveH_   = waveH

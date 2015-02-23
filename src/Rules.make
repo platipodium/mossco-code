@@ -87,8 +87,12 @@ else
         $(warning Overwriting FORTRAN_COMPILER=$(FORTRAN_COMPILER) with $(ESMF_FORTRAN_COMPILER))
       endif
     endif
-    export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
-    MOSSCO_F03VERSION=$(shell $(F90) --version | head -1)
+    ifeq ($(FORTRAN_COMPILER), XLF)
+      MOSSCO_F03VERSION=$(shell $(F90) -qversion | head -1)
+    else
+      MOSSCO_F03VERSION=$(shell $(F90) --version | head -1)
+      export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
+    endif
   endif
 endif
 export MOSSCO_ESMF
@@ -257,7 +261,11 @@ ifeq ($(MOSSCO_GOTM),true)
   #GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
   #GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
   ifeq ($(MOSSCO_FABM),true)
-    DEFINES += -D_GOTM_MOSSCO_FABM_
+    ifeq ($(FORTRAN_COMPILER), XLF)
+      DEFINES += -WF,-D_GOTM_MOSSCO_FABM_
+    else
+      DEFINES += -D_GOTM_MOSSCO_FABM_
+    endif
     export MOSSCO_GOTM_FABM=true
   endif
   #export GOTM_CPPFLAGS = -I$(GOTMDIR)/include -I$(GOTMDIR)/modules/$(FORTRAN_COMPILER)
@@ -281,7 +289,11 @@ ifeq ($(MOSSCO_GETM),true)
 
 # default compile for SPHERICAL
   GETM_GEOMETRY ?= SPHERICAL
-  export STATIC += -D$(GETM_GEOMETRY) $(GETM_STATIC_DEFINES)
+  ifeq ($(FORTRAN_COMPILER), XLF)
+    export STATIC += -WF,-D$(GETM_GEOMETRY) -WF,$(GETM_STATIC_DEFINES)
+  else
+    export STATIC += -D$(GETM_GEOMETRY) $(GETM_STATIC_DEFINES)
+  endif
   export GETM_CPPFLAGS = $(STATIC)
   ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
     export GETM_CPPFLAGS += -DGETM_PARALLEL
@@ -316,7 +328,11 @@ endif
 
 ifdef EROSED_DIR
   MOSSCO_EROSED=true
-  DEFINES += -DMOSSCO_EROSED
+  ifeq ($(FORTRAN_COMPILER), XLF)
+    DEFINES += -WF,-DMOSSCO_EROSED
+  else
+    DEFINES += -DMOSSCO_EROSED
+  endif
 endif
 export MOSSCO_EROSED
 
@@ -409,7 +425,7 @@ EXTRA_CPP=
 else
 ifeq ($(FORTRAN_COMPILER),XLF)
 F90FLAGS += -qmoddir=$(MOSSCO_MODULE_PATH) -qstrict
-EXTRA_CPP=-DNO_ISO_FORTRAN_ENV
+EXTRA_CPP=-WF,-DNO_ISO_FORTRAN_ENV
 else
 $(error I don't know where to place modules for FORTRAN_COMPILER=$(FORTRAN_COMPILER).)
 endif
