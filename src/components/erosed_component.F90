@@ -46,7 +46,7 @@ module erosed_component
   !size_classes_of_upward_flux_of_pim_at_bottom
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
-
+  integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
   ! Dimensions (x,y,depth layer, fraction index)
   real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
   type (BioturbationEffect)                     :: BioEffects
@@ -225,18 +225,7 @@ contains
                                     !  2: part mud to fluff layer, other part to bed layers (no burial)
     namelist /benthic/   anymud     != .true.
 
-
-
-!    namelist /sedparams/ sedtyp(1)   !1= SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
-!    namelist /sedparams/ sedtyp(2)   !2= SEDTYP_COHESIVE               ! cohesive sediment (mud)
-!    namelist /sedparams/ cdryb       != 1650.0_fp                     ! dry bed density [kg/m3]
-!    namelist /sedparams/ rhosol      != 2650.0_fp                     ! specific density [kg/m3]
-!    namelist /sedparams/ sedd50      != 0.0001_fp                     ! 50% diameter sediment fraction [m]
-!    namelist /sedparams/ sedd90      != 0.0002_fp                     ! 90% diameter sediment fraction [m]
-
-!    namelist /sedparams/ frac        != 0.5_fp
-
-
+!#define DEBUG
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
@@ -337,7 +326,6 @@ contains
     endif
 
   inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
-    !write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
   if (exst.and.(.not.opnd)) then
     call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
@@ -345,13 +333,9 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     open (unit = UnitNr, file = 'globaldata.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
-   !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
-   read (UnitNr, nml=globaldata, iostat = istat)
-   close (UnitNr)
+    read (UnitNr, nml=globaldata, iostat = istat)
+    close (UnitNr)
   end if
-!    g       = 9.81_fp   ! gravitational acceleration [m/s2]
-!    rhow    = 1000.0_fp ! density of water [kg/m3]
-
 
   inquire ( file = 'benthic.nml', exist=exst , opened =opnd, Number = UnitNr )
 
@@ -360,7 +344,6 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     open (unit = UnitNr, file = 'benthic.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
-    !write (*,*) ' in erosed-ESMF-component ', UnitNr, ' was just opened'
     read (UnitNr, nml=benthic, iostat = istat)
     close (UnitNr)
   end if
@@ -441,13 +424,13 @@ contains
     BioEffects%ErodibilityEffect = 1.0_fp
 
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
-  !  write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
     if (exst.and.(.not.opnd)) then
       call ESMF_UtilIOUnitGet(UnitNr, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       open (unit = UnitNr, file = 'sedparams.txt', action = 'read ', status = 'old')
+
  ! non-cohesive sediment
       read (UnitNr,*, iostat = istat) (sedtyp(i),i=1,nfrac)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) ( cdryb(i), i=1, nfrac)
@@ -460,7 +443,6 @@ contains
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (eropartmp(i), i=1, nfrac)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrdeptmp(i), i=1, nfrac)
       if (istat ==0 ) read (UnitNr,*, iostat = istat) (tcrerotmp(i), i=1, nfrac)
-
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((eropar(i,j), i=1, nfrac), j=nmlb,nmub)   ! erosion parameter for mud [kg/m2/s]
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrdep(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud sedimentation [N/m2]
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrero(i,j), i=1, nfrac), j=nmlb,nmub)   ! critical bed shear stress for mud erosion [N/m2]
@@ -512,21 +494,6 @@ contains
       stop
     end if
 
-    ! ================================================================================
-    !   USER INPUT
-    ! ================================================================================
-    !
-    !   Sediment properties (see also 'sedparams.inc')
-    !
-!    sedtyp(1)   = SEDTYP_NONCOHESIVE_SUSPENDED  ! non-cohesive suspended sediment (sand)
-!    sedtyp(2)   = SEDTYP_COHESIVE               ! cohesive sediment (mud)
-!    cdryb       = 1650.0_fp                     ! dry bed density [kg/m3]
-!    rhosol      = 2650.0_fp                     ! specific density [kg/m3]
-!    sedd50      = 0.0001_fp                     ! 50% diameter sediment fraction [m]
-!    sedd90      = 0.0002_fp                     ! 90% diameter sediment fraction [m]
-!
-!    frac = 0.5_fp
-    !
     !   Initial bed composition
     !
     if (iunderlyr==2) then
@@ -551,7 +518,7 @@ contains
         taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
     enddo
 
-!#ifdef DEBUG
+#ifdef DEBUG
     ! Open file for producing output
     call ESMF_UtilIOUnitGet(unit707, rc = localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -560,7 +527,7 @@ contains
 
 !! This file output is not MPI compatible
     if (lexist) then
-  !      write (*,*) ' The output file "delft_sediment_test.out" already exits. It will be overwritten!!!'
+
         open (unit = unit707, file = 'delft_sediment.out', status = 'REPLACE', action = 'WRITE')
     else
         open (unit = unit707, file = 'delft_sediment.out', status = 'NEW', action = 'WRITE')
@@ -568,7 +535,7 @@ contains
 
     write (unit707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
         'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
-!#endif
+#endif
 
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(inum, jnum,nfrac))
 
@@ -735,6 +702,29 @@ contains
         end if
       end do
     end do
+   !> The preferred interface would be to use isPresent, but htis only works in ESMF from Nov 2014
+   !> @todo replace if 0 by ESMF_VERSION macros
+#if 0
+   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+   if (isPresent) then
+#else
+   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
+   !! Do not check for success here as NOT_FOUND is expected behaviour, @todo: check for NOT_FOUND flag
+   if (localrc .ne. ESMF_SUCCESS) then
+      call ESMF_LogWrite('ignore ERROR messages above related to GridGetItem - waiting for new ESMF release', &
+                         ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+   end if
+   if (localrc == ESMF_SUCCESS) then
+#endif
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   else
+      allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+      mask = 0
+      mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
+   end if
 
 !   Complete Import Fields
     do i=1,size(importList)
@@ -897,7 +887,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical                  :: First_entry = .true.
     type(ESMF_StateItem_Flag) :: itemType
 
-
+#define DEBUG
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
@@ -940,7 +930,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          do j=1,jnum
           do i= 1, inum
            h1(inum*(j -1)+i) = depth(i,j)
-           !write (*,*) ' water depth ',depth(i,j)
+  !         write (*,*) ' water depth ',depth(i,j), 'i,j', i,j, 'nm',inum*(j -1)+i
           end do
          end do
       else
@@ -953,27 +943,27 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       end if
 
 !write (*,*) 'layer_height_at_soil_surface', hbot
-
 !write (*,*)'depth_averaged_x_velocity_in_water', u2d
-
-!write (*,*)'turbulent_diffusivity_of_momentum_at_soil_surface',nybot
 
       if (localrc == 0) then
 
         do j=1,jnum
           do i= 1, inum
-            if (u2d(i,j)==-9999.0)u2d(i,j)=0.0_fp
-            if (v2d(i,j)==-9999.0)v2d(i,j)=0.0_fp
+
+           if (mask(i,j)/=0)then
             umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
             thick (inum*(j -1)+i) = hbot (i,j)/depth(i,j)
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
-            if (ubot (i,j)==-9999.0) u_bot (inum*(j -1)+i) =0.0_fp
-            if (vbot (i,j)==-9999.0) v_bot (inum*(j -1)+i) =0.0_fp
-     !       write (*,*) 'ubot', ubot(i,j)
-     !       write (*,*) 'vbot', vbot(i,j)
-            !write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
-     !write (*,*) 'thick',thick(inum*(j -1)+i), 'depth', depth(i,j), 'hbot',hbot (i,j)
+!                umod (inum*(j -1)+i) = 1.0_fp
+!                u_bot (inum*(j -1)+i)= 0.32_fp
+!                v_bot (inum*(j -1)+i) = u_bot(inum*(j -1)+i)
+!                u2d(i,j)=1.0_fp/1.414213_fp
+!                v2d(i,j)=u2d(i,j)
+!            write (*,*) 'ubot', ubot(i,j)
+!            write (*,*) 'vbot', vbot(i,j)
+!            write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
+!            write (*,*) 'nm',inum*(j -1)+i, 'thick',thick(inum*(j -1)+i), 'i,j', i,j ,'depth', depth(i,j), 'hbot',hbot (i,j)
             if (wave) then
                 tper (inum*(j -1)+i) = waveT (i,j)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
@@ -981,14 +971,16 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     !write (*,*) 'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j)
             endif
 
+           else
+            u2d(i,j) = 0.0_fp
+            v2d(i,j) = u2d(i,j)
+           end if
           end do
         end do
 
       else
         umod = 0.2
       end if
-write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
-!write (*,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
 
        !> get spm concentrations, particle sizes and density
       call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
@@ -1200,15 +1192,16 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
 
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
-!#ifdef DEBUG
+#ifdef DEBUG
         write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
-!#endif
+
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
         sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
+ !       write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
+ !       write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
 
-  !  write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
-
+#endif
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
@@ -1310,6 +1303,7 @@ write (unit707,*) 'max bottom vel', maxval(sqrt(u_bot*u_bot+v_bot*v_bot))
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
     deallocate (spm_concentration)
+    deallocate (mask)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 
