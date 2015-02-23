@@ -398,7 +398,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
 !
 !! executable statements ------------------
 !
-#define DEBUG
+!#define DEBUG
     !   User defined parameters
     !
     !   Initialization
@@ -431,7 +431,7 @@ eps = 1e-6
 
 zubed = relativ_thick* h /2.0_fp   ! center of the first element at bed
 z0cur = sedd50/12._fp   ! z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
-!z0rou = z0cur           ! z0 bed roughness height for wave: is calculated using a function in erosed
+!z0rou = z0cur           ! z0 bed roughness height for wave
 
 aksfac = 1.0_fp         ! proportionality factor multiplied by ks (equivalent sand roughness height)
                         ! to evaluate van Rijn concentration height "a"
@@ -442,8 +442,10 @@ rdw = rdc                 !it is not used when iopkcw = 1
 !+++++++++++TEST Soursin_3D++++++++++++++
 sigsed = -(1.0_fp - relativ_thick /2.0_fp)      ! Dimensionless distance of the middle of the lowest cell to the water surface
 sigmol = 6.7_fp     ! Schmidt number
-seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from input file
-!
+seddif = 1.e-3_fp
+!thick0  = 1.0_fp
+!thick1 = 1.0_fp
+!relativ_thick= 0.25_fp ! thickness of bed layer bed cell!?
 !+++++++++++TEST++++++++++++++
 
 
@@ -511,14 +513,14 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
 
 
                 !   Compute source and sink fluxes for cohesive sediment (mud)
-print*, 'cohesive','i,j', i,j, 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
+!write (*,*) 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
                  call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
                                               & uorb(nm), tper  (nm), teta(nm), kssilt,       &
                                               & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
 
                  call compbsskin_arguments%run ()
                  call compbsskin_arguments%get(taub(nm))
-write (*,*) 'taub', taub(nm), 'nm', nm
+!write (*,*) 'taub', taub(nm)
 
                  fracf   = 0.0_fp
                  if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
@@ -543,9 +545,8 @@ write (*,*) 'taub', taub(nm), 'nm', nm
 
                  call eromud_arguments%get(sour (l,nm), sink (l,nm), sourf (l,nm), sinkf (l,nm) )
 #ifdef DEBUG
-                 write (*,*) 'erosed mud sour, l, nm', sour (l,nm), l, nm
+                 write (*,*) 'erosed mud sour', sour (l,nm), l
                  write (*,*) 'erosed mud sink',sink (l,nm), l
-                write (*,*) '----------------------------------'
 #endif
             else
                 !Non-Cohesive soil
@@ -655,7 +656,7 @@ write (*,*) 'taub', taub(nm), 'nm', nm
 !write (*,*)'taucr-sand', taucr(l)
 
                  z0rou = calcZ0rou (vonkar,sedd50(l),h (nm),g)
-!write (*,*) 'z0rou', z0rou
+
                  call bedbc1993_arguments%set (tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm), &
                            & zubed(nm)   ,sedd50(l)     ,sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l), &
                            & taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax   , &
@@ -681,7 +682,7 @@ write (*,*) 'taub', taub(nm), 'nm', nm
 
                  thick0 = relativ_thick(nm) * h0(nm)
                  thick1 = relativ_thick(nm) * h (nm)
-                 write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
+  !               write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
                  call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
@@ -689,12 +690,12 @@ write (*,*) 'taub', taub(nm), 'nm', nm
                  call soursin3d_arguments%run ()
 
                  call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
-   !             write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm), 'l', l, 'nm',nm
-  !              write (*,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++'
+ !                write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm), 'l', l, 'nm',nm
+
               end if !(2D/3D)
             endif ! (cohesive /non-cohesive
         enddo     fractions
- !write (*,*) '**************************************************************************'
+ !write (*,*) '------------------------------'
     enddo    elements
     !
 
