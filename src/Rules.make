@@ -85,13 +85,13 @@ else
     ifdef FORTRAN_COMPILER
       ifneq ("$(ESMF_FORTRAN_COMPILER)","$(FORTRAN_COMPILER)")
         $(warning Overwriting FORTRAN_COMPILER=$(FORTRAN_COMPILER) with $(ESMF_FORTRAN_COMPILER))
+        export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
       endif
     endif
     ifeq ($(FORTRAN_COMPILER), XLF)
       MOSSCO_F03VERSION=$(shell $(F90) -qversion | head -1)
     else
       MOSSCO_F03VERSION=$(shell $(F90) --version | head -1)
-      export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
     endif
   endif
 endif
@@ -382,7 +382,12 @@ ifdef FORTRAN_COMPILER
 
   ifeq (${MOSSCO_GETM},true)
     GETM_F90COMPILER=$(shell grep 'FC=' $(GETMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-    GETM_F90COMPILER_VERSION:=$(shell $(GETM_F90COMPILER) --version | head -1)
+
+    ifeq ($(FORTRAN_COMPILER), XLF)
+      GETM_F90COMPILER_VERSION:=$(shell $(GETM_F90COMPILER) -qversion | head -1)
+    else
+      GETM_F90COMPILER_VERSION:=$(shell $(GETM_F90COMPILER) --version | head -1)
+    endif
     ifndef F90
       export F90=$(GETM_F90COMPILER)
       $(warning F90 automatically determined from GETM environment: F90=$(F90))
@@ -391,7 +396,12 @@ ifdef FORTRAN_COMPILER
 
   ifeq (${MOSSCO_GOTM},true)
     GOTM_F90COMPILER=$(shell grep 'FC=' $(GOTMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-    GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) --version | head -1)
+    ifeq ($(FORTRAN_COMPILER), XLF)
+      GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) -qversion | head -1)
+    else
+      GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) --version | head -1)
+    endif
+    
     ifndef F90
       export F90=$(GOTM_F90COMPILER)
       $(warning F90 automatically determined from GOTM environment: F90=$(F90))
@@ -535,7 +545,7 @@ fabm_build:
 ifeq ($(MOSSCO_FABM),true)
 ifndef MOSSCO_FABM_BINARY_DIR
 	@mkdir -p $(FABM_BINARY_DIR)
-	(cd $(FABM_BINARY_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST))
+	(cd $(FABM_BINARY_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) -DCMAKE_Fortran_COMPILER=$(MOSSCO_F03COMPILER))
 endif
 endif
 
@@ -543,7 +553,7 @@ fabm_install:
 ifeq ($(MOSSCO_FABM),true)
 ifdef FABM_BINARY_DIR
 	@echo Recreating the FABM library in $(FABM_PREFIX)
-	$(MAKE) -sC $(FABM_BINARY_DIR) install
+	$(MAKE) -j6 -sC $(FABM_BINARY_DIR) install
 endif
 endif
 
