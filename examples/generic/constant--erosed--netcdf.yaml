@@ -1,0 +1,9 @@
+coupling:
+  - components:
+     - constant
+     - erosed
+    interval: none
+  - components:
+     - erosed
+     - netcdf
+    interval: none

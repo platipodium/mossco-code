@@ -7,7 +7,7 @@ constant_constant_netcdf
 constant_constant
 constant_coupling
 constant_empty_netcdf
-constant_erosed
+constant--erosed--netcdf
 constant_fabm0d_netcdf
 constant_fabm_gotm_erosed
 constant--fabm_sediment--netcdf
