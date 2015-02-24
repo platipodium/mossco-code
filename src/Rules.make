@@ -238,11 +238,11 @@ export MOSSCO_GETM
 # the libraries are installed in the production version (libfabm_prod)
 # @todo adjust this generic for FABM/GOTM/GETM
 
-ifneq (,$(filter $(MOSSCO_GOTM),$(MOSSCO_FABM),$(MOSSCO_GETM) true))
+ifeq ($(MOSSCO_GETM),true)
   ifndef FORTRAN_COMPILER
-    FABM_AVAILABLE_COMPILERS=$(shell ls -1 $(FABMDIR)/compilers/compiler.* | cut -d'.' -f2)
-    FABM_AVAILABLE_COMPILERS:=$(patsubst %compiler.,,$(FABM_AVAILABLE_COMPILERS))
-    $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(FABMDIR)/compilers: $(FABM_AVAILABLE_COMPILERS))
+    GETM_AVAILABLE_COMPILERS=$(shell ls -1 $(GETMDIR)/compilers/compiler.* | cut -d'.' -f2)
+    GETM_AVAILABLE_COMPILERS:=$(patsubst %compiler.,,$(GETM_AVAILABLE_COMPILERS))
+    $(error FORTRAN_COMPILER needs to be set to one of the compilers in $(GETMDIR)/compilers: $(GETM_AVAILABLE_COMPILERS))
   endif
 endif
 
@@ -391,20 +391,6 @@ ifdef FORTRAN_COMPILER
     ifndef F90
       export F90=$(GETM_F90COMPILER)
       $(warning F90 automatically determined from GETM environment: F90=$(F90))
-    endif
-  endif
-
-  ifeq (${MOSSCO_GOTM},true)
-    GOTM_F90COMPILER=$(shell grep 'FC=' $(GOTMDIR)/compilers/compiler.$(FORTRAN_COMPILER) | cut -d"=" -f2)
-    ifeq ($(FORTRAN_COMPILER), XLF)
-      GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) -qversion | head -1)
-    else
-      GOTM_F90COMPILER_VERSION:=$(shell $(GOTM_F90COMPILER) --version | head -1)
-    endif
-    
-    ifndef F90
-      export F90=$(GOTM_F90COMPILER)
-      $(warning F90 automatically determined from GOTM environment: F90=$(F90))
     endif
   endif
 
