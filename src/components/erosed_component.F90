@@ -422,7 +422,7 @@ contains
    ! wave = .true.
     BioEffects%TauEffect =1.0_fp
     BioEffects%ErodibilityEffect = 1.0_fp
-write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
+!write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
 
     if (exst.and.(.not.opnd)) then
