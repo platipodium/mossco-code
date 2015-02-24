@@ -364,6 +364,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Field),  allocatable :: fieldList(:)
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
+    type(ESMF_GeomType_Flag)    :: importGeomType
     type(ESMF_Grid)             :: importGrid,exportGrid
     type(ESMF_StateItem_Flag)   :: itemType
     logical                     :: isPresent
@@ -435,6 +436,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             call ESMF_FieldGet(exportField,grid=exportGrid,rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+            call ESMF_FieldGet(importField, geomType=importGeomType, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            if (importGeomType .ne. ESMF_GEOMTYPE_GRID) cycle
             call ESMF_FieldGet(importField,grid=importGrid,rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
