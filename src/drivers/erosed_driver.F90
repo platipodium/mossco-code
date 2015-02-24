@@ -398,7 +398,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
 !
 !! executable statements ------------------
 !
-#define DEBUG
+!#define DEBUG
     !   User defined parameters
     !
     !   Initialization
@@ -511,14 +511,14 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
 
 
                 !   Compute source and sink fluxes for cohesive sediment (mud)
-print*, 'cohesive','i,j', i,j, 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
+!print*, 'cohesive','i,j', i,j, 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
                  call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
                                               & uorb(nm), tper  (nm), teta(nm), kssilt,       &
                                               & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
 
                  call compbsskin_arguments%run ()
                  call compbsskin_arguments%get(taub(nm))
-write (*,*) 'taub', taub(nm), 'nm', nm
+!write (*,*) 'taub', taub(nm), 'nm', nm
 
                  fracf   = 0.0_fp
                  if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
@@ -681,7 +681,7 @@ write (*,*) 'taub', taub(nm), 'nm', nm
 
                  thick0 = relativ_thick(nm) * h0(nm)
                  thick1 = relativ_thick(nm) * h (nm)
-                 write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
+    !             write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
                  call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
