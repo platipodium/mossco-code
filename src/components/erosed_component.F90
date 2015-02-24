@@ -988,7 +988,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
    &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if(localrc /= ESMF_SUCCESS) then
+      call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if(n .eq. 0) then
         !> run without SPM forcing from pelagic component
 !#ifdef DEBUG
         call ESMF_LogWrite( &
@@ -996,10 +1000,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
            ESMF_LOGMSG_INFO)
 !#endif
       else
-
-        call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (allocated(fieldlist)) deallocate(fieldlist)
         allocate(fieldlist(n))
