@@ -888,7 +888,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical                  :: First_entry = .true.
     type(ESMF_StateItem_Flag) :: itemType
 
-#define DEBUG
+!#define DEBUG
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
