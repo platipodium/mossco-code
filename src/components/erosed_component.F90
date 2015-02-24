@@ -258,7 +258,7 @@ contains
                    maxIndex=(/inum,jnum/), &
                    regDecomp=(/1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
-                   indexflag=ESMF_INDEX_GLOBAL,  &
+                   indexflag=ESMF_INDEX_DELOCAL,  &
                    name="erosed", &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=localrc)
