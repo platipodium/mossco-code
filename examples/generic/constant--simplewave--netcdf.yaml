@@ -2,8 +2,8 @@ coupling:
   - components: 
      - constant
      - simplewave
-    interval: 24 h
+    interval: none
   - components: 
      - simplewave
      - netcdf
-    interval: 12 h
+    interval: none
