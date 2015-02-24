@@ -19,7 +19,6 @@ constant--inout--inout--netcdf
 constant--netcdf
 constant--regrid--fabm_sediment--netcdf
 constant--simplewave--netcdf
-constant_simplewave
 coupling_system
 empty_coupling
 empty_empty

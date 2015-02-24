@@ -16,7 +16,6 @@ constant_fabmsed_netcdf
 constant_gotm
 constant_netcdf
 constant_simplewave_netcdf
-constant_simplewave
 coupling_system
 empty_coupling
 empty_empty
