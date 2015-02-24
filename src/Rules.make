@@ -85,9 +85,9 @@ else
     ifdef FORTRAN_COMPILER
       ifneq ("$(ESMF_FORTRAN_COMPILER)","$(FORTRAN_COMPILER)")
         $(warning Overwriting FORTRAN_COMPILER=$(FORTRAN_COMPILER) with $(ESMF_FORTRAN_COMPILER))
-        export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
       endif
     endif
+    export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
     ifeq ($(FORTRAN_COMPILER), XLF)
       MOSSCO_F03VERSION=$(shell $(F90) -qversion | head -1)
     else
