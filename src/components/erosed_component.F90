@@ -419,10 +419,10 @@ contains
     uorb = 0.0_fp
     tper = 0.0_fp
     teta = 0.0_fp
-    wave = .false.
+   ! wave = .true.
     BioEffects%TauEffect =1.0_fp
     BioEffects%ErodibilityEffect = 1.0_fp
-
+write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
     inquire ( file = 'sedparams.txt', exist=exst , opened =opnd, Number = UnitNr )
 
     if (exst.and.(.not.opnd)) then
@@ -467,6 +467,7 @@ contains
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff0(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 1 [s/m]
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
+      if (istat ==0 ) read (UnitNr,*, iostat = istat) wave
       if (istat /=0) stop ' Error in reading sedparams !!!!'
       close (UnitNr)
       do i =nmlb, nmub
@@ -1200,7 +1201,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
  !       write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
- !       write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
+ !if (spm_concentration(i,j,l) >100.)  write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
 
 #endif
      enddo
