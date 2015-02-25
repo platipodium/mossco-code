@@ -335,7 +335,7 @@ case ${SYSTEM} in
          ;;
   SGE)   if test $(which qsub 2> /dev/null) ; then
            if [[ $NP < 49 ]] ; then
-             qsub -q.small sge.sh ;
+             qsub -q small.q sge.sh ;
            else
              qsub sge.sh
            fi
