@@ -17,6 +17,20 @@
    use time, only: jul0,secs0,juln,secsn,julianday,secondsofday,simtime
    use time, only: String2JulSecs,time_diff,write_time_string,update_time
    IMPLICIT NONE
+
+   interface
+      subroutine tracer_diffusion(f,hn,AH_method,AH_const,AH_Prt,AH_stirr_const, &
+                                  phymix)
+         use domain, only: imin,imax,jmin,jmax,kmax
+         IMPLICIT NONE
+         REALTYPE,intent(in)           :: hn(I3DFIELD)
+         integer,intent(in)            :: AH_method
+         REALTYPE,intent(in)           :: AH_const,AH_Prt,AH_stirr_const
+         REALTYPE,intent(inout)        :: f(I3DFIELD)
+         REALTYPE,intent(out),optional :: phymix(I3DFIELD)
+      end subroutine tracer_diffusion
+   end interface
+
    private
 !
 ! !PUBLIC DATA MEMBERS:
@@ -726,6 +740,7 @@
 ! !USES:
    use domain      ,only: imin,imax,jmin,jmax,kmax,az
    use m3d         ,only: dt,cnpar
+   use les         ,only: les_mode,LES_BOTH,LES_TRACER
    use advection_3d,only: do_advection_3d
    use variables_3d,only: uu,vv,ww,hun,hvn,ho,hn,nuh
    use halo_zones  ,only: update_3d_halo,wait_halo,H_TAG
@@ -745,7 +760,10 @@
 ! !LOCAL VARIABLES
    REALTYPE,dimension(0:kmax) :: sour,Taur,ws1d
    integer                    :: i,j
-   REALTYPE,parameter         :: AH=_ZERO_
+   integer                    :: AH_method=2
+   REALTYPE                   :: AH_const=1.4d-7
+   REALTYPE                   :: AH_Prt=_TWO_
+   REALTYPE                   :: AH_stirr_const=_ONE_
 !
 !EOP
 !-----------------------------------------------------------------------
@@ -759,7 +777,14 @@
 !  see comments in do_transport()
    call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
    call wait_halo(H_TAG)
-   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,AH,H_TAG)
+   call do_advection_3d(dt,f,uu,vv,ww,hun,hvn,ho,hn,HALFSPLIT,P2_PDM,P2_PDM,_ZERO_,H_TAG)
+
+   if (les_mode.eq.LES_BOTH .or. les_mode.eq.LES_TRACER) then
+
+      call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
+      call wait_halo(H_TAG)
+      call tracer_diffusion(f,hn,AH_method,AH_const,AH_Prt,AH_stirr_const)
+   end if
 
    sour = _ZERO_
    Taur = 1.d15
