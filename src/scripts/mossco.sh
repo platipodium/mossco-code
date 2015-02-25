@@ -328,19 +328,35 @@ if [[ ${BUILD_ONLY} == 1 ]] ; then
 fi
 
 case ${SYSTEM} in
-  MOAB)  if test $(which msub 2> /dev/null)  ; then msub moab.sh ; else cat moab.sh ; fi
+  MOAB)  if test $(which msub 2> /dev/null)  ; then
+           msub moab.sh
+           echo "Job ${TITLE} submitted for system ${SYSTEM}"
+         else cat moab.sh ; fi
          ;;
-  SGE)   if test $(which qsub 2> /dev/null) ; then qsub sge.sh ; else cat sge.sh ; fi
+  SGE)   if test $(which qsub 2> /dev/null) ; then
+           if [[ $NP < 49 ]] ; then
+             qsub -q.small sge.sh ;
+           else
+             qsub sge.sh
+           fi
+           echo "Job ${TITLE} submitted for system ${SYSTEM}"
+           qstat -g c
+           qstat
+         else cat sge.sh ; fi
          ;;
-  SLURM)   if test $(which sbatch 2> /dev/null) ; then sbatch slurm.sh ; else cat slurm.sh ; fi
+  SLURM) if test $(which sbatch 2> /dev/null) ; then
+           sbatch slurm.sh
+           echo "Job ${TITLE} submitted for system ${SYSTEM}"
+         else cat slurm.sh ; fi
          ;;
   INTERACTIVE)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
+         echo "Job ${TITLE} interactively running in background"
+
          ;;
   *)     echo "System not defined in $0"; exit 1
          ;;
 esac
 
-echo "Job ${TITLE} submitted for system ${SYSTEM}"
 
 test -f ${STDOUT} && tail -n 20 ${STDOUT}
 test -f ${STDERR} && tail -n 20 ${STDERR}
