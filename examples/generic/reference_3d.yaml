@@ -107,7 +107,3 @@ coupling:
      - benthos
      - erosed
     interval: 60 h
-  - components:
-     - fabm_sediment
-     - benthos
-    interval: 1 h
