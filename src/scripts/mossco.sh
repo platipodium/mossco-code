@@ -231,6 +231,8 @@ if [[ "x${MPI_PREFIX}" != "x" ]] ; then
   esac
 fi
 
+EMAIL=${MOSSCO_USER_EMAIL:-$(who am i |cut -f1 -d" ")@$(hostname)}
+
 case ${SYSTEM} in
   SLURM) cat << EOT > slurm.sh
 #!/bin/bash -x
@@ -241,7 +243,7 @@ case ${SYSTEM} in
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=00:00:06
 #SBATCH --partition=batch
-#SBATCH --mail-user=carsten.lemmen@hzg.de
+#SBATCH --mail-user=${EMAIL}
 #SBATCH --mail-type=ALL
 #SBATCH --job-name=${TITLE}
 
@@ -256,9 +258,10 @@ EOT
 #MSUB -l nodes=${NODES}:ppn=${PPN}
 #MSUB -l walltime=0:12:00
 
-#MSUB -M carsten.lemmen@hzg.de
-#MSUB -m abe
 #MSUB -N ${TITLE}
+
+#MSUB -M ${EMAIL}
+#MSUB -m abe
 
 # Go to the current working directory (from where you submitted the job
 cd \$PBS_O_WORKDIR
@@ -277,6 +280,8 @@ EOT
 
 #$ -N ${TITLE}
 #$ -pe orte $NP
+#$ -m beas
+#$ -M ${EMAIL}
 #$ -cwd
 #$ -V
 
