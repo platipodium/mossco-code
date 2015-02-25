@@ -162,7 +162,7 @@ contains
     integer(ESMF_KIND_I4)  :: ubnd2(2), lbnd2(2), ubnd3(3), lbnd3(3)
 
     rc = ESMF_SUCCESS
-
+#define DEBUG
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -263,14 +263,6 @@ contains
     call Macrofanua_init(Total_Bioturb, inum, jnum)
     call Macrofanua_set()
 
-    ! Test parameters (they are not needed here for real calculations)
-    tau = 1.9
-    Erod = 0.00006
-
-#ifdef DEBUG
-    write(0,*) 'Abiotic critical tau =' , tau, 'Abiotic Erodibility = ', Erod
-    write(0,*)
-#endif
 
    !> create export fields
     allocate(Effect_of_MPB_on_sediment_erodibility_at_bottom(inum,jnum))
