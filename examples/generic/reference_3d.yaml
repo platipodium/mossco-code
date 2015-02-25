@@ -14,7 +14,7 @@ dependencies:
       grid: water_depth_at_soil_surface
   - benthos:
     - component: getm
-      grid: temperature_at_soil_surface
+      grid: water_depth_at_soil_surface
 
 instances:
   - netcdf_reference_3d: netcdf
@@ -82,28 +82,28 @@ coupling:
   - components:
      - fabm_sediment
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 60 m
   - components:
      - fabm_pelagic
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 60 m
   - components:
      - getm
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 60 m
   - components:
      - simplewave
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 60 m
   - components:
      - benthos
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 60 m
   - components:
      - erosed
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 60 m
   - components:
      - benthos
      - erosed
-    interval: 60 h
+    interval: 6 m
