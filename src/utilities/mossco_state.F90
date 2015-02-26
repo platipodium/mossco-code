@@ -1232,7 +1232,7 @@ contains
   subroutine MOSSCO_StateGetFieldGrid(state, itemName, grid, rc)
 
     type(ESMF_State), intent(in)        :: state
-    character(ESMF_MAXSTR),  intent(in) :: itemName
+    character(len=*),  intent(in) :: itemName
     type(ESMF_Grid), intent(out)        :: grid
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 

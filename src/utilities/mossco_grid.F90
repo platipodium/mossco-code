@@ -32,23 +32,23 @@ contains
 #define ESMF_METHOD "MOSSCO_GridCreateRegional3D"
 function MOSSCO_GridCreateRegional3D(name, rc) result(grid)
 
-	character(ESMF_MAXSTR), intent(in) :: name
-	integer,  intent(out)              :: rc
-	type(ESMF_Grid)                    :: grid
+  character(ESMF_MAXSTR), intent(in) :: name
+  integer,  intent(out)              :: rc
+  type(ESMF_Grid)                    :: grid
 
-	integer(ESMF_KIND_I4)      :: minIndex(3), maxIndex(3), regDecomp(3)
-	type(ESMF_Index_Flag)      :: indexFlag
-	type(ESMF_CoordSys_Flag)   :: coordSys
-	integer                    :: localrc, i, lbnd(3), ubnd(3)
+  integer(ESMF_KIND_I4)      :: minIndex(3), maxIndex(3), regDecomp(3)
+  type(ESMF_Index_Flag)      :: indexFlag
+  type(ESMF_CoordSys_Flag)   :: coordSys
+  integer                    :: localrc, i, lbnd(3), ubnd(3)
   real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
 
-	rc = ESMF_SUCCESS
+  rc = ESMF_SUCCESS
 
-	minIndex=(/1,1,1/)
-	maxIndex=(/40,50,10/)
-	regDecomp=(/4,3,3/)
-	coordSys=ESMF_COORDSYS_SPH_DEG
-	indexFlag=ESMF_INDEX_GLOBAL
+  minIndex=(/1,1,1/)
+  maxIndex=(/40,50,10/)
+  regDecomp=(/4,3,3/)
+  coordSys=ESMF_COORDSYS_SPH_DEG
+  indexFlag=ESMF_INDEX_GLOBAL
 
   grid = ESMF_GridCreateNoPeriDim(minIndex=minIndex, maxIndex=maxIndex, &
     regDecomp=regDecomp, coordSys=coordSys, indexFlag=indexFlag,  &
@@ -83,23 +83,23 @@ end function MOSSCO_GridCreateRegional3D
 #define ESMF_METHOD "MOSSCO_GridCreateRegional2D"
 function MOSSCO_GridCreateRegional2D(name, rc) result(grid)
 
-	character(ESMF_MAXSTR), intent(in) :: name
-	integer,  intent(out)              :: rc
-	type(ESMF_Grid)                    :: grid
+  character(ESMF_MAXSTR), intent(in) :: name
+  integer,  intent(out)              :: rc
+  type(ESMF_Grid)                    :: grid
 
-	integer(ESMF_KIND_I4)      :: minIndex(2), maxIndex(2), regDecomp(2)
-	type(ESMF_Index_Flag)      :: indexFlag
-	type(ESMF_CoordSys_Flag)   :: coordSys
-	integer                    :: localrc, i, lbnd(2), ubnd(2)
+  integer(ESMF_KIND_I4)      :: minIndex(2), maxIndex(2), regDecomp(2)
+  type(ESMF_Index_Flag)      :: indexFlag
+  type(ESMF_CoordSys_Flag)   :: coordSys
+  integer                    :: localrc, i, lbnd(2), ubnd(2)
   real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
 
-	rc = ESMF_SUCCESS
+  rc = ESMF_SUCCESS
 
-	minIndex=(/1,1/)
-	maxIndex=(/40,50/)
-	regDecomp=(/4,3/)
-	coordSys=ESMF_COORDSYS_SPH_DEG
-	indexFlag=ESMF_INDEX_GLOBAL
+  minIndex=(/1,1/)
+  maxIndex=(/40,50/)
+  regDecomp=(/4,3/)
+  coordSys=ESMF_COORDSYS_SPH_DEG
+  indexFlag=ESMF_INDEX_GLOBAL
 
   grid = ESMF_GridCreateNoPeriDim(minIndex=minIndex, maxIndex=maxIndex, &
     regDecomp=regDecomp, coordSys=coordSys, indexFlag=indexFlag,  &
@@ -131,7 +131,8 @@ function MOSSCO_GridCreateRegional2D(name, rc) result(grid)
 end function MOSSCO_GridCreateRegional2D
 
 
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCopyFromForeignField"
   subroutine MOSSCO_GridCopyFromForeignField(gridComp, state, gridfieldName, grida, gridb, rc)
 
     use mossco_strings
@@ -210,7 +211,8 @@ end function MOSSCO_GridCreateRegional2D
 
   end subroutine MOSSCO_GridCopyFromForeignField
 
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCreateFromOtherGrid"
   function MOSSCO_GridCreateFromOtherGrid(grida, rc) result(gridb)
 
     implicit none
@@ -256,7 +258,6 @@ end function MOSSCO_GridCreateRegional2D
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
-
     call ESMF_GridAddCoord(gridb, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -268,6 +269,8 @@ end function MOSSCO_GridCreateRegional2D
 
   end function MOSSCO_GridCreateFromOtherGrid
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCopyCoords"
   subroutine MOSSCO_GridCopyCoords(grida, gridb, coordDims, rc)
 
     implicit none
@@ -284,10 +287,9 @@ end function MOSSCO_GridCreateRegional2D
     character(len=ESMF_MAXSTR)                :: message
 
     rc_ = ESMF_SUCCESS
-
     call ESMF_GridGet(grida, rank=ranka, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridGet(grida, rank=ranka, rc=localrc)
+    call ESMF_GridGet(gridb, rank=rankb, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Make a link if both grids are of the same rank, otherwise create new grid
@@ -295,23 +297,46 @@ end function MOSSCO_GridCreateRegional2D
     if (ranka == rankb) then
       gridb = grida
     elseif (ranka<2 .or.ranka>3) then
-      call MOSSCO_MessageAdd(message, '  input grid rank must be 2 or 3')
+      write(message,'(A,I1)') '  input grid rank must be of rank 2 or 3, but is rank ',ranka
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     elseif (rankb<2 .or.rankb>3) then
-      call MOSSCO_MessageAdd(message, '  output grid rank must be 2 or 3')
+      write(message,'(A,I1)') '  output grid rank must be of rank 2 or 3, but is rank ',rankb
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     elseif (ranka == 2) then
+
       do i=1, ubound(coordDims,1)
         coordDim=coordDims(i)
 
-        call ESMF_GridGetCoord(gridb,coordDim=i,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-          computationalLBound=lbnd3, computationalUBound=ubnd3, farrayPtr=coord3,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_GridGetCoord(grida,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-             computationalLBound=lbnd2, computationalUBound=ubnd2, farrayPtr=coord2,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_GridGetCoordBounds(gridb,coordDim=i,localDE=0, &
+          exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (any(ubnd3-lbnd3 == 0)) then
+          write(message,'(A)') '  no coord data on this DE, skipped'
+          continue
+        endif
+
+        call ESMF_GridGetCoord(gridb, coordDim=i, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
+          farrayPtr=coord3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridGetCoordBounds(grida,coordDim=i,localDE=0, &
+          exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (any(ubnd2-lbnd2 == 0)) then
+          write(message,'(A)') '  no coord data on this DE, skipped'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          continue
+        endif
+
+        call ESMF_GridGetCoord(grida,coordDim=i,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+          farrayPtr=coord2,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         coord3(lbnd3(i):ubnd3(i)) = coord2(lbnd2(i):ubnd2(i))
       enddo
     else ! rankb == 2

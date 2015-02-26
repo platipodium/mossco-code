@@ -174,7 +174,7 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default=trim(name))
+      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default=name)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -219,9 +219,9 @@ module netcdf_input_component
     ! back to overall file
     if (petCount>0) then
       write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
-      write(petFileName,form) filename(1:len_trim(filename)-2),localPet,'.nc'
+      write(petFileName,trim(form)) filename(1:len_trim(filename)-2),localPet,'.nc'
       inquire(file=trim(petFileName), exist=isPresent)
-      if (isPresent) fileName=petFileName
+      if (isPresent) fileName=trim(petFileName)
     endif
 
     inquire(file=trim(fileName), exist=isPresent)
@@ -231,6 +231,9 @@ module netcdf_input_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
     endif
+
+    write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -242,6 +245,7 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
       hasGrid=.true.
     endif
+
 
     call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
       isPresent=isPresent, rc=localrc)
@@ -260,6 +264,7 @@ module netcdf_input_component
       hasGrid=.true.
     endif
 
+
     if (.not.hasGrid) then
       write(message,'(A)') trim(name)//' not implemented withut foreing_grid'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
@@ -270,15 +275,19 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (rank==2) then
+    if (rank == 2) then
       grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     elseif (rank==3) then
       grid3 = grid2
       grid2 = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
       write(message,'(A)') trim(name)//' cannot use grid with rank<2 or >3 for foreign_grid'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
@@ -472,6 +481,7 @@ module netcdf_input_component
     ! todo from here
 
     call MOSSCO_CompExit(gridComp)
+    return
 
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
