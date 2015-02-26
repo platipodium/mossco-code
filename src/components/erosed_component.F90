@@ -575,14 +575,15 @@ contains
     importList(6)%units = 'm s**-1'
     importList(7)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
     importList(7)%units = 'm**2 s**-1'
-    importList( 8)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
+    importList( 8)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
     importList( 8)%units = '-'
-    importList( 9)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
+    importList( 9)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
     importList( 9)%units = '-'
-    importList(10)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
+    importList(10)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
     importList(10)%units = '-'
-    importList(11)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
+    importList(11)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
     importList(11)%units = '-'
+
 
     if (wave) then
        importList(12)%name  = 'wave_height'
@@ -594,10 +595,11 @@ contains
        importList(15)%name  = 'wave_direction'
        importList(15)%units = 'rad'
     end if
-write (*,*) ' size of importlist ', size(importList)
+
     do i=1,size(importList)
 
       if (foreignGridIsPresent) then
+
         if (trim(importList(i)%name) == foreignGridFieldName) cycle
       end if
 
@@ -611,8 +613,9 @@ write (*,*) ' size of importlist ', size(importList)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_StateAdd(importState,(/field/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     end do
-call ESMF_fieldprint(field)
+
     fieldBundle = ESMF_FieldBundleCreate(name='concentration_of_SPM_in_water',multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
