@@ -151,12 +151,10 @@ contains
     real(ESMF_KIND_R8)     :: dt
     character(len=80)      :: title
     character(len=256)     :: din_variable='',pon_variable=''
-    integer(ESMF_KIND_I8)  :: nlev
-
     character(ESMF_MAXSTR) :: name, message, timeString
     type(ESMF_Clock)       :: clock
     type(ESMF_Time)        :: currTime
-    logical                :: clockIsPresent
+    logical                :: clockIsPresent, isPresent, foreignGridIsPresent=.false.
     type(ESMF_INDEX_Flag)  :: indexFlag
 
     integer(ESMF_KIND_I4)  :: ubnd2(2), lbnd2(2), ubnd3(3), lbnd3(3)
@@ -173,6 +171,14 @@ contains
     !! rely on field with name foreignGridFieldName given as attribute and field
     !! in importState
     !! and just take the same grid&distgrid.
+!!! Create Grid
+    call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (isPresent) then
+    call ESMF_GridCompGet(gridComp,grid=grid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+  else
 
     call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
            value=foreignGridFieldName, defaultValue='none',rc=localrc)
@@ -195,6 +201,7 @@ contains
       call ESMF_GridAddCoord(grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
+      foreignGridIsPresent=.true.
       write(message,*) trim(name)//' uses foreign grid '//trim(foreignGridFieldName)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -245,17 +252,18 @@ contains
                    coorddep2=(/2/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_GridAddCoord(grid, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
-
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     endif
-
+       call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
     !> Create distgrid for arrays
     !   distgrid =  ESMF_DistGridCreate(minIndex=(/inum,jnum/), maxIndex=(/inum,jnum/), &
     !   indexflag=ESMF_INDEX_GLOBAL, rc=localrc)
     call ESMF_GridGet(grid, distGrid=distGrid, indexflag=indexflag, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    nlev=1
 
     call Micro%initialize(inum, jnum)
     call Micro%set()
@@ -270,7 +278,7 @@ contains
 
 #ifdef DEBUG
     write(0,*) ' Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
-    Effect_of_MPB_on_sediment_erodibility_at_bottom, ubound(Effect_of_MPB_on_sediment_erodibility_at_bottom)
+    Effect_of_MPB_on_sediment_erodibility_at_bottom !, ubound(Effect_of_MPB_on_sediment_erodibility_at_bottom)
 #endif
 
     array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag, &
@@ -353,7 +361,7 @@ contains
 
     call ESMF_StateAdd(exportState,(/Macrofauna_critical_bed_shearstress/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    call ESMF_StatePrint(exportstate, nestedFlag=.true.,rc=rc)
 #ifdef DEBUG
     call ESMF_FieldPrint (Microphytobenthos_erodibility)
       write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
@@ -409,9 +417,9 @@ contains
 
     allocate(itemNameList(itemCount))
     itemNameList(1)='Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
-    itemNameList(1)='Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
-    itemNameList(1)='Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
-    itemNameList(1)='Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
+    itemNameList(2)='Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
+    itemNameList(3)='Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
+    itemNameList(4)='Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
 
     do i=1,itemCount
 
@@ -495,17 +503,6 @@ contains
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     call ESMF_TimeIntervalGet(timestep,s_r8=dt,rc=localrc)
-
-
-#if 0
-    ! get import state
-    if (forcing_from_coupler) then
-      call ESMF_StateGet(importState, "temperature_in_water", water_temperature_field, rc=localrc)
-      call ESMF_FieldGet(water_temperature_field, farrayPtr=water_temperature, rc=localrc)
-      zerod%temp = water_temperature(1,1,1)
-    end if
-
-#endif
 
     call Micro%run()
     call Macrofanua_run(Total_Bioturb)
