@@ -756,15 +756,16 @@ contains
       call ESMF_StateGet(importState,trim(importList(i)%name),field)
       call ESMF_FieldGet(field,status=status)
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+        call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
         call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
                                      ESMF_INDEX_DELOCAL,                      &
                                      totalLWidth=exclusiveLBound-totalLBound, &
                                      totalUWidth=totalUBound-exclusiveUBound)
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
                    .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
           call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
