@@ -225,7 +225,7 @@ contains
                                     !  2: part mud to fluff layer, other part to bed layers (no burial)
     namelist /benthic/   anymud     != .true.
 
-!#define DEBUG
+#define DEBUG
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
@@ -417,9 +417,9 @@ contains
     mudfrac = 0.0_fp
     mfluff =0.0_fp
     uorb = 0.0_fp
-    tper = 0.0_fp
+    tper = 1.0_fp
     teta = 0.0_fp
-   ! wave = .true.
+    wave = .false.
     BioEffects%TauEffect =1.0_fp
     BioEffects%ErodibilityEffect = 1.0_fp
 !write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
@@ -483,7 +483,7 @@ contains
         tcrfluff (:,i) = tcrflufftmp (:)
         ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
-
+write (*,*) 'wave', wave
       do i = 1, inum
         do j = 1, jnum
           spm_concentration (i,j,:) = spm_const (:)
@@ -506,19 +506,15 @@ contains
     !   Initial flow conditions
     !
     chezy   = 50.0_fp       ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
-    h1      = 3.0_fp        ! water depth [m]
+    h1      = 0.03_fp        ! water depth [m]
     h0      = h1            ! @ToDo : read h0 from input data
-    umod    = 0.1_fp        ! depth averaged flow magnitude [m/s]
+    umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
  !   ws      = 0.001_fp      ! Settling velocity [m/s]
 !    r1(:,:) = 2.0e-1_fp    ! sediment concentration [kg/m3]
-    u_bot   = 0.1_fp        ! flow velocity in u-direction at (center of the ) bottm cell
-    v_bot   = 0.1_fp        ! flow velocity in v-direction at (center of the ) bottm cell
-    thick   = 0.25_fp       ! height of the bottom cell
-
-    do nm = nmlb, nmub
-        taub(nm) = umod(nm)*umod(nm)*rhow*g/(chezy(nm)*chezy(nm)) ! bottom shear stress [N/m2]
-    enddo
-
+    u_bot   = 0.0_fp        ! flow velocity in u-direction at (center of the ) bottm cell
+    v_bot   = 0.0_fp        ! flow velocity in v-direction at (center of the ) bottm cell
+    thick   = 0.02_fp       ! height of the bottom cell
+    taub    = 0.0_fp
 #ifdef DEBUG
     ! Open file for producing output
     call ESMF_UtilIOUnitGet(unit707, rc = localrc)
@@ -902,7 +898,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldBundle)   :: fieldBundle
     logical                  :: forcing_from_coupler=.true.
     real(kind=ESMF_KIND_R8),parameter :: porosity=0.1 !> @todo make this an import field (e.g. by bed component)
-    real(kind=ESMF_KIND_R8),parameter :: ws_convention_factor=-1.0
+    real(kind=ESMF_KIND_R8),parameter :: ws_convention_factor=-1.0 !upward positive
 
     integer                  :: petCount, localPet
     character(ESMF_MAXSTR)   :: name, message
@@ -951,6 +947,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         waveDir => importList(11)%data
 
       end if
+!write (*,*) 'waveH (10,10)', waveH(10,10)
+!stop
+
+
 !     if (wave) then
 !        waveH   => importList(12)%data
 !        waveT   => importList(13)%data
@@ -961,8 +961,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (localrc == 0) then
          do j=1,jnum
           do i= 1, inum
-           h1(inum*(j -1)+i) = depth(i,j)
-  !         write (*,*) ' water depth ',depth(i,j), 'i,j', i,j, 'nm',inum*(j -1)+i
+           if (mask(i,j)/=0)then
+             h1(inum*(j -1)+i) = depth(i,j)
+ !          write (*,*) ' water depth ',depth(i,j), 'i,j', i,j, 'nm',inum*(j -1)+i
+           endif   ! else use initial value in phase 1
           end do
          end do
       else
@@ -1000,7 +1002,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 tper (inum*(j -1)+i) = waveT (i,j)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
                 uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
-    !write (*,*) 'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j)
+    write (*,*) 'nm', inum*(j -1)+i, 'i,j', i,j,'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j), 'wavek', waveK(i,j)
             endif
 
            else
@@ -1117,9 +1119,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
               ! filtering missing values (land)
               if (mask(i,j)/=0) then
                ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1)
-              else
+               else
                ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = 0.0_fp
-              endif
+               endif
             end do
           end do
         end do
@@ -1149,7 +1151,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       BioEffects%ErodibilityEffect = ptr_f2
 #ifdef DEBUG
-        write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+ !       write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
 #endif
     end if
 
@@ -1170,9 +1172,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
-#ifdef DEBUG
-       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
-#endif
+
     endif
 
     call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
@@ -1221,7 +1221,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             end if
          end do
      end do
-
+#ifdef DEBUG
+ !      write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+ !      write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%TauEffect=', BioEffects%TauEffect
+#endif
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
 
@@ -1229,7 +1232,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
                 & tper   , teta   , spm_concentration , BioEffects     , nybot, thick, u_bot, &
-                & v_bot  , u2d    , v2d      , h0    )
+                & v_bot  , u2d    , v2d      , h0 , mask   )
 
 
     !   Updating sediment concentration in water column over cells
@@ -1241,10 +1244,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
 #ifdef DEBUG
-        write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+        write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
 
         size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
-        sour(l,nm) *1000.0_fp - min(-ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
+        sour(l,nm) *1000.0_fp - min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
  !       write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
  !if (spm_concentration(i,j,l) >100.)  write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
