@@ -357,14 +357,20 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
+
           end do
           deallocate(fieldList)
         else
           write(message,'(A)') trim(name)//' did not save item '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-       endif
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !> Remove from import state the written field, !commented since it would break hardcoded examples
+        call ESMF_StateRemove(importState, (/ trim(itemNameList(i))/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       enddo
 
