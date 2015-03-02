@@ -463,15 +463,15 @@ module getm_component
       type(ESMF_Clock)    :: clock        ! may be uninitialized
       integer,intent(out) :: rc
 
-      type(ESMF_StateItem_Flag) ,dimension(:),allocatable :: itemTypeList
-      type(ESMF_FieldBundle)    ,dimension(:),allocatable :: fieldBundleList
       type(ESMF_FieldBundle)                              :: concFieldBundle,wsFieldBundle
-      type(ESMF_Field)          ,dimension(:),allocatable :: fieldList_ws,fieldList_conc
+      type(ESMF_Field)          ,dimension(:),allocatable :: concFieldList,fieldList
+      type(ESMF_Field)                                    :: wsField
       type(ESMF_FieldStatus_Flag)                         :: status
       character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
       character(len=ESMF_MAXSTR)                          :: itemName
-      integer                   ,dimension(:),allocatable :: transportFieldCountList,namelenList
-      integer                                             :: transportFieldCount,itemCount
+      integer                   ,dimension(:),allocatable :: namelenList,concFlags
+      integer                                             :: concFieldCount,transportFieldCount,FieldCount
+      integer                                             :: conc_id,ws_id
       integer                                             :: i,ii,n
       character(len=*),parameter :: ws_suffix="_z_velocity_in_water"
       character(len=*),parameter :: conc_suffix="_in_water"
@@ -484,74 +484,51 @@ module getm_component
       call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldBundleGet(concFieldBundle,fieldCount=itemCount, rc=localrc)
+      call ESMF_FieldBundleGet(concFieldBundle,fieldCount=concFieldCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemCount .gt. 0) then
+      if (concFieldCount .gt. 0) then
 
-         call ESMF_StateGet(importState,"concentrations_z_velocity_in_water",wsFieldBundle, rc=localrc)
+         allocate(concFieldList(concFieldCount))
+         allocate(itemNameList (concFieldCount))
+         allocate(namelenList  (concFieldCount))
+         allocate(concFlags    (concFieldCount))
+
+         call ESMF_FieldBundleGet(concFieldBundle, fieldList=concFieldList, fieldNameList=itemNameList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         transportFieldCount = itemCount
+         concFlags = 0
+         do i=1,concFieldCount
+!           identify concentrations by suffix
+            namelenList(i) = len_trim(itemNameList(i))
+            if (namelenList(i) .le. len_trim(conc_suffix) ) cycle
+            if (itemNameList(i)(namelenList(i)-len_trim(conc_suffix)+1:namelenList(i)) .ne. trim(conc_suffix)) cycle
+            concFlags(i) = 1
+         end do
 
+         transportFieldCount = sum(concFlags)
 
          if (transportFieldCount .gt. 0) then
 
-            allocate(fieldList_ws  (transportFieldCount))
-            allocate(fieldList_conc(transportFieldCount))
-
-            call ESMF_FieldBundleGet(wsFieldBundle, itemorderflag=ESMF_ITEMORDER_ADDORDER, fieldList=fieldList_ws, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_FieldBundleGet(concFieldBundle, fieldList=fieldList_conc,  itemorderflag=ESMF_ITEMORDER_ADDORDER, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-            allocate(transport_ws  (transportFieldCount))
             allocate(transport_conc(transportFieldCount))
+            allocate(transport_ws  (transportFieldCount))
 
-            do n=1,transportFieldCount
+            call ESMF_StateGet(importState, "concentrations_z_velocity_in_water", wsFieldBundle, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-               call ESMF_FieldGet(fieldList_ws(n),name=itemName,status=status, rc=localrc)
+            n = 1
+
+            do i=1,concFieldCount
+
+               if (concFlags(i) .eq. 0) cycle
+
+               call ESMF_FieldGet(concFieldList(i),status=status, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
-!                 Coupler called ESMF_FieldEmptyCreate(name),
-!                 because fabm_pelagic ships with its own grid (coupler
-!                 checks whether temperature field in fabm_pelagic's
-!                 importState is already completed).
-                  call ESMF_LogWrite('  will use internal field '//trim(itemName),ESMF_LOGMSG_INFO)
-                  allocate(transport_ws(n)%ptr(I3DFIELD))
-                  call ESMF_FieldEmptyComplete(fieldList_ws(n),getmGrid3D,        &
-                                               transport_ws(n)%ptr,               &
-                                               ESMF_INDEX_DELOCAL,                &
-                                               staggerloc=ESMF_STAGGERLOC_CENTER, &
-                                               totalLWidth=(/HALO,HALO,1/),       &
-                                               totalUWidth=(/HALO,HALO,0/),rc=localrc)
-                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
-!                 Coupler linked completed field from fabm_pelagic,
-!                 because GETM's grid was provided to fabm_pelagic.
-!                 The field MUST include the HALO zones and k=0 !!!
-                  call ESMF_LogWrite('  will use external field '//trim(itemName),ESMF_LOGMSG_INFO)
-                  call ESMF_FieldGet(fieldList_ws(n),farrayPtr=transport_ws(n)%ptr,rc=localrc)
-                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                  if (.not. (      all(lbound(transport_ws(n)%ptr) .eq. (/imin-HALO,jmin-HALO,0   /)) &
-                             .and. all(ubound(transport_ws(n)%ptr) .eq. (/imax+HALO,jmax+HALO,kmax/)) ) ) then
-                     call ESMF_LogWrite('  invalid field bounds', &
-                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
-                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
-                  end if
-               else
-                  call ESMF_LogWrite('  field '//trim(itemName)//' neither empty nor complete', &
-                                     ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
-                  call ESMF_Finalize(endflag=ESMF_END_ABORT)
-               end if
-
-               call ESMF_FieldGet(fieldList_conc(n),name=itemName,status=status)
-
-               if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
-                  call ESMF_LogWrite('  will transport internal field '//trim(itemName),ESMF_LOGMSG_INFO)
+                  call ESMF_LogWrite('  will transport internal field '//trim(itemNameList(i)),ESMF_LOGMSG_INFO)
                   allocate(transport_conc(n)%ptr(I3DFIELD))
-                  call ESMF_FieldEmptyComplete(fieldList_conc(n),getmGrid3D,      &
+                  call ESMF_FieldEmptyComplete(concFieldList(i),getmGrid3D,       &
                                                transport_conc(n)%ptr,             &
                                                ESMF_INDEX_DELOCAL,                &
                                                staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -559,8 +536,73 @@ module getm_component
                                                totalUWidth=(/HALO,HALO,0/),rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
-                  call ESMF_LogWrite('  will transport external field '//trim(itemName),ESMF_LOGMSG_INFO)
-                  call ESMF_FieldGet(fieldList_conc(n),farrayPtr=transport_conc(n)%ptr,rc=localrc)
+                  call ESMF_LogWrite('  will transport external field '//trim(itemNameList(i)),ESMF_LOGMSG_INFO)
+                  call ESMF_FieldGet(concFieldList(i), farrayPtr=transport_conc(n)%ptr, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  if (.not. (      all(lbound(transport_conc(n)%ptr) .eq. (/imin-HALO,jmin-HALO,0   /)) &
+                             .and. all(ubound(transport_conc(n)%ptr) .eq. (/imax+HALO,jmax+HALO,kmax/)) ) ) then
+                     call ESMF_LogWrite('invalid field bounds', &
+                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+                  end if
+               else
+                  call ESMF_LogWrite('field '//trim(itemNameList(i))//' neither empty nor complete', &
+                                     ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                  call ESMF_Finalize(endflag=ESMF_END_ABORT)
+               end if
+
+!              search for corresponding z_velocity
+               itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//ws_suffix
+
+               call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldCount=fieldCount, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               if (fieldCount .eq. 0) then
+                  call ESMF_LogWrite('  no corresponding field '//trim(itemName),ESMF_LOGMSG_INFO)
+                  transport_ws(n)%ptr => null()
+                  n = n + 1
+                  cycle
+               else if (fieldCount .eq. 1) then
+                  call ESMF_FieldBundleGet(wsFieldBundle, itemName, field=wsField, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               else
+                  call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=-1, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  allocate(fieldList(fieldCount))
+                  call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldList=fieldList, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  do ii=1,fieldCount
+                     call ESMF_AttributeGet(fieldList(ii), 'external_index', value=ws_id, defaultValue=-2, rc=localrc)
+                     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                     if (ws_id .eq. conc_id) then
+                        wsField = fieldList(ii)
+                        exit
+                     end if
+                  end do
+                  deallocate(fieldList)
+                  if (ws_id .ne. conc_id) then
+                     call ESMF_LogWrite('  no unique field '//trim(itemName), &
+                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+                  end if
+               end if
+
+               call ESMF_FieldGet(wsField, status=status, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
+                  call ESMF_LogWrite('  will use internal field '//trim(itemName),ESMF_LOGMSG_INFO)
+                  allocate(transport_ws(n)%ptr(I3DFIELD))
+                  call ESMF_FieldEmptyComplete(wsField,getmGrid3D,                  &
+                                               transport_ws(n)%ptr,               &
+                                               ESMF_INDEX_DELOCAL,                &
+                                               staggerloc=ESMF_STAGGERLOC_CENTER, &
+                                               totalLWidth=(/HALO,HALO,1/),       &
+                                               totalUWidth=(/HALO,HALO,0/),rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+                  call ESMF_LogWrite('  will use external field '//trim(itemName),ESMF_LOGMSG_INFO)
+                  call ESMF_FieldGet(wsField,farrayPtr=transport_ws(n)%ptr,rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   if (.not. (      all(lbound(transport_ws(n)%ptr) .eq. (/imin-HALO,jmin-HALO,0   /)) &
                              .and. all(ubound(transport_ws(n)%ptr) .eq. (/imax+HALO,jmax+HALO,kmax/)) ) ) then
@@ -573,6 +615,8 @@ module getm_component
                                      ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
                   call ESMF_Finalize(endflag=ESMF_END_ABORT)
                end if
+
+               n = n + 1
 
             end do
 
