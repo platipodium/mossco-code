@@ -45,6 +45,7 @@ module erosed_driver
 
 use precision
 use Biotypes ,only: BioturbationEffect
+use mathconsts
 
 implicit none
 
@@ -281,7 +282,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                  & nfrac    , rhosol  , sedd50   , sedd90  , sedtyp              , &
                  & sink     , sinkf   , sour     , sourf   , anymud  , wave      , &
                  & uorb     , tper    , teta     , spm_concentration , Bioeffects, &
-                 & turb_difz, relativ_thick  , u_bottom , v_bottom, u2d     , v2d ,h0)
+                 & turb_difz, relativ_thick      , u_bottom, v_bottom, u2d       , &
+                 & v2d      , h0      , mask)
 
 !
 !    Function: Computes sedimentation and erosion fluxes
@@ -299,6 +301,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     type (soursin3d_argument)                              :: soursin3d_arguments
     type (compbsskin_argument)                             :: compbsskin_arguments
     !
+    integer     , dimension(:,:)            , pointer      :: mask
     real(fp)    , dimension(:,:,:)          , pointer      :: spm_concentration
     real(fp)    , dimension(:,:)            , pointer      :: turb_difz
     real(fp)    , dimension(:,:)            , pointer      :: mfluff        ! composition of fluff layer: mass of mud fractions [kg/m2]
@@ -410,6 +413,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     sink        = 0.0_fp
     sinkf       = 0.0_fp
     sourf       = 0.0_fp
+    taub        = 0.0_fp
     rhowat      = 1000.0_fp
     vicmol      = 1.307e-6_fp
     thcmud      = 0.001_fp ! @ToDO: Total thickness of mud layer [m] should be read from data file
@@ -417,7 +421,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                         ! z0 roughness for taub in compbsskin. Taub is the combined wave current shear
                         ! stress for cohesive soil
 
-   !++++++++++ TEST Bedbc_1993 -Initialization++++++++++
+mfltot = 0.0_fp
 flow2d = .false.
 rwave = 2.0_fp            ! Default value in Delft-3D
 iopkcw=1
@@ -439,13 +443,12 @@ camax=0.65_fp
 rdc = 2.5_fp* sedd50(1)   !it is not used when iopkcw = 1
 rdw = rdc                 !it is not used when iopkcw = 1
 
-!+++++++++++TEST Soursin_3D++++++++++++++
-sigsed = -(1.0_fp - relativ_thick /2.0_fp)      ! Dimensionless distance of the middle of the lowest cell to the water surface
+sigsed = relativ_thick /2.0_fp -1.0_fp      ! Dimensionless distance of the middle of the lowest cell to the water surface
 sigmol = 6.7_fp     ! Schmidt number
 seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from input file
 !
-!+++++++++++TEST++++++++++++++
 
+    call init_mathconsts()
 
 !
     !
@@ -490,15 +493,16 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
 ! Main loop over elements organized in vector form
  elements: do nm = nmlb, nmub
 
-        mfltot = 0.0_fp
-        if (flufflyr>0) then
-            do l = 1, nfrac
-                mfltot = mfltot + mfluff(l,nm)
-            enddo
-        endif
-
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
+masking: if (mask(i,j) /=0) then
+         ! do not run erosed für missing values
+
+          if (flufflyr>0) then
+             do l = 1, nfrac
+                 mfltot = mfltot + mfluff(l,nm)
+             enddo
+          endif
 
         ! Taub is the bed shear stress under combined wave and current (Soulsby(2004))
         ! note here that kssilt and kssand could be either skin related roughness (2.5 d50)
@@ -652,7 +656,7 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
 
                  taucr(l) = factcr * (rhosol(l)-rhowat) * g * sedd50(l) * tetacr(l)* Bioeffects%TauEffect(i,j)
 
-!write (*,*)'taucr-sand', taucr(l)
+!write (*,*)'taucr-sand', taucr(l), 'nm', nm, 'i,j', i,j
 
                  z0rou = calcZ0rou (vonkar,sedd50(l),h (nm),g)
 !write (*,*) 'z0rou', z0rou
@@ -681,7 +685,7 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
 
                  thick0 = relativ_thick(nm) * h0(nm)
                  thick1 = relativ_thick(nm) * h (nm)
-    !             write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
+                ! write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
                  call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
@@ -689,12 +693,13 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
                  call soursin3d_arguments%run ()
 
                  call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
-   !             write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm), 'l', l, 'nm',nm
-  !              write (*,*) '++++++++++++++++++++++++++++++++++++++++++++++++++++'
+!                write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm), 'l', l, 'nm',nm
+!                write (*,*) '+++++++++++++++++++++++++SPM class +++++++++++++++++++++++++++'
               end if !(2D/3D)
             endif ! (cohesive /non-cohesive
-        enddo     fractions
- !write (*,*) '**************************************************************************'
+           enddo     fractions
+         end if masking
+ !write (*,*) '**********************Element****************************************************'
     enddo    elements
     !
 
