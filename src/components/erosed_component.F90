@@ -225,7 +225,7 @@ contains
                                     !  2: part mud to fluff layer, other part to bed layers (no burial)
     namelist /benthic/   anymud     != .true.
 
-#define DEBUG
+!#define DEBUG
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
@@ -483,7 +483,7 @@ contains
         tcrfluff (:,i) = tcrflufftmp (:)
         ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
-write (*,*) 'wave', wave
+!write (*,*) 'wave', wave
       do i = 1, inum
         do j = 1, jnum
           spm_concentration (i,j,:) = spm_const (:)
@@ -947,9 +947,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         waveDir => importList(11)%data
 
       end if
-!write (*,*) 'waveH (10,10)', waveH(10,10)
-!stop
-
 
 !     if (wave) then
 !        waveH   => importList(12)%data
@@ -1002,7 +999,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 tper (inum*(j -1)+i) = waveT (i,j)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
                 uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
-    write (*,*) 'nm', inum*(j -1)+i, 'i,j', i,j,'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j), 'wavek', waveK(i,j)
+ !   write (*,*) 'nm', inum*(j -1)+i, 'i,j', i,j,'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j), 'wavek', waveK(i,j)
             endif
 
            else
