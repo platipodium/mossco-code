@@ -3,10 +3,9 @@
 coupling:
   - components:
      - gotmfabm
-     - pelagic_benthic_mediator
-  - components:
-     - pelagic_benthic_mediator
+     - pelagic_soil_connector
      - fabm_sediment
+    interval: 30 m
   - components:
      - constant
      - fabm_sediment
@@ -14,9 +13,13 @@ coupling:
   - components:
      - fabm_sediment
      - netcdf
-    interval: 1 d
+    interval: 12 h
+  - components:
+     - gotmfabm 
+     - netcdf
+    interval: 12 h
   - components:
      - fabm_sediment
-     - benthic_pelagic_coupler
+     - soil_pelagic_connector
      - gotmfabm
-    interval: 6 m
+    interval: 30 m
