@@ -222,7 +222,11 @@ ifdef GETMDIR
       ifeq ($(ESMF_COMM),openmpi)
         export MPI=OPENMPI
       else
-        export MPI=MPICH2
+        ifeq ($(ESMF_COMM),mpi)
+          export MPI=MPICH
+        else
+          export MPI=MPICH2
+        endif
       endif
     else
       export GETM_PARALLEL=false
@@ -539,7 +543,7 @@ fabm_install:
 ifeq ($(MOSSCO_FABM),true)
 ifdef FABM_BINARY_DIR
 	@echo Recreating the FABM library in $(FABM_PREFIX)
-	$(MAKE) -j6 -sC $(FABM_BINARY_DIR) install
+	$(MAKE) -sC $(FABM_BINARY_DIR) install
 endif
 endif
 
