@@ -730,12 +730,13 @@ module mossco_netcdf
       ncStatus = nf90_open(trim(filename), mode=NF90_NOWRITE, ncid=nc%ncid)
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
       ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
-      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
-      ncStatus = nf90_get_att(nc%ncid, nc%timeDimId, 'units', timeUnit_)
-      if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
-
-      if (present(timeUnit)) write(timeUnit,'(A)') trim(timeUnit_)
-
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  finding time dim ID: '//trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_WARNING)
+      else
+        ncStatus = nf90_get_att(nc%ncid, nc%timeDimId, 'units', timeUnit_)
+        if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
+        if (present(timeUnit)) write(timeUnit,'(A)') trim(timeUnit_)
+      endif
     endif
 
     call nc%update_variables()
