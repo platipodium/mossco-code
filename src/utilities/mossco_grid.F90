@@ -313,7 +313,7 @@ end function MOSSCO_GridCreateRegional2D
           exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (any(ubnd3-lbnd3 == 0)) then
+        if (any(ubnd3-lbnd3 <= 0)) then
           write(message,'(A)') '  no coord data on this DE, skipped'
           continue
         endif
@@ -327,7 +327,7 @@ end function MOSSCO_GridCreateRegional2D
           exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (any(ubnd2-lbnd2 == 0)) then
+        if (any(ubnd2-lbnd2 <= 0)) then
           write(message,'(A)') '  no coord data on this DE, skipped'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           continue
