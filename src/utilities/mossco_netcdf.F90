@@ -731,7 +731,8 @@ module mossco_netcdf
       if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)
       ncStatus = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
       if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  finding time dim ID: '//trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('  did not find time dim ID: '//trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_WARNING)
+        ncStatus = NF90_NOERR
       else
         ncStatus = nf90_get_att(nc%ncid, nc%timeDimId, 'units', timeUnit_)
         if (ncStatus /= NF90_NOERR) call ESMF_LogWrite(trim(nf90_strerror(ncStatus)), ESMF_LOGMSG_ERROR)

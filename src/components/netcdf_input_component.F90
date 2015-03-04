@@ -266,7 +266,7 @@ module netcdf_input_component
 
 
     if (.not.hasGrid) then
-      write(message,'(A)') trim(name)//' not implemented withut foreing_grid'
+      write(message,'(A)') trim(name)//' not implemented without foreing_grid'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_NOT_IMPL
     endif
@@ -342,11 +342,18 @@ module netcdf_input_component
 
     do i=1, itemCount
       if (trim(nc%variables(i)%name) == 'time') cycle
-      write(message,'(A)') trim(name)//' found item '//trim(nc%variables(i)%standard_name)
-      write(message,'(A,I3,A,I1,A)') trim(message)//' ', &
-         nc%variables(i)%varid,' rank ',nc%variables(i)%rank,' units='//trim(nc%variables(i)%units)
+      write(message,'(A)') trim(name)//' found item "'//trim(nc%variables(i)%standard_name)//'"'
+      write(message,'(A,I3,A,I1,A)') trim(message)//', id = ', &
+         nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+      if (nc%variables(i)%rank < 2) then
+        write(message,'(A)') trim(name)//' reading of rank < 2 variables not implemented'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        cycle
+      endif
+
+!>@ todo somthing creating segfault in the next 10 lines
       itemName=trim(nc%variables(i)%standard_name)
       if (len_trim(itemName)<1) itemName=trim(nc%variables(i)%standard_name)
       if (len_trim(itemName)<1) cycle
@@ -358,7 +365,7 @@ module netcdf_input_component
       !call nc%gridget(varGrid, nc%variables(i), localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+continue
       if (hasGrid) then
 
         gridRank=nc%variables(i)%rank
