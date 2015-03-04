@@ -271,7 +271,7 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (associated(gridmask3)) then
-        write(0,*) varname, shape(gridmask3), grid3lbnd, grid3ubnd, shape(farrayPtr3)
+        !write(0,*) varname, shape(gridmask3), grid3lbnd, grid3ubnd, shape(farrayPtr3)
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             do k=lbnd(3),ubnd(3)
