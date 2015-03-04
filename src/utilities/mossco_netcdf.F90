@@ -26,6 +26,7 @@ module mossco_netcdf
   use esmf
   use netcdf
 
+
   implicit none
 
   private
@@ -92,12 +93,13 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
-    real(ESMF_KIND_R8)                               :: missingValue
+    real(ESMF_KIND_R8)                               :: missingValue=-1.0E30
 
     integer, pointer                  :: gridmask3(:,:,:)=>null(), gridmask2(:,:)=> null()
     type(ESMF_Grid)                   :: grid
     integer(ESMF_KIND_I4)             :: gridRank
     type(ESMF_GeomType_Flag)          :: geomType
+    logical                           :: catchNaN=.true., isPresent
 
     rc_ = ESMF_SUCCESS
 
@@ -178,9 +180,16 @@ module mossco_netcdf
       endif
     end if
 
-    call ESMF_AttributeGet(field, 'missing_value', missingValue, defaultvalue=missingValue, rc=localrc)
+
+    call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(field, 'missing_value', missingValue, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     if (rank==4) then
 
@@ -203,6 +212,39 @@ module mossco_netcdf
           enddo
         enddo
       end if
+
+      if (catchNan) then
+        if (missingValue < 0.0) then
+          if (any(farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) < missingValue)) then
+            call self%close()
+            write(message,'(A)')  '  Possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
+        elseif (missingValue > 0.0) then
+          if (any(farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) > missingValue)) then
+            call self%close()
+            write(message,'(A)')  '  Possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
+        else
+          if (any(farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= &
+                  farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))) then
+            call self%close()
+            write(message,'(A)')  '  NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
+        endif
+      endif
+
+      ! it is recommended to check of nans with x /= x, as this is true for NaN
+      ! it is recommended to check for inf with abs(x) > huge(x)
+
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)), &
         start=(/1,1,1,1,dimlen/))
 
@@ -227,6 +269,33 @@ module mossco_netcdf
           enddo
         enddo
       end if
+
+      if (catchNan) then
+
+        call ESMF_LogWrite('Catching NaN: ...',ESMF_LOGMSG_INFO)
+        if (missingValue < 0.0) then
+          if ( any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) < missingValue) .or. &
+               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) < -1E30) .or. &
+               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) > 1E30)) then
+            call self%close()
+            write(message,'(A)')  '  Possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            endif
+        else
+          if ( any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) > missingValue) .or. &
+               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) < -1E30) .or. &
+               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) > 1E30)) then
+            call self%close()
+            write(message,'(A)')  '  Possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            endif
+        endif
+      endif
+
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), &
         start=(/1,1,1,dimlen/))
 
@@ -243,6 +312,26 @@ module mossco_netcdf
           enddo
         enddo
       end if
+
+      if (catchNan) then
+        if (missingValue < 0.0) then
+          if (any(farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) < missingValue)) then
+            call self%close()
+            write(message,'(A)')  '  Possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            endif
+        else
+          if (any(farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) > missingValue)) then
+            call self%close()
+            write(message,'(A)')  '  Possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            endif
+        endif
+      endif
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
         start=(/1,1,dimlen/))
 
@@ -251,6 +340,27 @@ module mossco_netcdf
       call  ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (catchNan) then
+        if (missingValue < 0.0) then
+          if (any(farrayPtr1(lbnd(1):ubnd(1)) < missingValue)) then
+            call self%close()
+            write(message,'(A)')  '  possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            endif
+        else
+          if (any(farrayPtr1(lbnd(1):ubnd(1)) > missingValue)) then
+            call self%close()
+            write(message,'(A)')  '  possible NaN detected in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            endif
+        endif
+      endif
+
       ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(lbnd(1):ubnd(1)), &
         start=(/1,dimlen/))
 
