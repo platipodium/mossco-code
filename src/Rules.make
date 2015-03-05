@@ -294,9 +294,9 @@ ifeq ($(MOSSCO_GETM),true)
 # default compile for SPHERICAL
   GETM_GEOMETRY ?= SPHERICAL
   ifeq ($(FORTRAN_COMPILER), XLF)
-    export STATIC += -WF,-D$(GETM_GEOMETRY) -WF,$(GETM_STATIC_DEFINES)
+    export STATIC += -WF,-D$(GETM_GEOMETRY) -WF,-DSMOOTH_BVF_HORI -WF,$(GETM_STATIC_DEFINES)
   else
-    export STATIC += -D$(GETM_GEOMETRY) $(GETM_STATIC_DEFINES)
+    export STATIC += -D$(GETM_GEOMETRY) -DSMOOTH_BVF_HORI $(GETM_STATIC_DEFINES)
   endif
   export GETM_CPPFLAGS = $(STATIC)
   ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
