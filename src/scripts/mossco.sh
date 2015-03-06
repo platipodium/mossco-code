@@ -19,7 +19,7 @@ REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 NP=1               # Run on one processor
 DEFAULT=getm--fabm_pelagic--fabm_sediment--netcdf  # Default example
-SYSTEM=INTERACTIVE                  # Interactive shell as default system
+SYSTEM=BACKGROUND                  # Interactive shell as default system
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
 
 # Function for printing usage of this script
@@ -40,6 +40,8 @@ usage(){
 	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
 	echo "      [-s J]: Slurm system, e.g. juropatest, writes slurm.sh"
+	echo "      [-s F]: Command line interactive, running in foreground
+	echo "      [-s B]: Command line interactive, running in background
 	echo
 	exit
 }
@@ -292,7 +294,10 @@ cat \$PE_HOSTFILE
 
 ${MPI_PREFIX} ${EXE} > ${STDOUT} 2> ${STDERR}
 EOT
-;;
+  ;;
+
+  F|fg)  SYSTEM=FOREGROUND
+  ;;
 esac
 
 rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
@@ -349,9 +354,13 @@ case ${SYSTEM} in
            echo "Job ${TITLE} submitted for system ${SYSTEM}"
          else cat slurm.sh ; fi
          ;;
-  INTERACTIVE)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
+  BACKGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
+         echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
          echo "Job ${TITLE} interactively running in background"
-
+         ;;
+  FOREGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
+         echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}"
+         echo "Job ${TITLE} interactively running in foreground"
          ;;
   *)     echo "System not defined in $0"; exit 1
          ;;
