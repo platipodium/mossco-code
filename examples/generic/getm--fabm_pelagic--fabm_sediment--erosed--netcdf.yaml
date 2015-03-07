@@ -61,4 +61,7 @@ coupling:
      - fabm_pelagic
      - erosed
     interval: 60 m
-
+  - components:
+     - erosed
+     - mossco_gffen
+    interval: 60 m

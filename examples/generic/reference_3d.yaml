@@ -80,6 +80,10 @@ coupling:
      - fabm_sediment
     interval: none
   - components:
+     - benthos
+     - erosed
+    interval: 6 m
+  - components:
      - fabm_sediment
      - netcdf_reference_3d
     interval: 60 m
