@@ -258,10 +258,24 @@ module pelagic_soil_connector
         endif
 
         CN_det = DETC(Clbnd(1):Cubnd(1),Clbnd(2):Cubnd(2),Clbnd(3))/ &
-                   DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+                  (1E-5 + DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3)))
+
       end if
+
       fac_fdet = (1.0d0-NC_sdet*CN_det)/(NC_fdet-NC_sdet)
-      fac_sdet = (1.0d0-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
+
+! dirty=non-mass-conserving fix added by kw against unphysical partitioning
+
+      where (fac_fdet .gt. CN_det)
+         fac_fdet = CN_det
+      endwhere
+
+      where (fac_fdet .lt. 0.0d0)
+         fac_fdet = 0.0d0
+      endwhere
+
+      fac_sdet = CN_det - fac_fdet
+!      fac_sdet = (1.0d0-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
       call mossco_state_get(exportState, &
         (/'fast_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
@@ -379,4 +393,5 @@ module pelagic_soil_connector
 
 
 end module pelagic_soil_connector
+
 
