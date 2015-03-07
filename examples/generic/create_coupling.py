@@ -727,7 +727,7 @@ if (True):
       fid.write('        call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
       fid.write('          exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
       fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
-      fid.write('        call MOSSCO_StateLog(gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
+      fid.write('        !call MOSSCO_StateLog(gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
       fid.write('      endif\n')
       fid.write('      endif\n')
 
@@ -769,8 +769,8 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !call MOSSCO_StateCheckFields(gridExportStateList(i), rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call MOSSCO_StateLog(gridImportStateList(i))
-      call MOSSCO_StateLog(gridExportStateList(i))
+      !call MOSSCO_StateLog(gridImportStateList(i))
+      !call MOSSCO_StateLog(gridExportStateList(i))
    enddo
 ''')
 
