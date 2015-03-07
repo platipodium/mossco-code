@@ -44,6 +44,7 @@ libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 mossco_state.o : mossco_field.o
 mossco_field.o : mossco_strings.o
+mossco_component.o : mossco_strings.o
 
 #@todo there should be a generic rule for the mods
 #$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90 
