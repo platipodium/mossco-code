@@ -25,8 +25,8 @@ SUBDIRS =
 
 all: clone
 
-clone:  fabm_clone  gotm_clone  getm_clone es_clone #erosed-svn-clone
-update: fabm_update gotm_update getm_update es_update #erosed-svn-update
+clone:  fabm_clone  gotm_clone  getm_clone  #erosed-svn-clone
+update: fabm_update gotm_update getm_update #erosed-svn-update
 
 clean: extraclean
 
