@@ -59,18 +59,6 @@ else
 	$(MAKE) gotm_update
 endif
 
-es_clone:
-ifeq ($(wildcard $(MOSSCO_DIR)/external/editscenario/editscenario.py),)
-	git clone git://git.bolding-burchard.com/editscenario $(MOSSCO_DIR)/external/editscenario
-else
-	$(MAKE) es_update
-endif
-
-es_update:
-ifneq ($(wildcard $(MOSSCO_DIR)/external/editscenario/editscenario.py),)
-	( cd $(MOSSCO_DIR)/external/editscenario ; git pull origin master)
-endif
-
 gotm_update:
 ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
 	( cd $(external_GOTMDIR) ; git pull origin master )
