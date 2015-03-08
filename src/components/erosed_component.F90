@@ -1240,16 +1240,18 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
+        if (mask(i,j) /=0) then 
 #ifdef DEBUG
-        write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+          write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
 
-        size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
-        sour(l,nm) *1000.0_fp - min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
+          size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
+          sour(l,nm) *1000.0_fp - min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
  !       write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
  !if (spm_concentration(i,j,l) >100.)  write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
 
 #endif
+        end if
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
