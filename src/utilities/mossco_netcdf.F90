@@ -100,7 +100,7 @@ module mossco_netcdf
     type(ESMF_Grid)                   :: grid
     integer(ESMF_KIND_I4)             :: gridRank
     type(ESMF_GeomType_Flag)          :: geomType
-    logical                           :: catchNaN=.true., isPresent
+    logical                           :: catchNaN=.false., isPresent
 
     rc_ = ESMF_SUCCESS
 
@@ -1400,7 +1400,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4), intent(in), optional  :: itime
 
-    integer(ESMF_KIND_I4)                        :: localrc, i, udimid, localDeCount
+    integer(ESMF_KIND_I4)                        :: localrc, i, udimid, localDeCount, rc_
     integer(ESMF_KIND_I4)                        :: rank, itime_
     integer(ESMF_KIND_I4), allocatable           :: dimids(:)
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
@@ -1409,7 +1409,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
     character(len=ESMF_MAXSTR)                   :: message
 
-    rc = ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
 
     if (present(itime)) then
       itime_=itime
@@ -1419,7 +1419,7 @@ module mossco_netcdf
 
     ! Test for field completeness and terminate if not complete
     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
@@ -1430,7 +1430,7 @@ module mossco_netcdf
     endif
 
     call ESMF_FieldGet(field, rank=rank, localDeCount=localDeCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (localDeCount==0) return
@@ -1447,14 +1447,14 @@ module mossco_netcdf
     allocate(ubnd(rank))
     call ESMF_FieldGetBounds(field, localDe=0, exclusiveLBound=lbnd, &
       exclusiveUBound=ubnd, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (any(lbnd < ubnd)) return
 
     if (rank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (var%rank==rank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, lbnd, ubnd)
@@ -1475,6 +1475,8 @@ module mossco_netcdf
     elseif (rank == 4) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
     endif
+
+    if (present(rc)) rc=rc_
 
     return
 
