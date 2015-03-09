@@ -139,7 +139,7 @@ end subroutine init_grid
 !! bioturbation_profile:
 !!   0 - constant
 !!   1 - linear decrease over bioturbation_depth towards bioturbation_min
-!!   2 - exponential descrease bioturbation*exp(-depth/bioturbation_depth) 
+!!   2 - exponential descrease bioturbation*exp(-depth/bioturbation_depth)
 
 subroutine initialize(sed)
 implicit none
@@ -321,6 +321,12 @@ implicit none
 class(type_sed) :: sed
 integer         :: n,i,j,k
 
+! Make sure we are in an aqueous environment
+if (any(sed%porosity <= 0) .or. any(sed%porosity > 1)) then
+  write(0,*) 'FATAL Porosity out of range, cannot initialize sediment'
+  return
+endif
+
 do n=1,sed%nvar
    sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value/sed%porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
@@ -432,7 +438,7 @@ rhs=0.0_rk
 do k=1,rhs_driver%knum
    do j=1,rhs_driver%jnum
       do i=1,rhs_driver%inum
-         if (.not.rhs_driver%mask(i,j,k)) then 
+         if (.not.rhs_driver%mask(i,j,k)) then
            call fabm_do(rhs_driver%model,i,j,k,rhs(i,j,k,:))
          else
            ! set transport to 0.0 - evtl. skip calculation of transport completely
@@ -477,7 +483,7 @@ implicit none
 class(fabm_sed_grid), intent(in)        :: grid
 real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: C, D
 
-! Boundary concentrations (used if Bc..=2,4), fluxes (used if Bc= 1) 
+! Boundary concentrations (used if Bc..=2,4), fluxes (used if Bc= 1)
 ! and convection coeff (used if Bc=4)
 real(rk), dimension(grid%inum,grid%jnum), intent(in)   :: Cup, Cdown, fluxup, fluxdown
 
@@ -485,19 +491,25 @@ real(rk), dimension(grid%inum,grid%jnum), intent(in)   :: Cup, Cdown, fluxup, fl
 real(rk), dimension(grid%inum,grid%jnum,grid%knum), intent(in) :: VF
 
 ! boundary concitions (1= flux, 2=conc, 3 = 0-grad, 4=convect)
-integer, intent(in) :: BcUp, BcDown   
+integer, intent(in) :: BcUp, BcDown
 
 ! output: fluxes and rate of change
 real(rk), dimension(grid%inum,grid%jnum,grid%knum+1), intent(out) :: Flux
 real(rk), dimension(grid%inum,grid%jnum,grid%knum),intent(out) :: dC
 
-! locals 
+! locals
 integer  :: i,j,k
 real(rk),dimension(grid%inum,grid%jnum)   :: AVF,restflux
 real(rk),dimension(grid%inum,grid%jnum,grid%knum),optional :: flux_cap
 
 ! -------------------------------------------------------------------------------
 
+
+! Make sure that dzc and dz are finite and positive
+if (any(grid%dzc <= 0) .or. any(grid%dz <=0)) then
+  write(0,*)  'FATAL: nonpositive grid height'
+  return
+endif
 
 ! Flux - first internal cells
 ! positive flux is directed downward
@@ -507,7 +519,7 @@ do j=1,grid%jnum
          Flux(i,j,k) = -D(i,j,k) * (C(i,j,k)-C(i,j,k-1)) /grid%dzc(i,j,k-1)
       end do
 
-! Then the outer cells 
+! Then the outer cells
 ! upstream boundary
       IF (BcUp .EQ. 1) THEN
         Flux(i,j,1) = fluxup(i,j)
@@ -519,7 +531,7 @@ do j=1,grid%jnum
         Flux(i,j,1) = 0.0_rk
 
       ELSE IF (BcUp .EQ. 4) THEN
-        Flux(i,j,1) = fluxup(i,j) 
+        Flux(i,j,1) = fluxup(i,j)
         k = 2
         restflux(i,j) = Flux(i,j,1) - flux_cap(i,j,1)
         do while ((restflux(i,j) .gt. 0) .and. (k .le. grid%knum))
@@ -527,11 +539,11 @@ do j=1,grid%jnum
            restflux(i,j) = restflux(i,j) - flux_cap(i,j,k)
            k = k + 1
         end do
-        if (k .gt. grid%knum) then 
+        if (k .gt. grid%knum) then
            Flux(i,j,grid%knum) = Flux(i,j,grid%knum) + restflux(i,j)
-        endif 
+        endif
       ENDIF
-       
+
 ! downstream boundary
       IF (BcDown .EQ. 1) THEN
         Flux(i,j,grid%knum+1) = fluxdown(i,j)
@@ -631,7 +643,7 @@ subroutine get_all_export_states(self)
    do fabm_id=1,self%nvar
        self%export_states(5+fabm_id) = self%get_export_state_by_id(fabm_id)
    end do
-   
+
 end subroutine get_all_export_states
 
 end module fabm_sediment_driver
