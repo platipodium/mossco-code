@@ -132,7 +132,7 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName
     type(ESMF_Config)          :: config
 
-    integer(ESMF_KIND_I4)      :: itemCount, i, timeid, itime, udimid, gridRank, rank
+    integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid, gridRank, rank
     type(ESMF_Time)            :: refTime, time
     real(ESMF_KIND_R8)         :: seconds
     type(ESMF_Field), allocatable :: fieldList(:)
@@ -336,6 +336,8 @@ module netcdf_input_component
       endif
 
       ! todo find time index (default is one)
+    else
+      udimid=-1
     endif
 
     if (itemCount>0) allocate(fieldList(itemCount))
@@ -353,7 +355,6 @@ module netcdf_input_component
         cycle
       endif
 
-!>@ todo somthing creating segfault in the next 10 lines
       itemName=trim(nc%variables(i)%standard_name)
       if (len_trim(itemName)<1) itemName=trim(nc%variables(i)%standard_name)
       if (len_trim(itemName)<1) cycle
