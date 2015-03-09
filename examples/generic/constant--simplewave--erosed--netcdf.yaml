@@ -1,0 +1,24 @@
+dependencies:
+  - erosed:
+    - component: simplewave
+      grid: wave_height
+
+coupling:
+  - components: 
+     - constant
+     - simplewave
+    interval: none
+  - components:
+     - constant
+     - erosed
+    interval: none
+  - components:
+     - simplewave
+     - erosed
+  - components: 
+     - simplewave
+     - netcdf
+  - components:
+     - erosed
+     - netcdf
+
