@@ -41,8 +41,8 @@ program main
   type(ESMF_Clock)           :: mainClock,topClock
   type(ESMF_VM)              :: vm
   integer(ESMF_KIND_I4)      :: iostat, localPet, petCount
-  logical                    :: ClockIsPresent, isPresent
-  character(len=ESMF_MAXSTR) :: message, formatstring, name='main'
+  logical                    :: ClockIsPresent
+  character(len=ESMF_MAXSTR) :: message, formatstring
 
 
 !> Read the namelist `mossco_run.nml`and evaluate three parameters:
@@ -193,7 +193,7 @@ program main
   call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  write(message,'(A,G10.1,A)') trim(title)//' needed ',seconds,' seconds to run'
+  write(message,'(A,ES10.4,A)') trim(title)//' needed ',seconds,' seconds to run'
   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
   call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
 
