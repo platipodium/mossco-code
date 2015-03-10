@@ -23,7 +23,7 @@ SYSTEM=BACKGROUND                  # Interactive shell as default system
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
 
 # Function for printing usage of this script
-usage(){
+function usage {
   echo
 	echo "Usage: $0 [options] [example]"
 	echo
@@ -45,6 +45,18 @@ usage(){
 	echo
 	exit
 }
+
+# Function for selecting the queue
+function select_sge_queue {
+  QSMALL=$(qstat -g c |grep small.q | awk '{print $5}') 
+  if [[ ${QSMALL} -ge  $1 ]] ; then
+    echo small.q  
+  else
+    echo all.q
+  fi
+}
+
+
 
 # Getopts parsing of command line arguments
 while getopts ":rt:bn:s:" opt; do
@@ -341,19 +353,19 @@ case ${SYSTEM} in
          else cat moab.sh ; fi
          ;;
   SGE)   if test $(which qsub 2> /dev/null) ; then
-           if [[ $NP < 49 ]] ; then
-             qsub -q small.q sge.sh ;
-           else
-             qsub sge.sh
-           fi
-           echo "Job ${TITLE} submitted for system ${SYSTEM}"
+           QUEUE=$(select_sge_queue ${NP})
+           qsub -q ${QUEUE} sge.sh
+           echo "Job ${TITLE} submitted to queue ${QUEUE} for system ${SYSTEM}"
            qstat -g c
            qstat
-         else cat sge.sh ; fi
+         else 
+           cat sge.sh 
+         fi
          ;;
   SLURM) if test $(which sbatch 2> /dev/null) ; then
            sbatch -vv slurm.sh
-           echo "Job ${TITLE} submitted for system ${SYSTEM}"
+           echo "Job ${TITLE} submitted to default queue for system ${SYSTEM}"
+           squeue -u ${USER}
          else cat slurm.sh ; fi
          ;;
   BACKGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
