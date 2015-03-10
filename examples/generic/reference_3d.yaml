@@ -24,10 +24,10 @@ coupling:
      - constant
      - getm
     interval: none
-  - components:
-     - clm_netcdf
-     - getm
-    interval: 6 h
+#  - components:
+#     - clm_netcdf
+#     - getm
+#    interval: 6 h
   - components:
      - getm
      - simplewave
@@ -36,10 +36,10 @@ coupling:
      - simplewave
      - getm
     interval: 1 h
-  - components:
-     - clm_netcdf
-     - simplewave
-    interval: 6 h
+#  - components:
+#     - clm_netcdf
+#     - simplewave
+#    interval: 6 h
   - components:
      - simplewave
      - erosed
@@ -86,28 +86,24 @@ coupling:
   - components:
      - fabm_sediment
      - netcdf_reference_3d
-    interval: 60 m
+    interval: 60 h
   - components:
      - fabm_pelagic
      - netcdf_reference_3d
-    interval: 60 m
+    interval: 60 h
   - components:
      - getm
      - netcdf_reference_3d
-    interval: 60 m
+    interval: 60 h
   - components:
      - simplewave
      - netcdf_reference_3d
-    interval: 60 m
+    interval: 60 h
   - components:
      - benthos
      - netcdf_reference_3d
-    interval: 60 m
+    interval: 60 h
   - components:
      - erosed
      - netcdf_reference_3d
-    interval: 60 m
-  - components:
-     - benthos
-     - erosed
-    interval: 6 m
+    interval: 60 h
