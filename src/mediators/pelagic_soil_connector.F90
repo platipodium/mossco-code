@@ -162,8 +162,8 @@ module pelagic_soil_connector
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
     real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20d0
     real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet=>null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
 
