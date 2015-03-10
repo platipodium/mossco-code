@@ -221,13 +221,51 @@ end function MOSSCO_GridCreateRegional2D
     type(ESMF_Grid)                              :: gridb
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank
-    integer(ESMF_KIND_I4)                     :: ubnd3(3), lbnd3(3)
-    integer(ESMF_KIND_I4)                     :: ubnd2(2), lbnd2(2)
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank, deCount
+    type(ESMF_DistGrid)                       :: distGrid
+    type(ESMF_CoordSys_Flag)                  :: coordSys
+    integer(ESMF_KIND_I4), allocatable        :: coordDimCount(:), coordDimMap(:,:)
+    integer(ESMF_KIND_I4), allocatable        :: ubnd(:), lbnd(:)
+    type(ESMF_DeLayout)                       :: deLayout
+    integer(ESMF_KIND_I4)                     :: ubnd2(2), lbnd2(2), ubnd3(3), lbnd3(3)
+    integer(ESMF_KIND_I4)                     :: distGridToArrrayMap(2)
+    integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
+    integer,dimension(:,:,:),allocatable,target :: deBlockList
 
     rc_ = ESMF_SUCCESS
 
-    call ESMF_GridGet(grida, rank=rank)
+    call ESMF_GridGet(grida, rank=rank, distGrid=distGrid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rank>0) then
+      allocate(coordDimCount(rank))
+      allocate(coordDimMap(rank,3))
+      allocate(ubnd(rank))
+      allocate(lbnd(rank))
+    endif
+
+    call ESMF_DistGridGet(distGrid, deLayout=deLayout, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_DeLayoutGet(deLayout, deCount=deCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    allocate(minIndexPDe(rank,deCount))
+    allocate(maxIndexPDe(rank,deCount))
+    allocate(deBlockList(rank,2,deCount))
+
+    call ESMF_DistGridGet(distGrid,minIndexPDe=minIndexPDe, &
+                          maxIndexPDe=maxIndexPDe, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    deBlockList(:,1,:) = minIndexPDe
+    deBlockList(:,2,:) = maxIndexPDe
+
+    !>l@ todo : adjust code below to use distgrid information, this is impolemented
+    ! in fabm_pelagic_component.F90 and should be completley moved to here.
 
     if (rank == 3) then
 
