@@ -199,7 +199,7 @@ case ${SYSTEM} in
          ;;
   SLURM)  NODES=$(expr \( $NP - 1 \) / 28 + 1 )
          PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
-         NP=$(expr $NODES \* $PPN )
+         #NP=$(expr $NODES \* $PPN )
          ;;
   *)     ;;
 esac
@@ -239,8 +239,10 @@ case ${SYSTEM} in
   SLURM) cat << EOT > slurm.sh
 #!/bin/bash -x
 
-#SBATCH --nodes=${NODES}
-#SBATCH --tasks-per-node=${PPN}
+#SBATCH --ntasks=${NP}
+#SBATCH --ntasks-per-core=1
+#####SBATCH --nodes=${NODES}
+#####SBATCH --tasks-per-node=${PPN}
 #SBATCH --output=${TITLE}-%j.stdout
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=00:00:06
@@ -350,7 +352,7 @@ case ${SYSTEM} in
          else cat sge.sh ; fi
          ;;
   SLURM) if test $(which sbatch 2> /dev/null) ; then
-           sbatch slurm.sh
+           sbatch -vv slurm.sh
            echo "Job ${TITLE} submitted for system ${SYSTEM}"
          else cat slurm.sh ; fi
          ;;
