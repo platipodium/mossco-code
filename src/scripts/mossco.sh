@@ -59,6 +59,25 @@ function select_sge_queue {
   fi
 }
 
+# Function for predicting simulation time (adjusted for slurm)
+# Calculation assumes 1 day per core and cpu-hour
+function predict_time {
+  NP=$1
+  START=$(cat mossco_run.nml | grep start| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  STOP=$(cat mossco_run.nml | grep stop| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
+  Y1=$(echo ${START} | cut -d"-" -f1)
+  Y2=$(echo ${STOP}  | cut -d"-" -f1)
+  M1=$(echo ${START} | cut -d"-" -f2)
+  M2=$(echo ${STOP}  | cut -d"-" -f2)
+  D1=$(echo ${START} | cut -d"-" -f3)
+  D2=$(echo ${STOP}  | cut -d"-" -f3)
+  D=$(expr \( ${Y2} - ${Y1} \) \* 365 + \( ${M2} - ${M1} \) \* 31 + ${D2} - ${D1} + 1)
+  M=$(expr $D \* 60 / ${NP})
+  H=$(expr $M / 60)
+  M=$(expr $M % 60)
+  echo  $H:$M:00
+}
+
 # Getopts parsing of command line arguments
 while getopts ":rt:bn:s:" opt; do
   case "$opt" in
@@ -252,6 +271,7 @@ if [[ "x${MPI_PREFIX}" != "x" ]] ; then
 fi
 
 EMAIL=${MOSSCO_USER_EMAIL:-$(who am i |cut -f1 -d" ")@$(hostname)}
+WALLTIME=$(predict_time $NP)
 
 case ${SYSTEM} in
   SLURM) cat << EOT > slurm.sh
@@ -263,7 +283,7 @@ case ${SYSTEM} in
 #####SBATCH --tasks-per-node=${PPN}
 #SBATCH --output=${TITLE}-%j.stdout
 #SBATCH --error=${TITLE}-%j.stderr
-#SBATCH --time=00:00:06
+#SBATCH --time=${WALLTIME}
 #SBATCH --partition=batch
 #SBATCH --mail-user=${EMAIL}
 #SBATCH --mail-type=ALL
@@ -278,7 +298,7 @@ EOT
 #!/bin/bash -x
 
 #MSUB -l nodes=${NODES}:ppn=${PPN}
-#MSUB -l walltime=0:12:00
+#MSUB -l walltime=${WALLTIME}
 
 #MSUB -N ${TITLE}
 
