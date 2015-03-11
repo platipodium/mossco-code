@@ -21,6 +21,7 @@ NP=1               # Run on one processor
 DEFAULT=getm--fabm_pelagic--fabm_sediment--netcdf  # Default example
 SYSTEM=BACKGROUND                  # Interactive shell as default system
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
+POSTPROCESS=NONE
 
 # Function for printing usage of this script
 function usage {
@@ -33,20 +34,22 @@ function usage {
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp"
-	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then
-	echo "            MPI is not used at all. Default is n=1
+	echo "    [-p] :  specifiy the name of a postprocess script (only SLURM)" 
+	echo "            the default is <system>_postprocess.h"
+	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
+	echo "            MPI is not used at all. Default is n=1"
 	echo "    [-s M|S|J]: exeute batch queue for a specific system"
 	echo
 	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
 	echo "      [-s J]: Slurm system, e.g. juropatest, writes slurm.sh"
-	echo "      [-s F]: Command line interactive, running in foreground
-	echo "      [-s B]: Command line interactive, running in background
+	echo "      [-s F]: Command line interactive, running in foreground"
+	echo "      [-s B]: Command line interactive, running in background"
 	echo
 	exit
 }
 
-# Function for selecting the queue
+# Function for selecting the queue on SGE system
 function select_sge_queue {
   QSMALL=$(qstat -g c |grep small.q | awk '{print $5}') 
   if [[ ${QSMALL} -ge  $1 ]] ; then
@@ -56,8 +59,6 @@ function select_sge_queue {
   fi
 }
 
-
-
 # Getopts parsing of command line arguments
 while getopts ":rt:bn:s:" opt; do
   case "$opt" in
@@ -66,6 +67,8 @@ while getopts ":rt:bn:s:" opt; do
   g)  GENERIC=1
       ;;
   b)  BUILD_ONLY=1
+      ;;
+  p)  POSTPROCESS=${OPTARG}
       ;;
   n)  NP=${OPTARG}
       ;;
@@ -212,6 +215,9 @@ case ${SYSTEM} in
   SLURM)  NODES=$(expr \( $NP - 1 \) / 28 + 1 )
          PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
          #NP=$(expr $NODES \* $PPN )
+         if [[ ${POSTPROCESS} -eq NONE ]]; then
+           POSTPROCESS=slurm_postprocess.sh           
+         fi
          ;;
   *)     ;;
 esac
@@ -363,8 +369,12 @@ case ${SYSTEM} in
          fi
          ;;
   SLURM) if test $(which sbatch 2> /dev/null) ; then
-           sbatch -vv slurm.sh
-           echo "Job ${TITLE} submitted to default queue for system ${SYSTEM}"
+           JOBID=$(sbatch --parsable slurm.sh)
+           echo "Job ${TITLE} with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
+           if test -f ${POSTPROCESS}; then
+             JOBID=$(sbatch --parsable --dependency=after:${JOBID} ${POSTPROCESS})
+             echo "Postprocess job with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
+           fi
            squeue -u ${USER}
          else cat slurm.sh ; fi
          ;;
