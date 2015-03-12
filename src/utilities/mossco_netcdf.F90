@@ -1124,7 +1124,7 @@ module mossco_netcdf
     integer                     :: nDims, nAtts, udimid, dimlen, dimid, j
     character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName
 
-    character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits
+    character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits, axisNameList
     character(len=ESMF_MAXSTR)               :: attributeName
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
@@ -1162,6 +1162,8 @@ module mossco_netcdf
       coordnames=(/'x','y','z'/)
       coordunits=(/'1','1','1'/)
     endif
+
+    axisNameList=(/'X','Y','Z'/)
 
     allocate(coordDimCount(dimCount))
     call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=esmfrc)
@@ -1207,7 +1209,11 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
       ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
       ncStatus = nf90_put_att(self%ncid,varid,'horizontal_stagger_location','center')
-
+      !! axis attribute added only for 1-D coordinate variables
+      if (coordDimCount(i)==1) then
+        ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
+      end if
+      
       !! Inquire array for attributes and create / overwrite attributes
       call ESMF_GridGetCoord(grid, i, staggerloc=ESMF_STAGGERLOC_CENTER, array=array, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
