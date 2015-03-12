@@ -60,6 +60,7 @@ module mossco_netcdf
     procedure :: gridget  => mossco_netcdf_grid_get
     procedure :: getvarvar => mossco_netcdf_var_get_var
     procedure :: getvar => mossco_netcdf_var_get
+    procedure :: getAxis => grid_get_coordinate_axis
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -1129,6 +1130,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
+    integer(ESMF_KIND_I4), pointer, dimension(:)     :: intPtr1
     integer, pointer, dimension(:)     :: dimids
     integer, dimension(:), allocatable :: coordDimids
     integer :: eLBound1(1),eLBound2(2),eLBound3(3),eLBound4(4)
@@ -1170,7 +1172,13 @@ module mossco_netcdf
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     dimids => self%grid_dimensions(grid)
     do i=1,dimCount
-
+      !Get Axis info
+      !DOESN'T WORK YET:
+      !call self%getAxis(grid, coordDim=i, intPtr1=intPtr1, rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !write (0,*)'hello2'  
+      
       !write(0,*)  i,dimCount,trim(geomName), trim(coordNames(i)), trim(coordUnits(i))
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
       if (self%variable_present(varName)) then
@@ -1438,23 +1446,58 @@ module mossco_netcdf
   
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_var_get"
-  subroutine grid_get_coordinate_axis(self, grid, coordDim, field, rc)
+  subroutine grid_get_coordinate_axis(self, grid, coordDim, intPtr1, rc)
     
     implicit none
     class(type_mossco_netcdf)                    :: self
     type(ESMF_grid), intent(in)                  :: grid
-    type(ESMF_Field), intent(out)                :: field
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4), intent(in)            :: coordDim
+    integer(ESMF_KIND_I4), pointer, intent(inout):: intPtr1(:)
 
     integer(ESMF_KIND_I4)                        :: localrc, i, localDeCount, rc_
-    integer(ESMF_KIND_I4)                        :: rank
-    !real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
+    integer(ESMF_KIND_I4)                        :: rank, decount,localPet
+    integer(ESMF_KIND_I4),allocatable            :: minIndexPDe(:,:), maxIndexPDe(:,:), deBlockList(:,:,:)
+    type(ESMF_DistGrid)                          :: distGrid
+    type(ESMF_DELayout)                          :: delayout
+    type(ESMF_Vm)                                :: Vm
     character(len=ESMF_MAXSTR)                   :: message
     
     rc_=ESMF_SUCCESS
-    if (present(rc)) rc=rc_
+    
+    nullify(intPtr1)
+    
+    call ESMF_GridGet(grid,distGrid=distGrid, rank=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) & 
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    call ESMF_DistGridGet(distGrid, delayout=delayout, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) & 
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    call ESMF_DELayoutGet(delayout,deCount=deCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) & 
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    allocate(minIndexPDe(rank,deCount))
+    allocate(maxIndexPDe(rank,deCount))
+    allocate(deBlockList(rank,2,deCount))
+
+    call ESMF_DistGridGet(distGrid,minIndexPDe=minIndexPDe, &
+                                   maxIndexPDe=maxIndexPDe, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) & 
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
+    deBlockList(:,1,:) = minIndexPDe
+    deBlockList(:,2,:) = maxIndexPDe
+    !allocate the pointer with length from deBlockList on htis pet and fill the pointer with the int indices
+    call ESMF_VMGetGlobal(Vm)
+    call ESMF_VMGet(Vm, localpet=localpet)
+    write (0,*)'!!!! localpet,deBlockList = ',localpet,deBlockList
+    !allocate(intPtr1(deBlockList)) 
+    
+    if (present(rc)) rc=rc_
+   
   end subroutine grid_get_coordinate_axis 
 
 #undef  ESMF_METHOD
