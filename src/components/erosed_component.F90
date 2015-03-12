@@ -1355,7 +1355,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
     deallocate (spm_concentration)
-    deallocate (mask)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 
