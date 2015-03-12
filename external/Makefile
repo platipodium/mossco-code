@@ -18,15 +18,14 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST =
 SUBDIRS =
 
-
 .PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
-.PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone
-.PHONY: fabm_update gotm_update getm_update erosed-svn-update
+.PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone flibs-cvs-clone
+.PHONY: fabm_update gotm_update getm_update erosed-svn-update flibs-cvs-update
 
 all: clone
 
-clone:  fabm_clone  gotm_clone  getm_clone  #erosed-svn-clone
-update: fabm_update gotm_update getm_update #erosed-svn-update
+clone:  fabm_clone  gotm_clone  getm_clone  flibs-cvs-clone #erosed-svn-clone
+update: fabm_update gotm_update getm_update flibs-cvs-update #erosed-svn-update
 
 clean: extraclean
 
@@ -38,7 +37,6 @@ subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@
-
 
 fabm_clone:
 ifeq ($(wildcard $(external_FABMDIR)/src/Makefile),)
@@ -107,7 +105,13 @@ flow2d3d-svn-export:
 	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $(MOSSCO_DIR)/external/erosed-svn/source
 	svn export --force https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/utils_lgpl/deltares_common/packages/deltares_common/src/mathconsts.f90 $(MOSSCO_DIR)/external/erosed-svn/source
 
+flibs-cvs-clone:
+ifeq ($(wildcard $(MOSSCO_DIR)/external/flibs-cvs),)
+	mkdir -p $(MOSSCO_DIR)/external/flibs-cvs
+	cvs -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs login
+	$(MAKE) flibs-cvs-update
+endif
 
-
-
-
+flibs-cvs-update:
+	(cd $(MOSSCO_DIR)/external/flibs-cvs; \
+	cvs -z3 -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs checkout src )
