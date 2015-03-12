@@ -17,15 +17,15 @@ instances:
   - netcdf_pelagic_3d: netcdf
 
 coupling:
-  - components:
-     - clm_netcdf
-     - getm
+#  - components:
+#     - clm_netcdf
+#     - getm
   - components:
      - getm
      - simplewave
-  - components:
-     - clm_netcdf
-     - simplewave
+#  - components:
+#     - clm_netcdf
+#     - simplewave
   - components:
      - simplewave
      - getm
