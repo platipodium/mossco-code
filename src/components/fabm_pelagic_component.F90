@@ -783,13 +783,18 @@ module fabm_pelagic_component
   end subroutine InitializeP2
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "update_import_pointers"
   subroutine update_import_pointers(importState)
-  implicit none
-  type(ESMF_State)          :: importState
-  type(ESMF_StateItem_Flag) :: itemType
-  type(ESMF_Field)          :: field
-  real(ESMF_KIND_R8), dimension(:,:), pointer :: ptr_f2=>null()
-  integer                   :: localrc
+
+    implicit none
+
+    type(ESMF_State)          :: importState
+
+    type(ESMF_StateItem_Flag) :: itemType
+    type(ESMF_Field)          :: field
+    real(ESMF_KIND_R8), dimension(:,:), pointer :: ptr_f2=>null()
+    integer                   :: localrc
 
     ! todo: add bulk dependencies
 
@@ -806,6 +811,7 @@ module fabm_pelagic_component
       end do
     end if
   end subroutine
+
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
@@ -883,6 +889,7 @@ module fabm_pelagic_component
 
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
+
     integer           :: i,j,k,n
     integer(8)        :: t
     integer           :: seconds_of_day, day_of_year, day
@@ -913,6 +920,7 @@ module fabm_pelagic_component
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
     do while (.not.ESMF_ClockIsStopTime(clock))
       ! integrate rates
       call ode_solver(pel,dt,ode_method)
@@ -923,6 +931,10 @@ module fabm_pelagic_component
       do n=1,pel%nvar
         pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
       end do
+
+      call add_fluxes(importState, dt=dt, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       ! reset concentrations to mininum_value
       do n=1,pel%nvar
@@ -957,6 +969,65 @@ module fabm_pelagic_component
   end subroutine Run
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "add_fluxes"
+  subroutine add_fluxes(state, dt, rc)
+
+    implicit none
+
+    type(ESMF_State), intent(inout)                 :: state
+    integer(ESMF_KIND_I4), intent(out), optional    :: rc
+    real(ESMF_KIND_R8), intent(in)                  :: dt
+
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer   :: farrayPtr3, ratePtr3
+    integer(ESMF_KIND_I4)                           :: rc_, localrc, i, j
+    character(len=ESMF_MAXSTR)                      :: varName
+    type(ESMF_Field)                                :: field
+    type(ESMF_StateItem_Flag)                       :: itemType
+
+    rc_ = ESMF_SUCCESS
+
+    do i=1, pel%nvar
+      varName=trim(pel%model%info%state_variables(n)%name)
+
+      call ESMF_StateGet(state, varName, itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(state, varName, field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (index(varName,'concentration_') /= 1) cycle
+      j=index(varName,'_')
+      varName='concentration_rate'//varName(j:len_trim(varName))
+
+      call ESMF_StateGet(state, varName, itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(state, varName, field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      farrayPtr3(:,:,:) = farrayPtr3(:,:,:)  + ratePtr3(:,:,:) * dt
+
+      call ESMF_LogWrite('Added flux from '//trim(varName), ESMF_LOGMSG_INFO)
+    enddo
+
+    if(present(rc)) rc=rc_
+
+  end subroutine add_fluxes
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
@@ -986,7 +1057,7 @@ module fabm_pelagic_component
     !! been fixed by ESMF
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-		call ESMF_ClockDestroy(clock, rc=localrc)
+    call ESMF_ClockDestroy(clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (associated(bfl)) deallocate(bfl)
