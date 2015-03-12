@@ -1433,8 +1433,29 @@ module mossco_netcdf
       rc=ESMF_RC_NOT_IMPL
 
     return
-
+    
   end subroutine mossco_netcdf_grid_get
+  
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_var_get"
+  subroutine grid_get_coordinate_axis(self, grid, coordDim, field, rc)
+    
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    type(ESMF_grid), intent(in)                  :: grid
+    type(ESMF_Field), intent(out)                :: field
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4), intent(in)            :: coordDim
+
+    integer(ESMF_KIND_I4)                        :: localrc, i, localDeCount, rc_
+    integer(ESMF_KIND_I4)                        :: rank
+    !real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
+    character(len=ESMF_MAXSTR)                   :: message
+    
+    rc_=ESMF_SUCCESS
+    if (present(rc)) rc=rc_
+
+  end subroutine grid_get_coordinate_axis 
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_var_get"
