@@ -1328,7 +1328,7 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_NameCheck(field, localrc)
+        call MOSSCO_FieldNameCheck(field, localrc)
       endif
     enddo
 
