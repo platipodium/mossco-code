@@ -673,6 +673,10 @@ if (True):
     fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
 #    fid.write('        call MOSSCO_GridCompFieldsTable(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
 #    fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), rc=localrc)\n')
+    fid.write('        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridImportStateList(' + str(ito+1) + '), &\n')
+    fid.write('        !   clock=clock, rc=localrc)\n')
+    fid.write('        !call ESMF_CplCompInitialize(cplCompList(2), importState=gridExportStateList(' + str(ito+1) + '), &\n')
+    fid.write('        !   clock=clock, rc=localrc)\n')
     fid.write('      endif\n\n')
 
   fid.write('      !! Linking\n')

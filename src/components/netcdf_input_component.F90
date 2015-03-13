@@ -246,7 +246,6 @@ module netcdf_input_component
       hasGrid=.true.
     endif
 
-
     call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
       isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -264,9 +263,8 @@ module netcdf_input_component
       hasGrid=.true.
     endif
 
-
     if (.not.hasGrid) then
-      write(message,'(A)') trim(name)//' not implemented without foreing_grid'
+      write(message,'(A)') trim(name)//' not implemented without foreign_grid'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_NOT_IMPL
     endif
