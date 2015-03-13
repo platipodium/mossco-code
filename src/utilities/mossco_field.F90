@@ -222,13 +222,13 @@ end subroutine MOSSCO_FieldCopy
 #define ESMF_METHOD "MOSSCO_FieldNameCheck"
   subroutine MOSSCO_FieldNameCheck(field, rc)
 
-    type(ESMF_Field), intent(in)        :: field
+    type(ESMF_Field), intent(inout)              :: field
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
     character(ESMF_MAXSTR)              :: name, standardName
 
-    type(ESMF_StateItem_Flag)           :: itemType
+    logical                             :: isPresent
 
     rc_ = ESMF_SUCCESS
 
@@ -236,14 +236,214 @@ end subroutine MOSSCO_FieldCopy
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    standardName=trim(name)
-
-    call ESMF_LogWrite('You cannot change the name of a field, do not use this function', &
-      ESMF_LOGMSG_ERROR)
-
-    !call ESMF_FieldSet(field, name=name, rc=localrc)
+    call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !if (.not.isPresent) then
+
+      select case(trim(name))
+        case ('Chl_chl_bottom_flux_hz')
+          standardName='upward_flux_of_chlorophyll_at_soil_surface'
+        case ('Chl_chl_surface_flux_hz')
+          standardName='upward_flux_of_chlorophyll_at_water_surface'
+        case ('Detritus_Carbon_detC_bottom_flux_hz')
+          standardName='upward_flux_of_detritus_carbon_at_soil_surface'
+        case ('Detritus_Carbon_detC_surface_flux_hz')
+          standardName='upward_flux_of_detritus_carbon_at_water_surface'
+        case ('Detritus_Carbon_detC_in_water')
+          standardName='detritus_carbon_in_water'
+        case ('Detritus_Carbon_detC_z_velocity_in_water')
+          standardName='detritus_carbon_z_velocity_in_water'
+        case ('Detritus_Nitrogen_detN_bottom_flux_hz')
+          standardName='upward_flux_of_detritus_nitrogen_at_soil_surface'
+        case ('Detritus_Nitrogen_detN_surface_flux_hz')
+          standardName='upward_flux_of_detritus_nitrogen_at_water_surface'
+        case ('Detritus_Nitrogen_detN_in_water')
+          standardName='detritus_nitrogen_in_water'
+        case ('Detritus_Nitrogen_detN_z_velocity_in_water')
+          standardName='detritus_nitrogen_z_velocity_in_water'
+        case ('Detritus_Phosphorous_detP_bottom_flux_hz')
+          standardName='upward_flux_of_detritus_phosphorous_at_soil_surface'
+        case ('Detritus_Phosphorous_detP_surface_flux_hz')
+          standardName='upward_flux_of_detritus_phosphorous_at_water_surface'
+        case ('Detritus_Phosphorous_detP_in_water')
+          standardName='detritus_phosphorous_in_water'
+        case ('Detritus_Phosphorous_detP_z_velocity_in_water')
+          standardName='detritus_phosphorous_z_velocity_in_water'
+        case ('Dissolved_Inorganic_Nitrogen_DIN_nutN_bottom_flux_hz')
+          standardName='upward_flux_of_dissolved_inorganic_nitrogen_at_soil_surface'
+        case ('Dissolved_Inorganic_Nitrogen_DIN_nutN_surface_flux_hz')
+          standardName='upward_flux_of_dissolved_inorganic_at_water_surface'
+        case ('Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water')
+          standardName='dissolved_inorganic_nitrogen_in_water'
+        case ('Dissolved_Inorganic_Nitrogen_DIN_nutN_z_velocity_in_water')
+          standardName='dissolved_inorganic_nitrogen_z_velocity_in_water'
+        case ('Dissolved_Inorganic_Phosphorus_DIP_nutP_bottom_flux_hz')
+          standardName='upward_flux_of_dissolved_inorganic_phosphorous_at_soil_surface'
+        case ('Dissolved_Inorganic_Phosphorus_DIP_nutP_surface_flux_hz')
+          standardName='upward_flux_of_dissolved_inorganic_phosphorous_at_water_surface'
+        case ('Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water')
+          standardName='dissolved_inorganic_phosphorous_in_water'
+        case ('Dissolved_Inorganic_Phosphorus_DIP_nutP_z_velocity_in_water')
+          standardName='dissolved_inorganic_phosphorous_z_velocity_in_water'
+        case ('Dissolved_Organic_Carbon_domC_bottom_flux_hz')
+          standardName='upward_flux_of_dissolved_organic_carbon_at_soil_surface'
+        case ('Dissolved_Organic_Carbon_domC_surface_flux_hz')
+          standardName='upward_flux_of_dissolved_organic_carbon_at_water_surface'
+        case ('Dissolved_Organic_Carbon_domC_in_water')
+          standardName='dissolved_organic_carbon_in_water'
+        case ('Dissolved_Organic_Carbon_domC_z_velocity_in_water')
+          standardName='dissolved_organic_carbon_z_velocity_in_water'
+        case ('Dissolved_Organic_Nitrogen_domN_bottom_flux_hz')
+          standardName='upward_flux_of_dissolved_organic_nitrogen_at_soil_surface'
+        case ('Dissolved_Organic_Nitrogen_domN_surface_flux_hz')
+          standardName='upward_flux_of_dissolved_organic_nitrogen_at_water_surface'
+        case ('Dissolved_Organic_Nitrogen_domN_in_water')
+          standardName='dissolved_organic_nitrogen_in_water'
+        case ('Dissolved_Organic_Nitrogen_domN_z_velocity_in_water')
+          standardName='dissolved_organic_nitrogen_z_velocity_in_water'
+        case ('Dissolved_Organic_Phosphorus_domP_bottom_flux_hz')
+          standardName='upward_flux_of_dissolved_organic_phosphorous_at_soil_surface'
+        case ('Dissolved_Organic_Phosphorus_domP_surface_flux_hz')
+          standardName='upward_flux_of_dissolved_organic_phosphorous_at_water_surface'
+        case ('Dissolved_Organic_Phosphorus_domP_in_water')
+          standardName='dissolved_organic_phosphorous_in_water'
+        case ('Dissolved_Organic_Phosphorus_domP_z_velocity_in_water')
+          standardName='dissolved_organic_phosphorous_z_velocity_in_water'
+        case ('Nitrate_no3_in_water')
+          standardName='nitrate_in_water'
+        case ('Photosynthetically_Active_Radiation_dPAR_in_water')
+          standardName='photosynthetically_active_radiation_in_water'
+        case ('Phytoplankton_Carbon_phyC_bottom_flux_hz')
+          standardName='upward_flux_of_phytoplankton_carbon_at_soil_surface'
+        case ('Phytoplankton_Carbon_phyC_surface_flux_hz')
+          standardName='upward_flux_of_phytoplankton_carbon_at_water_surface'
+        case ('Phytoplankton_Carbon_phyC_in_water')
+          standardName='phytoplankton_carbon_in_water'
+        case ('Phytoplankton_Carbon_phyC_z_velocity_in_water')
+          standardName='phytoplankton_carbon_z_velocity_in_water'
+        case ('Phytoplankton_Nitrogen_phyN_bottom_flux_hz')
+          standardName='upward_flux_of_phytoplankton_nitrogen_at_soil_surface'
+        case ('Phytoplankton_Nitrogen_phyN_surface_flux_hz')
+          standardName='upward_flux_of_phytoplankton_nitrogen_at_water_surface'
+        case ('Phytoplankton_Nitrogen_phyN_in_water')
+          standardName='phytoplankton_nitrogen_in_water'
+        case ('Phytoplankton_Nitrogen_phyN_z_velocity_in_water')
+          standardName='phytoplankton_nitrogen_z_velocity_in_water'
+        case ('Phytoplankton_Phosphorous_phyP_bottom_flux_hz')
+          standardName='upward_flux_of_phytoplankton_phosphorous_at_soil_surface'
+        case ('Phytoplankton_Phosphorous_phyP_surface_flux_hz')
+          standardName='upward_flux_of_phytoplankton_phosphorous_at_water_surface'
+        case ('Phytoplankton_Phosphorous_phyP_in_water')
+          standardName='phytoplankton_phosphorous_in_water'
+        case ('Phytoplankton_Phosphorous_phyP_z_velocity_in_water')
+          standardName='phytoplankton_phosphorous_z_velocity_in_water'
+        case ('Zooplankton_Carbon_zooC_bottom_flux_hz')
+          standardName='upward_flux_of_zooplankton_carbon_at_soil_surface'
+        case ('Zooplankton_Carbon_zooC_surface_flux_hz')
+          standardName='upward_flux_of_zooplankton_carbon_at_water_surface'
+        case ('Zooplankton_Carbon_zooC_in_water')
+          standardName='zooplankton_carbon_in_water'
+        case ('Zooplankton_Carbon_zooC_z_velocity_in_water')
+          standardName='zooplankton_carbon_z_velocity_in_water'
+        case ('Zooplankton_Nitrogen_zooN_bottom_flux_hz')
+          standardName='upward_flux_of_zooplankton_nitrogen_at_soil_surface'
+        case ('Zooplankton_Nitrogen_zooN_surface_flux_hz')
+          standardName='upward_flux_of_zooplankton_nitrogen_at_water_surface'
+        case ('Zooplankton_Nitrogen_zooN_in_water')
+          standardName='zooplankton_nitrogen_in_water'
+        case ('Zooplankton_Nitrogen_zooN_z_velocity_in_water')
+          standardName='zooplankton_nitrogen_z_velocity_in_water'
+        case ('Zooplankton_Phosphorous_zooP_bottom_flux_hz')
+          standardName='upward_flux_of_zooplankton_phosphorous_at_soil_surface'
+        case ('Zooplankton_Phosphorous_zooP_surface_flux_hz')
+          standardName='upward_flux_of_zooplankton_phosphorous_at_water_surface'
+        case ('Zooplankton_Phosphorous_zooP_in_water')
+          standardName='zooplankton_phosphorous_in_water'
+        case ('Zooplankton_Phosphorous_zooP_z_velocity_in_water')
+          standardName='zooplankton_phosphorous_z_velocity_in_water'
+!concentration_of_SPM_bottom_flux_hz
+!concentration_of_SPM_in_water_001
+!concentration_of_SPM_in_water_002
+!concentration_of_SPM_surface_flux_hz
+!concentration_of_SPM_upward_flux_at_soil_surface_001
+!concentration_of_SPM_upward_flux_at_soil_surface_002
+!concentration_of_SPM_upward_flux_at_soil_surface_003
+!concentration_of_SPM_upward_flux_at_soil_surface_004
+!concentration_of_SPM_z_velocity_in_water_001
+!concentration_of_SPM_z_velocity_in_water_002
+!denitrification_rate_Denitr_in_water
+!denitrification_rate_in_soil
+!depth_averaged_x_velocity_in_water
+!depth_averaged_y_velocity_in_water
+!detritus-P_in_soil
+!detritus-P_sources-sinks_in_soil
+!detritus-P_upward_flux_at_soil_surface
+!dissolved_ammonium_nh3_bottom_flux_hz
+!dissolved_ammonium_nh3_in_water
+!dissolved_ammonium_nh3_sources-sinks_in_water
+!dissolved_ammonium_nh3_surface_flux_hz
+!dissolved_ammonium_nh3_z_velocity_in_water
+!dissolved_ammonium_sources-sinks_in_soil
+!dissolved_nitrate_sources-sinks_in_soil
+!dissolved_oxygen_in_soil
+!dissolved_oxygen_oxy_bottom_flux_hz
+!dissolved_oxygen_oxy_in_water
+!dissolved_oxygen_oxy_sources-sinks_in_water
+!dissolved_oxygen_oxy_surface_flux_hz
+!dissolved_oxygen_oxy_z_velocity_in_water
+!dissolved_oxygen_sources-sinks_in_soil
+!dissolved_oxygen_upward_flux_at_soil_surface
+!dissolved_phosphate_sources-sinks_in_soil
+!dissolved_reduced_substances_in_soil
+!dissolved_reduced_substances_odu_bottom_flux_hz
+!dissolved_reduced_substances_odu_in_water
+!dissolved_reduced_substances_odu_sources-sinks_in_water
+!dissolved_reduced_substances_odu_surface_flux_hz
+!dissolved_reduced_substances_odu_z_velocity_in_water
+!dissolved_reduced_substances_sources-sinks_in_soil
+!dissolved_reduced_substances_upward_flux_at_soil_surface
+!dtheta_fac4_in_water
+!dtheta_fac5_in_water
+!fast_detritus_C_in_soil
+!fast_detritus_C_sources-sinks_in_soil
+!fast_detritus_C_upward_flux_at_soil_surface
+!fraction_of_Rubisco_Rub_bottom_flux_hz
+!fraction_of_Rubisco_Rub_in_water
+!fraction_of_Rubisco_Rub_sources-sinks_in_water
+!fraction_of_Rubisco_Rub_surface_flux_hz
+!fraction_of_Rubisco_Rub_z_velocity_in_water
+!gross_primary_production_GPPR_in_water
+!massflux_in_the_exchange_layer_hz
+!massfraction_in_the_exchange_layer_hz
+!mole_concentration_of_ammonium_in_soil
+!mole_concentration_of_ammonium_upward_flux_at_soil_surface
+!mole_concentration_of_nitrate_in_soil
+!mole_concentration_of_nitrate_upward_flux_at_soil_surface
+!mole_concentration_of_phosphate_in_soil
+!mole_concentration_of_phosphate_upward_flux_at_soil_surface
+!oxygen_flux_between_sea_water_and_air_hz
+!phosphate_adsorption_in_soil
+!porosity_in_soil
+!slow_detritus_C_in_soil
+!slow_detritus_C_sources-sinks_in_soil
+!slow_detritus_C_upward_flux_at_soil_surface
+!surface_downwelling_photosynthetic_radiative_flux
+        case default
+          standardName=trim(name)
+      end select
+
+      call ESMF_AttributeSet(field, 'standard_name', trim(standardName), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+   ! endif
+
+    !No implemented in ESMF: changing field name
+    !call ESMF_FieldSet(field, name=name, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(rc)) rc = rc_
 
