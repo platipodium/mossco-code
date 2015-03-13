@@ -37,7 +37,7 @@ $cutscript $nproc $fnameroot
 #echo 'cutting complete'
 
 #stitch
-fnameout=$fnameroot'_xs.nc'
+fnameout=${fnameroot}'_xs.nc'
 #fname='cut.'$p'.nc'
 #ncmerge cut.*.nc $fnameout
 python $pystitchscript cut 
@@ -45,7 +45,7 @@ mv 'cut_stitched.nc' $fnameout
 #rm -r cut.*
 
 #append parameters
-$toolpath/append_pars.sh $fnameout
+${toolpath}append_par.sh $fnameout
 
 #make #python $pyplotscript $fnameout
 echo 'plotting variables:' $ts
