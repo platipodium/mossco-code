@@ -63,7 +63,7 @@ else:
 if config.has_key('copyright'):
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2014, Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht'
 
 if config.has_key('dependencies'):
   dependencies = config.pop('dependencies')
@@ -204,6 +204,10 @@ if 'link_connector' in componentList:
   c=componentList.pop(componentList.index('link_connector'))
   componentList.insert(0,c)
 
+if 'rename_connector' in componentList:
+  c=componentList.pop(componentList.index('link_connector'))
+  componentList.insert(1,c)
+
 # Create dictionary for component names (instanceDict) and for petLists that
 # instances of these components run on.  Get this information from the
 # yaml 'instances' dictionary/list
@@ -259,6 +263,14 @@ for item in componentList:
             petList.append('all')
     else:
         cplCompList.append(item)
+
+if 'link_connector' in cplCompList:
+  c=componentList.pop(componentList.index('link_connector'))
+  componentList.insert(0,c)
+
+if 'rename_connector' in componentList:
+  c=cplCompList.pop(cplCompList.index('link_connector'))
+  cplCompList.insert(1,c)
 
 # print gridCompList, cplCompList
 
@@ -1531,6 +1543,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
         'link_connector' : ['mossco_connector'],
+        'rename_connector' : ['mossco_connector'],
         'transport_connector' : ['mossco_connector'],
         'copy_coupler' : ['copycoupler'],
         'regrid_coupler' : ['regridcoupler'],
@@ -1568,6 +1581,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
+        'rename_connector' : ['libmossco_connector'],
         'transport_connector' : ['libmossco_connector'],
         'copy_coupler' : ['libcopycoupler'],
         'regrid_coupler' : ['libregridcoupler'],
@@ -1616,7 +1630,7 @@ fid.write('LDFLAGS += -lmossco_util $(ESMF_LDFLAGS)  \n\n')
 
 fid.write('.PHONY: all exec ' + coupling_name + '\n\n')
 fid.write('all: exec\n\n')
-fid.write('exec: libmossco_util ')
+fid.write('exec: libmossco_util libmossco_connector ')
 for item in gridCompSet.union(cplCompSet):
     if instanceDict.has_key(item):
         item=instanceDict[item]
