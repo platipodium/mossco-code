@@ -193,6 +193,7 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     integer(ESMF_KIND_I4)      :: localrc
     integer, dimension(:,:), pointer :: gridmask=>null()
+    type(ESMF_StateItem_Flag)  :: itemType
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -256,12 +257,26 @@ module fabm_sediment_component
     end if
 
     if (sed%grid%type==FOREIGN_GRID) then
-      ! get 2d grid from foreign_grid_field
-      write(message,*) '  use foreign horizontal grid '//trim(foreignGridFieldName)
+
+      call ESMF_StateGet(importState, trim(foreignGridFieldName), itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        call MOSSCO_StateLog(importState, localrc)
+        write(message,'(A)') trim(name)//' cannot find specified foreign grid field '//trim(foreignGridFieldName)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      call ESMF_StateGet(importState, foreignGridFieldName, field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(name)//' uses foreign horizontal grid from field'
+      call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      call ESMF_StateGet(importState,foreignGridFieldName, field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field, grid=flux_grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field, rank=rank, rc=localrc)
