@@ -1295,4 +1295,46 @@ contains
 
   end subroutine MOSSCO_StateGetFieldGrid
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateNameCheck"
+  subroutine MOSSCO_StateNameCheck(state, rc)
+
+    type(ESMF_State), intent(in)        :: state
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)               :: rc_, localrc, i, itemCount
+    character(ESMF_MAXSTR)              :: name
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+
+    type(ESMF_StateItem_Flag)           :: itemType
+    type(ESMF_Field)                    :: field
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_StateGet(state, name=name, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount>0) then
+      allocate(itemNameList(itemCount))
+      allocate(itemTypeList(itemCount))
+    endif
+
+    do i=1,itemCount
+
+      if (itemTypeList(i) == ESMF_STATEITEM_Field) then
+        call ESMF_StateGet(state, trim(itemNameList(i)), field, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !call MOSSCO_FieldNameCheck(field, localrc)
+      endif
+    enddo
+
+    return
+
+  end subroutine MOSSCO_StateNameCheck
+
+
 end module mossco_state
