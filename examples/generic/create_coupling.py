@@ -77,7 +77,8 @@ else:
 
 componentList=[]
 gridCompList=[]
-cplCompList=[]
+cplCompList=['link_connector','rename_connector']
+#cplCompList=['link_connector']
 couplingList=[]
 petList=[]
 foreignGrid={}
@@ -200,13 +201,13 @@ for key,value in dependencyDict.iteritems():
     dependencyDict[key]=unique
 
 
+if 'rename_connector' in componentList:
+  c=componentList.pop(componentList.index('rename_connector'))
+  componentList.insert(0,c)
+
 if 'link_connector' in componentList:
   c=componentList.pop(componentList.index('link_connector'))
   componentList.insert(0,c)
-
-if 'rename_connector' in componentList:
-  c=componentList.pop(componentList.index('link_connector'))
-  componentList.insert(1,c)
 
 # Create dictionary for component names (instanceDict) and for petLists that
 # instances of these components run on.  Get this information from the
@@ -264,15 +265,16 @@ for item in componentList:
     else:
         cplCompList.append(item)
 
+if 'rename_connector' in cplCompList:
+  c=cplCompList.pop(cplCompList.index('rename_connector'))
+  cplCompList.insert(0,c)
+
 if 'link_connector' in cplCompList:
-  c=componentList.pop(componentList.index('link_connector'))
-  componentList.insert(0,c)
-
-if 'rename_connector' in componentList:
   c=cplCompList.pop(cplCompList.index('link_connector'))
-  cplCompList.insert(1,c)
+  cplCompList.insert(0,c)
 
-# print gridCompList, cplCompList
+print componentList
+print gridCompList, cplCompList
 
 # Done parsing the list, now write the new toplevel_component file
 
@@ -712,9 +714,10 @@ if (True):
         fid.write('      endif\n\n')
 
   for i,item in enumerate(cplCompList):
-#   dirty hack for now: skip link_connector
-    if i == 0:
-      continue
+#   dirty hack for now: skip link_connector and rename_connector
+    if item=='link_connector': continue
+    if item=='rename_connector': continue
+
     for jtem in couplingList:
       if jtem[1] == item:
         break
