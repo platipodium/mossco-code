@@ -20,6 +20,7 @@ module rename_connector
 
   use esmf
   use mossco_field
+  use mossco_state
 
   implicit none
 
@@ -124,7 +125,7 @@ module rename_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_StateNameCheck(importState, rc)
+    call MOSSCO_StateItemNameCheck(importState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

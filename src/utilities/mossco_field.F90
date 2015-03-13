@@ -147,7 +147,7 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
 
   rc_ = ESMF_SUCCESS
 
-	call ESMF_FieldGet(from, status=fromStatus, rank=fromRank, rc=localrc)
+  call ESMF_FieldGet(from, status=fromStatus, rank=fromRank, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -217,5 +217,39 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
   if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_FieldCopy
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldNameCheck"
+  subroutine MOSSCO_FieldNameCheck(field, rc)
+
+    type(ESMF_Field), intent(in)        :: field
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)               :: rc_, localrc
+    character(ESMF_MAXSTR)              :: name, standardName
+
+    type(ESMF_StateItem_Flag)           :: itemType
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_FieldGet(field, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    standardName=trim(name)
+
+    call ESMF_LogWrite('You cannot change the name of a field, do not use this function', &
+      ESMF_LOGMSG_ERROR)
+
+    !call ESMF_FieldSet(field, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(rc)) rc = rc_
+
+    return
+
+  end subroutine MOSSCO_FieldNameCheck
+
 
 end module mossco_field

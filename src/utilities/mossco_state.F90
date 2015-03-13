@@ -1296,8 +1296,8 @@ contains
   end subroutine MOSSCO_StateGetFieldGrid
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_StateNameCheck"
-  subroutine MOSSCO_StateNameCheck(state, rc)
+#define ESMF_METHOD "MOSSCO_StateItemNameCheck"
+  subroutine MOSSCO_StateItemNameCheck(state, rc)
 
     type(ESMF_State), intent(in)        :: state
     integer(ESMF_KIND_I4), intent(out), optional :: rc
@@ -1328,13 +1328,15 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !call MOSSCO_FieldNameCheck(field, localrc)
+        call MOSSCO_NameCheck(field, localrc)
       endif
     enddo
 
+    if (present(rc)) rc = rc_
+
     return
 
-  end subroutine MOSSCO_StateNameCheck
+  end subroutine MOSSCO_StateItemNameCheck
 
 
 end module mossco_state
