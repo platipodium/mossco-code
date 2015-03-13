@@ -21,6 +21,7 @@ module rename_connector
   use esmf
   use mossco_field
   use mossco_state
+  use mossco_component
 
   implicit none
 
@@ -46,11 +47,6 @@ module rename_connector
 
     call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_cplCompSetEntryPoint(cplComp, ESMF_METHOD_READRESTART, phase=1, &
-      userRoutine=ReadRestart, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -138,20 +134,6 @@ module rename_connector
   end subroutine InitializeP1
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "ReadRestart"
-  subroutine ReadRestart(cplComp, importState, exportState, parentClock, rc)
-
-    type(ESMF_cplComp)   :: cplComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
-
-    rc=ESMF_SUCCESS
-
-  end subroutine ReadRestart
-
-#undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
   subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
@@ -163,21 +145,36 @@ module rename_connector
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime, stopTime
     type(ESMF_Clock)        :: clock
+    integer(ESMF_KIND_I4)   :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc=ESMF_SUCCESS
 
-    call ESMF_cplCompGet(cplComp, clock=clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_StateItemNameCheck(importState, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    exportState = importState
+
+    call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Finally, log the successful completion of this function
-    call MOSSCO_CompExit(cplComp, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 

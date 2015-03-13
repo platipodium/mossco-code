@@ -3,6 +3,8 @@ in the MOSSCO library
 
 We currently have two working connectors
 
-# Link coupler
+# Link connector
 
-# Transport coupler
+# Transport connector
+
+# Rename connector
