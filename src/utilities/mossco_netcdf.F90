@@ -102,7 +102,7 @@ module mossco_netcdf
     type(ESMF_Grid)                   :: grid
     integer(ESMF_KIND_I4)             :: gridRank
     type(ESMF_GeomType_Flag)          :: geomType
-    logical                           :: catchNaN=.true., isPresent
+    logical                           :: catchNaN=.false., isPresent
 
     rc_ = ESMF_SUCCESS
 
