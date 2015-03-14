@@ -294,11 +294,21 @@ module netcdf_input_component
 
     itemCount = ubound(nc%variables,1)
 
+    !do i=1, itemCount
+    !    write(message,'(A)')  trim(name)//' found variable '//trim(nc%variables(i)%name)
+    !    write(message,'(A,I3,A,I1,A)') trim(message)//' ', &
+    !      nc%variables(i)%varid,' rank ',nc%variables(i)%rank,' units='//trim(nc%variables(i)%units)
+    !    do j=1,nc%variables(i)%rank
+    !      write(message,'(A,X,I1)') trim(message),nc%variables(i)%dimids(j)
+    !    enddo
+    !    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    !enddo
+
     ! Get time information from time variable if present and log the time span available
     itime=1
     timeid=0
     do i=1, itemCount
-      if (trim(nc%variables(i)%name) == 'time') then
+      if (trim(nc%variables(i)%name) == 'time' .or. trim(nc%variables(i)%standard_name) == 'time') then
         timeid=i
         write(message,'(A)')  trim(name)//' found time variable'
         write(message,'(A,I3,A,I1,A)') trim(message)//' ', &
@@ -309,12 +319,12 @@ module netcdf_input_component
     enddo
 
     if (timeid>0) then
-      call ESMF_ClockGet(clock, currTime=currTime, refTime=refTime, rc=localrc)
+      call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      timeunit=trim(nc%variables(i)%units)
-      udimid=nc%variables(i)%dimids(1)
+      timeunit=trim(nc%variables(timeid)%units)
+      udimid=nc%variables(timeid)%dimids(1)
       i=index(timeunit,'since ')
       if (i>0) then
         call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
@@ -334,6 +344,8 @@ module netcdf_input_component
       endif
 
       ! todo find time index (default is one)
+      ! allocate(time(nc%variables(timid)%dimlens(1)))
+      ! localrc=nf90_var_get(nc%ncid, timeid, time
     else
       udimid=-1
     endif
@@ -342,6 +354,8 @@ module netcdf_input_component
 
     do i=1, itemCount
       if (trim(nc%variables(i)%name) == 'time') cycle
+      if (trim(nc%variables(i)%name) == 'lat') cycle
+      if (trim(nc%variables(i)%name) == 'lon') cycle
       write(message,'(A)') trim(name)//' found item "'//trim(nc%variables(i)%standard_name)//'"'
       write(message,'(A,I3,A,I1,A)') trim(message)//', id = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
@@ -364,7 +378,7 @@ module netcdf_input_component
       !call nc%gridget(varGrid, nc%variables(i), localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-continue
+
       if (hasGrid) then
 
         gridRank=nc%variables(i)%rank
