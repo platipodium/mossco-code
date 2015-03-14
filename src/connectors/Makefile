@@ -28,17 +28,21 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
-libmossco_connector: libtransport_connector liblink_connector librename_connector
+libmossco_connector: libtransport_connector liblink_connector librename_connector libflux_connector
 
 libtransport_connector: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(transport_connector.o)
 liblink_connector: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(link_connector.o)
 librename_connector: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(rename_connector.o)
+libflux_connector: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(flux_connector.o)
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(transport_connector.o): transport_connector.o
 	$(AR) cruvs $@ transport_connector.o
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(flux_connector.o): flux_connector.o
+	$(AR) cruvs $@ flux_connector.o
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(rename_connector.o): rename_connector.o
 	$(AR) cruvs $@ rename_connector.o
