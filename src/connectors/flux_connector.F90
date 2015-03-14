@@ -307,7 +307,7 @@ module flux_connector
           enddo
         enddo
       elseif (rank==3) then
-        call ESMF_FieldGet(rateField(i), farrayPtr=ratePtr3, rc=localrc)
+        call ESMF_FieldGet(rateField, farrayPtr=ratePtr3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
