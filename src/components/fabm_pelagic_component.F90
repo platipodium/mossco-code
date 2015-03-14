@@ -322,7 +322,8 @@ module fabm_pelagic_component
                exclusiveCount=maxIndex,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field, totalLWidth=totalLWidth, totalUWidth=totalUWidth, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         inum=maxIndex(1)
         jnum=maxIndex(2)
         numlayers=maxIndex(3)
@@ -332,8 +333,9 @@ module fabm_pelagic_component
         totalLWidth2(:)=totalLWidth(1:2,1)
         totalUWidth2(:)=totalUWidth(1:2,1)
       else
-        write(message,*) 'foreign grid must be of rank = 3'
+        write(message,'(A)') 'foreign grid must be of rank = 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end if
     end if
 
@@ -890,22 +892,38 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
 
-    integer           :: i,j,k,n
+    integer           :: k,n
     integer(8)        :: t
     integer           :: seconds_of_day, day_of_year, day
 
-    character(len=ESMF_MAXSTR) :: name
+    character(len=ESMF_MAXSTR) :: name, message
     type(ESMF_Clock)           :: clock
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc
 
+    type(ESMF_Field)                       :: importField, exportField
+    type(ESMF_Field), allocatable          :: exportFieldList(:), importFieldList(:)
+    character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
+    character(ESMF_MAXSTR)                 :: itemName
+    type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
+    type(ESMF_StateItem_Flag)              :: itemType
+    type(ESMF_FieldStatus_Flag)            :: fieldStatus
+    integer(ESMF_KIND_I4)                  :: i, j, l, nmatch, itemCount, rank
+    integer(ESMF_KIND_I4)                  :: ubnd(2), lbnd(2)
+
+    real(ESMF_KIND_R8), pointer            :: farrayPtr3(:,:,:), ratePtr3(:,:,:)
+    real(ESMF_KIND_R8), pointer            :: farrayPtr2(:,:), ratePtr2(:,:)
+
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! set global time information
     call ESMF_TimeGet(currTime, dd=day, s=seconds_of_day, &
                       dayOfYear=day_of_year, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call pel%set_time(day_of_year, seconds_of_day)
 
     ! calculate layer_heights
@@ -917,9 +935,60 @@ module fabm_pelagic_component
     ! calculate PAR
     call pel%light()
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    ! Create a list of matching flux and state
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    allocate(itemNameList(itemCount))
+    allocate(itemTypeList(itemCount))
+    call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    allocate(exportFieldList(itemCount))
+    allocate(importFieldList(itemCount))
+
+    nmatch=0
+    do i=1, itemCount
+      j=index(itemNameList(i),'_flux_in_water')
+      if (j<1) cycle
+
+      itemName=itemNameList(i)
+      call ESMF_StateGet(exportState, itemName(1:j)//'in_water', itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(exportState, itemName(1:j)//'in_water', exportField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+     ! call ESMF_AttributeGet(exportField, 'external_index', isPresent=isPresent, rc=localrc)
+     ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+     !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+     ! if (.not.isPresent) cycle
+
+     ! call ESMF_AttributeGet(exportField, 'external_index', isPresent=isPresent, rc=localrc)
+     ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+     !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(importState, trim(itemName), importField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      nmatch=nmatch+1
+      exportFieldList(nmatch)=exportField
+      importFieldList(nmatch)=importField
+      itemNameList(nmatch)=itemNameList(i)
+
+    enddo
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do while (.not.ESMF_ClockIsStopTime(clock))
       ! integrate rates
@@ -932,7 +1001,52 @@ module fabm_pelagic_component
         pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
       end do
 
-      call add_fluxes(importState, dt=dt, rc=localrc)
+      do i=1, nmatch
+
+        !write(message,'(A)') trim(name)//' add flux '
+        !call MOSSCO_FieldString(exportFieldList(i), message)
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        !write(message,'(A)') trim(name)//' add flux '
+        !call MOSSCO_FieldString(importFieldList(i), message)
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        call ESMF_FieldGet(exportFieldList(i), farrayPtr=farrayPtr3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldGet(importFieldList(i), rank=rank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (rank==2) then
+          call ESMF_FieldGetBounds(importFieldList(i), exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          do k=1,ubound(farrayPtr3, 3)
+            do j=lbnd(2),ubnd(2)
+              do l=lbnd(1), ubnd(1)
+                if (ratePtr2(l,j)>0) farrayPtr3(l,j,k) = farrayPtr3(l,j,k)  + ratePtr2(l,j) * dt
+              enddo
+            enddo
+          enddo
+        elseif (rank==3) then
+          call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          where(ratePtr3(:,:,:)>-1)
+            farrayPtr3(:,:,:) = farrayPtr3(:,:,:)  + ratePtr3(:,:,:) * dt
+          endwhere
+        endif
+      enddo
+
+      !call add_fluxes(importState, dt=dt, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -954,78 +1068,27 @@ module fabm_pelagic_component
       call pel%update_expressions()
 
       call ESMF_ClockGet(clock, advanceCount=t, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ClockAdvance(clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
+
+    if (allocated(exportFieldList)) deallocate(exportFieldList)
+    if (allocated(importFieldList)) deallocate(importFieldList)
+    if (allocated(itemNameList))    deallocate(itemNameList)
+    if (allocated(itemTypeList))    deallocate(itemTypeList)
 
     !> prepare component's export
     call pel%update_export_states()
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "add_fluxes"
-  subroutine add_fluxes(state, dt, rc)
-
-    implicit none
-
-    type(ESMF_State), intent(inout)                 :: state
-    integer(ESMF_KIND_I4), intent(out), optional    :: rc
-    real(ESMF_KIND_R8), intent(in)                  :: dt
-
-    real(ESMF_KIND_R8), dimension(:,:,:), pointer   :: farrayPtr3, ratePtr3
-    integer(ESMF_KIND_I4)                           :: rc_, localrc, i, j
-    character(len=ESMF_MAXSTR)                      :: varName
-    type(ESMF_Field)                                :: field
-    type(ESMF_StateItem_Flag)                       :: itemType
-
-    rc_ = ESMF_SUCCESS
-
-    do i=1, pel%nvar
-      varName=trim(pel%model%info%state_variables(n)%name)
-
-      call ESMF_StateGet(state, varName, itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (itemType /= ESMF_STATEITEM_FIELD) cycle
-
-      call ESMF_StateGet(state, varName, field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (index(varName,'concentration_') /= 1) cycle
-      j=index(varName,'_')
-      varName='concentration_rate'//varName(j:len_trim(varName))
-
-      call ESMF_StateGet(state, varName, itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (itemType /= ESMF_STATEITEM_FIELD) cycle
-
-      call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_StateGet(state, varName, field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      farrayPtr3(:,:,:) = farrayPtr3(:,:,:)  + ratePtr3(:,:,:) * dt
-
-      call ESMF_LogWrite('Added flux from '//trim(varName), ESMF_LOGMSG_INFO)
-    enddo
-
-    if(present(rc)) rc=rc_
-
-  end subroutine add_fluxes
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
