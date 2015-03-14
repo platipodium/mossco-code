@@ -99,7 +99,7 @@
 
   end function mossco_create_fabm_pelagic
 
-  
+
   !> initialize domain of pelagic fabm class
   subroutine initialize_domain(pf,inum,jnum,knum,dt,mask)
   class(type_mossco_fabm_pelagic) :: pf
@@ -252,7 +252,7 @@
   type(type_bulk_standard_variable),dimension(:), pointer :: deps
   type(type_bulk_standard_variable),dimension(:), pointer :: deps_tmp
   type(type_standard_variable),target                     :: var
-  integer :: n_bulk  
+  integer :: n_bulk
 
   if (associated(deps)) then
     n_bulk = size(deps)
@@ -277,7 +277,7 @@
   type(type_horizontal_standard_variable),dimension(:), pointer :: deps
   type(type_horizontal_standard_variable),dimension(:), pointer :: deps_tmp
   type(type_standard_variable),target                           :: var
-  integer :: n_hor  
+  integer :: n_hor
 
   if (associated(deps)) then
     n_hor = size(deps)
@@ -309,7 +309,7 @@
   nullify(pf%bulk_dependencies)
   allocate(pf%horizontal_dependencies(1))
   pf%horizontal_dependencies(1)=standard_variables%surface_downwelling_photosynthetic_radiative_flux
-  
+
   !> add required dependencies
   link => pf%model%links_postcoupling%first
   do while (associated(link))
@@ -348,7 +348,7 @@
   subroutine set_time(pf,day_of_year,seconds_of_day)
   class(type_mossco_fabm_pelagic) :: pf
   integer :: day_of_year, seconds_of_day
-  
+
   pf%day_of_year = day_of_year
   pf%seconds_of_day = seconds_of_day
   pf%decimal_yearday = day_of_year-1.0d0 + dble(seconds_of_day)/86400
@@ -395,7 +395,7 @@
 
   !> Initializes a pelagic FABM export state by FABM state_variable id
   function get_export_state_by_id(pf,fabm_id) result(export_state)
-  class(type_mossco_fabm_pelagic) :: pf   
+  class(type_mossco_fabm_pelagic) :: pf
   type(export_state_type) :: export_state
   integer, intent(in)     :: fabm_id
   integer                 :: n
@@ -456,14 +456,17 @@
   !> update pelagic FABM export states pointers and sinking velocities using a list of export states
 
   subroutine update_export_states(pf,update_sinking)
-  class(type_mossco_fabm_pelagic) :: pf
-  real(rk),dimension(pf%inum,pf%jnum,pf%knum,pf%nvar) :: wstmp
-  real(rk),dimension(:,:,:),pointer :: p3d
-  type(export_state_type),pointer :: export_state
-  integer :: n,i,j,k
-  integer,dimension(4) :: lbnd
-  logical,optional :: update_sinking
-  logical :: update_sinking_eff
+
+    class(type_mossco_fabm_pelagic) :: pf
+    logical,optional :: update_sinking
+
+    real(rk),dimension(pf%inum,pf%jnum,pf%knum,pf%nvar) :: wstmp
+    real(rk),dimension(:,:,:),pointer :: p3d
+
+    type(export_state_type),pointer :: export_state
+    integer :: n,i,j,k
+    integer,dimension(4) :: lbnd
+    logical :: update_sinking_eff
 
   update_sinking_eff=.true.
   if (present(update_sinking)) update_sinking_eff=update_sinking
