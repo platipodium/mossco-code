@@ -367,7 +367,7 @@ module netcdf_input_component
 
       ! todo find time index (default is one)
       ! allocate(time(nc%variables(timid)%dimlens(1)))
-      ! localrc=nf90_var_get(nc%ncid, timeid, time
+      ! localrc=nf90_var_get(nc%ncid, timeid, time)
     else
       udimid=-1
     endif
@@ -429,7 +429,7 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call nc%getvar(fieldList(i), nc%variables(i), localrc)
+      call nc%getvar(fieldList(i), nc%variables(i), itime=itime, rc=localrc)
 
       call ESMF_StateAdd(exportState, (/fieldList(i)/), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &

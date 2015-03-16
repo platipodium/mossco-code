@@ -1636,10 +1636,54 @@ module mossco_netcdf
       endif
     elseif (rank == 2) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (var%rank==rank) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, lbnd, ubnd)
+      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, (/itime_,lbnd(1),lbnd(2)/), (/itime_, ubnd(1),ubnd(2)/))
+      else
+        rc = ESMF_RC_NOT_IMPL
+        return
+      endif
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
     elseif (rank == 3) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (var%rank==rank) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr3, lbnd, ubnd)
+      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr3, &
+          (/itime_,lbnd(1),lbnd(2),lbnd(3)/), (/itime_,ubnd(1),ubnd(2), ubnd(3)/))
+      else
+        rc = ESMF_RC_NOT_IMPL
+        return
+      endif
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
     elseif (rank == 4) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (var%rank==rank) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr4, lbnd, ubnd)
+      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr4, &
+          (/itime_,lbnd(1),lbnd(2),lbnd(3),lbnd(4)/), (/itime_,ubnd(1),ubnd(2),ubnd(3),ubnd(4)/))
+      else
+        rc = ESMF_RC_NOT_IMPL
+        return
+      endif
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
     endif
 
     if (present(rc)) rc=rc_
