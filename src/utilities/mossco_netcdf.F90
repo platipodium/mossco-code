@@ -1588,6 +1588,7 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)')  'Cannot read into non-complete field '
       call MOSSCO_FieldString(field, message)
@@ -1616,7 +1617,9 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (any(lbnd < ubnd)) return
+    if (any(lbnd > ubnd)) return
+
+    !write(0,*) 'lbnd=', lbnd, ' ubnd=', ubnd, 'rank=', rank, 'var%rank=', var%rank, 'itime=', itime_, 'name=', var%name
 
     if (rank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
@@ -1624,8 +1627,8 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (var%rank==rank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, lbnd, ubnd)
-      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
-        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, (/itime_,lbnd(1)/), (/itime_, ubnd(1)/))
+      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, (/lbnd(1),itime_/), (/ubnd(1),itime_/))
       else
         rc = ESMF_RC_NOT_IMPL
         return
@@ -1638,14 +1641,16 @@ module mossco_netcdf
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !write(0,*) 'rank=', rank, 'var%rank=', var%rank, 'var%dimids=', var%dimids(:), 'udimid=',self%timeDimId
       if (var%rank==rank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, lbnd, ubnd)
-      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
-        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, (/itime_,lbnd(1),lbnd(2)/), (/itime_, ubnd(1),ubnd(2)/))
+      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
+        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, (/lbnd(1),lbnd(2),itime_/), (/ubnd(1),ubnd(2),itime_/))
       else
         rc = ESMF_RC_NOT_IMPL
         return
       endif
+      !write(0,*) 'farrayPtr2=', farrayPtr2
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1656,9 +1661,9 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (var%rank==rank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr3, lbnd, ubnd)
-      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
+      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr3, &
-          (/itime_,lbnd(1),lbnd(2),lbnd(3)/), (/itime_,ubnd(1),ubnd(2), ubnd(3)/))
+          (/lbnd(1),lbnd(2),lbnd(3),itime_/), (/ubnd(1),ubnd(2), ubnd(3),itime_/))
       else
         rc = ESMF_RC_NOT_IMPL
         return
@@ -1673,9 +1678,9 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (var%rank==rank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr4, lbnd, ubnd)
-      elseif (var%rank==rank+1 .and. var%dimids(1) == udimid ) then
+      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr4, &
-          (/itime_,lbnd(1),lbnd(2),lbnd(3),lbnd(4)/), (/itime_,ubnd(1),ubnd(2),ubnd(3),ubnd(4)/))
+          (/lbnd(1),lbnd(2),lbnd(3),lbnd(4),itime_/), (/ubnd(1),ubnd(2),ubnd(3),ubnd(4),itime_/))
       else
         rc = ESMF_RC_NOT_IMPL
         return
@@ -1685,6 +1690,9 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
     endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
 
     if (present(rc)) rc=rc_
 
