@@ -1511,7 +1511,7 @@ module mossco_netcdf
 
     nullify(intPtr1)
 
-    call ESMF_GridGet(grid,distGrid=distGrid, rank=rank, rc=localrc)
+    call ESMF_GridGet(grid, distGrid=distGrid, rank=rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1519,16 +1519,16 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_DELayoutGet(delayout,deCount=deCount, rc=localrc)
+    call ESMF_DELayoutGet(delayout, deCount=deCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(minIndexPDe(rank,deCount))
-    allocate(maxIndexPDe(rank,deCount))
-    allocate(deBlockList(rank,2,deCount))
+    allocate(minIndexPDe(rank, deCount))
+    allocate(maxIndexPDe(rank, deCount))
+    allocate(deBlockList(rank, 2, deCount))
 
-    call ESMF_DistGridGet(distGrid,minIndexPDe=minIndexPDe, &
-                                   maxIndexPDe=maxIndexPDe, rc=localrc)
+    call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
+                                    maxIndexPDe=maxIndexPDe, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1539,17 +1539,18 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_VmGet(vm, localpet=localPet, rc=localrc)
+    !> @todo decount instead of petCount
+    call ESMF_VmGet(vm, localPet=localPet, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !write (0,*) 'c, deBlockList1 = ', coordDim, deBlockList(coordDim,1,localPet+1), deBlockList(coordDim,2,localPet+1)
 
     n=deBlockList(coordDim,2,localPet+1)-deBlockList(coordDim,1,localPet+1)+1
     allocate(intPtr1(n))
     do i=1,n
       intPtr1(i)=deBlockList(coordDim,1,localPet+1)+i-1
     enddo
+
+   ! write (0,*) 'c, deBlockList1 = ', coordDim, deBlockList(coordDim,1,localPet+1), deBlockList(coordDim,2,localPet+1)
 
     if (present(rc)) rc=rc_
 

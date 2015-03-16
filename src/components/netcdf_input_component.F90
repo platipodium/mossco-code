@@ -174,23 +174,52 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default=name)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (labelIsPresent) then
+        call ESMF_ConfigGetAttribute(config, fileName, rc=localrc, default=name)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' filename: '//trim(fileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' filename: '//trim(fileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
 
       call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
-        call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
+        call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
+      elseif (labelIsPresent) then
         call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      call ESMF_ConfigFindLabel(config, label='grid:', isPresent=labelIsPresent, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (labelIsPresent) then
+        call ESMF_ConfigGetAttribute(config, foreignGridFieldName, rc=localrc, default='none')
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' grid: '//trim(fileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (isPresent) then
+        call ESMF_AttributeGet(importState, 'foreign_grid_field_name', value=foreignGridFieldName, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (labelIsPresent) then
+        call ESMF_AttributeSet(importState, 'foreign_grid_field_name', trim(foreignGridFieldName), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -235,12 +264,12 @@ module netcdf_input_component
     write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_GridCompGet(gridComp,gridIsPresent=isPresent, rc=localrc)
+    call ESMF_GridCompGet(gridComp, gridIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_GridCompGet(gridComp,grid=grid2, rc=localrc)
+      call ESMF_GridCompGet(gridComp, grid=grid2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
       hasGrid=.true.
@@ -257,16 +286,19 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_StateGetFieldGrid(importState, trim(foreignGridFieldName), grid2, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      hasGrid=.true.
+      if (trim(foreignGridFieldName) /= 'none') then
+        call MOSSCO_StateGetFieldGrid(importState, trim(foreignGridFieldName), grid2, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        hasGrid=.true.
+      endif
     endif
 
     if (.not.hasGrid) then
-      write(message,'(A)') trim(name)//' not implemented without foreign_grid'
+      write(message,'(A)') trim(name)//' not implemented without grid or foreign_grid'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      rc = ESMF_RC_NOT_IMPL
+      !rc = ESMF_RC_NOT_IMPL
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_GridGet(grid2, rank=rank, rc=localrc)
@@ -293,16 +325,6 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     itemCount = ubound(nc%variables,1)
-
-    !do i=1, itemCount
-    !    write(message,'(A)')  trim(name)//' found variable '//trim(nc%variables(i)%name)
-    !    write(message,'(A,I3,A,I1,A)') trim(message)//' ', &
-    !      nc%variables(i)%varid,' rank ',nc%variables(i)%rank,' units='//trim(nc%variables(i)%units)
-    !    do j=1,nc%variables(i)%rank
-    !      write(message,'(A,X,I1)') trim(message),nc%variables(i)%dimids(j)
-    !    enddo
-    !    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !enddo
 
     ! Get time information from time variable if present and log the time span available
     itime=1
