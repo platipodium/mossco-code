@@ -318,7 +318,7 @@ end function MOSSCO_GridCreateRegional2D
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4), dimension(:)          :: coordDims
 
-    integer(ESMF_KIND_I4)                     :: rc_, localrc
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, localDeCount
     integer(ESMF_KIND_I4)                     :: ubndA(3), lbndA(3), ubndB(3), lbndB(3)
     integer(ESMF_KIND_I4)                     :: coordDim, i, ranka, rankb
     real(ESMF_KIND_R8), pointer               :: coordA(:), coordB(:)
@@ -351,6 +351,15 @@ end function MOSSCO_GridCreateRegional2D
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
+
+    call ESMF_GridGet(grida, localDeCount=localDeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (localDeCount<1) return
+    call ESMF_GridGet(gridb, localDeCount=localDeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (localDeCount<1) return
 
     allocate(coordDimCountA(ranka))
     call ESMF_GridGet(grida, coordDimCount=coordDimCountA, rc=localrc)
