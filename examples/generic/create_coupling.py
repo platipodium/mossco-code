@@ -236,7 +236,6 @@ else:
       if value.has_key('petList'):
           instancePetDict[key]=value['petList']
 
-print 'Components to process:', componentList
 if len(instanceDict)>0:
   for key,value in instanceDict.iteritems():
     sys.stdout.write(key + ' is running as an instance of ' + value)
@@ -251,6 +250,10 @@ if len(dependencyDict)>0:
 if len(foreignGrid)>0:
   for key,value in foreignGrid.iteritems():
     print(key + ' obtains grid information from ' + value + ' field')
+
+for item in gridCompList:
+  if not instanceDict.has_key(item):
+    instanceDict[item]=item
 
 cplCompList=[]
 gridCompList=[]
@@ -273,8 +276,11 @@ if 'link_connector' in cplCompList:
   c=cplCompList.pop(cplCompList.index('link_connector'))
   cplCompList.insert(0,c)
 
-print componentList
-print gridCompList, cplCompList
+instanceList=list(set(instanceDict.values()))
+print 'Components to process:', componentList
+print 'Grid components to process:', componentList
+print 'Couple components to process:', cplCompList
+print 'Base instances to process:', instanceList
 
 # Done parsing the list, now write the new toplevel_component file
 
@@ -314,19 +320,14 @@ fid.write('''
   use mossco_component\n
 ''')
 
-for jtem in gridCompList:
-    if instanceDict.has_key(jtem):
-        item=instanceDict[jtem]
-    else: item=jtem
+for jtem in instanceList:
 
-    if item.find('mediator')>0:
-      fid.write('  use ' + item + ', only : ' + item + '_SetServices => SetServices \n')
-    else: fid.write('  use ' + item + '_component, only : ' + item + '_SetServices => SetServices \n')
+    if jtem.find('mediator')>0:
+      fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
+    else: fid.write('  use ' + jtem + '_component, only : ' + jtem + '_SetServices => SetServices \n')
+
 for jtem in cplCompList:
-    if instanceDict.has_key(jtem):
-        item=instanceDict[jtem]
-    else: item=jtem
-    fid.write('  use ' + item + ', only : ' + item + '_SetServices => SetServices \n')
+    fid.write('  use ' + jtem + ', only : ' + jtem + '_SetServices => SetServices \n')
 
 fid.write('\n  implicit none\n\n  private\n\n  public SetServices\n')
 fid.write('''
