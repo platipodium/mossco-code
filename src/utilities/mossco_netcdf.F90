@@ -37,12 +37,14 @@ module mossco_netcdf
     integer               :: varid
     integer               :: ncid
     integer               :: rank
-    integer, allocatable  :: dimids(:), dimlens(:)
+    integer, allocatable  :: dimids(:)
   end type type_mossco_netcdf_variable
 
   type, public :: type_mossco_netcdf
-    integer      :: ncid
-    integer      :: timeDimId
+    integer      :: ncid, nvars, natts
+    integer      :: timeDimId, ndims
+    integer, allocatable :: dimlens(:), dimids(:)
+
     character(len=ESMF_MAXSTR) :: name
     type(type_mossco_netcdf_variable), pointer, dimension(:) :: variables
     contains
@@ -52,6 +54,7 @@ module mossco_netcdf
     procedure :: mesh_dimensions => mossco_netcdf_mesh_dimensions
     procedure :: init_time => mossco_netcdf_init_time
     procedure :: update_variables => mossco_netcdf_update_variables
+    procedure :: update => mossco_netcdf_update
     procedure :: create_variable => mossco_netcdf_variable_create
     procedure :: variable_present => mossco_netcdf_variable_present
     procedure :: put_variable => mossco_netcdf_variable_put
@@ -668,6 +671,9 @@ module mossco_netcdf
 
     end if
 
+    call self%update_variables()
+    call self%update()
+
     if (present(rc)) rc = ESMF_SUCCESS
 
   end subroutine mossco_netcdf_variable_create
@@ -744,6 +750,7 @@ module mossco_netcdf
 
     nc%name=trim(filename)
     call nc%update_variables()
+    call nc%update()
 
     if (present(rc)) then
       rc=ncStatus
@@ -823,6 +830,11 @@ module mossco_netcdf
     var%rank=1
   end if
   if (present(rc)) rc=rc_
+
+    call self%update()
+
+    return
+
   end subroutine mossco_netcdf_init_time
 
 #undef  ESMF_METHOD
@@ -877,22 +889,58 @@ module mossco_netcdf
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
 
-      if (allocated(var%dimlens)) deallocate(var%dimlens)
-      allocate(var%dimlens(var%rank))
-
-      do j=1, var%rank
-        localrc = nf90_inquire_dimension(self%ncid, j, len=var%dimlens(j))
-        if (localrc /= NF90_NOERR) then
-          call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        endif
-      enddo
-
     end do
 
     return
 
   end subroutine mossco_netcdf_update_variables
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_update"
+  subroutine mossco_netcdf_update(self)
+
+    implicit none
+
+    class(type_mossco_netcdf)      :: self
+    integer                        :: localrc, i, nvars, natts, ndims
+    character(ESMF_MAXSTR)         :: message
+
+    localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    self%natts=natts
+    self%nvars=nvars
+
+    if (allocated(self%dimids))  deallocate(self%dimids)
+    if (allocated(self%dimlens)) deallocate(self%dimlens)
+
+    localrc = nf90_inquire(self%ncid, unlimitedDimId=self%timeDimId)
+
+    localrc = nf90_inquire(self%ncid, nDimensions=ndims)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    self%ndims=ndims
+
+    allocate(self%dimids(ndims))
+    allocate(self%dimlens(ndims))
+
+    do i=1, ndims
+      localrc=nf90_inquire_dimension(self%ncid, self%dimids(i), len=self%dimlens(i))
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite(trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    enddo
+
+    return
+
+  end subroutine mossco_netcdf_update
 
   function mossco_netcdf_mesh_dimensions(self,field) result(dimids)
 
@@ -968,9 +1016,13 @@ module mossco_netcdf
    !! if grid not present, also create the coordinate variables
    ! if (dimcheck == -1) call self%create_mesh_coordinate(mesh)
 
+
    !! deallocate memory
    deallocate(totalubound)
    deallocate(totallbound)
+   call self%update()
+
+   return
 
   end function mossco_netcdf_mesh_dimensions
 
@@ -1032,6 +1084,9 @@ module mossco_netcdf
 
     !! if grid not present, also create the coordinate variables
     if (dimcheck == -1) call self%create_coordinate(grid)
+    call self%update()
+
+    return
 
   end function mossco_netcdf_grid_dimensions
 
@@ -1122,6 +1177,9 @@ module mossco_netcdf
     enddo
 #endif
     if (allocated(ownedNodeCoords)) deallocate(ownedNodeCoords)
+
+    call self%update_variables()
+    call self%update()
 
   end subroutine mossco_netcdf_mesh_coordinate_create
 
@@ -1327,6 +1385,11 @@ module mossco_netcdf
     enddo
     if (allocated(coordDimCount)) deallocate(coordDimCount)
 
+    call self%update_variables()
+    call self%update()
+
+    return
+
   end subroutine mossco_netcdf_coordinate_create
 
 
@@ -1348,6 +1411,9 @@ module mossco_netcdf
     if (ncStatus /= NF90_NOERR) then
       ncStatus = nf90_def_dim(self%ncid,trim(dimName),length,dimid=dimid)
     end if
+
+    call self%update()
+
   end function mossco_netcdf_ungridded_dimension_id
 
 #undef  ESMF_METHOD
@@ -1568,9 +1634,9 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(in), optional  :: itime
 
     integer(ESMF_KIND_I4)                        :: localrc, udimid, localDeCount, rc_
-    integer(ESMF_KIND_I4)                        :: rank, itime_
+    integer(ESMF_KIND_I4)                        :: rank, itime_, j, i
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
-    integer(ESMF_KIND_I4), allocatable           :: start(:), count(:)
+    integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:)
     real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
     real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
     character(len=ESMF_MAXSTR)                   :: message
@@ -1650,13 +1716,36 @@ module mossco_netcdf
 
     allocate(start(rank))
     allocate(count(rank))
-    count(:)=1
+    allocate(ubnd(rank))
+
 
     start=minIndexPDe(:,localPet+1)
-    count=count(:)+maxIndexPDe(:,localPet+1)-start
+    where (start < 1)
+      start=1
+    endwhere
+
+    ubnd=maxIndexPDe(:,localPet+1)
+
+    j=0
+    do i=1, rank
+      j=j+1
+      if (var%dimids(i)==self%timeDimId) j=j+1
+      if (ubnd(i)>self%dimlens(var%dimids(j))) ubnd(i)=self%dimlens(var%dimids(j))
+    enddo
+
+    count(:)=1
+    count=count+ubnd-start
+
+    write(0,*) var%name, 'dimids=',var%dimids
+    write(0,*) var%name, 'dimlens=',self%dimlens
+    write(0,*) 'start=', start
+    write(0,*) 'maxIndPDe=', maxIndexPDe(:,localPet+1)
+    write(0,*) 'ubnd=', ubnd
+    write(0,*) 'count=', count
+
     if (any(count <= 0)) return
 
-    !write(0,*) 'start=', start, ' count=', count, 'rank=', rank, 'var%rank=', var%rank, 'itime=', itime_, 'dimlens=', var%dimlens(:), 'name=', var%name
+    write(0,*) 'start=', start, ' count=', count, 'rank=', rank, 'var%rank=', var%rank, 'itime=', itime_, 'name=', var%name
 
     if (rank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
@@ -1728,6 +1817,7 @@ module mossco_netcdf
       endif
     endif
 
+    if (allocated(ubnd))  deallocate(ubnd)
     if (allocated(count)) deallocate(count)
     if (allocated(start)) deallocate(start)
 
