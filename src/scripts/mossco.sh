@@ -38,13 +38,13 @@ function usage {
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
 	echo "            MPI is not used at all. Default is n=1"
-	echo "    [-s M|S|J]: exeute batch queue for a specific system"
+	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system"
 	echo
 	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
 	echo "      [-s J]: Slurm system, e.g. juropatest, writes slurm.sh"
 	echo "      [-s F]: Command line interactive, running in foreground"
-	echo "      [-s B]: Command line interactive, running in background"
+	echo "      [-s B]: Command line interactive, running in background (default)"
 	echo
 	exit
 }
@@ -71,6 +71,10 @@ function predict_time {
   M2=$(echo ${STOP}  | cut -d"-" -f2)
   D1=$(echo ${START} | cut -d"-" -f3)
   D2=$(echo ${STOP}  | cut -d"-" -f3)
+  if [[ "x$D1" == "x" ]]; then
+    echo "Check your input file, make sure it uses apostrophes around dates"
+    exit
+  fi
   D=$(expr \( ${Y2} - ${Y1} \) \* 365 + \( ${M2} - ${M1} \) \* 31 + ${D2} - ${D1} + 1)
   M=$(expr $D \* 60 / ${NP})
   H=$(expr $M / 60)
