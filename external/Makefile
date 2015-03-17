@@ -40,7 +40,7 @@ $(SUBDIRS):
 
 fabm_clone:
 ifeq ($(wildcard $(external_FABMDIR)/src/Makefile),)
-	git clone git://git.code.sf.net/p/fabm/code $(external_FABMDIR)
+	git clone http://git.code.sf.net/p/fabm/code $(external_FABMDIR)
 else
 	$(MAKE) fabm_update
 endif
@@ -52,7 +52,7 @@ endif
 
 gotm_clone:
 ifeq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
-	git clone git://git.code.sf.net/p/gotm/code $(external_GOTMDIR)
+	git clone http://git.code.sf.net/p/gotm/code $(external_GOTMDIR)
 else
 	$(MAKE) gotm_update
 endif
@@ -69,7 +69,7 @@ endif
 
 getm_clone:
 ifeq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	git clone git://git.code.sf.net/p/getm/code $(external_GETMDIR)
+	git clone http://git.code.sf.net/p/getm/code $(external_GETMDIR)
 	( cd $(external_GETMDIR) ; git checkout -b iow origin/iow )
 else
 	$(MAKE) getm_update
