@@ -11,14 +11,16 @@ from matplotlib import pyplot
 # Map of author names to columns
 
 authorinstitute={'Carsten Lemmen':'HZG','Richard Hofmeister':'HZG',
-  'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW'}
+  'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW',
+  'Markus Kreus':'HZG', 'Onur Kerimoglu':'HZG', 'Kai Wirtz':'HZG'}
 
 authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Richard Hofmeister','Richard':'Richard Hofmeister','hofmeist':
   'Richard Hofmeister','Ulrich Koerner':'Ulrich Koerner','Ulrich Körner':
   'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli',
   'Mohammed Hassan Nasermoaddeli':'Hassan Nasermoaddeli','Hassan Nasermoaddeli':
-  'Hassan Nasermoaddeli','Knut':'Knut Klingbeil'}
+  'Hassan Nasermoaddeli','Knut':'Knut Klingbeil','Kai Wirtz':'Kai Wirtz',
+  'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus'}
 
 # Get committer names from one of the output gnuplot files
 with open('../gitstats/lines_of_code_by_author.plot', 'r') as fid:
@@ -50,10 +52,10 @@ for counter in counters:
     af=[]
     for i in range(1,numpy.size(fieldnames)):
       if authoralias.has_key(fieldnames[i]):
-        if authoralias[fieldnames[i]]==author:        
+        if authoralias[fieldnames[i]]==author:
           af.append(i)
-    authorfields[author]=af 
- 
+    authorfields[author]=af
+
   institutefields={}
   for institute in pylab.unique(authorinstitute.values()):
     #print institute
@@ -62,9 +64,9 @@ for counter in counters:
       if fieldnames[i]=='time':
         continue
       if authorinstitute.has_key(authoralias[fieldnames[i]]):
-        if authorinstitute[authoralias[fieldnames[i]]]==institute:        
+        if authorinstitute[authoralias[fieldnames[i]]]==institute:
           af.append(i)
-    institutefields[institute]=af 
+    institutefields[institute]=af
 
   contrib={}
   for key in authorfields:
@@ -83,7 +85,7 @@ for counter in counters:
   fds = dates.date2num(dts) # converted
   hfmt = dates.DateFormatter('%y %m %d')
 
-  # make a  a piechart 
+  # make a  a piechart
   fig=pylab.figure(1, figsize=(6,6))
   fig.clf()
   ax = pylab.axes([0.1, 0.1, 0.8, 0.8])
@@ -96,7 +98,7 @@ for counter in counters:
   #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '_by_author.pdf',transparent=True,format='pdf')
 
-  # make a  a piechart 
+  # make a  a piechart
   fig=pylab.figure(2, figsize=(6,6))
   fig.clf()
   ax = pylab.axes([0.1, 0.1, 0.8, 0.8])
@@ -120,13 +122,13 @@ for counter in counters:
     fracs[i,:]=contrib[labels[i]]
 
   pyplot.stackplot(fds,fracs,colors=colormap)
-  
+
   p = []
   i = 0
   for _ in labels:
     p.append(pyplot.Rectangle((0, 0), 1, 1, fc=colormap[i]))
     i = (i + 1) % len(colormap)
- 
+
   ax=pylab.gca()
   ax.xaxis.set_major_formatter(hfmt)
   ax.xaxis.set_major_locator(dates.MonthLocator())
@@ -149,13 +151,13 @@ for counter in counters:
   for i in range(0,pylab.size(labels)):
     fracs[i,:]=contrib[labels[i]]
 
-  pyplot.stackplot(fds,fracs,colors=colormap)  
+  pyplot.stackplot(fds,fracs,colors=colormap)
   p = []
   i = 0
   for _ in labels:
     p.append(pyplot.Rectangle((0, 0), 1, 1, fc=colormap[i]))
     i = (i + 1) % len(colormap)
- 
+
   ax=pylab.gca()
   ax.xaxis.set_major_formatter(hfmt)
   ax.xaxis.set_major_locator(dates.MonthLocator())
@@ -166,7 +168,7 @@ for counter in counters:
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
   #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '_by_time_and_author.pdf',transparent=True,format='pdf')
- 
+
   fig=pylab.figure(5, figsize=(12,6))
   fig.clf()
 
@@ -177,8 +179,8 @@ for counter in counters:
   for i in range(0,pylab.size(labels)):
     fracs[i,:]=contrib[labels[i]]
 
-  pyplot.plot(fds,numpy.sum(fracs,0),'k-',linewidth=3)  
- 
+  pyplot.plot(fds,numpy.sum(fracs,0),'k-',linewidth=3)
+
   ax=pylab.gca()
   ax.xaxis.set_major_formatter(hfmt)
   ax.xaxis.set_major_locator(dates.MonthLocator())
@@ -188,6 +190,6 @@ for counter in counters:
   pylab.title(titles[counter].capitalize(), bbox={'facecolor':'0.8', 'pad':15})
   #pylab.show()
   pylab.savefig(titles[counter].replace(' ','_') + '.pdf',transparent=True,format='pdf')
-  
+
 
 
