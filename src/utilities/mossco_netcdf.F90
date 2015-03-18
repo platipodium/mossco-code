@@ -44,7 +44,7 @@ module mossco_netcdf
     integer      :: timeDimId, ndims
     integer, allocatable :: dimlens(:)
 
-    character(len=ESMF_MAXSTR) :: name
+    character(len=ESMF_MAXSTR) :: name, timeUnit
     type(type_mossco_netcdf_variable), pointer, dimension(:) :: variables
     contains
     procedure :: close => mossco_netcdf_close
@@ -695,9 +695,22 @@ module mossco_netcdf
 
     integer           :: ncStatus, dimlen, varid, rc_, localrc
 
-    ncStatus = nf90_inq_varid(self%ncid, 'time', varid)
-    !>@todo check for exsiting time
+    if (self%timeDimid < 0) then
+      call self%init_time(rc=rc_)
+    endif
+
     ncStatus = nf90_inquire_dimension(self%ncid, self%timedimid, len=dimlen)
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find time dimension',ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    ncStatus = nf90_inq_varid(self%ncid, 'time', varid)
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find time variable',ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
 
     ncStatus = nf90_put_var(self%ncid, varid, seconds, start=(/dimlen+1/))
     if (ncStatus /= NF90_NOERR) then
@@ -782,7 +795,7 @@ module mossco_netcdf
 
   end function mossco_netcdfOpen
 
-  function mossco_netcdfCreate(filename,timeUnit,rc) result(nc)
+  function mossco_netcdfCreate(filename, timeUnit, rc) result(nc)
 
     use iso_fortran_env
     implicit none
@@ -794,10 +807,17 @@ module mossco_netcdf
     character(len=*),optional     :: timeUnit
 
     character(len=255)            :: string
+    integer                       :: rc_
 
     ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
     if (present(rc)) rc=ncStatus
-    if (present(timeUnit)) call nc%init_time(timeUnit)
+    if (present(timeUnit)) then
+      nc%timeUnit=trim(timeUnit)
+      call nc%init_time(rc=rc_)
+    else
+      nc%timeUnit=''
+      call ESMF_LogWrite('  created file '//trim(filename)//' with no time unit', ESMF_LOGMSG_WARNING)
+    endif
 
     ncStatus = nf90_redef(nc%ncid)
 
@@ -833,10 +853,9 @@ module mossco_netcdf
   end function mossco_netcdfCreate
 
 
-  subroutine mossco_netcdf_init_time(self, timeUnit, rc)
+  subroutine mossco_netcdf_init_time(self, rc)
 
     class(type_mossco_netcdf)      :: self
-    character(len=*)               :: timeUnit
     integer, optional, intent(out) :: rc
 
     integer                        :: varid, rc_, localrc
@@ -852,7 +871,7 @@ module mossco_netcdf
     if (localrc==NF90_ENAMEINUSE) then
       rc_=MOSSCO_NC_EXISTING
     else
-      localrc = nf90_put_att(self%ncid, varid, 'units', timeUnit)
+      localrc = nf90_put_att(self%ncid, varid, 'units', trim(self%timeUnit))
     end if
     localrc = nf90_put_att(self%ncid, varid, 'standard_name', 'time')
 
