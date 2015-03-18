@@ -314,9 +314,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, rc=localrc)
       end if
 
+      call nc%update()
+      call nc%update_variables()
+
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call nc%add_timestep(seconds, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call nc%update()
+      call nc%update_variables()
 
       do i=1,itemCount
 

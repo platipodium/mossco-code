@@ -324,7 +324,9 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    itemCount = ubound(nc%variables,1)
+    call nc%update_variables()
+    call nc%update()
+    itemCount = nc%nvars
 
     ! Get time information from time variable if present and log the time span available
     itime=1
@@ -524,7 +526,6 @@ module netcdf_input_component
 
     call MOSSCO_CompExit(gridComp)
     return
-
 
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
       defaultValue='netcdf_component.nc', rc=rc)
