@@ -2,7 +2,7 @@
 # This script is is part of MOSSCO. It creates from an ESMF Log file output
 # timing diagrams for all components
 #
-# @copyright (C) 2014 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -17,7 +17,7 @@ from matplotlib import pyplot
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = os.environ['MOSSCO_DIR'] + '/examples/generic/PET0.Untitled'
+     filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET3.deep_lake-1x5-getm--netcdf'
 
 print 'Using ' + filename + ' ...'
 
@@ -43,22 +43,22 @@ for line in lines:
     timingdict[component]={}
   if not timingdict[component].has_key(stage):
     timingdict[component][stage]=[]
-      
+
   timingdict[component][stage].append(msecs)
-  
+
 stats={}
 for key,value in timingdict.iteritems():
   stats[key]={}
-  timediffs=numpy.array(value['initialized'])-numpy.array(value['initializing'] )   
+  timediffs=numpy.array(value['initialized'])-numpy.array(value['initializing'] )
   timediff=numpy.nansum(timediffs)
   stats[key]['Initialization']={'all':timediffs, 'total': timediff, 'start': numpy.array(value['initializing'])}
-  timediffs=numpy.array(value['finalized'])-numpy.array(value['finalizing'] )   
+  timediffs=numpy.array(value['finalized'])-numpy.array(value['finalizing'] )
   timediff=numpy.nansum(timediffs)
   stats[key]['Finalization']={'all':timediffs, 'total': timediff, 'start': numpy.array(value['finalizing'])}
-  timediffs=numpy.array(value['ran'])-numpy.array(value['running'] )   
+  timediffs=numpy.array(value['ran'])-numpy.array(value['running'] )
   timediff=numpy.nansum(timediffs)
   stats[key]['Run']={'all':timediffs, 'total': timediff, 'start': numpy.array(value['running'])}
-    
+
 # make piecharts
 fig=pylab.figure(1, figsize=(6,6))
 fig.clf()
@@ -85,21 +85,21 @@ for stage in ['Initialization', 'Run']: # , 'Finalization']:
   fracs=[]
   for component in labels:
     fracs.append(stats[component][stage]['total'])
-  
+
   pylab.pie(fracs, labels=labels, autopct='%1.1f%%', shadow=True, startangle=90)
   pylab.title(stage + ' time spent by component', bbox={'facecolor':'0.8', 'pad':15})
   #pylab.show()
   pylab.savefig(stage.lower() + '_time_spent_by_component.pdf',transparent=True,format='pdf')
   pylab.close(fig)
-  
+
 #fig=pylab.figure(5)
 #fig.clf()
 #
 #for comp,compval in stats.iteritems():
 #  for stage,stageval in compval.iteritems():
-#    pylab.plot(stageval['start'],stageval['all'])  
-#    
-  
-  
-  
-    
+#    pylab.plot(stageval['start'],stageval['all'])
+#
+
+
+
+

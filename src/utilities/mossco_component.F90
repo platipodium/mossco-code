@@ -123,10 +123,8 @@ contains
     !call ESMF_CplCompGetEPPhaseCount(cplComp, method, phaseCount, &
     !  phaseZeroFlag, rc)
     phaseCount=1 !>@todo for now we assume all couplers have only 1 phase
+    write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
 
-    if (phaseCount>1 .or. phase==0) then
-      write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
-    endif
     write(message,'(A)') trim(message)//' ...'
 
     if (present(rc)) rc=rc_
@@ -259,9 +257,7 @@ contains
     !  phaseZeroFlag, rc)
     phaseCount=1 !>@todo for now we assume all couplers have only 1 phase
 
-    if (phaseCount>1 .or. phase==0) then
-      write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
-    endif
+    write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     if (present(rc)) rc=rc_
@@ -346,9 +342,7 @@ contains
       write(message,'(A)') trim(message)//' finalizing'
     end if
 
-    if (phaseCount>1 .or. cphase==0) then
-      write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
-    endif
+    write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
 
     if (cMethod.eq.ESMF_METHOD_INITIALIZE .and. cPhase.eq.1) then
       call ESMF_GridCompGet(gridComp,petCount=petCount)
@@ -419,9 +413,7 @@ contains
       write(message,'(A)') trim(message)//' finalized'
     end if
 
-    if (phaseCount>1 .or. cphase==0) then
-      write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
-    endif
+    write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine MOSSCO_GridCompExitLog
