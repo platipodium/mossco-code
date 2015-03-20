@@ -12,12 +12,18 @@ Thus, in the coupling configuration, we specifiy the grid dependency and name th
 	dependencies:
   		- river_input:
     		- component: getm
-      		  grid: temperature_in_water
+      		- grid: temperature_in_water
 
 	instances:
   		- river_input: netcdf_input
+  		
+	coupling:
+		- components:
+			- river_input
+			- fabm_pelagic
+		- interval: 1 d 
 
-Then the configuration file `river_input.nc` contains the name of the file to read
+Then the configuration file `river_input.cfg` contains the name of the file to read
 
 		filename: /my/path/to/input/files/river_grid_fluxes.nc
 		
