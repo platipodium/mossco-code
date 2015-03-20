@@ -1225,9 +1225,9 @@ module getm_component
 
          xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc1D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         call ESMF_AttributeSet(xcArray2D,'creator', trim(name), rc=localrc)
+         call ESMF_AttributeSet(xcArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         call ESMF_AttributeSet(xcArray2D,'units', 'degrees_east', rc=localrc)
+         call ESMF_AttributeSet(xcArray3D,'units', 'degrees_east', rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
          ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc1D,indexflag=ESMF_INDEX_DELOCAL, &
