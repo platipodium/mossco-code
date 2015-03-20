@@ -714,16 +714,19 @@ module mossco_netcdf
   end subroutine mossco_netcdf_variable_create
 
 
-  subroutine mossco_netcdf_add_timestep(self,seconds, rc)
+  subroutine mossco_netcdf_add_timestep(self, seconds, rc)
 
-    class(type_mossco_netcdf) :: self
-    real(ESMF_KIND_R8), intent(in) :: seconds
-    integer, optional              :: rc
+    class(type_mossco_netcdf)        :: self
+    real(ESMF_KIND_R8), intent(in)   :: seconds
+    integer(ESMF_KIND_I4), optional  :: rc
 
+    character(ESMF_MAXSTR)           :: message
     integer           :: ncStatus, dimlen, varid, rc_, localrc
 
+    rc_ = ESMF_SUCCESS
+
     if (self%timeDimid < 0) then
-      call self%init_time(rc=rc_)
+      call self%init_time(rc=localrc)
     endif
 
     ncStatus = nf90_inquire_dimension(self%ncid, self%timedimid, len=dimlen)
@@ -744,6 +747,11 @@ module mossco_netcdf
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable time',ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,') to file '//trim(self%name)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (present(rc)) rc = rc_
 
   end subroutine mossco_netcdf_add_timestep
 
