@@ -17,7 +17,7 @@ from matplotlib import pyplot
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-     filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET3.deep_lake-1x5-getm--netcdf'
+     filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-r1'
 
 print 'Using ' + filename + ' ...'
 
