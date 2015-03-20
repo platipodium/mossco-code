@@ -403,7 +403,7 @@ module getm_component
           call getmCmp_StateAddPtr("wave_number",waveK,exportState,"m-1",name)
         end if
         if (associated(waveDir)) then
-          call getmCmp_StateAddPtr("wave_direction",waveDir,exportState,"deg",name)
+          call getmCmp_StateAddPtr("wave_direction",waveDir,exportState,"rad",name)
         end if
       case(WAVES_FROMEXT)
         if (associated(waveH)) then
@@ -416,7 +416,7 @@ module getm_component
           call getmCmp_StateAddPtr("wave_number",waveK,importState,"m-1",name)
         end if
         if (associated(waveDir)) then
-          call getmCmp_StateAddPtr("wave_direction",waveDir,importState,"deg",name)
+          call getmCmp_StateAddPtr("wave_direction",waveDir,importState,"rad",name)
         end if
     end select
 
