@@ -31,7 +31,7 @@ clean:
 	@-rm -rf latex html
 	@-rm -f $(GUIDE)
 	
-www: src/mainpage.doxygen latex/refman.pdf
+www: doc src/mainpage.doxygen latex/refman.pdf
 ifdef MOSSCO_SF_USER
 	@rsync -e ssh -rt html/* $(MOSSCO_SF_USER)@web.sourceforge.net:/home/project-web/mossco/htdocs/doc/
 	@rsync -e ssh -rt $(GUIDE) $(MOSSCO_SF_USER)@frs.sf.net:/home/pfs/p/mossco/Reference_Manual/
