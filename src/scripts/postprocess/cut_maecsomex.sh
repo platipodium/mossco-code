@@ -11,7 +11,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 
-if (( "$#" -eq 0 ));then
+if (( "$#" < 1 ));then
  print 'error: specify number of nodes'
 else
  nproc=$1
@@ -42,11 +42,11 @@ Svars='dissolved_oxygen_in_soil,dissolved_reduced_substances_in_soil,denitrifica
 #  ts=$ts','$model${vn[$i]}
 #done # i
 
-echo "nproc= $nproc" 
-for p in $(seq -f "%03g" 0 $(( nproc-1 ))); do
-#for p in $(seq -f "%02g" 0 0); do
-
-  F=$fnameroot'.'$p.'nc'
+p=-1
+#for p in $(seq -f "%03g" 0 $(( nproc-1 ))); do
+for F  in $fnameroot.*.nc; do
+  ((p++))  
+  #F=$fnameroot'.'$p.'nc'
   G='cut.'$p'.nc'
   echo "cutting $F"
   #'lat-lon'
