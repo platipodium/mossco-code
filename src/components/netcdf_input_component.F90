@@ -520,6 +520,7 @@ module netcdf_input_component
 
     if (.not.isPresent) then
       call MOSSCO_CompExit(gridComp)
+      return
     endif
 
     ! todo from here
