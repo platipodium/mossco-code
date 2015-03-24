@@ -1,0 +1,41 @@
+# This configuration is a test configuration for pelagic river input
+# it runs getm/fabm_pel and river input, writes pelagic and river output separately
+# it needs river_input.cfg as a configuration file
+author: Carsten Lemmen <carsten.lemmen@hzg.de>
+copyright: 2015, Helmholtz-Zentrum Geesthacht
+
+dependencies:
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - netcdf_input:
+    - component: getm
+      grid: temperature_at_soil_surface
+
+instances:
+  - pelagic_output: netcdf
+  - river_output: netcdf
+  - river_input: netcdf_input
+
+coupling:
+  - components:
+     - river_input
+     - fabm_pelagic
+    interval: 1 d
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - pelagic_output
+    interval: 3 h 
+  - components:
+     - river_input
+     - river_output
+    interval: 24 h
