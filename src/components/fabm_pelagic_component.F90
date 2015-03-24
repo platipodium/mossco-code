@@ -1003,13 +1003,12 @@ module fabm_pelagic_component
 
       do i=1, nmatch
 
-        !write(message,'(A)') trim(name)//' add flux '
-        !call MOSSCO_FieldString(exportFieldList(i), message)
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)//' add flux field '
+        call MOSSCO_FieldString(importFieldList(i), message)
 
-        !write(message,'(A)') trim(name)//' add flux '
-        !call MOSSCO_FieldString(importFieldList(i), message)
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(message)//' to field '
+        call MOSSCO_FieldString(exportFieldList(i), message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_FieldGet(exportFieldList(i), farrayPtr=farrayPtr3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1028,11 +1027,12 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          do k=1,ubound(farrayPtr3, 3)
-            do j=lbnd(2),ubnd(2)
-              do l=lbnd(1), ubnd(1)
-                if (ratePtr2(l,j)>0) farrayPtr3(l,j,k) = farrayPtr3(l,j,k)  + ratePtr2(l,j) * dt
-              enddo
+          do j=lbnd(2),ubnd(2)
+            do l=lbnd(1), ubnd(1)
+              if (ratePtr2(l,j)>0) then
+               ! write(0,*) trim(name), l,j, farrayPtr3(l,j,1), ratePtr2(l,j), dt
+                farrayPtr3(l,j,:) = farrayPtr3(l,j,:)  + ratePtr2(l,j) * dt
+              endif
             enddo
           enddo
         elseif (rank==3) then
@@ -1040,7 +1040,7 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          where(ratePtr3(:,:,:)>-1)
+          where(ratePtr3(:,:,:)>0)
             farrayPtr3(:,:,:) = farrayPtr3(:,:,:)  + ratePtr3(:,:,:) * dt
           endwhere
         endif

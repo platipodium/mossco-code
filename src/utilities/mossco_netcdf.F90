@@ -1824,16 +1824,16 @@ module mossco_netcdf
     count(:)=1
     count=count+ubnd-start
 
-    write(0,*) var%name, 'dimids=',var%dimids
-    write(0,*) var%name, 'dimlens=',self%dimlens
-    write(0,*) 'start=', start
-    write(0,*) 'maxIndPDe=', maxIndexPDe(:,localPet+1)
-    write(0,*) 'ubnd=', ubnd
-    write(0,*) 'count=', count
+    !write(0,*) var%name, 'dimids=',var%dimids
+    !write(0,*) var%name, 'dimlens=',self%dimlens
+    !write(0,*) 'start=', start
+    !write(0,*) 'maxIndPDe=', maxIndexPDe(:,localPet+1)
+    !write(0,*) 'ubnd=', ubnd
+    !write(0,*) 'count=', count
 
     if (any(count <= 0)) return
 
-    write(0,*) 'start=', start, ' count=', count, 'rank=', rank, 'var%rank=', var%rank, 'itime=', itime_, 'name=', var%name
+    !write(0,*) 'start=', start, ' count=', count, 'rank=', rank, 'var%rank=', var%rank, 'itime=', itime_, 'dimlens=', var%dimlens(:), 'name=', var%name
 
     if (rank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
@@ -1855,7 +1855,7 @@ module mossco_netcdf
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-     ! write(0,*) 'rank=', rank, 'var%rank=', var%rank, 'var%dimids=', var%dimids(:), 'udimid=',self%timeDimId
+      !write(0,*) 'rank=', rank, 'var%rank=', var%rank, 'var%dimids=', var%dimids(:), 'udimid=',self%timeDimId
       if (var%rank==rank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, start, count)
       elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
@@ -1868,6 +1868,11 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      if (any(farrayPtr2>0)) then
+        write(0,*) '   mossco_netcdf: '//trim(var%name), farrayPtr2
+      endif
+
     elseif (rank == 3) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
