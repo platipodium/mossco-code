@@ -39,14 +39,14 @@ $(SUBDIRS):
 	$(MAKE) -C $@
 
 fabm_clone:
-ifeq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
 	git clone http://git.code.sf.net/p/fabm/code $(external_FABMDIR)
 else
 	$(MAKE) fabm_update
 endif
 
 fabm_update:
-ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+ifneq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
 	( cd $(external_FABMDIR) ; git pull origin master )
 endif
 
