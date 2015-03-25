@@ -38,17 +38,14 @@ subdirs: $(SUBDIRS)
 $(SUBDIRS):
 	$(MAKE) -C $@
 
-fabm_clone:
+fabm_clone fabm_update:
 ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
 	git clone http://git.code.sf.net/p/fabm/code $(external_FABMDIR)
-	( cd $(external_FABMDIR) && git remote add -f mossco http://git.code.sf.net/p/mossco/fabm && git checkout -b mossco mossco/master )
 else
-	$(MAKE) fabm_update
-endif
-
-fabm_update:
-ifneq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
 	( cd $(external_FABMDIR) && git pull )
+endif
+ifeq ($(wildcard $(external_FABMDIR)/.git/refs/remotes/mossco/master),)
+	( cd $(external_FABMDIR) && git remote add -f mossco http://git.code.sf.net/p/mossco/fabm && git checkout -b mossco mossco/master )
 endif
 
 gotm_clone:
