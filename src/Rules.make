@@ -128,7 +128,7 @@ endif
 export external_FABMDIR=$(MOSSCO_DIR)/external/fabm/code
 ifeq ($(FABM_PREFIX),)
   ifndef MOSSCO_FABMDIR
-    ifneq ($(wildcard $(external_FABMDIR)/src/Makefile),)
+    ifneq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
       export MOSSCO_FABMDIR=$(external_FABMDIR)
     endif
   endif
