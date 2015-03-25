@@ -24,9 +24,9 @@ where vars are expected to have
 
 """
 
-from pylab import *
-import pickle,netcdftime,os,re
-from numpy import load as nload
+import numpy as np
+import matplotlib.pyplot as plt
+import pickle,netcdftime,os,re,sys
 from mpl_toolkits.basemap import Basemap
 import netCDF4
 
@@ -44,9 +44,15 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
 
     #common variables
     try:
-        LO = ncv['getmGrid3D_getm_x'][:]
-        LA = ncv['getmGrid3D_getm_y'][:]
+        #if spherical coordinates:
+        #LO = ncv['getmGrid2D_getm_x'][:]
+        #LA = ncv['getmGrid2D_getm_y'][:]
+
+        lon=ncv['getmGrid2D_getm_lon'][:]
+        lat=ncv['getmGrid2D_getm_lat'][:]
+        LO,LA = np.meshgrid(lon,lat)
         x,y = proj(LO,LA)
+
     except:
         #raise 'could not find getmGrid2D_getm_lon and/or getmGrid2D_getm_lat dimensions'
         #for now, support lon_2/lat_2 coordinates
@@ -67,7 +73,7 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
     tvec=utime.num2date(tv[:])
     #days to plot:
     days=[tvec[ti].day for ti in range(0,len(tvec))]
-    (tind,)=where(in1d(days,timeint))
+    (tind,)=np.where(np.in1d(days,timeint))
 
     for varno,varname in enumerate(varnames):
         print varname,
@@ -85,8 +91,8 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
 
         for i in tind:
             print str(i),
-            f = figure(figsize=(10,6), dpi=96)
-            f.subplots_adjust(left=0.0,right=1.0,bottom=0.0,top=1.0)
+            f = plt.figure(figsize=(10,6), dpi=96)
+            f.subplots_adjust(left=0.0,right=1.0,bottom=0.0,top=.9)
 
             if len(v.shape)==3: #directly plot the variable
                 vI=v[i,:,:]
@@ -103,7 +109,7 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
                     suffix='-integral'
                 except:
                     #if not, we'll calculate the column-average, not weighted by layer thickness
-                    lh=1.0/v.shape[1]*ones((v.shape[1],v.shape[2],v.shape[3]))
+                    lh=1.0/v.shape[1]*np.ones((v.shape[1],v.shape[2],v.shape[3]))
                     print '(!)',
                     suffix='-unweighted-average'
                 #integrate
@@ -114,26 +120,34 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
             #plot
             #proj.contourf(x,y,h,levels=range(0,255,25),extend='both',cmap=cm.YlGnBu)
             #proj.contourf(x,y,h[i,:,:],extend='both',levels=np.arange(0.0,1.0,0.1),cmap=cm.YlOrRd) #cm.YlGnBu
-            pcf=proj.pcolormesh(x,y,vI,cmap=cm.YlOrRd) #cm.YlGnBu
+            clim=[np.amin(vI),np.amax(vI)] #[np.amax(vI)*.8,np.amax(vI)] #
+            pcf=proj.pcolormesh(x,y,vI,cmap=plt.get_cmap('YlOrRd'),vmin=clim[0], vmax=clim[1])
 
-            title(suffix+' '+longname+'\n'+str(tvec[i].date()))
+            plt.title(suffix+' '+longname+'\n'+str(tvec[i].date()))
 
             #setup specific features
-            if setup in ['NSBS','SNS']:
+            if setup in ['NSBS','NSBSfull','SNS']:
                 #coastlines, etc
                 #proj.drawcoastlines(color=(0.7,0.7,0.7),linewidth=0.2)
                 #proj.fillcontinents((0.7,0.7,0.7),lake_color=(0.9,0.9,1.0))
                 proj.drawcoastlines(color=(0.3,0.3,0.3),linewidth=0.5)
                 proj.fillcontinents((1.0,1.0,1.0),lake_color=(0.9,0.9,1.0))
-                gca().patch.set_facecolor((0.9,0.9,1.0))
+                plt.gca().patch.set_facecolor((0.9,0.9,1.0))
                 #retrieve the axes position to set the colorbar position
-                pos1 = gca().get_position()
+                pos1 = plt.gca().get_position()
 
             if setup=='NSBS':
                 #some annotation
                 mark_stats(proj, lang='en', stations=True, seas=True)
                 #colorbar
                 poscbar = [pos1.x0 + pos1.width/3+0.1, pos1.y0+0.18,  pos1.width/2, 0.03]
+                cbaxes=f.add_axes(poscbar)
+                plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
+            elif setup=='NSBSfull':
+                #some annotation
+                #mark_stats(proj, lang='en', stations=True, seas=True)
+                #colorbar
+                poscbar = [pos1.x0 + pos1.width/3, pos1.y0+0.08,  pos1.width/2, 0.03]
                 cbaxes=f.add_axes(poscbar)
                 plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
             elif setup=='SNS':
@@ -150,9 +164,9 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
             cbaxes.set_title(cbartitle,size=12.)
 
             filename=fname.split('.nc')[0]+'_'+varname+suffix+'_'+ str(tvec[i].date()) + '.png' #pdf
-            savefig(filename,dpi=300)
+            plt.savefig(filename,dpi=300)
             #s=show()
-            close(f)
+            plt.close(f)
         print '.'
 
     #close the netcdf file
@@ -163,7 +177,7 @@ def getproj(setup):
     if os.path.isfile('proj.'+setup+'.pickle'):
         print 'opening an existing projection: '+ 'proj.'+setup+'.pickle'
         #if a projection exists, just load it (fast)
-        (proj,) = nload('proj.'+setup+'.pickle')
+        (proj,) = np.load('proj.'+setup+'.pickle')
     else:
         print 'projecting for: '+ setup
         if setup=='NSBS':
@@ -174,6 +188,16 @@ def getproj(setup):
                    llcrnrlat=50.5,
                    urcrnrlon=26.0,
                    urcrnrlat=59.5,
+                   lat_0=54.0,
+                   lon_0=20.)
+        elif setup=='NSBSfull':
+            # initialise geographic projection (slow)
+            proj=Basemap(projection='lcc',
+                   resolution='i',
+                   llcrnrlon=-4.0,
+                   llcrnrlat=48.0,
+                   urcrnrlon=32.5,
+                   urcrnrlat=66.0,
                    lat_0=54.0,
                    lon_0=20.)
         elif setup=='SNS':
@@ -214,9 +238,9 @@ def mark_stats(proj, lang='en', stations=False, seas=True):
             plot_station(proj,12.685,54.411,'Zingster Bodden\n5 m',unsure=True)
         if seas:
             xx,yy=proj(1.0,56.5)
-            text(xx,yy,'Nordsee',size=18.,color=(0.3,0.3,0.3))
+            plt.text(xx,yy,'Nordsee',size=18.,color=(0.3,0.3,0.3))
             xx,yy=proj(16.,56.5)
-            text(xx,yy,'Ostsee',size=18.,color=(0.3,0.3,0.3),rotation=30.)
+            plt.text(xx,yy,'Ostsee',size=18.,color=(0.3,0.3,0.3),rotation=30.)
             filename='Referenzstationen_Karte.pdf'
     elif lang=='en':
         if stations:
@@ -226,9 +250,9 @@ def mark_stats(proj, lang='en', stations=False, seas=True):
             plot_station(proj,12.685,54.411,'Zingst Bay\n5 m',unsure=True)
         if seas:
             xx,yy=proj(1.0,56.5)
-            text(xx,yy,'North Sea',size=18.,color=(0.3,0.3,0.3))
+            plt.text(xx,yy,'North Sea',size=18.,color=(0.3,0.3,0.3))
             xx,yy=proj(16.,56.5)
-            text(xx,yy,'Baltic Sea',size=18.,color=(0.3,0.3,0.3),rotation=30.)
+            plt.text(xx,yy,'Baltic Sea',size=18.,color=(0.3,0.3,0.3),rotation=30.)
 
 
 def plot_station(proj,lon,lat,name,unsure=False,right=False):
@@ -246,25 +270,30 @@ def plot_station(proj,lon,lat,name,unsure=False,right=False):
     if right:
         xoffset,yoffset=(25000,10000) # m
 
-        text(xx+xoffset,yy-yoffset,name,horizontalalignment='left', \
+        plt.text(xx+xoffset,yy-yoffset,name,horizontalalignment='left', \
             verticalalignment='top',size=10,color=color)
     else:
         xoffset,yoffset=(25000,10000) # m
 
-        text(xx-xoffset,yy+yoffset,name,horizontalalignment='right', \
+        plt.text(xx-xoffset,yy+yoffset,name,horizontalalignment='right', \
             verticalalignment='top',size=10,color=color)
 
 if __name__=='__main__':
     if len(sys.argv)>1:
         fname=sys.argv[1]
     else:
-        fname='/home/onur/mounts/odata/mossco-results/sns/maecsomex_kw3fzt/mossco_gffn_xs.nc'
+        #fname='/home/onur/mounts/odata/mossco-results/sns/maecsomex_kw3fzt/mossco_gffn_xs.nc'
+        fname='/home/onur/WORK/projects/NSBS/setups/mossco/NSBS/juropa/mossco_gffn_xs.nc'
         #fname='soil_mossco_gffn_stitched.nc'
 
     if len(sys.argv)>2:
         varnames=sys.argv[2].split(',')
     else:
-        varnames=['gross_primary_production_GPPR_in_water', 'Photosynthetically_Active_Radiation_dPAR_in_water', 'Phytplankton_Carbon_phyC_in_water']
+        varnames=[#'gross_primary_production_GPPR_in_water',
+                  #'Photosynthetically_Active_Radiation_dPAR_in_water',
+                  'Phytplankton_Carbon_phyC_in_water',
+                  'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water',
+                  'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water']
         #varnames=['denitrification_rate_in_soil', 'dissolved_oxygen_in_soil']
 
     if len(sys.argv)>3:
@@ -275,7 +304,7 @@ if __name__=='__main__':
     if len(sys.argv)>4:
         setup=sys.argv[4]
     else:
-        setup='SNS'
+        setup='NSBSfull'
         #setup='deep_lake'
 
     do_2Dplotmap(fname,varnames,timeint,setup)
