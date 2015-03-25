@@ -176,7 +176,7 @@ endif
 export external_GOTMDIR=$(MOSSCO_DIR)/external/gotm/code
 ifeq ($(GOTM_PREFIX),)
   ifndef MOSSCO_GOTMDIR
-    ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
+    ifneq ($(wildcard $(external_GOTMDIR)/src/gotm/gotm.F90),)
       export MOSSCO_GOTMDIR=$(external_GOTMDIR)
     endif
   endif
