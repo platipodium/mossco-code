@@ -49,7 +49,7 @@ echo 'cd to:'$PWD
 
 #extract
 echo 'cutting..'
-#$cutscript $nproc $fnameroot
+$cutscript $nproc $fnameroot
 
 #stitch
 echo 'stitching..'

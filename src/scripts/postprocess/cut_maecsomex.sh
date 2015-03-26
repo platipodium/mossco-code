@@ -48,7 +48,7 @@ for F  in $fnameroot.*.nc; do
   ((p++))  
   #F=$fnameroot'.'$p.'nc'
   G='cut.'$p'.nc'
-  echo "cutting $F"
+  echo "$F -> $G"
   #'lat-lon'
   ncks -O -v $latlon $F $G
   #2D vars

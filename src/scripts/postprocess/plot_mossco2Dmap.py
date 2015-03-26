@@ -25,10 +25,9 @@ where vars are expected to have
 """
 
 import numpy as np
+import netCDF4,pickle,netcdftime,os,re,sys
 import matplotlib.pyplot as plt
-import pickle,netcdftime,os,re,sys
 from mpl_toolkits.basemap import Basemap
-import netCDF4
 
 
 def do_2Dplotmap(fname, varnames,timeint,setup):
