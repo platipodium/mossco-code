@@ -14,7 +14,7 @@ dependencies:
       grid: water_depth_at_soil_surface
   - river_input:
     - component: getm
-      grid: water_depth_at_soil_surface
+      grid: temperature_in_water
 
 instances:
   - netcdf_reference_3d: netcdf
