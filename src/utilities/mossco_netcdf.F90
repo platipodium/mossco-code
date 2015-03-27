@@ -23,6 +23,7 @@ module mossco_netcdf
   use mossco_strings
   use mossco_field
   use mossco_state
+  use mossco_time
   use esmf
   use netcdf
 
