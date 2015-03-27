@@ -1984,21 +1984,22 @@ module mossco_netcdf
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_WARNING)
+      itime_ = 1
+    else
+
+      ntime = self%dimlens(self%timeDimId)
+      allocate(farray(ntime))
+
+      localrc = nf90_get_var(self%ncid, varid, farray)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do itime_ = 1, ntime
+        if (farray(itime_) > seconds) exit
+      enddo
+      if (itime_>1 .and. farray(itime_) > seconds) itime_ = itime_ - 1
     endif
-
-    ntime = self%dimlens(self%timeDimId)
-    allocate(farray(ntime))
-
-    localrc = nf90_get_var(self%ncid, varid, farray)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    do itime_ = 1, ntime
-      if (farray(itime_) > seconds) exit
-    enddo
-    if (itime_>1 .and. farray(itime) > seconds) itime_ = itime_ - 1
 
     if (present(rc)) rc=rc_
     if (present(itime)) itime=itime_
