@@ -478,29 +478,21 @@ module netcdf_input_component
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime,startTime
-    type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8)   :: advanceCount,  i, j
+    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime,startTime, stopTime
+    type(ESMF_TimeInterval) :: timeStep
+    integer(ESMF_KIND_I8)   :: i, j, itime
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii, petCount
     integer(ESMF_KIND_I4)   :: localDeCount
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: totalUBound, totalLBound
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
-    type(ESMF_Field), allocatable, dimension(:) :: fieldList
-    type(ESMF_Array)        :: array
-    type(ESMF_FieldBundle)  :: fieldBundle
-    type(ESMF_ArrayBundle)  :: arrayBundle
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     character(len=ESMF_MAXSTR) :: fieldName
-    character(len=3)        :: numberstring
     type(ESMF_Clock)        :: clock
-    logical                    :: clockIsPresent, isPresent
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    type(type_mossco_netcdf_variable), pointer    :: var => null()
 
-
-    character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
-    type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
-    type(ESMF_IOFmt_Flag)      :: ioFmt
+    character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc
 
     rc = ESMF_SUCCESS
@@ -509,123 +501,85 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
+    nc = MOSSCO_NetcdfOpen(trim(nc%name), mode='r', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeGet(importState, 'fileName', isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call nc%update_variables()
+    call nc%update()
 
-    if (.not.isPresent) then
+    if (nc%nvars==0) then
       call MOSSCO_CompExit(gridComp)
       return
     endif
 
-    ! todo from here
+    call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(gridComp)
-    return
-
-    call ESMF_AttributeGet(importState, name='filename', value=fileName, &
-      defaultValue='netcdf_component.nc', rc=rc)
-    if (petCount>0) then
-      write(fileName,'(A,I3.3,A)') filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
-    endif
-
-    call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    !write(numstring,'(I3)') itemCount
-    !write(message,'(A)') 'Found '//trim(numstring)//' items in '//trim(name)
-    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    if (advanceCount<huge(timeSlice)) then
-      timeSlice=int(advanceCount, ESMF_KIND_I4)
-    else
-      write(message,'(A)') 'Cannot use this advanceCount for a netcdf timeSlice, failed to convert long int to int'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-    endif
-
-    if (itemcount>0) then
+    if (itemCount>0) then
       if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
       if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
 
-      call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-      call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
-
-      call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-      if (currTime == startTime) then
-        nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, rc=rc)
-      else
-        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, rc=rc)
-      end if
-
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call nc%add_timestep(seconds, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-      do i=1,itemCount
-
-        if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-          call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-          call ESMF_FieldGet(field, localDeCount=localDeCount, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          if (localDeCount>0) call nc%put_variable(field)
-
-        elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          allocate(fieldList(fieldCount))
-          call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=rc)
-          if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-          !! go through list of fields and put fields into netcdf using field name and number
-          do ii=1,size(fieldList)
-            call ESMF_FieldGet(fieldList(ii),name=fieldName,rc=rc)
-            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-            write(numberstring,'(I0.3)') ii
-
-            call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)
-            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-            if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
-          end do
-          deallocate(fieldList)
-        else
-          write(message,'(A)') 'Item with name '//trim(itemNameList(i))//' not saved to file '
-        endif
-        if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-      enddo
-
-      if (allocated(itemTypeList)) deallocate(itemTypeList)
-      if (allocated(itemNameList)) deallocate(itemNameList)
-
-      call nc%close()
+      call ESMF_StateGet(exportState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    !! This component has no do loop over an internal timestep, it is advance with the
-    !! timestep written into its local clock from a parent component
-    call ESMF_ClockAdvance(clock, rc=rc)
+    !> @todo determine itime
+    itime=1
 
-    call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=rc)
+    !> Go through list of export variables and fill their pointers with values from the file
+    do i=1, itemCount
+
+      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+
+      call ESMF_FieldGet(field, localDeCount=localDeCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (localDeCount < 1) cycle
+
+      var => nc%getvarvar(trim(itemNameList(i)))
+      if (.not.associated(var)) cycle
+
+      call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    enddo
+
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+
+    call nc%close()
+
+    !! This component has no do loop over an internal timestep, it is advanced with the
+    !! timestep written into its local clock from a parent component
+    call ESMF_ClockGet(clock, currTime=currTime, stopTime=stopTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    timeStep=stopTime-currTime
+    if (stopTime>currTime) then
+      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
