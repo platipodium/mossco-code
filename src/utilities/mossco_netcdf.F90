@@ -64,6 +64,8 @@ module mossco_netcdf
     procedure :: getvarvar => mossco_netcdf_var_get_var
     procedure :: getvar => mossco_netcdf_var_get
     procedure :: getAxis => grid_get_coordinate_axis
+    procedure :: refTime => mossco_netcdf_reftime
+    procedure :: timeIndex => mossco_netcdf_find_time_index
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -712,7 +714,6 @@ module mossco_netcdf
     if (present(rc)) rc = ESMF_SUCCESS
 
   end subroutine mossco_netcdf_variable_create
-
 
   subroutine mossco_netcdf_add_timestep(self, seconds, rc)
 
@@ -1950,5 +1951,97 @@ module mossco_netcdf
     return
 
   end function mossco_netcdf_var_get_var
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_find_time_index"
+  subroutine mossco_netcdf_find_time_index(self, currTime, itime, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    integer(ESMF_KIND_I4), intent(out), optional :: rc, itime
+    type(ESMF_Time), intent(in)                  :: currTime
+
+    type(ESMF_Time)                              :: refTime
+    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, ntime, varid
+    real(ESMF_KIND_R8), allocatable              :: farray(:)
+    real(ESMF_KIND_R8)                           :: seconds
+
+    rc_ = ESMF_SUCCESS
+
+    call self%reftime(refTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeIntervalGet(currTime - refTime, s_r8=seconds, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (seconds <= 0) then
+      if (present(rc)) rc=rc_
+      if (present(itime)) itime=1
+    endif
+
+    localrc = nf90_inq_varid(self%ncid, 'time', varid)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    ntime = self%dimlens(self%timeDimId)
+    allocate(farray(ntime))
+
+    localrc = nf90_get_var(self%ncid, varid, farray)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do itime_ = 1, ntime
+      if (farray(itime_) > seconds) exit
+    enddo
+    if (itime_>1 .and. farray(itime) > seconds) itime_ = itime_ - 1
+
+    if (present(rc)) rc=rc_
+    if (present(itime)) itime=itime_
+
+  end subroutine mossco_netcdf_find_time_index
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_reftime"
+  subroutine mossco_netcdf_reftime(self, refTime, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_Time), intent(out)                 :: refTime
+
+    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid
+    character(ESMF_MAXSTR)                       :: timeUnit
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_inq_varid(self%ncid, 'time', varid)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    i=index(timeunit,'since ')
+    if (i<1) then
+      call ESMF_LogWrite('  unknown time unit '//trim(timeUnit), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(rc)) rc=rc_
+
+  end subroutine mossco_netcdf_reftime
 
 end module
