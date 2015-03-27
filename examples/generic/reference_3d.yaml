@@ -12,12 +12,13 @@ dependencies:
   - simplewave:
     - component: getm
       grid: water_depth_at_soil_surface
-  - benthos:
+  - river_input:
     - component: getm
       grid: water_depth_at_soil_surface
 
 instances:
   - netcdf_reference_3d: netcdf
+  - river_input : netcdf_input
 
 coupling:
   - components:
@@ -66,6 +67,10 @@ coupling:
      - fabm_pelagic
     interval: 6 m
   - components:
+     - river_input
+     - fabm_pelagic
+    interval: 14 d
+  - components:
      - fabm_pelagic
      - pelagic_soil_connector
      - fabm_sediment
@@ -79,10 +84,10 @@ coupling:
      - constant
      - fabm_sediment
     interval: none
-  - components:
-     - benthos
-     - erosed
-    interval: 6 m
+#  - components:
+#     - benthos
+#     - erosed
+#    interval: 6 m
   - components:
      - fabm_sediment
      - netcdf_reference_3d
@@ -91,18 +96,18 @@ coupling:
      - fabm_pelagic
      - netcdf_reference_3d
     interval: 60 h
-  - components:
-     - getm
-     - netcdf_reference_3d
-    interval: 60 h
+#  - components:
+#     - getm
+#     - netcdf_reference_3d
+#    interval: 60 h
   - components:
      - simplewave
      - netcdf_reference_3d
     interval: 60 h
-  - components:
-     - benthos
-     - netcdf_reference_3d
-    interval: 60 h
+#  - components:
+#     - benthos
+#     - netcdf_reference_3d
+#    interval: 60 h
   - components:
      - erosed
      - netcdf_reference_3d
