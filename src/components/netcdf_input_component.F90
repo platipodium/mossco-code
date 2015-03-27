@@ -480,20 +480,21 @@ module netcdf_input_component
     character(len=19)       :: timestring
     type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime,startTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
-    integer(ESMF_KIND_I8)   :: i, j, itime
+    integer(ESMF_KIND_I8)   :: i, j
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii, petCount
     integer(ESMF_KIND_I4)   :: localDeCount
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
-    character(len=ESMF_MAXSTR) :: fieldName
+    character(len=ESMF_MAXSTR) :: fieldName, fileName
     type(ESMF_Clock)        :: clock
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(type_mossco_netcdf_variable), pointer    :: var => null()
 
     character(len=ESMF_MAXSTR) :: message, name
-    integer(ESMF_KIND_I4)      :: localrc
+    integer(ESMF_KIND_I4)      :: localrc, itime
+    logical                    :: isPresent
 
     rc = ESMF_SUCCESS
 
@@ -501,7 +502,18 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    nc = MOSSCO_NetcdfOpen(trim(nc%name), mode='r', rc=localrc)
+    call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) then
+      write(message,'(A)') trim(name)//' received no filename to read from'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call MOSSCO_CompExit(gridComp)
+      return
+    endif
+
+    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -509,6 +521,8 @@ module netcdf_input_component
     call nc%update()
 
     if (nc%nvars==0) then
+      write(message,'(A)') trim(name)//' contains no variables to read.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       call MOSSCO_CompExit(gridComp)
       return
     endif
@@ -526,8 +540,9 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    !> @todo determine itime
-    itime=1
+    call nc%timeIndex(currTime, itime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Go through list of export variables and fill their pointers with values from the file
     do i=1, itemCount
