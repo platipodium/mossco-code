@@ -15,6 +15,10 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "gotm_transport_component.F90"
 
 module gotm_transport_component
 
@@ -53,6 +57,8 @@ module gotm_transport_component
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
     type(ESMF_GridComp)  :: gridcomp
@@ -73,6 +79,8 @@ module gotm_transport_component
   !!
   !! create list of pointers to the 1D fields in the importState;
   !! the exportState is not used
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Initialize"
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     use meanflow, only : gotm_heights => h
     implicit none
@@ -219,6 +227,8 @@ module gotm_transport_component
   end subroutine Initialize
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     use util, only: flux, Neumann
@@ -240,7 +250,7 @@ module gotm_transport_component
     integer                 :: w_adv_method=1, w_adv_discr=6, w_adv_ctr=1
     GOTM_REALTYPE           :: cnpar=1.0
 
-    integer(ESMF_KIND_I4)   :: localPet, petCount, hours, seconds, minutes
+    integer(ESMF_KIND_I4)   :: localPet, petCount, hours, seconds, minutes, localrc
     logical                 :: clockIsPresent
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
@@ -326,6 +336,8 @@ module gotm_transport_component
   end subroutine Run
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -337,6 +349,8 @@ module gotm_transport_component
   end subroutine Finalize
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "tracer_append"
   subroutine tracer_append(tracer, tracerPtr)
   type(type_data_ptr),dimension(:),pointer,intent(inout) :: tracer
   type(type_data_ptr),dimension(:),pointer :: t_

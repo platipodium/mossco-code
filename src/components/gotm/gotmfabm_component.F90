@@ -5,7 +5,7 @@
 !! infrastructure together with the gotm_component and the
 !! gotm_transport_component for transport of fabm_pelagic's state variables
 !>
-!> This computer program is part of MOSSCO. 
+!> This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
@@ -15,11 +15,17 @@
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "gotmfabm_component.F90"
+
 module gotmfabm_component
 
   use esmf
 
-  use gotm_component, only : gotm_SetServices => SetServices 
+  use gotm_component, only : gotm_SetServices => SetServices
   use fabm_pelagic_component, only : fabm_SetServices => SetServices
   use gotm_transport_component, only : gotm_transp_SetServices => SetServices
   use airsea, only : I_0 ! surface radiation in GOTM
@@ -41,8 +47,10 @@ module gotmfabm_component
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! entry points for Init/Run/Finalize
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
@@ -59,6 +67,8 @@ module gotmfabm_component
 
   !> Initialize the coupling
   !!
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Initialize"
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)     :: gridComp
@@ -86,7 +96,7 @@ module gotmfabm_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_GridCompSetServices(gotmTranspComp,gotm_transp_SetServices, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-   
+
     state = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_UNSPECIFIED,name="Exchange state")
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -128,8 +138,10 @@ module gotmfabm_component
 
   end subroutine Initialize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)     :: gridComp
     type(ESMF_State)        :: importState, exportState
     type(ESMF_Clock)        :: parentClock, childClock
@@ -141,7 +153,7 @@ module gotmfabm_component
     call ESMF_LogWrite("GOTM/FABM component running ... ",ESMF_LOGMSG_INFO)
 
     do while (.not. ESMF_ClockIsStopTime(parentClock, rc=rc))
-      
+
       call ESMF_ClockGet(parentClock, currTime=currTime, timeStep=timeStep, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
@@ -170,15 +182,17 @@ module gotmfabm_component
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-    enddo 
+
+    enddo
 
     call ESMF_LogWrite("GOTM/FABM component finished running. ",ESMF_LOGMSG_INFO)
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -207,9 +221,9 @@ module gotmfabm_component
 #endif
 
     call ESMF_LogWrite("GOTM/FABM component finalized",ESMF_LOGMSG_INFO)
-   
+
     rc=ESMF_SUCCESS
-  
+
   end subroutine Finalize
 
 end module gotmfabm_component

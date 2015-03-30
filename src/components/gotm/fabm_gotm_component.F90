@@ -5,15 +5,20 @@
 !> @export (FABM variables)
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen
+!> @author Richard Hofmeister
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
 ! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 ! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 !
+#define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
+#define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
+#undef ESMF_FILENAME
+#define ESMF_FILENAME "fabm_gotm_component.F90"
+
 
 module fabm_gotm_component
 
@@ -61,6 +66,8 @@ module fabm_gotm_component
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
   subroutine SetServices(gridcomp, rc)
 
     type(ESMF_GridComp)  :: gridcomp
@@ -81,6 +88,8 @@ module fabm_gotm_component
   !!
   !! Allocate memory for boundaries and fluxes, create ESMF fields
   !! and export them
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Initialize"
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
     implicit none
 
@@ -300,6 +309,8 @@ module fabm_gotm_component
 
   end subroutine Initialize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     use meanflow, only : gotm_temperature => T
@@ -327,7 +338,7 @@ module fabm_gotm_component
     type(ESMF_StateItem_Flag)  :: itemType
     character(len=ESMF_MAXSTR) :: string,varname,message
 
-    integer(ESMF_KIND_I4)    :: localPet, petCount, hours, seconds, minutes
+    integer(ESMF_KIND_I4)    :: localPet, petCount, hours, seconds, minutes, localrc
     logical                  :: clockIsPresent
     integer                  :: alarmCount
 
@@ -495,6 +506,8 @@ module fabm_gotm_component
 
   end subroutine Run
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
@@ -561,6 +574,8 @@ module fabm_gotm_component
   end subroutine Finalize
 
   !> set boundary flags, mainly for optional forcing fields
+#undef  ESMF_METHOD
+#define ESMF_METHOD "set_import_flags"
   subroutine set_import_flags(importState)
     type(ESMF_State)           :: importState
     character(len=ESMF_MAXSTR) :: name,varname

@@ -164,6 +164,7 @@ module empty_component
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime, stopTime
     type(ESMF_Clock)        :: clock
+    integer(ESMF_KIND_I4)   :: localrc
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
