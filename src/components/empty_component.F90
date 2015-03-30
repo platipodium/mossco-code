@@ -193,8 +193,12 @@ module empty_component
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+
+    if (stopTime>currTime) then
+      call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     !! 3. You should not have to do anything with the export state, because the mapping
     !!    between your internal model's data and the exported fields has already been
