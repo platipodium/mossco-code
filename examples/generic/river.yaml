@@ -8,7 +8,7 @@ dependencies:
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
-  - netcdf_input:
+  - river_input:
     - component: getm
       grid: temperature_at_soil_surface
 
