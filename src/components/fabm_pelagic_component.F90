@@ -898,7 +898,8 @@ module fabm_pelagic_component
 
     character(len=ESMF_MAXSTR) :: name, message
     type(ESMF_Clock)           :: clock
-    type(ESMF_Time)            :: currTime
+    type(ESMF_Time)            :: currTime, stopTime
+    type(ESMF_TimeInterval)    :: timeStep
     integer(ESMF_KIND_I4)      :: localrc
 
     type(ESMF_Field)                       :: importField, exportField
@@ -990,7 +991,27 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_ClockGet(clock, stopTime=stopTime, currTime=currTime, timeStep=timeStep, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     do while (.not.ESMF_ClockIsStopTime(clock))
+
+      call ESMF_ClockGet(clock, currTime=currTime, advanceCount=t, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (currTime + timeStep > stopTime) then
+        timeStep=stopTime-currTime
+        call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       ! integrate rates
       call ode_solver(pel,dt,ode_method)
 
@@ -1067,11 +1088,7 @@ module fabm_pelagic_component
       call pel%update_pointers()
       call pel%update_expressions()
 
-      call ESMF_ClockGet(clock, advanceCount=t, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_ClockAdvance(clock, rc=localrc)
+      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
