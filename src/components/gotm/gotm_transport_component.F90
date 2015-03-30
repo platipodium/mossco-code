@@ -5,8 +5,8 @@
 !> @import 1D tracer fields
 !> @export transported 1D tracer fields
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -20,11 +20,11 @@ module gotm_transport_component
 
   use esmf
   use mossco_strings
-  
+
   implicit none
 
   private
- 
+
   integer, parameter :: rk=selected_real_kind(13)
   type :: type_data_ptr
     real(rk), dimension(:,:,:), pointer :: conc
@@ -46,15 +46,15 @@ module gotm_transport_component
   integer                   :: buoy_method,eq_state_mode,eq_state_method
   GOTM_REALTYPE,allocatable :: ones(:),zeros(:),relaxTau(:)
 
-    
+
   public :: SetServices
-  
+
   contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
@@ -66,7 +66,7 @@ module gotm_transport_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     rc=ESMF_SUCCESS
-    
+
   end subroutine SetServices
 
   !> Initialize the component
@@ -74,7 +74,7 @@ module gotm_transport_component
   !! create list of pointers to the 1D fields in the importState;
   !! the exportState is not used
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    use meanflow, only : gotm_heights => h 
+    use meanflow, only : gotm_heights => h
     implicit none
 
     type(ESMF_GridComp)         :: gridComp
@@ -104,24 +104,24 @@ module gotm_transport_component
     character(len=ESMF_MAXSTR)  :: configFileName
     type(type_data_ptr)         :: tracer_ptr
 
-      
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+
+    !! Check whether there is already a clock (it might have been set
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
     call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     else
       clock = ESMF_ClockCreate(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     !! Log the call to this function
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -129,7 +129,7 @@ module gotm_transport_component
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' initializing ...'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-   
+
     !> fill the tracer and ws pointer lists from importState
     call ESMF_StateGet(importState, itemCount=itemCount, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -137,17 +137,17 @@ module gotm_transport_component
     if (itemcount>0) then
       if (.not.allocated(itemTypeList)) allocate(itemTypeList(itemCount))
       if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
-      
+
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       do i=1,itemCount
-        
+
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           varname=trim(itemNameList(i))
           namelen=len_trim(varname)
-          call ESMF_StateGet(importState, varname, concfield, rc=rc) 
+          call ESMF_StateGet(importState, varname, concfield, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
           if (varname((namelen-8):namelen) == '_in_water') then
@@ -159,7 +159,7 @@ module gotm_transport_component
             if (rc /= ESMF_SUCCESS) cycle
 
             call ESMF_FieldGet(concfield, farrayPtr=tracer_ptr%conc, rc=rc)
-            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+            if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
             call ESMF_FieldGet(wsfield, farrayPtr=tracer_ptr%ws, rc=rc)
             if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
             call tracer_append(tracer,tracer_ptr)
@@ -178,7 +178,7 @@ module gotm_transport_component
           ! go to next item, if no *_z_velocity is present
           if (rc /= ESMF_SUCCESS) cycle
 
-          call ESMF_StateGet(importState, varname, fieldBundle, rc=rc) 
+          call ESMF_StateGet(importState, varname, fieldBundle, rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
           call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=rc)
           if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -215,14 +215,14 @@ module gotm_transport_component
     relaxTau=1.d15
 
     call ESMF_LogWrite("FABM/GOTM component initialized.",ESMF_LOGMSG_INFO)
-    
+
   end subroutine Initialize
 
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     use util, only: flux, Neumann
-    use meanflow, only : w, gotm_heights => h 
+    use meanflow, only : w, gotm_heights => h
     use turbulence, only: diffusivity => nuh
 
     type(ESMF_GridComp)     :: gridComp
@@ -239,7 +239,7 @@ module gotm_transport_component
     character(len=ESMF_MAXSTR) :: string,varname,message
     integer                 :: w_adv_method=1, w_adv_discr=6, w_adv_ctr=1
     GOTM_REALTYPE           :: cnpar=1.0
-    
+
     integer(ESMF_KIND_I4)   :: localPet, petCount, hours, seconds, minutes
     logical                 :: clockIsPresent
 
@@ -251,7 +251,7 @@ module gotm_transport_component
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -261,7 +261,7 @@ module gotm_transport_component
     call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(timestring)//' '//trim(name)//' running with dt='
-    
+
     call ESMF_TimeIntervalGet(timeInterval, s_r8=dt, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     write(message,'(A,F6.1,A)') trim(message),dt,' s to '
@@ -273,11 +273,29 @@ module gotm_transport_component
     ! get number of layers as 3rd dimension of tracer pointer
     knum = ubound(zeros,1)
 
-    ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, stopTime=stopTime, currTime=currTime, timeStep=timeStep, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
      do while (.not.ESMF_ClockIsStopTime(clock))
 
-       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
-       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockGet(clock, currTime=currTime, advanceCount=n, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (currTime + timeStep > stopTime) then
+        timeStep=stopTime-currTime
+        call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
        ! Vertical advection and residual movement (sinking/floating)
        do i=1,ubound(tracer,1)
@@ -300,8 +318,9 @@ module gotm_transport_component
             tracer(i)%conc(1,1,:),tracer(i)%conc(1,1,:))
        end do
 
-      call ESMF_ClockAdvance(clock,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do ! end of time loop
 
   end subroutine Run

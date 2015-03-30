@@ -4,8 +4,8 @@
 !> @import temperature_in_water
 !> @export (FABM variables)
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht 
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -32,12 +32,12 @@ module fabm_gotm_component
   use mossco_variable_types
   use mossco_state
   use mossco_strings
-  
+
   implicit none
 
   private
- 
-  type(ESMF_Clock)  :: clock 
+
+  type(ESMF_Clock)  :: clock
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
   type(export_state_type),dimension(:), allocatable        :: fabm_export_states
@@ -54,15 +54,15 @@ module fabm_gotm_component
   integer                   :: nlev
   GOTM_REALTYPE             :: latitude,longitude,depth
 
-    
+
   public :: SetServices
-  
+
   contains
 
   !> Provide an ESMF compliant SetServices routine, which defines
   !! the entry points for Init/Run/Finalize
   subroutine SetServices(gridcomp, rc)
-  
+
     type(ESMF_GridComp)  :: gridcomp
     integer, intent(out) :: rc
 
@@ -74,7 +74,7 @@ module fabm_gotm_component
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     rc=ESMF_SUCCESS
-    
+
   end subroutine SetServices
 
   !> Initialize the component
@@ -101,40 +101,40 @@ module fabm_gotm_component
     type(ESMF_DistGrid)  :: distgrid
     type(ESMF_Grid)      :: grid
     type(ESMF_ArraySpec) :: arrayspec
-    
+
     type(ESMF_Field), dimension(:), allocatable  :: importField
     type(ESMF_Field)          :: field,concfield,wsfield
     type(ESMF_FieldBundle)    :: fieldBundle
     type(ESMF_StateItem_Flag) :: itemType
-    
+
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr,wsPtr
     real(ESMF_KIND_R8)   :: attribute_r8
     character(len=ESMF_MAXSTR) :: attribute_name
     namelist /station/ name,latitude,longitude,depth
-    
+
     logical                     :: clockIsPresent, fileIsPresent
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR)  :: message
     character(len=ESMF_MAXSTR)  :: configFileName
     character(len=ESMF_MAXSTR)  :: fieldname, wsfieldname
-      
-    !! Check whether there is already a clock (it might have been set 
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create 
+
+    !! Check whether there is already a clock (it might have been set
+    !! with a prior ESMF_gridCompCreate() call.  If not, then create
     !! a local clock as a clone of the parent clock, and associate it
     !! with this component.  Finally, set the name of the local clock
     call ESMF_GridCompGet(gridComp, name=name, clockIsPresent=clockIsPresent, rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     if (clockIsPresent) then
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)     
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     else
       clock = ESMF_ClockCreate(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)    
+      call ESMF_GridCompSet(gridComp, clock=clock, rc=rc)
     endif
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     call ESMF_ClockSet(clock, name=trim(name)//' clock', rc=rc)
     if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
     !! Log the call to this function
     call ESMF_ClockGet(clock, currTime=currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -159,7 +159,7 @@ module fabm_gotm_component
     else
       call ESMF_StateGet(exportState,trim(varname),field,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    
+
       call ESMF_FieldGet(field,grid=grid, arrayspec=arrayspec,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
@@ -226,7 +226,7 @@ module fabm_gotm_component
         name=fieldname, &
         staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
+
       !> add attributes relevant for MOSSCO
       !! mean_particle_diameter and particle density given only,
       !! if property persent
@@ -297,14 +297,14 @@ module fabm_gotm_component
     enddo
 
     call ESMF_LogWrite("FABM/GOTM component initialized.",ESMF_LOGMSG_INFO)
-    
+
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     use meanflow, only : gotm_temperature => T
     use meanflow, only : gotm_salinity => S
-    use meanflow, only : gotm_heights => h 
+    use meanflow, only : gotm_heights => h
     use meanflow, only : gotm_radiation => rad
     use gotm_mossco_fabm, only: gotm_fabm_bottom_flux => bfl
 
@@ -326,7 +326,7 @@ module fabm_gotm_component
     type(ESMF_Field),dimension(:),allocatable ::fieldlist
     type(ESMF_StateItem_Flag)  :: itemType
     character(len=ESMF_MAXSTR) :: string,varname,message
-    
+
     integer(ESMF_KIND_I4)    :: localPet, petCount, hours, seconds, minutes
     logical                  :: clockIsPresent
     integer                  :: alarmCount
@@ -339,7 +339,7 @@ module fabm_gotm_component
       call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
     endif
-    
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -418,11 +418,29 @@ module fabm_gotm_component
          end if
        end do
 
-    ! @todo implement a solution for short outer timesteps or non-integer number of internal vs outer timesteps
+     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+     call ESMF_ClockGet(clock, stopTime=stopTime, currTime=currTime, timeStep=timeStep, rc=localrc)
+     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+     call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
      do while (.not.ESMF_ClockIsStopTime(clock))
 
-       call ESMF_ClockGet(clock,currTime=clockTime, advanceCount=n, rc=rc)
-       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (currTime + timeStep > stopTime) then
+        timeStep=stopTime-currTime
+        call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
 #ifdef DEBUG
        call ESMF_TimeGet(clockTime,timeStringISOFrac=timestring, rc=rc)
@@ -453,8 +471,10 @@ module fabm_gotm_component
        end if
        end if
 
-      call ESMF_ClockAdvance(clock,rc=rc)
-      if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     end do ! end of time loop
 
     ! update Field data:
@@ -532,7 +552,7 @@ module fabm_gotm_component
 
     enddo
 
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed 
+    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
     !! previously, thus, we comment the clock destruction code while this has not
     !! been fixed by ESMF
     !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=rc)
