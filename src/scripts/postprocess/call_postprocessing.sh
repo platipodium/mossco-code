@@ -11,20 +11,22 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
-system=$1 #todo: doing it as a slurm or sge command on cluster
-outdir=$2 #todo: detect the outputdir using the mossco_gffn.cfg file (?)
+outdir=/data/kerimogl/mossco-results/nsbs/nsbs47-3r
+if (( "$#" > 0 ));then
+  outdir=$1
+fi
+system=$2 #todo: doing it as a slurm or sge command on cluster
 
 proc_script=$MOSSCO_DIR/src/scripts/postprocess/process_fabmout.sh
-outdir=/data/kerimogl/mossco-results/nsbs/nsbs47-3r
 fnameroot=mossco_gffn
 user=kerimogl
-remotemachine=grpsrv05
+remotemachine=grpsrv09
 
 #attempt to detect whether ncks is available locally
 #if $(which ncks 2> /dev/null) ; then
 if false ; then
 	#do processing locally
-	process_fabmout.sh $toolpath $outdir $fnameroot
+	$proc_script $outdir $fnameroot $MOSSCO_DIR
 else
 	#do processing through a remote machine
         outdir=$(echo $outdir | sed 's/data/ocean-data/')
