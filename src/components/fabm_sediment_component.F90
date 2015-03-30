@@ -850,7 +850,31 @@ module fabm_sediment_component
       enddo
     endif
 
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, stopTime=stopTime, currTime=currTime, timeStep=timeStep, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     do while (.not.ESMF_ClockIsStopTime(clock))
+
+      call ESMF_ClockGet(clock, currTime=currTime, advanceCount=advanceCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (currTime + timeStep > stopTime) then
+        timeStep=stopTime-currTime
+        call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       call ode_solver(sed,dt,ode_method)
 
       ! reset concentrations to mininum_value
@@ -862,8 +886,6 @@ module fabm_sediment_component
           end if
         end do
       end do
-
-      call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
 
       if (sed%do_output) then
         !! Check if the output alarm is ringing, if so, quiet it and
@@ -895,8 +917,9 @@ module fabm_sediment_component
       if (mod(advanceCount*dt,(365.*86400.)).eq.0) write(0,*) '  elapsed [d]',dt*advanceCount/86400.
 #endif
 
-      call ESMF_ClockAdvance(clock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
     ! write back fluxes into export State
