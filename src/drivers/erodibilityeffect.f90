@@ -95,18 +95,18 @@ real (fp)    :: b2     = 5.08e-8
 
       else
 
-        g_erod_Macrofauna = 1.0
-        write (*,*) ' WARNING!! At the moment computation of bioeffect of macrofauna on critical shear stress as a function of gCm-2 is not implemented yet.'// &
-                    ' Therefore, it is ignored !!!!!!!'
+        g_erod_Macrofauna = 0.4989 * log (Mbalthica%amount(i,j)) +0.952
+
+
       endif
       exit
     else if (trim(Mbalthica%units) == '' ) then    ! according to Borsje et al. (2008)
 
        g_erod_Macrofauna = 1.0
 
-      write (*,*) ' Error: the Macoma balthica effect on the erodibility can be calculated at the moment based'// &
-                  ' on intensity (refer to Paarlberg et al. (2005)), therefore, the effect based on Biomass'// &
-                  '  was set to 1.0'
+      write (*,*) ' Error: Macoma balthica misses units, the effect on the erodibility can be calculated at the moment based'// &
+                  ' on intensity (refer to Paarlberg et al. (2005)) or biomas per square metere (Borsje et al (2008)'// &
+                  '  therefore, the effect was set to 1.0'
       exit
     end if
   end do

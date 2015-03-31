@@ -81,7 +81,7 @@ integer                          :: i,j
 
          fcr_macrofauna (i,j)= 0.0016 * log (Mbalthica%intensity(i,j) * Mbalthica%intensity(i,j)) &
                             & -0.085  * log (Mbalthica%intensity(i,j)) +1.0    ! Knaapen et al (2003)
-write (*,*) ' in cshearfunction mbalthica%intesnity = ',Mbalthica%intensity(i,j)
+write (*,*) ' in shearfunction mbalthica%intesnity = ',Mbalthica%intensity(i,j)
         endif
 
     elseif (trim(Mbalthica%units) == 'gCm-2' ) then
@@ -89,11 +89,10 @@ write (*,*) ' in cshearfunction mbalthica%intesnity = ',Mbalthica%intensity(i,j)
 
           fcr_macrofauna = 1.0
 
-         else
+         else                                      ! Borsje et al (2008), digitalized graphics
 
-          fcr_macrofauna = 1.0
-          write (*,*) ' WARNING!! At the moment computation of bioeffect of macrofauna on critical shear stress as a function of gCm-2 is not implemented yet.'// &
-                      ' Therefore, it is ignored !!!!!!!'
+          fcr_macrofauna = -0.15 * log (Mbalthica%amount(i,j)) + 0.978
+ write (*,*) ' in shearfunction mbalthica%amount = ',Mbalthica%amount(i,j)
          endif
          exit
     else if (trim(Mbalthica%units) == '' ) then
