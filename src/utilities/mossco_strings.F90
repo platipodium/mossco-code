@@ -206,4 +206,18 @@ contains
 
   end subroutine MOSSCO_StringMatch
 
+  subroutine MOSSCO_CleanPattern(pattern, rc)
+
+    character(len=*), intent(inout)     :: pattern
+    integer(ESMF_KIND_I4), intent(out)  :: rc
+
+    integer(ESMF_KIND_I4)               :: localrc, i, n
+
+    rc=ESMF_SUCCESS
+
+    !> @todo immplement cleaning of a pattern string
+
+  end subroutine MOSSCO_CleanPattern
+
+
 end module mossco_strings
