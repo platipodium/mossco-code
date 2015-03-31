@@ -64,3 +64,7 @@ coupling:
      - benthos
      - erosed
     interval: 1 h
+  - components:
+     - benthos
+     - netcdf_pelagic_3d
+    interval: 60 h
