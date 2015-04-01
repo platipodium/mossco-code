@@ -211,11 +211,11 @@ module netcdf_component
           endif
         enddo
         if (allocated(excludePatternList)) deallocate(excludePatternList)
-      endif
 
-      call ESMF_AttributeSet(importState, 'filter_pattern_exclude', trim(excludeAttributeString), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(importState, 'filter_pattern_exclude', trim(excludeAttributeString), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       call ESMF_ConfigFindLabel(config, label='include:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -226,6 +226,10 @@ module netcdf_component
         n=ESMF_ConfigGetLen(config, label='include:', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,I2.2,A)')  trim(name)//' found ',n,' include patterns'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
         if (n>0) allocate(includePatternList(n))
 
         call ESMF_ConfigFindLabel(config, label='include:', rc = localrc)
@@ -236,9 +240,8 @@ module netcdf_component
           call ESMF_ConfigGetAttribute(config, value=includePatternList(j), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          !if (len_trim(includePatternList(j))<1) cycle
 
-          call MOSSCO_CleanPattern(includePatternList(j), rc=localrc)
+          !call MOSSCO_CleanPattern(includePatternList(j), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -252,11 +255,10 @@ module netcdf_component
           endif
         enddo
         if (allocated(includePatternList)) deallocate(includePatternList)
+        call ESMF_AttributeSet(importState, 'filter_pattern_include', trim(includeAttributeString), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-
-      call ESMF_AttributeSet(importState, 'filter_pattern_include', trim(includeAttributeString), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -336,22 +338,29 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       defaultValue=trim(name)//'.nc', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    j=index(fileName,'.nc',back=.true.)
+    if (j < len_trim(fileName)-2) fileName=trim(fileName)//'.nc'
+
     if (petCount>1) then
       write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
       write(fileName,form) filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
     endif
 
-    call ESMF_AttributeGet(importState, name='filter_pattern_exclude', value=excludeAttributeString, &
-      isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeGet(importState, name='filter_pattern_exclude', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
+      call ESMF_AttributeGet(importState, name='filter_pattern_exclude', value=excludeAttributeString, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_LogWrite(trim(name)//' found exclude pattern '//trim(excludeAttributeString), ESMF_LOGMSG_INFO)
+
+      !if (len_trim(excludeAttributeString)<1) exit
       n=1
-      j=0
-      do while (.true.)
-        j=index(excludeAttributeString(j+1:len_trim(excludeAttributeString)),',')
-        if (j>0) n=n+1
-        if (j<1) exit
+      do i=1,len_trim(excludeAttributeString)
+        if (excludeAttributeString(i:i)==',') n=n+1
       enddo
 
       !write(message,'(A,I1,A)') trim(name)//' filter_pattern_exclude(1:',n,') = "'//trim(excludeAttributeString)//'"'
@@ -360,43 +369,51 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       allocate(excludePatternList(n))
       do i=1,n
         j=index(excludeAttributeString,',')
-        !write(message,'(I1,X,I1,X,I1,X,A)') i,n,j,trim(excludeAttributeString)
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         if (j>0) then
           excludePatternList(i)=excludeAttributeString(1:j-1)
         else
           excludePatternList(i)=trim(excludeAttributeString)
         endif
-        !write(excludeAttributeString,'(A)') excludeAttributeString(j+2:len_trim(excludeAttributeString))
-        !write(message,'(A,I1,A)') trim(name)//' filter_pattern_exclude(',i,') = "'//trim(excludePatternList(i))//'"'
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !write(message,'(I1,X,I1,X,I1,X,A)') i,n,j,trim(excludeAttributeString)
+        write(excludeAttributeString,'(A)') excludeAttributeString(j+2:len_trim(excludeAttributeString))
+        write(message,'(A,I1,A)') trim(name)//' filter_pattern_exclude(',i,') = "'//trim(excludePatternList(i))//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        !write(message,'(I1,X,I1,X,I1,X,A)') i,n,j
+        !call MOSSCO_MessageAdd(message,excludeAttributeString)
         !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       enddo
 
     endif
 
-    call ESMF_AttributeGet(importState, name='filter_pattern_include', value=includeAttributeString, &
-      isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeGet(importState, name='filter_pattern_include', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
+      call ESMF_AttributeGet(importState, name='filter_pattern_include', value=includeAttributeString, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_LogWrite(trim(name)//' found include pattern '//trim(includeAttributeString), ESMF_LOGMSG_INFO)
+
       n=1
-      j=0
-      do while (.true.)
-        j=index(includeAttributeString(j+1:len_trim(includeAttributeString)),',')
-        if (j>0) n=n+1
-        if (j<1) exit
+      do i=1,len_trim(includeAttributeString)
+        if (includeAttributeString(i:i)==',') n=n+1
       enddo
 
       allocate(includePatternList(n))
       do i=1,n
         j=index(includeAttributeString,',')
         if (j>0) then
-          includePatternList(i)=includeAttributeString(1:j-1)
+          includePatternList(i)=trim(adjustl(includeAttributeString(1:j-1)))
         else
-          includePatternList(i)=trim(includeAttributeString)
+          includePatternList(i)=trim(adjustl(includeAttributeString))
         endif
+        write(includeAttributeString,'(A)') includeAttributeString(j+2:len_trim(includeAttributeString))
+        write(message,'(A,I1,A)') trim(name)//' filter_pattern_include(',i,') = "'//trim(includePatternList(i))//'"'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        !write(message,'(I1,X,I1,X,I1,X,A)') i,n,j
+        !call MOSSCO_MessageAdd(message,includeAttributeString)
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       enddo
     endif
 
@@ -533,11 +550,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       if (allocated(itemTypeList)) deallocate(itemTypeList)
       if (allocated(itemNameList)) deallocate(itemNameList)
-      if (allocated(includePatternList)) deallocate(includePatternList)
-      if (allocated(excludePatternList)) deallocate(excludePatternList)
 
       call nc%close()
     endif
+
+    if (allocated(includePatternList)) deallocate(includePatternList)
+    if (allocated(excludePatternList)) deallocate(excludePatternList)
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
