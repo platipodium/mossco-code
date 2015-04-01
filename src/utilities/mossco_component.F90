@@ -60,6 +60,7 @@ contains
     type(ESMF_Method_Flag)  :: method
     type(ESMF_Context_Flag) :: context
     type(ESMF_Config)       :: config
+    type(ESMF_Time)         :: startTime, stopTime
 
     rc_=ESMF_SUCCESS
 
@@ -92,20 +93,34 @@ contains
     if (vmIsPresent) then
       call ESMF_CplCompGet(cplComp, vm=vm, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_VmGet(vm, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call ESMF_VmGet(vm, rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !!> @todo: what todo with this information?
     endif
 
     !! Synchronize clock with parent clock if local clock is present
     call ESMF_ClockGet(parentClock, currTime=currTime_, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (clockIsPresent) then
+      call ESMF_ClockGet(clock, startTime=startTime, stopTime=stopTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (currTime_>stopTime) currTime_=stopTime
+
       call ESMF_ClockSet(clock, currTime=currTime_, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
+      !  call ESMF_TimePrint(startTime, options='string')
+      !  call ESMF_TimePrint(stopTime, options='string')
+      !  call ESMF_TimePrint(currTime_, options='string')
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !endif
 
       call ESMF_ClockGet(clock, currTime=currTime_, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_TimeGet(currTime_,timeStringISOFrac=timestring)
