@@ -115,6 +115,10 @@ end if
   amounts(:,:)= amount
   This%StateVar%amount = amounts
   nullify (This%StateVar%intensity)
+else
+
+    write (*,*) 'Warning! no units has been defined in macrofauna data file. This leads to '// ,&
+               'assumption of no biological effect on the sediment transport.'
 
  end if
 
@@ -166,7 +170,7 @@ logical                   :: opnd, exst
 
 if (This%StateVar%units == '-') then
 
-  deallocate (This%StateVar%amount)
+  deallocate (This%StateVar%intensity)
 
 elseif  (This%StateVar%units == 'gCm-2') then
 

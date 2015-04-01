@@ -76,29 +76,29 @@ integer                          :: i,j
         if (Mbalthica%intensity(i,j) == 0.0_fp ) then
 
          fcr_macrofauna = 1.0
-
+         exit
         else
 
          fcr_macrofauna (i,j)= 0.0016 * log (Mbalthica%intensity(i,j) * Mbalthica%intensity(i,j)) &
                             & -0.085  * log (Mbalthica%intensity(i,j)) +1.0    ! Knaapen et al (2003)
-write (*,*) ' in shearfunction mbalthica%intesnity = ',Mbalthica%intensity(i,j)
+!write (*,*) ' in shearfunction mbalthica%intesnity = ',Mbalthica%intensity(i,j)
         endif
 
     elseif (trim(Mbalthica%units) == 'gCm-2' ) then
          if (Mbalthica%amount(i,j) == 0.0_fp ) then
 
           fcr_macrofauna = 1.0
-
+          exit
          else                                      ! Borsje et al (2008), digitalized graphics
 
-          fcr_macrofauna = -0.15 * log (Mbalthica%amount(i,j)) + 0.978
- write (*,*) ' in shearfunction mbalthica%amount = ',Mbalthica%amount(i,j)
+          fcr_macrofauna (i,j) = -0.15 * log (Mbalthica%amount(i,j)) + 0.978
+ !write (*,*) ' in shearfunction mbalthica%amount = ',Mbalthica%amount(i,j)
          endif
-         exit
+         
     else if (trim(Mbalthica%units) == '' ) then
 
       fcr_macrofauna = 1.0
-
+      
       write (*,*) ' WARNING!! Missing unit. The Macoma balthica effect on critical bed shear stress can at the'// &
                   ' moment be calculated base on intensity (refer to Knaapen et al. (2003)),'// &
                   ' therefore, without unit this effect is ignored.'
