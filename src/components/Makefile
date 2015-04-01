@@ -124,6 +124,14 @@ libmossco_sediment_driver:
 libmossco_getm_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_getm
 
+netcdf_input_component.o: netcdf_input_component.F90
+	@echo "Compiling $<"
+	$(F90) $(GETM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+netcdf_component.o: netcdf_component.F90
+	@echo "Compiling $<"
+	$(F90) $(GETM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
 getm_component.o: getm_component.F90
 	@echo "Compiling $<"
 	$(F90) $(GETM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
