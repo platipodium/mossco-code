@@ -117,8 +117,8 @@ end if
   nullify (This%StateVar%intensity)
 else
 
-    write (*,*) 'Warning! no units has been defined in macrofauna data file. This leads to '// ,&
-               'assumption of no biological effect on the sediment transport.'
+    write (*,*) 'Warning! no units has been defined in macrofauna data file. This leads to '
+    write (*,*) 'assumption of no biological effect on the sediment transport.'
 
  end if
 
