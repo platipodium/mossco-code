@@ -20,7 +20,7 @@ authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli',
   'Mohammed Hassan Nasermoaddeli':'Hassan Nasermoaddeli','Hassan Nasermoaddeli':
   'Hassan Nasermoaddeli','Knut':'Knut Klingbeil','Kai Wirtz':'Kai Wirtz',
-  'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus'}
+  'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus','Onur':'Onur Kerimoglu'}
 
 # Get committer names from one of the output gnuplot files
 with open('../gitstats/lines_of_code_by_author.plot', 'r') as fid:
