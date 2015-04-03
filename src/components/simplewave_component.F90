@@ -437,7 +437,7 @@ module simplewave_component
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR) :: name
-    type(ESMF_Time)        :: currTime, stopTime
+    type(ESMF_Time)        :: currTime
     integer                :: localrc
 
     type(ESMF_Clock)        :: myClock
@@ -455,7 +455,6 @@ module simplewave_component
 
     call ESMF_GridCompGet(gridcomp, clock=myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call ESMF_ClockGetNextTime(clock,nextTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -491,15 +490,7 @@ module simplewave_component
       end do
     end do
 
-    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (stopTime>currTime) then
-      call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+    call ESMF_ClockAdvance(myClock, timeStep=nextTime-currTime, rc=localrc)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
