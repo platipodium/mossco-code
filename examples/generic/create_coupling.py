@@ -1005,7 +1005,7 @@ fid.write('''
 
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     type(ESMF_Alarm)        :: childAlarm
-    type(ESMF_Clock)        :: childClock, clock
+    type(ESMF_Clock)        :: childClock, myClock, clock
     logical                 :: clockIsPresent
     type(ESMF_State)        :: impState, expState
     type(ESMF_Field)        :: field
@@ -1029,7 +1029,7 @@ fid.write('''
     call MOSSCO_CompEntry(gridComp, parentClock, myName, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.allocated(alarmList)) allocate(alarmList(20))
@@ -1063,7 +1063,7 @@ fid.write('''
     !  if (.not.hasPhaseZero) cycle
     !enddo
 
-    call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
+    call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
       alarmCount=alarmCount, rc=localrc)
 
     if (allocated(alarmList)) then
@@ -1078,7 +1078,7 @@ fid.write('''
     !! Run until the clock's stoptime is reached
     do
 
-      call ESMF_ClockGet(clock,currTime=currTime, stopTime=stopTime, rc=localrc)
+      call ESMF_ClockGet(myClock,currTime=currTime, stopTime=stopTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (currTime>stopTime) then
@@ -1201,8 +1201,9 @@ fid.write('''
 ''')
 
 fid.write('''
+!         Note (KK): myClock should be replaced here!!!
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
-            exportState=expState, clock=clock, rc=localrc)
+            exportState=expState, clock=myClock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_LogFlush()
 
@@ -1263,7 +1264,7 @@ fid.write('''
         !! from local clock into alarmList, find those that contain the string "cplAlarm"
         !! and look for the earliest ringtime in all coupling alarms.  Save that in the
         !! ringTime
-        call ESMF_ClockGet(clock, stopTime=ringTime, rc=localrc)
+        call ESMF_ClockGet(myClock, stopTime=ringTime, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         do j=1,alarmCount
@@ -1306,8 +1307,9 @@ fid.write('''
         !! phases
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
+!         Note (KK): myClock must be replaced here!!!
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
-            exportState=gridExportStateList(i), clock=clock, phase=phase, rc=localrc)
+            exportState=gridExportStateList(i), clock=myClock, phase=phase, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           !call ESMF_LogFlush()
@@ -1329,7 +1331,7 @@ fid.write('''
       !! Now that all child components have been started, find out the minimum time
       !! to the next coupling and use this as a time step for my own clock Advance
 
-      call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
+      call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
         alarmCount=alarmCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1337,7 +1339,7 @@ fid.write('''
         !call ESMF_LogWrite('No alarm found in '//trim(myName), ESMF_LOGMSG_WARNING)
         timeInterval=stopTime-currTime
       else
-        call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
+        call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmList=alarmList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1365,11 +1367,11 @@ fid.write('''
 
       !> Set new time interval and advance clock, stop if end of
       !! simulation reached
-      call ESMF_ClockSet(clock, timeStep=timeInterval, rc=localrc)
+      call ESMF_ClockSet(myClock, timeStep=timeInterval, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_ClockAdvance(clock, rc=localrc)
+      call ESMF_ClockAdvance(myClock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (ESMF_ClockIsStopTime(clock, rc=localrc)) exit
+      if (ESMF_ClockIsStopTime(myClock, rc=localrc)) exit
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
