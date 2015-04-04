@@ -27,10 +27,11 @@ where vars are expected to have
 import numpy as np
 import netCDF4,pickle,netcdftime,os,re,sys
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 from mpl_toolkits.basemap import Basemap
 
 
-def do_2Dplotmap(fname, varnames,timeint,setup):
+def do_2Dplotmap(fname, varnames,timeint,setup,method):
 
     proj=getproj(setup)
 
@@ -96,7 +97,11 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
             if len(v.shape)==3: #directly plot the variable
                 vI=v[i,:,:]
                 suffix=''
-            elif len(v.shape)==4: #calculate vertical integral or average
+                filename=fname.split('.nc')[0]+'_'+varname+suffix+'_'+ str(tvec[i].date()) + '.png' #pdf
+                titlestr=suffix+' '+longname+'\n'+str(tvec[i].date())
+                plot2Dmap(x,y,vI,varname,proj,setup,filename,titlestr,cbarstr=unitstr)
+
+            elif len(v.shape)==4 and (method=='int' or method=='avg'):
 
                 #try to retrieve the layer height of the corresponding domain
                 try:
@@ -104,72 +109,103 @@ def do_2Dplotmap(fname, varnames,timeint,setup):
                         lh=ncv['layer_height_in_water'][i,:,:,:] #doesn't exist!?
                     elif vardom=='soil':
                         lh=ncv['layer_height_in_soil'][i,:,:,:]
-                    unitstr.replace('m**3','m**2')
-                    suffix='-integral'
                 except:
                     #if not, we'll calculate the column-average, not weighted by layer thickness
                     lh=1.0/v.shape[1]*np.ones((v.shape[1],v.shape[2],v.shape[3]))
                     print '(!)',
-                    suffix='-unweighted-average'
+                    method='unweighted-average'
                 #integrate
-                vI=0
-                for j in range(1,v.shape[1]):
-                    vI=vI+v[i,j,:,:]*lh[j,:,:]
+                vI=0;lhI=0
+                for k in range(1,v.shape[1]):
+                    lhI=lhI+lh[k,:,:]
+                    vI=vI+v[i,k,:,:]*lh[k,:,:]
+                if method=='avg':
+                    vI=vI/lhI
+                    suffix='average'
+                elif method=='unweighted-average':
+                    suffix='unweighted-average'
+                elif method=='int':
+                    unitstr.replace('m**3','m**2')
+                    suffix='integral'
 
-            #plot
-            #proj.contourf(x,y,h,levels=range(0,255,25),extend='both',cmap=cm.YlGnBu)
-            #proj.contourf(x,y,h[i,:,:],extend='both',levels=np.arange(0.0,1.0,0.1),cmap=cm.YlOrRd) #cm.YlGnBu
-            clim=[np.amin(vI),np.amax(vI)] #[np.amax(vI)*.8,np.amax(vI)] #
-            pcf=proj.pcolormesh(x,y,vI,cmap=plt.get_cmap('YlOrRd'),vmin=clim[0], vmax=clim[1])
+                filename=fname.split('.nc')[0]+'_'+varname+'-'+suffix+'_'+ str(tvec[i].date())+ '.png' #pdf
+                titlestr=suffix+' '+longname+'\n'+str(tvec[i].date())
+                plot2Dmap(x,y,vI,varname,proj,setup,filename,titlestr,cbarstr=unitstr)
 
-            plt.title(suffix+' '+longname+'\n'+str(tvec[i].date()))
 
-            #setup specific features
-            if setup in ['NSBS','NSBSfull','SNS']:
-                #coastlines, etc
-                #proj.drawcoastlines(color=(0.7,0.7,0.7),linewidth=0.2)
-                #proj.fillcontinents((0.7,0.7,0.7),lake_color=(0.9,0.9,1.0))
-                proj.drawcoastlines(color=(0.3,0.3,0.3),linewidth=0.5)
-                proj.fillcontinents((1.0,1.0,1.0),lake_color=(0.9,0.9,1.0))
-                plt.gca().patch.set_facecolor((0.9,0.9,1.0))
-                #retrieve the axes position to set the colorbar position
-                pos1 = plt.gca().get_position()
+            elif len(v.shape)==4 and method=='each':
+                levind=[0,v.shape[1]-1] #only for bottom and surface
+                for k in levind:
+                    #lev=ncv['level'][:] #todo: more accurate information about the layer
 
-            if setup=='NSBS':
-                #some annotation
-                mark_stats(proj, lang='en', stations=True, seas=True)
-                #colorbar
-                poscbar = [pos1.x0 + pos1.width/3+0.1, pos1.y0+0.18,  pos1.width/2, 0.03]
-                cbaxes=f.add_axes(poscbar)
-                plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
-            elif setup=='NSBSfull':
-                #some annotation
-                #mark_stats(proj, lang='en', stations=True, seas=True)
-                #colorbar
-                poscbar = [pos1.x0 + pos1.width/3, pos1.y0+0.08,  pos1.width/2, 0.03]
-                cbaxes=f.add_axes(poscbar)
-                plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
-            elif setup=='SNS':
-                #colorbar
-                poscbar = [pos1.x0 + pos1.width/2+0.1, pos1.y0+0.18,  pos1.width/2.5, 0.03]
-                cbaxes=f.add_axes(poscbar)
-                plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
-            elif setup=='deep_lake':
-                #colorbar
-                cbaxes=plt.colorbar(pcf)
+                    vI=v[i,k,:,:]
+                    suffix='L'+str(levind[k])
+                    suffixtit=suffix #+'('+str(lev[k])+')'
+                    print '-L'+str(levind[k]),
 
-            #set colorbar title (todo: test for deep lake)
-            cbartitle=unitstr
-            cbaxes.set_title(cbartitle,size=12.)
+                    filename=fname.split('.nc')[0]+'_'+varname+'-'+suffix+'_'+ str(tvec[i].date())+ '.png' #pdf
+                    titlestr=suffixtit+' '+longname+'\n'+str(tvec[i].date())
+                    plot2Dmap(x,y,vI,varname,proj,setup,filename,titlestr,cbarstr=unitstr)
 
-            filename=fname.split('.nc')[0]+'_'+varname+suffix+'_'+ str(tvec[i].date()) + '.png' #pdf
-            plt.savefig(filename,dpi=300)
-            #s=show()
-            plt.close(f)
         print '.'
-
     #close the netcdf file
     nc.close()
+
+def plot2Dmap(x,y,v,varname,proj,setup,filename,titlestr,cbarstr):
+    f = plt.figure(figsize=(10,6), dpi=96)
+    f.subplots_adjust(left=0.0,right=1.0,bottom=0.0,top=.9)
+
+    #plot
+    if varname in ['Phytplankton_Carbon_phyC_in_water']:
+        clim=[1e-1,np.amax(v)] #[np.amax(v)*.8,np.amax(v)] #
+        pcf=proj.pcolormesh(x,y,v,cmap=plt.get_cmap('PuBuGn'),vmin=clim[0], vmax=clim[1],norm=LogNorm(clim[0], clim[1]))
+    else:
+        clim=[np.amin(v),np.amax(v)] #[np.amax(v)*.8,np.amax(v)] #
+        pcf=proj.pcolormesh(x,y,v,cmap=plt.get_cmap('YlOrRd'),vmin=clim[0], vmax=clim[1])
+
+
+    plt.title(titlestr)
+
+    #setup specific features
+    if setup in ['NSBS','NSBSfull','SNS']:
+        #coastlines, etc
+        #proj.drawcoastlines(color=(0.7,0.7,0.7),linewidth=0.2)
+        #proj.fillcontinents((0.7,0.7,0.7),lake_color=(0.9,0.9,1.0))
+        proj.drawcoastlines(color=(0.3,0.3,0.3),linewidth=0.5)
+        proj.fillcontinents((1.0,1.0,1.0),lake_color=(0.9,0.9,1.0))
+        plt.gca().patch.set_facecolor((0.9,0.9,1.0))
+        #retrieve the axes position to set the colorbar position
+        pos1 = plt.gca().get_position()
+
+    if setup=='NSBS':
+        #some annotation
+        #mark_stats(proj, lang='en', stations=True, seas=True)
+        #colorbar
+        poscbar = [pos1.x0 + pos1.width/3+0.1, pos1.y0+0.18,  pos1.width/2, 0.03]
+        cbaxes=f.add_axes(poscbar)
+        plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
+    elif setup=='NSBSfull':
+        #some annotation
+        #mark_stats(proj, lang='en', stations=True, seas=True)
+        #colorbar
+        poscbar = [pos1.x0 + pos1.width/3, pos1.y0+0.08,  pos1.width/2, 0.03]
+        cbaxes=f.add_axes(poscbar)
+        plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
+    elif setup=='SNS':
+        #colorbar
+        poscbar = [pos1.x0 + pos1.width/2+0.1, pos1.y0+0.18,  pos1.width/2.5, 0.03]
+        cbaxes=f.add_axes(poscbar)
+        plt.colorbar(pcf, cax=cbaxes,orientation='horizontal')
+    elif setup=='deep_lake':
+        #colorbar
+        cbaxes=plt.colorbar(pcf)
+
+    #set colorbar title
+    cbaxes.set_title(cbarstr,size=12.)
+
+    plt.savefig(filename,dpi=300)
+    #s=show()
+    plt.close(f)
 
 def getproj(setup):
 
@@ -281,8 +317,7 @@ if __name__=='__main__':
     if len(sys.argv)>1:
         fname=sys.argv[1]
     else:
-        #fname='/home/onur/mounts/odata/mossco-results/sns/maecsomex_kw3fzt/mossco_gffn_xs.nc'
-        fname='/home/onur/WORK/projects/NSBS/setups/mossco/NSBS/juropa/mossco_gffn_xs.nc'
+        fname='/home/onur/WORK/projects/NSBS/setups/mossco/NSBS/juropa/res/3-0-kw1-noPARA/mossco_gffn_xs.nc'
         #fname='soil_mossco_gffn_stitched.nc'
 
     if len(sys.argv)>2:
@@ -292,7 +327,8 @@ if __name__=='__main__':
                   #'Photosynthetically_Active_Radiation_dPAR_in_water',
                   'Phytplankton_Carbon_phyC_in_water',
                   'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water',
-                  'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water']
+                  'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'
+                ]
         #varnames=['denitrification_rate_in_soil', 'dissolved_oxygen_in_soil']
 
     if len(sys.argv)>3:
@@ -306,4 +342,10 @@ if __name__=='__main__':
         setup='NSBSfull'
         #setup='deep_lake'
 
-    do_2Dplotmap(fname,varnames,timeint,setup)
+    if len(sys.argv)>5:
+        method=sys.argv[5]
+    else:
+        method='each' #'avg','int','each'
+        #setup='deep_lake'
+
+    do_2Dplotmap(fname,varnames,timeint,setup,method)
