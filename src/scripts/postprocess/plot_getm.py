@@ -87,7 +87,6 @@ def do_2Dplotmap(fname, varnames,timeint,setup,method):
             print ': identified as soil variable. plotting scene#:',
             vardom='soil'
 
-        levind=[0,1]
         for i in tind:
             print str(i),
 
@@ -106,20 +105,23 @@ def do_2Dplotmap(fname, varnames,timeint,setup,method):
                     #layer height of the corresponding domain
                     lhI=lhI+lh[i,k,:,:]
                     vI=vI+v[i,k,:,:]*lh[i,k,:,:]
-                if method=='int': #divide by total height
-                    suffix='integral'
-                    unitstr.replace('m**3','m**2')
-                elif method=='avg':
+                if method=='avg':
                     vI=vI/lhI
                     suffix='average'
+                elif method=='unweighted-average':
+                    suffix='unweighted-average'
+                elif method=='int': #divide by total height
+                    suffix='integral'
+                    unitstr.replace('m**3','m**2')
 
                 filename=fname.split('.nc')[0]+'_'+varname+'-'+suffix+'_'+ str(tvec[i].date()) + '.png' #pdf
                 titlestr=suffix+' '+longname+'\n'+str(tvec[i].date())
                 plot2Dmap(x,y,vI,proj,setup,filename,titlestr,cbarstr=unitstr)
 
             elif len(v.shape)==4 and method=='each':
+                lev=ncv['level'][:]
+                levind=[0,1]
                 for k in levind:
-                    lev=ncv['level'][:]
                     vI=v[i,k,:,:]
                     suffix='L'+str(levind[k])
                     suffixtit=suffix+'('+str(lev[k])+')'
