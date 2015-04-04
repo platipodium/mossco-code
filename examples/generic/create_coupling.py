@@ -1288,8 +1288,9 @@ fid.write('''
         call ESMF_ClockGet(childClock, timeStep=timeInterval, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (timeInterval>ringTime-currTime) then
-          call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          !call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=localrc)
+          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_LogWrite(trim(myName)//" adaptive timestep must be implemented in "//trim(compName),ESMF_LOGMSG_WARNING)
         endif
 
         timeInterval=ringTime-currTime
