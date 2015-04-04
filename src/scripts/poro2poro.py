@@ -67,8 +67,8 @@ def write_poro_ncdf(filename,lon,lat,value):
   var[:] = 0
 
   var=nc.createVariable('porosity_at_soil_surface','f8',('time','lat','lon'))
-  var.long_name = "Porosity at soil surface"
-  var.units = "1" 
+  var.long_name = "Porosity"
+  var.units = "m^3/m^3" 
   var.valid_min = 0.0
   var.valid_max = 1.0
   var.missing_value = -1.0
