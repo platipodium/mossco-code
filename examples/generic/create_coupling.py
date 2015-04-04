@@ -1016,7 +1016,7 @@ fid.write('''
     character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
     integer(ESMF_KIND_I4)   :: itemCount, localrc
 
-    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName
+    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName, name1
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
@@ -1150,7 +1150,7 @@ fid.write('''
           write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
-          myName=trim(alarmName(1:index(alarmName,'--')-1))
+          name1=trim(alarmName(1:index(alarmName,'--')-1))
           otherName=trim(alarmName(index(alarmName,'--')+2:index(alarmName,'--cplAlarm')-1))
 
           do k=1,ubound(cplAlarmList,1)
@@ -1160,7 +1160,7 @@ fid.write('''
             endif
           enddo
 
-          write(message,'(A)') trim(timeString)//' '//trim(myName)//' ->'
+          write(message,'(A)') trim(timeString)//' '//trim(name1)//' ->'
           if (trim(cplName) /= 'link') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
