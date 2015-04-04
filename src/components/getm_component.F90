@@ -53,6 +53,7 @@ module getm_component
   logical                    :: noKindMatch
   integer(ESMF_KIND_I4),pointer :: maskC(:,:)=>NULL(),maskX(:,:)=>NULL()
   integer(ESMF_KIND_I4),dimension(:,:,:),allocatable :: maskC3D,maskX3D
+  REALTYPE,dimension(:,:),allocatable                :: cosconv,sinconv
   real(ESMF_KIND_R8),pointer :: xc1D(:)  =>NULL(),yc1D(:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: xx1D(:)  =>NULL(),yx1D(:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: xc2D(:,:)=>NULL(),yc2D(:,:)=>NULL()
@@ -799,7 +800,7 @@ module getm_component
    use domain         ,only: az,ax
    use domain         ,only: xcord,ycord,xx,yx,lonx,latx
    use domain         ,only: xxcord,yxcord,xc,yc,lonc,latc
-   use domain         ,only: grid_type
+   use domain         ,only: grid_type,convc
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
@@ -808,7 +809,8 @@ module getm_component
    use variables_3d   ,only: T
 #endif
 #endif
-   use meteo          ,only: metforcing,met_method,METEO_FROMEXT,calc_met
+   use meteo          ,only: metforcing,met_method,calc_met
+   use meteo          ,only: METEO_CONST,METEO_FROMFILE,METEO_FROMEXT
    use meteo          ,only: u10,v10,swr_=>swr
    use waves          ,only: waveforcing_method,NO_WAVES
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
@@ -824,6 +826,8 @@ module getm_component
    REALTYPE,dimension(:,:),pointer :: p2d
    REALTYPE :: getmreal
    integer  :: k,klen
+   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+   REALTYPE, parameter :: deg2rad=pi/180
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -884,10 +888,6 @@ module getm_component
 #endif
       end if
       if (metforcing) then
-         if (.not. (calc_met .and. met_method.eq.METEO_FROMEXT) ) then
-            allocate(windU(E2DFIELD))
-            allocate(windV(E2DFIELD))
-         end if
          allocate(swr(E2DFIELD))
       end if
       if (waveforcing_method .ne. NO_WAVES) then
@@ -952,10 +952,6 @@ module getm_component
 #endif
       end if
       if (metforcing) then
-         if (.not. (calc_met .and. met_method.eq.METEO_FROMEXT) ) then
-            windU => u10
-            windV => v10
-         end if
          swr => swr_
       end if
       if (waveforcing_method .ne. NO_WAVES) then
@@ -1004,6 +1000,22 @@ module getm_component
    else
       allocate(Ubot(E2DFIELD))
       allocate(Vbot(E2DFIELD))
+   end if
+
+   if (metforcing) then
+      if (calc_met .or. met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
+         if (noKindMatch .or. grid_type.ne.2) then
+            allocate(windU(E2DFIELD))
+            allocate(windV(E2DFIELD))
+         else
+            windU => u10
+            windV => v10
+         end if
+         allocate(cosconv(E2DFIELD))
+         allocate(sinconv(E2DFIELD))
+         cosconv = cos( deg2rad*convc )
+         sinconv = sin( deg2rad*convc )
+      end if
    end if
 
    if (waveforcing_method .ne. NO_WAVES) then
@@ -1738,10 +1750,6 @@ module getm_component
       end if
 #endif
       if (metforcing) then ! still required...
-         if (met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
-            windU = u10
-            windV = v10
-         end if
          swr = swr_
       end if
       if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
@@ -1850,6 +1858,17 @@ module getm_component
    end if
 #endif
 
+   if (met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
+      if (noKindMatch .or. grid_type.ne.2) then
+         windU =  cosconv*u10 + sinconv*v10
+         windV = -sinconv*u10 + cosconv*v10
+      else
+!        Note (KK): update pointer because of pointer swap within GETM
+         windU => u10
+         windV => v10
+      end if
+   end if
+
    if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
       waveDir = atan2(sinwavedir,coswavedir)
    end if
@@ -1876,8 +1895,9 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
+   use domain         ,only: grid_type
    use meteo          ,only: metforcing,met_method,METEO_FROMEXT,calc_met
-   use meteo          ,only: u10,v10
+   use meteo          ,only: u10,v10,new_meteo
    use waves          ,only: waveforcing_method,WAVES_FROMEXT,new_waves
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
@@ -1900,22 +1920,23 @@ module getm_component
    write(debug,*) 'getmCmp_update_importState() # ',Ncall
 #endif
 
-   if (noKindMatch) then
-      if (metforcing) then ! still required...
-         if (calc_met .and. met_method.eq.METEO_FROMEXT) then
-            u10 = windU
-            v10 = windV
+   if (met_method .eq. METEO_FROMEXT) then
+      new_meteo = .true. ! KK-TODO: should be set by coupler
+      if (calc_met) then
+         if (noKindMatch .or. grid_type.ne.2) then
+            u10 = cosconv*windU - sinconv*windV
+            v10 = sinconv*windU + cosconv*windV
          end if
-      end if
-      if (waveforcing_method .eq. WAVES_FROMEXT) then
-         waveH_   = waveH
-         waveT_   = waveT
-         waveK_   = waveK
       end if
    end if
 
    if (waveforcing_method .eq. WAVES_FROMEXT) then
       new_waves = .true. ! KK-TODO: should be set by coupler
+      if (noKindMatch) then
+         waveH_ = waveH
+         waveT_ = waveT
+         waveK_ = waveK
+      end if
       coswavedir = cos(waveDir)
       sinwavedir = sin(waveDir)
    end if
