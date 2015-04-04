@@ -1303,17 +1303,24 @@ fid.write('''
           ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
+!       TODO: avoid repeated re-creation of this clock!
+        clock = ESMF_ClockCreate(startTime=currTime,timeStep=timeInterval,runTimeStepCount=1,name=trim(compName)//"ControlClock", rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         !! Loop over all run phases, disregarding any action that could be taken between
         !! phases
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
 !         Note (KK): myClock must be replaced here!!!
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
-            exportState=gridExportStateList(i), clock=myClock, phase=phase, rc=localrc)
+            exportState=gridExportStateList(i), clock=clock, phase=phase, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           !call ESMF_LogFlush()
         enddo
+
+        call ESMF_ClockDestroy(clock, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
