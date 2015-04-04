@@ -1026,7 +1026,7 @@ fid.write('''
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, myName, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
@@ -1082,7 +1082,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (currTime>stopTime) then
-        call ESMF_LogWrite('Clock out of scope in '//trim(compName), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite('Clock out of scope in '//trim(myName), ESMF_LOGMSG_ERROR)
         call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
       endif
 
@@ -1237,7 +1237,7 @@ fid.write('''
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(name)//' now at '//trim(timestring)//', cycling ...'
+          write(message,'(A)') trim(myName)//' now at '//trim(timestring)//', cycling ...'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           cycle
@@ -1327,15 +1327,13 @@ fid.write('''
 
       !! Now that all child components have been started, find out the minimum time
       !! to the next coupling and use this as a time step for my own clock Advance
-      call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
         alarmCount=alarmCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (alarmCount==0) then
-        !call ESMF_LogWrite('No alarm found in '//trim(name), ESMF_LOGMSG_WARNING)
+        !call ESMF_LogWrite('No alarm found in '//trim(myName), ESMF_LOGMSG_WARNING)
         timeInterval=stopTime-currTime
       else
         call ESMF_ClockGetAlarmList(clock, alarmListFlag=ESMF_ALARMLIST_ALL, &
@@ -1358,7 +1356,7 @@ fid.write('''
       !> Log current and next ring time
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      write(message,'(A)') trim(timeString)//' '//trim(name)//' stepping to'
+      write(message,'(A)') trim(timeString)//' '//trim(myName)//' stepping to'
       call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       write(message,'(A)') trim(message)//' '//trim(timeString)
