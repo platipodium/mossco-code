@@ -1329,9 +1329,10 @@ fid.write('''
           !! This child component did not advance its clock in its Run() routine
           !! We do that here
           call ESMF_LogWrite(trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite("... but this assumption is weird - skipping further action!",ESMF_LOGMSG_WARNING)
 
-          call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          !call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
+          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       enddo
 
