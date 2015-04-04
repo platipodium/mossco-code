@@ -1016,7 +1016,7 @@ fid.write('''
     character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
     integer(ESMF_KIND_I4)   :: itemCount, localrc
 
-    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, otherName, name1
+    character(len=ESMF_MAXSTR) :: message, compName, name, alarmName, name1, name2
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
@@ -1151,7 +1151,7 @@ fid.write('''
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           name1=trim(alarmName(1:index(alarmName,'--')-1))
-          otherName=trim(alarmName(index(alarmName,'--')+2:index(alarmName,'--cplAlarm')-1))
+          name2=trim(alarmName(index(alarmName,'--')+2:index(alarmName,'--cplAlarm')-1))
 
           do k=1,ubound(cplAlarmList,1)
             if (cplAlarmList(k) == alarmList(j)) then
@@ -1166,7 +1166,7 @@ fid.write('''
           else
             write(message,'(A)') trim(message)//' ('//trim(cplName)//') ->'
           endif
-          write(message,'(A)') trim(message)//' '//trim(otherName)
+          write(message,'(A)') trim(message)//' '//trim(name2)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           call ESMF_GridCompGet(gridCompList(i), exportState=impState, rc=localrc)
@@ -1176,11 +1176,11 @@ fid.write('''
           do k=1, ubound(gridCompList,1)
               call ESMF_GridCompGet(gridCompList(k), name=name, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-              if (trim(name)==trim(otherName)) exit
+              if (trim(name)==trim(name2)) exit
           enddo
 
-          if (trim(name) /= trim(otherName)) then
-            write(message,'(A)') 'Did not find component '//trim(otherName)
+          if (trim(name) /= trim(name2)) then
+            write(message,'(A)') 'Did not find component '//trim(name2)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
           endif
