@@ -326,7 +326,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               call ESMF_StateAddReplace(exportState,(/importFieldBundle/), rc=localrc)
             else
               write(message,'(A)') '    skipped existing fieldbundle '//trim(itemNameList(i))
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+              !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             endif
           endif
           if (exportItemCount>1) then
