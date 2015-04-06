@@ -443,7 +443,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (importGrid .ne. exportGrid) then
-              write(message,'(A)') ' grids do not match for '//trim(itemNameList(i))
+              write(message,'(A)') trim(name)//' grids do not match for '//trim(itemNameList(i))
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
               cycle
             end if
