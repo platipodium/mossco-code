@@ -506,6 +506,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (fieldCount==0) then
           call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
           call ESMF_FieldBundleDestroy(exportFieldBundle, rc=localrc)
+          write(message,'(A)') trim(name)//' replaced empty fieldBundle '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
         endif
 
