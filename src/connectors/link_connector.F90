@@ -531,6 +531,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           if (itemType == ESMF_STATEITEM_FIELD) then
             call ESMF_StateGet(importState, trim(fieldNameList(j)), importField, rc=localrc)
             call ESMF_FieldBundleAddReplace(exportFieldBundle, (/importField/), rc=localrc)
+            write(message,'(A)') trim(name)//' replaced empty field '//trim(fieldNameList(j))//' in fieldBundle '//trim(itemNameList(i))//' by field from state'
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
         enddo
         deallocate(fieldList, fieldNameList)
