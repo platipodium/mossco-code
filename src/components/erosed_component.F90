@@ -45,10 +45,14 @@ module erosed_component
   !! @todo hn: read CF documnetation for correct name of this
   !size_classes_of_upward_flux_of_pim_at_bottom
 
+  type :: ptrarray2D
+     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr=>NULL()
+  end type ptrarray2D
+  type(ptrarray2D),dimension(:),allocatable :: size_classes_of_upward_flux_of_pim_at_bottom
+
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
   integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
   ! Dimensions (x,y,depth layer, fraction index)
-  real(ESMF_KIND_R8), dimension(:,:,:), pointer :: size_classes_of_upward_flux_of_pim_at_bottom
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
@@ -536,13 +540,7 @@ contains
         'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
 #endif
 
-    allocate (size_classes_of_upward_flux_of_pim_at_bottom(inum, jnum,nfrac))
-
-     do j=1,jnum
-       do i= 1, inum
-          size_classes_of_upward_flux_of_pim_at_bottom(i,j,:) = sink(:,inum*(j -1)+i)-sour(:,inum*(j -1)+i)
-       end do
-     end do
+    allocate (size_classes_of_upward_flux_of_pim_at_bottom(nfrac))
 
 !> not used fo export State, since sink,sour are used by bed module
 !    allocate (size_classes_of_downward_flux_of_pim_at_bottom(1,1,nfrac))
@@ -693,13 +691,14 @@ contains
     end type
     type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
 
-    type(ESMF_Field)  ,dimension(:),allocatable :: fieldlist
+    type(ESMF_Field)  ,dimension(:),allocatable :: fieldlist,spm_flux_fieldList
     type(ESMF_FieldBundle)                      :: fieldBundle
     integer(ESMF_KIND_I4)                       :: fieldCount
 
     real(ESMF_KIND_R8),dimension(:,:),pointer   :: ptr_f2=>null()
 
     integer :: n
+    integer,dimension(:),allocatable :: spm_flux_id
     logical :: isPresent
 
     call MOSSCO_CompEntry(gridComp, clock, name, currTime, localrc)
@@ -835,8 +834,61 @@ contains
 
     call ESMF_StateGet(exportState,"concentration_of_SPM_upward_flux_at_soil_surface",fieldBundle,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldcount .gt. 0) then
+      allocate(spm_flux_fieldList(fieldCount))
+      allocate(spm_flux_id(fieldCount))
+
+      call ESMF_FieldBundleGet(fieldBundle, fieldList=spm_flux_fieldList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do i=1,fieldCount
+        call ESMF_AttributeGet(spm_flux_fieldList(i), 'external_index', value=spm_flux_id(i), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      end do
+    end if
+
   do n=1,nfrac
-    ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(:,:,n)
+      i = -1
+      do j=1,fieldCount
+         if (spm_flux_id(j) .eq. external_idx_by_nfrac(n) ) then
+           i = j
+           exit
+         end if
+      end do
+      if (i .ne. -1) then
+        call ESMF_LogWrite(' export to external field concentration_of_SPM_upward_flux_at_soil_surface',ESMF_LOGMSG_INFO)
+        call ESMF_FieldGet(spm_flux_fieldList(i),status=status, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+          call ESMF_FieldGet(spm_flux_fieldList(i),farrayPtr=size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr,rc=rc)
+          if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+          if (.not. (      all(lbound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. (/   1,   1/) ) &
+                     .and. all(ubound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. (/inum,jnum/) ) ) ) then
+            call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+            call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          end if
+          if (.not. (      all(lbound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. totalLBound) &
+                     .and. all(ubound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. totalUBound) ) ) then
+            call ESMF_LogWrite(' field bounds do not match total domain',ESMF_LOGMSG_WARNING,ESMF_CONTEXT)
+          end if
+        else
+          call ESMF_LogWrite('incomplete field',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        end if
+      else
+        call ESMF_LogWrite(' export to internal field concentration_of_SPM_upward_flux_at_soil_surface',ESMF_LOGMSG_INFO)
+        allocate (size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(inum, jnum))
+        do j=1,jnum
+          do i= 1, inum
+            size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(i,j) = sink(n,inum*(j -1)+i)-sour(n,inum*(j -1)+i)
+          end do
+        end do
+        ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr
+
     field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
             name='concentration_of_SPM_upward_flux_at_soil_surface', rc=localrc)
     call ESMF_AttributeSet(field,'external_index',external_idx_by_nfrac(n), rc=localrc)
@@ -849,6 +901,9 @@ contains
 
     call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      end if
+
   end do
 
     call MOSSCO_CompExit(gridComp, localrc)
@@ -1246,7 +1301,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 #ifdef DEBUG
           write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
 #endif
-          size_classes_of_upward_flux_of_pim_at_bottom(i,j,l) = &
+          size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = &
           sour(l,nm) *1000.0_fp - min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
         !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
  !       write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
