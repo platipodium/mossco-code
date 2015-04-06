@@ -522,6 +522,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           if (isPresent) then
             call ESMF_FieldBundleGet(importFieldBundle, fieldNameList(j), field=importfield, rc=localrc)
             call ESMF_FieldBundleAddReplace(exportFieldBundle, (/importField/), rc=localrc)
+            write(message,'(A)') trim(name)//' replaced empty field in fieldBundle '//trim(itemNameList(i))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             cycle
           endif
 
