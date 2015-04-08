@@ -470,7 +470,8 @@ module mossco_netcdf
     integer                        :: ncStatus,esmfrc,rc_,varid,dimcheck=0
     integer                        :: dimids_1d(2), dimids_2d(3), dimids_3d(4), rank
     integer, dimension(:),pointer  :: dimids, tmpDimids
-    character(len=1), dimension(3) :: coordNames = (/'x','y','z'/)
+    type(ESMF_CoordSys_Flag)       :: coordSys
+    character(len=ESMF_MAXSTR), dimension(3) :: coordNames=(/'x','y','z'/)
     integer                        :: external_index=-1
     real(ESMF_KIND_R8)             :: mean_diameter, real8
     real(ESMF_KIND_R4)             :: real4
@@ -511,6 +512,18 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         dimids => self%grid_dimensions(grid)
+
+        call ESMF_GridGet(grid, coordSys=coordSys,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (coordSys == ESMF_COORDSYS_SPH_DEG) then
+          coordnames=(/'lon  ','lat  ','level'/)
+        elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
+          coordnames=(/'lon  ','lat  ','level'/)
+        else
+          coordnames=(/'x','y','z'/)
+        endif
+
       elseif (geomType==ESMF_GEOMTYPE_MESH) then
         !call ESMF_FieldGet(field,mesh=mesh,rc=esmfrc)
         !if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -532,9 +545,9 @@ module mossco_netcdf
       call replace_character(geomName, ' ', '_')
 
       if (ubound(dimids,1)>1) then
-        write(coordinates,'(A)') trim(geomName)//'_'//coordnames(ubound(dimids,1)-1)
+        write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(ubound(dimids,1)-1))
         do i=ubound(dimids,1)-2,1,-1
-          write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//coordnames(i)
+          write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(i))
         enddo
       endif
 
