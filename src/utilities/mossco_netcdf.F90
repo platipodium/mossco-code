@@ -1386,6 +1386,11 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       ncStatus = nf90_redef(self%ncid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter definition mode',ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       ncStatus = nf90_def_var(self%ncid, trim(varName), NF90_Int, coordDimids, varid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
@@ -1393,13 +1398,34 @@ module mossco_netcdf
       endif
       !! Write default attributes into netCDF
       ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(varName))
-      ncStatus = nf90_put_att(self%ncid,varid,'units',1)
-      ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-9999_ESMF_KIND_I4)
-      ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-9999_ESMF_KIND_I4)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute standard_name='//trim(varname),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      ncStatus = nf90_put_att(self%ncid,varid,'units','1')
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute units=1',ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       ncStatus = nf90_put_att(self%ncid,varid,'axis',axisNameList(i))
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute axis='//axisNameList(i),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       ncStatus = nf90_enddef(self%ncid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode',ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write data for variable'//trim(varname),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
     enddo
 
     if (allocated(coordDimids)) deallocate(coordDimids)
