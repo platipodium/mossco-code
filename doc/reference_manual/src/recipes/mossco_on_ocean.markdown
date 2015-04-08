@@ -27,18 +27,19 @@ This example also assumes that you have downloaded or `git clone`d MOSSCO into a
 	
 It is advisable to have `$MOSSCO_DIR` somewhere in your `/home` and `$MOSSCO_SETUPDIR` in your `/data` directory on ocean because of space restrictions (but not backup).
 
-## Downloading MOSSCO
+## Downloading MOSSCO and obtaining external sources
 
 	mkdir -p $MOSSCO_DIR
 	git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
+    make -C $MOSSCO_DIR external # to obtain getm/gotm/fabm
 	
+.. and the same for the setups
+
 	mkdir -p $MOSSCO_SETUPDIR
 	git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
+    make -C $MOSSCO_SETUPDIR external # to obtain editscenario
 
-## Obtaining external sources and compiling MOSSCO
+> if you want to enable debugging, you can set `$MOSSCO_FFLAGS`
 
-    cd $MOSSCO_DIR
-    make external # to obtain getm/gotm/fabm
-    make
-
+	export MOSSCO_FFLAGS="-g -C -check -traceback -check noarg_temp_created"
 
