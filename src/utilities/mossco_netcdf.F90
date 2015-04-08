@@ -875,7 +875,11 @@ module mossco_netcdf
     integer                       :: rc_
 
     ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
-    if (present(rc)) rc=ncStatus
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot create file '//trim(filename), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
     if (present(timeUnit)) then
       nc%timeUnit=trim(timeUnit)
       call nc%init_time(rc=rc_)
@@ -885,20 +889,50 @@ module mossco_netcdf
     endif
 
     ncStatus = nf90_redef(nc%ncid)
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot enter define mode for '//trim(filename), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute mossco_sha_key', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 
 #ifndef NO_ISO_FORTRAN_ENV
     !> @todo check cross-platform compatibility of the iso_fortran_env calls
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_version',compiler_version())
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute compile_compiler_version', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'compile_compiler_options',compiler_options())
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute compile_compiler_options', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 #endif
+
     call get_command(string)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_command_line',trim(string))
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_command_line', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
     call getcwd(string)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_working_directory',trim(string))
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_working_directory', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 #ifndef NO_ISO_FORTRAN_ENV
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_process_id',getpid())
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_process_id', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 #endif
     !> @todo check cross-platform compatibility of these gnu extensions
     call getlog(string)
@@ -906,14 +940,26 @@ module mossco_netcdf
     write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
 #endif
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_user',trim(string))
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_user', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
     call hostnm(string)
     ncStatus = nf90_put_att(nc%ncid,NF90_GLOBAL,'run_hostname',trim(string))
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write attribute run_hostname', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 
     ncStatus = nf90_enddef(nc%ncid)
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 
     nc%name=trim(filename)
-
-    return
+    if (present(rc)) rc=ESMF_SUCCESS
 
   end function mossco_netcdfCreate
 
@@ -1278,8 +1324,6 @@ module mossco_netcdf
 
       ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
-      ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
-      ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
       ncStatus = nf90_enddef(self%ncid)
 
       if (coordDimCount(i) == 1) then
@@ -1540,7 +1584,6 @@ module mossco_netcdf
     return
 
   end subroutine mossco_netcdf_coordinate_create
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_ungridded_dimension_id"
