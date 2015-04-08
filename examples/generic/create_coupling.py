@@ -1016,7 +1016,7 @@ fid.write('''
 
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
     type(ESMF_Alarm)        :: childAlarm
-    type(ESMF_Clock)        :: childClock, myClock, clock
+    type(ESMF_Clock)        :: childClock, myClock
     logical                 :: clockIsPresent
     type(ESMF_State)        :: impState, expState
     type(ESMF_Field)        :: field
@@ -1093,7 +1093,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (currTime>stopTime) then
-        call ESMF_LogWrite('Clock out of scope in '//trim(myName), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(myName)//' clock out of scope', ESMF_LOGMSG_ERROR)
         call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
       endif
 
@@ -1105,7 +1105,7 @@ fid.write('''
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (.not.clockIsPresent) then
-          call ESMF_LogWrite('Required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(myName)//' required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
           call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
@@ -1212,9 +1212,8 @@ fid.write('''
 ''')
 
 fid.write('''
-!         Note (KK): myClock should be replaced here!!!
           call ESMF_CplCompRun(cplCompList(l), importState=impState, &
-            exportState=expState, clock=myClock, rc=localrc)
+            exportState=expState, clock=controlClock, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_LogFlush()
 
@@ -1229,7 +1228,7 @@ fid.write('''
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (.not.clockIsPresent) then
-          call ESMF_LogWrite('Required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(myName)//' required clock not found in '//trim(compName), ESMF_LOGMSG_ERROR)
           call ESMF_FINALIZE(endflag=ESMF_END_ABORT, rc=localrc)
         endif
 
@@ -1313,26 +1312,23 @@ fid.write('''
 
         write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
           ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
 
-!       TODO: avoid repeated re-creation of this clock!
-        clock = ESMF_ClockCreate(startTime=currTime,timeStep=timeInterval,runTimeStepCount=1,name=trim(compName)//"ControlClock", rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !! Change the controlClock with updated currTime and timeStep
+        call ESMF_ClockSet(controlClock, currTime=currTime, timeStep=timeInterval, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !! Loop over all run phases, disregarding any action that could be taken between
         !! phases
         do phase=1,gridCompPhaseCountList(i)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
-!         Note (KK): myClock must be replaced here!!!
           call ESMF_GridCompRun(gridCompList(i),importState=gridImportStateList(i),&
-            exportState=gridExportStateList(i), clock=clock, phase=phase, rc=localrc)
+            exportState=gridExportStateList(i), clock=controlClock, phase=phase, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           !call MOSSCO_GridCompFieldsTable(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i),rc=localrc)
           !call ESMF_LogFlush()
         enddo
-
-        call ESMF_ClockDestroy(clock, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_ClockGet(childClock, currTime=time, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1340,7 +1336,7 @@ fid.write('''
         if (time == currTime) then
           !! This child component did not advance its clock in its Run() routine
           !! We do that here
-          call ESMF_LogWrite(trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite(trim(myName)//' '//trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
           call ESMF_LogWrite("... but this assumption is weird - skipping further action!",ESMF_LOGMSG_WARNING)
 
           !call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
