@@ -336,6 +336,7 @@ fid.write('''
   type(ESMF_State), dimension(:),  save, allocatable :: gridExportStateList, gridImportStateList
   type(ESMF_Alarm), dimension(:),  save, allocatable :: cplAlarmList
   type(ESMF_Clock), dimension(:),  save, allocatable :: gridCompClockList, cplCompClockList
+  type(ESMF_Clock), save                             :: controlClock
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNameList, cplCompNameList, cplNames
 ''')
 
@@ -457,6 +458,16 @@ fid.write('''
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! Create a control clock that is later used for deteriming timesteps to individual calls of coupled components
+    !! this is a global variable, might change later
+    controlClock = ESMF_ClockCreate(clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    call ESMF_ClockSet(controlClock, name=trim(myName)//'Control')    
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate the fields for all gridded components and their names
 ''')
@@ -1486,11 +1497,17 @@ fid.write('''
     if (allocated(gridImportStateList)) deallocate(gridImportStateList)
     if (allocated(cplAlarmList)) deallocate(cplAlarmList)
 
+    call ESMF_ClockDestroy(controlClock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_ClockDestroy(clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
 
