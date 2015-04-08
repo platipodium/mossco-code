@@ -18,8 +18,22 @@ Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the ver
     export NETCDFINC=$NETCDFHOME/include
     export NETCDFLIBDIR=$NETCDFHOME/lib
 
+> Don't worry about `$NETCDFHOME`, it was defined by the call to `module load netcdf`.
 
-This example also assumes that you have downloaded or `git clone`ed MOSSCO into a directory referred to by the environment variable `$MOSSCO_DIR`
+This example also assumes that you have downloaded or `git clone`d MOSSCO into a directory referred to by the environment variable `$MOSSCO_DIR`, and have `git clone`d the MOSSCO setups into `$MOSSCO_SETUPDIR`.
+
+	export MOSSCO_DIR=/my/path/to/mossco/code
+	export MOSSCO_SETUPDIR=/my/path/to/mossco/code
+	
+It is advisable to have `$MOSSCO_DIR` somewhere in your `/home` and `$MOSSCO_SETUPDIR` in your `/data` directory on ocean because of space restrictions (but not backup).
+
+## Downloading MOSSCO
+
+	mkdir -p $MOSSCO_DIR
+	git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
+	
+	mkdir -p $MOSSCO_SETUPDIR
+	git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
 
 ## Obtaining external sources and compiling MOSSCO
 
