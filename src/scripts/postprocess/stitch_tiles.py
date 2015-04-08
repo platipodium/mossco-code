@@ -23,12 +23,12 @@ else:
 
 pattern=prefix + u'.*.nc'
 files=glob.glob(pattern)
-
+    
 outfile=prefix + '_stitched.nc'
 
 if len(files)<1:
   print "Did not find any files for pattern "+pattern
-
+  
 alat={}
 alon={}
 
@@ -36,10 +36,23 @@ alon={}
 nc=netcdf.Dataset(files[0],'r')
 for key, value in nc.variables.iteritems():
   dim=value.dimensions
+  print key, dim
   if len(value.dimensions) != 1 : continue
   if key.endswith('_lat'): alat[key]=[]
   elif key.endswith('_lon'): alon[key]=[]
+  elif key.endswith('_X'): alon[key]=[]
+  elif key.endswith('_Y'): alat[key]=[]
 nc.close()
+
+#for item in alat.keys():
+#  print "Found latitude/Y information " + item
+#for item in alon.keys():
+#  print "Found longitude/X information " + item
+
+if len(alon)<1:
+  print "Found no longitude/X information"
+if len(alat)<1:
+  print "Found no latitude/Y information"
 
 for f in files:
   nc=netcdf.Dataset(f,'r')
