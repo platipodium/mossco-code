@@ -72,6 +72,7 @@ module mossco_netcdf
   integer, parameter :: MOSSCO_NC_ERROR=-1
   integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
   integer, parameter :: MOSSCO_NC_EXISTING=1
+
 #include "git-sha.h"
 
   contains
@@ -438,6 +439,8 @@ module mossco_netcdf
   end subroutine mossco_netcdf_variable_put
 
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_variable_present"
   function mossco_netcdf_variable_present(self,name) result(varpresent)
 
     class(type_mossco_netcdf)          :: self
@@ -451,7 +454,8 @@ module mossco_netcdf
 
   end function mossco_netcdf_variable_present
 
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_variable_create"
   subroutine mossco_netcdf_variable_create(self, field, name, rc)
 
     class(type_mossco_netcdf)        :: self
@@ -716,6 +720,8 @@ module mossco_netcdf
 
   end subroutine mossco_netcdf_variable_create
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_add_timestep"
   subroutine mossco_netcdf_add_timestep(self, seconds, rc)
 
     class(type_mossco_netcdf)        :: self
@@ -757,15 +763,22 @@ module mossco_netcdf
 
   end subroutine mossco_netcdf_add_timestep
 
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_close"
   subroutine mossco_netcdf_close(self,rc)
-  class(type_mossco_netcdf)      :: self
-  integer, optional, intent(out) :: rc
-  integer                        :: ncStatus
-  ncStatus = nf90_close(self%ncid)
-  if (present(rc)) rc=ncStatus
+
+    class(type_mossco_netcdf)      :: self
+    integer, optional, intent(out) :: rc
+    integer                        :: ncStatus
+
+    ncStatus = nf90_close(self%ncid)
+
+    if (present(rc)) rc=ncStatus
+
   end subroutine mossco_netcdf_close
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_NetcdfOpen"
   function MOSSCO_NetcdfOpen(filename, timeUnit, mode, rc) result(nc)
 
     character(len=*), intent(in)               :: filename
@@ -832,6 +845,8 @@ module mossco_netcdf
 
   end function mossco_netcdfOpen
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdfCreate"
   function mossco_netcdfCreate(filename, timeUnit, rc) result(nc)
 
     use iso_fortran_env
@@ -889,7 +904,8 @@ module mossco_netcdf
 
   end function mossco_netcdfCreate
 
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_init_time"
   subroutine mossco_netcdf_init_time(self, rc)
 
     class(type_mossco_netcdf)      :: self
@@ -925,8 +941,6 @@ module mossco_netcdf
     call self%update()
     call self%update_variables()
     if (present(rc)) rc=rc_
-
-    return
 
   end subroutine mossco_netcdf_init_time
 
@@ -1033,6 +1047,8 @@ module mossco_netcdf
 
   end subroutine mossco_netcdf_update
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_mesh_dimensions"
   function mossco_netcdf_mesh_dimensions(self,field) result(dimids)
 
     implicit none
@@ -1116,6 +1132,8 @@ module mossco_netcdf
 
   end function mossco_netcdf_mesh_dimensions
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_grid_dimensions"
   recursive function mossco_netcdf_grid_dimensions(self,grid) result(dimids)
     class(type_mossco_netcdf)     :: self
     type(ESMF_Grid)               :: grid
@@ -1180,6 +1198,8 @@ module mossco_netcdf
 
   end function mossco_netcdf_grid_dimensions
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_mesh_coordinate_create"
   subroutine mossco_netcdf_mesh_coordinate_create(self,mesh)
 
     implicit none
@@ -1334,7 +1354,7 @@ module mossco_netcdf
 
     ! Write the auxiliary coordinate variables x, y, z
     ! These are 1-dimensional irrespective of the actual coordinates
-    do i=1,dimCount
+    do i=1, dimCount
 
       write(varName,'(A)') trim(geomName)//'_'//trim(axisNameList(i))
       if (self%variable_present(varName)) then
