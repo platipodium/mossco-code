@@ -1104,7 +1104,7 @@ fid.write('''
         call ESMF_ClockGet(childClock,currTime=time, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        ! write(message,'(A)') trim(compName)//' now at '//trim(timestring)
+        ! write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)
         !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
 
         if (time>currTime) cycle
@@ -1123,7 +1123,7 @@ fid.write('''
 
         if (alarmCount==0) then
           timeInterval=stopTime-currTime
-          !call ESMF_LogWrite(trim(compName)//' has not ringing alarm at '//trim(timestring),ESMF_LOGMSG_WARNING)
+          !call ESMF_LogWrite(trim(myName)//' '//trim(compName)//' has not ringing alarm at '//trim(timestring),ESMF_LOGMSG_WARNING)
         else
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
              alarmList=alarmList, rc=localrc)
@@ -1147,7 +1147,7 @@ fid.write('''
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !write(0,*) trim(compName)//' ', i,'/',alarmCount,' '//trim(alarmName)//' rings at '//trim(timeString)
-          write(message,'(A)') trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
+          write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           name1=trim(alarmName(1:index(alarmName,'--')-1))
@@ -1160,7 +1160,7 @@ fid.write('''
             endif
           enddo
 
-          write(message,'(A)') trim(timeString)//' '//trim(name1)//' ->'
+          write(message,'(A)') trim(myName)//' '//trim(timeString)//' '//trim(name1)//' ->'
           if (trim(cplName) /= 'link') then
             write(message,'(A)') trim(message)//' '//trim(cplName)//' ->'
           else
@@ -1196,7 +1196,7 @@ fid.write('''
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(timeString)//' Calling '//trim(cplCompNameList(l))
+          write(message,'(A)') trim(myName)//' '//trim(timeString)//' calling '//trim(cplCompNameList(l))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 ''')
 
@@ -1233,7 +1233,7 @@ fid.write('''
         if (time>currTime) then
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(compName)//' now at '//trim(timestring)//', but'
+          write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)//', but'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
@@ -1279,7 +1279,7 @@ fid.write('''
 
         !call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
         !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !write(message,'(A)') 'Setting child''s stopTime to'//trim(timeString)
+        !write(message,'(A)') trim(myName)//' setting child''s stopTime to'//trim(timeString)
         !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
 !       TODO: do not modify childClock
@@ -1300,7 +1300,7 @@ fid.write('''
         call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(timeString)//' calling '//trim(compName), &
+        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
           ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc);
 
@@ -1368,7 +1368,7 @@ fid.write('''
       !> Log current and next ring time
       call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      write(message,'(A)') trim(timeString)//' '//trim(myName)//' stepping to'
+      write(message,'(A)') trim(myName)//' '//trim(timeString)//' '//trim(myName)//' stepping to'
       call ESMF_TimeGet(ringTime,timeStringISOFrac=timestring, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       write(message,'(A)') trim(message)//' '//trim(timeString)
