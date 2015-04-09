@@ -1054,16 +1054,16 @@ module fabm_pelagic_component
           call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-	  
-	  !if the rates should be applied to all layers
-	  !if it's a vertically averaged (2D-) flux
-	  if (index(itemNameList(i),'_flux_in_water')>0) then
+
+          !if the rates should be applied to all layers
+          !if it's a vertically averaged (2D-) flux
+          if (index(itemNameList(i),'_flux_in_water')>0) then
             do k=1,pel%knum
               where(ratePtr2(:,:)>0)
                 farrayPtr3(:,:,k) = farrayPtr3(:,:,k)  + ratePtr2(:,:) * dt
               endwhere
             enddo
-          elseif (index(itemNameList(i),'_flux_at_surface')>0 .or. 
+          elseif (index(itemNameList(i),'_flux_at_surface')>0 .or. & 
                   index(itemNameList(i),'_flux_at_water_surface')>0) then 
             where(ratePtr2(:,:)>0)
               farrayPtr3(:,:,pel%knum) = farrayPtr3(:,:,pel%knum)  + ratePtr2(:,:) * dt
@@ -1075,7 +1075,7 @@ module fabm_pelagic_component
           else 
             write (message,'(A)') trim(name)//' could not add flux field'
             call MOSSCO_FieldString(importFieldList(i),message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGSMSG_ERROR)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
         elseif (rank==3) then
