@@ -2132,10 +2132,15 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      do itime_ = 1, ntime
-        if (farray(itime_) > seconds) exit
+      !! Search for the largest index i with farray(i) <= seconds
+      do i = 1, ntime
+        if (farray(i) <= seconds) then
+          itime_=i
+        else
+          exit
+        endif
       enddo
-      if (itime_>1 .and. farray(itime_) > seconds) itime_ = itime_ - 1
+      if (farray(ntime) <= seconds) itime_ = ntime
     endif
 
     if (present(rc)) rc=rc_
