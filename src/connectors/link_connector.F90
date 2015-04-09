@@ -22,6 +22,7 @@ module link_connector
   use mossco_state
   use mossco_field
   use mossco_component
+  use mossco_strings
 
   implicit none
 
@@ -222,6 +223,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_FieldStatus_Flag) :: fieldstatus
     logical                     :: isPresent
+    type(ESMF_Grid)             :: importGrid, exportGrid
 
     rc = ESMF_SUCCESS
 
@@ -253,11 +255,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_StateGet(importState, trim(itemNameList(i)), importField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=exportItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 
         if (exportItemCount>0) then
           call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
@@ -267,17 +267,29 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (exportField /= importField) then
-              cycle
               call ESMF_FieldGet(importField, status=fieldstatus,rc=localrc)
-              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-              if (fieldstatus==ESMF_FIELDSTATUS_COMPLETE) then
-                write(message,'(A)') '    replaced existing field '//trim(itemNameList(i))
-                call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
-                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
-                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-                call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
-              end if
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+
+              call ESMF_FieldGet(importField, grid=importGrid,rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              call ESMF_FieldGet(exportField, grid=exportGrid,rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              if (importGrid /= exportGrid) cycle
+
+              call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
+              write(message,'(A)') '    replaced existing field'
+              call MOSSCO_FieldString(exportField, message)
+              write(message,'(A)') trim(message)//'  with field'
+              call MOSSCO_FieldString(importField, message)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
             else
               write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
               !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
