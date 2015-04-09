@@ -898,7 +898,7 @@ module fabm_pelagic_component
     integer(8)        :: t
     integer           :: seconds_of_day, day_of_year, day
 
-    character(len=ESMF_MAXSTR) :: name, message
+    character(len=ESMF_MAXSTR) :: name, message, suffix, prefix
     type(ESMF_Clock)           :: clock
     type(ESMF_Time)            :: currTime, stopTime
     type(ESMF_TimeInterval)    :: timeStep
@@ -954,17 +954,22 @@ module fabm_pelagic_component
 
     nmatch=0
     do i=1, itemCount
-      j=index(itemNameList(i),'_flux_in_water') ! or flux at surface/bottom etc
+      j=index(itemNameList(i),'_flux_in_water')
+      if (j<1) j=index(itemNameList(i),'_flux_at_water_surface') 
+      if (j<1) j=index(itemNameList(i),'_flux_at_surface') 
+      if (j<1) j=index(itemNameList(i),'_flux_at_soil_surface') 
       if (j<1) cycle
-
+      
       itemName=itemNameList(i)
-      call ESMF_StateGet(exportState, itemName(1:j)//'in_water', itemType=itemType, rc=localrc)
+      prefix=itemName(1:j-1)
+      suffix=itemName(j+6:len_trim(itemName))
+      call ESMF_StateGet(exportState, trim(prefix)//'_'//trim(suffix), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemType /= ESMF_STATEITEM_FIELD) cycle
 
-      call ESMF_StateGet(exportState, itemName(1:j)//'in_water', exportField, rc=localrc)
+      call ESMF_StateGet(exportState, trim(prefix)//'_'//trim(suffix), exportField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
