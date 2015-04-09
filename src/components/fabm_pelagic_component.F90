@@ -1059,18 +1059,21 @@ module fabm_pelagic_component
           !if it's a vertically averaged (2D-) flux
           if (index(itemNameList(i),'_flux_in_water')>0) then
             do k=1,pel%knum
-              where(ratePtr2(:,:)>0)
-                farrayPtr3(:,:,k) = farrayPtr3(:,:,k)  + ratePtr2(:,:) * dt
+              where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
+                farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)  &
+                                                              + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
               endwhere
             enddo
           elseif (index(itemNameList(i),'_flux_at_surface')>0 .or. & 
                   index(itemNameList(i),'_flux_at_water_surface')>0) then 
-            where(ratePtr2(:,:)>0)
-              farrayPtr3(:,:,pel%knum) = farrayPtr3(:,:,pel%knum)  + ratePtr2(:,:) * dt
+            where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
+              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) &
+                                                                   + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
             endwhere
           elseif (index(itemNameList(i),'_flux_at_soil_surface')>0) then 
-            where(ratePtr2(:,:)>0)
-              farrayPtr3(:,:,1) = farrayPtr3(:,:,1)  + ratePtr2(:,:) * dt
+            where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
+              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) & 
+                                                            + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
             endwhere
           else 
             write (message,'(A)') trim(name)//' could not add flux field'
