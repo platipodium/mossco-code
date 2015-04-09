@@ -133,6 +133,8 @@ contains
       write(message,'(A)') trim(message)//' initializing'
     elseif (method == ESMF_METHOD_FINALIZE) then
       write(message,'(A)') trim(message)//' finalizing'
+    elseif (method == ESMF_METHOD_READRESTART) then
+      write(message,'(A)') trim(message)//' readrestarting'
     endif
 
     !call ESMF_CplCompGetEPPhaseCount(cplComp, method, phaseCount, &
@@ -266,6 +268,8 @@ contains
       write(message,'(A)') trim(message)//' initialized'
     elseif (method == ESMF_METHOD_FINALIZE) then
       write(message,'(A)') trim(message)//' finalized'
+    elseif (method == ESMF_METHOD_READRESTART) then
+      write(message,'(A)') trim(message)//' readrestarted'
     endif
 
     !call ESMF_CplCompGetEPPhaseCount(cplComp, method, phaseCount, &
@@ -355,6 +359,8 @@ contains
       write(message,'(A)') trim(message)//' running'
     else if (cMethod == ESMF_METHOD_FINALIZE) then
       write(message,'(A)') trim(message)//' finalizing'
+    elseif (cMethod == ESMF_METHOD_READRESTART) then
+      write(message,'(A)') trim(message)//' readrestarting'
     end if
 
     write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
@@ -426,6 +432,8 @@ contains
       write(message,'(A)') trim(message)//' ran'
     else if (cMethod == ESMF_METHOD_FINALIZE) then
       write(message,'(A)') trim(message)//' finalized'
+    elseif (cMethod == ESMF_METHOD_READRESTART) then
+      write(message,'(A)') trim(message)//' readrestarting'
     end if
 
     write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
