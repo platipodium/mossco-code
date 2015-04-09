@@ -1058,10 +1058,20 @@ module fabm_pelagic_component
                 farrayPtr3(:,:,k) = farrayPtr3(:,:,k)  + ratePtr2(:,:) * dt
               endwhere
             enddo
-          elseif (index(itemNameList(i),'_flux_at_surface')>0) then 
+          elseif (index(itemNameList(i),'_flux_at_surface')>0 .or. 
+                  index(itemNameList(i),'_flux_at_water_surface')>0) then 
             where(ratePtr2(:,:)>0)
               farrayPtr3(:,:,pel%knum) = farrayPtr3(:,:,pel%knum)  + ratePtr2(:,:) * dt
             endwhere
+          elseif (index(itemNameList(i),'_flux_at_soil_surface')>0) then 
+            where(ratePtr2(:,:)>0)
+              farrayPtr3(:,:,1) = farrayPtr3(:,:,1)  + ratePtr2(:,:) * dt
+            endwhere
+          else 
+            write (message,'(A)') trim(name)//' could not add flux field'
+            call MOSSCO_FieldString(importFieldList(i),message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGSMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
         elseif (rank==3) then
           call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr3, rc=localrc)
