@@ -954,7 +954,7 @@ module fabm_pelagic_component
 
     nmatch=0
     do i=1, itemCount
-      j=index(itemNameList(i),'_flux_in_water')
+      j=index(itemNameList(i),'_flux_in_water') ! or flux at surface/bottom etc
       if (j<1) cycle
 
       itemName=itemNameList(i)
@@ -1049,15 +1049,23 @@ module fabm_pelagic_component
           call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          do j=lbnd(2),ubnd(2)
-            do l=lbnd(1), ubnd(1)
-              if (ratePtr2(l,j)>0) then
-               ! write(0,*) trim(name), l,j, farrayPtr3(l,j,1), ratePtr2(l,j), dt
-                farrayPtr3(l,j,:) = farrayPtr3(l,j,:)  + ratePtr2(l,j) * dt
-              endif
+	  
+	  !if the rates should be applied to all layers
+	  !if it's a vertically averaged (2D-) flux
+	  if (index(itemNameList(i),'_flux_in_water')>0) then
+            do j=lbnd(2),ubnd(2)
+              do l=lbnd(1), ubnd(1)
+                if (ratePtr2(l,j)>0) then
+                 ! write(0,*) trim(name), l,j, farrayPtr3(l,j,1), ratePtr2(l,j), dt
+                  farrayPtr3(l,j,:) = farrayPtr3(l,j,:)  + ratePtr2(l,j) * dt
+                endif
+              enddo
             enddo
-          enddo
+          elseif (index(itemNameList(i),'_flux_at_surface')>0) then 
+            where(ratePtr2(:,:)>0)
+              farrayPtr3(:,:,pel%knum) = farrayPtr3(:,:,pel%knum)  + ratePtr2(:,:) * dt
+            endwhere
+          endif
         elseif (rank==3) then
           call ESMF_FieldGet(importFieldList(i), farrayPtr=ratePtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
