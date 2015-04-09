@@ -29,7 +29,7 @@ else:
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='getm--fabm_pelagic--netcdf'
-     filename='pelagic_3d'
+     filename='river'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -464,8 +464,8 @@ fid.write('''
     controlClock = ESMF_ClockCreate(clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
-    call ESMF_ClockSet(controlClock, name=trim(myName)//'Control')    
+
+    call ESMF_ClockSet(controlClock, name=trim(myName)//'Control')
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -805,33 +805,33 @@ fid.write('''
    enddo
 ''')
 
-fid.write('''
-    do phase=1, -9
-      do i=1, numGridComp
-        if (gridCompPhaseCountList(i) < phase) cycle
-        call ESMF_AttributeGet(gridImportStateList(i), 'depends_on_id', isPresent=isPresent, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (isPresent) then
-          call ESMF_AttributeGet(gridImportStateList(i), 'depends_on_id', itemCount=itemCount, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          allocate(intValueList(itemCount))
-          call ESMF_AttributeGet(gridImportStateList(i), 'depends_on_id', valueList=intValueList, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          do j=1, itemCount
-            call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(intValueList(j)), &
-              exportState=gridImportStateList(i), clock=clock, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          enddo
-          deallocate(intValueList)
-        endif
-
-        call ESMF_GridCompInitialize(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i), &
-          clock=clock, phase=phase, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      enddo
-    enddo
-
- ''')
+#fid.write('''
+#    do phase=1, -9
+#      do i=1, numGridComp
+#        if (gridCompPhaseCountList(i) < phase) cycle
+#        call ESMF_AttributeGet(gridImportStateList(i), 'depends_on_id', isPresent=isPresent, rc=localrc)
+#        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#        if (isPresent) then
+#          call ESMF_AttributeGet(gridImportStateList(i), 'depends_on_id', itemCount=itemCount, rc=localrc)
+#          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#          allocate(intValueList(itemCount))
+#          call ESMF_AttributeGet(gridImportStateList(i), 'depends_on_id', valueList=intValueList, rc=localrc)
+#          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#          do j=1, itemCount
+#            call ESMF_CplCompInitialize(cplCompList(1), importState=gridExportStateList(intValueList(j)), &
+#              exportState=gridImportStateList(i), clock=clock, rc=localrc)
+#            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#          enddo
+#          deallocate(intValueList)
+#        endif
+#
+#        call ESMF_GridCompInitialize(gridCompList(i), importState=gridImportStateList(i), exportState=gridExportStateList(i), &
+#          clock=clock, phase=phase, rc=localrc)
+#        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#      enddo
+#    enddo
+#
+# ''')
 
 
 #for icpl in range(1,len(cplCompList)):
@@ -903,7 +903,6 @@ for i in range(0,len(couplingList)):
       else:
         unit = 'h'
 
-
     fid.write('    call ESMF_TimeIntervalSet(alarmInterval, startTime, ' + unit + '=' + number + ' ,rc=localrc)\n')
     fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
     fid.write('    cplAlarmList(' + str(i+1) + ')=ESMF_AlarmCreate(clock=clock,ringTime=startTime+alarmInterval, &\n')
@@ -946,7 +945,6 @@ for i in range(0,len(couplingList)):
       endif
     enddo
     ''')
-
 
 fid.write('''
     !! Set the default ringTime to the stopTime of local clock, then get all Alarms
