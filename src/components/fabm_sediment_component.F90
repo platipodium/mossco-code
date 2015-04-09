@@ -484,6 +484,11 @@ module fabm_sediment_component
 #endif
 
       !! create boundary fields in import State
+      field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      
       field = ESMF_FieldCreate(surface_mesh, &
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, meshloc=ESMF_MESHLOC_ELEMENT, rc=localrc)
