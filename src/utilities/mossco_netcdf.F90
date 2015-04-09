@@ -2106,7 +2106,8 @@ module mossco_netcdf
     type(ESMF_Time)                              :: refTime
     integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, ntime, varid
     real(ESMF_KIND_R8), allocatable              :: farray(:)
-    real(ESMF_KIND_R8)                           :: seconds
+    integer(ESMF_KIND_I8)                        :: ticks
+    character(ESMF_MAXSTR)                       :: timeUnit
 
     rc_ = ESMF_SUCCESS
 
@@ -2120,7 +2121,25 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_TimeIntervalGet(currTime - refTime, s_r8=seconds, rc=localrc)
+      localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      i=index(timeUnit,' ')
+      timeUnit=timeUnit(1:i-1)
+
+      if (trim(timeUnit) == 'seconds') then
+        call ESMF_TimeIntervalGet(currTime - refTime, s_i8=ticks, rc=localrc)
+      elseif (trim(timeUnit) == 'days') then
+        call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
+      elseif (trim(timeUnit) == 'years') then
+        call ESMF_TimeIntervalGet(currTime - refTime, yy_i8=ticks, rc=localrc)
+      else
+        call ESMF_LogWrite('  time unit '//trim(timeUnit)//' not implemented', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2132,15 +2151,15 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !! Search for the largest index i with farray(i) <= seconds
+      !! Search for the largest index i with farray(i) <= ticks*1.0D0
       do i = 1, ntime
-        if (farray(i) <= seconds) then
+        if (farray(i) <= ticks*1.0D0) then
           itime_=i
         else
           exit
         endif
       enddo
-      if (farray(ntime) <= seconds) itime_ = ntime
+      if (farray(ntime) <= ticks*1.0D0) itime_ = ntime
     endif
 
     if (present(rc)) rc=rc_
