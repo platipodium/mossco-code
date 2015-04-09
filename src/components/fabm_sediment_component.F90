@@ -701,18 +701,21 @@ module fabm_sediment_component
     if (itemType==ESMF_STATEITEM_FIELD) then
       call ESMF_StateGet(importState, trim(itemname), field=field, rc=localrc)
       call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
-      if (fieldstatus== ESMF_FIELDSTATUS_COMPLETE) then
+      if (fieldstatus==ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_FieldGet(field, farrayPtr=ptr_f2, &
                exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
         sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
         call sed%update_porosity(from_surface=.true.)
+        write(message,'(A)') trim(name)//' updated porosity from'
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       else
-        write(message,'(A)') trim(name)//': incomplete field'
+        write(message,'(A)') trim(name)//' received incomplete field'
         call mossco_fieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
       end if
     else
-      write(message,'(A)') trim(name)//': no external porosity information'
+      write(message,'(A)') trim(name)//' has no external porosity information'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end if
 
