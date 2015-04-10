@@ -955,11 +955,11 @@ module fabm_pelagic_component
     nmatch=0
     do i=1, itemCount
       j=index(itemNameList(i),'_flux_in_water')
-      if (j<1) j=index(itemNameList(i),'_flux_at_water_surface') 
-      if (j<1) j=index(itemNameList(i),'_flux_at_surface') 
-      if (j<1) j=index(itemNameList(i),'_flux_at_soil_surface') 
+      if (j<1) j=index(itemNameList(i),'_flux_at_water_surface')
+      if (j<1) j=index(itemNameList(i),'_flux_at_surface')
+      if (j<1) j=index(itemNameList(i),'_flux_at_soil_surface')
       if (j<1) cycle
-      
+
       itemName=itemNameList(i)
       prefix=itemName(1:j-1)
       suffix=itemName(j+6:len_trim(itemName))
@@ -1055,8 +1055,7 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          !if the rates should be applied to all layers
-          !if it's a vertically averaged (2D-) flux
+          !> If it is a vertically averaged (2D-) flux (expected unit mmol m**-3)
           if (index(itemNameList(i),'_flux_in_water')>0) then
             do k=1,pel%knum
               where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
@@ -1064,19 +1063,21 @@ module fabm_pelagic_component
                                                               + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
               endwhere
             enddo
-          elseif (index(itemNameList(i),'_flux_at_surface')>0 .or. & 
-                  index(itemNameList(i),'_flux_at_water_surface')>0) then 
-            where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
+          !> Otherwise it is a surface (2D-) flux (expected unit mmol m**-2), that needs
+          !> to be converted to volume concentration by division with layer_height
+          elseif (index(itemNameList(i),'_flux_at_surface')>0 .or. &
+                  index(itemNameList(i),'_flux_at_water_surface')>0) then
+            where (ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
               farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) &
-                                                                   + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
+                + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt / pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum)
             endwhere
-          elseif (index(itemNameList(i),'_flux_at_soil_surface')>0) then 
+          elseif (index(itemNameList(i),'_flux_at_soil_surface')>0) then
             where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
-              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) & 
-                                                            + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
+              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) &
+                + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt / pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1)
             endwhere
-          else 
-            write (message,'(A)') trim(name)//' could not add flux field'
+          else
+            write (message,'(A)') trim(name)//' could not locate/add flux field'
             call MOSSCO_FieldString(importFieldList(i),message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
