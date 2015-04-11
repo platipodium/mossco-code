@@ -172,6 +172,10 @@ module fabm_pelagic_component
       call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      write(message,'(A)') trim(name)//' created diagnostic field '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
       call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
@@ -500,11 +504,15 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_AttributeSet(wsfield,'units','m/s')
-     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field=wsfield, localDe=0, farrayPtr=pel%export_states(n)%ws, &
                      totalLBound=lbnd3,totalUBound=ubnd3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       pel%export_states(n)%ws = 0.0d0
+
+      write(message,'(A)') trim(name)//' created field '
+      call MOSSCO_FieldString(wsfield, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       !> add to state depending on existing items
       call ESMF_StateGet(exportState, trim(varname), itemType, rc=localrc)
@@ -569,6 +577,10 @@ module fabm_pelagic_component
         call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        write(message,'(A)') trim(name)//' created diagnostic field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
@@ -579,8 +591,6 @@ module fabm_pelagic_component
         !> check for existing field
         call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', itemType,rc=localrc)
         if (itemType == ESMF_STATEITEM_NOTFOUND) then
-          write(message,*) 'create bulk field ',trim(pel%bulk_dependencies(n)%name)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
           field = ESMF_FieldCreate(state_grid, &
                     name=trim(pel%bulk_dependencies(n)%name)//'_in_water', &
                     typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
@@ -592,11 +602,19 @@ module fabm_pelagic_component
           call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           ptr_f3 = 0.0_rk
-          ! add field to state, if not present
+
+          write(message,'(A)') trim(name)//' created bulk dependency field '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
           call ESMF_StateAdd(importState,(/field/),rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         else
-          write(message,*) 'use existing field: ',trim(pel%bulk_dependencies(n)%name)//'_in_water'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,rc=localrc)
+          call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field, rc=localrc)
+          write(message,'(A)') trim(name)//' uses existing bulk dependency field '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         end if
         attribute_name=trim(pel%bulk_dependencies(n)%name)//'_in_water'
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=3)
@@ -620,8 +638,7 @@ module fabm_pelagic_component
         end if
         call ESMF_StateGet(importState, trim(esmf_name), itemType,rc=localrc)
         if (itemType == ESMF_STATEITEM_NOTFOUND) then
-          write(message,*) 'create hor. field ',trim(esmf_name)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
           field = ESMF_FieldCreate(horizontal_grid, &
                name=trim(esmf_name), &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
@@ -630,12 +647,18 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          !! add field to state, if not present
+
+          write(message,'(A)') trim(name)//' created horizontal dependency field '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
           call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         else
-          write(message,*) 'use existing field: ',trim(esmf_name)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO,rc=localrc)
+          call ESMF_StateGet(importState, trim(esmf_name), field, rc=localrc)
+          write(message,'(A)') trim(name)//' uses existing horizontal dependency field '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         end if
         attribute_name=trim(esmf_name)
         call set_item_flags(importState,attribute_name,requiredFlag=.true.,requiredRank=2)
@@ -668,8 +691,6 @@ module fabm_pelagic_component
     !! prepare upward_flux forcing
     do n=1,size(pel%model%state_variables)
       varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux_at_soil_surface'
-      write(message,*) 'create hor. field ',trim(varname)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       field = ESMF_FieldCreate(horizontal_grid, &
              name=varname, &
              typekind=ESMF_TYPEKIND_R8, &
@@ -685,6 +706,10 @@ module fabm_pelagic_component
       bfl(n)%p = 0.0_rk
       attribute_name=trim(varname)
       call set_item_flags(importState,attribute_name,requiredFlag=.false.,optionalFlag=.true.,requiredRank=2)
+
+      write(message,'(A)') trim(name)//' created field '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       !> add to importState
       call ESMF_StateGet(importState, itemName=trim(varname), itemType=itemType, rc=localrc)
@@ -740,6 +765,11 @@ module fabm_pelagic_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' created horizontal diagnostic field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
