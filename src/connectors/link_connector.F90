@@ -383,7 +383,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldStatus_Flag) :: fieldStatus, exportFieldStatus
 
     rc = ESMF_SUCCESS
-    name='link_coupler'
+    name='link_connector'
 
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -572,7 +572,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_TypeKind_Flag)    :: typekind
 
     rc = ESMF_SUCCESS
-    name='link_coupler'
+    name='link_connector'
 
     call ESMF_AttributeGet(exportState, count=count, attcountflag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
