@@ -19,6 +19,7 @@ if len(sys.argv) > 1:
 else:
   filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-river'
   filename = '/Volumes/Kiwi/mossco/output/PET0.NSBS153-1x153-3Dpelsedriv_TRACE'
+  filename = os.environ['MOSSCO_SETUPDIR'] + '/sns/PET0.sns-1x1-getm--fabm_pelagic--netcdf'
 
 print 'Using ' + filename + ' ...'
 
@@ -71,40 +72,43 @@ totals[:]=0.0
 i=0
 for key,value in timingdict.iteritems():
   if value.has_key('initialized'):
-    timediffs=numpy.array(value['initialized'])-numpy.array(value['initializing'] )   
-    ax.bar(left=value['initializing'],height=np.multiply(value['initialized'],0.0)+0.8,
+    n=len(value['initialized'])
+    timediffs=np.array(value['initialized'][0:n])-np.array(value['initializing'][0:n])   
+    ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initializing'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i])  
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'initialize calls'
 
     totals[i] = totals[i] + np.sum(timediffs)
     if key != 'toplevel':
-      ax.bar(left=value['initializing'],height=np.multiply(value['initialized'],0.0)+0.8,
+      ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initialized'][0:n],0.0)+0.8,
            width=timediffs,bottom=0.1,color=colors[i])  
 
   else:
     print i,key,'has no init phase'
    
   if value.has_key('finalized'):
-    timediffs=numpy.array(value['finalized'])-numpy.array(value['finalizing'] )
-    ax.bar(left=value['finalizing'],height=np.multiply(value['finalizing'],0.0)+0.8,
+    n=len(value['finalized'])
+    timediffs=np.array(value['finalized'][0:n])-np.array(value['finalizing'][0:n] )
+    ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i])  
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'finalize calls'
     if key != 'toplevel':
-      ax.bar(left=value['finalizing'],height=np.multiply(value['finalizing'],0.0)+0.8,
+      ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
            width=timediffs,bottom=0.1,color=colors[i])  
     totals[i] = totals[i] + np.sum(timediffs)
   else:
     print i,key,'has no finalize phase'
 
   if value.has_key('ran'):
-    timediffs=numpy.array(value['ran'])-numpy.array(value['running'] )
-    ax.bar(left=value['running'],height=np.multiply(value['running'],0.0)+0.8,
+    n=len(value['ran'])
+    timediffs=np.array(value['ran'][0:n])-np.array(value['running'][0:n] )
+    ax.bar(left=value['running'][0:n],height=np.multiply(value['running'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i])  
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'run calls'
     totals[i] = totals[i] + np.sum(timediffs)
 
     if key != 'toplevel':
-      ax.bar(left=value['running'],height=np.multiply(value['running'],0.0)+0.8,
+      ax.bar(left=value['running'][0:n],height=np.multiply(value['running'][0:n],0.0)+0.8,
            width=timediffs,bottom=0.1,color=colors[i])  
   else:
     print i,key,'has no run phase'
