@@ -109,7 +109,7 @@ module mossco_netcdf
     type(ESMF_Grid)                   :: grid
     integer(ESMF_KIND_I4)             :: gridRank
     type(ESMF_GeomType_Flag)          :: geomType
-    logical                           :: catchNaN=.false., isPresent
+    logical                           :: catchNaN=.false., isPresent, gridIsPresent
 
     rc_ = ESMF_SUCCESS
 
@@ -190,27 +190,38 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (gridRank == 2) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
-          nullify(gridmask2)
-          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_INFO)
-        else
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=gridIsPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (gridIsPresent) then
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid2Lbnd, &
             exclusiveUBound=grid2Ubnd, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        else
+          nullify(gridmask2)
         endif
       elseif (gridRank == 3) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
-          nullify(gridmask3)
-          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_INFO)
-        else
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=gridIsPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (gridIsPresent) then
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid3Lbnd, &
             exclusiveUBound=grid3Ubnd, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           gridmask2 => gridmask3(:,:,1)
+        else
+          nullify(gridmask3)
         endif
       endif
     end if
