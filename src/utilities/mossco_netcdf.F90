@@ -780,7 +780,7 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,') to file '//trim(self%name)
+    write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,' s) to file '//trim(self%name)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (present(rc)) rc = rc_
@@ -1092,7 +1092,7 @@ module mossco_netcdf
         var%units=''
       endif
 
-      call ESMF_LogWrite(trim(var%standard_name)//' '//trim(var%units), ESMF_LOGMSG_INFO)
+      !call ESMF_LogWrite(trim(var%standard_name)//' '//trim(var%units), ESMF_LOGMSG_INFO)
 
       if (var%rank <= 0) cycle
 

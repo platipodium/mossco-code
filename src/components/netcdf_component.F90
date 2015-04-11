@@ -499,9 +499,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         if (advanceCount < 1) then
           write(message,'(A)') trim(name)//' will write'
-          call MOSSCO_MessageAdd(message,itemNameList(i))
+          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
           call MOSSCO_MessageAdd(message,' to file ')
-          call MOSSCO_MessageAdd(message, fileName)
+          call MOSSCO_MessageAdd(message,' '//fileName)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
 
