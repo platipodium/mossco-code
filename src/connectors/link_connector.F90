@@ -224,6 +224,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldStatus_Flag) :: fieldstatus
     logical                     :: isPresent
     type(ESMF_Grid)             :: importGrid, exportGrid
+    type(ESMF_GeomType_Flag)    :: importgeomType, exportGeomType
 
     rc = ESMF_SUCCESS
 
@@ -267,15 +268,33 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (exportField /= importField) then
-              call ESMF_FieldGet(importField, status=fieldstatus,rc=localrc)
+              call ESMF_FieldGet(importField, status=fieldstatus, geomType=importGeomType, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
+              if (importGeomType /= ESMF_GEOMTYPE_GRID) then
+                write(message,'(A)') '    not implemented: non-grid geometry in field'
+                call MOSSCO_FieldString(importField, message)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                cycle
+              endif
+
               call ESMF_FieldGet(importField, grid=importGrid,rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              call ESMF_FieldGet(exportField, status=fieldstatus, geomType=exportGeomType, rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+              if (exportGeomType /= ESMF_GEOMTYPE_GRID) then
+                write(message,'(A)') '    not implemented: non-grid geometry in field'
+                call MOSSCO_FieldString(importField, message)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                cycle
+              endif
 
               call ESMF_FieldGet(exportField, grid=exportGrid,rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
