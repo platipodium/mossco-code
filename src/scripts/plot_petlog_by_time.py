@@ -151,7 +151,20 @@ for key,value in timingdict.iteritems():
 
 i=0
 for key in timingdict.keys():
-  ax.text(dtime*1.02,1.5+i,str(int(totals[i])) + ' ms',verticalalignment='center',
+    
+  string="%5.1f %% (" % (totals[i]*100/dtime)
+    
+  if totals[i] < 1000:
+    string += "%3.0f ms)" % (totals[i])
+  elif  totals[i] < 1000*1000:
+    string += "%3.0f s )" % (totals[i]/1000.0)
+  elif  totals[i] < 1000*1000*60:
+    string += "%3.0f m )" % (totals[i]/1000.0/60)
+  else:
+    string += "%3.0f h )" % (totals[i]/1000.0/3600)
+
+    
+  ax.text(dtime*1.02,1.5+i,string,verticalalignment='center',
           horizontalalignment='left')
   i=i+1
 
