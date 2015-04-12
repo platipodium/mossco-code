@@ -221,7 +221,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
     type(ESMF_StateItem_Flag)   :: itemType
-    type(ESMF_FieldStatus_Flag) :: fieldstatus
+    type(ESMF_FieldStatus_Flag) :: fieldstatus, exportFieldStatus
     logical                     :: isPresent
     type(ESMF_Grid)             :: importGrid, exportGrid
     type(ESMF_GeomType_Flag)    :: importgeomType, exportGeomType
@@ -268,11 +268,15 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (exportField /= importField) then
-              call ESMF_FieldGet(importField, status=fieldstatus, geomType=importGeomType, rc=localrc)
+              call ESMF_FieldGet(importField, status=fieldstatus, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+
+              call ESMF_FieldGet(importField, geomType=importGeomType, rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               if (importGeomType /= ESMF_GEOMTYPE_GRID) then
                 write(message,'(A)') '    not implemented: non-grid geometry in field'
@@ -285,22 +289,28 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-              call ESMF_FieldGet(exportField, status=fieldstatus, geomType=exportGeomType, rc=localrc)
+              call ESMF_FieldGet(exportField, status=exportFieldStatus, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-              if (exportGeomType /= ESMF_GEOMTYPE_GRID) then
-                write(message,'(A)') '    not implemented: non-grid geometry in field'
-                call MOSSCO_FieldString(importField, message)
-                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-                cycle
+              if (exportFieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
+                call ESMF_FieldGet(exportField, geomType=exportGeomType, rc=localrc)
+                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+                if (exportGeomType /= ESMF_GEOMTYPE_GRID) then
+                  write(message,'(A)') '    not implemented: non-grid geometry in field'
+                  call MOSSCO_FieldString(importField, message)
+                  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                  cycle
+                endif
+
+                call ESMF_FieldGet(exportField, grid=exportGrid,rc=localrc)
+                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+                if (importGrid /= exportGrid) cycle
               endif
-
-              call ESMF_FieldGet(exportField, grid=exportGrid,rc=localrc)
-              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-              if (importGrid /= exportGrid) cycle
 
               call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
               write(message,'(A)') '    replaced existing field'
