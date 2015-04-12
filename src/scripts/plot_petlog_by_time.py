@@ -13,13 +13,15 @@ import os
 import re
 import numpy as np
 import pylab
+from matplotlib import cm
+import brewer2mpl
 
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
   filename = '/Volumes/Kiwi/mossco/output/PET0.NSBS153-1x153-3Dpelsedriv_TRACE'
-  filename = os.environ['MOSSCO_SETUPDIR'] + '/sns/PET0.sns-1x1-getm--fabm_pelagic--netcdf'
   filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-getm--fabm_pelagic--fabm_s'
+  #filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-river'
 
 print 'Using ' + filename + ' ...'
 
@@ -65,12 +67,13 @@ fig=pylab.figure(1, figsize=(12,3))
 fig.clf()
 ax = pylab.axes([0.15, 0.15, 0.7, 0.8])
 
-colors='mrgycbkmrgycbk'
 
 dtime=maxtime-mintime
 n=len(timingdict.keys())
 totals=np.ones(n)
 totals[:]=0.0
+
+colors=cm.rainbow(np.linspace(0,1,n))
 
 i=0
 for key,value in timingdict.iteritems():
@@ -81,13 +84,13 @@ for key,value in timingdict.iteritems():
       continue
     timediffs=np.array(value['initialized'][0:n])-np.array(value['initializing'][0:n])   
     ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initializing'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'initialize calls'
 
     totals[i] = totals[i] + np.sum(timediffs)
     if key != 'toplevel':
       ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initialized'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
 
   else:
     print i,key,'has no init phase'
@@ -99,13 +102,13 @@ for key,value in timingdict.iteritems():
       continue
     timediffs=np.array(value['readrestarted'][0:n])-np.array(value['readrestarting'][0:n])   
     ax.bar(left=value['readrestarting'][0:n],height=np.multiply(value['readrestarting'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'readrestart calls'
 
     totals[i] = totals[i] + np.sum(timediffs)
     if key != 'toplevel':
       ax.bar(left=value['readrestarting'][0:n],height=np.multiply(value['readrestarting'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
 
   else:
     print i,key,'has no readrestart phase'
@@ -117,11 +120,11 @@ for key,value in timingdict.iteritems():
       continue
     timediffs=np.array(value['finalized'][0:n])-np.array(value['finalizing'][0:n] )
     ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'finalize calls'
     if key != 'toplevel':
       ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
     totals[i] = totals[i] + np.sum(timediffs)
   else:
     print i,key,'has no finalize phase'
@@ -134,13 +137,13 @@ for key,value in timingdict.iteritems():
   
     timediffs=np.array(value['ran'][0:n])-np.array(value['running'][0:n] )
     ax.bar(left=value['running'][0:n],height=np.multiply(value['running'][0:n],0.0)+0.8,
-           width=timediffs,bottom=1.1+i,color=colors[i])  
+           width=timediffs,bottom=1.1+i,color=colors[i], edgecolor=colors[i])  
     print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'run calls'
     totals[i] = totals[i] + np.sum(timediffs)
 
     if key != 'toplevel':
       ax.bar(left=value['running'][0:n],height=np.multiply(value['running'][0:n],0.0)+0.8,
-           width=timediffs,bottom=0.1,color=colors[i])  
+           width=timediffs,bottom=0.1,color=colors[i], edgecolor=colors[i])  
   else:
     print i,key,'has no run phase'
 
