@@ -17,11 +17,14 @@ import pylab
 if len(sys.argv) > 1:
     filename = sys.argv[1]
 else:
-  filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-river'
   filename = '/Volumes/Kiwi/mossco/output/PET0.NSBS153-1x153-3Dpelsedriv_TRACE'
   filename = os.environ['MOSSCO_SETUPDIR'] + '/sns/PET0.sns-1x1-getm--fabm_pelagic--netcdf'
+  filename = os.environ['MOSSCO_SETUPDIR'] + '/deep_lake/PET0.deep_lake-1x1-getm--fabm_pelagic--fabm_s'
 
 print 'Using ' + filename + ' ...'
+
+(file_dir,file_name) = os.path.split(filename)
+(file_base, file_ext)= os.path.splitext(file_name)
 
 fid = file(filename,'rU')
 lines=fid.readlines()
@@ -73,6 +76,9 @@ i=0
 for key,value in timingdict.iteritems():
   if value.has_key('initialized'):
     n=len(value['initialized'])
+    if (len(value['initializing'])<n or len(value['initializing']) > n+1 ): 
+      print i,key,'has unbalanced initialize phase, skipped.'
+      continue
     timediffs=np.array(value['initialized'][0:n])-np.array(value['initializing'][0:n])   
     ax.bar(left=value['initializing'][0:n],height=np.multiply(value['initializing'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i])  
@@ -86,8 +92,29 @@ for key,value in timingdict.iteritems():
   else:
     print i,key,'has no init phase'
    
+  if value.has_key('readrestarted'):
+    n=len(value['readrestarted'])
+    if (len(value['readrestarting'])<n or len(value['readrestarting']) > n+1 ): 
+      print i,key,'has unbalanced readrestart phase, skipped.'
+      continue
+    timediffs=np.array(value['readrestarted'][0:n])-np.array(value['readrestarting'][0:n])   
+    ax.bar(left=value['readrestarting'][0:n],height=np.multiply(value['readrestarting'][0:n],0.0)+0.8,
+           width=timediffs,bottom=1.1+i,color=colors[i])  
+    print i,key,'spent',np.sum(timediffs),'ms in ',len(timediffs),'readrestart calls'
+
+    totals[i] = totals[i] + np.sum(timediffs)
+    if key != 'toplevel':
+      ax.bar(left=value['readrestarting'][0:n],height=np.multiply(value['readrestarting'][0:n],0.0)+0.8,
+           width=timediffs,bottom=0.1,color=colors[i])  
+
+  else:
+    print i,key,'has no readrestart phase'
+   
   if value.has_key('finalized'):
     n=len(value['finalized'])
+    if (len(value['finalizing'])<n or len(value['finalizing']) > n+1 ): 
+      print i,key,'has unbalanced finalize phase, skipped.'
+      continue
     timediffs=np.array(value['finalized'][0:n])-np.array(value['finalizing'][0:n] )
     ax.bar(left=value['finalizing'][0:n],height=np.multiply(value['finalizing'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i])  
@@ -101,6 +128,10 @@ for key,value in timingdict.iteritems():
 
   if value.has_key('ran'):
     n=len(value['ran'])
+    if (len(value['running'])<n or len(value['running']) > n+1 ): 
+      print i,key,'has unbalanced run phase, skipped.'
+      continue
+  
     timediffs=np.array(value['ran'][0:n])-np.array(value['running'][0:n] )
     ax.bar(left=value['running'][0:n],height=np.multiply(value['running'][0:n],0.0)+0.8,
            width=timediffs,bottom=1.1+i,color=colors[i])  
@@ -129,5 +160,5 @@ ax.set_yticks(np.arange(0.5,len(labels),step=1),minor=False)
 ax.set_yticklabels(labels)
 #pylab.title('Time spent in each component', bbox={'facecolor':'0.8', 'pad':15})
 #pylab.show()
-pylab.savefig('petlog_by_time.pdf',transparent=True,format='pdf')
+pylab.savefig('petlog_by_time_' + file_ext + '.pdf',transparent=True,format='pdf')
 pylab.close(fig)
