@@ -380,8 +380,11 @@ module netcdf_input_component
       if (trim(nc%variables(i)%name) == 'time') cycle
       if (trim(nc%variables(i)%name) == 'lat') cycle
       if (trim(nc%variables(i)%name) == 'lon') cycle
-      write(message,'(A)') trim(name)//' found item "'//trim(nc%variables(i)%standard_name)//'"'
-      write(message,'(A,I3,A,I1,A)') trim(message)//', id = ', &
+      write(message,'(A)') trim(name)//' found item "'
+      call MOSSCO_MessageAdd(message, nc%variables(i)%standard_name//'"')
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      write(message,'(A,I3,A,I1,A)') trim(name)//' id = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
