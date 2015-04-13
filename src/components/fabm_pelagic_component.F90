@@ -1006,12 +1006,11 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !> @todo implement for data in fieldbundles
-      if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+      !> @todo implement for data in fieldbundles, log warning only on first run
+      if (itemType == ESMF_STATEITEM_FIELDBUNDLE .and. advanceCount<1) then
         write(message,'(A)') trim(name)//' cannot yet process matching fieldbundle for flux '
         call MOSSCO_FieldString(importField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        cycle
       endif
 
       if (itemType /= ESMF_STATEITEM_FIELD) cycle
