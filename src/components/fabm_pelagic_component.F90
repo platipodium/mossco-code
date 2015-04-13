@@ -928,7 +928,7 @@ module fabm_pelagic_component
     integer(8)        :: t
     integer           :: seconds_of_day, day_of_year, day
 
-    character(len=ESMF_MAXSTR) :: name, message, suffix, prefix
+    character(len=ESMF_MAXSTR) :: name, message, prefix
     type(ESMF_Clock)           :: clock
     type(ESMF_Time)            :: currTime, stopTime
     type(ESMF_TimeInterval)    :: timeStep
@@ -1002,14 +1002,13 @@ module fabm_pelagic_component
 
       itemName=itemNameList(i)
       prefix=itemName(1:j-1)
-      suffix=itemName(j+6:len_trim(itemName))
-      call ESMF_StateGet(exportState, trim(prefix)//'_'//trim(suffix), itemType=itemType, rc=localrc)
+      call ESMF_StateGet(exportState, trim(prefix)//'_in_water', itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemType /= ESMF_STATEITEM_FIELD) cycle
 
-      call ESMF_StateGet(exportState, trim(prefix)//'_'//trim(suffix), exportField, rc=localrc)
+      call ESMF_StateGet(exportState, trim(prefix)//'_in_water', exportField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
