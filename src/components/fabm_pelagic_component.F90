@@ -943,6 +943,7 @@ module fabm_pelagic_component
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     integer(ESMF_KIND_I4)                  :: i, j, l, nmatch, itemCount, rank
     integer(ESMF_KIND_I4)                  :: ubnd(2), lbnd(2)
+    integer(ESMF_KIND_I8)                  :: advanceCount
 
     real(ESMF_KIND_R8), pointer            :: farrayPtr3(:,:,:), ratePtr3(:,:,:)
     real(ESMF_KIND_R8), pointer            :: farrayPtr2(:,:), ratePtr2(:,:)
@@ -950,6 +951,15 @@ module fabm_pelagic_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 
     ! set global time information
     call ESMF_TimeGet(currTime, dd=day, s=seconds_of_day, &
@@ -1021,6 +1031,13 @@ module fabm_pelagic_component
       exportFieldList(nmatch)=exportField
       importFieldList(nmatch)=importField
       itemNameList(nmatch)=itemNameList(i)
+
+      !! Only log successful matching the first time Run() operates
+      if (advanceCount<1) then
+        write(message,'(A)') trim(name)//' found matching field for flux '
+        call MOSSCO_FieldString(importField, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
 
     enddo
 
