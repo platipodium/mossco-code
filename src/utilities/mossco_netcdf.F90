@@ -189,6 +189,7 @@ module mossco_netcdf
       call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#if 0
       if (gridRank == 2) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=gridIsPresent, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -224,6 +225,32 @@ module mossco_netcdf
           nullify(gridmask3)
         endif
       endif
+#else
+      if (gridRank == 2) then
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
+          nullify(gridmask2)
+          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_INFO)
+        else
+          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid2Lbnd, &
+            exclusiveUBound=grid2Ubnd, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      elseif (gridRank == 3) then
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
+          nullify(gridmask3)
+          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_INFO)
+        else
+          call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid3Lbnd, &
+            exclusiveUBound=grid3Ubnd, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          gridmask2 => gridmask3(:,:,1)
+        endif
+      endif
+#endif
     end if
 
     call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
