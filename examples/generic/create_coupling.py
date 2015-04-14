@@ -29,7 +29,7 @@ else:
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
      filename='getm--fabm_pelagic--netcdf'
-     filename='river'
+     filename='/Users/lemmen/devel/MOSSCO/setups/deep_lake/3Dpelsedrivpor'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -258,6 +258,17 @@ for item in gridCompList:
 cplCompList=[]
 gridCompList=[]
 petList=[]
+
+for item in componentList:
+  i=componentList.index(item)
+  if dependencyDict.has_key(item):
+    for dep in dependencyDict[item]:
+      j=componentList.index(dep)
+      if j>i:
+        componentList.remove(item)
+        componentList.insert(j,item)
+        
+
 for item in componentList:
     if item in gridCompSet:
         gridCompList.append(item)
@@ -278,7 +289,7 @@ if 'link_connector' in cplCompList:
 
 instanceList=list(set(instanceDict.values()))
 print 'Components to process:', componentList
-print 'Grid components to process:', componentList
+print 'Grid components to process:', gridCompList
 print 'Couple components to process:', cplCompList
 print 'Base instances to process:', instanceList
 
