@@ -489,7 +489,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             if (isMatch .and. advanceCount < 1) then
-              write(message,'(A)') trim(name)//' included '//trim(itemNameList(i))//' from include pattern '//trim(includePatternList(j))
+              write(message,'(A)') trim(name)//' included '//trim(itemNameList(i))
+              call MOSSCO_MESSAGEAdd(message,' from include pattern '//trim(includePatternList(j)))
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
               exit
             endif
