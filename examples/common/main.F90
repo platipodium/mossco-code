@@ -102,9 +102,15 @@ program main
   write(message,'(A)')  "Program starts at wall clock "//trim(timestring)
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-! Create and initialize a clock from mossco_run.nml
-  call timeString2ESMF_Time(start,startTime)
-  call timeString2ESMF_Time(stop,stopTime)
+  ! Create and initialize a clock from mossco_run.nml
+  call MOSSCO_TimeSet(startTime, start, localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call MOSSCO_TimeSet(stopTime, stop, localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   runDuration = stopTime - startTime
 
   mainClock = ESMF_ClockCreate(timeStep=runDuration, startTime=startTime, stopTime=stopTime, &
