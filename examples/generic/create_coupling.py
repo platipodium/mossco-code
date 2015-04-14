@@ -390,27 +390,39 @@ fid.write('''
     integer, intent(out)        :: rc
 
     character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: myName, message
+    character(len=ESMF_MAXSTR)  :: myName
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
 
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, myName, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
 
@@ -426,10 +438,9 @@ fid.write('''
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: clockTime, startTime, stopTime, currTime
+    type(ESMF_Time)         :: startTime, currTime
     type(ESMF_Time)         :: ringTime, time
-    type(ESMF_TimeInterval) :: timeInterval, timeStep, alarmInterval
-    real(ESMF_KIND_R8)      :: dt
+    type(ESMF_TimeInterval) :: alarmInterval
 
     integer(ESMF_KIND_I4)  :: numGridComp, numCplComp, petCount
     integer(ESMF_KIND_I4)  :: alarmCount, numCplAlarm, i, localrc
@@ -442,10 +453,10 @@ fid.write('''
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
 
-    integer(ESMF_KIND_I4)  :: phase, phaseCount, j, itemCount
+    integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
-    logical                :: hasPhaseZero, isPresent
+    logical                :: hasPhaseZero
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
     integer(ESMF_KIND_I4), allocatable      :: intValueList(:)
@@ -769,10 +780,10 @@ if (True):
   fid.write('    !! @todo this is still a hack that treats netcdf and netcdf_input as special components')
   for coupling in couplingList:
     item=coupling[0]
-    if instanceDict[item] != 'netcdf_input': continue        
+    if instanceDict[item] != 'netcdf_input': continue
     jtem=coupling[-1]
     if instanceDict[jtem].startswith('netcdf'): continue
-        
+
     ifrom=gridCompList.index(item)
     ito=  gridCompList.index(jtem)
     icpl= cplCompList.index(coupling[1])
@@ -1002,6 +1013,14 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1022,23 +1041,16 @@ fid.write('''
     character(len=ESMF_MAXSTR) :: timestring, cplName, myName, childName
     type(ESMF_Time)            :: stopTime, currTime, ringTime, time
     type(ESMF_TimeInterval)    :: timeInterval, ringInterval
-    integer(ESMF_KIND_I8)      :: advanceCount,  i, j, k, l
-    integer(ESMF_KIND_I4)      :: alarmCount, petCount, localPet
+    integer(ESMF_KIND_I8)      :: i, j, k, l
+    integer(ESMF_KIND_I4)      :: alarmCount
     integer(ESMF_KIND_I4)      :: numGridComp, numCplComp
     integer(ESMF_KIND_I4)      :: hours, minutes, seconds
 
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList
-    type(ESMF_Alarm)        :: childAlarm
     type(ESMF_Clock)        :: childClock, myClock
     logical                 :: clockIsPresent
     type(ESMF_State)        :: impState, expState
-    type(ESMF_Field)        :: field
-    type(ESMF_FieldBundle)  :: fieldBundle
-    type(ESMF_Array)        :: array
-    type(ESMF_ArrayBundle)  :: arrayBundle
-    type(ESMF_StateItem_Flag), dimension(:), allocatable :: itemTypeList
-    character(len=ESMF_MAXSTR), dimension(:), allocatable:: itemNameList
-    integer(ESMF_KIND_I4)   :: itemCount, localrc
+    integer(ESMF_KIND_I4)   :: localrc
 
     character(len=ESMF_MAXSTR) :: message, compName, alarmName, name1, name2
 
@@ -1404,6 +1416,15 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
+    call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1418,9 +1439,8 @@ fid.write('''
     integer, intent(out) :: rc
 
     integer(ESMF_KIND_I8)   :: i
-    integer(ESMF_KIND_I4)   :: petCount, localPet,numGridComp, numCplComp, localrc
-    character(ESMF_MAXSTR)  :: myName, message, timeString
-    logical                 :: clockIsPresent
+    integer(ESMF_KIND_I4)   :: numGridComp, numCplComp, localrc
+    character(ESMF_MAXSTR)  :: myName
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
@@ -1511,6 +1531,14 @@ fid.write('''
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockDestroy(clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
