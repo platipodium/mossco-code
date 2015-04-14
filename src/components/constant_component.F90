@@ -337,7 +337,7 @@ module constant_component
         call ESMF_AttributeSet(cur_item%field,'default_value',cur_item%value, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)') trim(name)//' just created field '
+        write(message,'(A)') trim(name)//' created field '
         call mossco_fieldstring(cur_item%field, message)
         call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
 
