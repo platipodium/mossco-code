@@ -19,7 +19,6 @@ REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 NP=1               # Run on one processor
 DEFAULT=getm--fabm_pelagic--fabm_sediment--netcdf  # Default example
-SYSTEM=BACKGROUND                  # Interactive shell as default system
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
 POSTPROCESS=NONE
 
@@ -38,13 +37,14 @@ function usage {
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
 	echo "            MPI is not used at all. Default is n=1"
-	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system"
+	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system, which is"
+        echo "            autodetected by default"
 	echo
 	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
 	echo "      [-s J]: Slurm system, e.g. juropatest, writes slurm.sh"
 	echo "      [-s F]: Command line interactive, running in foreground"
-	echo "      [-s B]: Command line interactive, running in background (default)"
+	echo "      [-s B]: Command line interactive, running in background"
 	echo
 	exit
 }
@@ -207,25 +207,55 @@ if ! test -x  ${EXE} ; then
   exit 1
 fi
 
+# Automatically determine system
+if [[ $(which qstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SGE 
+elif [[ $(which sstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SLURM
+elif [[ $(which msub 2> /dev/null) != "" ]] ; then AUTOSYSTEM=MOAB
+fi
+
+# Convert different system names
+case ${SYSTEM} in
+  moab|MOAB|M)  SYSTEM=MOAB
+                ;;
+  sge|SGE|S)    SYSTEM=SGE
+                ;;
+  J|SLURM|slurm)  SYSTEM=SLURM
+                ;;
+  F|FOREGROUND|fg)  SYSTEM=FOREGROUND
+                ;;
+  B|BACKGROUND|bg)  SYSTEM=BACKGROUND
+                ;;
+esac
+
+if [[ ${AUTOSYSTEM}  = ${SYSTEM} ]] ; then :
+elif [[ ${SYSTEM} = "" ]] ; then SYSTEM=${AUTOSYSTEM}
+elif [[ ${AUTOSYSTEM} != "" ]] ; then echo "Overriding system ${AUTOSYSTEM} with ${SYSTEM}"
+fi
+
+if [[ ${SYSTEM} = "" ]] ; then SYSTEM=BACKGROUND; fi
+
 # Adapt to different MPI implementations
 case ${SYSTEM} in
-  moab|MOAB|M)  MPI_PREFIX="mpiexec"
+  MOAB)  MPI_PREFIX="mpiexec"
                 SYSTEM=MOAB
                 ;;
-  sge|SGE|S)    MPI_PREFIX="mpirun"
+  SGE)    MPI_PREFIX="mpirun"
                 SYSTEM=SGE
                 ;;
-  J|SLURM|slurm)  MPI_PREFIX="srun"
+  SLURM)  MPI_PREFIX="srun"
                   SYSTEM=SLURM
                 ;;
   *)  MPI_PREFIX="mpirun"
                 ;;
 esac
 
+
 if [[ ${NP} == 0 ]]; then
   MPI_PREFIX=""
   NP=1
 fi
+
+echo "Building scripts for system ${SYSTEM} with MPI_PREFIX ${MPI_PREFIX} -np ${NP}"
 
 NODES=1
 PPN=${NP}
@@ -339,9 +369,6 @@ cat \$PE_HOSTFILE
 ${MPI_PREFIX} ${EXE} > ${STDOUT} 2> ${STDERR}
 EOT
   ;;
-
-  F|fg)  SYSTEM=FOREGROUND
-  ;;
 esac
 
 rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
@@ -410,7 +437,7 @@ case ${SYSTEM} in
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}"
          echo "Job ${TITLE} interactively running in foreground"
          ;;
-  *)     echo "System not defined in $0"; exit 1
+  *)     echo "System ${SYSTEM} not defined in $0"; exit 1
          ;;
 esac
 
