@@ -136,10 +136,8 @@ module constant_component
 
     character(len=ESMF_MAXSTR)     :: name, message, line
 
-    type(ESMF_Grid)                             :: grid2, grid3
     type(ESMF_Mesh)                             :: mesh
-    type(ESMF_ArraySpec)                        :: arrayspec2, arraySpec3
-    real(ESMF_KIND_R8), pointer :: farrayPtr3(:,:,:), farrayPtr2(:,:), farrayPtr1(:)
+    real(ESMF_KIND_R8), pointer :: farrayPtr1(:)
     character(len=ESMF_MAXSTR)                  :: varname, meshname
     integer, parameter                          :: fileunit=21
     logical                                     :: file_readable=.true.
@@ -149,7 +147,6 @@ module constant_component
     type(ESMF_Time)                             :: currTime
     real(ESMF_KIND_R8)                          :: floatValue
     integer(ESMF_KIND_I4), dimension(2)  :: computationalUBound2, computationalLBound2
-    integer(ESMF_KIND_I4), dimension(3)  :: computationalUBound3, computationalLBound3
     integer                              :: petCount, localPet
 
     integer                     :: localrc
@@ -160,6 +157,7 @@ module constant_component
     integer(ESMF_KIND_I4)       :: localDeCount, localDe
 
     rc=ESMF_SUCCESS
+    localDeCount=0
 
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -418,9 +416,29 @@ module constant_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
+    integer(ESMF_KIND_I4) :: localrc
+
     rc=ESMF_SUCCESS
 
-    !> @todo implement this routine
+    !> It does not make sense to readrestart this component, thus, we
+    !> 1. do not log calls to this function with CompEntry/CompExit
+    !> 2. use dummy variables to avoid -Wunused
+
+    call ESMF_GridCompValidate(gridComp, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockValidate(parentClock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateValidate(exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
 
