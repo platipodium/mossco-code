@@ -829,6 +829,7 @@ module fabm_pelagic_component
     type(ESMF_Field)          :: field
     real(ESMF_KIND_R8), dimension(:,:), pointer :: ptr_f2=>null()
     integer                   :: localrc
+    character(len=ESMF_MAXSTR):: varname
 
     ! todo: add bulk dependencies
 
@@ -844,6 +845,22 @@ module fabm_pelagic_component
         end if
       end do
     end if
+
+#if 0
+    !! re-link upward_flux forcing
+    do n=1,size(pel%model%state_variables)
+      varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux_at_soil_surface'
+      call ESMF_StateGet(importState, trim(varname), itemType,rc=localrc)
+      if (itemType == ESMF_STATEITEM_FIELD) then
+        !write(0,*) 'field ',trim(varname),' found'
+        call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
+        call ESMF_FieldGet(field, farrayPtr=bfl(n)%p, rc=localrc)
+      else
+        !write(0,*) 'field ',trim(varname),' not found'
+      end if
+    end do
+#endif
+ 
   end subroutine
 
 
