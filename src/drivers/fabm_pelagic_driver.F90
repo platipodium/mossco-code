@@ -343,13 +343,13 @@
       if (.not.link%target%read_indices%is_empty().and.link%target%state_indices%is_empty()) then
         select case (link%target%domain)
           case (domain_bulk)
-            if (.not.associated(pf%model%environment%data(link%target%read_indices%pointers(1)%p)%p) &
+            if (.not.associated(pf%model%data(link%target%read_indices%pointers(1)%p)%p) &
                 .and..not.(link%target%presence==presence_internal) &
                 .and.associated(link%target%standard_variable)) then
               call add_bulk_dependency(pf%bulk_dependencies,link%target%standard_variable)
             end if
     case (domain_horizontal,domain_bottom,domain_surface)
-            if (.not.associated(pf%model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
+            if (.not.associated(pf%model%data_hz(link%target%read_indices%pointers(1)%p)%p) &
                 .and..not.(link%target%presence==presence_internal) &
                 .and.associated(link%target%standard_variable)) then
               if (trim(link%target%standard_variable%name) == "surface_downwelling_photosynthetic_radiative_flux") then
@@ -359,7 +359,7 @@
               call add_horizontal_dependency(pf%horizontal_dependencies,link%target%standard_variable)
             end if
           case (domain_scalar)
-            if (.not.associated(pf%model%environment%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
+            if (.not.associated(pf%model%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
                 .and..not.(link%target%presence==presence_internal) &
                 .and.associated(link%target%standard_variable)) then
             end if
@@ -680,7 +680,7 @@
            if (expression%average) weights(i,j,:) = weights(i,j,:)/(min(expression%maximum_depth,depth(i,j))-expression%minimum_depth)
          end do
        end do
-       vertmean = sum(pf%model%environment%data(expression%in)%p(:,:,:)*weights,dim=3)
+       vertmean = sum(pf%model%data(expression%in)%p(:,:,:)*weights,dim=3)
      end function calculate_vertical_mean
 
    end subroutine update_expressions

@@ -65,7 +65,7 @@ model => fabm_create_model_from_file(namlst)
     if (.not.link%target%read_indices%is_empty().and.link%target%state_indices%is_empty()) then
       select case (link%target%domain)
         case (domain_bulk)
-          if (.not.associated(model%environment%data(link%target%read_indices%pointers(1)%p)%p) &
+          if (.not.associated(model%data(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal)) then
             if (.not.associated(link%target%standard_variable)) then
               LEVEL3 '      bulk: ',trim(link%name),' [',trim(link%target%units),']'
@@ -74,7 +74,7 @@ model => fabm_create_model_from_file(namlst)
             end if
           end if
   case (domain_horizontal,domain_bottom,domain_surface)
-          if (.not.associated(model%environment%data_hz(link%target%read_indices%pointers(1)%p)%p) &
+          if (.not.associated(model%data_hz(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal)) then
             if (.not.associated(link%target%standard_variable)) then
               LEVEL3 'horizontal: ',trim(link%name),' [',trim(link%target%units),']'
@@ -83,7 +83,7 @@ model => fabm_create_model_from_file(namlst)
             end if
           end if
         case (domain_scalar)
-          if (.not.associated(model%environment%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
+          if (.not.associated(model%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal)) then
             if (.not.associated(link%target%standard_variable)) then
               LEVEL3 '    global: ',trim(link%name),' [',trim(link%target%units),']'
