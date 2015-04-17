@@ -267,7 +267,7 @@ for item in componentList:
       if j>i:
         componentList.remove(item)
         componentList.insert(j,item)
-        
+
 
 for item in componentList:
     if item in gridCompSet:
@@ -547,7 +547,32 @@ fid.write('''
         name=trim(gridCompNameList(i))//'Import')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
+''')
 
+for i in range(0, len(gridCompList)):
+  item=gridCompList[i]
+  if instanceDict.has_key(item):
+    if instanceDict[item] != 'netcdf': continue
+  else:
+    continue
+
+  fid.write('    !! Adding meta information to output component ' + item + '\n')
+  fid.write('''
+    !>@todo find out why attributeSet does not work
+
+    do i=1, numGridComp
+      if (i<10) then
+        write(message,'(A,I1)') 'gridded_component_', i
+      else
+        write(message,'(A,I2)') 'gridded_component_', i
+      endif
+  ''')
+  fid.write('      !call ESMF_AttributeSet(importState(' + str(i+1) + '), trim(message), trim(gridCompNameList(i)), rc=localrc)\n')
+  fid.write('      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+  fid.write('        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
+  fid.write('    enddo\n')
+
+fid.write('''
     !! Now register all setServices routines for the gridded components
 ''')
 
@@ -1458,7 +1483,7 @@ fid.write('''
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
     logical, allocatable   :: GridCompHasPhaseZeroList(:)
-    logical                :: hasPhaseZero
+    logical                :: hasPhaseZero, isPresent
     integer(ESMF_KIND_I4), parameter :: maxPhaseCount=9
 
     rc=ESMF_SUCCESS
@@ -1545,11 +1570,19 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    !if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
