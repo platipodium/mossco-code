@@ -1114,7 +1114,8 @@ module mossco_netcdf
 
       localrc = nf90_get_att(self%ncid,var%varid, 'units', var%units)
       if (localrc /= NF90_NOERR) then
-        write(message,'(A)') '  '//trim(var%name)//' did not specify units in '//trim(self%name)
+        write(message,'(A)') '  '//trim(var%name)
+        call MOSSCO_MESSAGEAdd(message,' did not specify units in '//trim(self%name))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         var%units=''
       endif
