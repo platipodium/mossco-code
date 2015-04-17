@@ -862,7 +862,7 @@ module mossco_netcdf
       endif
       localrc = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time dimension'), ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time dimension', ESMF_LOGMSG_WARNING)
         nc%timeDimID=-1
       endif
     else
@@ -873,17 +873,17 @@ module mossco_netcdf
       endif
       localrc = nf90_inq_dimid(nc%ncid,'time',nc%timeDimId)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time dimension'), ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time dimension', ESMF_LOGMSG_WARNING)
         nc%timeDimID=-1
       endif
 
       localrc = nf90_inq_varid(nc%ncid,'time', varid)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable', ESMF_LOGMSG_WARNING)
       else
         localrc = nf90_get_att(nc%ncid, varid, 'units', timeUnit_)
         if (localrc /= NF90_NOERR) then
-          call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time unit'), ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_WARNING)
         else
           if (present(timeUnit)) write(timeUnit,'(A)') trim(timeUnit_)
         endif
@@ -2152,7 +2152,7 @@ module mossco_netcdf
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite('  no time variable found, choosing default time index 1', ESMF_LOGMSG_INFO)
       itime_ = 1
     else
 
