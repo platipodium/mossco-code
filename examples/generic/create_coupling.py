@@ -855,11 +855,11 @@ fid.write('''
 fid.write('''
     !!> Check all states for remaining incomplete fields
     !!>@todo find segfault this is causing
-    call ESMF_LogWrite(trim(myName)//' listing all import and export states', ESMF_LOGMSG_INFO)
+    !call ESMF_LogWrite(trim(myName)//' listing all import and export states', ESMF_LOGMSG_INFO)
 
     do i=1, numGridComp
-      call MOSSCO_StateCheckFields(gridImportStateList(i), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call MOSSCO_StateCheckFields(gridImportStateList(i), rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !call MOSSCO_StateCheckFields(gridExportStateList(i), rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !call MOSSCO_StateLog(gridImportStateList(i))
