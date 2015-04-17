@@ -56,6 +56,10 @@ module netcdf_input_component
       userRoutine=InitializeP1, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
+      userRoutine=InitializeP2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
       userRoutine=ReadRestart, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -80,7 +84,7 @@ module netcdf_input_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(len=10)           :: InitializePhaseMap(1)
+    character(len=10)           :: InitializePhaseMap(2)
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
@@ -91,6 +95,7 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
+    InitializePhaseMap(2) = "IPDv00p2=2"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
@@ -448,6 +453,10 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      write(message, '(A)') trim(name)//' created field'
+      call MOSSCO_FieldString(fieldList(i), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       call ESMF_StateAdd(exportState, (/fieldList(i)/), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -464,6 +473,229 @@ module netcdf_input_component
     return
 
   end subroutine InitializeP1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(gridComp, importState, exportState, parentClock, rc)
+    implicit none
+
+    type(ESMF_GridComp)  :: gridComp
+    type(ESMF_State)     :: importState, exportState
+    type(ESMF_Clock)     :: parentClock
+    integer, intent(out) :: rc
+
+    character(len=ESMF_MAXSTR) :: timestring, message, name, fileName
+    character(len=ESMF_MAXSTR) :: foreignGridFieldName, form
+    type(ESMF_Time)            :: currTime
+    type(ESMF_TimeInterval)    :: timeInterval, timeStep
+    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc
+    integer(ESMF_KIND_I8)      :: advanceCount
+    type(ESMF_Clock)           :: clock
+
+    logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
+    type(ESMF_Grid)            :: grid2, grid3, varGrid, importGrid, exportGrid
+    type(ESMF_Field)           :: field, importField, exportField
+    character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName
+    type(ESMF_Config)          :: config
+
+    integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid, gridRank, rank
+    type(ESMF_Time)            :: refTime, time
+    real(ESMF_KIND_R8)         :: seconds
+    type(ESMF_Field), allocatable :: fieldList(:)
+    type(ESMF_StateItem_Flag)  :: itemType
+
+    rc = ESMF_SUCCESS
+    hasGrid = .false.
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
+      config=config, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) then
+      write(message,'(A)') trim(name)//' received no filename to read from'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call MOSSCO_CompExit(gridComp)
+      return
+    endif
+
+    call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! For multiprocessor applications, try to read cpu-specific input first, default
+    ! back to overall file
+    if (petCount>0) then
+      write(form,'(A)')  '(A,'//trim(intformat(int(petCount-1,kind=8)))//',A)'
+      write(petFileName,trim(form)) filename(1:len_trim(filename)-2),localPet,'.nc'
+      inquire(file=trim(petFileName), exist=isPresent)
+      if (isPresent) fileName=trim(petFileName)
+    endif
+
+    inquire(file=trim(fileName), exist=isPresent)
+
+    if (.not.isPresent) then
+      write(message,'(A)') trim(name)//' cannot read file '//trim(fileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+    endif
+
+    write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_GridCompGet(gridComp, gridIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, grid=grid2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+      hasGrid=.true.
+    endif
+
+    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+      isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+        value=foreignGridFieldName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (trim(foreignGridFieldName) /= 'none') then
+        call MOSSCO_StateGetFieldGrid(importState, trim(foreignGridFieldName), grid2, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        hasGrid=.true.
+      endif
+    endif
+
+    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call nc%update_variables()
+    call nc%update()
+    itemCount = nc%nvars
+
+    ! Get time information from time variable if present and log the time span available
+    itime=1
+    timeid=0
+    do i=1, itemCount
+      if (trim(nc%variables(i)%name) == 'time' .or. trim(nc%variables(i)%standard_name) == 'time') then
+        timeid=i
+        write(message,'(A)')  trim(name)//' found time variable'
+        write(message,'(A,I3,A,I1,A)') trim(message)//' ', &
+          nc%variables(i)%varid,' rank ',nc%variables(i)%rank,' units='//trim(nc%variables(i)%units)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        exit
+      endif
+    enddo
+
+    if (timeid>0) then
+      call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      timeunit=trim(nc%variables(timeid)%units)
+      udimid=nc%variables(timeid)%dimids(1)
+      i=index(timeunit,'since ')
+      if (i>0) then
+        call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        timeunit=timeunit(1:i-1)
+      endif
+
+      if (trim(timeUnit) == 'seconds') then
+        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        write(message,'(A)')  trim(name)//' not implemented: unit for time is '//trim(timeUnit)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        seconds=0.0
+      endif
+
+      ! todo find time index (default is one)
+      ! allocate(time(nc%variables(timid)%dimlens(1)))
+      ! localrc=nf90_var_get(nc%ncid, timeid, time)
+    else
+      udimid=-1
+    endif
+
+    if (itemCount>0) allocate(fieldList(itemCount))
+
+    do i=1, itemCount
+
+      itemName=trim(nc%variables(i)%standard_name)
+      call ESMF_StateGet(importState, itemName, itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(importState, itemName, importField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(exportState, itemName, exportField, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+#if 0
+      call ESMF_FieldEmptySet(fieldList(i), grid3, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+
+      call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call nc%getvar(fieldList(i), nc%variables(i), itime=itime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeGet(fieldList(i), 'creator', isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (.not.isPresent) then
+        call ESMF_AttributeSet(fieldList(i), 'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      !call ESMF_StateAdd(exportState, (/fieldList(i)/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
+    enddo
+
+    if (allocated(fieldList)) deallocate(fieldList)
+
+    call nc%close(rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_CompExit(gridComp)
+    return
+
+  end subroutine InitializeP2
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
