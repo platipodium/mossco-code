@@ -503,12 +503,13 @@ module fabm_sediment_component
       !! create boundary fields in import State
       field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message, '(A)') trim(name)//' created field'
+      write(message, '(A)') trim(name)//' created empty field'
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       field = ESMF_FieldCreate(surface_mesh, &
                name='temperature_at_soil_surface', &
@@ -684,6 +685,17 @@ module fabm_sediment_component
       end do
 
       !! create boundary fields in import State
+       !! create boundary fields in import State
+      field = ESMF_FieldEmptyCreate(name='porosity_at_soil_surface', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' created empty field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       field = ESMF_FieldCreate(flux_grid, &
                name='temperature_at_soil_surface', &
                typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
