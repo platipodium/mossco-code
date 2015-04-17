@@ -159,6 +159,8 @@ contains
     character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
+    logical                     :: isPresent
+
 
     rc=ESMF_SUCCESS
 
@@ -176,11 +178,19 @@ contains
       convention="NUOPC", purpose="General", rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -930,6 +940,7 @@ contains
     integer, intent(out)  :: rc
 
     integer(ESMF_KIND_I4) :: localrc
+    logical               :: isPresent
 
     rc=ESMF_SUCCESS
 
@@ -945,11 +956,19 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1400,7 +1419,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR) :: name
-    logical                :: clockIsPresent
+    logical                :: clockIsPresent, isPresent
     type(ESMF_Time)        :: currTime
     type(ESMF_Clock)       :: clock
     integer                :: localrc
@@ -1464,11 +1483,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     end if
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
