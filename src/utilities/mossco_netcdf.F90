@@ -2006,16 +2006,7 @@ module mossco_netcdf
     count(:)=1
     count=count+ubnd-start
 
-    !write(0,*) var%name, 'dimids=',var%dimids
-    !write(0,*) var%name, 'dimlens=',self%dimlens
-    !write(0,*) 'start=', start
-    !write(0,*) 'maxIndPDe=', maxIndexPDe(:,localPet+1)
-    !write(0,*) 'ubnd=', ubnd
-    !write(0,*) 'count=', count
-
     if (any(count <= 0)) return
-
-    !write(0,*) 'start=', start, ' count=', count, 'rank=', rank, 'var%rank=', var%rank, 'itime=', itime_, 'dimlens=', var%dimlens(:), 'name=', var%name
 
     if (rank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
@@ -2051,9 +2042,8 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      if (any(farrayPtr2>0)) then
-        write(0,*) '   mossco_netcdf: '//trim(var%name), farrayPtr2
-      endif
+      !if (any(farrayPtr2>0)) write(0,*) '   mossco_netcdf: '//trim(var%name), farrayPtr2
+
 
     elseif (rank == 3) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
