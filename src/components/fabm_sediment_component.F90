@@ -806,6 +806,8 @@ module fabm_sediment_component
         write(message,'(A)') trim(name)//' received incomplete field'
         call mossco_fieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      call MOSSCO_StateLog(importState)
+      call MOSSCO_StateLog(exportState)
       end if
     else
       write(message,'(A)') trim(name)//' has no external porosity information'
@@ -921,8 +923,39 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR) :: alarmName
     integer(ESMF_KIND_I4)      :: localrc
 
+    type(ESMF_StateItem_Flag)   :: itemType
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    character(len=ESMF_MAXSTR)  :: itemName
+    integer(ESMF_KIND_I4)       :: lbnd(2), ubnd(2)
+
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> check for porosity
+    itemname='porosity_at_soil_surface'
+    call ESMF_StateGet(importState, trim(itemname), itemType=itemType, rc=localrc)
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(importState, trim(itemname), field=field, rc=localrc)
+      call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
+      if (fieldstatus==ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field, farrayPtr=ptr_f2, &
+               exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+        sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+        call sed%update_porosity(from_surface=.true.)
+        write(message,'(A)') trim(name)//' updated porosity from'
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      else
+        write(message,'(A)') trim(name)//' received incomplete field'
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      call MOSSCO_StateLog(importState)
+      call MOSSCO_StateLog(exportState)
+      end if
+    else
+      write(message,'(A)') trim(name)//' has no external porosity information'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    end if
 
     call get_boundary_conditions(sed,importState,bdys,fluxes)
     sed%bdys   => bdys
