@@ -43,6 +43,7 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
   type(ESMF_GeomType_Flag) :: geomType
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
+  integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
 
   rc_ = ESMF_SUCCESS
 
@@ -105,17 +106,22 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
 
-    !if (rank==1) then
-    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd1, exclusiveLBound=lbnd1, rc=rc)
-    !elseif (rank==2) then
-    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=rc)
-    !elseif (rank==3) then
-    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd3, exclusiveLBound=lbnd3, rc=rc)
-    !elseif (rank==4) then
-    !  call ESMF_FieldGetBounds(field, localDe=0, exclusiveUBound=ubnd4, exclusiveLBound=lbnd4, rc=rc)
-    !else
-    !  write(0,*) 'NOT implemented: rank > 4'
-    !endif
+    allocate(ubnd(rank))
+    allocate(lbnd(rank))
+
+    call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rank>0 .and. (len_trim(message) + 5 <=len(message))) write(message,'(A,I3)') trim(message)//' (', ubnd(1)-lbnd(1)+1
+    if (rank>1 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(2)-lbnd(2)+1
+    if (rank>2 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(3)-lbnd(3)+1
+    if (rank>3 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(4)-lbnd(4)+1
+    if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
+
+    deallocate(ubnd)
+    deallocate(lbnd)
+
   endif
 
   length_=len_trim(message)
