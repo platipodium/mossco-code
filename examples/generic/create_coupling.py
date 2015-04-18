@@ -829,19 +829,21 @@ if (True):
     fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
     fid.write('      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
-## Go through ReadRestart (assumed only phase 1)
-#for item in gridCompList:
-#  fid.write('    !! ReadRestarting ' + item + '\n')
-#  ifrom=gridCompList.index(item)
-#  ito=ifrom
-#  for j in range(0, len(couplingList)):
-#    jtem=couplingList[j]
-#    if jtem[-1]==item:
-#      ifrom=gridCompList.index(jtem[0])
-#  j=gridCompList.index(item)
-#  fid.write('    call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito+1) + '), &\n')
-#  fid.write('          exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
-#fid.write('    !! End of ReadRestart \n\n')
+# Go through ReadRestart (assumed only phase 1)
+for item in gridCompList:
+  fid.write('    !! ReadRestarting ' + item + '\n')
+  ifrom=gridCompList.index(item)
+  ito=ifrom
+  for j in range(0, len(couplingList)):
+    jtem=couplingList[j]
+    if jtem[-1]==item:
+      ifrom=gridCompList.index(jtem[0])
+  j=gridCompList.index(item)
+  fid.write('    call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
+  fid.write('      exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
+  fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+  fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+fid.write('    !! End of ReadRestart \n\n')
 
 fid.write('''
     do i=1, numGridComp
