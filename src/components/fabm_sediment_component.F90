@@ -862,18 +862,22 @@ module fabm_sediment_component
           if ((ubnd(1)-lbnd(1)+1.ne.ownshape(1)).or. &
               (ubnd(2)-lbnd(2)+1.ne.ownshape(2)).or. &
               (ubnd(3)-lbnd(3)+1.ne.ownshape(3))) then
-            write(message,'(A)') trim(name)//': incompatible shape of '//trim(varname)
+            write(message,'(A)') trim(name)//' incompatible shape of field'
+            call mossco_fieldString(field, message)
             call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
           sed%export_states(n)%data = ptr_f3
+          write(message,'(A)') trim(name)//' hotstarted field'
+          call mossco_fieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         else
-          write(message,'(A)') trim(name)//': incomplete field'
+          write(message,'(A)') trim(name)//' incomplete field'
           call mossco_fieldString(field, message)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         end if
       else
-        write(message,'(A)') trim(name)//': skipped hotstart for variable '//trim(varname)
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       end if
     end do
