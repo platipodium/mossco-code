@@ -880,7 +880,7 @@ module fabm_pelagic_component
       end if
     end do
 #endif
- 
+
   end subroutine
 
 
@@ -922,23 +922,31 @@ module fabm_pelagic_component
         if (fieldstatus== ESMF_FIELDSTATUS_COMPLETE) then
           call ESMF_FieldGet(field, farrayPtr=ptr_f3, &
                exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-          ownshape = shape(pel%export_states(n)%conc)
+          ownshape = shape(pel%export_states(n)%data)
           if ((ubnd(1)-lbnd(1)+1.ne.ownshape(1)).or. &
               (ubnd(2)-lbnd(2)+1.ne.ownshape(2)).or. &
               (ubnd(3)-lbnd(3)+1.ne.ownshape(3))) then
-            write(message,'(A)') trim(name)//': incompatible shape of '//trim(varname)
+            write(message,'(A)') trim(name)//' incompatible shape of field'
+            call mossco_fieldString(field, message)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            write(message,'(A,4I3,A,4I3)') trim(name)//' own shape', ownshape, ' other shape ', &
+              ubnd(:)-lbnd(:)+ (/1,1,1/)
             call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
           pel%export_states(n)%conc = ptr_f3
+          write(message,'(A)') trim(name)//' hotstarted field'
+          call mossco_fieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         else
-          write(message,'(A)') trim(name)//': incomplete field'
+          write(message,'(A)') trim(name)//' incomplete field'
           call mossco_fieldString(field, message)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         end if
       else
-        write(message,'(A)') trim(name)//': skipped hotstart for variable '//trim(varname)
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState)
       end if
     end do
 
