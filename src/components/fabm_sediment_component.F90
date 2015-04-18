@@ -847,6 +847,8 @@ module fabm_sediment_component
     call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
+
     !> browse through list of state variables and
     !! copy data from importState fields with same name
     do n=1,size(sed%export_states)
@@ -865,6 +867,9 @@ module fabm_sediment_component
             write(message,'(A)') trim(name)//' incompatible shape of field'
             call mossco_fieldString(field, message)
             call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+            write(message,'(A,4I3,A,4I3)') trim(name)//' own shape', ownshape, ' other shape ', &
+              ubnd(:)-lbnd(:)+ (/1,1,1/)
+            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
           sed%export_states(n)%data = ptr_f3
@@ -879,6 +884,7 @@ module fabm_sediment_component
       else
         write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState)
       end if
     end do
 
