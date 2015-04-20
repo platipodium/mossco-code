@@ -1904,9 +1904,9 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(in), optional  :: itime
 
     integer(ESMF_KIND_I4)                        :: localrc, udimid, localDeCount, rc_
-    integer(ESMF_KIND_I4)                        :: rank, itime_, j, i
+    integer(ESMF_KIND_I4)                        :: fieldRank, gridRank, itime_, j, i
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
-    integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:)
+    integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:), lbnd(:)
     real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
     real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
     character(len=ESMF_MAXSTR)                   :: message
@@ -1938,13 +1938,13 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_FieldGet(field, rank=rank, localDeCount=localDeCount, rc=localrc)
+    call ESMF_FieldGet(field, rank=fieldRank, localDeCount=localDeCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (localDeCount==0) return
 
-    if (rank > 4) then
+    if (fieldRank > 4) then
       write(message, '(A)')  'Rank > 4 not implemented for reading field '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
@@ -1956,7 +1956,7 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridGet(grid, distGrid=distGrid, rank=rank, rc=localrc)
+    call ESMF_GridGet(grid, distGrid=distGrid, rank=gridRank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1968,8 +1968,8 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(minIndexPDe(rank, deCount))
-    allocate(maxIndexPDe(rank, deCount))
+    allocate(minIndexPDe(gridRank, deCount))
+    allocate(maxIndexPDe(gridRank, deCount))
 
     call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
                                     maxIndexPDe=maxIndexPDe, rc=localrc)
@@ -1984,20 +1984,26 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(start(rank))
-    allocate(count(rank))
-    allocate(ubnd(rank))
+    allocate(start(fieldRank))
+    allocate(count(fieldRank))
+    allocate(ubnd(fieldRank))
+    allocate(lbnd(fieldRank))
 
+    start(1:gridRank)=minIndexPDe(:,localPet+1)
+    if (fieldRank>gridRank) start(gridRank+1:fieldRank)=1
 
-    start=minIndexPDe(:,localPet+1)
     where (start < 1)
       start=1
     endwhere
 
-    ubnd=maxIndexPDe(:,localPet+1)
+    call ESMF_FieldGetBounds(field, exclusiveUbound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ubnd(1:gridRank)=maxIndexPDe(:,localPet+1)
 
     j=0
-    do i=1, rank
+    do i=1, fieldRank
       j=j+1
       if (var%dimids(i)==self%timeDimId) j=j+1
       if (ubnd(i)>self%dimlens(var%dimids(j))) ubnd(i)=self%dimlens(var%dimids(j))
@@ -2008,13 +2014,13 @@ module mossco_netcdf
 
     if (any(count <= 0)) return
 
-    if (rank == 1) then
+    if (fieldRank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (var%rank==rank) then
+      if (var%rank==fieldRank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, start, count)
-      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
+      elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, (/start(1),itime_/), (/count(1),1/))
       else
         rc = ESMF_RC_NOT_IMPL
@@ -2024,14 +2030,14 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-    elseif (rank == 2) then
+    elseif (fieldRank == 2) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !write(0,*) 'rank=', rank, 'var%rank=', var%rank, 'var%dimids=', var%dimids(:), 'udimid=',self%timeDimId
-      if (var%rank==rank) then
+      if (var%rank==fieldRank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, start, count)
-      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
+      elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, (/start(1),start(2),itime/), (/count(1),count(2),1/))
       else
         rc = ESMF_RC_NOT_IMPL
@@ -2045,13 +2051,13 @@ module mossco_netcdf
       !if (any(farrayPtr2>0)) write(0,*) '   mossco_netcdf: '//trim(var%name), farrayPtr2
 
 
-    elseif (rank == 3) then
+    elseif (fieldRank == 3) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (var%rank==rank) then
+      if (var%rank==fieldRank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr3, start, count)
-      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
+      elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr3, &
           (/start(1),start(2),start(3),itime_/), (/count(1),count(2), count(3),1/))
       else
@@ -2062,13 +2068,13 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-    elseif (rank == 4) then
+    elseif (fieldRank == 4) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (var%rank==rank) then
+      if (var%rank==fieldRank) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr4, start, count)
-      elseif (var%rank==rank+1 .and. var%dimids(rank+1) == self%timeDimId ) then
+      elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, farrayPtr4, &
           (/start(1),start(2),start(3),start(4),itime_/), (/count(1),count(2),count(3),count(4),1/))
       else
@@ -2081,6 +2087,7 @@ module mossco_netcdf
       endif
     endif
 
+    if (allocated(lbnd))  deallocate(lbnd)
     if (allocated(ubnd))  deallocate(ubnd)
     if (allocated(count)) deallocate(count)
     if (allocated(start)) deallocate(start)
