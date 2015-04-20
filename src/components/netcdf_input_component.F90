@@ -132,15 +132,17 @@ module netcdf_input_component
     type(ESMF_Clock)           :: clock
 
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
-    type(ESMF_Grid)            :: grid2, grid3, varGrid
+    type(ESMF_Grid)            :: grid2, grid3, grid, varGrid
     type(ESMF_Field)           :: field
-    character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName
+    character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName, gridName
     type(ESMF_Config)          :: config
 
-    integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid, gridRank, rank
+    integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid
+    integer(ESMF_KIND_I4)      :: fieldRank, gridRank
     type(ESMF_Time)            :: refTime, time
     real(ESMF_KIND_R8)         :: seconds
     type(ESMF_Field), allocatable :: fieldList(:)
+    integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
 
     rc = ESMF_SUCCESS
     hasGrid = .false.
@@ -274,7 +276,10 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_GridCompGet(gridComp, grid=grid2, rc=localrc)
+      write(message,'(A)') trim(name)//' found grid in component'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+
+      call ESMF_GridCompGet(gridComp, grid=grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
       hasGrid=.true.
@@ -292,11 +297,25 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (trim(foreignGridFieldName) /= 'none') then
-        call MOSSCO_StateGetFieldGrid(importState, trim(foreignGridFieldName), grid2, localrc)
+        call ESMF_StateGet(importState,  trim(foreignGridFieldName), field, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message, '(A)') trim(name)//' obtains grid from field'
+        call MOSSCO_FieldString(field,message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        call ESMF_FieldGet(field, grid=grid, rank=fieldRank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         hasGrid=.true.
       endif
+    else
+      write(message,'(A)') trim(name)//' not implemented without foreign_grid'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      !rc = ESMF_RC_NOT_IMPL
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     if (.not.hasGrid) then
@@ -306,16 +325,26 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_GridGet(grid2, rank=rank, rc=localrc)
+    call ESMF_GridGet(grid, rank=gridRank, name=gridName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (rank == 2) then
+    !! Check for ungridded dimensions
+    if (fieldRank>gridRank) then
+      allocate(ungriddedUbnd(fieldRank-gridRank))
+      allocate(ungriddedLbnd(fieldRank-gridRank))
+      call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd, ungriddedUbound=ungriddedUbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (gridRank == 2) then
+      grid2 = grid
       grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    elseif (rank==3) then
-      grid3 = grid2
+    elseif (gridRank == 3) then
+      grid3 = grid
       grid2 = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -413,10 +442,27 @@ module netcdf_input_component
 
       if (hasGrid) then
 
-        gridRank=nc%variables(i)%rank
-        if (any(nc%variables(i)%dimids==udimid)) gridRank=gridRank-1
+        !! Make sure varRank>=fieldRank>=gridRank
 
-        ! todo: test if varGrid conforms to grid
+        if (any(nc%variables(i)%dimids==udimid)) then
+          if (fieldRank /= nc%variables(i)%rank-1) then
+            write(message,'(A,I1)') trim(name)//' got mismatching ranks from netdf (', nc%variables(i)%rank-1
+            write(message,'(A)') trim(message)//') and field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
+        else
+          if (fieldRank /= nc%variables(i)%rank) then
+            write(message,'(A,I1)') trim(name)//' got mismatching ranks from netdf (', nc%variables(i)%rank
+            write(message,'(A)') trim(message)//') and field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
+        endif
+
+        !> @todo: test if varGrid conforms to grid
         if (gridRank==2) then
           call ESMF_FieldEmptySet(fieldList(i), grid2, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
         elseif (gridRank==3) then
@@ -435,7 +481,12 @@ module netcdf_input_component
         return
       endif
 
-      call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, rc=localrc)
+      if (fieldRank>gridRank) then
+        call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, ungriddedLBound= &
+          ungriddedLbnd, ungriddedUbound=ungriddedUbnd, rc=localrc)
+      else
+        call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, rc=localrc)
+      endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -462,6 +513,9 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     enddo
+
+    if (allocated(ungriddedUbnd)) deallocate(ungriddedUbnd)
+    if (allocated(ungriddedLbnd)) deallocate(ungriddedLbnd)
 
     if (allocated(fieldList)) deallocate(fieldList)
 
