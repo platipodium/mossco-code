@@ -34,16 +34,16 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
   integer(ESMF_KIND_I4), intent(inout), optional :: length
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc
-  integer(ESMF_KIND_I4)   :: ubnd1(1), ubnd2(2), ubnd3(3), ubnd4(4)
-  integer(ESMF_KIND_I4)   :: lbnd1(1), lbnd2(2), lbnd3(3), lbnd4(4)
+  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, gridRank, n
+
+  integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
+
   character(ESMF_MAXSTR)  :: geomName, stringValue, name
   type(ESMF_Grid)         :: grid
 
   type(ESMF_GeomType_Flag) :: geomType
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
-  integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
 
   rc_ = ESMF_SUCCESS
 
@@ -71,7 +71,7 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
   endif
 
   if (fieldStatus /= ESMF_FIELDSTATUS_EMPTY) then
-    call ESMF_FieldGet(field, geomtype=geomtype, rc=localrc)
+    call ESMF_FieldGet(field, geomtype=geomtype, rank=rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -79,13 +79,21 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
       call ESMF_FieldGet(field, grid=grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_GridGet(grid, name=geomName, rc=localrc)
+      call ESMF_GridGet(grid, name=geomName, rank=gridRank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_MessageAdd(message,' '//geomName)
-      call ESMF_GridGet(grid, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !! Check for ungridded dimensions
+      n=rank-gridRank
+      if (n>0) then
+        allocate(ungriddedUbnd(n))
+        allocate(ungriddedLbnd(n))
+        call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd, ungriddedUbound=ungriddedUbnd, &
+          rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
     elseif (geomtype==ESMF_GEOMTYPE_MESH) then
       call MOSSCO_MessageAdd(message,' mesh')
@@ -119,10 +127,12 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
     if (rank>3 .and. (len_trim(message) + 4 <=len(message))) write(message,'(A,X,I3)') trim(message), ubnd(4)-lbnd(4)+1
     if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
 
-    deallocate(ubnd)
-    deallocate(lbnd)
-
   endif
+
+  if (allocated(ubnd)) deallocate(ubnd)
+  if (allocated(lbnd)) deallocate(lbnd)
+  if (allocated(ungriddedUbnd)) deallocate(ungriddedUbnd)
+  if (allocated(ungriddedLbnd)) deallocate(ungriddedLbnd)
 
   length_=len_trim(message)
   if (present(length)) length=length_
