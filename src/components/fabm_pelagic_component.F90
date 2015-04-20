@@ -922,7 +922,7 @@ module fabm_pelagic_component
         if (fieldstatus== ESMF_FIELDSTATUS_COMPLETE) then
           call ESMF_FieldGet(field, farrayPtr=ptr_f3, &
                exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-          ownshape = shape(pel%export_states(n)%data)
+          ownshape = shape(pel%export_states(n)%conc)
           if ((ubnd(1)-lbnd(1)+1.ne.ownshape(1)).or. &
               (ubnd(2)-lbnd(2)+1.ne.ownshape(2)).or. &
               (ubnd(3)-lbnd(3)+1.ne.ownshape(3))) then
