@@ -127,7 +127,7 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
     enddo
 
     do i=gridRank+1, rank
-      if (len_trim(message) + 4 <=len(message)) write(message,'(A,X,I3,A)') trim(message), ubnd(i)-lbnd(i)+1,'u'
+      if (len_trim(message) + 5 <=len(message)) write(message,'(A,X,I3,A)') trim(message), ubnd(i)-lbnd(i)+1,'u'
     enddo
 
     if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
