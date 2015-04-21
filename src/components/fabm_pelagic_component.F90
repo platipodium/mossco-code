@@ -853,7 +853,7 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> lookup the importState for restart data
-    call ReadRestart(gridComp, importState, exportState, parentClock, rc=localrc)
+    !call ReadRestart(gridComp, importState, exportState, parentClock, rc=localrc)
 
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
@@ -976,6 +976,9 @@ module fabm_pelagic_component
         call MOSSCO_StateLog(importState)
       end if
     end do
+
+    !> update sinking after restart
+    call pel%update_export_states(update_sinking=.true.)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
