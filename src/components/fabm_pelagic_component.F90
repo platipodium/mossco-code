@@ -1193,8 +1193,9 @@ module fabm_pelagic_component
                  pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)))
               !> addition of mass
               where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
-                farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)  &
-                                                              + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
+                farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) + &
+                  dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) / &
+                  (pel%knum * pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) * pel%column_area)
               endwhere
             enddo
           !> Otherwise it is a surface (2D-) flux (expected unit mmol m**-2), that needs
