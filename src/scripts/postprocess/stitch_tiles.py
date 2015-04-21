@@ -21,6 +21,11 @@ if len(sys.argv) > 1:
 else:
   prefix = u"netcdf_out"
 
+if len(sys.argv) > 2:
+  excl_variables = sys.argv[2].split(',')
+else:
+  excl_variables = []
+
 pattern=prefix + u'.*.nc'
 files=glob.glob(pattern)
     
@@ -92,17 +97,25 @@ for key,value in nc.dimensions.iteritems():
 # attribute, as adding this after variable creation causes spurious "variable not
 # found" errors.
 
+if (excl_variables == []):
+  excl_variables = nc.variables.keys()
+else:
+  excl_variables.extend(list(set(alon)))
+  excl_variables.extend(list(set(alat)))
+  excl_variables.append('time')
+
 for key,value in nc.variables.iteritems():
   dims=list(value.dimensions)
 
-  try:
-    var=ncout.createVariable(key,value.dtype,tuple(dims),fill_value=value.getncattr('_FillValue'))
-  except:
-    var=ncout.createVariable(key,value.dtype,tuple(dims))
+  if (key in excl_variables):
+    try:
+      var=ncout.createVariable(key,value.dtype,tuple(dims),fill_value=value.getncattr('_FillValue'))
+    except:
+      var=ncout.createVariable(key,value.dtype,tuple(dims))
 
-  for att in value.ncattrs():
-    if att == '_FillValue': continue
-    var.setncattr(att,value.getncattr(att))
+    for att in value.ncattrs():
+      if att == '_FillValue': continue
+      var.setncattr(att,value.getncattr(att))
 
 nc.close()
 
@@ -147,7 +160,7 @@ for f in files[:]:
 
     if key=='time': continue
     if key in coords: continue
-
+    if not(key in excl_variables): continue
 
     var=ncout.variables[key]
 
