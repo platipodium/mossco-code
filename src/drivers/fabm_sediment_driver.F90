@@ -324,7 +324,8 @@ integer         :: n,i,j,k
 ! Make sure we are in an aqueous environment
 if (any(sed%porosity <= 0) .or. any(sed%porosity > 1)) then
   write(0,*) 'FATAL Porosity out of range, cannot initialize sediment'
-  return
+  !> @todo check values only within the water mask
+  !return
 endif
 
 do n=1,sed%nvar
@@ -508,7 +509,8 @@ real(rk),dimension(grid%inum,grid%jnum,grid%knum),optional :: flux_cap
 ! Make sure that dzc and dz are finite and positive
 if (any(grid%dzc <= 0) .or. any(grid%dz <=0)) then
   write(0,*)  'FATAL: nonpositive grid height'
-  return
+  !> @todo only check within water mask
+  !return
 endif
 
 ! Flux - first internal cells
