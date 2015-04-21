@@ -41,6 +41,8 @@
     type(export_state_type),dimension(:),pointer :: export_states => null()
     real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
+    real(rk),dimension(:,:),pointer    :: volume_flux=>null()
+    real(rk),dimension(:,:),pointer    :: column_area=>null()
     real(rk),dimension(:,:,:),pointer  :: zi=>null() !> layer interface depth
     real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0=>null()
     real(rk)                           :: decimal_yearday

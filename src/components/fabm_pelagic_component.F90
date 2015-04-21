@@ -217,7 +217,7 @@ module fabm_pelagic_component
     type(ESMF_FieldBundle) :: fieldBundle
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     type(ESMF_Field)     :: field,wsfield,concfield,tmpField
-    type(ESMF_Field)     :: restartField
+    type(ESMF_Field)     :: restartField, areaField
     type(ESMF_Array)     :: array
     integer              :: i,j,k,n
     integer              :: rank
@@ -760,6 +760,33 @@ module fabm_pelagic_component
            farrayPtr=pel%zi, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> create river runoff field in import State
+    field = ESMF_FieldCreate(horizontal_grid, name="water_volume_flux", staggerloc=ESMF_STAGGERLOC_CENTER, &
+              typekind=ESMF_TYPEKIND_R8, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(field,'units','m3.s-1',rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=pel%volume_flux, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    ! initialize volume flux with 0.0 (to be filled in the importState
+    pel%volume_flux = 0.0d0
+    call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> read area of cells from grid
+    areaField = ESMF_FieldCreate(horizontal_grid, name="water_column_area", \
+                                 staggerloc=ESMF_STAGGERLOC_CENTER, \
+                                 typekind=ESMF_TYPEKIND_R8, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldRegridGetArea(areaField, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(areaField, farrayPtr=pel%column_area, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(0,*) 'area(10,:)',pel%column_area(10,:)
+
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
 
@@ -1156,6 +1183,12 @@ module fabm_pelagic_component
           !> If it is a vertically averaged (2D-) flux (expected unit mmol m**-3)
           if (index(itemNameList(i),'_flux_in_water')>0) then
             do k=1,pel%knum
+              !> river dilution
+              !@todo: if river_dilution_on
+              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) * &
+                (1.0d0 - dt*pel%volume_flux / (pel%knum * pel%column_area * &
+                 pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)))
+              !> addition of mass
               where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
                 farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)  &
                                                               + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt
