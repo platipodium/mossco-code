@@ -405,6 +405,24 @@ if [[ RETITLE != 0 ]] ; then
   fi
 fi
 
+if test -f ./par_setup.dat ; then
+  if test -f ./Parallel/par_setup.${NP}p.dat ; then
+    ln -sf ./Parallel/par_setup.${NP}p.dat par_setup.dat
+    echo "Linked Parallel/par_setup.${NP}p.dat to par_setup.dat"
+  else
+    echo "Warning: check that par_setup.dat is correctly setup for ${NP} processors"
+  fi
+fi
+
+for F in *.dim ; do
+  if test -f Parallel/${F%%.dim}.${NP}p.dim ; then
+    ln -sf Parallel/${F%%.dim}.${NP}p.dim $F
+    echo "Linked Parallel/${F%%.dim}.${NP}p.dim to $F"
+  else
+    echo "Warning: check that $F is correctly setup for ${NP} processors"
+  fi
+done
+
 if ! test -f mossco_run.nml ; then
   echo
   echo "ERROR: Need file mossco_run.nml to run"
@@ -427,8 +445,8 @@ case ${SYSTEM} in
            echo "Job ${TITLE} submitted to queue ${QUEUE} for system ${SYSTEM}"
            qstat -g c
            qstat
-         else 
-           cat sge.sh 
+         else
+           cat sge.sh
          fi
          ;;
   SLURM) if test $(which sbatch 2> /dev/null) ; then
