@@ -192,6 +192,7 @@ for f in files[:]:
       print 'skipped ' + key
       continue
 
+    nc.sync()
     print 'Stitched ' + f + ' ' + key, value.shape
 
   nc.close()
