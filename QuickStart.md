@@ -2,7 +2,7 @@
 
 These instructions should get you started on building your own coupled system with MOSSCO. It is really only a quick start, if you or someone else has already installed
 
-- Python with YAML support (any version)
+- Python with YAML support (python >= 2.7)
 - Fortran2003 compliant compiler (e.g. PGI > 13.1, Intel > 12.0, GCC >= 4.8.2)
 - CMake (>= 2.8.6)
 - ESMF (The Earth System Modeling Framework) with NetCDF and MPI support (>= 6.3.0)
@@ -80,7 +80,7 @@ to learn about the options to this script.
 To perform a simulation, you have to change to a directory containing all necessary setup files and execute `mossco` with the name of one of the provided examples, e.g.
 
 	cd $MOSSCO_SETUPDIR/helgoland
-	mossco -g gotm--fabm_pelagic--fabm_sediment--netcdf 
+	mossco gotm--fabm_pelagic--fabm_sediment--netcdf 
 	
 You will see some screen output, and at least two files will be written
 
@@ -95,11 +95,11 @@ You can see many namelists here, of which the most important ones are
 - `fabm.nml` (for controlling the pelagic fabm models to be used)
 - `run_sed.nml` (for controlling the benthic fabm models)
 
-Depending on your choice of FABM models, you may have to edit or add more namelist files, then execute `mossco -g gotm--fabm_pelagic--fabm_sediment--netcdf` again.
+Depending on your choice of FABM models, you may have to edit or add more namelist files, then execute `mossco gotm--fabm_pelagic--fabm_sediment--netcdf` again.
 
 You can also explore this coupling configuration, which is specified in the file `$MOSSCO_DIR/examples/generic/gotm--fabm_pelagic--fabm_sediment--netcdf.yaml`.  After changing this coupling specification, issue
 
-	mossco -rg gotm--fabm_pelagic--fabm_sediment--netcdf 
+	mossco -r gotm--fabm_pelagic--fabm_sediment--netcdf 
 	
 To rebuild and execute your example again.
 
