@@ -17,10 +17,10 @@ OPTIND=1           # Reset in case getopts has been used previously in the shell
 GENERIC=1          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
-NP=1               # Run on one processor
 DEFAULT=getm--fabm_pelagic--fabm_sediment--netcdf  # Default example
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
 POSTPROCESS=NONE
+NP=NONE
 
 # Function for printing usage of this script
 function usage {
@@ -33,10 +33,10 @@ function usage {
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp"
-	echo "    [-p] :  specifiy the name of a postprocess script (only SLURM)" 
+	echo "    [-p] :  specifiy the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
-	echo "            MPI is not used at all. Default is n=1"
+	echo "            MPI is not used at all. Default is content of par_setup.dat or n=1"
 	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system, which is"
         echo "            autodetected by default"
 	echo
@@ -51,9 +51,9 @@ function usage {
 
 # Function for selecting the queue on SGE system
 function select_sge_queue {
-  QSMALL=$(qstat -g c |grep small.q | awk '{print $5}') 
+  QSMALL=$(qstat -g c |grep small.q | awk '{print $5}')
   if [[ ${QSMALL} -ge  $1 ]] ; then
-    echo small.q  
+    echo small.q
   else
     echo all.q
   fi
@@ -208,7 +208,7 @@ if ! test -x  ${EXE} ; then
 fi
 
 # Automatically determine system
-if [[ $(which qstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SGE 
+if [[ $(which qstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SGE
 elif [[ $(which sstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SLURM
 elif [[ $(which msub 2> /dev/null) != "" ]] ; then AUTOSYSTEM=MOAB
 fi
@@ -250,10 +250,22 @@ case ${SYSTEM} in
 esac
 
 
-if [[ ${NP} == 0 ]]; then
-  MPI_PREFIX=""
-  NP=1
+# Figure out default NP (1), or special settings if found in par_setup.dat
+if [[ ${NP} == NONE ]]; then
+  if test -f par_setup.dat ; then
+    NP=$(head -n 1 par_setup.dat)
+  else
+    NP=1
+  fi
 fi
+
+
+if [[ ${NP} == 0 ]]; then
+  NP=1
+  MPI_PREFIX=""
+fi
+
+
 
 echo "Building scripts for system ${SYSTEM} with MPI_PREFIX ${MPI_PREFIX} -np ${NP}"
 
@@ -269,7 +281,7 @@ case ${SYSTEM} in
          PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
          #NP=$(expr $NODES \* $PPN )
          if [[ ${POSTPROCESS} -eq NONE ]]; then
-           POSTPROCESS=slurm_postprocess.sh           
+           POSTPROCESS=slurm_postprocess.sh
          fi
          ;;
   *)     ;;
@@ -393,6 +405,24 @@ if [[ RETITLE != 0 ]] ; then
   fi
 fi
 
+if test -f ./par_setup.dat ; then
+  if test -f ./Parallel/par_setup.${NP}p.dat ; then
+    ln -sf ./Parallel/par_setup.${NP}p.dat par_setup.dat
+    echo "Linked Parallel/par_setup.${NP}p.dat to par_setup.dat"
+  else
+    echo "Warning: check that par_setup.dat is correctly setup for ${NP} processors"
+  fi
+fi
+
+for F in *.dim ; do
+  if test -f Parallel/${F%%.dim}.${NP}p.dim ; then
+    ln -sf Parallel/${F%%.dim}.${NP}p.dim $F
+    echo "Linked Parallel/${F%%.dim}.${NP}p.dim to $F"
+  else
+    echo "Warning: check that $F is correctly setup for ${NP} processors"
+  fi
+done
+
 if ! test -f mossco_run.nml ; then
   echo
   echo "ERROR: Need file mossco_run.nml to run"
@@ -415,8 +445,8 @@ case ${SYSTEM} in
            echo "Job ${TITLE} submitted to queue ${QUEUE} for system ${SYSTEM}"
            qstat -g c
            qstat
-         else 
-           cat sge.sh 
+         else
+           cat sge.sh
          fi
          ;;
   SLURM) if test $(which sbatch 2> /dev/null) ; then
