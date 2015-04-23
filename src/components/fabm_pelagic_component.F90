@@ -791,12 +791,16 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(areaField, farrayPtr=pel%column_area, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldRegridGetArea(areaField, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-      pel%column_area=11112.0d0**2 ! default to 6nm square
-    end if
 
-    write(0,*) 'area(10,:)',pel%column_area(10,:)
+    !> @todo calculate area based on corner coordinates. ESMF_FieldRegridGetArea needs a
+    !!       a testing program here. (in NSBS6nm, it does not stop being busy)
+    pel%column_area=11112.0d0**2 ! default to 6nm square
+
+    !call ESMF_FieldRegridGetArea(areaField, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+    !  pel%column_area=11112.0d0**2 ! default to 6nm square
+    !end if
+    !write(0,*) 'area(10,:)',pel%column_area(10,:)
 
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
