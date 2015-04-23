@@ -236,7 +236,7 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
     real(ESMF_KIND_R8)    :: attribute_r8
-    real(ESMF_KIND_R8)    :: background_extinction
+    real(ESMF_KIND_R8)    :: background_extinction=3.0
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I4) :: totallwidth3(3), totaluwidth3(3)
