@@ -791,11 +791,6 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(areaField, farrayPtr=pel%column_area, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldRegridGetArea(areaField, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-      pel%column_area=11112.0d0**2 ! default to 6nm square
-    end if
-
     !> @todo calculate area based on corner coordinates. ESMF_FieldRegridGetArea needs a
     !!       a testing program here. (in NSBS6nm, it does not stop being busy)
     pel%column_area=11112.0d0**2 ! default to 6nm square
