@@ -803,11 +803,11 @@ module fabm_sediment_component
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       else
-        write(message,'(A)') trim(name)//' received incomplete field'
+        write(message,'(A)') trim(name)//' received incomplete field, remove field'
         call mossco_fieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-      call MOSSCO_StateLog(importState)
-      call MOSSCO_StateLog(exportState)
+        call ESMF_StateRemove(importState,(/ trim(itemname) /), rc=localrc)
+        call ESMF_FieldDestroy(field)
       end if
     else
       write(message,'(A)') trim(name)//' has no external porosity information'
