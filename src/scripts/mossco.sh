@@ -414,7 +414,7 @@ if test -f ./par_setup.dat ; then
   fi
 fi
 
-for F in *.dim ; do
+for F in $(ls *.dim 2> /dev/null) ; do
   if test -f Parallel/${F%%.dim}.${NP}p.dim ; then
     ln -sf Parallel/${F%%.dim}.${NP}p.dim $F
     echo "Linked Parallel/${F%%.dim}.${NP}p.dim to $F"
