@@ -1279,13 +1279,15 @@ module mossco_netcdf
     integer,allocatable           :: ubounds(:),lbounds(:)
     integer,pointer,dimension(:)  :: dimids
 
-    integer(ESMF_KIND_I4)         :: dimCount, dimid, rank, i
+    integer(ESMF_KIND_I4)         :: dimCount, dimid, rank, i, localrc
     character(len=ESMF_MAXSTR)    :: message
 
     rc_ = MOSSCO_NC_NOERR
+
     dimcheck=0
-    call ESMF_GridGet(grid,name=geomName,rank=rank,rc=esmfrc)
-    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridGet(grid, name=geomName, rank=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call replace_character(geomName, ' ', '_')
     allocate(ubounds(rank))
@@ -1296,8 +1298,9 @@ module mossco_netcdf
     dimids(:)=-1
     dimids(rank+1)=self%timeDimId
 
-    call ESMF_GridGet(grid,ESMF_STAGGERLOC_CENTER,0,exclusiveCount=ubounds,rc=esmfrc)
-    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridGet(grid, ESMF_STAGGERLOC_CENTER, 0, exclusiveCount=ubounds, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! get grid dimension-ids
     do i=1,rank
@@ -1324,6 +1327,7 @@ module mossco_netcdf
           rc_=MOSSCO_NC_ERROR
         end if
       enddo
+
       ncStatus = nf90_enddef(self%ncid)
     end if
 
@@ -1430,7 +1434,7 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_coordinate_create"
-  subroutine mossco_netcdf_coordinate_create(self,grid)
+  subroutine mossco_netcdf_coordinate_create(self, grid)
 
     implicit none
     class(type_mossco_netcdf)               :: self
@@ -1463,9 +1467,11 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)            :: int4
     character(len=ESMF_MAXSTR)       :: string
 
-
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
-      name=geomName, rc=esmfrc)
+      name=geomName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call replace_character(geomName, ' ', '_')
     if (dimCount<1) return
 
