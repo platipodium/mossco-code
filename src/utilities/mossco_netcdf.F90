@@ -1489,8 +1489,10 @@ module mossco_netcdf
     axisNameList=(/'X','Y','Z'/)
 
     allocate(coordDimCount(dimCount))
-    call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=esmfrc)
-    if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     dimids => self%grid_dimensions(grid)
 
     ! Write the auxiliary coordinate variables x, y, z
@@ -1628,10 +1630,12 @@ module mossco_netcdf
            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),trim(string))
          endif
       enddo
+    enddo
 
-      !! End definition phase of netcdf
-      ncStatus = nf90_enddef(self%ncid)
+    !! End definition phase of netcdf
+    ncStatus = nf90_enddef(self%ncid)
 
+    do i=1, dimCount
       if (coordDimCount(i) == 1) then
         call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, exclusiveLBound=eLBound1, exclusiveUBound=eUBound1,rc=esmfrc)
         if (esmfrc == ESMF_SUCCESS) then
