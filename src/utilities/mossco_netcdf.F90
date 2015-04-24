@@ -1558,7 +1558,6 @@ module mossco_netcdf
       endif
     enddo
 
-    if (allocated(coordDimids)) deallocate(coordDimids)
 
     do i=1,dimCount
 
@@ -1569,6 +1568,7 @@ module mossco_netcdf
         cycle
       endif
 
+      if (allocated(coordDimids)) deallocate(coordDimids)
       allocate(coordDimids(coordDimCount(i)))
       if (allocated(exclusiveCount)) deallocate(exclusiveCount)
       allocate(exclusiveCount(coordDimCount(i)))
