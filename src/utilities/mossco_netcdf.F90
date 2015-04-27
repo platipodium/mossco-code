@@ -1466,6 +1466,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)            :: int8
     integer(ESMF_KIND_I4)            :: int4
     character(len=ESMF_MAXSTR)       :: string
+    type(ESMF_Field)                 :: field
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
       name=geomName, rc=localrc)
@@ -1631,9 +1632,31 @@ module mossco_netcdf
          endif
       enddo
     enddo
-
     !! End definition phase of netcdf
     ncStatus = nf90_enddef(self%ncid)
+
+    if (rank == 2) then
+      field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    elseif  (rank == 3) then
+      field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    ! @todo this only works if the grid item AREA has been set in the grid.  We could do this here (
+    ! the area calculation or rely on it being calculated in the creator component ...).  Problem again
+    ! as with GRIDITEM_MASK is that we do not know how to check for its presence.
+
+    !call ESMF_FieldRegridGetArea(field, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !call self%put_variable(field, .0D00, 'grid_area')
+    call ESMF_FieldDestroy(field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, dimCount
       if (coordDimCount(i) == 1) then
