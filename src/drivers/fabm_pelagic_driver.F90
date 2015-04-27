@@ -263,6 +263,21 @@
       call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(RHSRANGE3D,n))
     end do
 
+    ! get fluxes through surface and bottom
+    ! just to update the pelagic variables
+    do j=1,rhs_driver%jnum
+      do i=1,rhs_driver%inum
+        if (.not.rhs_driver%mask(i,j,rhs_driver%knum)) then
+          call fabm_do_surface(rhs_driver%model,i,j,rhs_driver%knum,rhs(i,j,rhs_driver%knum,:))
+          rhs(i,j,rhs_driver%knum,:) = rhs(i,j,rhs_driver%knum,:)/rhs_driver%layer_height(i,j,rhs_driver%knum)
+        end if
+        !if (.not.rhs_driver%mask(i,j,1)) then
+        !  call fabm_do_bottom()
+        !end if
+      end do
+    end do
+
+    ! get local rates of change
     do k=1,rhs_driver%knum
       do j=1,rhs_driver%jnum
         do i=1,rhs_driver%inum
