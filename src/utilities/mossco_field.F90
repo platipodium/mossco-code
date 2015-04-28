@@ -84,11 +84,16 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call MOSSCO_MessageAdd(message,' '//geomName)
-      call ESMF_FieldGet(field, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        rank=gridRank ! fall back to gridRank, if field not completed
 
-        !! Check for ungridded dimensions
+      if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field, rank=rank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        rank=gridRank ! fall back to gridRank, if field not completed
+      endif
+
+      !! Check for ungridded dimensions
       n=rank-gridRank
       if (n>0) then
         allocate(ungriddedUbnd(n))
