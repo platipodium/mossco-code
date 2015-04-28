@@ -1506,6 +1506,8 @@ module getm_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    array = ESMF_ArrayCreate(getmDistGrid2D,areaC,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_AttributeSet(array,'units','m**2', rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_GridSetItem(getmGrid2D,ESMF_GRIDITEM_AREA,array=array,staggerloc=StaggerLoc, rc=localrc)
@@ -1533,6 +1535,8 @@ module getm_component
    !array = ESMF_ArrayCreate(getmDistGrid3D,areaC,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
    array = ESMF_ArrayCreate(getmDistGrid3D,areaW3D,indexflag=ESMF_INDEX_DELOCAL, &
                             totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/), rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   call ESMF_AttributeSet(array,'units','m**2', rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
