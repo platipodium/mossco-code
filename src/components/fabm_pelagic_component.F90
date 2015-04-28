@@ -406,6 +406,14 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
+    !! add cell area to horizontal grid
+    call ESMF_GridAddItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridGetItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=pel%column_area, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    pel%column_area=11112.0d0**2 ! default to 6nm square
+    ! @todo: now either get area from 3d grid or calculate based on corner coordinates
+
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
 
@@ -789,16 +797,14 @@ module fabm_pelagic_component
                                  staggerloc=ESMF_STAGGERLOC_CENTER, \
                                  typekind=ESMF_TYPEKIND_R8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !! add area to export State to appear in netcdf
+    !call ESMF_StateAdd(exportState, (/ areaField /), rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(areaField, farrayPtr=pel%column_area, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !> @todo calculate area based on corner coordinates. ESMF_FieldRegridGetArea needs a
-    !!       a testing program here. (in NSBS6nm, it does not stop being busy)
-    pel%column_area=11112.0d0**2 ! default to 6nm square
 
-    !call ESMF_FieldRegridGetArea(areaField, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-    !  pel%column_area=11112.0d0**2 ! default to 6nm square
-    !end if
+    call ESMF_FieldRegridGetArea(areaField, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !write(0,*) 'area(10,:)',pel%column_area(10,:)
 
     !call ESMF_StatePrint(importState)
