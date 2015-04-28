@@ -20,6 +20,7 @@
 module info_component
 
   use esmf
+  use mossco_component
 
   implicit none
 
