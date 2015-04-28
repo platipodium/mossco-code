@@ -1431,7 +1431,6 @@ module mossco_netcdf
 
   end subroutine mossco_netcdf_mesh_coordinate_create
 
-
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_coordinate_create"
   subroutine mossco_netcdf_coordinate_create(self, grid)
@@ -1654,9 +1653,11 @@ module mossco_netcdf
     !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !call self%put_variable(field, .0D00, 'grid_area')
-    call ESMF_FieldDestroy(field, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (rank>1 .and. rank < 4) then
+      call ESMF_FieldDestroy(field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     do i=1, dimCount
       if (coordDimCount(i) == 1) then
