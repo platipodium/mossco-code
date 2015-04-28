@@ -55,7 +55,7 @@ module getm_component
   integer(ESMF_KIND_I4),dimension(:,:,:),allocatable :: maskC3D,maskX3D
   REALTYPE,dimension(:,:),allocatable                :: cosconv,sinconv
   real(ESMF_KIND_R8),dimension(:,:)  ,allocatable :: areaC
-  real(ESMF_KIND_R8),dimension(:,:,:),allocatable :: areaC3D
+  real(ESMF_KIND_R8),dimension(:,:,:),allocatable :: areaW3D
   real(ESMF_KIND_R8),pointer :: xc1D(:)  =>NULL(),yc1D(:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: xx1D(:)  =>NULL(),yx1D(:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: xc2D(:,:)=>NULL(),yc2D(:,:)=>NULL()
@@ -983,14 +983,15 @@ module getm_component
 
    allocate(maskC3D(E2DFIELD,1:klen))
    allocate(maskX3D(E2DFIELD,0:klen))
-   allocate(areaC3D(E2DFIELD,1:klen))
+   allocate(areaW3D(E2DFIELD,0:klen))
 
    do k=1,klen
       maskC3D(:,:,k) = az
       maskX3D(:,:,k) = ax
-      areaC3D(:,:,k) = _ONE_/arcd1
+      areaW3D(:,:,k) = _ONE_/arcd1
    end do
    maskX3D(:,:,0) = 0
+   areaW3D(:,:,0) = _ONE_/arcd1
 
    allocate(zw(E2DFIELD ,0:klen))
    allocate(zc(E2DFIELD ,1:klen))
@@ -1530,11 +1531,12 @@ module getm_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !  KK-TODO: add attribute with un-/mask value?
    !array = ESMF_ArrayCreate(getmDistGrid3D,areaC,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
-   array = ESMF_ArrayCreate(getmDistGrid3D,areaC3D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+   array = ESMF_ArrayCreate(getmDistGrid3D,areaW3D,indexflag=ESMF_INDEX_DELOCAL, &
+                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/), rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_AREA,array=array,staggerloc=StaggerLoc, rc=localrc)
+   call ESMF_GridSetItem(getmGrid3D,ESMF_GRIDITEM_AREA,array=array,staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
    StaggerLoc = ESMF_STAGGERLOC_CORNER
