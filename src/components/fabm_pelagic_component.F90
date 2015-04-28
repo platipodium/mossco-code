@@ -800,13 +800,7 @@ module fabm_pelagic_component
     !! add area to export State to appear in netcdf
     !call ESMF_StateAdd(exportState, (/ areaField /), rc=localrc)
     !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(areaField, farrayPtr=pel%column_area, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_FieldRegridGetArea(areaField, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !write(0,*) 'area(10,:)',pel%column_area(10,:)
-
+    
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
 
