@@ -1634,6 +1634,7 @@ module mossco_netcdf
     !! End definition phase of netcdf
     ncStatus = nf90_enddef(self%ncid)
 
+#if 0
     if (rank == 2) then
       field = ESMF_FieldCreate(grid, typekind=ESMF_TYPEKIND_R8, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1658,6 +1659,7 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+#endif
 
     do i=1, dimCount
       if (coordDimCount(i) == 1) then
@@ -1685,7 +1687,7 @@ module mossco_netcdf
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
       endif
-      deallocate(coordDimids)
+      if (allocated(coordDimids)) deallocate(coordDimids)
       esmfrc = 0 ! reset esmfrc after checking its status above
     enddo
     if (allocated(coordDimCount)) deallocate(coordDimCount)
