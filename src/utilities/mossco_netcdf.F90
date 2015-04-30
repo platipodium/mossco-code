@@ -189,7 +189,8 @@ module mossco_netcdf
       call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-#if 0
+#if ESMF_VERSION_MAJOR > 6
+!! This is only implemented from 7b29
       if (gridRank == 2) then
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=gridIsPresent, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
