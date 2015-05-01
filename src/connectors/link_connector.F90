@@ -815,6 +815,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    write(message,'(A)') 'assigned value to field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     if (allocated(ubnd)) deallocate(ubnd)
     if (allocated(lbnd)) deallocate(lbnd)
 
