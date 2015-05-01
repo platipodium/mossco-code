@@ -473,6 +473,8 @@ fid.write('''
 
     integer(ESMF_KIND_I4), allocatable      :: intValueList(:)
     character(len=ESMF_MAXSTR), allocatable :: charValueList(:)
+    type(ESMF_AttPack)     :: attPack
+    character(len=ESMF_MAXSTR) :: convention, purpose
 
     rc = ESMF_SUCCESS
 
@@ -489,6 +491,82 @@ fid.write('''
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockSet(controlClock, name=trim(myName)//'Control')
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! Add a CIM component attribute package to this component
+    convention='CIM 1.5'
+    purpose='ModelComp'
+
+    call ESMF_AttributeAdd(gridComp, convention=convention, purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'ShortName', 'toplevel', convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'LongName', 'toplevel', convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'ModelType', 'climate', convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'SimulationShortName', message, convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'SimulationLongName', message, convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'SimulationRationale', 'Modular coupled system simulation', convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(importState, name='simulation_start', value=message, defaultvalue='Untitled', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'SimulationStartDate', message, convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(importState, name='simulation_stop', value=message, defaultvalue='Untitled', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'SimulationDuration', message, convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(I4)') petCount
+    call ESMF_AttributeSet(gridComp, 'SimulationNumberOfProcessingElements', message, convention=convention, &
+      purpose=purpose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    purpose='Platform'
+    call ESMF_AttributeGetAttPack(gridComp, convention, purpose, attpack=attpack, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'MachineName', 'unknown', convention=convention, &
+      purpose=purpose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -819,11 +897,18 @@ for item in gridCompList:
   elif not item == 'netcdf' : continue
   ito=gridCompList.index(item)
 
-  fid.write('  !> Link attributes of exportState of the topLevel component (which contains metadata)\n')
-  fid.write('  !> to the netcdf component\'s import state\n')
-  fid.write('  call ESMF_AttributeLink(importState, gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
-  fid.write('  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
-  fid.write('    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+  fid.write('    !> Link attributes of exportState of the topLevel component (which contains metadata)\n')
+  fid.write('    !> to the netcdf component\'s import state\n')
+  fid.write('    call ESMF_AttributeLink(importState, gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
+  fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+  fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+  fid.write('    call ESMF_CplCompInitialize(cplCompList(1), importState=importState, &\n')
+  fid.write('      exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, rc=localrc)\n')
+  fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+  fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+  fid.write('    call MOSSCO_StateLog(exportState, rc=localrc)\n')
+  fid.write('    call MOSSCO_StateLog(gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
+
 
 # Go through ReadRestart (assumed only phase 1)
 for item in gridCompList:
@@ -955,8 +1040,8 @@ for i in range(0,len(couplingList)):
     string = intervals[i].split()
     number = string[0]
     if (number == 'inf') or (number == 'none') or (number == '0'):
-    	  unit = 'yy'
-    	  number = '99999'
+        unit = 'yy'
+        number = '99999'
     else:
       if len(string)>1:
         unit = string[1]
