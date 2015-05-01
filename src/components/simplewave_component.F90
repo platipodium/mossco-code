@@ -363,6 +363,7 @@ module simplewave_component
                                      ESMF_INDEX_DELOCAL,                      &
                                      totalLWidth=exclusiveLBound-totalLBound, &
                                      totalUWidth=totalUBound-exclusiveUBound)
+        importList(i)%data = 0.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
@@ -390,6 +391,7 @@ module simplewave_component
                                      ESMF_INDEX_DELOCAL,                      &
                                      totalLWidth=exclusiveLBound-totalLBound, &
                                      totalUWidth=totalUBound-exclusiveUBound)
+        exportList(i)%data = 0.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
