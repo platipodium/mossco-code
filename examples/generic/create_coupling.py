@@ -3,7 +3,7 @@
 # couplings a toplevel_component.F90 source file
 #
 # @copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -463,6 +463,7 @@ fid.write('''
     logical                :: clockIsPresent
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
+    type(ESMF_Config)      :: config
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
@@ -810,6 +811,19 @@ if (True):
       fid.write('      endif\n')
 
   fid.write('    enddo  ! of loop over Initialize phases\n\n')
+
+# Go through all output components and link toplevel metadata to it
+for item in gridCompList:
+  if instanceDict.has_key(item):
+    if not instanceDict[item] == 'netcdf' : continue
+  elif not item == 'netcdf' : continue
+  ito=gridCompList.index(item)
+
+  fid.write('  !> Link attributes of exportState of the topLevel component (which contains metadata)\n')
+  fid.write('  !> to the netcdf component\'s import state\n')
+  fid.write('  call ESMF_AttributeLink(importState, gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
+  fid.write('  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+  fid.write('    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
 
 # Go through ReadRestart (assumed only phase 1)
 for item in gridCompList:
