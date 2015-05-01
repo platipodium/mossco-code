@@ -32,7 +32,7 @@ program main
   type(ESMF_TimeInterval)    :: runDuration
   integer                    :: localrc, rc,nmlunit=2013
   double precision           :: seconds
-  character(len=40)          :: timestring, logKindString='multi', name='main'
+  character(len=40)          :: timestring, logKind='multi', name='main'
   character(len=40)          :: start='2000-01-01 00:00:00'
   character(len=40)          :: stop='2000-01-05 00:00:00'
   character(len=40)          :: title='Untitled'
@@ -40,10 +40,10 @@ program main
   type(ESMF_State)           :: topState ! for import and export, empty
   type(ESMF_Clock)           :: mainClock,topClock
   type(ESMF_VM)              :: vm
-  integer(ESMF_KIND_I4)      :: iostat, localPet, petCount
+  integer(ESMF_KIND_I4)      :: localPet, petCount
   logical                    :: ClockIsPresent
   character(len=ESMF_MAXSTR) :: message, formatstring
-  type(ESMF_LogKind_Flag)    :: logKind
+  type(ESMF_LogKind_Flag)    :: logKindFlag
   logical                    :: fileIsPresent, labelIsPresent
   type(ESMF_Config)          :: config
   character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg'
@@ -58,7 +58,7 @@ program main
 !> If this file is not present, then the default simulation with title "Untitled"
 !> will be executed for the time 2000-01-01 00:00:00 to 2000-01-05 00:00:00
 
-  namelist /mossco_run/ title,start,stop, logKindString
+  namelist /mossco_run/ title,start,stop,logkind
   !! add loglevel, logflush
 
   configfilename='mossco.cfg'
@@ -83,17 +83,17 @@ program main
   call replace_character(title,' ','_')
 
   !> Find out what kind of log to write, the default is MULTI
-  if (logKindString == 'none') then
-    logKind=ESMF_LOGKIND_NONE
-  elseif (logKindString == 'single') then
-    logKind=ESMF_LOGKIND_SINGLE
+  if (logKind == 'none') then
+    logKindFlag=ESMF_LOGKIND_NONE
+  elseif (logKind == 'single') then
+    logKindFlag=ESMF_LOGKIND_SINGLE
   else
-    logKind=ESMF_LOGKIND_MULTI
+    logKindFlag=ESMF_LOGKIND_MULTI
   endif
 
   ! Initialize ESMF, get resources, and log this
   call ESMF_Initialize(defaultLogFileName=trim(title), rc=localrc, &
-    logkindflag=logKind,defaultCalKind=ESMF_CALKIND_GREGORIAN, vm=vm)
+    logkindflag=logKindFlag,defaultCalKind=ESMF_CALKIND_GREGORIAN, vm=vm)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -218,7 +218,7 @@ program main
 ! Create toplevel component and call its setservices routines, if namelist was successfully read, then copy the
 ! main clock to the toplevel (child) clock.  If no time information from namelist, then let the toplevel component
 ! read the time and pass it back to main clock
-  if (iostat .eq. 0) then
+  if (fileIsPresent) then
     topClock = ESMF_ClockCreate(mainClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -262,7 +262,7 @@ program main
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  call ESMF_AttributeSet(topState, 'simulation_log_kind', trim(logKindString), rc=localrc)
+  call ESMF_AttributeSet(topState, 'simulation_log_kind', trim(logKind), rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -274,7 +274,7 @@ program main
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  if (iostat .ne. 0) then
+  if (.not.fileIsPresent) then
     call ESMF_GridCompGet(topComp,clockIsPresent=ClockIsPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
