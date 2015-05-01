@@ -3,7 +3,7 @@
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
-!> @author Richard Hofmeister
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -298,7 +298,7 @@ contains
         write(message, '(A)') '   - '//trim(fieldName(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
-      call MOSSCO_StateLog(state)
+      !call MOSSCO_StateLog(state)
       ubnd_(:)=-1
       lbnd_(:)=0
     endif
@@ -496,6 +496,12 @@ contains
     call ESMF_AttributeGet(state, count=count, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    if (count==0) then
+      write(message,'(A)')  trim(name)//' contains no attributes'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      return
+    endif
+
     do i=1, count
       call ESMF_AttributeGet(state, attributeIndex=i , name=attributeName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -575,7 +581,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount==0) then
-      write(message,'(A)')  trim(name)//' contains no items'
+      write(message,'(A)')  trim(name)//' contains no data items'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       return
     endif
