@@ -985,6 +985,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     rc_ = ESMF_SUCCESS
     attributeName='default_value'
 
+    if (importField == exportField) then
+      if (present(rc)) rc=rc_
+      return
+    end if
+
     call ESMF_AttributeGet(importField, trim(attributeName), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_FieldGet(importField,name=name)
