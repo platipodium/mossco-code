@@ -759,6 +759,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    if (fieldStatus .ne. ESMF_FIELDSTATUS_COMPLETE) then
+      if (present(rc)) rc=rc_
+      return
+    endif
+
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
       write(message,'(A)') 'cannot assign a value to empty field'
       call MOSSCO_FieldString(field, message)
