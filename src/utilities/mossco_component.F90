@@ -1,9 +1,9 @@
-!> @brief Implementation of ESMF State utilities
+!> @brief Implementation of ESMF Component utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen
-!> @author Knut Klingbeil
+!> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -575,5 +575,190 @@ contains
     return
 
   end subroutine MOSSCO_GridCompFieldsTable
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompLog"
+  subroutine MOSSCO_GridCompLog(comp, rc)
+    type(ESMF_GridComp)             :: comp
+    integer(ESMF_KIND_I4), optional :: rc
+
+    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, j, rank, count
+    character(len=ESMF_MAXSTR)      :: name, message, attributeName
+    type(ESMF_Grid)                 :: grid
+    logical, allocatable            :: logicalValueList(:)
+    real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
+    real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
+    integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
+    integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
+    character(len=ESMF_MAXSTR), allocatable :: characterValueList(:)
+    type(ESMF_Context_Flag)         :: contextFlag
+    type(ESMF_Method_Flag)          :: methodFlag
+    integer(ESMF_KIND_I4)           :: phase
+    logical                         :: isPresent
+    type(ESMF_Clock)                :: clock
+    type(ESMF_Config)               :: config
+    type(ESMF_Vm)                   :: vm
+    type(ESMF_State)                :: state
+    type(ESMF_TypeKind_Flag)        :: typeKind
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_GridCompGet(comp, name=name, contextFlag=contextFlag, currentMethod=methodFlag, &
+      currentPhase=phase, vmIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(comp, vm=vm, rc=localRc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !!@ todo utilize VM info
+      !! call MOSSCO_VmLog(vm)
+    endif
+
+    !!@ todo utilize context/method/phase/name
+
+    call ESMF_GridCompGet(comp, configFileIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(comp, config=config, rc=localRc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !!@ todo utilize Config info
+      !! call MOSSCO_ConfigLog(config)
+    endif
+
+    call ESMF_GridCompGet(comp, importStateIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(comp, importState=state, rc=localRc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !! call MOSSCO_StateLog(state)
+    endif
+
+    call ESMF_GridCompGet(comp, exportStateIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(comp, exportState=state, rc=localRc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !! call MOSSCO_StateLog(state)
+    endif
+
+    call ESMF_GridCompGet(comp, gridIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(comp, grid=grid, rc=localRc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !! call MOSSCO_GridLog(grid)
+    endif
+
+    call ESMF_GridCompGet(comp, clockIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(comp, clock=clock, rc=localRc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !! call MOSSCO_ClockLog(clock)
+    endif
+
+    call ESMF_AttributeGet(comp, count=count, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (count==0) then
+      write(message,'(A)')  trim(name)//' contains no attributes'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      return
+    endif
+
+    do i=1, count
+      call ESMF_AttributeGet(comp, attributeIndex=i , name=attributeName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(name)//' attribute '//trim(attributeName)//'='
+
+      call ESMF_AttributeGet(comp, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (typekind==ESMF_TYPEKIND_Logical) then
+        allocate(logicalValueList(itemCount))
+        call ESMF_AttributeGet(comp, name=attributeName, valueList=logicalValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+        enddo
+        deallocate(logicalValueList)
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        allocate(characterValueList(itemCount))
+        call ESMF_AttributeGet(comp, name=attributeName, valueList=characterValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
+          write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
+          do j=2, itemCount-1
+            write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
+          enddo
+          deallocate(characterValueList)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_I4) then
+        allocate(integer4ValueList(itemCount))
+        call ESMF_AttributeGet(comp, name=attributeName, valueList=integer4ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+        enddo
+        deallocate(integer4ValueList)
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        allocate(integer8ValueList(itemCount))
+        call ESMF_AttributeGet(comp, name=attributeName, valueList=integer8ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+        enddo
+        deallocate(integer8ValueList)
+      elseif (typekind==ESMF_TYPEKIND_R4) then
+        allocate(real4ValueList(itemCount))
+        call ESMF_AttributeGet(comp, name=attributeName, valueList=real4ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,G8.2)') trim(message)//' ',real4ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,G8.2)') trim(message)//', ',real4ValueList(j)
+        enddo
+        deallocate(real4ValueList)
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        allocate(real8ValueList(itemCount))
+        call ESMF_AttributeGet(comp, name=attributeName, valueList=real8ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,G8.2)') trim(message)//' ',real8ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,G8.2)') trim(message)//', ',real8ValueList(j)
+        enddo
+        deallocate(real8ValueList)
+      endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
+
+  end subroutine MOSSCO_GridCompLog
 
 end module mossco_component
