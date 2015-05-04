@@ -30,6 +30,10 @@ interface MOSSCO_CompExit
     module procedure MOSSCO_GridCompExit
 end interface
 
+interface MOSSCO_CompLog
+    module procedure MOSSCO_GridCompLog
+end interface
+
 interface MOSSCO_CompEntry
     module procedure MOSSCO_CplCompEntry
     module procedure MOSSCO_GridCompEntry
@@ -37,8 +41,9 @@ end interface
 
 public MOSSCO_CompExit
 public MOSSCO_CompEntry
-public MOSSCO_GridCompEntryLog
+public MOSSCO_CompLog
 public MOSSCO_GridCompExitLog
+public MOSSCO_GridCompEntryLog
 
 private
 
