@@ -613,6 +613,21 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    if (methodFlag == ESMF_METHOD_INITIALIZE) then
+      write(message,'(A,I1)') trim(name)//' in method INITIALIZE phase ',phase
+    elseif (methodFlag == ESMF_METHOD_READRESTART) then
+      write(message,'(A,I1)') trim(name)//' in method READRESTART phase ',phase
+    elseif (methodFlag == ESMF_METHOD_RUN) then
+      write(message,'(A,I1)') trim(name)//' in method RUN phase ',phase
+    elseif (methodFlag == ESMF_METHOD_FINALIZE) then
+      write(message,'(A,I1)') trim(name)//' in FINALIZE phase ',phase
+    else
+      write(message,'(A,I1)') trim(name)//' in unknown method ',phase
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     if (isPresent) then
       call ESMF_GridCompGet(comp, vm=vm, rc=localRc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -679,16 +694,23 @@ contains
       !! call MOSSCO_ClockLog(clock)
     endif
 
-    call ESMF_AttributeGet(comp, count=count, rc=localrc)
+    call ESMF_AttributeGet(comp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTLINK, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(name)//' contains ', count, ' linked, '
 
-    if (count==0) then
-      write(message,'(A)')  trim(name)//' contains no attributes'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      return
-    endif
+    call ESMF_AttributeGet(comp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTPACK, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(message), count, ' packed, and '
 
+    call ESMF_AttributeGet(comp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(message), count, ' single attributes'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    return
     do i=1, count
       call ESMF_AttributeGet(comp, attributeIndex=i , name=attributeName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

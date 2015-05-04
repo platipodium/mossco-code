@@ -911,6 +911,7 @@ for item in gridCompList:
   fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
   fid.write('    call MOSSCO_StateLog(exportState, rc=localrc)\n')
   fid.write('    call MOSSCO_StateLog(gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
+  fid.write('    call MOSSCO_CompLog(gridComp, rc=localrc)\n')
 
 
 # Go through ReadRestart (assumed only phase 1)
