@@ -232,9 +232,9 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4) :: localrc
 
 
-    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
-    real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4=>null()
     real(ESMF_KIND_R8)    :: attribute_r8
     real(ESMF_KIND_R8)    :: background_extinction=3.0
     integer(ESMF_KIND_I4) :: fieldcount
@@ -411,8 +411,13 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridGetItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=pel%column_area, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    pel%column_area=11112.0d0**2 ! default to 6nm square
-    ! @todo: now either get area from 3d grid or calculate based on corner coordinates
+    ! get area from 3d grid
+    call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, farrayPtr=ptr_f3, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    ! use layer 1 cell area.
+    ! the indexing fits to GETM layout that starts at i=1-totalLWidth(1)
+    pel%column_area =  ptr_f3(1:inum,1:jnum,1)
+    ! @todo: if no area in state_grid, calculate based on corner coordinates
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
@@ -1010,8 +1015,8 @@ module fabm_pelagic_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3
+    real(ESMF_KIND_R8),pointer,dimension(:,:) :: ptr_f2=>null()
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:) :: ptr_f3=>null()
 
     integer           :: k,n
     integer(8)        :: t
