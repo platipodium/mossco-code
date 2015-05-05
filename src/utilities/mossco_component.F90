@@ -587,7 +587,8 @@ contains
     type(ESMF_GridComp)             :: comp
     integer(ESMF_KIND_I4), optional :: rc
 
-    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, j, rank, count
+    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, j, rank
+    integer(ESMF_KIND_I4)           :: attCount, packCount, linkedCount
     character(len=ESMF_MAXSTR)      :: name, message, attributeName
     type(ESMF_Grid)                 :: grid
     logical, allocatable            :: logicalValueList(:)
@@ -605,6 +606,7 @@ contains
     type(ESMF_Vm)                   :: vm
     type(ESMF_State)                :: state
     type(ESMF_TypeKind_Flag)        :: typeKind
+    type(ESMF_AttPack)              :: attPack
 
     if (present(rc)) rc=ESMF_SUCCESS
 
@@ -694,23 +696,23 @@ contains
       !! call MOSSCO_ClockLog(clock)
     endif
 
-    call ESMF_AttributeGet(comp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTLINK, rc=localrc)
+    call ESMF_AttributeGet(comp, count=linkedCount, attCountFlag=ESMF_ATTGETCOUNT_ATTLINK, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message, '(A,I2,A)') trim(name)//' contains ', count, ' linked, '
+    write(message, '(A,I2,A)') trim(name)//' contains ', linkedCount, ' linked, '
 
-    call ESMF_AttributeGet(comp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTPACK, rc=localrc)
+    call ESMF_AttributeGet(comp, count=packCount, attCountFlag=ESMF_ATTGETCOUNT_ATTPACK, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message, '(A,I2,A)') trim(message), count, ' packed, and '
+    write(message, '(A,I2,A)') trim(message), packCount, ' packed, and '
 
-    call ESMF_AttributeGet(comp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
+    call ESMF_AttributeGet(comp, count=attCount, attCountFlag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message, '(A,I2,A)') trim(message), count, ' single attributes'
+    write(message, '(A,I2,A)') trim(message), attCount, ' single attributes'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    do i=1, count
+    do i=1, attCount
       message=''
       call MOSSCO_CompIndexedAttributeString(comp, i, message, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -719,10 +721,36 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)')  trim(name)//' attribute '//trim(message)
+      write(message,'(A)')  trim(name)//' single attribute '//trim(message)
 
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
+
+!     call ESMF_AttGetAttPack(comp, convention='CIM 1.5' , purpose='ModelComp', isPresent=isPresent, &
+!       rc=localrc)
+!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!     if (isPresent) then
+!       call ESMF_AttGetAttPack(comp, convention='CIM 1.5' , purpose='ModelComp', attPack=attPack, &
+!         rc=localrc)
+!       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!     endif
+
+!     do i=1, attCount
+!     message=''
+!         call MOSSCO_CompIndexedAttributeString(comp, i, message, localrc)
+!         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!         write(message,'(A)')  trim(name)//' pack attribute '//trim(message)
+!
+!         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+!     enddo
 
   end subroutine MOSSCO_GridCompLog
 
