@@ -2032,6 +2032,7 @@ module getm_component
       end if
 
       call do_transport_3d(p_conc,p_ws)
+      call zero_gradient_3d_bdy(p_conc)
 
       if (noKindMatch) then
          transport_conc(n)%ptr = t_conc

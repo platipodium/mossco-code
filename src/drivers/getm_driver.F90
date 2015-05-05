@@ -36,6 +36,7 @@
 ! !PUBLIC DATA MEMBERS:
    public preinit_model,postinit_model,init_time,time_step
    public do_transport,do_transport_3d
+   public zero_gradient_3d_bdy
    character(len=64)                   :: runid
    character(len=80)                   :: title
    logical                             :: hotstart=.false.
@@ -813,6 +814,46 @@
    end subroutine do_transport_3d
 !EOC
 !-----------------------------------------------------------------------
+
+
+   subroutine zero_gradient_3d_bdy(f)
+   use domain, only: imin,imax,jmin,jmax,kmax,az,au,av
+
+   REALTYPE,dimension(I3DFIELD),intent(inout) :: f
+   integer :: i,j
+
+   ! set zero-gradient in x-direction
+   do j=jmin,jmax
+     do i=imin,imax-1
+       ! western boundary
+       if ((au(i,j) .eq. 2) .and. (au(i-1,j) .eq. 0)) &
+         f(i,j,:) = f(i+1,j,:)
+     end do
+     do i=imin+1,imax
+       ! eastern boundary
+       if ((au(i-1,j) .eq. 2) .and. (au(i,j) .eq. 0)) &
+         f(i,j,:) = f(i-1,j,:)
+     end do
+   end do
+
+   ! set zero-gradient in y-direction
+   do j=jmin,jmax-1
+     do i=imin,imax
+       ! southern boundary
+       if ((av(i,j) .eq. 2) .and. (av(i,j-1) .eq. 0)) &
+         f(i,j,:) = f(i,j+1,:)
+     end do
+   end do
+   do j=jmin,jmax+1
+     do i=imin,imax
+       ! northern boundary
+       if ((av(i,j-1) .eq. 2) .and. (av(i,j) .eq. 0)) &
+         f(i,j,:) = f(i,j-1,:)
+     end do
+   end do
+
+   end subroutine zero_gradient_3d_bdy
+
 
    end module getm_driver
 
