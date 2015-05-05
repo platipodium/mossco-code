@@ -406,19 +406,6 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
-    !! add cell area to horizontal grid
-    call ESMF_GridAddItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridGetItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=pel%column_area, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    ! get area from 3d grid
-    call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, farrayPtr=ptr_f3, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    ! use layer 1 cell area.
-    ! the indexing fits to GETM layout that starts at i=1-totalLWidth(1)
-    pel%column_area =  ptr_f3(1:inum,1:jnum,1)
-    ! @todo: if no area in state_grid, calculate based on corner coordinates
-
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
 
@@ -433,20 +420,35 @@ module fabm_pelagic_component
                       1-totalLWidth3(3):numlayers+totalUWidth3(3), &
                       1:pel%nvar))
     !! get mask
-    allocate(mask(1:inum,1:jnum,1:numlayers))
+    allocate(mask(1-totalLWidth3(1):inum+totalUWidth3(1), &
+                  1-totalLWidth3(2):jnum+totalUWidth3(2), &
+                  1-totalLWidth3(3):numlayers+totalUWidth3(3)))
     mask = .false.
+    allocate(pel%is_openboundary(1-totalLWidth3(1):inum+totalUWidth3(1), &
+                                 1-totalLWidth3(2):jnum+totalUWidth3(2), &
+                                 1-totalLWidth3(3):numlayers+totalUWidth3(3)))
+    pel%is_openboundary = .false.
+
     call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
-      do i=1,inum
-        do j=1,jnum
-          do k=1,numlayers
-            mask(i,j,k) = gridmask(i,j,k)==0
-          end do
-        end do
-      end do
+      mask = gridmask == 0 !>@todo: mask where gridmask /= 1
+      pel%is_openboundary = gridmask > 1
     end if
 
-    call pel%initialize_domain(inum,jnum,numlayers,dt,mask=mask)
+    !! add cell area to horizontal grid
+    call ESMF_GridAddItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_GridGetItem(horizontal_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=pel%column_area, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    ! get area from 3d grid
+    call ESMF_GridGetItem(state_grid, itemflag=ESMF_GRIDITEM_AREA, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, farrayPtr=ptr_f3, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    ! use layer 1 cell area.
+    ! the indexing fits to GETM layout that starts at i=1-totalLWidth(1)
+    pel%column_area = ptr_f3(1:inum,1:jnum,1)
+    ! @todo: if no area in state_grid, calculate based on corner coordinates
+
+    call pel%initialize_domain(inum,jnum,numlayers,dt,mask=mask(1:inum,1:jnum,1:numlayers))
     call pel%update_pointers()
     call pel%initialize_concentrations()
     call pel%update_export_states(update_sinking=.false.)
@@ -797,15 +799,6 @@ module fabm_pelagic_component
     call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> read area of cells from grid
-    areaField = ESMF_FieldCreate(horizontal_grid, name="water_column_area", \
-                                 staggerloc=ESMF_STAGGERLOC_CENTER, \
-                                 typekind=ESMF_TYPEKIND_R8, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !! add area to export State to appear in netcdf
-    !call ESMF_StateAdd(exportState, (/ areaField /), rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
     !call ESMF_StatePrint(importState)
     !call ESMF_StatePrint(exportState)
 
@@ -1036,7 +1029,7 @@ module fabm_pelagic_component
     type(ESMF_StateItem_Flag)              :: itemType
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     integer(ESMF_KIND_I4)                  :: i, j, l, nmatch, itemCount, rank
-    integer(ESMF_KIND_I4)                  :: ubnd(2), lbnd(2)
+    integer(ESMF_KIND_I4)                  :: ubnd(2), lbnd(2), ubnd3(3), lbnd3(3)
     integer(ESMF_KIND_I8)                  :: advanceCount
 
     real(ESMF_KIND_R8), pointer            :: farrayPtr3(:,:,:), ratePtr3(:,:,:)
@@ -1176,6 +1169,17 @@ module fabm_pelagic_component
         pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
       end do
 
+      ! calculate total water depth
+      if (.not.(associated(pel%cell_per_column_volume))) then
+        ubnd3 = ubound(pel%layer_height)
+        lbnd3 = lbound(pel%layer_height)
+        allocate(pel%cell_per_column_volume(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
+        pel%cell_per_column_volume = 0.0d0
+      end if
+      do k=1,pel%knum
+        pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
+      end do
+
       do i=1, nmatch
 
         write(message,'(A)') trim(name)//' add flux field '
@@ -1202,19 +1206,19 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          !> If it is a vertically averaged (2D-) flux (expected unit mmol m**-3)
+          !> If it is a vertically integrated (2D-) flux (expected unit mmol s**-1)
           if (index(itemNameList(i),'_flux_in_water')>0) then
             do k=1,pel%knum
               !> river dilution
               !@todo: if river_dilution_on
               farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) * &
-                (1.0d0 - dt*pel%volume_flux / (pel%knum * pel%column_area * &
-                 pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)))
+                (1.0d0 - dt*pel%volume_flux * pel%cell_per_column_volume(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k))
+
               !> addition of mass
+              !@todo: allow for negative mass flux
               where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
                 farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) + &
-                  dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) / &
-                  (pel%knum * pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) * pel%column_area)
+                  dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * pel%cell_per_column_volume(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)
               endwhere
             enddo
           !> Otherwise it is a surface (2D-) flux (expected unit mmol m**-2), that needs
