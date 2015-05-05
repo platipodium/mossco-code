@@ -822,14 +822,16 @@
    REALTYPE,dimension(I3DFIELD),intent(inout) :: f
    integer :: i,j
 
+   ! a halo update is necessary here to be fully consistent in parallel
+   call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
+   call wait_halo(H_TAG)
+
    ! set zero-gradient in x-direction
    do j=jmin,jmax
-     do i=imin,imax-1
+     do i=imin,imax
        ! western boundary
        if ((au(i,j) .eq. 2) .and. (au(i-1,j) .eq. 0)) &
          f(i,j,:) = f(i+1,j,:)
-     end do
-     do i=imin+1,imax
        ! eastern boundary
        if ((au(i-1,j) .eq. 2) .and. (au(i,j) .eq. 0)) &
          f(i,j,:) = f(i-1,j,:)
@@ -837,15 +839,11 @@
    end do
 
    ! set zero-gradient in y-direction
-   do j=jmin,jmax-1
+   do j=jmin,jmax
      do i=imin,imax
        ! southern boundary
        if ((av(i,j) .eq. 2) .and. (av(i,j-1) .eq. 0)) &
          f(i,j,:) = f(i,j+1,:)
-     end do
-   end do
-   do j=jmin,jmax+1
-     do i=imin,imax
        ! northern boundary
        if ((av(i,j-1) .eq. 2) .and. (av(i,j) .eq. 0)) &
          f(i,j,:) = f(i,j-1,:)
