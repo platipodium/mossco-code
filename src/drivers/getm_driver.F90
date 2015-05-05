@@ -818,6 +818,7 @@
 
    subroutine zero_gradient_3d_bdy(f)
    use domain, only: imin,imax,jmin,jmax,kmax,az,au,av
+   use halo_zones  ,only: update_3d_halo,wait_halo,H_TAG
 
    REALTYPE,dimension(I3DFIELD),intent(inout) :: f
    integer :: i,j
