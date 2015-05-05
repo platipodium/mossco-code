@@ -793,7 +793,7 @@
    ws1d(kmax) = _ZERO_
    do j=jmin,jmax
       do i=imin,imax
-         if (az(i,j) .ge. 1) then
+         if (az(i,j) .eq. 1) then
 !           Do advection step due to settling or rising
             ws1d(1:kmax-1) = _HALF_ * ( ws(i,j,1:kmax-1) + ws(i,j,2:kmax) )
             call adv_center(kmax,dt,hn(i,j,:),hn(i,j,:),ws1d,FLUX,FLUX, &
