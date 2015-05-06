@@ -1325,8 +1325,8 @@ module fabm_pelagic_component
         do k=1,pel%knum
           !> river dilution
           if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
-            pel%export_states(n)%conc(LAYBND2D) = pel%export_states(n)%conc(LAYBND2D) * &
-              (1.0d0 - dt*pel%volume_flux * pel%cell_per_column_volume(LAYBND2D))
+            pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
+              (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
           end if
         end do
         call ESMF_StateGet(importState, trim(varname), itemType, rc=localrc)
@@ -1343,9 +1343,8 @@ module fabm_pelagic_component
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           do k=1,pel%knum
             !> addition of mass
-            !@todo: allow for negative mass flux
             where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
-              pel%export_states(n)%conc(LAYBND2D) = pel%export_states(n)%conc(LAYBND2D) + &
+              pel%conc(LAYBND2D,n) = pel%conc(LAYBND2D,n) + &
                 dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * pel%cell_per_column_volume(LAYBND2D)
             end where
           end do
