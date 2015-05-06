@@ -386,8 +386,13 @@ contains
       write(formatstring,'(A)') '(A,'//intformat(petCount)//',A)'
       write(message,formatstring) trim(message)//' on ',petCount,' PETs'
     elseif (cMethod.eq.ESMF_METHOD_RUN .and. have_clock) then
-      write(formatstring,'(A)') '(A,'//intformat(advanceCount)//',A,'//intformat(hours)//',A,I2.2,A,I2.2,A)'
-      write(message, formatstring) trim(message)//' step ',advanceCount,' dt=',hours,':',minutes,':',seconds,' hours'
+      !! The code below is broken, as the timeSteop in the internal Clock is not anymore the
+      !! timestep that the component is run for (with the new controlClock), thus we write out
+      !! only the advanceCount and not the timeStep information
+      ! write(formatstring,'(A)') '(A,'//intformat(advanceCount)//',A,'//intformat(hours)//',A,I2.2,A,I2.2,A)'
+      ! write(message, formatstring) trim(message)//' step ',advanceCount,' dt=',hours,':',minutes,':',seconds,' hours'
+      write(formatstring,'(A)') '(A,'//intformat(advanceCount)//')'
+      write(message, formatstring) trim(message)//' step ',advanceCount
     end if
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
