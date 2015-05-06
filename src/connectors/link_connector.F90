@@ -448,11 +448,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         call ESMF_FieldGet(exportField, status=exportFieldStatus, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
         !! don't deal with complete fields here
         if (exportFieldStatus .eq. ESMF_FIELDSTATUS_COMPLETE) cycle
-        !! exclude empty fields because of also called reverse direction
-        if (exportFieldStatus .ne. ESMF_FIELDSTATUS_GRIDSET) cycle
 
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
           itemCount=importItemCount, rc=localrc)
