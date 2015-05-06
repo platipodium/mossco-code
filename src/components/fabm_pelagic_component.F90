@@ -785,7 +785,10 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> create river runoff field in import State
-    field = ESMF_FieldCreate(horizontal_grid, name="water_volume_flux", staggerloc=ESMF_STAGGERLOC_CENTER, &
+#if 0
+    field = ESMF_FieldEmptyCreate(name="volume_flux_in_water")
+#else
+    field = ESMF_FieldCreate(horizontal_grid, name="volume_flux_in_water", staggerloc=ESMF_STAGGERLOC_CENTER, &
               typekind=ESMF_TYPEKIND_R8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
@@ -796,6 +799,7 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     ! initialize volume flux with 0.0 (to be filled in the importState
     pel%volume_flux = 0.0d0
+#endif
     call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -853,6 +857,8 @@ module fabm_pelagic_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
+    type(ESMF_Field)           :: field
+    type(ESMF_StateItem_FLAG)  :: itemType
     type(ESMF_Time)            :: currTime
     character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc
@@ -866,6 +872,13 @@ module fabm_pelagic_component
 
     !> lookup the importState for restart data
     !call ReadRestart(gridComp, importState, exportState, parentClock, rc=localrc)
+
+    !> get volume_flux pointer
+    call ESMF_StateGet(importState,'volume_flux_in_water',field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, farrayPtr=pel%volume_flux, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !@todo: if fieldstatus still empty, create field with 0.0 values
 
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
