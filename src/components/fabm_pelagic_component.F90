@@ -1252,18 +1252,8 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
 
-      ! reset concentrations to mininum_value
-      do n=1,pel%nvar
-        do k=1,pel%knum
-        do j=1,pel%jnum
-        do i=1,pel%inum
-          if (pel%conc(i,j,k,n) .lt. pel%model%info%state_variables(n)%minimum) then
-            pel%conc(i,j,k,n) = pel%model%info%state_variables(n)%minimum
-          end if
-        end do
-        end do
-        end do
-      end do
+      ! clip concentrations that are below minimum
+      call pel%clip_below_minimum()
 
       ! link fabm state
       call pel%update_pointers()

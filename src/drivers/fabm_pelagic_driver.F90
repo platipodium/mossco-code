@@ -75,6 +75,7 @@
     procedure :: update_grid
     procedure :: update_expressions
     procedure :: check_expressions
+    procedure :: clip_below_minimum
   end type
 
   type,public :: export_state_type !< pelagic FABM driver type for export states
@@ -703,6 +704,24 @@
      end function calculate_vertical_mean
 
    end subroutine update_expressions
+
+   subroutine clip_below_minimum(pf)
+     class(type_mossco_fabm_pelagic) :: pf
+     integer                         :: i,j,k,n
+
+      ! reset concentrations to mininum_value
+      do n=1,pf%nvar
+        do k=1,pf%knum
+          do j=1,pf%jnum
+            do i=1,pf%inum
+              if (pf%conc(i,j,k,n) .lt. pf%model%state_variables(n)%minimum) then
+                pf%conc(i,j,k,n) = pf%model%state_variables(n)%minimum
+              end if
+            end do
+          end do
+        end do
+      end do
+   end subroutine clip_below_minimum
 
   end module mossco_fabm_pelagic
 
