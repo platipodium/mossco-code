@@ -431,8 +431,8 @@ module fabm_pelagic_component
 
     call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
-      mask = gridmask == 0 !>@todo: mask where gridmask /= 1
-      pel%is_openboundary = gridmask > 1
+      mask(1:inum,1:jnum,1:numlayers) = ( gridmask(1:inum,1:jnum,1:numlayers) == 0 ) !>@todo: mask where gridmask /= 1
+      pel%is_openboundary(1:inum,1:jnum,1:numlayers) = ( gridmask(1:inum,1:jnum,1:numlayers) > 1 )
     end if
 
     !! add cell area to horizontal grid
