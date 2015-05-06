@@ -1067,7 +1067,6 @@ module fabm_pelagic_component
     ! calculate PAR
     call pel%light()
 
-#if 0
     ! Create a list of matching flux and state
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1084,8 +1083,7 @@ module fabm_pelagic_component
 
     nmatch=0
     do i=1, itemCount
-      j=index(itemNameList(i),'_flux_in_water')
-      if (j<1) j=index(itemNameList(i),'_flux_at_water_surface')
+      j=index(itemNameList(i),'_flux_at_water_surface')
       if (j<1) j=index(itemNameList(i),'_flux_at_surface')
       if (j<1) j=index(itemNameList(i),'_flux_at_soil_surface')
       if (j<1) cycle
@@ -1136,7 +1134,6 @@ module fabm_pelagic_component
       endif
 
     enddo
-#endif
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1175,9 +1172,8 @@ module fabm_pelagic_component
 
       call integrate_flux_in_water(pel, importState)
 
-#if 0
-      do i=1, nmatch
 
+      do i=1, nmatch
         write(message,'(A)') trim(name)//' add flux field '
         call MOSSCO_FieldString(importFieldList(i), message)
 
@@ -1203,23 +1199,11 @@ module fabm_pelagic_component
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !> If it is a vertically integrated (2D-) flux (expected unit mmol s**-1)
-          if (index(itemNameList(i),'_flux_in_water')>0) then
-            do k=1,pel%knum
-              !> river dilution
-              !@todo: if river_dilution_on
-              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) * &
-                (1.0d0 - dt*pel%volume_flux * pel%cell_per_column_volume(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k))
+          !! it is handled by integrate_fluxes_in_water
 
-              !> addition of mass
-              !@todo: allow for negative mass flux
-              where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
-                farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) + &
-                  dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * pel%cell_per_column_volume(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)
-              endwhere
-            enddo
-          !> Otherwise it is a surface (2D-) flux (expected unit mmol m**-2), that needs
+          !> It is a surface (2D-) flux (expected unit mmol m**-2), that needs
           !> to be converted to volume concentration by division with layer_height
-          elseif (index(itemNameList(i),'_flux_at_surface')>0 .or. &
+          if (index(itemNameList(i),'_flux_at_surface')>0 .or. &
                   index(itemNameList(i),'_flux_at_water_surface')>0) then
             where (ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
               farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) &
@@ -1246,11 +1230,6 @@ module fabm_pelagic_component
           endwhere
         endif
       enddo
-
-      !call add_fluxes(importState, dt=dt, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-#endif
 
       ! clip concentrations that are below minimum
       call pel%clip_below_minimum()
