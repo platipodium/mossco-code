@@ -43,23 +43,26 @@ program main
   integer(ESMF_KIND_I4)      :: localPet, petCount
   logical                    :: ClockIsPresent
   character(len=ESMF_MAXSTR) :: message, formatstring
+  type(ESMF_LogMsg_Flag), allocatable :: logMsgList(:)
   type(ESMF_LogKind_Flag)    :: logKindFlag
   logical                    :: fileIsPresent, labelIsPresent
   type(ESMF_Config)          :: config
   character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg'
+  character(len=ESMF_MAXSTR) :: logLevel='all'
+  logical                    :: logFlush=.false.
 
-
-!> Read the namelist `mossco_run.nml`and evaluate three parameters:
+!> Read the namelist `mossco_run.nml`and evaluate five parameters:
 !> 1. `start`: the start date of the simulation in YYYY-MM-DD hh:mm:ss format
 !> 2. `stop` : the stop date of the simulation in the same format
 !> 3. `title`: the title of the simulation.
 !> 4. `logkind`: an ESMF LOGKIND, multi | single | none, default is multi
+!> 5. `loglevel`: an ESMF LOGMSGFLAG, none | error | warning | all, default is all
+!> 6. `logflush`: a logical, .false. | .true. , default is .true.
 !>
 !> If this file is not present, then the default simulation with title "Untitled"
 !> will be executed for the time 2000-01-01 00:00:00 to 2000-01-05 00:00:00
 
-  namelist /mossco_run/ title,start,stop,logkind
-  !! add loglevel, logflush
+  namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush
 
   configfilename='mossco.cfg'
   inquire(file=trim(configfilename), exist=fileIsPresent)
@@ -153,12 +156,61 @@ program main
       write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' stop: '//trim(stop)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
+
+    call ESMF_ConfigFindLabel(config, label='logflush:', isPresent=labelIsPresent, rc = localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (labelIsPresent) then
+      call ESMF_ConfigGetAttribute(config, logflush, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A,L)')  trim(name)//' found in file '//trim(configFileName)//' logflush: ',logflush
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call ESMF_ConfigFindLabel(config, label='loglevel:', isPresent=labelIsPresent, rc = localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (labelIsPresent) then
+      call ESMF_ConfigGetAttribute(config, loglevel, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' loglevel: '//trim(loglevel)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
   endif
 
-  !call ESMF_LogSet(flush=.false., logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING/),rc=localrc)
-  call ESMF_LogSet(flush=.true., logMsgList=(/ESMF_LOGMSG_ALL/),rc=localrc)
+  !> Find out what level of log to write, the default is all, overwrite previous decision
+
+  if (logLevel == 'none') then
+    allocate(logMsgList(1))
+    logMsgList=(/ESMF_LOGMSG_NONE/)
+  elseif (logLevel == 'error') then
+    allocate(logMsgList(1))
+    logMsgList=(/ESMF_LOGMSG_ERROR/)
+  elseif (logLevel == 'warning') then
+    allocate(logMsgList(2))
+    logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING/)
+  elseif (logLevel == 'info') then
+    allocate(logMsgList(3))
+    logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING, ESMF_LOGMSG_INFO/)
+  elseif (logLevel == 'trace') then
+    allocate(logMsgList(1))
+    logMsgList=(/ESMF_LOGMSG_TRACE/)
+  else
+    allocate(logMsgList(1))
+    logMsgList=(/ESMF_LOGMSG_ALL/)
+  endif
+
+  call ESMF_LogSet(logMsgList=logMsgList, flush=logFlush, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (allocated(logMsgList)) deallocate(logMsgList)
 
   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
