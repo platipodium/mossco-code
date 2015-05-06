@@ -156,8 +156,6 @@ contains
     phaseCount=1 !>@todo for now we assume all couplers have only 1 phase
     write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
 
-    write(message,'(A)') trim(message)//' ...1'
-
     if (present(rc)) rc=rc_
     if (present(currTime)) currTime=currTime_
     if (present(name)) name=trim(name_)
@@ -293,7 +291,6 @@ contains
     phaseCount=1 !>@todo for now we assume all couplers have only 1 phase
 
     write(message,'(A,I1,A,I1)') trim(message)//' phase ',phase,' of ',phaseCount
-    write(message,'(A)') trim(message)//' ...2'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     if (present(rc)) rc=rc_
@@ -392,7 +389,6 @@ contains
       write(formatstring,'(A)') '(A,'//intformat(advanceCount)//',A,'//intformat(hours)//',A,I2.2,A,I2.2,A)'
       write(message, formatstring) trim(message)//' step ',advanceCount,' dt=',hours,':',minutes,':',seconds,' hours'
     end if
-    write(message,'(A)') trim(message)//' ...3'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine MOSSCO_GridCompEntryLog
@@ -458,7 +454,6 @@ contains
     end if
 
     write(message,'(A,I1,A,I1)') trim(message)//' phase ',cPhase,' of ',phaseCount
-    write(message,'(A)') trim(message)//' ...4'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
   end subroutine MOSSCO_GridCompExitLog
