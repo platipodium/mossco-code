@@ -1021,6 +1021,8 @@ module fabm_pelagic_component
     type(ESMF_TimeInterval)    :: timeStep
     integer(ESMF_KIND_I4)      :: localrc
 
+    type(ESMF_Field)                       :: field
+    character(len=ESMF_MAXSTR)             :: varname
     type(ESMF_Field)                       :: importField, exportField
     type(ESMF_Field), allocatable          :: exportFieldList(:), importFieldList(:)
     character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
@@ -1065,6 +1067,7 @@ module fabm_pelagic_component
     ! calculate PAR
     call pel%light()
 
+#if 0
     ! Create a list of matching flux and state
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1133,6 +1136,7 @@ module fabm_pelagic_component
       endif
 
     enddo
+#endif
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1169,17 +1173,9 @@ module fabm_pelagic_component
         pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
       end do
 
-      ! calculate total water depth
-      if (.not.(associated(pel%cell_per_column_volume))) then
-        ubnd3 = ubound(pel%layer_height)
-        lbnd3 = lbound(pel%layer_height)
-        allocate(pel%cell_per_column_volume(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
-        pel%cell_per_column_volume = 0.0d0
-      end if
-      do k=1,pel%knum
-        pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
-      end do
+      call integrate_flux_in_water(pel, importState)
 
+#if 0
       do i=1, nmatch
 
         write(message,'(A)') trim(name)//' add flux field '
@@ -1254,6 +1250,7 @@ module fabm_pelagic_component
       !call add_fluxes(importState, dt=dt, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
 
       ! reset concentrations to mininum_value
       do n=1,pel%nvar
@@ -1330,5 +1327,64 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
+
+
+  subroutine integrate_flux_in_water(pel,importState)
+    type(ESMF_State)               :: importState
+    type(type_mossco_fabm_pelagic) :: pel
+    type(ESMF_Field)               :: field
+    type(ESMF_StateItem_FLAG)      :: itemtype
+    integer                        :: n,i,j,k, localrc, rc
+    integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3)
+    character(len=ESMF_MAXSTR)     :: message, varname
+    real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:)
+
+      ! calculate total water depth
+      if (.not.(associated(pel%cell_per_column_volume))) then
+        ubnd3 = ubound(pel%layer_height)
+        lbnd3 = lbound(pel%layer_height)
+        allocate(pel%cell_per_column_volume(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
+        pel%cell_per_column_volume = 0.0d0
+      end if
+      do k=1,pel%knum
+        pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
+      end do
+
+#define LAYBND2D lbnd(1):ubnd(1),lbnd(2):ubnd(2),k
+      do n=1,pel%nvar
+        varname = trim(pel%export_states(n)%standard_name)
+        call ESMF_StateGet(importState, trim(varname), itemType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (itemType == ESMF_STATEITEM_FIELD) then
+          call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', field, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_FieldGet(field, farrayPtr=ratePtr2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          do k=1,pel%knum
+            !> river dilution
+            if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
+              pel%export_states(n)%conc(LAYBND2D) = pel%export_states(n)%conc(LAYBND2D) * &
+                (1.0d0 - dt*pel%volume_flux * pel%cell_per_column_volume(LAYBND2D))
+            end if
+            !> addition of mass
+            !@todo: allow for negative mass flux
+            where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
+              pel%export_states(n)%conc(LAYBND2D) = pel%export_states(n)%conc(LAYBND2D) + &
+                dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * pel%cell_per_column_volume(LAYBND2D)
+            end where
+          end do
+        else
+          ! no field found
+          cycle
+        end if
+      end do
+
+  end subroutine integrate_flux_in_water
+
 
 end module fabm_pelagic_component
