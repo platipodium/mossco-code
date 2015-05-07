@@ -1,9 +1,9 @@
 # This Makefile is part of MOSSCO
 #
 # @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
-# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @author Richard Hofmeister <richard.hofmeister@hzg.de>
+# @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -161,6 +161,18 @@ fabm_pelagic_component.o: fabm_pelagic_component.F90
 	@echo "Compiling $<"
 	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
+hamsom_component.o: hamsom_component.F90
+	@echo "Compiling $<"
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+hamsom_component.F90: empty_component.F90
+	@echo "Creating dummy HAMSOM component $@"
+	sed 's/empty/hamsom/g' $< > $@
+
+tracer_component.F90: empty_component.F90
+	@echo "Creating dummy TRACER component $@"
+	sed 's/empty/tracer/g' $< > $@
+
 # KK-TODO: this can be removed when gotm's timestep routine is used
 ifeq ($(MOSSCO_GOTM_FABM),true)
 gotm_component.o: gotm_component.F90
@@ -193,6 +205,8 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm0d_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/simplewave_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/hamsom_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/tracer_component.mod
 
 subdirs: $(SUBDIRS)
 
