@@ -981,7 +981,7 @@ module getm_component
    end if
    allocate(areaC(E2DFIELD)) ; areaC = _ONE_/arcd1
 
-   allocate(maskC3D(E2DFIELD,1:klen))
+   allocate(maskC3D(E2DFIELD,0:klen))
    allocate(maskX3D(E2DFIELD,0:klen))
    allocate(areaW3D(E2DFIELD,0:klen))
 
@@ -990,6 +990,7 @@ module getm_component
       maskX3D(:,:,k) = ax
       areaW3D(:,:,k) = _ONE_/arcd1
    end do
+   maskC3D(:,:,0) = 0
    maskX3D(:,:,0) = 0
    areaW3D(:,:,0) = _ONE_/arcd1
 
@@ -1525,7 +1526,8 @@ module getm_component
    call ESMF_GridSetCoord(getmGrid3D,3,array=array,staggerloc=StaggerLoc, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    !array = ESMF_ArrayCreate(getmDistGrid3D,maskC,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
-   array = ESMF_ArrayCreate(getmDistGrid3D,maskC3D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+   array = ESMF_ArrayCreate(getmDistGrid3D,maskC3D,indexflag=ESMF_INDEX_DELOCAL, &
+                            totalLWidth=(/HALO,HALO,1/),totalUWidth=(/HALO,HALO,0/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_AttributeSet(array,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
