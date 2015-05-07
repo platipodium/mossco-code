@@ -1,8 +1,8 @@
 # This Makefile is part of MOSSCO
 #
 # @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen
-# @author Richard Hofmeister
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @author Richard Hofmeister <richard.hofmeister@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -195,6 +195,7 @@ tracer_driver.o: tracer_driver.F90
 
 # HAMSOM section
 
+ifeq ($(MOSSCO_HAMSOM),true)
 libmossco_hamsom_dependencies:              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Modules.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/HAMSOM_3p.o) \
@@ -219,6 +220,9 @@ libmossco_hamsom_dependencies:              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Tools.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Par.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Boundary_DynHeight_NWCS20.o)
+else
+libmossco_hamsom_dependencies:
+endif
 
 libmossco_hamsom: prefix libmossco_hamsom_dependencies  \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
@@ -226,6 +230,10 @@ libmossco_hamsom: prefix libmossco_hamsom_dependencies  \
 hamsom_driver.o: hamsom_driver.F90
 	@echo "Compiling $<"
 	$(F90)  $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(HAMSOM_FFLAGS) $(F90FLAGS) -c $< -o $@
+
+hamsom_driver.F90: empty_driver.F90
+	@echo "Creating dummy HAMSOM driver $@"
+	sed 's/empty/hamsom/g' $< > $@
 
 # Generic section
 
