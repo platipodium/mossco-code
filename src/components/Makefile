@@ -4,6 +4,7 @@
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
+# @author Markus Kreus <markus.kreus@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -64,6 +65,7 @@ libmossco_hamsom: libmossco_hamsom_driver libmossco_hamsom_component
 libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
 libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
 
+libmossco_clm: libmossco_clm_driver libmossco_clm_component
 libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
@@ -75,10 +77,6 @@ libmossco_river: libmossco_river_driver libmossco_util \
 libmossco_river_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_river
 
-libmossco_clm: libmossco_clm_driver  \
-   $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
-
-libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_netcdf: prefix libmossco_util \
   $(MOSSCO_LIBRARY_PATH)/libmossco_netcdf.a(netcdf_component.o) \
