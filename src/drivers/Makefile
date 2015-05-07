@@ -41,6 +41,16 @@ ifeq ($(MOSSCO_EROSED),true)
   CPPFLAGS += -I$(EROSED_DIR)/include
 endif
 
+ifeq ($(MOSSCO_TRACER),true)
+  TARGETS += libmossco_tracer
+  CPPFLAGS += -I$(TRACER_DIR)/src
+endif
+
+ifeq ($(MOSSCO_HAMSOM),true)
+  TARGETS += libmossco_hamsom
+  CPPFLAGS += -I$(HAMSOM_DIR)/src
+endif
+
 .PHONY: $(TARGETS)
 
 # Make targets
@@ -146,6 +156,76 @@ libmossco_erosed_dependencies: prefix              \
 
 libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies       \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosed_driver.o)
+
+# TRACER section
+# TRACER_OBJS= \
+#   $(TRACER_DIR)/src/grid_NWCS20D.o  \
+#   $(TRACER_DIR)/src/avr2geo.o  \
+#   $(TRACER_DIR)/src/utils.o  \
+#   $(TRACER_DIR)/src/forcing_NWCS20D.o  \
+#   $(TRACER_DIR)/src/particles.o  \
+#   $(TRACER_DIR)/src/traort4.o  \
+#   $(TRACER_DIR)/src/output.o \
+#   tracer_driver.o
+
+libmossco_tracer_dependencies:              \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_DIR)/src/grid_NWCS20D.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_DIR)/src/avr2geo.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_DIR)/src/utils.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_DIR)/src/forcing_NWCS20D.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_DIR)/src/particles.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_DIR)/src/traort4.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_DIR)/src/output.o) \
+
+# libtracer_external: prefix libmossco_tracer_dependencies       \
+#   $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a($(TRACER_OBJS))
+
+# libmossco_tracer: prefix libmossco_tracer_dependencies       \
+#   $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a(tracer_driver.o)
+
+# libmossco_tracer: prefix libmossco_tracer_dependencies  \
+#   $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a(tracer_driver.o $(TRACER_OBJS))
+
+libmossco_tracer: prefix libmossco_tracer_dependencies  \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_tracer.a(tracer_driver.o)
+
+tracer_driver.o: tracer_driver.F90
+	@echo "Compiling $<"
+	$(F90)  $(TRACER_CPPFLAGS) $(CPPFLAGS) $(TRACER_FFLAGS) $(F90FLAGS) -c $< -o $@
+
+# HAMSOM section
+
+libmossco_hamsom_dependencies:              \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Modules.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/HAMSOM_3p.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Main.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Init.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Topo.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Boundary.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/River.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/CalcAv.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/CalcTS.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/EOS.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/SOR.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Continuity.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Momentum.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Implicit.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/NonLinear.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/InOut.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/DataOut.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/AverageM2Out.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/AverageOut.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/InstantOut.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Tools.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Par.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Boundary_DynHeight_NWCS20.o)
+
+libmossco_hamsom: prefix libmossco_hamsom_dependencies  \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
+
+hamsom_driver.o: hamsom_driver.F90
+	@echo "Compiling $<"
+	$(F90)  $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(HAMSOM_FFLAGS) $(F90FLAGS) -c $< -o $@
 
 # Generic section
 

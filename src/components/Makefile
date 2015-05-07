@@ -40,6 +40,9 @@ endif
 ifeq ($(MOSSCO_GETM),true)
   TARGETS += libmossco_getm
 endif
+ifeq ($(MOSSCO_HAMSOM),true)
+  TARGETS += libmossco_hamsom
+endif
 
 .PHONY: $(TARGETS) $(SUBDIRS) subdirs utilities
 
@@ -56,6 +59,13 @@ libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 
 libmossco_benthos: libmossco_benthos_driver libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthos_component.o)
+
+libmossco_hamsom: libmossco_hamsom_driver libmossco_hamsom_component
+libmossco_hamsom_driver:  prefix $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
+libmossco_hamsom_component: libmossco_hamsom_driver $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_component.o)
+
+libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_netcdf_component.o)
+libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
    $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
@@ -82,6 +92,9 @@ erosed_component: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.
 
 libmossco_benthos_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_benthos
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o):
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_hamsom
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_clm

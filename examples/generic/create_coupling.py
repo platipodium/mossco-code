@@ -1864,7 +1864,7 @@ libmossco_fabm0d libmossco_fabmpelagic:
 libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
-libmossco_info libmossco_test libmossco_river:
+libmossco_info libmossco_test libmossco_river libmossco_hamsom:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libmossco_sediment:

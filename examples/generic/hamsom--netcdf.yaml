@@ -1,0 +1,5 @@
+coupling:
+  - components:
+     - hamsom
+     - netcdf
+    interval: 1 h

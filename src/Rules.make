@@ -338,6 +338,86 @@ ifdef EROSED_DIR
 endif
 export MOSSCO_EROSED
 
+# 6a. TRACER
+MOSSCO_TRACER=false
+
+ifndef MOSSCO_TRACERDIR
+  external_TRACERDIR = $(MOSSCO_DIR)/external/tracer-git
+  ifneq ($(wildcard $(external_TRACERDIR)/src/Makefile),)
+    export MOSSCO_TRACERDIR=$(external_TRACERDIR)
+  endif
+endif
+
+ifdef MOSSCO_TRACERDIR
+  export TRACER_DIR=$(MOSSCO_TRACERDIR)
+else
+  ifdef TRACER_DIR
+    $(warning Assuming you have a working TRACER in ${TRACER_DIR}, proceed at your own risk or set the environment variable $$MOSSCO_TRACERDIR explicitly to enable the build system to take care of the TRACER build)
+  endif
+endif
+
+
+ifdef TRACER_DIR
+  MOSSCO_TRACER=true
+  DEFINES += -D MOSSCO_TRACER
+endif
+
+ifeq ($(TRACER_FORCING_ONLINE),true)
+  DEFINES += -DForcing_Online
+endif
+
+
+# 6b. HAMSOM
+MOSSCO_HAMSOM =false
+
+ifndef MOSSCO_HAMSOMDIR
+  external_HAMSOMDIR = $(HAMSOM_DIR)/external/hamsom-git
+  ifneq ($(wildcard $(external_HAMSOMDIR)/src/makefile),)
+    export MOSSCO_HAMSOMDIR=$(external_HAMSOMDIR)
+  endif
+endif
+
+ifdef MOSSCO_HAMSOMDIR
+  export HAMSOM_DIR=$(MOSSCO_HAMSOMDIR)
+else
+  ifdef HAMSOM_DIR
+    $(warning Assuming you have a working HAMSOM in ${HAMSOM_DIR}, proceed at your own risk or set the environment variable $$MOSSCO_HAMSOMDIR explicitly to enable the build system to take care of the HAMSOM build)
+  endif
+endif
+
+ifdef HAMSOM_DIR
+  MOSSCO_HAMSOM=true
+  DEFINES += -D MOSSCO_HAMSOM
+endif
+
+ifeq ($(MOSSCO_HAMSOM),true)
+  #export HAMSOM_LIBRARY_PATH=$(HAMSOM_DIR)/lib/$(FORTRAN_COMPILER)
+  #HAMSOM_LIBS:=-lhamsom
+  DEFINES += -DCalcHBottomOld
+  DEFINES += -DNOVEC
+  DEFINES += -Dcheck_waterlevel
+  DEFINES += -Dcalc_AvrCumZ
+  DEFINES += -Dincl_AvrW
+#  DEFINES += -DAvrInclBounds
+#  DEFINES += -DreadATZ_monthly_mean
+#  DEFINES += -Dbaltic_closedEB
+  DEFINES += -Dcheck_BoundaryZ
+  DEFINES += -DBndDynHeight
+  DEFINES += -DRadiationUV_XinpingChen
+  DEFINES += -DRadiationTS_XinpingChen
+#  DEFINES += -Dsmooth_BoundaryTS
+  DEFINES += -DMomentumJP
+#  DEFINES += -DFullSWR
+  DEFINES += -DRiverFilesECOHAM
+  DEFINES += -DRiverInterpolationOff
+  DEFINES += -DIncludeFreshwater
+
+  export HAMSOM_FFLAGS = -g -p -xf95-cpp-input -fdefault-real-8 -fsign-zero -fbounds-check -fno-f2c -Wall
+  HAMSOM_FFLAGS += -Wmaybe-uninitialized
+  #export HAMSOM_CPPFLAGS = -I$(HAMSOM_DIR)/src
+  #export HAMSOM_LDFLAGS = -L$(HAMSOM_LIBRARY_PATH) $(HAMSOM_LIBS)
+endif
+
 # 7. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
 #
@@ -406,8 +486,10 @@ INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(MOSSCO_DIR)/src/include
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
+F90FLAGS = $(MOSSCO_FFLAGS) $(ESMF_F90COMPILEOPTS)
+F90FLAGS += $(HAMSOM_FFLAGS)
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
-F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
+F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH) $(MOSSCO_FFLAGS)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
 EXTRA_CPP=
@@ -512,6 +594,12 @@ info:
 	@echo FC = $(FC)
 	@echo FORTRAN_COMPILER = $(FORTRAN_COMPILER)
 	@env | grep ^F90 | sort
+ifeq ($(MOSSCO_TRACER),true)
+	@env | grep ^TRACER | sort
+endif
+ifeq ($(MOSSCO_HAMSOM),true)
+	@env | grep ^HAMSOM | sort
+endif
 ifeq ($(MOSSCO_FABM),true)
 	@env | grep ^FABM | sort
 endif
@@ -598,6 +686,13 @@ libgetm_external: libgotm_external
 ifdef MOSSCO_GETMDIR
 	( unset FABM ; $(MAKE) -C $(GETMDIR)/src GIT FORTRAN ../VERSION makedirs subdirs )
 endif
+
+#libtracer_external: prefix
+#ifdef MOSSCO_TRACERDIR
+#	@echo Recreating the TRACER library in $(MOSSCO_TRACERDIR)
+#	($(MAKE) -C $(MOSSCO_TRACERDIR)/src)
+#endif
+
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
 install:
@@ -606,8 +701,19 @@ install:
 	install  $(MOSSCO_DIR)/src/scripts/mossco $(MOSSCO_INSTALL_PREFIX)/mossco
 
 .PHONY: mossco_clean
-mossco_clean: distclean gotm_clean fabm_clean
-	$(MAKE) -C $(MOSSCO_DIR)/external getm_distclean
+
+mossco_clean: distclean fabm_clean
+	$(MAKE) -C $(MOSSCO_DIR)/external gotm_distclean getm_distclean
+# Note (KK): These distcleans might be redundant, but might also operate outside MOSSCO_DIR.
+ifdef MOSSCO_GOTMDIR
+	$(MAKE) -C $(MOSSCO_GOTMDIR) distclean
+endif
+ifdef MOSSCO_GETMDIR
+	$(MAKE) -C $(MOSSCO_GETMDIR) distclean
+endif
+#ifdef MOSSCO_TRACERDIR
+#	$(MAKE) -C $(MOSSCO_TRACERDIR) distclean
+#endif
 
 # Common rules
 #ifndef EXTRA_CPP
@@ -650,16 +756,17 @@ mossco_clean: distclean gotm_clean fabm_clean
 %.mod: %.f90
 	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
-#%.o: %.f90
+
+# %.o: %.f90
 #	@echo "Compiling $<"
 #	$(F90) $(CPPFLAGS)  -c $< -o $@
-#else
-#%.f90: %.F90
+# else
+# %.f90: %.F90
 #	$(CPP) $(CPPFLAGS) $< -o $@
 #	$(F90_to_f90)
-#%.o: %.f90
+# %.o: %.f90
 #	$(F90) $(F90FLAGS) $(EXTRA_FFLAGS) -c $< -o $@
-#endif
+# endif
 
 sha:
 	@-git log | head -1 | awk '{print "character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = \""$$2"\"" }' \
