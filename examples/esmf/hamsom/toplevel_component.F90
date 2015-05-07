@@ -1,8 +1,9 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
+!> @copyright Copyright (C) 2015, Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Markus Kreus <markus.kreus@hzg.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the

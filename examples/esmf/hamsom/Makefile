@@ -1,7 +1,8 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2015 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+# @author Markus Kreus <markus.kreus@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -35,4 +36,4 @@ libmossco_hamsom:
 clean: extraclean
 
 extraclean:
-	@rm -f hamsom main.F90
+	@rm -f hamsom
