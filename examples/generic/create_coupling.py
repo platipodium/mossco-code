@@ -407,7 +407,7 @@ fid.write('''
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, myName, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -478,7 +478,7 @@ fid.write('''
 
     rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, myName, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
@@ -1185,7 +1185,8 @@ fid.write('''
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, myName, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
@@ -1575,7 +1576,7 @@ fid.write('''
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, myName, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
