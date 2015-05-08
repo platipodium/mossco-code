@@ -192,10 +192,11 @@ contains
 
     rc_=ESMF_SUCCESS
 
-    call ESMF_GridCompGet(GridComp, &
+    call ESMF_GridCompGet(GridComp, name=name_, &
       configIsPresent=configIsPresent, vmIsPresent=vmIsPresent, localPet=localPet, &
       petCount=petCount, contextFlag=context, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Check for clock presence and add if necessary
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent, rc=localrc)

@@ -228,7 +228,7 @@ program main
   write(message,formatstring) 'Creating multiple logs, this is processor ',localPet,' of ', petCount
   if (logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-! Get the wall clock starting time
+ ! Get the wall clock starting time
   call ESMF_TimeSet(time1, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -351,6 +351,7 @@ program main
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
   end if
+
 
   !> @todo create simulation attribute package for CIM and write this to XML if XERCES is set, otherwise write
   !> tab-delimited info
