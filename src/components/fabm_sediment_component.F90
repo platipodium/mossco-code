@@ -127,7 +127,8 @@ module fabm_sediment_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
@@ -195,7 +196,8 @@ module fabm_sediment_component
     integer, dimension(:,:), pointer :: gridmask=>null()
     type(ESMF_StateItem_Flag)  :: itemType
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! read namelist input for control of timestepping
@@ -785,7 +787,8 @@ module fabm_sediment_component
     !!         b) presimulate after setting constant values
     !!         c) copy 3d data for restarting previous simulation
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> check for porosity
@@ -844,7 +847,8 @@ module fabm_sediment_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
@@ -938,7 +942,8 @@ module fabm_sediment_component
     character(len=ESMF_MAXSTR)  :: itemName
     integer(ESMF_KIND_I4)       :: lbnd(2), ubnd(2)
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> check for porosity
@@ -1126,7 +1131,8 @@ module fabm_sediment_component
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)      :: localrc
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     close(funit)
