@@ -169,26 +169,30 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCompEntry"
-  subroutine MOSSCO_GridCompEntry(GridComp, parentClock, name, currTime, rc)
+  subroutine MOSSCO_GridCompEntry(GridComp, parentClock, keywordEnforcer, name, &
+    currTime, importState, exportState, rc)
 
     type(ESMF_GridComp), intent(inout)             :: gridComp
     type(ESMF_Clock), intent(in)                   :: parentClock
+    type(ESMF_KeywordEnforcer), optional           :: keywordEnforcer ! must use keywords below
     character(ESMF_MAXSTR), intent(out), optional  :: name
     type(ESMF_Time), intent(out), optional         :: currTime
     integer, intent(out), optional                 :: rc
+    type(ESMF_State), intent(in), optional         :: importState, exportState
 
     character(ESMF_MAXSTR)  :: name_
     type(ESMF_Time)         :: currTime_
     integer                 :: rc_
 
     integer(ESMF_KIND_I4)   :: petCount, localPet, phase, localrc
-    logical                 :: clockIsPresent, configIsPresent, vmIsPresent
+    logical                 :: clockIsPresent, configIsPresent, vmIsPresent, isPresent
     type(ESMF_Clock)        :: clock
     type(ESMF_Vm)           :: vm
     type(ESMF_Method_Flag)  :: method
     type(ESMF_Context_Flag) :: context
     type(ESMF_Config)       :: config
     character(len=ESMF_MAXSTR) :: message
+    type(ESMF_State)        :: state
 
     rc_=ESMF_SUCCESS
 
@@ -197,6 +201,24 @@ contains
       petCount=petCount, contextFlag=context, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> if importState and exportState are provided as arguments, check whether they agree with
+    !> the gridComp's import- and exportState
+    if (present(importState)) then
+      call ESMF_GridCompGet(GridComp, importStateIsPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (isPresent) then
+        call ESMF_GridCompGet(GridComp, importState=state, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (state /= importState) then
+          write(message,'(A)')  trim(name)//' importState differs from state given as argument'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        endif
+      endif
+    endif
+
 
     !! Check for clock presence and add if necessary
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent, rc=localrc)
