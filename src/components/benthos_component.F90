@@ -110,7 +110,8 @@ contains
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -177,7 +178,9 @@ contains
     integer(ESMF_KIND_I4)  :: ubnd2(2), lbnd2(2), ubnd3(3), lbnd3(3)
 
     rc = ESMF_SUCCESS
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -460,7 +463,8 @@ contains
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -631,7 +635,8 @@ contains
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
