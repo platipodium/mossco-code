@@ -785,8 +785,10 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> create river runoff field in import State
-#if 0
+#if 1
     field = ESMF_FieldEmptyCreate(name="volume_flux_in_water")
+    !> @todo: make field gridset. BUT: since fabm_pelagic creates its own horizontal_grid the
+    !! check for equal grids requires magic in the link coupler to check for conformal grids.
 #else
     field = ESMF_FieldCreate(horizontal_grid, name="volume_flux_in_water", staggerloc=ESMF_STAGGERLOC_CENTER, &
               typekind=ESMF_TYPEKIND_R8, rc=localrc)
@@ -859,6 +861,7 @@ module fabm_pelagic_component
 
     type(ESMF_Field)           :: field
     type(ESMF_StateItem_FLAG)  :: itemType
+    type(ESMF_FieldStatus_FLAG):: fieldStatus
     type(ESMF_Time)            :: currTime
     character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc
@@ -874,11 +877,20 @@ module fabm_pelagic_component
     !call ReadRestart(gridComp, importState, exportState, parentClock, rc=localrc)
 
     !> get volume_flux pointer
-    call ESMF_StateGet(importState,'volume_flux_in_water',field, rc=localrc)
+    call ESMF_StateGet(importState,'volume_flux_in_water',itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(field, farrayPtr=pel%volume_flux, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !@todo: if fieldstatus still empty, create field with 0.0 values
+    if (itemType==ESMF_STATEITEM_FIELD) then
+      call ESMF_StateGet(importState,'volume_flux_in_water',field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (fieldStatus==ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_FieldGet(field, farrayPtr=pel%volume_flux, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        pel%volume_flux=>null()
+      end if
+    end if
 
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
@@ -1332,19 +1344,19 @@ module fabm_pelagic_component
         pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
       end do
 
-#define LAYBND2D lbnd(1):ubnd(1),lbnd(2):ubnd(2),k
       do n=1,pel%nvar
         varname = trim(pel%export_states(n)%standard_name)
-        do k=1,pel%knum
-          !> river dilution
-          if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
-            pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
-              (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
-          end if
-        end do
-        call ESMF_StateGet(importState, trim(varname), itemType, rc=localrc)
+        if (associated(pel%volume_flux)) then
+          do k=1,pel%knum
+            !> river dilution
+            if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
+              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
+                (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
+            end if
+          end do
+        end if
+        call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', itemType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
         if (itemType == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', field, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
