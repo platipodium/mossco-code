@@ -323,7 +323,7 @@ integer         :: n,i,j,k
 
 ! Make sure we are in an aqueous environment
 if (any(sed%porosity <= 0) .or. any(sed%porosity > 1)) then
-  write(0,*) 'FATAL Porosity out of range, cannot initialize sediment'
+  !write(0,*) 'FATAL Porosity out of range, cannot initialize sediment'
   !> @todo check values only within the water mask
   !return
 endif
@@ -336,6 +336,7 @@ if(associated(sed%mask)) then
   do k=1,sed%knum
     do j=1,sed%jnum
       do i=1,sed%inum
+        !> @todo: check adaptive solver for -1.d20 or other negative missing values
         if (sed%mask(i,j,k)) sed%conc(i,j,k,:)=1.d20
       end do
     end do
