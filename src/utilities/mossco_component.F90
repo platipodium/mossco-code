@@ -22,6 +22,8 @@ module mossco_component
 
 use esmf
 use mossco_strings
+use mossco_state
+use mossco_field
 
 implicit none
 
@@ -213,12 +215,12 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (state /= importState) then
-          write(message,'(A)')  trim(name)//' importState differs from state given as argument'
+          write(message,'(A)')  trim(name_)//' importState differs from state given as argument'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          call MOSSCO_StateLog(state)
         endif
       endif
     endif
-
 
     !! Check for clock presence and add if necessary
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent, rc=localrc)
