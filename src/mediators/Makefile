@@ -38,7 +38,8 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
-libmossco_mediator: libpelagicbenthic_mediator pelagicsoilconnector soilpelagicconnector
+#libmossco_mediator: libpelagicbenthic_mediator pelagicsoilconnector soilpelagicconnector
+libmossco_mediator: pelagicsoilconnector soilpelagicconnector
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
