@@ -20,6 +20,7 @@ module mossco_state
 
 use esmf
 use mossco_field
+use mossco_strings
 
 implicit none
 
@@ -506,7 +507,8 @@ contains
       call ESMF_AttributeGet(state, attributeIndex=i , name=attributeName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)')  trim(name)//' attribute '//trim(attributeName)//'='
+      write(message,'(A)')  trim(name)//' attribute '
+      call MOSSCO_MessageAdd(message, trim(attributeName)//'=')
 
       call ESMF_AttributeGet(state, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -591,7 +593,7 @@ contains
 
     call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, &
       rc=localRc)
-   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1,itemCount
       if (itemtypeList(i) == ESMF_STATEITEM_FIELD) then
