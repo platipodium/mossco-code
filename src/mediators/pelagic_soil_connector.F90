@@ -190,6 +190,7 @@ module pelagic_soil_connector
 
       ptr_f2 = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
+    nullify(ptr_f3)
 
     ! dissolved_oxygen:
     call mossco_state_get(importState,(/ &
@@ -210,18 +211,24 @@ module pelagic_soil_connector
       if (.not.associated(oxy)) allocate(oxy(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
       if (.not.associated(odu)) allocate(odu(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
 
-      do j=lbnd(2),ubnd(2)
-        do i=lbnd(1),ubnd(1)
-          oxy = max(0.0d0,ptr_f3(i,j,lbnd(3)))
-          odu = max(0.0d0,-ptr_f3(i,j,lbnd(3)))
+      if (odurc == 0) then
+        ptr_f2 = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      else
+        ! assume that negative oxygen is amount of reduced substances
+        do j=lbnd(2),ubnd(2)
+          do i=lbnd(1),ubnd(1)
+            oxy(i,j) = max(0.0d0,ptr_f3(i,j,lbnd(3)))
+            odu(i,j) = max(0.0d0,-ptr_f3(i,j,lbnd(3)))
+          end do
         end do
-      end do
-      ptr_f2 = oxy(:,:)
+        ptr_f2 = oxy(:,:)
+      end if
       
       call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/),ptr_f2,rc=odurc)
       if (odurc == ESMF_SUCCESS) odu = ptr_f3_2nd(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       ptr_f2 = odu(:,:)
     end if
+    nullify(ptr_f3)
 
       !   Det flux:
     call mossco_state_get(importState,(/ &
