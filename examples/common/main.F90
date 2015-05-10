@@ -35,7 +35,7 @@ program main
   character(len=40)          :: timestring, logKind='multi', name='main'
   character(len=40)          :: start='2000-01-01 00:00:00'
   character(len=40)          :: stop='2000-01-05 00:00:00'
-  character(len=40)          :: title='Untitled'
+  character(len=ESMF_MAXSTR) :: title='Untitled'
   type(ESMF_GridComp)        :: topComp
   type(ESMF_State)           :: topState ! for import and export, empty
   type(ESMF_Clock)           :: mainClock,topClock
