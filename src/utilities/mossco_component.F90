@@ -217,6 +217,7 @@ contains
         if (state /= importState) then
           write(message,'(A)')  trim(name_)//' importState differs from state given as argument'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          call MOSSCO_StateLog(importState)
           call MOSSCO_StateLog(state)
         endif
       endif
