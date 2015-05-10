@@ -1642,7 +1642,8 @@ fid.write('''
     enddo
     do i=1,ubound(gridCompList,1)
       do phase=1,gridCompPhaseCountList(i)
-        call ESMF_GridCompFinalize(gridCompList(i), clock=clock, phase=phase, rc=localrc)
+        call ESMF_GridCompFinalize(gridCompList(i), importState=gridImportStateList(i), exportState= &
+          gridExportStateList(i), clock=clock, phase=phase, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
     enddo
