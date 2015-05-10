@@ -26,13 +26,16 @@ module soil_pelagic_connector
   implicit none
 
   private
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN,DIN,vDETN
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP,DETP,vDETP
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2,val1_f2,val2_f2
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux,DETPflux,DETCflux,DINflux,DIPflux,OXYflux
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux,fDETCflux,omexDETPflux
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP=>null(),vDETP=>null()
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2=>null(),val1_f2=>null(),val2_f2=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux=>null(),DETPflux=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETCflux=>null(),DINflux=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DIPflux=>null(),OXYflux=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ODUflux=>null(),omexDETPflux=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),fDETCflux=>null()
   real(ESMF_KIND_R8) :: dinflux_const=0.0
   real(ESMF_KIND_R8) :: dipflux_const=-1.
   public SetServices
@@ -143,7 +146,7 @@ module soil_pelagic_connector
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer, intent(out) :: rc
-    integer              :: ammrc,nitrc,oxyrc
+    integer              :: ammrc,nitrc,oxyrc,odurc
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
@@ -172,8 +175,9 @@ module soil_pelagic_connector
              DINflux, ubnd=ubnd, lbnd=lbnd, rc=nitrc)
       if (nitrc == 0) DINflux = val1_f2
       call mossco_state_get(exportState, &
-             (/'ammonium_upward_flux_at_soil_surface'/), &
-             DINflux, ubnd=ubnd, lbnd=lbnd, rc=nitrc)
+             (/'ammonium_upward_flux_at_soil_surface               ',   &
+               'dissolved_ammonium_nh3_upward_flux_at_soil_surface '/), &
+             DINflux, ubnd=ubnd, lbnd=lbnd, rc=ammrc)
       if (nitrc == 0) DINflux = val2_f2
 
       !RH: weak check, needs to be replaced:
@@ -229,12 +233,16 @@ module soil_pelagic_connector
       end if
 
       !> oxygen and odu fluxes
-      call mossco_state_get(exportState,(/'oxygen_upward_flux_at_soil_surface'/),OXYflux,rc=rc)
-      if (rc == 0) then
-        call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux_at_soil_surface'/),val1_f2,rc=rc)
-        call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux_at_soil_surface'/),val2_f2,rc=rc)
-        OXYflux = val1_f2 - val2_f2
-      end if
+      call mossco_state_get(exportState,(/ &
+        'oxygen_upward_flux_at_soil_surface               ', &
+        'dissolved_oxygen_oxy_upward_flux_at_soil_surface '/),OXYflux,rc=oxyrc)
+      call mossco_state_get(exportState,(/ &
+        'dissolved_reduced_substances_odu_upward_flux_at_soil_surface'/),ODUflux,rc=odurc)
+      call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux_at_soil_surface'/),val1_f2,rc=rc)
+      call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux_at_soil_surface'/),val2_f2,rc=rc)
+      if (oxyrc == 0) OXYflux = val1_f2
+      if ((oxyrc == 0) .and. (odurc /= 0)) OXYflux = OXYflux - val2_f2
+      if (odurc == 0) ODUflux = val2_f2
 
     call MOSSCO_CompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

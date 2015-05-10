@@ -165,11 +165,12 @@ module pelagic_soil_connector
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet=>null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3_2nd => null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
-    integer                     :: localrc, oxyrc
+    integer                     :: localrc, oxyrc, odurc
 
     rc = ESMF_SUCCESS
 
@@ -194,7 +195,13 @@ module pelagic_soil_connector
     call mossco_state_get(importState,(/ &
         'concentration_of_dissolved_oxygen_in_water', &
         'oxygen_in_water                           ', &
+        'dissolved_oxygen_oxy_in_water             ', &
         'dissolved_oxygen_in_water                 '/),ptr_f3,lbnd=lbnd,ubnd=ubnd,rc=oxyrc)
+
+    ! dissolved_reduced_substances:
+    call mossco_state_get(importState,(/ &
+        'dissolved_reduced_substances_odu_in_water ', &
+        'dissolved_reduced_substances_in_water     '/),ptr_f3_2nd,lbnd=lbnd,ubnd=ubnd,rc=odurc)
 
     if (oxyrc == ESMF_SUCCESS) then
       call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/),ptr_f2,rc=localrc)
@@ -211,7 +218,8 @@ module pelagic_soil_connector
       end do
       ptr_f2 = oxy(:,:)
       
-      call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/),ptr_f2,rc=odurc)
+      if (odurc == ESMF_SUCCESS) odu = ptr_f3_2nd(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       ptr_f2 = odu(:,:)
     end if
 
@@ -320,7 +328,9 @@ module pelagic_soil_connector
               'DIN_in_water                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/),DIN,lbnd=lbnd,ubnd=ubnd,rc=localrc)
       end if
-      call mossco_state_get(importState,(/'ammonium_in_water'/),amm,lbnd=AMMlbnd,ubnd=AMMubnd,rc=ammrc)
+      call mossco_state_get(importState,(/ &
+        'ammonium_in_water              ', &
+        'dissolved_ammonium_nh3_in_water'/),amm,lbnd=AMMlbnd,ubnd=AMMubnd,rc=ammrc)
 
       call ESMF_StateGet(exportState,'mole_concentration_of_ammonium_at_soil_surface',field,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -342,7 +352,11 @@ module pelagic_soil_connector
       if (nitrc == 0) then
         ptr_f2 = nit(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       else
-        ptr_f2 = 0.5d0 * DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        if (ammrc == 0) then
+          ptr_f2 = DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))-amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
+        else
+          ptr_f2 = 0.5d0 * DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        end if
       end if
 
       !> check for DIP, if present, take as is, if not calculate it N-based
