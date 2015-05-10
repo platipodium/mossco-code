@@ -29,7 +29,7 @@ program main
   implicit none
 
   type(ESMF_Time)            :: time1, time2, startTime, stopTime
-  type(ESMF_TimeInterval)    :: runDuration
+  type(ESMF_TimeInterval)    :: runDuration, timeStep
   integer                    :: localrc, rc,nmlunit=2013
   double precision           :: seconds
   character(len=40)          :: timestring, logKind='multi', name='main'
@@ -356,33 +356,37 @@ program main
   !> @todo create simulation attribute package for CIM and write this to XML if XERCES is set, otherwise write
   !> tab-delimited info
 
-  call ESMF_GridCompRun(topComp,importState=topState,exportState=topState,clock=mainClock,rc=localrc)
+  call ESMF_GridCompRun(topComp, importState=topState, exportState=topState, clock=mainClock, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-! Destroy toplevel component and clean up
-  call ESMF_GridCompFinalize(topComp,importState=topState,exportState=topState,clock=mainClock,rc=localrc)
+  ! Destroy toplevel component and clean up
+  call ESMF_GridCompFinalize(topComp, importState=topState, exportState=topState, clock=mainClock, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  !> @todo  The following line was commented, as it produces a segfault
   call ESMF_GridCompDestroy(topComp,rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   call ESMF_LogWrite("All ESMF components destroyed", ESMF_LOGMSG_INFO)
 
-  call ESMF_TimeSet(time2,rc=localrc)
+  call ESMF_TimeSet(time2, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  call ESMF_TimeSyncToRealTime(time2,rc=localrc)
+  call ESMF_TimeSyncToRealTime(time2, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  call ESMF_TimeGet(time2,timeStringISOFrac=timestring, rc=localrc)
+  call ESMF_TimeGet(time2, timeStringISOFrac=timestring, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  call ESMF_TimeIntervalGet(time2-time1,s_r8=seconds, rc=localrc)
+  timeStep=time2 - time1
+
+  call ESMF_TimeIntervalGet(timeStep, s_r8=seconds, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -391,16 +395,16 @@ program main
   if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) &
     call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
 
+
   call ESMF_StateDestroy(topState,rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-!> @todo What about topClocks that were created locally?
   call ESMF_ClockDestroy(mainClock,rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  call ESMF_ConfigDestroy(config,rc=localrc)
+  !call ESMF_ConfigDestroy(config,rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
