@@ -76,9 +76,14 @@ module inout_component
     character(len=10)           :: InitializePhaseMap(1)
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)       :: currTime
+    integer(ESMF_KIND_I4) :: localrc
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    rc = ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
@@ -105,14 +110,16 @@ module inout_component
     character(ESMF_MAXSTR):: name, message
     type(ESMF_Time)       :: currTime
 
-    !! Check whether there is already a clock (it might have been set
-    !! with a prior ESMF_gridCompCreate() call.  If not, then create
-    !! a local clock as a clone of the parent clock, and associate it
-    !! with this component.  Finally, set the name of the local clock
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    integer(ESMF_KIND_I4) :: localrc
 
-	  exportState=importState
+    rc = ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    exportState=importState
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(gridComp, rc)
@@ -130,7 +137,16 @@ module inout_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    rc=ESMF_SUCCESS
+    character(ESMF_MAXSTR):: name
+    type(ESMF_Time)       :: currTime
+    integer(ESMF_KIND_I4) :: localrc
+
+    rc = ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Here omes your restart code, which in the simplest case copies
     !> values from all fields in importState to those in exportState
@@ -150,17 +166,23 @@ module inout_component
     type(ESMF_Time)         :: currTime, stopTime
     type(ESMF_Clock)        :: clock
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    integer(ESMF_KIND_I4) :: localrc
+
+    rc = ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-   	exportState=importState
+     exportState=importState
 
-	  call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-	  call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)
+    call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     !! Finally, log the successful completion of this function
@@ -182,8 +204,14 @@ module inout_component
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    integer(ESMF_KIND_I4) :: localrc
+
+    rc = ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)

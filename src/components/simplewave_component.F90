@@ -85,7 +85,7 @@ module simplewave_component
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -133,7 +133,7 @@ module simplewave_component
     integer                :: i
     type(ESMF_StateItem_Flag) :: itemType
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -307,7 +307,7 @@ module simplewave_component
     type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
 
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -455,7 +455,7 @@ module simplewave_component
     integer,dimension(2)         :: totalLBound,totalUBound
     integer                      :: i,j
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -515,7 +515,7 @@ module simplewave_component
     type(ESMF_Clock)        :: myClock
     integer                 :: localrc
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

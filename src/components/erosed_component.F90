@@ -745,7 +745,7 @@ contains
     integer,dimension(:),allocatable :: spm_flux_id
     logical :: isPresent
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1042,7 +1042,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !#define DEBUG
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
   & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
