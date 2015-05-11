@@ -217,12 +217,12 @@ program main
 
   if (allocated(logMsgList)) deallocate(logMsgList)
 
-  write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
   call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
+  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
   write(formatstring,'(A)') '(A,'//intformat(localPet)//',A,'//intformat(petCount)//')'
   write(message,formatstring) 'Creating multiple logs, this is processor ',localPet,' of ', petCount

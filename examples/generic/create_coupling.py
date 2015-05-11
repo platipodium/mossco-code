@@ -493,6 +493,14 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_VmGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     !! Add a CIM component attribute package to this component
     convention='CIM 1.5'
     purpose='ModelComp'
@@ -585,9 +593,7 @@ for i in range(0, len(gridCompList)):
 
 fid.write('''
     !! Create all gridded components, and create import and export states for these
-    call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_VmGet(vm, petCount=petCount, rc=localrc)
+
     allocate(petList(petCount))
     do i=1,petCount
       petList(i)=i-1
