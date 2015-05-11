@@ -17,7 +17,7 @@ OPTIND=1           # Reset in case getopts has been used previously in the shell
 GENERIC=1          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
-DEFAULT=getm--fabm_pelagic--fabm_sediment--netcdf  # Default example
+DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--netcdf  # Default example
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
 POSTPROCESS=NONE
 NP=NONE
@@ -33,7 +33,7 @@ function usage {
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp"
-	echo "    [-p] :  specifiy the name of a postprocess script (only SLURM)"
+	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
 	echo "            MPI is not used at all. Default is content of par_setup.dat or n=1"
