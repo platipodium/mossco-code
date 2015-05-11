@@ -1207,7 +1207,7 @@ module fabm_pelagic_component
         write(message,'(A)') trim(name)//' add flux field '
         call MOSSCO_FieldString(importFieldList(i), message)
 
-        call MOSSCO_MessageAdd(message,' to field '
+        call MOSSCO_MessageAdd(message,' to field ')
         call MOSSCO_FieldString(exportFieldList(i), message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
