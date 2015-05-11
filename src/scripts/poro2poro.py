@@ -69,7 +69,7 @@ def write_poro_ncdf(filename,lon,lat,value):
   var=nc.createVariable('porosity_at_soil_surface','f8',('time','lat','lon'))
   var.long_name = "Porosity"
   var.units = "m^3/m^3" 
-  var.valid_min = 0.0
+  var.valid_min = 0.3
   var.valid_max = 1.0
   var.missing_value = -1.0
   
@@ -84,7 +84,7 @@ def write_poro_ncdf(filename,lon,lat,value):
 
 if __name__ == '__main__':
 
-  file1='/Volumes/Kiwi/mossco/setups/NSBS6nm/Forcing/Porosity/porosity_NSBS3nm_zwy.nc'
+  file1='/Users/lemmen/devel/mossco/setups/NSBS6nm/Forcing/porosity/porosity_NSBS3nm_zwy.nc'
   lon1, lat1, p1 = read_poro_ncdf(file1)
 
   # Extend data beyond edges
@@ -95,7 +95,9 @@ if __name__ == '__main__':
         p[p<0]=np.mean(p[p>0])    
         p1[ilat-1:ilat+2,ilon-1:ilon+2]=p
 
-  file2='/Volumes/Kiwi/mossco/setups/NSBS6nm/Forcing/Porosity/porosity_NSBS6nm_v3.nc'
+  p1[p1<0.3]=0.3
+
+  file2='/Users/lemmen/devel/mossco/setups/NSBS6nm/Forcing/porosity/porosity_NSBS6nm_v3.nc'
   lon2, lat2, p2 = read_poro_ncdf(file2)
   
   f=scipy.interpolate.interp2d(lon1, lat1, p1, kind='linear')
