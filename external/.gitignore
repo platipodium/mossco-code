@@ -4,5 +4,6 @@ gotm/
 gotm-*/
 getm/
 getm-*/
-erosed-*/
-
+*-git/
+*-svn/
+*-cvs/
