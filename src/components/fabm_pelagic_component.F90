@@ -1235,15 +1235,9 @@ module fabm_pelagic_component
           !> to be converted to volume concentration by division with layer_height
           if (index(itemNameList(i),'_flux_at_surface')>0 .or. &
                   index(itemNameList(i),'_flux_at_water_surface')>0) then
-            where (ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
-              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum) &
-                + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt / pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),pel%knum)
-            endwhere
+            farrayPtr3(RANGE2D,pel%knum) = farrayPtr3(RANGE2D,pel%knum) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,pel%knum)
           elseif (index(itemNameList(i),'_flux_at_soil_surface')>0) then
-            where(ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))>0)
-              farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) &
-                + ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) * dt / pel%layer_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1)
-            endwhere
+            farrayPtr3(RANGE2D,1) = farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)
           else
             write (message,'(A)') trim(name)//' could not locate/add flux field'
             call MOSSCO_FieldString(importFieldList(i),message)
@@ -1255,9 +1249,7 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          where(ratePtr3(:,:,:)>0)
-            farrayPtr3(:,:,:) = farrayPtr3(:,:,:)  + ratePtr3(:,:,:) * dt
-          endwhere
+          farrayPtr3(RANGE3D) = farrayPtr3(RANGE3D)  + ratePtr3(RANGE3D) * dt
         endif
       enddo
 
