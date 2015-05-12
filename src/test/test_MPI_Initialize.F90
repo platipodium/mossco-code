@@ -22,7 +22,7 @@ if (flag) then
   write(0,*) 'MPI initialized before initialized'
 endif
 
-      call mpi_init_thread( MPI_THREAD_MULTIPLE, -1, ierr )
+      !call mpi_init_thread( MPI_THREAD_MULTIPLE, -1, ierr )
 
 call MPI_Init(ierr)
 if (ierr /= MPI_SUCCESS) then
