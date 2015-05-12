@@ -1963,6 +1963,9 @@ module mossco_netcdf
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
     integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:), lbnd(:)
     real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
+    real(ESMF_KIND_R8), pointer                  :: netcdfPtr2(:,:)=>null()
+    real(ESMF_KIND_R8), pointer                  :: netcdfPtr3(:,:,:)=>null()
+    real(ESMF_KIND_R8), pointer                  :: netcdfPtr4(:,:,:,:)=>null()
     real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
     character(len=ESMF_MAXSTR)                   :: message
 
@@ -2090,10 +2093,11 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !write(0,*) 'rank=', rank, 'var%rank=', var%rank, 'var%dimids=', var%dimids(:), 'udimid=',self%timeDimId
+      allocate(netcdfPtr2(1:count(1),1:count(2)))
       if (var%rank==fieldRank) then
-        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, start, count)
+        localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr2, start, count)
       elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
-        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr2, (/start(1),start(2),itime/), (/count(1),count(2),1/))
+        localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr2, (/start(1),start(2),itime/), (/count(1),count(2),1/))
       else
         rc = ESMF_RC_NOT_IMPL
         return
@@ -2103,7 +2107,11 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      !if (any(farrayPtr2>0)) write(0,*) '   mossco_netcdf: '//trim(var%name), farrayPtr2
+      !> @todo: this assumes that index 1 is the first exclusive Index &
+      !! and possible LWidths are appended before (index 0 and negative indexes:
+      farrayPtr2(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1),start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2)) &
+        = netcdfPtr2
+      if (associated(netcdfPtr2)) deallocate(netcdfPtr2)
 
 
     elseif (fieldRank == 3) then
