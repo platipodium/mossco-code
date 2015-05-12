@@ -268,16 +268,20 @@ end subroutine initialize
 
 !> update porosity from surface values
 !!   to be used during initialisation
-subroutine update_porosity(sed, from_surface)
+subroutine update_porosity(sed, from_surface, reinitialize_concentrations)
 implicit none
 
 class(type_sed)   :: sed
 logical, optional :: from_surface
 logical           :: from_surface_eff
+logical, optional :: reinitialize_concentrations
+logical           :: reinitialize_concentrations_eff
 integer           :: n,i,j,k
 
 from_surface_eff = .false.
 if (present(from_surface)) from_surface_eff=from_surface
+reinitialize_concentrations_eff=.false.
+if (present(reinitialize_concentrations)) reinitialize_concentrations_eff=reinitialize_concentrations
 
 if (from_surface_eff) then
   do k=2,_KNUM_
@@ -306,7 +310,9 @@ sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
 sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
 
 ! update effective concentrations (scaled per volume pore water)
-if (associated(sed%conc)) call sed%init_concentrations()
+if (reinitialize_concentrations_eff) then
+  if (associated(sed%conc)) call sed%init_concentrations()
+end if
 
 end subroutine update_porosity
 
