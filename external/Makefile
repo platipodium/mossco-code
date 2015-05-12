@@ -19,17 +19,17 @@ EXTRA_DIST =
 SUBDIRS =
 
 .PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
-.PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone flibs-cvs-clone
-.PHONY: fabm_update gotm_update getm_update erosed-svn-update flibs-cvs-update
+.PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone flibs-cvs-clone json_clone
+.PHONY: fabm_update gotm_update getm_update erosed-svn-update flibs-cvs-update json_update
 
 all: clone
 
-clone:  fabm_clone  gotm_clone  getm_clone  flibs-cvs-clone #erosed-svn-clone
-update: fabm_update gotm_update getm_update flibs-cvs-update #erosed-svn-update
+clone:  fabm_clone  gotm_clone  getm_clone  flibs-cvs-clone json_clone #erosed-svn-clone
+update: fabm_update gotm_update getm_update flibs-cvs-update json_update #erosed-svn-update
 
 clean: extraclean
 
-distclean: getm_distclean gotm_distclean fabm_clean
+distclean: getm_distclean gotm_distclean fabm_clean json_clean
 
 extraclean:
 
@@ -46,6 +46,13 @@ else
 endif
 ifeq ($(wildcard $(external_FABMDIR)/.git/refs/remotes/mossco/master),)
 	( cd $(external_FABMDIR) && git remote add -f mossco http://git.code.sf.net/p/mossco/fabm && git checkout -b mossco mossco/master )
+endif
+
+json_clone json_update:
+ifeq ($(wildcard $(external_JSONDIR)/src/json_module.F90),)
+	git clone https://github.com/jacobwilliams/json-fortran.git $(external_JSONDIR)
+else
+	( cd $(external_JSONDIR) && git pull )
 endif
 
 gotm_clone:

@@ -237,6 +237,27 @@ endif
 
 export MOSSCO_GETM
 
+# 3d JSON library
+MOSSCO_JSON=false
+
+export external_JSONDIR=$(MOSSCO_DIR)/external/json/code
+
+ifndef MOSSCO_JSONDIR
+  ifneq ($(wildcard $(external_JSONDIR)/src/json_module.F90),)
+    export MOSSCO_JSONDIR=$(external_JSONDIR)
+  endif
+endif
+
+ifdef MOSSCO_JSONDIR
+  export JSON_BINARY_DIR=$(MOSSCO_DIR)/external/json/build
+  export JSON_PREFIX=$(MOSSCO_DIR)/external/json/install
+endif
+
+ifneq ($(JSON_JSONDIR),)
+  MOSSCO_JSON=true
+endif
+export MOSSCO_JSON
+
 # 4. Dealing with compiler matching of ESMF and FABM/GOTM/GETM, if one of those
 # is found, we require  that FORTRAN_COMPILER is set and that
 # the libraries are installed in the production version (libfabm_prod)
@@ -558,7 +579,7 @@ endif # End of MAKELEVEL 1 preamble
 
 
 # Make targets
-.PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external
+.PHONY: default all clean doc info prefix libfabm_external libgotm_external libgetm_external libjson_external
 .PHONY: distclean distupdate
 
 # Following GNU standards, "all" should be the default target in every Makefile.
@@ -643,6 +664,36 @@ ifndef MOSSCO_FABM_PREFIX
 	$(RM) -rf $(FABM_PREFIX)
 endif
 endif
+
+libjson_external: json_build json_install
+
+json_build:
+ifeq ($(MOSSCO_JSON),true)
+ifndef MOSSCO_JSON_BINARY_DIR
+	@mkdir -p $(JSON_BINARY_DIR)
+	(cd $(JSON_BINARY_DIR) && cmake $(JSONDIR)/src -DCMAKE_INSTALL_PREFIX=$(JSON_PREFIX)
+endif
+endif
+
+json_install:
+ifeq ($(MOSSCO_JSON),true)
+ifdef JSON_BINARY_DIR
+	@echo Recreating the JSON library in $(JSON_PREFIX)
+	$(MAKE) -sC $(JSON_BINARY_DIR) install
+endif
+endif
+
+json_clean:
+ifeq ($(MOSSCO_JSON),true)
+	@echo Cleaning the JSON library in $(JSON_PREFIX)
+ifndef MOSSCO_JSON_BINARY_DIR
+	$(RM) -rf $(JSON_BINARY_DIR)
+endif
+ifndef MOSSCO_JSON_PREFIX
+	$(RM) -rf $(JSON_PREFIX)
+endif
+endif
+
 
 libgotm_external: gotm_build gotm_install
 #ifdef MOSSCO_GOTMDIR
