@@ -164,11 +164,11 @@ module fabm_pelagic_component
     end do
 
     !> this will not work, is state_grid contains halo zones
-    do n=1,size(pel%model%info%diagnostic_variables)
+    do n=1,size(pel%model%diagnostic_variables)
       field = ESMF_FieldEmptyCreate( &
-        name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', rc=localrc)
+        name=only_var_name(pel%model%diagnostic_variables(n)%long_name)//'_in_water', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(pel%model%info%diagnostic_variables(n)%units))
+      call ESMF_AttributeSet(field,'units',trim(pel%model%diagnostic_variables(n)%units))
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -498,13 +498,13 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Find all attributes in this state variable and add them to MOSSCO
-      itemCount =  pel%model%info%state_variables(n)%properties%size()
+      itemCount =  pel%model%state_variables(n)%properties%size()
       if (itemCount>0) allocate(itemNameList(itemCount))
-      call pel%model%info%state_variables(n)%properties%keys(itemNameList)
+      call pel%model%state_variables(n)%properties%keys(itemNameList)
       do i=1, itemCount
         !>@todo
-        !if (pel%model%info%state_variables(n)%properties%get_property(itemNameList(i))%typecode()==1)
-        !attribute_r8 = pel%model%info%state_variables(n)%properties%get_real(itemNameList(i), default=-1d30)
+        !if (pel%model%state_variables(n)%properties%get_property(itemNameList(i))%typecode()==1)
+        !attribute_r8 = pel%model%state_variables(n)%properties%get_real(itemNameList(i), default=-1d30)
         !call ESMF_AttributeSet(concfield,trim(itemNameList(i)), attribute_r8)
         !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -517,13 +517,13 @@ module fabm_pelagic_component
       !! if property persent
       !! this section can be removed once the more generic one above works
       attribute_name=trim('mean_particle_diameter')
-      attribute_r8 = pel%model%info%state_variables(n)%properties%get_real('diameter',default=-99.d0)
+      attribute_r8 = pel%model%state_variables(n)%properties%get_real('diameter',default=-99.d0)
       if (attribute_r8 > 0.0d0) &
         call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       attribute_name=trim('particle_density')
-      attribute_r8 = pel%model%info%state_variables(n)%properties%get_real('density',default=-99.d0)
+      attribute_r8 = pel%model%state_variables(n)%properties%get_real('density',default=-99.d0)
       if (attribute_r8 > 0.0d0) &
         call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -603,17 +603,17 @@ module fabm_pelagic_component
     end do
 
     !> this will not work, is state_grid contains halo zones
-    do n=1,size(pel%model%info%diagnostic_variables)
+    do n=1,size(pel%model%diagnostic_variables)
         diag => pel%diagnostic_variables(n)
         !call ESMF_StateGet(exportState, &
-        !  name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', &
+        !  name=only_var_name(pel%model%diagnostic_variables(n)%long_name)//'_in_water', &
         !  field, rc=localrc)
 
         !call ESMF_FieldEmptyComplete(field,grid=state_grid,farrayPtr=diag, &
         field = ESMF_FieldCreate(state_grid,farrayPtr=diag, &
-                   name=only_var_name(pel%model%info%diagnostic_variables(n)%long_name)//'_in_water', rc=localrc)
+                   name=only_var_name(pel%model%diagnostic_variables(n)%long_name)//'_in_water', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'units',trim(pel%model%info%diagnostic_variables(n)%units))
+        call ESMF_AttributeSet(field,'units',trim(pel%model%diagnostic_variables(n)%units))
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -821,9 +821,9 @@ module fabm_pelagic_component
     do n=1,size(pel%model%horizontal_diagnostic_variables)
         diag_hz => pel%horizontal_diagnostic_variables(n)
         field = ESMF_FieldCreate(horizontal_grid,farrayPtr=diag_hz, &
-          name=only_var_name(pel%model%info%horizontal_diagnostic_variables(n)%long_name)//'_hz', rc=localrc)
+          name=only_var_name(pel%model%horizontal_diagnostic_variables(n)%long_name)//'_hz', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'units',trim(pel%model%info%horizontal_diagnostic_variables(n)%units))
+        call ESMF_AttributeSet(field,'units',trim(pel%model%horizontal_diagnostic_variables(n)%units))
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

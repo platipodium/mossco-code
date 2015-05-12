@@ -105,9 +105,9 @@
     ! Build FABM model tree.
     pf%model => fabm_create_model_from_file(namlst)
 
-    pf%nvar = size(pf%model%info%state_variables)
-    pf%ndiag = size(pf%model%info%diagnostic_variables)
-    pf%ndiag_hz = size(pf%model%info%horizontal_diagnostic_variables)
+    pf%nvar = size(pf%model%state_variables)
+    pf%ndiag = size(pf%model%diagnostic_variables)
+    pf%ndiag_hz = size(pf%model%horizontal_diagnostic_variables)
 
     ! initialise the export states and dependencies
     call pf%get_all_export_states()
@@ -175,7 +175,7 @@
     integer :: n
 
     do n=1,pf%nvar
-      pf%conc(:,:,:,n) = pf%model%info%state_variables(n)%initial_value
+      pf%conc(:,:,:,n) = pf%model%state_variables(n)%initial_value
     end do
 
   end subroutine
@@ -262,7 +262,7 @@
     rhs=0.0_rk
     !   link state variables
 #define RHSRANGE3D 1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum
-    do n=1,size(rhs_driver%model%info%state_variables)
+    do n=1,size(rhs_driver%model%state_variables)
       call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(RHSRANGE3D,n))
     end do
 
@@ -454,16 +454,16 @@
   !  allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
   !  export_state%ws = 0.0d0
     !> first check for present standard name
-    if (pf%model%info%state_variables(fabm_id)%standard_variable%name/='') then
+    if (pf%model%state_variables(fabm_id)%standard_variable%name/='') then
       export_state%standard_name = &
-        trim(pf%model%info%state_variables(fabm_id)%standard_variable%name)
+        trim(pf%model%state_variables(fabm_id)%standard_variable%name)
       export_state%units = &
-        trim(pf%model%info%state_variables(fabm_id)%standard_variable%units)
+        trim(pf%model%state_variables(fabm_id)%standard_variable%units)
     else
     !> otherwise use CF-ed version of long_name
       export_state%standard_name = only_var_name( &
-            pf%model%info%state_variables(fabm_id)%long_name)
-      export_state%units = pf%model%info%state_variables(fabm_id)%units
+            pf%model%state_variables(fabm_id)%long_name)
+      export_state%units = pf%model%state_variables(fabm_id)%units
     end if
   end function get_export_state_by_id
 
@@ -476,12 +476,12 @@
      integer                         :: n,fabm_id
 
      fabm_id=-1
-     do n=1,size(pf%model%info%state_variables)
-       if (trim(pf%model%info%state_variables(n)%name).eq.trim(varname)) &
+     do n=1,size(pf%model%state_variables)
+       if (trim(pf%model%state_variables(n)%name).eq.trim(varname)) &
            fabm_id=n
      end do
-     do n=1,size(pf%model%info%state_variables_ben)
-       if (trim(pf%model%info%state_variables_ben(n)%name).eq.trim(varname)) &
+     do n=1,size(pf%model%state_variables_ben)
+       if (trim(pf%model%state_variables_ben(n)%name).eq.trim(varname)) &
            fabm_id=n
      end do
      export_state = pf%get_export_state_by_id(fabm_id)

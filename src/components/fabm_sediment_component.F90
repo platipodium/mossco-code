@@ -380,8 +380,8 @@ module fabm_sediment_component
 
     ! set boundary conditions for pre-simulation
     bdys(:,:,1) = 5.0 !degC
-    do i=1,size(sed%model%info%state_variables)
-      varname = trim(only_var_name(sed%model%info%state_variables(i)%long_name))
+    do i=1,size(sed%model%state_variables)
+      varname = trim(only_var_name(sed%model%state_variables(i)%long_name))
       if (trim(varname) == 'dissolved_nitrate') bdys(:,:,i+1)=2.5
       if (trim(varname) == 'dissolved_ammonium') bdys(:,:,i+1)=2.5
       if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=0.15
@@ -390,7 +390,7 @@ module fabm_sediment_component
       if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
       if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
       if (trim(varname) == 'detritus-P') fluxes(:,:,i)=0.08_rk/86400.0_rk
-      !write(0,*) i,trim(only_var_name(sed%model%info%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
+      !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
     end do
 
     ! use Dirichlet boundary condition for pre-simulation
@@ -416,10 +416,10 @@ module fabm_sediment_component
       open(funit,file='output.dat')
       write(funit,fmt='(A,A,A,A)',advance='no') 'time(s) ','depth(m) ','layer-height(m) ','porosity() '
       do n=1,sed%nvar
-        write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%state_variables(n)%name)
+        write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%state_variables(n)%name)
       end do
-      do n=1,size(sed%model%info%diagnostic_variables)
-        write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%info%diagnostic_variables(n)%name)
+      do n=1,size(sed%model%diagnostic_variables)
+        write(funit,fmt='(A,A)',advance='no') ' ',trim(sed%model%diagnostic_variables(n)%name)
       end do
       write(funit,*)
     end if
@@ -484,11 +484,11 @@ module fabm_sediment_component
         end if
       end do
 #if 0
-      do n=1,size(sed%model%info%diagnostic_variables)
+      do n=1,size(sed%model%diagnostic_variables)
         diag => sed%diagnostic_variables(n)
         statemesh_ptr => diag(:,1,:)
         field = ESMF_FieldCreate(state_mesh,farrayPtr=statemesh_ptr, &
-                   name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
+                   name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -549,7 +549,7 @@ module fabm_sediment_component
 
           call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (sed%model%info%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
+          if (sed%model%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
             ! overwrite states with fluxes and set z_velocity to -1.0
             call ESMF_FieldGet(field,farrayPtr=fluxmesh_ptr,rc=localrc)
@@ -662,20 +662,20 @@ module fabm_sediment_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         end if
       end do
-      do n=1,size(sed%model%info%diagnostic_variables)
+      do n=1,size(sed%model%diagnostic_variables)
         diag => sed%diagnostic_variables(n)
         field = ESMF_FieldCreate(flux_grid,farray=diag, &
                    indexflag=indexflag, &
                    ungriddedLBound=(/1/), &
                    ungriddedUBound=(/sed%grid%knum/), &
                    gridToFieldMap=(/1,2/), &
-                   name=only_var_name(sed%model%info%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
+                   name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'units',trim(sed%model%info%diagnostic_variables(n)%units))
+        call ESMF_AttributeSet(field,'units',trim(sed%model%diagnostic_variables(n)%units))
 
         write(message, '(A)') trim(name)//' created diagnostic field'
         call MOSSCO_FieldString(field, message)
@@ -729,7 +729,7 @@ module fabm_sediment_component
           call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (sed%model%info%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
+          if (sed%model%state_variables(sed%export_states(n)%fabm_id)%properties%get_logical( &
               'particulate',default=.false.)) then
             field = ESMF_FieldCreate(flux_grid, &
                    name=trim(sed%export_states(n)%standard_name)//'_z_velocity_at_soil_surface', &
@@ -1025,8 +1025,8 @@ module fabm_sediment_component
       do n=1,sed%nvar
         do k=1,sed%grid%knum
 !!@todo This has to be adjusted for inum, jnum longer than 1
-          if (sed%conc(1,1,k,n) .lt. sed%model%info%state_variables(n)%minimum) then
-            sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%info%state_variables(n)%minimum
+          if (sed%conc(1,1,k,n) .lt. sed%model%state_variables(n)%minimum) then
+            sed%conc(_IRANGE_,_JRANGE_,k,n) = sed%model%state_variables(n)%minimum
           end if
         end do
       end do
@@ -1048,7 +1048,7 @@ module fabm_sediment_component
             do n=1,sed%nvar
               write(funit,FMT='(A,E15.4E3)',advance='no') ' ',conc(1,1,k,n)
             end do
-            do n=1,size(sed%model%info%diagnostic_variables)
+            do n=1,size(sed%model%diagnostic_variables)
               diag => sed%diagnostic_variables(n)
               write(funit,FMT='(A,E15.4E3)',advance='no') ' ',diag(1,1,k)
             end do
@@ -1198,13 +1198,13 @@ module fabm_sediment_component
     endif
 
     do i=1,sed%nvar
-      if (sed%model%info%state_variables(i)%standard_variable%name/='') then
+      if (sed%model%state_variables(i)%standard_variable%name/='') then
         varname = &
-          trim(sed%model%info%state_variables(i)%standard_variable%name)
+          trim(sed%model%state_variables(i)%standard_variable%name)
       else
       !> otherwise use CF-ed version of long_name
         varname = trim(only_var_name( &
-           sed%model%info%state_variables(i)%long_name))
+           sed%model%state_variables(i)%long_name))
       end if
       call ESMF_StateGet(importState,itemSearch=trim(varname)//'_at_soil_surface', &
                          itemCount=itemcount,rc=localrc)
@@ -1222,7 +1222,7 @@ module fabm_sediment_component
         if (localrc == ESMF_SUCCESS) write(0,*) 'found field ',trim(varname)
 #endif
 
-        if (sed%model%info%state_variables(i)%properties%get_logical( &
+        if (sed%model%state_variables(i)%properties%get_logical( &
             'particulate',default=.false.)) then
           !write(0,*) 'try to get ',trim(varname)//'_z_velocity'
           call ESMF_StateGet(importState,trim(varname)//'_z_velocity_at_soil_surface', &
@@ -1288,19 +1288,19 @@ module fabm_sediment_component
     name='temperature_at_soil_surface'
     call set_item_flags(state,name,requiredFlag=.true.,requiredRank=2)
 
-    do n=1,size(sed%model%info%state_variables)
-      if (sed%model%info%state_variables(n)%standard_variable%name/='') then
+    do n=1,size(sed%model%state_variables)
+      if (sed%model%state_variables(n)%standard_variable%name/='') then
         varname = &
-          trim(sed%model%info%state_variables(n)%standard_variable%name)
+          trim(sed%model%state_variables(n)%standard_variable%name)
       else
       !> otherwise use CF-ed version of long_name
         varname = trim(only_var_name( &
-           sed%model%info%state_variables(n)%long_name))
+           sed%model%state_variables(n)%long_name))
       end if
       attbasename=trim(varname)//'_at_soil_surface'
       call set_item_flags(state,attbasename,requiredFlag=.true.,requiredRank=2)
 
-      if (sed%model%info%state_variables(n)%properties%get_logical( &
+      if (sed%model%state_variables(n)%properties%get_logical( &
             'particulate',default=.false.)) then
         name = trim(varname)//'_z_velocity_at_soil_surface'
         call set_item_flags(state,name,requiredFlag=.true.,requiredRank=2)

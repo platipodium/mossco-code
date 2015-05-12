@@ -244,8 +244,8 @@ sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
 call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
 
 ! allocate state variables
-sed%nvar = size(sed%model%info%state_variables)
-sed%ndiag = size(sed%model%info%diagnostic_variables)
+sed%nvar = size(sed%model%state_variables)
+sed%ndiag = size(sed%model%diagnostic_variables)
 
 allocate(sed%diff(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%transport(_INUM_,_JNUM_,_KNUM_,sed%nvar))
@@ -335,7 +335,7 @@ if (any(sed%porosity <= 0) .or. any(sed%porosity > 1)) then
 endif
 
 do n=1,sed%nvar
-   sed%conc(:,:,:,n) = sed%model%info%state_variables(n)%initial_value/sed%porosity(:,:,:)
+   sed%conc(:,:,:,n) = sed%model%state_variables(n)%initial_value/sed%porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
 end do
 if(associated(sed%mask)) then
@@ -401,7 +401,7 @@ do k=1,rhs_driver%knum
 end do
 
 !   link state variables
-do n=1,size(rhs_driver%model%info%state_variables)
+do n=1,size(rhs_driver%model%state_variables)
    call fabm_link_bulk_state_data(rhs_driver%model,n,rhs_driver%conc(:,:,:,n))
 end do
 
@@ -411,8 +411,8 @@ call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosy
 
 ! calculate diffusivities (temperature)
 f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
-do n=1,size(rhs_driver%model%info%state_variables)
-   if (rhs_driver%model%info%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
+do n=1,size(rhs_driver%model%state_variables)
+   if (rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = rhs_driver%bcup_particulate_variables
       rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
               (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
@@ -584,16 +584,16 @@ function get_export_state_by_id(self,fabm_id) result(export_state)
    export_state%fabm_id=fabm_id
    export_state%data => self%conc(:,:,:,export_state%fabm_id)
    !> first check for present standard name
-   if (self%model%info%state_variables(fabm_id)%standard_variable%name/='') then
+   if (self%model%state_variables(fabm_id)%standard_variable%name/='') then
      export_state%standard_name = &
-       trim(self%model%info%state_variables(fabm_id)%standard_variable%name)
+       trim(self%model%state_variables(fabm_id)%standard_variable%name)
      export_state%units = &
-       trim(self%model%info%state_variables(fabm_id)%standard_variable%units)
+       trim(self%model%state_variables(fabm_id)%standard_variable%units)
    else
    !> otherwise use CF-ed version of long_name
      export_state%standard_name = only_var_name( &
-           self%model%info%state_variables(fabm_id)%long_name)
-     export_state%units = self%model%info%state_variables(fabm_id)%units
+           self%model%state_variables(fabm_id)%long_name)
+     export_state%units = self%model%state_variables(fabm_id)%units
    end if
    export_state%fabm_id = fabm_id
 end function get_export_state_by_id
@@ -609,16 +609,16 @@ function get_export_state_by_diag_id(self,fabm_id) result(export_state)
    !> data needs to be linked in the driver component
 
    !> first check for present standard name
-   if (self%model%info%diagnostic_variables(fabm_id)%standard_variable%name/='') then
+   if (self%model%diagnostic_variables(fabm_id)%standard_variable%name/='') then
      export_state%standard_name = &
-       trim(self%model%info%diagnostic_variables(fabm_id)%standard_variable%name)
+       trim(self%model%diagnostic_variables(fabm_id)%standard_variable%name)
      export_state%units = &
-       trim(self%model%info%diagnostic_variables(fabm_id)%standard_variable%units)
+       trim(self%model%diagnostic_variables(fabm_id)%standard_variable%units)
    else
    !> otherwise use CF-ed version of long_name
      export_state%standard_name = only_var_name( &
-           self%model%info%diagnostic_variables(fabm_id)%long_name)
-     export_state%units = self%model%info%diagnostic_variables(fabm_id)%units
+           self%model%diagnostic_variables(fabm_id)%long_name)
+     export_state%units = self%model%diagnostic_variables(fabm_id)%units
    end if
 end function get_export_state_by_diag_id
 
