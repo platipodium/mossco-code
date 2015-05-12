@@ -118,7 +118,8 @@ module fabm0d_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
@@ -234,7 +235,8 @@ module fabm0d_component
     integer(ESMF_KIND_I4)      :: localrc
 
     rc = ESMF_SUCCESS
-    call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
@@ -348,7 +350,8 @@ module fabm0d_component
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)      :: localrc
 
-    call MOSSCO_CompEntry (gridComp, parentClock, name, currTime, localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call finalize_0d()
