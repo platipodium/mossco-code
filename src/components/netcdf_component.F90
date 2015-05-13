@@ -327,6 +327,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR) :: filterPatternExclude
     character(len=ESMF_MAXSTR), allocatable :: includePatternList(:), excludePatternList(:)
     character(len=4096)        :: excludeAttributeString, includeAttributeString
+    type(ESMF_log)             :: log
 
     rc=ESMF_SUCCESS
 
@@ -554,11 +555,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        !> Remove from import state the written field
+      enddo
+
+      !> Remove from import state all fields, whether written or not
+      do i=1,itemCount
         call ESMF_StateRemove(importState, (/ trim(itemNameList(i))/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
       enddo
 
       if (allocated(itemTypeList)) deallocate(itemTypeList)
@@ -566,6 +569,16 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       call nc%close()
     endif
+
+    !call ESMF_LogOpen(log, "netcdf", rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !call MOSSCO_StateLog(importState, log=log, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !call ESMF_LogClose(log, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (allocated(includePatternList)) deallocate(includePatternList)
     if (allocated(excludePatternList)) deallocate(excludePatternList)
