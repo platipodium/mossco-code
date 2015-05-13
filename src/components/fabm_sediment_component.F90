@@ -265,7 +265,7 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemType /= ESMF_STATEITEM_FIELD) then
-        call MOSSCO_StateLog(importState, localrc)
+        call MOSSCO_StateLog(importState, rc=localrc)
         write(message,'(A)') trim(name)//' cannot find specified foreign grid field '//trim(foreignGridFieldName)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -888,7 +888,7 @@ module fabm_sediment_component
       else
         write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState)
+        call MOSSCO_StateLog(importState, rc=localrc)
       end if
     end do
 
@@ -964,8 +964,8 @@ module fabm_sediment_component
         write(message,'(A)') trim(name)//' received incomplete field'
         call mossco_fieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-      call MOSSCO_StateLog(importState)
-      call MOSSCO_StateLog(exportState)
+      call MOSSCO_StateLog(importState, rc=localrc)
+      call MOSSCO_StateLog(exportState, rc=localrc)
       end if
     else
       write(message,'(A)') trim(name)//' has no external porosity information'

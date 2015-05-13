@@ -1014,7 +1014,7 @@ module fabm_pelagic_component
       else
         write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState)
+        call MOSSCO_StateLog(importState, rc=localrc)
       end if
     end do
 

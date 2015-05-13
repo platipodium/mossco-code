@@ -257,7 +257,7 @@ module pelagic_benthic_mediator
     if (.not.found) then
       write(message,'(A)') trim(name)//' found no suitable 3D field with grid in state '//trim(stateName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(importState)
+      call MOSSCO_StateLog(importState, rc=localrc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 

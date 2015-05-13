@@ -117,7 +117,7 @@ contains
         write(message, '(A)') '   - '//trim(fieldName(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
-      call MOSSCO_StateLog(state)
+      call MOSSCO_StateLog(state, rc=localrc)
       ubnd_(:)=-1
       lbnd_(:)=0
     endif
@@ -205,7 +205,7 @@ contains
         write(message, '(A)') '   - '//trim(fieldName(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
-      call MOSSCO_StateLog(state)
+      call MOSSCO_StateLog(state, rc=localrc)
       ubnd_(:)=-1
       lbnd_(:)=0
     endif
@@ -299,7 +299,7 @@ contains
         write(message, '(A)') '   - '//trim(fieldName(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
-      !call MOSSCO_StateLog(state)
+      !call MOSSCO_StateLog(state, rc=localrc)
       ubnd_(:)=-1
       lbnd_(:)=0
     endif
@@ -466,8 +466,9 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateLog"
-  subroutine MOSSCO_StateLog(state, rc)
+  subroutine MOSSCO_StateLog(state, kwe, rc)
     type(ESMF_State)                :: state
+    logical,intent(in ),optional    :: kwe !keyword-enforcer
     integer(ESMF_KIND_I4), optional :: rc
 
     integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits, count, fieldCount
@@ -842,7 +843,7 @@ contains
     if (.not.isPresent) then
       write(message, '(A)')  'Requested attribute '//trim(attributeName)//' not found.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state)
+      call MOSSCO_StateLog(state, rc=localrc)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
@@ -854,14 +855,14 @@ contains
     if (itemType == ESMF_STATEITEM_NOTFOUND) then
       write(message, '(A)')  'Requested item '//trim(attributeValue)//' not found.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state)
+      call MOSSCO_StateLog(state, rc=localrc)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)')  'Requested item '//trim(attributeName)//' ist not a field.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state)
+      call MOSSCO_StateLog(state, rc=localrc)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
@@ -872,7 +873,7 @@ contains
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
       write(message, '(A)')  'Requested field '//trim(attributeName)//' is empty.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state)
+      call MOSSCO_StateLog(state, rc=localrc)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
@@ -1265,7 +1266,7 @@ contains
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message,'(A)') trim(itemName)//' is not a field in state '//trim(name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state)
+      call MOSSCO_StateLog(state, rc=localrc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 

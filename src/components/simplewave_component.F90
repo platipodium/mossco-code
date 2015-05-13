@@ -159,7 +159,7 @@ module simplewave_component
         if (rank .ne. 2) then
           write(message,*) 'foreign grid must be of rank = 2'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-          call MOSSCO_StateLog(importState)
+          call MOSSCO_StateLog(importState, rc=localrc)
           call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
         end if
       else
@@ -255,7 +255,7 @@ module simplewave_component
       if (itemType /= ESMF_STATEITEM_NOTFOUND) then
         write(message,'(A)')  trim(name)//' got other than field type for item '//trim(exportList(i)%name)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call MOSSCO_StateLog(exportState)
+        call MOSSCO_StateLog(exportState, rc=localrc)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
       endif
 

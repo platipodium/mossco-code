@@ -217,8 +217,8 @@ contains
         if (state /= importState) then
           write(message,'(A)')  trim(name_)//' importState differs from state given as argument'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          call MOSSCO_StateLog(importState)
-          call MOSSCO_StateLog(state)
+          call MOSSCO_StateLog(importState, rc=localrc)
+          call MOSSCO_StateLog(state, rc=localrc)
         endif
       endif
     endif
@@ -686,7 +686,7 @@ contains
       call ESMF_GridCompGet(comp, importState=state, rc=localRc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !! call MOSSCO_StateLog(state)
+      !! call MOSSCO_StateLog(state, rc=localrc)
     endif
 
     call ESMF_GridCompGet(comp, exportStateIsPresent=isPresent, rc=localRc)
@@ -697,7 +697,7 @@ contains
       call ESMF_GridCompGet(comp, exportState=state, rc=localRc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !! call MOSSCO_StateLog(state)
+      !! call MOSSCO_StateLog(state, rc=localrc)
     endif
 
     call ESMF_GridCompGet(comp, gridIsPresent=isPresent, rc=localRc)
