@@ -454,7 +454,7 @@ fid.write('''
     type(ESMF_TimeInterval) :: alarmInterval
 
     integer(ESMF_KIND_I4)  :: numGridComp, numCplComp, petCount
-    integer(ESMF_KIND_I4)  :: alarmCount, numCplAlarm, i, localrc
+    integer(ESMF_KIND_I4)  :: alarmCount, numCplAlarm, i, localrc, localPet
     type(ESMF_Alarm), dimension(:), allocatable :: alarmList !> @todo shoudl this be a pointer?
     character(ESMF_MAXSTR) :: myName, message, childName, alarmName
     type(ESMF_Alarm)       :: childAlarm
@@ -463,6 +463,7 @@ fid.write('''
     logical                :: clockIsPresent
     integer(ESMF_KIND_I4), allocatable :: petList(:)
     type(ESMF_VM)          :: vm
+    type(ESMF_Log)         :: stateLog
 
     integer(ESMF_KIND_I4)  :: phase, phaseCount
     integer(ESMF_KIND_I4), dimension(:), allocatable :: gridCompPhaseCountList,CplCompPhaseCountList
@@ -889,7 +890,7 @@ if (True):
       fid.write('        call ESMF_CplCompInitialize(cplCompList(' + str(icpl+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
       fid.write('          exportState=gridImportStateList(' + str(ito+1) + '), clock=clock, phase=phase, rc=localrc)\n')
       fid.write('        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n')
-      fid.write('        !call MOSSCO_StateLog(gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
+      fid.write('        !call MOSSCO_Log(gridImportStateList(' + str(ito+1) + '), rc=localrc)\n')
       fid.write('      endif\n')
       fid.write('      endif\n')
 
@@ -921,13 +922,34 @@ for item in gridCompList:
 # Go through all components and log their import and export states
 fid.write('''
     !> Go through all components and log their import and export states
-    call ESMF_LogWrite('====== Status at end of child initialization ======', ESMF_LOGMSG_INFO)
 
-    do i=1,numGridComp
-      call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO)
-      call MOSSCO_StateLog(gridImportStateList(i))
-      call MOSSCO_StateLog(gridExportStateList(i))
-    enddo
+    call ESMF_GridCompGet(gridComp, localPet=localPet, rc=localrc)
+
+    if (localPet==0) then
+      call ESMF_AttributeGet(importState, name='simulation_title', value=message, defaultvalue='Untitled', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_LogOpen(stateLog,'states_'//trim(message), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_LogWrite('====== Status at end of child initialization ======', ESMF_LOGMSG_INFO, log=stateLog)
+
+      do i=1,numGridComp
+        call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
+        call MOSSCO_StateLog(gridImportStateList(i), log=stateLog, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_StateLog(gridExportStateList(i), log=stateLog, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
+
+      call ESMF_LogClose(stateLog)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 ''')
 
 # Go through ReadRestart (assumed only phase 1)
@@ -975,11 +997,11 @@ fid.write('''
     !> Go through all components and log their import and export states
     call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO)
 
-    do i=1,numGridComp
-      call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO)
-      call MOSSCO_StateLog(gridImportStateList(i))
-      call MOSSCO_StateLog(gridExportStateList(i))
-    enddo
+    !do i=1,numGridComp
+    !  call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO)
+    !  call MOSSCO_StateLog(gridImportStateList(i))
+    !  call MOSSCO_StateLog(gridExportStateList(i))
+    !enddo
 ''')
 
 #fid.write('''
