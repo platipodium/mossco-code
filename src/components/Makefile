@@ -161,7 +161,7 @@ fabm_pelagic_component.o: fabm_pelagic_component.F90
 
 hamsom_component.o: hamsom_component.F90
 	@echo "Compiling $<"
-	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+	$(F90) $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) $(HAMSOM_FFLAGS) -c $< -o $@
 
 hamsom_component.F90: empty_component.F90
 	@echo "Creating dummy HAMSOM component $@"

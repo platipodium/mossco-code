@@ -194,8 +194,12 @@ tracer_driver.o: tracer_driver.F90
 	$(F90)  $(TRACER_CPPFLAGS) $(CPPFLAGS) $(TRACER_FFLAGS) $(F90FLAGS) -c $< -o $@
 
 # HAMSOM section
+# Save general F90FLAGS and add temporarily HAMSOM_FFLAGS to these, as the F90FLAGS variable
+# is used in the generic rule for .f90 to .o in ../Rules.make
 
 ifeq ($(MOSSCO_HAMSOM),true)
+  F90FLAGS_OLD=$(F90FLAGS)
+  F90FLAGS += $(HAMSOM_FFLAGS)
 libmossco_hamsom_dependencies:              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Modules.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/HAMSOM_3p.o) \
@@ -220,6 +224,7 @@ libmossco_hamsom_dependencies:              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Tools.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Par.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Boundary_DynHeight_NWCS20.o)
+  F90FLAGS:=$(F90FLAGS_OLD)
 else
 libmossco_hamsom_dependencies:
 endif

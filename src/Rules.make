@@ -433,7 +433,7 @@ ifeq ($(MOSSCO_HAMSOM),true)
   DEFINES += -DRiverInterpolationOff
   DEFINES += -DIncludeFreshwater
 
-  export HAMSOM_FFLAGS = -xf95-cpp-input -fdefault-real-8 -fsign-zero -fno-f2c
+  export HAMSOM_FFLAGS = -xf95-cpp-input -fdefault-real-8 -fsign-zero -fno-f2c -Wno-uninitialized
   #export HAMSOM_CPPFLAGS = -I$(HAMSOM_DIR)/src
   #export HAMSOM_LDFLAGS = -L$(HAMSOM_LIBRARY_PATH) $(HAMSOM_LIBS)
 endif
@@ -507,7 +507,7 @@ INCLUDES += -I$(MOSSCO_DIR)/src/include
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
 F90FLAGS = $(MOSSCO_FFLAGS) $(ESMF_F90COMPILEOPTS)
-F90FLAGS += $(HAMSOM_FFLAGS)
+#F90FLAGS += $(HAMSOM_FFLAGS)
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
 F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH) $(MOSSCO_FFLAGS)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
