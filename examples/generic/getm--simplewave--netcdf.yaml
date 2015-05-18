@@ -3,7 +3,8 @@ dependencies:
     - component: getm
       grid: water_depth_at_soil_surface
 
-mossco_gsn: netcdf
+instances:
+  - mossco_gsn: netcdf
 
 coupling:
   - components: 

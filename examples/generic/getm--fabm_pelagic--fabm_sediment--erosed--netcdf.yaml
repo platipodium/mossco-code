@@ -64,4 +64,4 @@ coupling:
   - components:
      - erosed
      - mossco_gffen
-    interval: 60 m
+    interval: 60 h
