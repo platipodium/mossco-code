@@ -1,0 +1,31 @@
+01 01 02 01 600 366           int  StartDay, -Month, EndDay, -Month, time step, days per run
+0    0     864000             int  no of iterations per run, max no of iterations, printMinMaxLoc every x seconds
+.true. .true. .false. .true.   log  lSaveAvrM2, lSaveAvr, lSaveInst, lSaveInitialState
+01 01  0   31 12 0            int  SaveAvrM2 StartDate, EndDate            (year = 0 ==> saving every year within dates)
+01 01  0   31 12 0    3600    int  SaveAvr   StartDate, EndDate, time step (year = 0 ==> saving every year within dates)
+01 01  0   31 12 0    3600    int  SaveInst  StartDate, EndDate, time step (year = 0 ==> saving every year within dates)
+.true. .true. .true.          log  lWind, lBoundary, lDynHeight
+.true. .false. .true. .true.  log  lReadWind, lReadZeta, lReadBoundTS, lReadClimTS
+.true.  .true.                log  lRadiationUV, lRadiationTS
+.true. .true.                 log  lBaroclinic, lPrognostic
+.true. .true.                 log  lMetForcing, lSmagDiffusion
+.true. .true. .false.         log  lReadSglPrec, lWriteSglPrec, lGradsOut
+21600 21600 0 21600 0         int  Input DT for zeta, input DT and offset for wind, input DT and offset SOL (all in seconds)
+10  1946 2100                 int  no of partial tides (0 ==> lIncludeTide = false), YearM2S, YearM2E
+0 86400 0                     int  noOfRivers, RiverDT, riverOffset
+1                             int  whichEOS defines which EOS to choose
+0 0                           int  whichTSField, whichWindField defines how to initialise temperature salinity and wind fields
+.false.                       log  lAccountPressureVar Take Pressure Variations on density into account
+1 0 0 0 0 0 0                 int  setupDOYTS, -YearTS, -DaysTS, -YearWind, -DaysWind, -YearZeta, -DaysZeta
+0.85 0.85 0.65                real htmit, vtmit, AlphaTS
+20.0 34.0  200.0              real Temp_default, Salt_default, ah_default
+82 88 31                      int  iMax, jMax, kMax
+1 82 1 88 1 31                int  iStartM2, iEndM2, jStartM2, jEndM2, kStartM2, kEndM2    (subregions for SaveAvrM2)
+1 82 1 88 1 31                int  iStartA,  iEndA,  jStartA,  jEndA,  kStartA,  kEndA     (subregions for SaveAvr)
+1 82 1 88 1 31                int  iStartI,  iEndI,  jStartI,  jEndI,  kStartI,  kEndI     (subregions for SaveInst)
+0                             int  Frame - distance from boundary w-velocity may be affected by treatment in Continuity
+1.                            real LandDepth
+63. 53.  0. 0. 12. 0.         real Phi0 in deg min sec, dPhi in deg min sec
+-15. -5. 0. 0. 20. 0.         real Lam0 in deg min sec, dLam in deg min sec
+10. 5. 5. 5. 5. 5. 5. 5. 5. 10. 10. 10. 10. 10. 20. 20. 20. 20. 20. 50. 50. 50. 50. 100. 100. 200. 200. 500. 500. 1000. 1000.  real thickness of each layer
+

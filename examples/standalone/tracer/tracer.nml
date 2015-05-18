@@ -1,0 +1,109 @@
+!-------------------------------------------------------------------------------
+! gereral settings
+!-------------------------------------------------------------------------------
+!   integer :: yearstart         ! starttime year
+!   integer :: daystart          ! starttime day (of year)
+!   integer :: simdays           ! duration of simulation (days)
+!   integer :: dt                ! timestep (h) for main loop (for reading forcing, particle release etc.)
+!   real    :: AH_const          ! horizontal exchange coefficient constant (m**2/s)
+!   char    :: path_to_griddata  ! path to grid infos
+!   char    :: path_to_forcing   ! path to forcing data
+!   integer :: dt_forcing        ! timestep of forcing data (hours)
+!   logical :: dump_warmstart    ! write warmstart file (each timestep)
+!-------------------------------------------------------------------------------
+&gerneral_nml
+   yearstart     =   1997,
+   daystart      =   1,
+   simdays       =   2,
+   dt            =   1,
+   AH_const      =   50,
+   path_to_griddata  = "griddata"
+   path_to_forcing   = "forcingdata"
+   dt_forcing        = 1,
+   dump_warmstart   = .false.
+/
+
+!-------------------------------------------------------------------------------
+! particle properties
+!-------------------------------------------------------------------------------
+!   integer :: npart            ! number of particles released per startpoint (lat/lon) and day
+!   integer :: LZ               ! LZ = max. number of particles (recommended: LZ < 500000)
+!   integer :: iwalk            ! iwalk: =
+!                               !     0: naive random walk,
+!                               !     1: diffusive random walk,
+!                               !     2: no horizontal and no vertical diffusion,
+!                               !     3: only horizontal diffusion (costant: 10 m2/s)
+!   integer :: nkick            ! nkick - number of random kicks, if particles rest on land,
+!   integer :: release_type     ! release_type: =
+!                               !     1: equally distributed within startbox
+!                               !     2: distributed equally within startarea,
+!                               !                   randomly within depth intervall
+!                               !     3: random distribution within startbox
+!   integer :: tstart           ! startday (day_of_year) for spawning period
+!   integer :: tspawn           ! spawning period in days
+!   integer :: spawn_step       ! timestep for sequential particle release in days
+!   integer :: tmax             ! max. age of particles allowed(days)
+!   real    :: north            ! northern value for latitude range of the Startbox
+!   real    :: south            ! southern value for latitude range of the Startbox
+!   real    :: west             ! western value for longitude range of the Startbox
+!   real    :: east             ! eastern value for longitude range of the Startbox
+!   real    :: upper            ! upper value for depth range of the Startbox
+!   real    :: lower            ! lower value for depth range of the Startbox
+!   integer :: nNS              ! number of latitudinal gridsteps
+!   integer :: nWE              ! number of longitudinal gridsteps
+!   integer :: nDZ              ! number of vertical gridsteps
+!-------------------------------------------------------------------------------
+&particles_nml
+   npart         =   1,
+   LZ            =  50,
+   iwalk         =   2,
+   nkick         =  10,
+   release_type  =   1,
+   tstart        =   1,
+   tspawn        =   1,
+   spawn_step    =   1,
+   tmax          =  99,
+   north         =  55.,
+   south         =  55.,
+   west          =   5.,
+   east          =   5.,
+   upper         =  15.,
+   lower         =  15.,
+   nNS           =   1,
+   nWE           =   1,
+   nDZ           =   1,
+/
+
+!-------------------------------------------------------------------------------
+! traort properties
+!-------------------------------------------------------------------------------
+!  real    :: DTG              ! timestep (s) within traort
+!  real    :: XDEFAULT         ! X-coordinate to move stucked particles
+!  real    :: YDEFAULT         ! Y-coordinate to move stucked particles
+!  real    :: ZDEFAULT         ! Z-coordinate to move stucked particles
+!-------------------------------------------------------------------------------
+&traort_nml
+   DTG           =  60.,
+   XDEFAULT      =  1.,
+   YDEFAULT      =  1.,
+   ZDEFAULT      =  1.,
+/
+
+!-------------------------------------------------------------------------------
+! output properties
+!-------------------------------------------------------------------------------
+!   integer        :: dt_out            ! timestep (h) for output
+!   character(100) :: path_to_output    ! prefix for output folder
+!   character(100) :: prefix_out        ! prefix for output filename
+!   character(100) :: suffix_out        ! suffix for output filename
+!   integer        :: output_fmt        ! format of timestring in output filename:
+!                                       ! <=0 (default) => 'YYYY-MM-DD hh:mm'
+!                                       !  1  (matlab)  => 'YYYY  DOY  hh.hh'
+!-------------------------------------------------------------------------------
+&output_nml
+   dt_out         =  1,
+   path_to_output =  ".",
+   prefix_out     =  "yy",
+   suffix_out     =  ".dat",
+   output_fmt     =   1,
+/
