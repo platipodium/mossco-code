@@ -26,9 +26,9 @@ coupling:
     interval: none
   - components:
      - getm
-     - mossco_gffrn
+     - mossco_gfrn
     interval: 60 h
   - components:
      - fabm_pelagic
-     - mossco_gffrn
+     - mossco_gfrn
     interval: 60 h
