@@ -39,6 +39,10 @@ coupling:
      - erosed
      - fabm_pelagic
   - components:
+     - getm
+     - mossco_gfen
+    interval: 60 h
+  - components:
      - erosed
      - mossco_gfen
     interval: 60 h

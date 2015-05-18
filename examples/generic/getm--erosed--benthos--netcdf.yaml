@@ -1,5 +1,3 @@
-# This example tests the interaction of erosed with fabm_pelagic
-#
 # configuration dependencies:
 
 dependencies:
@@ -9,6 +7,9 @@ dependencies:
   - erosed:
     - component: getm
       grid: water_depth_at_soil_surface
+
+instances:
+  - mossco_gebn: netcdf
 
 coupling:
   - components:
@@ -28,6 +29,14 @@ coupling:
      - erosed
     interval: 30 m
   - components:
+     - getm
+     - mossco_gebn
+    interval: 30 m
+  - components:
+     - benthos
+     - mossco_gebn
+    interval: 30 m
+  - components:
      - erosed
-     - netcdf
-    interval: 1 h
+     - mossco_gebn
+    interval: 30 m
