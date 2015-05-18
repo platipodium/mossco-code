@@ -433,8 +433,7 @@ ifeq ($(MOSSCO_HAMSOM),true)
   DEFINES += -DRiverInterpolationOff
   DEFINES += -DIncludeFreshwater
 
-  export HAMSOM_FFLAGS = -g -p -xf95-cpp-input -fdefault-real-8 -fsign-zero -fbounds-check -fno-f2c -Wall
-  HAMSOM_FFLAGS += -Wmaybe-uninitialized
+  export HAMSOM_FFLAGS = -xf95-cpp-input -fdefault-real-8 -fsign-zero -fno-f2c
   #export HAMSOM_CPPFLAGS = -I$(HAMSOM_DIR)/src
   #export HAMSOM_LDFLAGS = -L$(HAMSOM_LIBRARY_PATH) $(HAMSOM_LIBS)
 endif
