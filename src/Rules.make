@@ -412,30 +412,31 @@ ifdef HAMSOM_DIR
 endif
 
 ifeq ($(MOSSCO_HAMSOM),true)
-  #export HAMSOM_LIBRARY_PATH=$(HAMSOM_DIR)/lib/$(FORTRAN_COMPILER)
-  #HAMSOM_LIBS:=-lhamsom
-  DEFINES += -DCalcHBottomOld
-  DEFINES += -DNOVEC
-  DEFINES += -Dcheck_waterlevel
-  DEFINES += -Dcalc_AvrCumZ
-  DEFINES += -Dincl_AvrW
-#  DEFINES += -DAvrInclBounds
-#  DEFINES += -DreadATZ_monthly_mean
-#  DEFINES += -Dbaltic_closedEB
-  DEFINES += -Dcheck_BoundaryZ
-  DEFINES += -DBndDynHeight
-  DEFINES += -DRadiationUV_XinpingChen
-  DEFINES += -DRadiationTS_XinpingChen
-#  DEFINES += -Dsmooth_BoundaryTS
-  DEFINES += -DMomentumJP
-#  DEFINES += -DFullSWR
-  DEFINES += -DRiverFilesECOHAM
-  DEFINES += -DRiverInterpolationOff
-  DEFINES += -DIncludeFreshwater
+  HAMSOM_INCLUDES=
+  HAMSOM_DEFINES=
 
+  HAMSOM_DEFINES += -DCalcHBottomOld
+  HAMSOM_DEFINES += -DNOVEC
+  HAMSOM_DEFINES += -Dcheck_waterlevel
+  HAMSOM_DEFINES += -Dcalc_AvrCumZ
+  HAMSOM_DEFINES += -Dincl_AvrW
+#  HAMSOM_DEFINES += -DAvrInclBounds
+#  HAMSOM_DEFINES += -DreadATZ_monthly_mean
+#  HAMSOM_DEFINES += -Dbaltic_closedEB
+  HAMSOM_DEFINES += -Dcheck_BoundaryZ
+  HAMSOM_DEFINES += -DBndDynHeight
+  HAMSOM_DEFINES += -DRadiationUV_XinpingChen
+  HAMSOM_DEFINES += -DRadiationTS_XinpingChen
+#  HAMSOM_DEFINES += -Dsmooth_BoundaryTS
+  HAMSOM_DEFINES += -DMomentumJP
+#  HAMSOM_DEFINES += -DFullSWR
+  HAMSOM_DEFINES += -DRiverFilesECOHAM
+  HAMSOM_DEFINES += -DRiverInterpolationOff
+  HAMSOM_DEFINES += -DIncludeFreshwater
+
+  export HAMSOM_CPPFLAGS=$(HAMSOM_DEFINES) $(HAMSOM_INCLUDES)
   export HAMSOM_FFLAGS = -xf95-cpp-input -fdefault-real-8 -fsign-zero -fno-f2c -Wno-uninitialized
-  #export HAMSOM_CPPFLAGS = -I$(HAMSOM_DIR)/src
-  #export HAMSOM_LDFLAGS = -L$(HAMSOM_LIBRARY_PATH) $(HAMSOM_LIBS)
+
 endif
 
 # 7. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
