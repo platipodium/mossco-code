@@ -382,6 +382,7 @@ ifdef TRACER_DIR
   MOSSCO_TRACER=true
   DEFINES += -D MOSSCO_TRACER
 endif
+export MOSSCO_TRACER
 
 ifeq ($(TRACER_FORCING_ONLINE),true)
   DEFINES += -DForcing_Online
@@ -410,6 +411,8 @@ ifdef HAMSOM_DIR
   MOSSCO_HAMSOM=true
   DEFINES += -D MOSSCO_HAMSOM
 endif
+
+export MOSSCO_HAMSOM
 
 ifeq ($(MOSSCO_HAMSOM),true)
   HAMSOM_INCLUDES=
