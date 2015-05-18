@@ -781,7 +781,13 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), optional  :: rc
 
     character(ESMF_MAXSTR)           :: message
-    integer           :: ncStatus, dimlen, varid, rc_, localrc
+    integer                          :: ncStatus, dimlen, varid, rc_, localrc
+    real(ESMF_KIND_R8)               :: maxSeconds
+    real(ESMF_KIND_R8), allocatable  :: time(:)
+
+    type(ESMF_Time)                  :: reftime
+    type(ESMF_TimeInterval)          :: timeInterval
+    integer(ESMF_KIND_I4)            :: doy
 
     rc_ = ESMF_SUCCESS
 
@@ -801,15 +807,61 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
+    if (dimlen>0) then
+      allocate(time(dimlen))
 
-    ncStatus = nf90_put_var(self%ncid, varid, seconds, start=(/dimlen+1/))
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable time',ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      ncStatus = nf90_get_var(self%ncid, varid, time)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot read variable time',ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      maxSeconds=time(dimlen)
+    else
+      maxSeconds = -1.0D0
     endif
 
-    write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,' s) to file '//trim(self%name)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (maxSeconds>seconds) then
+      call ESMF_LogWrite('   not implemented addition of non-monotonic time',ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    elseif (maxSeconds<seconds) then
+      ncStatus = nf90_put_var(self%ncid, varid, seconds, start=(/dimlen+1/))
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable time',ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      ncStatus = nf90_inq_varid(self%ncid, 'doy', varid)
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find variable doy',ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      call self%reftime(refTime, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_TimeIntervalSet(timeInterval, s_r8=seconds, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_TimeGet(refTime + timeInterval, dayOfYear=doy, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      ncStatus = nf90_put_var(self%ncid, varid, doy, start=(/dimlen+1/))
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable doy',ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,' s) to file '//trim(self%name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    else
+      write(message,'(A,I4,A,F10.0,A)') '  did not add existing timestep ',dimlen,' (', seconds,' s) to file '//trim(self%name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
 
     if (present(rc)) rc = rc_
 
@@ -1080,16 +1132,28 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define dimension time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
+
     localrc = nf90_def_var(self%ncid, 'time', NF90_DOUBLE, self%timeDimId, varid)
     if (localrc==NF90_ENAMEINUSE) then
       rc_=MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
     localrc = nf90_put_att(self%ncid, varid, 'units', trim(self%timeUnit))
     localrc = nf90_put_att(self%ncid, varid, 'standard_name', 'time')
+
+    localrc = nf90_def_var(self%ncid, 'doy', NF90_INT, self%timeDimId, varid)
+    if (localrc==NF90_ENAMEINUSE) then
+      rc_=MOSSCO_NC_EXISTING
+    elseif (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable doy in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    localrc = nf90_put_att(self%ncid, varid, 'units', 'days')
+    localrc = nf90_put_att(self%ncid, varid, 'standard_name', 'day_of_year')
 
     localrc = nf90_enddef(self%ncid)
 
