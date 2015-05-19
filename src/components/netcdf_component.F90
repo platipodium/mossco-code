@@ -577,11 +577,24 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      do i=1,itemCount
-        call ESMF_StateRemove(importState, (/ trim(itemNameList(i))/), rc=localrc)
+      !! Somehow this did not help, so we ask again for the items
+      if (allocated(itemNameList)) deallocate(itemNameList)
+      call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemcount>0) then
+
+        allocate(itemNameList(itemCount))
+
+        call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      enddo
+
+        call ESMF_StateRemove(importState, itemNameList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       if (allocated(itemTypeList)) deallocate(itemTypeList)
       if (allocated(itemNameList)) deallocate(itemNameList)
