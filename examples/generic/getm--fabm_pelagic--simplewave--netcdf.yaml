@@ -1,0 +1,37 @@
+dependencies:
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - simplewave:
+    - component: getm
+      grid: water_depth_at_soil_surface
+
+instances:
+  - mossco_gfsn: netcdf
+
+coupling:
+  - components: 
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components: 
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components: 
+     - getm
+     - simplewave
+    interval: 30 m
+  - components:
+    - simplewave
+    - getm
+    interval: 30 m
+  - components: 
+     - getm
+     - mossco_gfsn
+    interval: 60 h
+  - components: 
+     - simplewave
+     - mossco_gfsn
+    interval: 60 h
