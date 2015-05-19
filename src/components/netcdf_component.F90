@@ -320,6 +320,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Clock)        :: clock
     logical                 :: clockIsPresent, isMatch, isPresent
     character(len=ESMF_MAXSTR) :: form
+    type(ESMF_VM)              :: vm
 
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
@@ -513,8 +514,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
           call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+            write(message,'(A,I4)') trim(name)//' failed with ESMF_RC=', localrc
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            call MOSSCO_StateLog(importState)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
 
           call ESMF_FieldGet(field, localDeCount=localDeCount, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -557,7 +562,20 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       enddo
 
-      !> Remove from import state all fields, whether written or not
+      !> Remove from import state all fields, whether written or not, ensure that all processes have
+      !> processed all states by using a barrier
+      call ESMF_GridCompGet(gridComp, vmIsPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+
+      if (isPresent) then
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_VMBarrier(vm, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       do i=1,itemCount
         call ESMF_StateRemove(importState, (/ trim(itemNameList(i))/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
