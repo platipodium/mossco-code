@@ -566,9 +566,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !> processed all states by using a barrier
       call ESMF_GridCompGet(gridComp, vmIsPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
+        call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_VMBarrier(vm, rc=localrc)
