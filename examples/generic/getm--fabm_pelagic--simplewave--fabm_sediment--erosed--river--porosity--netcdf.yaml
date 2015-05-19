@@ -19,7 +19,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - mossco_gfsferdn: netcdf
+  - mossco_gfsferpn: netcdf
   - river_input: netcdf_input
   - porosity_input: netcdf_input
 
@@ -85,21 +85,21 @@ coupling:
     interval: 30 m
   - components:
      - erosed
-     - mossco_gfsferdn
+     - mossco_gfsferpn
     interval: 60 h
   - components:
      - simplewave
-     - mossco_gfsferdn
+     - mossco_gfsferpn
     interval: 60 h
   - components:
      - getm
-     - mossco_gfsferdn
+     - mossco_gfsferpn
     interval: 60 h
   - components:
      - fabm_pelagic
-     - mossco_gfsferdn
+     - mossco_gfsferpn
     interval: 60 h
   - components:
      - fabm_sediment
-     - mossco_gfsferdn
+     - mossco_gfsferpn
     interval: 60 h
