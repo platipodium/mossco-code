@@ -20,6 +20,7 @@ if len(sys.argv) > 1:
   prefix = sys.argv[1]
 else:
   prefix = u"netcdf_out"
+  prefix = u"/Volumes/Kiwi/output/gsn/mossco_gsn"
 
 if len(sys.argv) > 2:
   excl_variables = sys.argv[2].split(',')
@@ -41,18 +42,20 @@ alon={}
 nc=netcdf.Dataset(files[0],'r')
 for key, value in nc.variables.iteritems():
   dim=value.dimensions
-  print key, dim
+  #print key, dim
   if len(value.dimensions) != 1 : continue
   if key.endswith('_lat'): alat[key]=[]
   elif key.endswith('_lon'): alon[key]=[]
   elif key.endswith('_X'): alon[key]=[]
   elif key.endswith('_Y'): alat[key]=[]
+  elif key.endswith('_x'): alon[key]=[]
+  elif key.endswith('_y'): alat[key]=[]
 nc.close()
 
-#for item in alat.keys():
-#  print "Found latitude/Y information " + item
-#for item in alon.keys():
-#  print "Found longitude/X information " + item
+for item in alat.keys():
+  print "Found latitude/Y information " + item
+for item in alon.keys():
+  print "Found longitude/X information " + item
 
 if len(alon)<1:
   print "Found no longitude/X information"
@@ -68,15 +71,29 @@ for f in files:
   for item in alon.keys(): 
     if nc.variables.has_key(item) and alon.has_key(item):
       alon[item].extend(nc.variables[item][:])
-  time=nc.variables['time'][:]
   nc.close()
 
 nc=netcdf.Dataset(files[0],'r')
+time=nc.variables['time'][:]
 
 for key,value in alon.iteritems(): alon[key]=np.sort(list(set(value)))
 for key,value in alat.iteritems(): alat[key]=np.sort(list(set(value)))
 
+temp={}
+for key,value in alon.iteritems():
+  if np.all(np.isfinite(value)):
+    temp[key]=value
+    
+alon=temp
+
+temp={}
+for key,value in alat.iteritems():
+  if np.all(np.isfinite(value)):
+    temp[key]=value
+alat=temp
+
 ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
+
 
 for key,value in alon.iteritems():
   dim=nc.variables[key].dimensions[0]
@@ -116,6 +133,7 @@ for key,value in nc.variables.iteritems():
     for att in value.ncattrs():
       if att == '_FillValue': continue
       var.setncattr(att,value.getncattr(att))
+    print 'Created for output variable ', key , tuple(dims)
 
 nc.close()
 
@@ -123,9 +141,15 @@ nc.close()
 if ncout.variables.has_key('time'): ncout.variables['time'][:]=time
 
 for item in alat.keys():
-  if ncout.variables.has_key(item) and alat.has_key(item): ncout.variables[item][:]=alat[item]
+  if ncout.variables.has_key(item): 
+    print item, len(ncout.variables[item][:]), len(alat[item])
+    ncout.variables[item][:]=alat[item]
+  else:
+    print 'Could not find item ' , item, ' in ncout'
 for item in alon.keys():
-  if ncout.variables.has_key(item) and alon.has_key(item): ncout.variables[item][:]=alon[item]
+  if ncout.variables.has_key(item): ncout.variables[item][:]=alon[item]
+  else:
+    print 'Could not find item ' , item, ' in ncout'
 
 for f in files[:]:
   nc=netcdf.Dataset(f,'r')
@@ -158,7 +182,7 @@ for f in files[:]:
 
   for key,value in nc.variables.iteritems():
 
-    if key=='time': continue
+    if key in ['time']: continue
     if key in coords: continue
     if not(key in excl_variables): continue
 
@@ -168,7 +192,7 @@ for f in files[:]:
       #print 'Skipped variable ', key
       continue
 
-    #print f, key, value.shape
+    print f, key, value.shape
 
     dims=list(value.dimensions)
     n=len(dims)
