@@ -592,8 +592,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_StateRemove(importState, itemNameList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+          write(message,'(A)') trim(name)//' ignores error above '
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
       endif
 
       if (allocated(itemTypeList)) deallocate(itemTypeList)

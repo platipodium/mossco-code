@@ -822,7 +822,6 @@ module mossco_netcdf
       maxSeconds = -1.0D0
     endif
 
-
     if (maxSeconds>seconds) then
       call ESMF_LogWrite('   not implemented addition of non-monotonic time',ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -872,7 +871,6 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable date_string',ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-
 
       write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,' s) to file '//trim(self%name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
