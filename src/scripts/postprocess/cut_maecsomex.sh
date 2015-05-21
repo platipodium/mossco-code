@@ -4,6 +4,7 @@
 #
 # @copyright (C) 2015 Helmholtz-Zentrum Geesthacht
 # @author Onur Kerimoglu
+# @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -21,6 +22,13 @@ if (( "$#" < 2));then
  fnameroot=mossco_gffn
 else
  fnameroot=$2
+fi
+
+# Determine number of processors to use
+if (( "$#" >2 )) ; then
+  n=$3
+else 
+  n=4
 fi
 
 latlon='getmGrid3D_getm_lon,getmGrid3D_getm_lat,getmGrid2D_getm_lat,getmGrid2D_getm_lon'
@@ -43,19 +51,91 @@ Svars='dissolved_oxygen_in_soil,dissolved_reduced_substances_in_soil,denitrifica
 #done # i
 
 p=-1
-#for p in $(seq -f "%03g" 0 $(( nproc-1 ))); do
 for F  in $fnameroot.*.nc; do
   ((p++))  
-  #F=$fnameroot'.'$p.'nc'
   G='cut.'$p'.nc'
-  echo "$F -> $G"
+  echo  "$F -> $G"
   #'lat-lon'
-  ncks -O -v $latlon $F $G
-  #2D vars
-  ncks -A $timedim -v ${Hvars} $F $G
-  #3D vars in water   
-  ncks -A $timedim $vertdimW -v ${Wvars} $F $G    
-  #3D vars in soil   
-  ncks -A $timedim $vertdimS -v ${Svars} $F $G    
+  ncks -O -v $latlon $F $G &
+  pids[$p]=$!
+  if [[ $(expr $p % $n) == $(expr $n - 1) ]] ; then
+    wait ${pids[$p]}
+  fi
 done
+
+echo -n "Processing water dimensions "
+
+p=-1
+for F  in $fnameroot.*.nc; do
+  ((p++))
+  wait ${pids[$p]}
+  echo -n .
+done
+echo " done"
+
+p=-1
+for F  in $fnameroot.*.nc; do
+  ((p++))  
+  G='cut.'$p'.nc'
+  #2D vars
+  ncks -A $timedim -v ${Hvars} $F $G &
+  pids[$p]=$!
+  if [[ $(expr $p % $n) == $(expr $n - 1) ]] ; then
+    echo "  waiting for $G (pid  ${pids[$p]})"
+    wait ${pids[$p]}
+  fi
+done
+
+echo -n "Processing water 2D variables "
+p=-1
+for F  in $fnameroot.*.nc; do
+  ((p++))
+  wait ${pids[$p]}
+  echo -n .
+done
+echo " done"
+
+p=-1
+for F  in $fnameroot.*.nc; do
+  ((p++))  
+  G='cut.'$p'.nc'
+  #3D vars in water   
+  ncks -A $timedim $vertdimW -v ${Wvars} $F $G &
+  pids[$p]=$!
+  if [[ $(expr $p % $n) == $(expr $n - 1) ]] ; then
+    wait ${pids[$p]}
+  fi
+done
+
+echo -n "Processing water 3D variables "
+p=-1
+for F  in $fnameroot.*.nc; do
+  ((p++))
+  wait ${pids[$p]}
+  echo -n .
+done
+echo "done"
+
+p=-1
+for F  in $fnameroot.*.nc; do
+  ((p++))  
+  G='cut.'$p'.nc'
+  #3D vars in soil   
+  ncks -A $timedim $vertdimS -v ${Svars} $F $G &   
+  pids[$p]=$!
+  if [[ $(expr $p % $n) == $(expr $n - 1) ]] ; then
+    wait ${pids[$p]}
+  fi
+done
+
+echo -n "Processing soil 3D variables "
+p=-1
+for F  in $fnameroot.*.nc; do
+  ((p++))
+  wait ${pids[$p]}
+  echo -n "."
+done
+echo " all done"
+
 exit
+
