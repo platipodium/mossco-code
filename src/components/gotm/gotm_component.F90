@@ -332,7 +332,7 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     nexport_3d = 6
-    nexport_2d = 8
+    nexport_2d = 9
     allocate(exportFieldList(nexport_3d + nexport_2d))
 
     !> Create 3d export fields and add them to export state, allocate the space for these
@@ -388,6 +388,7 @@ module gotm_component
     export_variables_2d(6)%standard_name="y_velocity_at_soil_surface"
     export_variables_2d(7)%standard_name="temperature_at_soil_surface"
     export_variables_2d(8)%standard_name="turbulent_diffusivity_of_momentum_at_soil_surface"
+    export_variables_2d(9)%standard_name="surface_downwelling_photosynthetic_radiative_flux"
 
 
 
@@ -402,6 +403,7 @@ module gotm_component
     variables_2d(1,1,6) = variables_3d(1,1,1,6)
     variables_2d(1,1,7) = variables_3d(1,1,1,1)
     variables_2d(1,1,8) = gotm_tknu(1)
+    variables_2d(1,1,9) = gotm_radiation(nlev)
 
 
     call ESMF_ArraySpecSet(arrayspec, rank=2, typekind=ESMF_TYPEKIND_R8, rc=localrc)
@@ -550,6 +552,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     variables_2d(1,1,6) = variables_3d(1,1,1,6)
     variables_2d(1,1,7) = variables_3d(1,1,1,1)
     variables_2d(1,1,8) = gotm_tknu(1)
+    variables_2d(1,1,9) = gotm_radiation(nlev)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
