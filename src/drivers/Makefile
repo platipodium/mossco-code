@@ -198,10 +198,8 @@ tracer_driver.o: tracer_driver.F90
 # is used in the generic rule for .f90 to .o in ../Rules.make
 
 ifeq ($(MOSSCO_HAMSOM),true)
-  F90FLAGS_OLD=$(F90FLAGS)
-  F90FLAGS += $(HAMSOM_FFLAGS)
-  CPPFLAGS_OLD=$(CPPFLAGS)
-  CPPFLAGS += $(HAMSOM_CPPFLAGS)
+libmossco_hamsom_dependencies: F90FLAGS += $(HAMSOM_FFLAGS)
+libmossco_hamsom_dependencies: CPPFLAGS += $(HAMSOM_CPPFLAGS)
 libmossco_hamsom_dependencies:              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Modules.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/HAMSOM_3p.o) \
@@ -226,13 +224,11 @@ libmossco_hamsom_dependencies:              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Tools.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Par.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a($(HAMSOM_DIR)/src/Boundary_DynHeight_NWCS20.o)
-  F90FLAGS:=$(F90FLAGS_OLD)
-  CPPFLAGS:=$(CPPFLAGS_OLD)
 else
 libmossco_hamsom_dependencies:
 endif
 
-libmossco_hamsom: prefix libmossco_hamsom_dependencies  \
+libmossco_hamsom: prefix libmossco_hamsom_dependencies \
   $(MOSSCO_LIBRARY_PATH)/libmossco_hamsom.a(hamsom_driver.o)
 
 hamsom_driver.o: hamsom_driver.F90

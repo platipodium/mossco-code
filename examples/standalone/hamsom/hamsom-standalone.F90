@@ -42,7 +42,8 @@
    IMPLICIT NONE
 !
 ! !LOCAL VARIABLES:
-   integer           :: istep_main, nstep_main, dt_main
+   integer           :: istep_main, nstep_main
+   real              :: dt_main
    character(len=4)  :: Str4
 
 !-----------------------------------------------------------------------
@@ -65,7 +66,7 @@
    call init_hamsom
    print*,''; print*,' ... HAMSOM component initialized !';print*,''
 
-   dt_main    = nint(dt)       ! main timestep in seconds !!
+   dt_main    = dt             ! main timestep in seconds !!
    nstep_main = EndOfIteration ! number of iterations
 
 !*****************************************************************

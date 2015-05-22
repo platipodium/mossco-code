@@ -24,12 +24,19 @@ LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBS)
 all: exec
 exec: libmossco_hamsom hamsom-standalone
 
+#%.o: %.f90
+#	$(F90) -c $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(HAMSOM_FFLAGS) $(F90FLAGS) $(LDFLAGS) $<
+
 libmossco_hamsom:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers $@
 
+hamsom-standalone: F90FLAGS += $(HAMSOM_FFLAGS)
+hamsom-standalone: CPPFLAGS += $(HAMSOM_CPPFLAGS)
 hamsom-standalone: hamsom-standalone.o
 	$(F90) $^ $(LDFLAGS) -o $@
 	@echo "Created example binary $(PWD)/$@"
+
+#	$(F90)  $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(HAMSOM_FFLAGS) $(F90FLAGS) $(LDFLAGS) -c $< -o $@
 
 clean: extraclean
 
