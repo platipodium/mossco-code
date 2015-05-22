@@ -327,8 +327,8 @@ module fabm_sediment_component
           end do
         end do
       else
-        write(0,*) 'no mask found',localrc
-        stop
+        write(message,*) trim(name)//'no mask found in foreign grid, compute every sediment column'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
       end if
     end if
 
