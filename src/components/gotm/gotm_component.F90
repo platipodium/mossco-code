@@ -57,7 +57,14 @@ module gotm_component
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables_3d
   type(MOSSCO_VariableFArray2d), dimension(:), allocatable :: export_variables_2d
   real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
+  real(ESMF_KIND_R8),dimension(:),pointer :: ones, zeros, relaxTau
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: coordZ
+
+  type :: type_transport_list
+     real(ESMF_KIND_R8),dimension(:),pointer :: conc=>NULL()
+     real(ESMF_KIND_R8),dimension(:),pointer :: ws=>NULL()
+  end type type_transport_list
+  type(type_transport_list), allocatable, dimension(:) :: transport_vars
 
    !> Declare an alarm to ring when output to file is requested
   type(ESMF_Alarm),save :: outputAlarm
@@ -94,6 +101,11 @@ module gotm_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_INITIALIZE, phase=2, &
+      userRoutine=InitializeP2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -116,7 +128,7 @@ module gotm_component
     type(ESMF_Clock)            :: parentClock
     integer, intent(out)        :: rc
 
-    character(len=10)           :: InitializePhaseMap(1)
+    character(len=10)           :: InitializePhaseMap(2)
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
@@ -129,6 +141,7 @@ module gotm_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
+    InitializePhaseMap(2) = "IPDv00p2=2"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
@@ -189,6 +202,7 @@ module gotm_component
     type(ESMF_Field), dimension(:), allocatable  :: exportFieldList
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr
     type(ESMF_Field) :: field
+    type(ESMF_FieldBundle) :: fieldBundle
 
     namelist /model_setup/ title,nlev,dt,cnpar,buoy_method
     namelist /station/ name,latitude,longitude,depth
@@ -425,11 +439,206 @@ module gotm_component
 
     deallocate(exportFieldList)
 
+    !> create helper arrays
+    allocate(ones(0:nlev))
+    ones=_ONE_
+    allocate(zeros(0:nlev))
+    zeros=_ZERO_
+    allocate(relaxTau(0:nlev))
+    relaxTau=1.d15
+
+    fieldBundle = ESMF_FieldBundleCreate(name='concentrations_in_water',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(importState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    fieldBundle = ESMF_FieldBundleCreate(name='concentrations_z_velocity_in_water',multiflag=.true.,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldBundleSet(fieldBundle,grid,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(fieldBundle,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAdd(importState,(/fieldBundle/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP2"
+  subroutine InitializeP2(gridComp,importState,exportState,clock,rc)
+
+      implicit none
+
+      type(ESMF_GridComp) :: gridComp
+      type(ESMF_State)    :: importState,exportState ! may be uninitialized
+      type(ESMF_Clock)    :: clock        ! may be uninitialized
+      integer,intent(out) :: rc
+
+      type(ESMF_FieldBundle)                              :: concFieldBundle,wsFieldBundle
+      type(ESMF_Field)          ,dimension(:),allocatable :: concFieldList,fieldList
+      type(ESMF_Field)                                    :: wsField
+      type(ESMF_FieldStatus_Flag)                         :: status
+      character(len=ESMF_MAXSTR),dimension(:),allocatable :: itemNameList
+      character(len=ESMF_MAXSTR)                          :: itemName
+      integer                   ,dimension(:),allocatable :: namelenList,concFlags
+      integer                                             :: concFieldCount,transportFieldCount,FieldCount
+      integer                                             :: conc_id,ws_id
+      integer                                             :: i,ii,n
+      character(len=*),parameter :: ws_suffix="_z_velocity_in_water"
+      character(len=*),parameter :: conc_suffix="_in_water"
+      integer(ESMF_KIND_I4) :: localrc
+      real(ESMF_KIND_R8), dimension(:,:,:), pointer  :: ptrf3
+
+      rc=ESMF_SUCCESS
+
+      call MOSSCO_GridCompEntryLog(gridComp)
+
+      call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(concFieldBundle,fieldCount=concFieldCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (concFieldCount .gt. 0) then
+
+         allocate(concFieldList(concFieldCount))
+         allocate(itemNameList (concFieldCount))
+         allocate(namelenList  (concFieldCount))
+         allocate(concFlags    (concFieldCount))
+
+         call ESMF_FieldBundleGet(concFieldBundle, fieldList=concFieldList, fieldNameList=itemNameList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         concFlags = 0
+         do i=1,concFieldCount
+!           identify concentrations by suffix
+            namelenList(i) = len_trim(itemNameList(i))
+            if (namelenList(i) .le. len_trim(conc_suffix) ) cycle
+            if (itemNameList(i)(namelenList(i)-len_trim(conc_suffix)+1:namelenList(i)) .ne. trim(conc_suffix)) cycle
+            concFlags(i) = 1
+         end do
+
+         transportFieldCount = sum(concFlags)
+
+         if (transportFieldCount .gt. 0) then
+
+            allocate(transport_vars(transportFieldCount))
+
+            call ESMF_StateGet(importState, "concentrations_z_velocity_in_water", wsFieldBundle, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            n = 1
+
+            do i=1,concFieldCount
+
+               if (concFlags(i) .eq. 0) cycle
+
+               call ESMF_FieldGet(concFieldList(i),status=status, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
+                  ! we do not expect imcomplete fields here                 
+               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+                  call ESMF_LogWrite('  will transport external field '//trim(itemNameList(i)),ESMF_LOGMSG_INFO)
+                  call ESMF_FieldGet(concFieldList(i), farrayPtr=ptrf3, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  if (.not. (      all(lbound(ptrf3) .eq. (/1,1,0/)) &
+                             .and. all(ubound(ptrf3) .eq. (/1,1,nlev/)) ) ) then
+                     call ESMF_LogWrite('invalid field bounds', &
+                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+                  else
+                     transport_vars(n)%conc => ptrf3(1,1,:)
+                  end if
+               else
+                  call ESMF_LogWrite('field '//trim(itemNameList(i))//' neither empty nor complete', &
+                                     ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                  call ESMF_Finalize(endflag=ESMF_END_ABORT)
+               end if
+
+!              search for corresponding z_velocity
+               itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//ws_suffix
+
+               call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldCount=fieldCount, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               if (fieldCount .eq. 0) then
+                  call ESMF_LogWrite('  no corresponding field '//trim(itemName),ESMF_LOGMSG_INFO)
+                  transport_vars(n)%ws => null()
+                  n = n + 1
+                  cycle
+               else if (fieldCount .eq. 1) then
+                  call ESMF_FieldBundleGet(wsFieldBundle, itemName, field=wsField, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+               else
+                  call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=-1, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  allocate(fieldList(fieldCount))
+                  call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldList=fieldList, rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  do ii=1,fieldCount
+                     call ESMF_AttributeGet(fieldList(ii), 'external_index', value=ws_id, defaultValue=-2, rc=localrc)
+                     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                     if (ws_id .eq. conc_id) then
+                        wsField = fieldList(ii)
+                        exit
+                     end if
+                  end do
+                  deallocate(fieldList)
+                  if (ws_id .ne. conc_id) then
+                     call ESMF_LogWrite('  no unique field '//trim(itemName), &
+                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+                  end if
+               end if
+
+               call ESMF_FieldGet(wsField, status=status, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               if (status.eq.ESMF_FIELDSTATUS_EMPTY) then
+                  ! do not expect empty fields here
+               else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+                  call ESMF_LogWrite('  will use external field '//trim(itemName),ESMF_LOGMSG_INFO)
+                  call ESMF_FieldGet(wsField,farrayPtr=ptrf3,rc=localrc)
+                  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                  if (.not. (      all(lbound(ptrf3) .eq. (/1,1,0   /)) &
+                             .and. all(ubound(ptrf3) .eq. (/1,1,nlev/)) ) ) then
+                     call ESMF_LogWrite('  invalid field bounds', &
+                                        ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                     call ESMF_Finalize(endflag=ESMF_END_ABORT)
+                  else
+                     transport_vars(n)%ws => ptrf3(1,1,:)
+                  end if
+               else
+                  call ESMF_LogWrite('  field '//trim(itemName)//' neither empty nor complete', &
+                                     ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+                  call ESMF_Finalize(endflag=ESMF_END_ABORT)
+               end if
+
+               n = n + 1
+
+            end do
+
+         end if
+
+      end if
+
+    call MOSSCO_GridCompExitLog(gridComp)
+    rc = ESMF_SUCCESS
+
+   end subroutine InitializeP2
+
+
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
@@ -510,6 +719,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
        call update_time(n)
        call gotm_time_step()
+
+       !> call transport of external variables
+       call gotm_transport()
 
        !> Check if the output alarm is ringing, if so, quiet it and
        !> call do_output from GOTM
@@ -738,5 +950,42 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   end select
 
   end subroutine gotm_time_step
+
+
+  subroutine gotm_transport()
+
+  use util, only: flux, Neumann
+  use meanflow, only : w, gotm_heights => h
+  use turbulence, only: diffusivity => nuh
+  use time, only: dt => timestep
+
+  integer                 :: i, w_adv_method=1, w_adv_discr=6, w_adv_ctr=1
+  GOTM_REALTYPE           :: cnpar=1.0
+
+  if ( .not. allocated(transport_vars) ) return
+  ! Vertical advection and residual movement (sinking/floating)
+  do i=1,ubound(transport_vars,1)
+
+    ! Do advection step due to settling or rising
+    if (associated(transport_vars(i)%ws)) then
+      call adv_center(nlev,dt,gotm_heights, gotm_heights, &
+        transport_vars(i)%ws, flux, flux, _ZERO_, _ZERO_, &
+        w_adv_discr,1,transport_vars(i)%conc)
+    end if
+
+    ! Do advection step due to vertical velocity
+    if (w_adv_method/=0) &
+      call adv_center(nlev,dt,gotm_heights, gotm_heights, &
+        w, flux, flux, _ZERO_, _ZERO_, &
+        w_adv_ctr,0,transport_vars(i)%conc)
+
+    ! Vertical diffusion
+    call diff_center(nlev,dt,cnpar,0,gotm_heights, &
+       Neumann, Neumann, _ZERO_, _ZERO_, &
+       diffusivity, zeros, zeros, relaxTau, &
+       transport_vars(i)%conc,transport_vars(i)%conc)
+  end do
+
+  end subroutine gotm_transport
 
 end module gotm_component

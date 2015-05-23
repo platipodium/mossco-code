@@ -16,12 +16,18 @@ coupling:
     interval: 6 m
   - components:
      - fabm_pelagic
-     - gotm_transport
-    interval: 6 m
+     - transport_connector
+     - gotm
+    interval: none
   - components:
      - fabm_pelagic
      - pelagic_soil_connector
      - fabm_sediment
+    interval: 6 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
     interval: 6 m
   - components:
      - constant
@@ -39,8 +45,3 @@ coupling:
      - fabm_pelagic
      - mossco_1d
     interval: 1 d
-  - components:
-     - fabm_sediment
-     - soil_pelagic_connector
-     - fabm_pelagic
-    interval: 6 m
