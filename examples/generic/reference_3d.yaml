@@ -1,8 +1,8 @@
 # configuration dependencies:
 dependencies:
-  - fabm_sediment:
-    - component: getm
-      grid: temperature_at_soil_surface
+#  - fabm_sediment:
+#    - component: getm
+#      grid: temperature_at_soil_surface
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
@@ -12,15 +12,22 @@ dependencies:
   - simplewave:
     - component: getm
       grid: water_depth_at_soil_surface
-  - river_input:
-    - component: getm
-      grid: temperature_in_water
+#  - river_input:
+#    - component: getm
+#      grid: temperature_in_water
+#  - benthohs:
+#    - component: getm
+#      grid: water_depth_at_soil_surface
 
 instances:
   - netcdf_reference_3d: netcdf
-  - river_input : netcdf_input
+#  - river_input : netcdf_input
 
 coupling:
+#  - components:
+#     - constant
+#     - simplewave
+#    interval: none
   - components:
      - constant
      - getm
@@ -32,11 +39,11 @@ coupling:
   - components:
      - getm
      - simplewave
-    interval: 1 h
+    interval: 10 s
   - components:
      - simplewave
      - getm
-    interval: 1 h
+    interval: 10 s
 #  - components:
 #     - clm_netcdf
 #     - simplewave
@@ -44,66 +51,66 @@ coupling:
   - components:
      - simplewave
      - erosed
-    interval: 1 h
+    interval: 10 s
   - components:
      - getm
      - fabm_pelagic
-    interval: 6 m
+    interval: 10 s
   - components:
      - fabm_pelagic
      - transport_connector
      - getm
-    interval: 6 m
+    interval: none
   - components:
      - fabm_pelagic
      - erosed
-    interval: 6 m
+    interval: 10 s
   - components:
      - getm
      - erosed
-    interval: 6 m
+    interval: 10 s
   - components:
      - erosed
      - fabm_pelagic
-    interval: 6 m
-  - components:
-     - river_input
-     - fabm_pelagic
-    interval: 14 d
-  - components:
-     - fabm_pelagic
-     - pelagic_soil_connector
-     - fabm_sediment
-    interval:  30 m
-  - components:
-     - fabm_sediment
-     - soil_pelagic_connector
-     - fabm_pelagic
-    interval: 30 m
-  - components:
-     - constant
-     - fabm_sediment
-    interval: none
+    interval: 10 s
+#  - components:
+#     - river_input
+#     - fabm_pelagic
+#    interval: 104 d
+#  - components:
+#     - fabm_pelagic
+#     - pelagic_soil_connector
+#     - fabm_sediment
+#    interval:  30 m
+#  - components:
+#     - fabm_sediment
+#     - soil_pelagic_connector
+#     - fabm_pelagic
+#    interval: 30 m
+#  - components:
+#     - constant
+#     - fabm_sediment
+#    interval: none
 #  - components:
 #     - benthos
 #     - erosed
 #    interval: 6 m
-  - components:
-     - fabm_sediment
-     - netcdf_reference_3d
-    interval: 60 h
-  - components:
-     - fabm_pelagic
-     - netcdf_reference_3d
-    interval: 60 h
 #  - components:
-#     - getm
+#     - fabm_sediment
 #     - netcdf_reference_3d
 #    interval: 60 h
   - components:
+     - fabm_pelagic
+     - netcdf_reference_3d
+    interval: 10 s
+  - components:
+     - getm
+     - netcdf_reference_3d
+    interval: 10 s
+  - components:
      - simplewave
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 10 s
 #  - components:
 #     - benthos
 #     - netcdf_reference_3d
@@ -111,4 +118,4 @@ coupling:
   - components:
      - erosed
      - netcdf_reference_3d
-    interval: 60 h
+    interval: 10 s
