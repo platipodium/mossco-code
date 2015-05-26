@@ -79,7 +79,7 @@ real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer:: spm_concentration=>null()
     real(fp)                                    :: rhow         ! density of water [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: cdryb        ! dry bed density [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: chezy        ! Chezy coefficient for hydraulic roughness [m(1/2)/s]
-    real(fp)    , dimension(:)  , allocatable   :: h0           ! water depth old time level [m]
+    real(fp)    , dimension(:)  , allocatable, save   :: h0           ! water depth old time level [m]
     real(fp)    , dimension(:)  , allocatable   :: h1           ! water depth new time level [m]
     real(fp)    , dimension(:)  , allocatable   :: rhosol       ! specific sediment density [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: sedd50       ! 50% diameter sediment fraction [m]
@@ -1278,6 +1278,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+write (*,*) 'inum, jnum',inum, jnum
+write (*,*) 'shape(ptr_f2)', shape(ptr_f2)
 
       BioEffects%ErodibilityEffect = ptr_f2
 #ifdef DEBUG
@@ -1342,11 +1344,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     endif
 
    ! filtering missing values (land)
+    do j = 1, jnum
     do i = 1, inum
-        do j = 1, jnum
             if (mask(i,j)== 0) then
-                BioEffects%TauEffect = 1.0_fp
-                BioEffects%ErodibilityEffect = 1.0_fp
+                BioEffects%TauEffect (i,j) = 1.0_fp
+                BioEffects%ErodibilityEffect(i,j) = 1.0_fp
                 spm_concentration (i,j,:)    = 0.0_fp
             end if
          end do
@@ -1362,9 +1364,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
                 & tper   , teta   , spm_concentration , BioEffects     , nybot, thick, u_bot, &
-                & v_bot  , u2d    , v2d      , h0 , mask   )
+                & v_bot  , u2d    , v2d      , h0 , mask , advancecount  )
 
-
+if ((advancecount>= 70).and.(advancecount<=100)) write (*,*) '######### Timestep: ',advancecount , ' #########'
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
       do nm = nmlb, nmub
@@ -1374,13 +1376,16 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
         if (mask(i,j) /=0) then
+
+        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+
 #ifdef DEBUG
-          write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm,min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), sink(l,nm)
+        write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), &
+        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j)
 #endif
-          size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = &
-          sour(l,nm) *1000.0_fp - min(ws_convention_factor*ws(l,nm),sink(l,nm))*spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplie dby 1000.
-        !write (0, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM',sink(l,nm) * spm_concentration(i,j,l)
- !       write (0,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
+
+!        write (*, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM', sink(l,nm)* spm_concentration(i,j,l)
+!        write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm, 'sedd50',sedd50(l)
  !if (spm_concentration(i,j,l) >100.)  write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
 
 
@@ -1393,7 +1398,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     enddo
 
     !> save current water level to the old water level for the next time step
-    h1 = h0
+    h0 = h1
 
         !
         !   Compute change in sediment composition of top layer and fluff layer
