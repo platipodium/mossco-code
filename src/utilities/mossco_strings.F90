@@ -194,7 +194,7 @@ contains
       j=index(item, pattern(i+1:len_trim(pattern)))
       if (j+len_trim(pattern)-2 == len_trim(item)) isMatch=.true.
       !write(0,*)  'Match 2', trim(item), trim(pattern), j+len_trim(pattern)-2, '?=', len_trim(item) , isMatch
-    elseif (i>1) then          ! found one asterisk at end, match beginning
+    elseif (i>1 .and. len_trim(item)>=i) then          ! found one asterisk at end, match beginning
       if (item(1:i-1)==pattern(1:i-1)) isMatch=.true.
       !write(0,*)  'Match 3', trim(item), trim(pattern), item(1:i-1), '?=', pattern(1:i-1) , isMatch
     else                       ! found no asterisk
