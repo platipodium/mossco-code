@@ -283,7 +283,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                  & sink     , sinkf   , sour     , sourf   , anymud  , wave      , &
                  & uorb     , tper    , teta     , spm_concentration , Bioeffects, &
                  & turb_difz, relativ_thick      , u_bottom, v_bottom, u2d       , &
-                 & v2d      , h0      , mask)
+                 & v2d      , h0      , mask, timestep)
 
 !
 !    Function: Computes sedimentation and erosion fluxes
@@ -335,6 +335,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: relativ_thick ! relative thickness of the lowest element
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: u_bottom, v_bottom ! flow velocity at the bottom cell (middle height) at x- and y-direction [m/s]
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: h0            ! water depth in old time step [m]
+
+integer (kind=8) , intent (in):: timestep
 ! Local variables
 !
     integer                                     :: l            ! sediment counter
@@ -434,8 +436,8 @@ factcr = 1.0
 eps = 1e-6
 
 zubed = relativ_thick* h /2.0_fp   ! center of the first element at bed
-z0cur = sedd50/12._fp   ! z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
-!z0rou = z0cur           ! z0 bed roughness height for wave: is calculated using a function in erosed
+z0cur = sedd50/12._fp   ! initial z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
+z0rou = z0cur           ! z0 bed roughness height for wave: is calculated using a function in erosed, here initialized to z0cur
 
 aksfac = 1.0_fp         ! proportionality factor multiplied by ks (equivalent sand roughness height)
                         ! to evaluate van Rijn concentration height "a"
@@ -465,7 +467,6 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
     inum = Size(Bioeffects%ErodibilityEffect,1)
     jnum = Size(Bioeffects%ErodibilityEffect,2)
 
-   ! allocate (spm_concentration (inum,jnum,nfrac))
 
     kssilt = 0.0_fp
     kssand = 0.0_fp
@@ -492,7 +493,7 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
 
 ! Main loop over elements organized in vector form
  elements: do nm = nmlb, nmub
-
+   if (nm==103) write (*,*) ' initialization:', soursin3d_arguments%sour
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
 masking: if (mask(i,j) /=0) then
@@ -624,7 +625,8 @@ masking: if (mask(i,j) /=0) then
 #endif
               else
                 !(3D)
-
+                 write (*,*)' ----------------------------'
+                 write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
                  drho     = (rhosol(l)-rhowat) / rhowat
                  dstar(l) = sedd50(l) * (drho*g/vicmol**2)**0.3333_fp
 
@@ -658,8 +660,10 @@ masking: if (mask(i,j) /=0) then
 
 !write (*,*)'taucr-sand', taucr(l), 'nm', nm, 'i,j', i,j
 
-                 z0rou = calcZ0rou (vonkar,sedd50(l),h (nm),g)
-!write (*,*) 'z0rou', z0rou
+
+                 z0rou (l)= calcZ0rou (vonkar,sedd50(l),h (nm),g)
+                 z0cur (l)= z0rou (l)
+!write (*,*) 'z0rou', z0rou, 'mudfrac','(',nm,')', mudfrac(nm)
                  call bedbc1993_arguments%set (tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm), &
                            & zubed(nm)   ,sedd50(l)     ,sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l), &
                            & taucr(l)    ,mudfrac(nm)   ,eps        ,aksfac   ,rwave   ,camax   , &
@@ -689,11 +693,15 @@ masking: if (mask(i,j) /=0) then
                  call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
-
+if (nm== 103) write (*,*) ' sour before RUN:',  sour (l,nm)
                  call soursin3d_arguments%run ()
-
+if (nm== 103)write (*,*) ' sour before get:',  sour (l,nm)
                  call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
-!                write (*,*)' sour and sink 3D',sour (l,nm), sink (l,nm), 'l', l, 'nm',nm
+ if (nm== 103)write (*,*) ' sour after get:',  sour (l,nm)
+                  ! change volume flux to kg/m**2/S
+                 sour (l,nm) = sour (l,nm) * thick0
+                 sink (l,nm) = sink (l,nm) * thick1
+write (*,*) 'thick0', thick0, 'thick1', thick1
 !                write (*,*) '+++++++++++++++++++++++++SPM class +++++++++++++++++++++++++++'
               end if !(2D/3D)
             endif ! (cohesive /non-cohesive
@@ -1391,7 +1399,8 @@ allocate (soursin3d_arguments%h1 ,soursin3d_arguments%thick0    ,soursin3d_argum
                                &  soursin3d_arguments%vicmol    ,soursin3d_arguments%sigmol     ,soursin3d_arguments%seddif, &
                                &  soursin3d_arguments%rhosol    ,soursin3d_arguments%ce_nm      ,soursin3d_arguments%ws , &
                                &  soursin3d_arguments%aks       ,soursin3d_arguments%sour       ,soursin3d_arguments%sink )
-
+soursin3d_arguments%sour = 0.0_fp
+soursin3d_arguments%sink = 0.0_fp
 
 end subroutine allocate_soursin3d
 
@@ -1470,6 +1479,11 @@ subroutine get_flux(soursin3d_arguments, source, sink)
 implicit none
 class (soursin3d_argument)    :: soursin3d_arguments
 real (fp) , intent (out)    :: source, sink
+
+  if (soursin3d_arguments%ce_nm * soursin3d_arguments%rhosol < soursin3d_arguments%r0 ) then
+!     in this case sour is not initialized
+      soursin3d_arguments%sour = 0.0_fp
+  end if
 
 source = soursin3d_arguments%sour
 sink   = soursin3d_arguments%sink
@@ -1582,13 +1596,39 @@ end subroutine get_compbsskin
 function calcZ0rou (vonkar, sedd50, waterdepth,g)
 
     !calculation of 2D- Chzy coefficient from ks
-    ! It is used lfor calculation of z0rou
+   ! It is used for calculation of z0rou
     !
     implicit none
     real (fp)     :: vonkar,sedd50, waterdepth, calcZ0rou, Chezy2d, ks, g
-    ks = 2.5_fp * sedd50
-    Chezy2d = 18._fp * log10 (12._fp * waterdepth/ks)
-    calcZ0rou   = waterdepth/(exp (1._fp)*(exp(vonkar*chezy2d/sqrt (g)) - 1.0))
+
+!    calcZ0rou = calcZ0cur (vonkar, sedd50, waterdepth,g)
+
+    ks = 2.5_fp * sedd50     ! Soulsby (1997)
+!
+    Chezy2d = 18._fp * log10 (12._fp * waterdepth/ks) ! Delft3D Manual page 210
+write(*,*) 'Chezy ', chezy2d
+!    rz        = 1.0 + delz/calcZ0rou   !Eq. 9.207 Delft3d manual p. 249
+!              = ln (rz)/vonkar
+    calcZ0rou = waterdepth/(exp (1._fp)*(exp(vonkar*chezy2d/sqrt (g)) - 1.0))
+   ! z0ucur(nm) = hu(nm)/(exp (1._fp)*(exp(vonkar*cfurou(nm, 1)/sqrt (g)) - 1.0))
+   ! calcZ0rou = (1.0 + sig(kmax))*waterdepth                     &
+   !                              & /(exp(vonkar*chezy2d) - 1.0)
+
+   !
+   ! cfurou(nm, 1) = sqrt (g)*log(rz)/vonkar
 end function calcZ0rou
 
+function calcZ0cur (vonkar, sedd50, waterdepth,g)
+   ! This routine calculates the current-related z0 in 3D
+
+   implicit none
+    real (fp)     :: vonkar,sedd50, waterdepth, calcZ0cur, Chezy2d, ks, g, rz
+
+    ks = 2.5_fp * sedd50   ! Soulsby (1997)
+   ! Chezy2d = 18._fp * log10 (12._fp * waterdepth/ks)   !Eq. 9.55 Delft3D Manual p. 210, only for 2D flow
+    rz            = 1.0 + waterdepth/(exp (1._fp)*ks/30.) ! Eq. 9.61, Delft3d manuaul p. 211
+    Chezy2d  = sqrt (g) * log(rz)/vonkar
+    calcZ0cur = waterdepth/(exp (1._fp)*(exp(vonkar*chezy2d/sqrt (g)) - 1.0)) !Eq. 9.62 Delft3D p. 211 and taubot.f90 code from Delft3d
+                                                                            ! z0cur for 3D case
+end function calcZ0cur
 end module erosed_driver
