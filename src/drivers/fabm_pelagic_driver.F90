@@ -47,9 +47,10 @@
     real(rk),dimension(:,:,:),pointer  :: cell_per_column_volume=>null()
     logical ,dimension(:,:,:),pointer  :: is_openboundary=>null()
     real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0=>null()
+    real(rk),dimension(:,:),pointer    :: albedo=>null()
     real(rk)                           :: decimal_yearday
     integer                            :: day_of_year,seconds_of_day
-    real(rk)                           :: background_extinction=7.9 ![m] - Jerlov 6
+    real(rk)                           :: background_extinction=1.0d0/7.9d0 ![1/m] - Jerlov 6
     integer                            :: ndiag
     integer                            :: ndiag_hz
     logical                            :: fabm_ready
@@ -147,6 +148,10 @@
     ! Allocate array for photosynthetically active radiation (PAR).
     allocate(pf%par(1:inum,1:jnum,1:knum))
     call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
+
+    ! allocate Albedo array
+    allocate(pf%albedo(1:inum,1:jnum))
+    pf%albedo = 0.0d0
 
 #if 0
     do n=1,size(pf%export_states)
@@ -604,7 +609,7 @@
          bioext(i,j,1) = bioext(i,j,1) + &
            (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
 
-         pf%par(i,j,:) = pf%I_0(i,j) * exp(-bioext(i,j,:))
+         pf%par(i,j,:) = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j)) * exp(-bioext(i,j,:))
        end do
      end do
 

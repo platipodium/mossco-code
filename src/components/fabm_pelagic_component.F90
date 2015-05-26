@@ -237,7 +237,8 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4=>null()
     real(ESMF_KIND_R8)    :: attribute_r8
-    real(ESMF_KIND_R8)    :: background_extinction=3.0
+    real(ESMF_KIND_R8)    :: background_extinction=0.13
+    real(ESMF_KIND_R8)    :: albedo_const=0.78
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I4) :: totallwidth3(3), totaluwidth3(3)
@@ -266,7 +267,8 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
 
-    namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min,background_extinction
+    namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min, &
+                            background_extinction, albedo_const
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -464,6 +466,10 @@ module fabm_pelagic_component
     end if
 
     call pel%initialize_domain(inum,jnum,numlayers,dt,mask=mask(1:inum,1:jnum,1:numlayers))
+    !> set Albedo from namelist
+    !!@todo: may come 2d from import State
+    pel%albedo = albedo_const
+
     call pel%update_pointers()
     call pel%initialize_concentrations()
     call pel%update_export_states(update_sinking=.false.)
