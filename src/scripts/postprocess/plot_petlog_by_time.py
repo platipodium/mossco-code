@@ -14,7 +14,6 @@ import re
 import numpy as np
 import pylab
 from matplotlib import cm
-import brewer2mpl
 
 if len(sys.argv) > 1:
     filename = sys.argv[1]
