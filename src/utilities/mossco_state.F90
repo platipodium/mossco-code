@@ -205,7 +205,7 @@ contains
         write(message, '(A)') '   - '//trim(fieldName(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       end do
-      call MOSSCO_StateLog(state, rc=localrc)
+      !call MOSSCO_StateLog(state, rc=localrc)
       ubnd_(:)=-1
       lbnd_(:)=0
     endif
