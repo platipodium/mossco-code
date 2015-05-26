@@ -15,6 +15,7 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "link_connector.F90"
+#define VERBOSE
 
 module link_connector
 
@@ -317,11 +318,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               endif
 
               call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
+#ifdef VERBOSE
               write(message,'(A)') '    replaced existing field'
               call MOSSCO_FieldString(exportField, message)
               write(message,'(A)') trim(message)//'  with field'
               call MOSSCO_FieldString(importField, message)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+#endif
 
             else
               write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
@@ -329,12 +332,14 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             endif
           endif
         else
+#ifdef VERBOSE
           write(message,'(A)') '    added field '
           call MOSSCO_FieldString(importField,message)
           !call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
           !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           !if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+#endif
           call ESMF_StateAdd(exportState,(/importField/), rc=localrc)
         endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -494,9 +499,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#ifdef VERBOSE
           write(message,'(A)') trim(name)//' replaced empty field with field '
           call MOSSCO_FieldString(importField, message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+#endif
 
         elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
             call ESMF_StateRemove(exportState,(/trim(itemNameList(i))/), rc=localrc)
@@ -693,9 +700,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+#ifdef VERBOSE
           write(message,'(A)') trim(name)//' did not replace with empty field '
           call MOSSCO_FieldString(importField,message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+#endif
           cycle
         endif
 
@@ -707,8 +716,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         !call ESMF_FieldDestroy(exportField, rc=localrc)
         !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#ifdef VERBOSE
         write(message,'(A)') trim(name)//' replaced empty/added field '
         call MOSSCO_FieldString(importField, message)
+#endif
       elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
         call ESMF_StateGet(importState, trim(fieldName), importFieldBundle, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
