@@ -34,7 +34,7 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
   integer(ESMF_KIND_I4), intent(inout), optional :: length
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, gridRank, n, i
+  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, gridRank, n, i, width
   integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
 
   character(ESMF_MAXSTR)  :: geomName, stringValue, name, form
@@ -136,13 +136,15 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
     endif
 
     do i=2,gridRank
+      width=order(ubnd(i)-lbnd(i)+1)
       write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
-      if (len_trim(message) + 4 <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
+      if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
     enddo
 
     do i=gridRank+1, rank
+      width=order(ubnd(i)-lbnd(i)+1)
       write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//',A)'
-      if (len_trim(message) + 5 <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1,'u'
+      if (len_trim(message) + 2 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1,'u'
     enddo
 
     if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
