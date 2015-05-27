@@ -136,14 +136,15 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
     endif
 
     do i=2,gridRank
-      width=order(ubnd(i)-lbnd(i)+1)
+      width=order(ubnd(i)-lbnd(i)+1)+1
       write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
       if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
     enddo
 
     do i=gridRank+1, rank
-      width=order(ubnd(i)-lbnd(i)+1)
+      width=order(ubnd(i)-lbnd(i)+1)+1
       write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//',A)'
+      !write(0,*) i, gridRank, ubnd(i)-lbnd(i)+1, width, intformat(ubnd(i)-lbnd(i)+1)
       if (len_trim(message) + 2 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1,'u'
     enddo
 
