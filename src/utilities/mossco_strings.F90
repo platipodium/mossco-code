@@ -28,6 +28,8 @@ implicit none
   interface order
     module procedure order_i4
     module procedure order_i8
+    module procedure order_r4
+    module procedure order_r8
   end interface
 
   interface intformat
@@ -105,18 +107,51 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "order_i8"
-   integer function order_i8(i)
-     integer(kind=8),intent(in) :: i
-     order_i8=int(log10(i*1.0))
+   function order_i8(i) result(order)
+     integer(kind=8), intent(in)  :: i
+     integer(kind=4)              :: order
+     if (i<0) then
+       order=int(log10(-i*1.0))+1
+     else
+       order=int(log10(i*1.0))
+     endif
    end function order_i8
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "order_i4"
-   integer function order_i4(i)
-     integer(kind=4),intent(in) :: i
-     order_i4=int(log10(i*1.0))
+   function order_i4(i) result(order)
+     integer(kind=4), intent(in)  :: i
+     integer(kind=4)              :: order
+     if (i<0) then
+       order=int(log10(-i*1.0))+1
+     else
+       order=int(log10(i*1.0))
+     endif
    end function order_i4
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "order_r8"
+   function order_r8(r) result(order)
+     real(kind=8), intent(in)  :: r
+     integer(kind=4)           :: order
+     if (r<0) then
+       order=int(log10(-r))+1
+     else
+       order=int(log10(r))
+     endif
+   end function order_r8
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "order_r4"
+   function order_r4(r) result(order)
+     real(kind=4), intent(in)  :: r
+     integer(kind=4)           :: order
+     if (r<0) then
+       order=int(log10(-r))+1
+     else
+       order=int(log10(r))
+     endif
+   end function order_r4
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "intformat_i8"
