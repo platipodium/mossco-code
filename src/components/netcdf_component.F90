@@ -513,46 +513,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         endif
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-          call ESMF_StateGet(importState, trim(itemNameList(i)), field, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-            write(message,'(A,I4)') trim(name)//' failed with ESMF_RC=', localrc
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            call MOSSCO_StateLog(importState)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-
-          call ESMF_FieldGet(field, localDeCount=localDeCount, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (localDeCount>0) call nc%put_variable(field)
+          call nc_state_field_write(importState, trim(itemNameList(i)), &
+            filterPatternExclude=trim(filterPatternExclude), rc=localrc)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call ESMF_StateGet(importState, trim(itemNameList(i)), fieldBundle, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_FieldBundleGet(fieldBundle,fieldCount=fieldCount,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          allocate(fieldList(fieldCount))
-          call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), &
+            filterPatternExclude=trim(filterPatternExclude), rc=localrc)
 
-          !! go through list of fields and put fields into netcdf using field name and number
-          do ii=1,size(fieldList)
-            call ESMF_FieldGet(fieldList(ii),name=fieldName,rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-            call MOSSCO_StringMatch(trim(itemNameList(i)), filterPatternExclude, isMatch, localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            if (isMatch) cycle
-
-            write(numberstring,'(I0.3)') ii
-
-            call ESMF_FieldGet(fieldList(ii), localDeCount=localDeCount)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            if (localDeCount>0)call nc%put_variable(fieldList(ii),name=trim(fieldName)//'_'//numberstring)
-
-          end do
-          deallocate(fieldList)
         elseif (advanceCount < 1) then
           write(message,'(A)') trim(name)//' does not save item '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
@@ -726,6 +693,37 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (present(rc)) rc=rc_
 
   end subroutine nc_state_fieldbundle_write
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "nc_state_field_write"
+  subroutine nc_state_field_write(state, fieldName, keywordEnforcer, filterPatternExclude, rc)
+
+    type(ESMF_State), intent(in)          :: state
+    character(ESMF_MAXSTR), intent(in)    :: fieldName
+    type(ESMF_KeywordEnforcer), optional  :: keywordEnforcer
+    character(ESMF_MAXSTR), intent(in), optional   :: filterPatternExclude
+    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+    type(ESMF_Field)           :: field
+    integer(ESMF_KIND_I4)      :: localrc, rc_
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_StateGet(state, trim(fieldName), field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(filterPatternExclude)) then
+      call nc_field_write(field, filterPatternExclude=filterPatternExclude, rc=localrc)
+    else
+       call nc_field_write(field, rc=localrc)
+    endif
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(rc)) rc=rc_
+
+  end subroutine nc_state_field_write
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_field_write"
