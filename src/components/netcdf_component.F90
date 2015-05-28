@@ -686,24 +686,24 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_FieldBundle)              :: fieldBundle
     type(ESMF_Field), allocatable       :: fieldList(:)
-    integer(ESMF_KIND_I4)               :: i, fieldCount, localrc
+    integer(ESMF_KIND_I4)               :: i, fieldCount, localrc, rc_
     character(ESMF_MAXSTR)              :: numberString
 
     if (present(rc)) rc=ESMF_SUCCESS
 
     call ESMF_StateGet(state, trim(bundleName), fieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (fieldCount<1) return
 
     allocate(fieldList(fieldCount))
     call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! go through list of fields and put fields into netcdf using field name and number
@@ -715,13 +715,15 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
         call nc_field_write(fieldList(i), filterPatternExclude=filterPatternExclude, &
           postFix=trim(numberString), rc=localrc)
       else
-        call nc_field_write(fieldList(i), postFix=trim(numberString), rc=localrc)
+         call nc_field_write(fieldList(i), postFix=trim(numberString), rc=localrc)
       endif
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     end do
     if (allocated(fieldList)) deallocate(fieldList)
+
+    if (present(rc)) rc=rc_
 
   end subroutine nc_state_fieldbundle_write
 
@@ -735,19 +737,19 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     character(ESMF_MAXSTR), intent(in), optional   :: postFix
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-    integer(ESMF_KIND_I4)               :: localDeCount, localrc
+    integer(ESMF_KIND_I4)               :: localDeCount, localrc, rc_
     character(ESMF_MAXSTR)              :: fieldName
     logical                             :: isMatch
 
     if (present(rc)) rc=ESMF_SUCCESS
 
     call ESMF_FieldGet(field, name=fieldName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(filterPatternExclude)) then
       call MOSSCO_StringMatch(trim(fieldName), filterPatternExclude, isMatch, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
       isMatch=.false.
@@ -756,13 +758,15 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (isMatch) return
 
     call ESMF_FieldGet(field, localDeCount=localDeCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(postFix)) fieldName=trim(fieldName)//'_'//trim(postFix)
     if (localDeCount>0) then
       call nc%put_variable(field, name=trim(fieldName))
     endif
+
+    if (present(rc)) rc=rc_
 
   end subroutine nc_field_write
 
