@@ -564,21 +564,26 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       !> Remove from import state all fields, whether written or not, ensure that all processes have
       !> processed all states by using a barrier
-      call ESMF_GridCompGet(gridComp, vmIsPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (isPresent) then
-        call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_VMBarrier(vm, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      !> commented, as ESMF_VMBarrier produces a non-reproducible segfault on ocean
+!       call ESMF_GridCompGet(gridComp, vmIsPresent=isPresent, rc=localrc)
+!       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!       if (isPresent) then
+!         call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+!         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!         call ESMF_VMBarrier(vm, rc=localrc)
+!         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!       endif
 
       !! Somehow this did not help, so we ask again for the items
       if (allocated(itemNameList)) deallocate(itemNameList)
+      call ESMF_StateReconcile(importState, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
