@@ -1,8 +1,9 @@
-!> @brief Implementation of an ESMF link coupling
+!> @brief Implementation of an ESMF soil-pelagic coupling
 !>
-!> This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2014,2015 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister
+!> This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -17,7 +18,7 @@
 #define ESMF_FILENAME "soil_pelagic_connector.F90"
 
 module soil_pelagic_connector
-    
+
   use esmf
   use mossco_state
   use mossco_field
@@ -52,28 +53,35 @@ module soil_pelagic_connector
     integer, intent(out) :: rc
 
     integer              :: localrc
-    
+
     rc = ESMF_SUCCESS
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP0"
   subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
-  
+
     implicit none
-  
+
     type(ESMF_cplComp)    :: cplComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -88,19 +96,24 @@ module soil_pelagic_connector
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
     call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
 
@@ -114,25 +127,51 @@ module soil_pelagic_connector
     type(ESMF_Clock)     :: externalclock
     type(ESMF_Field)     :: newfield
     integer, intent(out) :: rc
-    
+
     character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_State)      :: paramState
     type(ESMF_Time)       :: currTime
-    integer              :: nmlunit=127, localrc
+    logical               :: isPresent
+    integer               :: nmlunit=127, localrc
+
     namelist /soil_pelagic_connector/ dinflux_const,dipflux_const
 
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !read namelist
-    open(nmlunit,file='soil_pelagic_connector.nml',action='read',status='old')
-    read(nmlunit,soil_pelagic_connector)
-    close(nmlunit)
+    inquire(file=trim(name)//'.nml', exist=isPresent)
+
+    if (isPresent) then
+      open(nmlunit,file='soil_pelagic_connector.nml',action='read',status='old')
+      read(nmlunit,soil_pelagic_connector)
+      close(nmlunit)
+    endif
+
     if (dipflux_const < 0.0) dipflux_const=dinflux_const/16.0d0
 
+    paramState=ESMF_StateCreate(name=trim(name)//'Parameters', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(paramState, trim(name)//'::dipflux_const', dipflux_const, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(paramState, trim(name)//'::dinflux_const', dinflux_const, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateAdd(importState, (/paramState/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call MOSSCO_CompExit(cplComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
 
@@ -146,7 +185,7 @@ module soil_pelagic_connector
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer, intent(out) :: rc
-    integer              :: ammrc,nitrc,oxyrc,odurc
+    integer              :: ammrc, nitrc, oxyrc, odurc
 
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
@@ -162,26 +201,30 @@ module soil_pelagic_connector
 
     rc = ESMF_SUCCESS
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !   DIN flux:
-      call mossco_state_get(importState,(/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/),val1_f2,rc=localrc)
-       if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      call mossco_state_get(importState,(/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/),val2_f2,rc=localrc)
-       if(localrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
-      call mossco_state_get(exportState, &
+    !   DIN flux:
+    call mossco_state_get(importState,(/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/),val1_f2,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call mossco_state_get(importState,(/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/),val2_f2,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call mossco_state_get(exportState, &
              (/'nitrate_upward_flux_at_soil_surface'/), &
              DINflux, ubnd=ubnd, lbnd=lbnd, rc=nitrc)
-      if (nitrc == 0) DINflux = val1_f2
-      call mossco_state_get(exportState, &
+    if (nitrc == 0) DINflux = val1_f2
+    call mossco_state_get(exportState, &
              (/'ammonium_upward_flux_at_soil_surface               ',   &
                'dissolved_ammonium_nh3_upward_flux_at_soil_surface '/), &
              DINflux, ubnd=ubnd, lbnd=lbnd, rc=ammrc)
-      if (ammrc == 0) DINflux = val2_f2
+    if (ammrc == 0) DINflux = val2_f2
 
-      !RH: weak check, needs to be replaced:
-      if (nitrc /= 0) then
+    !RH: weak check, needs to be replaced:
+    if (nitrc /= 0) then
         call mossco_state_get(exportState,(/ &
               'nutrients_upward_flux_at_soil_surface                            ', &
               'DIN_upward_flux_at_soil_surface                                  ', &
@@ -191,25 +234,25 @@ module soil_pelagic_connector
         DINflux = val1_f2 + val2_f2
         ! add constant boundary flux of DIN (through groundwater, advection, rain
         DINflux = DINflux + dinflux_const/(86400.0*365.0)
-      end if
+    end if
 
-      !   DIP flux:
-      call mossco_state_get(exportState,(/ &
+    !   DIP flux:
+    call mossco_state_get(exportState,(/ &
               'DIP_upward_flux_at_soil_surface                                    ', &
               'phosphate_upward_flux_at_soil_surface                              ', &
               'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface'/),DIPflux,rc=rc)
-      if (rc == 0)  then
+    if (rc == 0)  then
         call mossco_state_get(importState,(/ &
               'mole_concentration_of_phosphate_upward_flux_at_soil_surface'/),val1_f2,rc=rc)
          DIPflux = val1_f2 + dipflux_const/(86400.0*365.0)
-      end if
+    end if
 
       !   Det flux:
-      call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/),SDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/),FDETCflux,rc=rc)
-      call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/),omexDETPflux,rc=rc)
+    call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/),SDETCflux,rc=rc)
+    call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/),FDETCflux,rc=rc)
+    call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/),omexDETPflux,rc=rc)
 
-      call mossco_state_get(exportState,(/ &
+    call mossco_state_get(exportState,(/ &
             'detritus_upward_flux_at_soil_surface              ', &
             'detN_upward_flux_at_soil_surface                  ', &
             'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'/),DETNflux,rc=rc)
@@ -245,7 +288,9 @@ module soil_pelagic_connector
       if (odurc == 0) ODUflux = val2_f2
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 
   end subroutine Run
 
@@ -257,19 +302,52 @@ module soil_pelagic_connector
     type(ESMF_State)     :: exportState
     type(ESMF_Clock)     :: externalclock
     integer,intent(out)  :: rc
-     
-    character(len=ESMF_MAXSTR)  :: name, message
-    type(ESMF_Time)       :: currTime
-    integer :: localrc
-    
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    character(len=ESMF_MAXSTR)  :: name, message, paramName
+    type(ESMF_State)            :: paramState
+    type(ESMF_Time)             :: currTime
+    integer                     :: localrc
+    type(ESMF_StateItem_Flag)   :: itemType
+
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! Safely destroy the parameter state if it exists in either import or export states
+    paramName=trim(name)//'Parameters'
+    call ESMF_StateGet(importState, paramName, itemType=itemType, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType == ESMF_STATEITEM_STATE) then
+      call ESMF_StateGet(importState, paramName, paramState, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateRemove(importState, (/paramName/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(exportState, paramName, itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType == ESMF_STATEITEM_STATE) then
+        call ESMF_StateRemove(exportState,  (/paramName/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      call ESMF_StateDestroy(paramState, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    !! Exit the method
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
-
 
 end module soil_pelagic_connector
 
