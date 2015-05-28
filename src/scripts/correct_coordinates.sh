@@ -1,8 +1,9 @@
+#! /bin/bash
+
 T="$1"
 S=../coordinates/mossco_gffn
 
-
-for F in $T ; do
+for F in $(ls *nc) ; do
 	test -f $F || continue
 
   B=${F%%.nc}
