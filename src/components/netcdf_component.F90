@@ -674,4 +674,68 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
   end subroutine Finalize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "nc_state_fieldbundle_write"
+  subroutine nc_state_fieldbundle_write(state, bundleName, keywordEnforcer, filterPatternExclude, rc)
+
+    type(ESMF_State), intent(in)          :: state
+    character(ESMF_MAXSTR), intent(in)    :: bundleName
+    type(ESMF_KeywordEnforcer), optional  :: keywordEnforcer
+    character(ESMF_MAXSTR), intent(in), optional   :: filterPatternExclude
+    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+    type(ESMF_FieldBundle)              :: fieldBundle
+    type(ESMF_Field), allocatable       :: fieldList(:)
+    integer(ESMF_KIND_I4)               :: i, fieldCount, localDeCount, localrc
+    character(ESMF_MAXSTR)              :: fieldName, numberString
+    logical                             :: isMatch
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_StateGet(state, trim(bundleName), fieldBundle, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldCount<1) return
+
+    allocate(fieldList(fieldCount))
+    call ESMF_FieldBundleGet(fieldBundle,fieldList=fieldList,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! go through list of fields and put fields into netcdf using field name and number
+    do i=1,fieldCount
+      call ESMF_FieldGet(fieldList(i), name=fieldName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (present(filterPatternExclude)) then
+        call MOSSCO_StringMatch(trim(fieldName), filterPatternExclude, isMatch, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        isMatch=.false.
+      endif
+
+      if (isMatch) cycle
+
+      write(numberstring,'(I0.3)') i
+
+      call ESMF_FieldGet(fieldList(i), localDeCount=localDeCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (localDeCount>0) then
+        call nc%put_variable(fieldList(i),name=trim(fieldName)//'_'//numberstring)
+      endif
+
+    end do
+    if (allocated(fieldList)) deallocate(fieldList)
+
+  end subroutine nc_state_fieldbundle_write
+
 end module netcdf_component
