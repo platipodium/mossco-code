@@ -13,7 +13,7 @@ coupling:
   - components:
      - gotm
      - fabm_pelagic
-    interval: 6 m
+    interval: 1 h
   - components:
      - fabm_pelagic
      - transport_connector
@@ -23,12 +23,12 @@ coupling:
      - fabm_pelagic
      - pelagic_soil_connector
      - fabm_sediment
-    interval: 6 m
+    interval: 1 h
   - components:
      - fabm_sediment
      - soil_pelagic_connector
      - fabm_pelagic
-    interval: 6 m
+    interval: 1 h
   - components:
      - constant
      - fabm_sediment
