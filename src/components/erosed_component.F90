@@ -581,7 +581,6 @@ contains
 !    size_classes_of_downward_flux_of_pim_at_bottom(1,1,:) = sour (:,1)
 
   allocate(external_idx_by_nfrac(nfrac))
-  allocate(nfrac_by_external_idx(nfrac))
 
 
     !! Prepare import state for fields needed in run
@@ -874,6 +873,7 @@ contains
   !!       related to SPM fractions in the bed module
   !! after having external_index defined by nfrac, create nfrac_by_external_idx:
 
+  allocate(nfrac_by_external_idx(1:maxval(external_idx_by_nfrac)))
   do n=1,ubound(external_idx_by_nfrac,1)
     nfrac_by_external_idx(external_idx_by_nfrac(n))=n
   end do
