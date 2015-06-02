@@ -210,7 +210,7 @@ module fabm_pelagic_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    type(ESMF_TimeInterval) :: timeInterval,alarmInterval
+    type(ESMF_TimeInterval) :: timeInterval
     character(len=ESMF_MAXSTR) :: string,fileName,varname,wsname
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     character(len=ESMF_MAXSTR) :: attribute_name
@@ -245,7 +245,6 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4) :: totallwidth2(2), totaluwidth2(2)
     integer(ESMF_KIND_I4) :: totallwidth(3,1), totaluwidth(3,1)
     integer(ESMF_KIND_I8) :: tidx
-    type(ESMF_Alarm)      :: outputAlarm
 
     character(len=ESMF_MAXSTR) :: timestring, name, message, units, esmf_name
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
