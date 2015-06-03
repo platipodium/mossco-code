@@ -28,8 +28,7 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
-     filename='getm--fabm_pelagic--netcdf'
-     filename='/Users/lemmen/devel/MOSSCO/setups/deep_lake/3Dpelsedrivpor'
+     filename='gotm--fabm_pelagic--fabm_sediment--netcdf'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
@@ -1075,8 +1074,10 @@ fid.write('''
 fid.write('    numCplAlarm = ' + str(len(couplingList)))
 if len(cplCompList)>0:
     fid.write('''
-    if (.not.allocated(cplAlarmList)) allocate(cplAlarmList(numCplAlarm))
-    if (.not.allocated(cplNames)) allocate(cplNames(numCplAlarm))
+    if (allocated(cplAlarmList)) deallocate(cplAlarmList)
+    if (allocated(cplNames)) deallocate(cplNames)
+    allocate(cplAlarmList(numCplAlarm))
+    allocate(cplNames(numCplAlarm))
     cplNames(:) = 'link'
 ''')
 for idx,couplingItem in enumerate(couplingList):
