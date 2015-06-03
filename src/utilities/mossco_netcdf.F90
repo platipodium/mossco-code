@@ -1562,16 +1562,14 @@ module mossco_netcdf
     integer                     :: nDims, nAtts, udimid, dimlen, dimid, j
     character(len=ESMF_MAXSTR)  :: varName, geomName, message, dimName
 
-    character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits, axisNameList
+    character(len=ESMF_MAXSTR), dimension(3) :: coordNames, coordUnits, axisNameList, standardNameList
     character(len=ESMF_MAXSTR)               :: attributeName
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
     integer(ESMF_KIND_I4), pointer, dimension(:)     :: intPtr1
-    integer, pointer, dimension(:)     :: dimids
-    integer, dimension(:), allocatable :: coordDimids
-    integer :: eLBound1(1),eLBound2(2),eLBound3(3),eLBound4(4)
-    integer :: eUBound1(1),eUBound2(2),eUBound3(3),eUBound4(4)
+    integer, pointer, dimension(:)                   :: dimids
+    integer(ESMF_KIND_I4),allocatable                :: ubnd(:), lbnd(:), coordDimids(:), coordDimLens(:)
     type(ESMF_CoordSys_Flag)                         :: coordSys
     integer(ESMF_KIND_I4), dimension(:), allocatable :: coordDimCount, exclusiveCount
     integer(ESMF_KIND_I4)                            :: dimCount, attributeCount, i
@@ -1597,12 +1595,15 @@ module mossco_netcdf
     if (coordSys == ESMF_COORDSYS_SPH_DEG) then
       coordnames=(/'lon  ','lat  ','layer'/)
       coordunits=(/'degree','degree','1     '/)
+      standardNameList=(/'longitude','latitude ','layer    '/)
     elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
       coordnames=(/'lon  ','lat  ','layer'/)
       coordunits=(/'rad','rad','1  '/)
+      standardNameList=(/'longitude','latitude ','layer    '/)
     else
       coordnames=(/'x','y','z'/)
       coordunits=(/'1','1','1'/)
+      standardNameList=(/'x','y','z'/)
     endif
 
     axisNameList=(/'X','Y','Z'/)
@@ -1620,7 +1621,7 @@ module mossco_netcdf
 
       write(varName,'(A)') trim(geomName)//'_'//trim(axisNameList(i))
       if (self%variable_present(varName)) then
-        write(message,'(A)') 'A variable with this name already exists'
+        write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
@@ -1645,8 +1646,9 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
       !! Write default attributes into netCDF
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(varName))
+      !!ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(varName))
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute standard_name='//trim(varname),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1682,7 +1684,7 @@ module mossco_netcdf
 
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
       if (self%variable_present(varName)) then
-        write(message,'(A)') 'A variable with this name already exists'
+        write(message,'(A)') 'A variable with the name "'//trim(varName)//'" already exists'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
@@ -1695,10 +1697,10 @@ module mossco_netcdf
 !     TODO: The following is a really dirty hack for non-rectilinear coordinates.
 !           Correct would be use of coordDimMap.
       if (coordDimCount(i) .gt. 1) then
-      do j=1,coordDimCount(i)
-        write(dimName,'(A,I1)') trim(geomName)//'_',j
-        ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
-      enddo
+        do j=1,coordDimCount(i)
+          write(dimName,'(A,I1)') trim(geomName)//'_',j
+          ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
+        enddo
       else
         write(dimName,'(A,I1)') trim(geomName)//'_',i
         ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(1))
@@ -1712,11 +1714,11 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
       !! Write default attributes into netCDF
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(varName))
+      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(standardNameList(i)))
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(varName))
       ncStatus = nf90_put_att(self%ncid,varid,'units',trim(coordUnits(i)))
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-99._ESMF_KIND_R8)
-      ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',-99._ESMF_KIND_R8)
+      ncStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
       ncStatus = nf90_put_att(self%ncid,varid,'horizontal_stagger_location','center')
       !! axis attribute added only for 1-D coordinate variables
       if (coordDimCount(i)==1) then
@@ -1749,6 +1751,9 @@ module mossco_netcdf
            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),trim(string))
          endif
       enddo
+
+      if (allocated(coordDimids)) deallocate(coordDimids)
+
     enddo
     !! End definition phase of netcdf
     ncStatus = nf90_enddef(self%ncid)
@@ -1781,33 +1786,61 @@ module mossco_netcdf
 #endif
 
     do i=1, dimCount
-      if (coordDimCount(i) == 1) then
-        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, exclusiveLBound=eLBound1, exclusiveUBound=eUBound1,rc=esmfrc)
-        if (esmfrc == ESMF_SUCCESS) then
-          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(eLBound1(1):eUBound1(1)))
-        else
-          write(message,'(A)')  'This error will be fixed in the future, disregard for now'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
-      elseif (coordDimCount(i) == 2) then
-        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, exclusiveLBound=eLBound2, exclusiveUBound=eUBound2,rc=esmfrc)
-        if (esmfrc == ESMF_SUCCESS) then
-          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(eLBound2(1):eUBound2(1),eLBound2(2):eUBound2(2)))
-        else
-          write(message,'(A)')  'This error will be fixed in the future, disregard for now'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
-      elseif (coordDimCount(i) == 3) then
-        call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, exclusiveLBound=eLBound3, exclusiveUBound=eUBound3,rc=esmfrc)
-        if (esmfrc == ESMF_SUCCESS) then
-          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(eLBound3(1):eUBound3(1),eLBound3(2):eUBound3(2),eLBound3(3):eUBound3(3)))
-        else
-          write(message,'(A)')  'This error will be fixed in the future, disregard for now'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
+
+      if (allocated(lbnd)) deallocate(lbnd)
+      if (allocated(ubnd)) deallocate(ubnd)
+      !if (allocated(coordDimids)) deallocate(coordDimids)
+      !if (allocated(coordDimLens)) deallocate(coordDimLens)
+
+      allocate(lbnd(coordDimCount(i)))
+      allocate(ubnd(coordDimCount(i)))
+      !allocate(coordDimids(coordDimCount(i)))
+      !allocate(coordDimLens(coordDimCount(i)))
+
+      write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
+      ncStatus=nf90_inq_varid(self%ncid, trim(varName), varid)
+
+      !do j=1,coordDimCount(i)
+      !  write(dimName,'(A,I1)') trim(geomName)//'_',i
+      !  ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
+      !  ncStatus = nf90_inquire_dimension(self%ncid,coordDimids(j),len=coordDimLens(j))
+      !enddo
+
+      select case (coordDimCount(i))
+        case (1)
+          call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr1, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr1(lbnd(1):ubnd(1)))
+        case (2)
+          call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr2, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+          ncStatus = nf90_put_var(self%ncid, varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
+        case (3)
+          call ESMF_GridGetCoord(grid, i, farrayPtr=farrayPtr3, exclusiveLBound=lbnd, exclusiveUBound=ubnd, rc=localrc)
+         ncStatus = nf90_put_var(self%ncid, varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))
+        case default
+          write(message,'(A)')  '  cannot deal with less than 1 or more than 3 coordinate dimensions'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      end select
+
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+        write(message,'(A)')  '  this error will be fixed in the future, disregard for now'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        write(message,'(A)')  '  did not write coordinate variable '//trim(varname)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        cycle
       endif
-      if (allocated(coordDimids)) deallocate(coordDimids)
-      esmfrc = 0 ! reset esmfrc after checking its status above
+
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write coordinate variable '//trim(varname),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      if (allocated(lbnd)) deallocate(lbnd)
+      if (allocated(ubnd)) deallocate(ubnd)
+      !if (allocated(coordDimids)) deallocate(coordDimids)
+      !if (allocated(coordDimLens)) deallocate(coordDimLens)
+
     enddo
     if (allocated(coordDimCount)) deallocate(coordDimCount)
 
