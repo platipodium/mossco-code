@@ -513,19 +513,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         endif
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-          call nc_state_field_write(importState, trim(itemNameList(i)), &
-            filterPatternExclude=trim(filterPatternExclude), rc=localrc)
+          call nc_state_field_write(importState, trim(itemNameList(i)), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), &
-            filterPatternExclude=trim(filterPatternExclude), rc=localrc)
+          call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         elseif (advanceCount < 1) then
           write(message,'(A)') trim(name)//' does not save item '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       enddo
 
@@ -643,20 +643,29 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_fieldbundle_write"
-  subroutine nc_state_fieldbundle_write(state, bundleName, keywordEnforcer, filterPatternExclude, rc)
+  subroutine nc_state_fieldbundle_write(state, bundleName, keywordEnforcer, rc)
 
-    type(ESMF_State), intent(in)          :: state
-    character(ESMF_MAXSTR), intent(in)    :: bundleName
-    type(ESMF_KeywordEnforcer), optional  :: keywordEnforcer
-    character(ESMF_MAXSTR), intent(in), optional   :: filterPatternExclude
+    type(ESMF_State), intent(in)           :: state
+    character(len=*), intent(in)           :: bundleName
+    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_FieldBundle)              :: fieldBundle
     type(ESMF_Field), allocatable       :: fieldList(:)
     integer(ESMF_KIND_I4)               :: i, fieldCount, localrc, rc_
     character(ESMF_MAXSTR)              :: numberString
+    type(ESMF_StateItem_Flag)           :: itemType
 
     if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_StateGet(state, trim(bundleName), itemType=itemType, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      call ESMF_LogWrite('  fieldBundle '//trim(bundleName)//' was not found', ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, trim(bundleName), fieldBundle, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -674,86 +683,74 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! go through list of fields and put fields into netcdf using field name and number
-    do i=1,fieldCount
+    do i=1, fieldCount
 
       write(numberstring,'(I0.3)') i
 
-      if (present(filterPatternExclude)) then
-        call nc_field_write(fieldList(i), filterPatternExclude=filterPatternExclude, &
-          postFix=trim(numberString), rc=localrc)
-      else
-         call nc_field_write(fieldList(i), postFix=trim(numberString), rc=localrc)
-      endif
+      call nc_field_write(fieldList(i), postFix=trim(numberString), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     end do
     if (allocated(fieldList)) deallocate(fieldList)
 
-    if (present(rc)) rc=rc_
+    if (present(rc)) rc=localrc
 
   end subroutine nc_state_fieldbundle_write
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_field_write"
-  subroutine nc_state_field_write(state, fieldName, keywordEnforcer, filterPatternExclude, rc)
+  subroutine nc_state_field_write(state, fieldName, keywordEnforcer, rc)
 
-    type(ESMF_State), intent(in)          :: state
-    character(ESMF_MAXSTR), intent(in)    :: fieldName
-    type(ESMF_KeywordEnforcer), optional  :: keywordEnforcer
-    character(ESMF_MAXSTR), intent(in), optional   :: filterPatternExclude
+    type(ESMF_State), intent(in)           :: state
+    character(len=*), intent(in)           :: fieldName
+    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_Field)           :: field
+    type(ESMF_StateItem_Flag)  :: itemType
     integer(ESMF_KIND_I4)      :: localrc, rc_
 
     if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_StateGet(state, trim(fieldName), itemType=itemType, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      call ESMF_LogWrite('  field '//trim(fieldName)//' was not found', ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_StateGet(state, trim(fieldName), field, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (present(filterPatternExclude)) then
-      call nc_field_write(field, filterPatternExclude=filterPatternExclude, rc=localrc)
-    else
-       call nc_field_write(field, rc=localrc)
-    endif
+    call nc_field_write(field, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (present(rc)) rc=rc_
+    if (present(rc)) rc=localrc
 
   end subroutine nc_state_field_write
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_field_write"
-  subroutine nc_field_write(field, keywordEnforcer, filterPatternExclude, postFix, rc)
+  subroutine nc_field_write(field, keywordEnforcer, postFix, rc)
 
-    type(ESMF_Field), intent(inout)       :: field
-    type(ESMF_KeywordEnforcer), optional  :: keywordEnforcer
-    character(ESMF_MAXSTR), intent(in), optional   :: filterPatternExclude
-    character(ESMF_MAXSTR), intent(in), optional   :: postFix
+    type(ESMF_Field), intent(inout)        :: field
+    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
+    character(len=*), intent(in), optional :: postFix
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     integer(ESMF_KIND_I4)               :: localDeCount, localrc, rc_
     character(ESMF_MAXSTR)              :: fieldName
-    logical                             :: isMatch
 
     if (present(rc)) rc=ESMF_SUCCESS
 
     call ESMF_FieldGet(field, name=fieldName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (present(filterPatternExclude)) then
-      call MOSSCO_StringMatch(trim(fieldName), filterPatternExclude, isMatch, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-      isMatch=.false.
-    endif
-
-    if (isMatch) return
 
     call ESMF_FieldGet(field, localDeCount=localDeCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -764,7 +761,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
       call nc%put_variable(field, name=trim(fieldName))
     endif
 
-    if (present(rc)) rc=rc_
+    if (present(rc)) rc=localrc
 
   end subroutine nc_field_write
 
