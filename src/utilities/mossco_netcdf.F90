@@ -1789,22 +1789,16 @@ module mossco_netcdf
 
       if (allocated(lbnd)) deallocate(lbnd)
       if (allocated(ubnd)) deallocate(ubnd)
-      !if (allocated(coordDimids)) deallocate(coordDimids)
-      !if (allocated(coordDimLens)) deallocate(coordDimLens)
 
       allocate(lbnd(coordDimCount(i)))
       allocate(ubnd(coordDimCount(i)))
-      !allocate(coordDimids(coordDimCount(i)))
-      !allocate(coordDimLens(coordDimCount(i)))
 
       write(varName,'(A)') trim(geomName)//'_'//trim(coordNames(i))
       ncStatus=nf90_inq_varid(self%ncid, trim(varName), varid)
-
-      !do j=1,coordDimCount(i)
-      !  write(dimName,'(A,I1)') trim(geomName)//'_',i
-      !  ncStatus = nf90_inq_dimid(self%ncid,trim(dimName),coordDimids(j))
-      !  ncStatus = nf90_inquire_dimension(self%ncid,coordDimids(j),len=coordDimLens(j))
-      !enddo
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find coordinate variable '//trim(varname),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       select case (coordDimCount(i))
         case (1)
@@ -1838,8 +1832,6 @@ module mossco_netcdf
 
       if (allocated(lbnd)) deallocate(lbnd)
       if (allocated(ubnd)) deallocate(ubnd)
-      !if (allocated(coordDimids)) deallocate(coordDimids)
-      !if (allocated(coordDimLens)) deallocate(coordDimLens)
 
     enddo
     if (allocated(coordDimCount)) deallocate(coordDimCount)
