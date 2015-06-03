@@ -1294,9 +1294,6 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (allocated(alarmList)) deallocate(alarmList)
-    allocate(alarmList(alarmCount))   
-
     !! Run until the clock's stoptime is reached
     do
 
@@ -1345,16 +1342,16 @@ fid.write('''
 
         if (alarmCount==0) then
           timeInterval=stopTime-currTime
-          !call ESMF_LogWrite(trim(myName)//' '//trim(compName)//' has not ringing alarm at '//trim(timestring),ESMF_LOGMSG_WARNING)
-        else
-          if (allocated(alarmList)) deallocate(alarmList)
-          allocate(alarmList(alarmCount))   
-
-          call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
-             alarmList=alarmList, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          cycle
         endif
+        
+        if (allocated(alarmList)) deallocate(alarmList)
+        allocate(alarmList(alarmCount))   
+
+        call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
+           alarmList=alarmList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         do j=1,alarmCount
           call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=ringTime, rc=localrc)
