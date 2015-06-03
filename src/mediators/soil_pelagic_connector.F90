@@ -178,7 +178,7 @@ module soil_pelagic_connector
              (/'ammonium_upward_flux_at_soil_surface               ',   &
                'dissolved_ammonium_nh3_upward_flux_at_soil_surface '/), &
              DINflux, ubnd=ubnd, lbnd=lbnd, rc=ammrc)
-      if (nitrc == 0) DINflux = val2_f2
+      if (ammrc == 0) DINflux = val2_f2
 
       !RH: weak check, needs to be replaced:
       if (nitrc /= 0) then
