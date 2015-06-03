@@ -45,6 +45,8 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
   logical                     :: isPresent
 
   rc_ = ESMF_SUCCESS
+  rank = 0
+  gridRank = 0
 
   call ESMF_FieldGet(field, name=name, status=fieldStatus, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
