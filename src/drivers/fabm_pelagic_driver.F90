@@ -48,7 +48,7 @@
     logical ,dimension(:,:,:),pointer  :: is_openboundary=>null()
     real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0=>null()
     real(rk),dimension(:,:),pointer    :: albedo=>null()
-    real(rk)                           :: decimal_yearday
+    real(rk),pointer                   :: decimal_yearday=>null()
     integer                            :: day_of_year,seconds_of_day
     real(rk)                           :: background_extinction=1.0d0/7.9d0 ![1/m] - Jerlov 6
     integer                            :: ndiag
@@ -165,6 +165,7 @@
 #endif
 
     ! link global time information
+    allocate(pf%decimal_yearday)
     pf%decimal_yearday=-999.0d0
     call fabm_link_scalar_data(pf%model, &
       standard_variables%number_of_days_since_start_of_the_year, &
@@ -196,7 +197,9 @@
     end do
 
     call fabm_link_bulk_data(pf%model,standard_variables%downwelling_photosynthetic_radiative_flux,pf%par)
-    ! evtl. also update pointer to pf%decimal_yearday
+    call fabm_link_scalar_data(pf%model, &
+      standard_variables%number_of_days_since_start_of_the_year, &
+      pf%decimal_yearday)
 
   end subroutine
 
