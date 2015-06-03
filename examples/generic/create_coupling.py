@@ -1370,7 +1370,8 @@ fid.write('''
           !if (ringTime > currTime) cycle
 
           call ESMF_TimeGet(ringTime,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !write(0,*) trim(compName)//' ', i,'/',alarmCount,' '//trim(alarmName)//' rings at '//trim(timeString)
           write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
@@ -1385,6 +1386,13 @@ fid.write('''
               exit
             endif
           enddo
+          
+          ! Catch a possible memory leak problem when k overflows
+          if (k > ubound(cplAlarmList,1)) then
+            write(message,'(A)') 'You have some memory corruption, good luck searching ...'
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
 
           write(message,'(A)') trim(myName)//' '//trim(timeString)//' '//trim(name1)//' ->'
           if (trim(cplName) /= 'link') then
