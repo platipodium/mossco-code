@@ -1278,8 +1278,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-write (*,*) 'inum, jnum',inum, jnum
-write (*,*) 'shape(ptr_f2)', shape(ptr_f2)
+!write (*,*) 'inum, jnum',inum, jnum
+!write (*,*) 'shape(ptr_f2)', shape(ptr_f2)
 
       BioEffects%ErodibilityEffect = ptr_f2
 #ifdef DEBUG
@@ -1366,7 +1366,7 @@ write (*,*) 'shape(ptr_f2)', shape(ptr_f2)
                 & tper   , teta   , spm_concentration , BioEffects     , nybot, thick, u_bot, &
                 & v_bot  , u2d    , v2d      , h0 , mask , advancecount  )
 
-if ((advancecount>= 70).and.(advancecount<=100)) write (*,*) '######### Timestep: ',advancecount , ' #########'
+!if ((advancecount>= 70).and.(advancecount<=100)) write (*,*) '######### Timestep: ',advancecount , ' #########'
     !   Updating sediment concentration in water column over cells
     do l = 1, nfrac
       do nm = nmlb, nmub

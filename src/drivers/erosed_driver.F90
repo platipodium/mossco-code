@@ -493,7 +493,7 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
 
 ! Main loop over elements organized in vector form
  elements: do nm = nmlb, nmub
-   if (nm==103) write (*,*) ' initialization:', soursin3d_arguments%sour
+ !  if (nm==103) write (*,*) ' initialization:', soursin3d_arguments%sour
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
 masking: if (mask(i,j) /=0) then
@@ -625,8 +625,8 @@ masking: if (mask(i,j) /=0) then
 #endif
               else
                 !(3D)
-                 write (*,*)' ----------------------------'
-                 write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
+ !                write (*,*)' ----------------------------'
+ !                write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
                  drho     = (rhosol(l)-rhowat) / rhowat
                  dstar(l) = sedd50(l) * (drho*g/vicmol**2)**0.3333_fp
 
@@ -693,15 +693,15 @@ masking: if (mask(i,j) /=0) then
                  call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
-if (nm== 103) write (*,*) ' sour before RUN:',  sour (l,nm)
+!if (nm== 103) write (*,*) ' sour before RUN:',  sour (l,nm)
                  call soursin3d_arguments%run ()
-if (nm== 103)write (*,*) ' sour before get:',  sour (l,nm)
+!if (nm== 103)write (*,*) ' sour before get:',  sour (l,nm)
                  call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
- if (nm== 103)write (*,*) ' sour after get:',  sour (l,nm)
+ !if (nm== 103)write (*,*) ' sour after get:',  sour (l,nm)
                   ! change volume flux to kg/m**2/S
                  sour (l,nm) = sour (l,nm) * thick0
                  sink (l,nm) = sink (l,nm) * thick1
-write (*,*) 'thick0', thick0, 'thick1', thick1
+!write (*,*) 'thick0', thick0, 'thick1', thick1
 !                write (*,*) '+++++++++++++++++++++++++SPM class +++++++++++++++++++++++++++'
               end if !(2D/3D)
             endif ! (cohesive /non-cohesive
