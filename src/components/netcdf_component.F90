@@ -301,7 +301,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime,startTime, stopTime
+    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime, startTime, stopTime, maxTime
     type(ESMF_TimeInterval) :: timeInterval
     integer(ESMF_KIND_I8)   :: i, j, n, advanceCount
     real(ESMF_KIND_R8)      :: seconds
@@ -460,13 +460,39 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       else
         nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, rc=localrc)
       end if
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call nc%update()
       call nc%update_variables()
 
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call nc%add_timestep(seconds, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !! Check for monotonic time, if not, then set itemCount=0 to skip writing of
+      !! variables.  Continue an error message
+
+      call nc%maxTime(maxTime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (currTime < maxTime) then
+        call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message, '(A)')  trim(name)//' '//trim(timeString)//' cannot insert time before'
+        call ESMF_TimeGet(maxTime, timeStringISOFrac=timeString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_MessageAdd(message,' '//trim(timeString))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+
+        itemCount=0
+
+      else
+
+        call nc%add_timestep(seconds, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       call nc%update()
       call nc%update_variables()
