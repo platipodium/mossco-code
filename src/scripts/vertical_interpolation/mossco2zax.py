@@ -2,7 +2,8 @@ from pylab import *
 import netCDF4
 import sys,os
 import numpy
-from scipy.interpolate import interp1d
+#from scipy.interpolate import interp1d
+from interp3d import interp3d
 
 if len(sys.argv)<3:
   print('  usage: mossco2zax.py mossco_output.nc variable1,variable2,..')
@@ -25,9 +26,10 @@ if depthname in ncv.keys():
   depth = squeeze(ncv[depthname][:])
 
 if zaxname not in ncv.keys():
-  zlevels = array([0.0,5.0,10.0,20.0,30.0,40.0,50.0,75.0,100.0,150.,200.0,250.0])
+  zlevels = array([250.0,200.0,150.0,100.0,75.0,50.0,40.0,30.0,20.0,10.0,5.0,1.0],dtype='f8')
+  #zlevels = array([0.0,5.0,10.0,20.0,30.0,40.0,50.0,75.0,100.0,150.,200.0,250.0],dtype='f8')
   nc.createDimension(zaxname,len(zlevels))
-  v = nc.createVariable(zaxname,'f4',(zaxname,))
+  v = nc.createVariable(zaxname,'f8',(zaxname,))
   v.units = 'm'
   v.positive = 'down'
   v[:] = zlevels
@@ -56,10 +58,6 @@ for var in variables:
     v.missing_value = fillvalue
     v.coordinates = zaxname+' '+coords[1]+' '+coords[2]
 
-#create 3d zlevels array
-zlevels3d = zeros((zaxnum,ynum,xnum))
-for z in range(zaxnum):
-  zlevels3d[z] = -zlevels[z] * ones((ynum,xnum))
 
 # so far assume sigma coordinates
 for t in range(tnum):
@@ -67,11 +65,16 @@ for t in range(tnum):
   h = numpy.tile(depth[t]/znum,(znum,1,1))
   z = cumsum(h,axis=0)-0.5*h - numpy.tile(depth[t],(znum,1,1))
   for varname in variables:
-    #ncv[varname+'_z'][t] = interp1d(z,ncv[varname][t],axis=0)(-zlevels3d)
-    for j in range(ynum):
-      for i in range(xnum):
-        varz[:,j,i] = interp(-zlevels,squeeze(z[:,j,i]),squeeze(ncv[varname][t,:,j,i]))
-    ncv[varname+'_z'][t]=varz
+    # Cython:
+    ncv[varname+'_z'][t] = interp3d(z.filled(1.0),ncv[varname][t].filled(-9999.0),-zlevels)
+
+    # Scipy interp:    
+    #
+    #for j in range(ynum):
+    #  for i in range(xnum):
+    #    varz[:,j,i] = interp(-zlevels,squeeze(z[:,j,i]),squeeze(ncv[varname][t,:,j,i]))
+    #ncv[varname+'_z'][t]=varz
+
   nc.sync()
 
 nc.close()
