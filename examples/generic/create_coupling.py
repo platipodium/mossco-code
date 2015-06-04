@@ -1443,8 +1443,57 @@ fid.write('''
         enddo
       enddo
 
+#if 0
+      !! Obtain all currently ringing Alarms, and run the components associated with these alarms
+      !! When no alarms are ringing anymore, then obtain the minimum of the nextRinging alarms and advance
+      !! myself with that timeStep
+      
+      call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_RINGING, &
+        alarmCount=alarmCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (alarmCount>0) then
+        if (allocated(alarmList)) deallocate(alarmList)
+        allocate(alarmList(alarmCount))
+        call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_RINGING, &
+          alarmList=alarmList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_TimeGet(time,timeStringISOFrac=timeString)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        write(message,'(A,I2,A)') trim(myName)//'  '//trim(timeString)//' has',alarmCount,' ringing alarms'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      endif
+      
+      do j=1,alarmCount
+        call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (index(trim(alarmName),'cplAlarm')<1) cycle
+
+        call ESMF_TimeGet(time,timeStringISOFrac=timeString)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        write(message,'(A)') trim(myName)//'  '//trim(alarmName)//' is ringing now at '//trim(timestring)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      enddo
+
+      call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_NEXTRINGING, &
+        alarmCount=alarmCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (alarmCount>0) then
+        if (allocated(alarmList)) deallocate(alarmList)
+        allocate(alarmList(alarmCount))
+      endif
+#endif      
+
       !! Loop through all components and check whether their clock is currently at the
-      !! same time as my own clock's currTime, if yes, then run the component
+      !! same time as my own clock's currTime, if yes, then run the component and advance it's time 
+      !! until the next coupling Alarm of this component
       do i=1,numGridComp
         !! Determine for each child the clock
         call ESMF_GridCompGet(gridCompList(i),name=compName, clockIsPresent=clockIsPresent, rc=localrc)
@@ -1486,7 +1535,8 @@ fid.write('''
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (alarmCount==0) then
-          !call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
+          !! This case seems problematic and causing the non-monotonic time warning in netcdf
+          call ESMF_LogWrite('No alarm found in '//trim(compName), ESMF_LOGMSG_WARNING)
           timeInterval=stopTime-currTime
         else
           if (allocated(alarmList)) deallocate(alarmList)
@@ -1511,6 +1561,15 @@ fid.write('''
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (index(trim(alarmName),'cplAlarm')<1) cycle
 
+          call ESMF_TimeGet(time,timeStringISOFrac=timeString)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timestring)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+     
+          !! This might be problematic for components that need to run multiple times from multiple alarms
+          !! For a process model the currTime+ringInterval should be taken if it advances it's own clock
+          !! For a non-process model (i.e. output), the clock should only be advanced if all of it's current
+          !! alarms are switched off ...
           if (time==currTime) ringTime=currTime+ringInterval
           if (time<ringTime) ringTime=time
         enddo

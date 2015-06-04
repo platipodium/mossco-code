@@ -590,6 +590,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (allocated(includePatternList)) deallocate(includePatternList)
     if (allocated(excludePatternList)) deallocate(excludePatternList)
 
+    !! For this component, it does not make sense to advance its clock, as it may
+    !! be called multiple times for a single time step by other components, and as it
+    !! has no time-process (this might change with temporal averaging).  Only for
+    !! the sake of consistency, this is added here.
+
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
