@@ -469,7 +469,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! Check for monotonic time, if not, then set itemCount=0 to skip writing of
       !! variables.  Continue an error message
 
-      call nc%maxTime(maxTime, rc=localrc)
+      maxTime=currTime
+      !call nc%maxTime(maxTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
