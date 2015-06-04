@@ -14,7 +14,7 @@ if len(sys.argv)>1:
 else:
   #filename='nsbs-m-mossco_gffrpn.031.nc'
   filename='/Volumes/Kiwi/output/ns-m-gfsfrpn/mossco_gfsfrpn.084.nc'
-  #filename='mossco_gfsfrpn_chl.031.nc'
+  filename='/Users/lemmen/devel/mossco/setups/helgoland/mossco_1d.nc'
 
 if len(sys.argv)>2:
   varnames=sys.argv[2]
@@ -33,7 +33,10 @@ else:
             'detritus-P_in_soil','dissolved_oxygen_in_soil',
             'dissolved_reduced_substances_in_soil','fast_detritus_C_in_soil',
             'mole_concentration_of_ammonium_in_soil','mole_concentration_of_nitrate_in_soil',
-            'mole_concentration_of_phosphate_in_soil','slow_detritus_C_in_soil'
+            'mole_concentration_of_phosphate_in_soil','slow_detritus_C_in_soil',
+            'detritus_in_water','grid_height_in_water','gross_primary_production_in_water',
+            'gross_primary_production_rate_in_water','nutrients_in_water','phytoplankton_in_water',
+            'salinity_in_water','zooplankton_in_water',
    ]
 
 if len(sys.argv)>3:
@@ -58,6 +61,11 @@ days=ncv['time'][:]/3600./24.
 x0=1
 x1=365
 
+# correct ix, iy by shape
+
+
+
+
 data3={}
 data2={}
 units={}
@@ -67,13 +75,21 @@ for key,value in ncv.iteritems():
   if (key.find('soil')<0 and key.find('water')<0): continue
     
   #print key, value.dimensions
-  if 'getmGrid3D_getm_3' in value.dimensions or 'ungridded00024' in value.dimensions:
+  if len(value.shape)==4 and value.shape[3]==1 and value.shape[2]==1:
+    # This is a 3D variable from 1D setup, create a curtain plot
+   data3[key]=np.squeeze(value[:,:,0,0])
+   ix=0
+   iy=0
+
+  elif 'getmGrid3D_getm_3' in value.dimensions or 'ungridded00024' in value.dimensions:
     # This is a 3D variable, create a curtain plot
+    
     data3[key]=np.squeeze(value[:,:,ix,iy])
   elif  'getmGrid2D_getm_2'  in value.dimensions:
     # This is a 2D variable, create a line plot
     data2[key]=np.squeeze(value[:,ix,iy])
-  
+    
+        
   try:  
     units[key]=value.units
   except:
@@ -173,9 +189,11 @@ for key in sorted(data3):
   decimals=np.floor(np.log10(np.max(np.abs(value[np.isfinite(value)]))))
   yt=np.linspace(vmin,vmax,4)
   yt=np.round(yt,int(2-decimals))
-  cbar.set_ticks(yt)
-  cyt=cax.get_yticks()
-  cytl=cax.get_yticklabels()
+  if yt[3]>yt[0]:
+    cbar.set_ticks(yt)
+    cyt=cax.get_yticks()
+    cytl=cax.get_yticklabels()
+
   decimals=np.floor(np.log10(np.max(np.abs(value[np.isfinite(value)])))) 
   
   #cax.set_ylim(cyticks.min(),cyticks.max())
