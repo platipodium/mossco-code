@@ -18,7 +18,7 @@ GENERIC=1          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--netcdf  # Default example
-AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp
+AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp/gotmrun.nml
 POSTPROCESS=NONE
 NP=NONE
 
@@ -32,7 +32,7 @@ function usage {
 	echo
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
-	echo "    [-t] :  give a title in mossco_run.nml and getm.inp"
+	echo "    [-t] :  give a title in mossco_run.nml and getm.inp/gotmrun.nml"
 	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
@@ -398,6 +398,11 @@ if [[ RETITLE != 0 ]] ; then
 
   if test -f getm.inp ; then
     ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+  fi
+
+  if test -f gotmrun.nml ; then
+    ${SED} -i 's/title =.*/title = "'${TITLE}'",/' gotmrun.nml
+    ${SED} -i 's/out_fn =.*/out_fn = "'${TITLE}'_gotm",/' gotmrun.nml
   fi
 
   if test -f mossco_run.nml ; then
