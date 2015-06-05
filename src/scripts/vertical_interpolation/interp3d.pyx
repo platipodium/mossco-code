@@ -8,7 +8,8 @@ ctypedef N.float64_t DTYPEf_t
 @cython.boundscheck(False) # turn of bounds-checking for entire function
 @cython.wraparound(False)  # turn of bounds-checking for entire function
 cpdef interp3d(N.ndarray[DTYPEf_t, ndim=3] x, N.ndarray[DTYPEf_t, ndim=3] y,
-               N.ndarray[DTYPEf_t, ndim=1] x_new):
+               N.ndarray[DTYPEf_t, ndim=1] x_new, float fillvalue=-9999.0,
+               int extrapolate_surface=1):
     """
     interp3d(x, y, new_x)
 
@@ -26,6 +27,11 @@ cpdef interp3d(N.ndarray[DTYPEf_t, ndim=3] x, N.ndarray[DTYPEf_t, ndim=3] y,
     x_new: 1-D ndarray (double type)
         Array with new abcissas to interpolate. Must be monotonically
         increasing
+    fillvalue [optional]: fillvalue for depths outside of zlevels
+        range, default -9999.0 
+    extrapolate_surface [optional]:
+        0 - no extrapolation, use fillvalue above the water surface
+        1 - extrapolate surface values for zlevels above water surface
 
     Returns
     -------
@@ -45,15 +51,15 @@ cpdef interp3d(N.ndarray[DTYPEf_t, ndim=3] x, N.ndarray[DTYPEf_t, ndim=3] y,
             kk=0
             for k in range(nz_new):
                  if x_new[k]<=x[0,j,i]:
-                   new_y[k,j,i] = -9999.
-                   #print("%d: %0.2f below %0.2f"%(k,x_new[k],x[0,j,i]))
+                   new_y[k,j,i] = fillvalue
                  elif x_new[k]>=x[nz-1,j,i]:
-                   new_y[k,j,i] = -9999.
-                   #print("%d: %0.2f above %0.2f"%(k,x_new[k],x[nz-1,j,i]))
+                   if extrapolate_surface==1:
+                     new_y[k,j,i] = y[nz-1,j,i]
+                   else:
+                     new_y[k,j,i] = fillvalue
                  else:
                    while x_new[k]>x[kk,j,i]:
                      kk=kk+1
-                   #print("%d: %0.2f between layer %d and %d (%0.2f and %0.2f)"%(k,x_new[k],kk-1,kk,x[kk-1,j,i],x[kk,j,i]))
                    dx = x[kk,j,i]-x[kk-1,j,i]
                    dl = x_new[k]-x[kk-1,j,i]
                    dy = y[kk,j,i]-y[kk-1,j,i]

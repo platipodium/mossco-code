@@ -47,6 +47,7 @@ for var in variables:
     if not(ncv[var+'_z'].shape == (tnum,zaxnum,ynum,xnum)):
       print('shape of existing variable %s does not match shape of interpolated fields'%(var+'_z'))
       exit()
+    fillvalue=ncv[var+'_z'].missing_value
   else:
     dims = ncv[var].dimensions
     newdims = (dims[0],zaxname,dims[2],dims[3])
@@ -56,7 +57,8 @@ for var in variables:
     v.long_name = ncv[var].long_name
     v.standard_name = ncv[var].standard_name
     v.missing_value = fillvalue
-    v.coordinates = zaxname+' '+coords[1]+' '+coords[2]
+    #v.coordinates = zaxname+' '+coords[1]+' '+coords[2]
+    v.coordinates = coords[1]+' '+coords[2]
 
 
 # so far assume sigma coordinates
@@ -66,7 +68,7 @@ for t in range(tnum):
   z = cumsum(h,axis=0)-0.5*h - numpy.tile(depth[t],(znum,1,1))
   for varname in variables:
     # Cython:
-    ncv[varname+'_z'][t] = interp3d(z.filled(1.0),ncv[varname][t].filled(-9999.0),-zlevels)
+    ncv[varname+'_z'][t] = interp3d(z.filled(1.0),ncv[varname][t].filled(fillvalue),-zlevels,fillvalue=fillvalue)
 
     # Scipy interp:    
     #
