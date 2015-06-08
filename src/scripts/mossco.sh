@@ -21,6 +21,7 @@ DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--netcdf  # Default ex
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp/gotmrun.nml
 POSTPROCESS=NONE
 NP=NONE
+LOGLEVEL='warning'
 
 # Function for printing usage of this script
 function usage {
@@ -35,10 +36,12 @@ function usage {
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp/gotmrun.nml"
 	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
+	echo "    [-l A|W|E] :  specify the log level, as one of all|warning|error"
+	echo "            the default is all"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
 	echo "            MPI is not used at all. Default is content of par_setup.dat or n=1"
 	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system, which is"
-        echo "            autodetected by default"
+  echo "            autodetected by default"
 	echo
 	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
@@ -83,7 +86,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bn:s:" opt; do
+while getopts ":rt:bn:s:l:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -99,6 +102,8 @@ while getopts ":rt:bn:s:" opt; do
       AUTOTITLE=0
       ;;
   s)  SYSTEM=${OPTARG}
+      ;;
+  l)  LOGLEVEL=${OPTARG}
       ;;
   \?) usage
       ;;
@@ -385,10 +390,28 @@ esac
 
 rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
 
-if [[ RETITLE != 0 ]] ; then
+# Unify loglevel input
+case ${LOGLEVEL} in
+  A|all|ALL) LOGLEVEL=all
+    ;;
+  W|warning|WARNING) LOGLEVEL=warning
+    ;;
+  E|error|ERROR) LOGLEVEL=error
+    ;;
+  *)  echo "Loglevel ${LOGLEVEL} not defined in $0"; exit 1
+    ;;
+esac
 
-  SED=${SED:-$(which gsed)} 2> /dev/null
-  SED=${SED:-$(which sed)} 2> /dev/null
+
+SED=${SED:-$(which gsed)} 2> /dev/null
+SED=${SED:-$(which sed)} 2> /dev/null
+
+if test -f mossco_run.nml ; then
+  ${SED} -i 's/loglevel =.*/loglevel = "'${LOGLEVEL}'",/' mossco_run.nml
+fi
+
+
+if [[ RETITLE != 0 ]] ; then
 
   if ! test -x ${SED}; then
     echo
