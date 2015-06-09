@@ -28,7 +28,7 @@ function usage {
   echo
 	echo "Usage: $0 [options] [example]"
 	echo
-	echo "Accepted options are -r, -b, -t <title>, -n <numproc>, -s <system> <example>"
+	echo "Accepted options are -r, -b, -t <title>, -n <numproc>, -s <system> -l <loglevel> <example>"
 	echo "If not provided, the default <example> is ${DEFAULT}"
 	echo
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
@@ -37,7 +37,7 @@ function usage {
 	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-l A|W|E] :  specify the log level, as one of all|warning|error"
-	echo "            the default is all"
+	echo "            the default is warning"
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
 	echo "            MPI is not used at all. Default is content of par_setup.dat or n=1"
 	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system, which is"
