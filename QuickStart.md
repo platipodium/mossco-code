@@ -55,11 +55,9 @@ For those not already working with their own FABM and GOTM codes, the easiest wa
 
 This will create corresponding source code directories in `$MOSSCO_DIR/external`, that will be recognised automatically by MOSSCO's `make` system.
 
-Next, define all environment variables that are needed for FABM, GOTM and MOSSCO (these may vary on your system), e.g.:
+Next, define the NETCDF environment variable needed for GOTM:
 
-	export FORTRAN_COMPILER=GFORTRAN # for FABM/GETM/GOTM
-	export NETCDF_VERSION=NETCDF4    # for GETM
-
+	export NETCDF=NETCDF4    # for GOTM
 
 # Linking the mossco executable
 
@@ -68,39 +66,40 @@ MOSSCO provides a startup script located in `$MOSSCO_DIR/src/scripts/mossco.sh`.
 	mkdir -p $HOME/opt/bin
 	export PATH=$PATH:$HOME/opt/bin
 	ln -sf $MOSSCO_DIR/src/scripts/mossco.sh $HOME/opt/bin/mossco
-	
+
 Type
 
 	mossco -h
-	
-to learn about the options to this script.  
+
+to learn about the options to this script.
 
 # Compiling/running an example
 
 To perform a simulation, you have to change to a directory containing all necessary setup files and execute `mossco` with the name of one of the provided examples, e.g.
 
 	cd $MOSSCO_SETUPDIR/helgoland
-	mossco gotm--fabm_pelagic--fabm_sediment--netcdf 
-	
+	mossco gotm--fabm_pelagic--fabm_sediment--netcdf
+
 You will see some screen output, and at least two files will be written
 
-- `netcdf_component.nc` (a netcdf file containing all the output)
+- `netcdf.nc` (a netcdf file containing all the output)
 - `PET0.Helgoland` (a log file for your simulation)
-	
+
 # Going further
-	
+
 You can see many namelists here, of which the most important ones are
 
 - `mossco_run.nml` (for controlling the simulation time)
 - `fabm.nml` (for controlling the pelagic fabm models to be used)
 - `run_sed.nml` (for controlling the benthic fabm models)
+- `gotmrun.nml` (for controlling the hydrodynamic model)
 
 Depending on your choice of FABM models, you may have to edit or add more namelist files, then execute `mossco gotm--fabm_pelagic--fabm_sediment--netcdf` again.
 
 You can also explore this coupling configuration, which is specified in the file `$MOSSCO_DIR/examples/generic/gotm--fabm_pelagic--fabm_sediment--netcdf.yaml`.  After changing this coupling specification, issue
 
-	mossco -r gotm--fabm_pelagic--fabm_sediment--netcdf 
-	
+	mossco -r gotm--fabm_pelagic--fabm_sediment--netcdf
+
 To rebuild and execute your example again.
 
 
