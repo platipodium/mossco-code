@@ -1012,9 +1012,9 @@ module fabm_pelagic_component
 
     character(len=ESMF_MAXSTR)  :: name,message,varname
     type(ESMF_Time)             :: currTime
-    integer                     :: localrc,n
+    integer                     :: localrc, n, rank
 
-    integer(ESMF_KIND_I4)          :: ubnd(3),lbnd(3),ownshape(3)
+    integer(ESMF_KIND_I4)          :: ubnd(3),lbnd(3),myShape(3)
     real(ESMF_KIND_R8), pointer    :: ptr_f3(:,:,:)
     type(ESMF_FieldStatus_Flag)    :: fieldstatus
     type(ESMF_StateItem_Flag)      :: itemtype
@@ -1024,45 +1024,88 @@ module fabm_pelagic_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> browse through list of state variables and
     !! copy data from importState fields with same name
     do n=1,size(pel%export_states)
+
       varname=trim(pel%export_states(n)%standard_name)//'_in_water'
       call ESMF_StateGet(importState, trim(varname), itemType=itemType, rc=localrc)
-      if (itemType==ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
-        call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
-        if (fieldstatus== ESMF_FIELDSTATUS_COMPLETE) then
-          call ESMF_FieldGet(field, farrayPtr=ptr_f3, &
-               exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-          ownshape = shape(pel%export_states(n)%conc)
-          if ((ubnd(1)-lbnd(1)+1.ne.ownshape(1)).or. &
-              (ubnd(2)-lbnd(2)+1.ne.ownshape(2)).or. &
-              (ubnd(3)-lbnd(3)+1.ne.ownshape(3))) then
-            write(message,'(A)') trim(name)//' incompatible shape of field'
-            call mossco_fieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            write(message,'(A,4I3,A,4I3)') trim(name)//' own shape', ownshape, ' other shape ', &
-              ubnd(:)-lbnd(:)+ (/1,1,1/)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          end if
-          pel%export_states(n)%conc = ptr_f3
-          write(message,'(A)') trim(name)//' hotstarted field'
-          call mossco_fieldString(field, message)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        else
-          write(message,'(A)') trim(name)//' incomplete field'
-          call mossco_fieldString(field, message)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        end if
-      else
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+
         write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         call MOSSCO_StateLog(importState, rc=localrc)
+        cycle
+
+      endif
+
+      call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
+
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState, rc=localrc)
+        write(message,'(A)') trim(name)//' incomplete field '
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+
+      endif
+
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank /= 3) then
+
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState, rc=localrc)
+        write(message,'(A)') trim(name)//' expected rank 3 but got field '
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+
+      endif
+
+      call ESMF_FieldGet(field, farrayPtr=ptr_f3, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      myShape = shape(pel%export_states(n)%conc)
+
+      if ((ubnd(1)-lbnd(1)+1.ne.myShape(1)).or. &
+          (ubnd(2)-lbnd(2)+1.ne.myShape(2)).or. &
+          (ubnd(3)-lbnd(3)+1.ne.myShape(3))) then
+
+        write(message,'(A)') trim(name)//' incompatible shape of field'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        write(message,'(A)') ''
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        write(message,'(A,3I3,A,3I3)') trim(name)//' own shape', myShape, ', other shape ', &
+              ubnd(:)-lbnd(:)+ (/1,1,1/)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end if
+
+      pel%export_states(n)%conc = ptr_f3
+      write(message,'(A)') trim(name)//' hotstarted field'
+      call mossco_fieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end do
 
     !> update sinking after restart
