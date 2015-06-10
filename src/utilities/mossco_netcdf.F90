@@ -2259,12 +2259,28 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      write(0,*) 'varname = ', trim(var%name), 'rank=', var%rank
+      write(0,*) 'minindexPDE shape ', shape(minIndexPDE), ' value ', minindexPDE
+
       !> @todo: this assumes that index 1 is the first exclusive Index &
       !! and possible LWidths are appended before (index 0 and negative indexes:
-      farrayPtr3(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
+      if (size(minIndexPDE,1)==3) then
+
+        farrayPtr3(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
                  start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
                  start(3)-minindexPDE(3,localPET+1)+1:start(3)-minindexPDE(3,localPET+1)+count(3)) &
-        = netcdfPtr3
+          = netcdfPtr3
+
+      elseif (size(minIndexPDE,1)==2) then
+        farrayPtr3(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
+                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
+                 start(3):start(3)-1+count(3)) &
+          = netcdfPtr3
+      else
+        call ESMF_LogWrite('  unimplemented constellation of minIndexPDE and field rank', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
       if (associated(netcdfPtr3)) deallocate(netcdfPtr3)
 
     elseif (fieldRank == 4) then
@@ -2285,6 +2301,32 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      !> @todo: this assumes that index 1 is the first exclusive Index &
+      !! and possible LWidths are appended before (index 0 and negative indexes:
+      if (size(minIndexPDE,1)==4) then
+        farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
+                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
+                 start(3)-minindexPDE(3,localPET+1)+1:start(3)-minindexPDE(3,localPET+1)+count(3), &
+                 start(4)-minindexPDE(4,localPET+1)+1:start(4)-minindexPDE(4,localPET+1)+count(4)) &
+          = netcdfPtr4
+      elseif (size(minIndexPDE,1)==3) then
+        farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
+                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
+                 start(3)-minindexPDE(3,localPET+1)+1:start(3)-minindexPDE(3,localPET+1)+count(3), &
+                 start(4):start(4)-1+count(4)) &
+          = netcdfPtr4
+      elseif (size(minIndexPDE,1)==2) then
+        farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
+                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
+                 start(3):start(3)-1+count(3), &
+                 start(4):start(4)-1+count(4)) &
+          = netcdfPtr4
+      else
+        call ESMF_LogWrite('  unimplemented constellation of minIndexPDE and field rank', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       !> @todo: this assumes that index 1 is the first exclusive Index &
       !! and possible LWidths are appended before (index 0 and negative indexes:
       farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
