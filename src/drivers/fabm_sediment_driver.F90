@@ -40,6 +40,7 @@ type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    integer  :: knum,inum=-1,jnum=-1
    real(rk) :: dzmin
    logical  :: use_ugrid=.false.
+   logical, dimension(:,:,:), pointer :: mask => null()
    integer  :: type=LOCAL_GRID
 contains
    procedure :: init_grid
@@ -82,6 +83,7 @@ contains
    procedure :: get_export_state_by_id
    procedure :: get_export_state_by_diag_id
    procedure :: get_all_export_states
+   procedure :: check_domain => fabm_sed_check_domain
 end type type_sed
 
 #define _GRID_ sed%grid
@@ -187,6 +189,8 @@ if (.not.associated(sed%mask)) then
   allocate(sed%mask(sed%grid%inum,sed%grid%jnum,sed%grid%knum))
   sed%mask = .false.
 end if
+! add mask to grid
+sed%grid%mask => sed%mask
 
 ! set porosity
 allocate(sed%porosity(_INUM_,_JNUM_,_KNUM_))
@@ -327,13 +331,6 @@ implicit none
 class(type_sed) :: sed
 integer         :: n,i,j,k
 
-! Make sure we are in an aqueous environment
-if (any(sed%porosity <= 0) .or. any(sed%porosity > 1)) then
-  !write(0,*) 'FATAL Porosity out of range, cannot initialize sediment'
-  !> @todo check values only within the water mask
-  !return
-endif
-
 do n=1,sed%nvar
    sed%conc(:,:,:,n) = sed%model%state_variables(n)%initial_value/sed%porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
@@ -349,6 +346,36 @@ if(associated(sed%mask)) then
   end do
 end if
 end subroutine init_concentrations
+
+
+!> fabm_sed_check_grid
+!!
+!! Check, if dzc and dz are > 0.0 and 0<porosity<1.
+
+subroutine fabm_sed_check_domain(sed)
+implicit none
+
+class(type_sed) :: sed
+integer         :: i,j,k
+
+  do k=1,sed%knum
+    do j=1,sed%jnum
+      do i=1,sed%inum
+        if (.not.sed%mask(i,j,k)) then
+          ! Make sure we are in an aqueous environment
+          if ((sed%porosity(i,j,k) <= 0) .or. (sed%porosity(i,j,k) > 1)) then
+            write(0,*) 'FATAL sediment porosity out of range at (i,j,k)',i,j,k
+            stop
+          end if
+          if ((sed%grid%dzc(i,j,k) <= 0) .or. (sed%grid%dz(i,j,k) <=0)) then
+            write(0,*) 'FATAL sediment grid heights <= 0 at (i,j,k)',i,j,k
+            stop
+          end if
+        end if
+      end do
+    end do
+  end do
+end subroutine fabm_sed_check_domain
 
 
 !> fabm_sed_diagnostic_variables
@@ -512,18 +539,12 @@ real(rk),dimension(grid%inum,grid%jnum,grid%knum),optional :: flux_cap
 
 ! -------------------------------------------------------------------------------
 
-
-! Make sure that dzc and dz are finite and positive
-if (any(grid%dzc <= 0) .or. any(grid%dz <=0)) then
-  write(0,*)  'FATAL: nonpositive grid height'
-  !> @todo only check within water mask
-  !return
-endif
-
+dC = 0.0_rk
 ! Flux - first internal cells
 ! positive flux is directed downward
 do j=1,grid%jnum
    do i=1,grid%inum
+     if (.not.grid%mask(i,j,1)) then
       do k = 2,grid%knum
          Flux(i,j,k) = -D(i,j,k) * (C(i,j,k)-C(i,j,k-1)) /grid%dzc(i,j,k-1)
       end do
@@ -569,6 +590,7 @@ do j=1,grid%jnum
       DO k = 1,grid%knum
         dC(i,j,k) = (Flux(i,j,k) - Flux(i,j,k+1))/(VF(i,j,k) * grid%dz(i,j,k))
       ENDDO
+    end if
    end do
 end do
 

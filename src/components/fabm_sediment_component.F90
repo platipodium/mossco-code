@@ -357,6 +357,8 @@ module fabm_sediment_component
     open(33,file='run_sed.nml',action='read',status='old')
     call sed1d%grid%init_grid()
     call sed1d%initialize()
+    !> check for valid grid and porosity
+    call sed%check_domain()
     close(33)
     allocate(sed1d%conc(1,1,1:sed%knum,1:sed%nvar))
     call sed1d%init_concentrations()
@@ -891,6 +893,9 @@ module fabm_sediment_component
         call MOSSCO_StateLog(importState, rc=localrc)
       end if
     end do
+
+    !> check for valid grid and porosity
+    call sed%check_domain()
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
