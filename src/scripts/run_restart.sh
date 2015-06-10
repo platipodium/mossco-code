@@ -53,27 +53,33 @@ ${SED} -i "${RE}" mossco_run.nml
 # time
 
 if ! test -f ${PREFIX}.nc ; then
-	rm -f restart.cfg
+	rm -f restart_soil.cfg
+	rm -f restart_water.cfg
 	echo "Running $0 for the first time from $START to $STOP"
 else
 	echo "Restarting from $START to $STOP"
 fi
 
-#mossco -n ${NP} -t ${TITLE} ${COUPLING}
+mossco -n ${NP} -t ${TITLE} ${COUPLING}
 
 INPUT=${PREFIX}.nc ## todo: add index for multi-proc output
 
 # Extract the last timestep
-#${MOSSCO_DIR}/src/scripts/cut_revert_last_time.sh ${INPUT}
+${MOSSCO_DIR}/src/scripts/cut_revert_last_time.sh ${INPUT}
 
 # Find out what file was produced and link it to a generic name, then create
 # the file restart.cfg pointing to this file
 OUT=$(ls -1rt ${PREFIX}_*.nc |tail -1)
 
-ln -sf ${OUT} restart.nc
+ncks -O -v .*_in_water ${OUT} restart_water.nc
+ncks -O -v .*_in_soil ${OUT} restart_soil.nc
 
-cat << EOT > restart.cfg
-filename: restart.nc
+cat << EOT > restart_soil.cfg
+filename: restart_soil.nc
+EOT
+
+cat << EOT > restart_water.cfg
+filename: restart_water.nc
 EOT
 
 # Now manipulate mossco_run.nml
