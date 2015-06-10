@@ -184,11 +184,12 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, fileName, rc=localrc, default=name)
+        call ESMF_ConfigGetAttribute(config, fileName, rc=localrc, default=trim(name))
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' filename: '//trim(fileName)
+        write(message,'(A)')  trim(name)//' found in file '
+        call MOSSCO_MessageAdd(message,trim(configFileName)//' filename: '//trim(fileName))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 

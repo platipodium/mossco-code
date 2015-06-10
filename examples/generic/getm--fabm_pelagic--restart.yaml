@@ -27,8 +27,8 @@ coupling:
   - components:
      - getm
      - mossco_gfr
-    interval: 60 h
+    interval: 12 h
   - components:
      - fabm_pelagic
      - mossco_gfr
-    interval: 60 h
+    interval: 12 h
