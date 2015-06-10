@@ -392,11 +392,11 @@ rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
 
 # Unify loglevel input
 case ${LOGLEVEL} in
-  A|all|ALL) LOGLEVEL=all
+  A|a|all|ALL) LOGLEVEL=all
     ;;
-  W|warning|WARNING) LOGLEVEL=warning
+  W|w|warning|WARNING) LOGLEVEL=warning
     ;;
-  E|error|ERROR) LOGLEVEL=error
+  E|e|error|ERROR) LOGLEVEL=error
     ;;
   *)  echo "Loglevel ${LOGLEVEL} not defined in $0"; exit 1
     ;;
