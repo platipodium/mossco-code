@@ -1014,11 +1014,11 @@ module fabm_pelagic_component
     type(ESMF_Time)             :: currTime
     integer                     :: localrc, n, rank
 
-    integer(ESMF_KIND_I4)          :: ubnd(3),lbnd(3),myShape(3)
-    real(ESMF_KIND_R8), pointer    :: ptr_f3(:,:,:)
+    integer(ESMF_KIND_I4)          :: ubnd(3), lbnd(3), exportUbnd(3), exportLBnd(3)
+    real(ESMF_KIND_R8), pointer    :: ptr_f3(:,:,:), exportPtr(:,:,:)
     type(ESMF_FieldStatus_Flag)    :: fieldstatus
     type(ESMF_StateItem_Flag)      :: itemtype
-    type(ESMF_Field)               :: field
+    type(ESMF_Field)               :: field, exportField
 
     rc=ESMF_SUCCESS
 
@@ -1081,28 +1081,56 @@ module fabm_pelagic_component
 
       endif
 
-      call ESMF_FieldGet(field, farrayPtr=ptr_f3, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+      call ESMF_FieldGet(field, farrayPtr=ptr_f3, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      myShape = shape(pel%export_states(n)%conc)
-
-      if ((ubnd(1)-lbnd(1)+1.ne.myShape(1)).or. &
-          (ubnd(2)-lbnd(2)+1.ne.myShape(2)).or. &
-          (ubnd(3)-lbnd(3)+1.ne.myShape(3))) then
-
-        write(message,'(A)') trim(name)//' incompatible shape of field'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        write(message,'(A)') ''
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        write(message,'(A,3I3,A,3I3)') trim(name)//' own shape', myShape, ', other shape ', &
-              ubnd(:)-lbnd(:)+ (/1,1,1/)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      !! Need to get shape from exportState field of same name to constrain the indices of the conc field
+      call ESMF_StateGet(exportState, trim(varname), itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      end if
 
-      pel%export_states(n)%conc = ptr_f3
+      call ESMF_StateGet(exportState, trim(varname), field=exportfield, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGetBounds(exportField, exclusiveUbound=exportUbnd, exclusiveLbound=exportLbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (any (exportUbnd /= ubnd) .or. any(exportLbnd /= lbnd)) then
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState, rc=localrc)
+        write(message,'(A)') trim(name)//' array bounds do not match '
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+
+      endif
+
+
+
+!       myShape = shape(pel%export_states(n)%conc)
+!
+!       write(0,*) 'myBounds = ', lbound(pel%export_states(n)%conc), ubound(pel%export_states(n)%conc)
+!
+!       if ((ubnd(1)-lbnd(1)+1.ne.myShape(1)).or. &
+!           (ubnd(2)-lbnd(2)+1.ne.myShape(2)).or. &
+!           (ubnd(3)-lbnd(3)+1.ne.myShape(3))) then
+!
+!         write(message,'(A)') trim(name)//' incompatible shape of field '
+!         call MOSSCO_FieldString(field, message)
+!         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+!         write(message,'(A,3I3,A,3I3)') trim(name)//' own shape ', myShape, ', other shape ', &
+!               ubnd(:)-lbnd(:)+ (/1,1,1/)
+!         !write(message,'(A,3I3,3I3)') lbound(pel%export_states(n)%conc),ubound(pel%export_states(n)%conc)
+!         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+!         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!       end if
+
+      pel%export_states(n)%conc(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), exportLBnd(3):exportUBnd(3)) &
+        = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
       write(message,'(A)') trim(name)//' hotstarted field'
       call mossco_fieldString(field, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
