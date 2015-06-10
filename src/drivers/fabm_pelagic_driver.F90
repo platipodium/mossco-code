@@ -123,15 +123,17 @@
     pf%int_idx_from_hor_diag_idx(:)=-1
     do n=1,pf%ndiag
       if ((pf%model%diagnostic_variables(n)%output == output_time_step_averaged) .or. &
-          (pf%model%diagnostic_variables(n)%output == output_time_step_integrated)) &
+          (pf%model%diagnostic_variables(n)%output == output_time_step_integrated)) then
         pf%ndiag_int = pf%ndiag_int+1
         pf%int_idx_from_diag_idx(n) = pf%ndiag_int
+      end if
     end do
     do n=1,pf%ndiag_hz
       if ((pf%model%horizontal_diagnostic_variables(n)%output == output_time_step_averaged) .or. &
-          (pf%model%horizontal_diagnostic_variables(n)%output == output_time_step_integrated)) &
+          (pf%model%horizontal_diagnostic_variables(n)%output == output_time_step_integrated)) then
         pf%ndiag_hz_int = pf%ndiag_hz_int+1
         pf%int_idx_from_hor_diag_idx(n) = pf%ndiag_hz_int
+      end if
     end do
 
     ! initialise the export states and dependencies
