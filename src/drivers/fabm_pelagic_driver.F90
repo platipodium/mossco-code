@@ -53,11 +53,17 @@
     real(rk)                           :: background_extinction=1.0d0/7.9d0 ![1/m] - Jerlov 6
     integer                            :: ndiag
     integer                            :: ndiag_hz
+    integer                            :: ndiag_int=0
+    integer                            :: ndiag_hz_int=0
     logical                            :: fabm_ready
     type(type_bulk_standard_variable),dimension(:),pointer :: bulk_dependencies => null()
     type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies => null()
     real(rk), dimension(:,:,:), pointer  :: horizontal_expression_data => null()
     real(rk), dimension(:,:,:), pointer  :: horizontal_data => null()
+    real(rk), dimension(:,:,:,:), pointer:: time_integrated_bulk_variables => null()
+    real(rk), dimension(:,:,:), pointer  :: time_integrated_horizontal_variables => null()
+    integer, dimension(:), pointer       :: int_idx_from_diag_idx
+    integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx
     contains
     procedure :: get_rhs
     procedure :: get_dependencies
@@ -70,6 +76,8 @@
     procedure :: update_export_states
     procedure :: diagnostic_variables
     procedure :: horizontal_diagnostic_variables
+    procedure :: integrate_diagnostic_variables
+    procedure :: integrate_horizontal_diagnostic_variables
     procedure :: initialize_concentrations
     procedure :: update_pointers
     procedure :: initialize_domain
@@ -109,6 +117,22 @@
     pf%nvar = size(pf%model%state_variables)
     pf%ndiag = size(pf%model%diagnostic_variables)
     pf%ndiag_hz = size(pf%model%horizontal_diagnostic_variables)
+    allocate(pf%int_idx_from_diag_idx(pf%ndiag))
+    pf%int_idx_from_diag_idx(:)=-1
+    allocate(pf%int_idx_from_hor_diag_idx(pf%ndiag_hz))
+    pf%int_idx_from_hor_diag_idx(:)=-1
+    do n=1,pf%ndiag
+      if ((pf%model%diagnostic_variables(n)%output == output_time_step_averaged) .or. &
+          (pf%model%diagnostic_variables(n)%output == output_time_step_integrated)) &
+        pf%ndiag_int = pf%ndiag_int+1
+        pf%int_idx_from_diag_idx(n) = pf%ndiag_int
+    end do
+    do n=1,pf%ndiag_hz
+      if ((pf%model%horizontal_diagnostic_variables(n)%output == output_time_step_averaged) .or. &
+          (pf%model%horizontal_diagnostic_variables(n)%output == output_time_step_integrated)) &
+        pf%ndiag_hz_int = pf%ndiag_hz_int+1
+        pf%int_idx_from_hor_diag_idx(n) = pf%ndiag_hz_int
+    end do
 
     ! initialise the export states and dependencies
     call pf%get_all_export_states()
@@ -172,6 +196,16 @@
       pf%decimal_yearday)
 
     call pf%check_expressions()
+
+    ! initialize index mapping and memory for time integrated variables
+    if (.not.associated(pf%time_integrated_bulk_variables)) then
+      allocate(pf%time_integrated_bulk_variables(pf%inum,pf%jnum,pf%knum,pf%ndiag_int))
+      pf%time_integrated_bulk_variables = 0.0d0
+    end if
+    if (.not.associated(pf%time_integrated_horizontal_variables)) then
+      allocate(pf%time_integrated_horizontal_variables(pf%inum,pf%jnum,pf%ndiag_hz_int))
+      pf%time_integrated_horizontal_variables = 0.0d0
+    end if
 
   end subroutine initialize_domain
 
@@ -560,12 +594,34 @@
   function diagnostic_variables(pf,n) result(diag)
     implicit none
 
-    class(type_mossco_fabm_pelagic)    :: pf
-    integer,intent(in)                 :: n
-    real(rk),dimension(:,:,:),pointer  :: diag
+    class(type_mossco_fabm_pelagic)      :: pf
+    integer,intent(in)                   :: n
+    real(rk),dimension(:,:,:),pointer    :: diag
 
-    diag => fabm_get_bulk_diagnostic_data(pf%model,n)
+    if (pf%model%diagnostic_variables(n)%output == output_none) then
+      diag => null()
+    elseif (pf%model%diagnostic_variables(n)%output == output_instantaneous) then
+      diag => fabm_get_bulk_diagnostic_data(pf%model,n)
+    else
+      diag => pf%time_integrated_bulk_variables(:,:,:,pf%int_idx_from_diag_idx(n))
+    end if
   end function diagnostic_variables
+
+  subroutine integrate_diagnostic_variables(pf,dt)
+    implicit none
+
+    class(type_mossco_fabm_pelagic)      :: pf
+    real(rk)                             :: dt
+    integer                              :: n,nn
+    real(rk),dimension(:,:,:),pointer    :: diag
+
+    do n=1,pf%ndiag
+      nn = pf%int_idx_from_diag_idx(n)
+      if (nn == -1) cycle
+      diag => fabm_get_bulk_diagnostic_data(pf%model,n)
+      pf%time_integrated_bulk_variables(:,:,:,nn) = pf%time_integrated_bulk_variables(:,:,:,nn) + dt*diag(:,:,:)
+    end do
+  end subroutine integrate_diagnostic_variables
 
   !> horizontal_diagnostic_variables
   !!
@@ -580,8 +636,30 @@
     integer,intent(in)                 :: n
     real(rk),dimension(:,:),pointer    :: diag_hz
 
-    diag_hz => fabm_get_horizontal_diagnostic_data(pf%model,n)
+    if (pf%model%horizontal_diagnostic_variables(n)%output == output_none) then
+      diag_hz => null()
+    elseif (pf%model%horizontal_diagnostic_variables(n)%output == output_instantaneous) then
+      diag_hz => fabm_get_horizontal_diagnostic_data(pf%model,n)
+    else
+      diag_hz => pf%time_integrated_horizontal_variables(:,:,pf%int_idx_from_hor_diag_idx(n))
+    end if
   end function horizontal_diagnostic_variables
+
+  subroutine integrate_horizontal_diagnostic_variables(pf,dt)
+    implicit none
+
+    class(type_mossco_fabm_pelagic)      :: pf
+    real(rk)                             :: dt
+    integer                              :: n,nn
+    real(rk),dimension(:,:),pointer      :: diag
+
+    do n=1,pf%ndiag_hz
+      nn = pf%int_idx_from_hor_diag_idx(n)
+      if (nn == -1) cycle
+      diag => fabm_get_horizontal_diagnostic_data(pf%model,n)
+      pf%time_integrated_horizontal_variables(:,:,nn) = pf%time_integrated_horizontal_variables(:,:,nn) + dt*diag(:,:)
+    end do
+  end subroutine integrate_horizontal_diagnostic_variables
 
    !> Calculate photosynthetically active radiation (PAR) and short wave
    !! radiation (SWR) over entire column, using surface short wave radiation,

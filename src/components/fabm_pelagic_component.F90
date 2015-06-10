@@ -223,7 +223,6 @@ module fabm_pelagic_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
-    use fabm_types, only: output_none
 
     implicit none
 
@@ -648,8 +647,8 @@ module fabm_pelagic_component
 
     !> this will not work, is state_grid contains halo zones
     do n=1,size(pel%model%diagnostic_variables)
-      if (pel%model%diagnostic_variables(n)%output /= output_none) then
-        diag => pel%diagnostic_variables(n)
+      diag => pel%diagnostic_variables(n)
+      if (associated(diag)) then
         !call ESMF_StateGet(exportState, &
         !  name=only_var_name(pel%model%diagnostic_variables(n)%long_name)//'_in_water', &
         !  field, rc=localrc)
@@ -865,8 +864,8 @@ module fabm_pelagic_component
     !> now initialize diagnostic variables.
     !! after check_ready FABM's internal pointers are set correctly
     do n=1,size(pel%model%horizontal_diagnostic_variables)
-      if (pel%model%horizontal_diagnostic_variables(n)%output /= output_none) then
-        diag_hz => pel%horizontal_diagnostic_variables(n)
+      diag_hz => pel%horizontal_diagnostic_variables(n)
+      if (associated(diag_hz)) then
         field = ESMF_FieldCreate(horizontal_grid,farrayPtr=diag_hz, &
           name=only_var_name(pel%model%horizontal_diagnostic_variables(n)%long_name)//'_hz', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1303,6 +1302,10 @@ module fabm_pelagic_component
 
       ! clip concentrations that are below minimum
       call pel%clip_below_minimum()
+
+      ! time integration of diagnostic variables
+      call pel%integrate_diagnostic_variables(dt)
+      call pel%integrate_horizontal_diagnostic_variables(dt)
 
       ! link fabm state
       call pel%update_pointers()
