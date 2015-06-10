@@ -449,19 +449,27 @@ module netcdf_input_component
 
         if (any(nc%variables(i)%dimids==udimid)) then
           if (fieldRank /= nc%variables(i)%rank-1) then
-            write(message,'(A,I1)') trim(name)//' got mismatching ranks from netdf (', nc%variables(i)%rank-1
-            write(message,'(A)') trim(message)//') and field '
+            write(message,'(A,I1)') trim(name)//' mismatch from'
+            call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
             call MOSSCO_FieldString(field, message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            cycle
+            !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
         else
           if (fieldRank /= nc%variables(i)%rank) then
-            write(message,'(A,I1)') trim(name)//' got mismatching ranks from netdf (', nc%variables(i)%rank
-            write(message,'(A)') trim(message)//') and field '
+            write(message,'(A,I1)') trim(name)//' mismatch from'
+            call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+            write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
             call MOSSCO_FieldString(field, message)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            cycle
+            !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           endif
         endif
 
