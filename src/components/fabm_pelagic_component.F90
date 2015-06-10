@@ -136,6 +136,7 @@ module fabm_pelagic_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Initialise_Advertise"
   subroutine Initialise_Advertise(gridComp, importState, exportState, parentClock, rc)
+    use fabm_types, only: output_none
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
@@ -182,20 +183,22 @@ module fabm_pelagic_component
 
     !> this will not work, is state_grid contains halo zones
     do n=1,size(pel%model%diagnostic_variables)
-      field = ESMF_FieldEmptyCreate( &
-        name=only_var_name(pel%model%diagnostic_variables(n)%long_name)//'_in_water', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'units',trim(pel%model%diagnostic_variables(n)%units))
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (pel%model%diagnostic_variables(n)%output /= output_none) then
+        field = ESMF_FieldEmptyCreate( &
+          name=only_var_name(pel%model%diagnostic_variables(n)%long_name)//'_in_water', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'units',trim(pel%model%diagnostic_variables(n)%units))
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)') trim(name)//' created diagnostic field '
-      call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)//' created diagnostic field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      end if
     end do
 
     !! create forcing fields in import State
@@ -220,6 +223,8 @@ module fabm_pelagic_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
+    use fabm_types, only: output_none
+
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -643,6 +648,7 @@ module fabm_pelagic_component
 
     !> this will not work, is state_grid contains halo zones
     do n=1,size(pel%model%diagnostic_variables)
+      if (pel%model%diagnostic_variables(n)%output /= output_none) then
         diag => pel%diagnostic_variables(n)
         !call ESMF_StateGet(exportState, &
         !  name=only_var_name(pel%model%diagnostic_variables(n)%long_name)//'_in_water', &
@@ -663,6 +669,7 @@ module fabm_pelagic_component
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      end if
     end do
 
     !! create forcing fields in import State
@@ -858,6 +865,7 @@ module fabm_pelagic_component
     !> now initialize diagnostic variables.
     !! after check_ready FABM's internal pointers are set correctly
     do n=1,size(pel%model%horizontal_diagnostic_variables)
+      if (pel%model%horizontal_diagnostic_variables(n)%output /= output_none) then
         diag_hz => pel%horizontal_diagnostic_variables(n)
         field = ESMF_FieldCreate(horizontal_grid,farrayPtr=diag_hz, &
           name=only_var_name(pel%model%horizontal_diagnostic_variables(n)%long_name)//'_hz', rc=localrc)
@@ -873,6 +881,7 @@ module fabm_pelagic_component
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      end if
     end do
 
     !> also update export states again with sinking velocities
