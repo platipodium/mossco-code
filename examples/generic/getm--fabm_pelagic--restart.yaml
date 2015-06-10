@@ -1,0 +1,34 @@
+dependencies:
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+
+instances:
+  - mossco_gfr: netcdf
+  - restart_water: netcdf_input
+
+coupling:
+  - components:
+     - restart_water
+     - fabm_pelagic
+    interval: none
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - getm
+     - mossco_gfr
+    interval: 60 h
+  - components:
+     - fabm_pelagic
+     - mossco_gfr
+    interval: 60 h
