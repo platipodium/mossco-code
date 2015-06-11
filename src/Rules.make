@@ -56,15 +56,20 @@ else
       ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
+      ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) --showme:command 2> /dev/null)
     endif
     ifeq ($(ESMF_COMM),mpich2)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
       ifeq ($(ESMF_FC),)
         $(error $(ESMF_F90COMPILER) is *not* based on $(ESMF_COMM)!)
       endif
+      ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     endif
     ifeq ($(ESMF_FC),)
       ESMF_FC:=$(shell $(ESMF_F90COMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
+    endif
+    ifeq ($(ESMF_CC),)
+      ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     endif
   endif
   ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
@@ -93,6 +98,11 @@ else
     else
       MOSSCO_F03VERSION=$(shell $(F90) --version | head -1)
     endif
+  endif
+  ifdef ESMF_CXXCOMPILER
+    export MOSSCO_CCOMPILER=$(ESMF_CXXCOMPILER)
+    export CC  = $(ESMF_CXXCOMPILER)
+    export CXX = $(ESMF_CXXCOMPILER)
   endif
 endif
 export MOSSCO_ESMF
@@ -505,11 +515,12 @@ ifdef FORTRAN_COMPILER
 endif
 
 # Include directories
-INCLUDES += $(ESMF_F90COMPILEPATHS)
+INCLUDES += $(ESMF_F90COMPILEPATHS) $(ESMF_CXXCOMPILEPATHS)
 INCLUDES += -I$(MOSSCO_MODULE_PATH)
 INCLUDES += -I$(MOSSCO_DIR)/src/include
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
+CFLAGS = $(MOSSCO_CFLAGS) $(ESMF_CXXCOMPILEOPTS)
 F90FLAGS = $(MOSSCO_FFLAGS) $(ESMF_F90COMPILEOPTS)
 #F90FLAGS += $(HAMSOM_FFLAGS)
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
@@ -537,6 +548,7 @@ endif
 endif
 F90FLAGS += $(ESMF_F90COMPILEOPTS) $(MOSSCO_FFLAGS)
 export F90FLAGS
+export CFLAGS
 
 ifndef HAVE_LD_FORCE_LOAD
   HAVE_LD_FORCE_LOAD=$(shell ld -v 2>&1 | grep -c LLVM)

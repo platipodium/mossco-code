@@ -37,8 +37,11 @@ endif
 endif
 
 # Make targets
+ifeq ($(MOSSCO_NETCDF),true)
+  TARGETS += nc_extract_restart
+endif
 
-all: libsolver libmossco_util
+all: libsolver libmossco_util $(TARGETS)
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
@@ -46,6 +49,9 @@ mossco_state.o : mossco_field.o mossco_state.F90
 mossco_field.o : mossco_strings.o mossco_field.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
 
+nc_extract_restart: nc_extract_restart.c
+	gcc -I /opt/local/include -c $<
+	gcc -L /opt/local/lib -o $@ nc_extract_restart.o -lnetcdf
 
 #@todo there should be a generic rule for the mods
 #$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90

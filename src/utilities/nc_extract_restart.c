@@ -112,28 +112,26 @@ static int copy_dims(int igrp, int ogrp) {
  * ovar in group ogrp.  Global (group) attributes are specified by
  * using the varid NC_GLOBAL */
 static int copy_atts(int igrp, int ivar, int ogrp, int ovar) {
-    int natts;
-    int iatt;
-    int stat = NC_NOERR;
 
-    stat = nc_inq_varnatts(igrp, ivar, &natts);
-    CHECK(stat, nc_inq_varnatts);
+  int natts, iatt;
+  int stat = NC_NOERR;
 
-    for(iatt = 0; iatt < natts; iatt++) {
-	char name[NC_MAX_NAME];
-	stat = nc_inq_attname(igrp, ivar, iatt, name);
-	CHECK(stat, nc_inq_attname);
-	stat = nc_copy_att(igrp, ivar, name, ogrp, ovar);
-	CHECK(stat, nc_copy_att);
-    }
-    return stat;
+  stat = nc_inq_varnatts(igrp, ivar, &natts);
+  CHECK(stat, nc_inq_varnatts);
+
+  for(iatt = 0; iatt < natts; iatt++) {
+	  char name[NC_MAX_NAME];
+	  stat = nc_inq_attname(igrp, ivar, iatt, name);
+	  CHECK(stat, nc_inq_attname);
+	  stat = nc_copy_att(igrp, ivar, name, ogrp, ovar);
+	  CHECK(stat, nc_copy_att);
+  }
+  return stat;
 }
 
 /* copy the schema for a single variable in group igrp (from a file of
  * kind inkind) to group ogrp */
-static int
-copy_var(int igrp, int inkind, int varid, int ogrp)
-{
+static int copy_var(int igrp, int inkind, int varid, int ogrp) {
     int stat = NC_NOERR;
     int ndims;
     int idimids[NC_MAX_DIMS];	/* ids of dims for input variable */
@@ -171,19 +169,29 @@ copy_var(int igrp, int inkind, int varid, int ogrp)
 
 /* copy the schema for all the variables in group igrp (from a file of kind
  * inkind) to group ogrp */
-static int
-copy_vars(int igrp, int inkind, int ogrp)
-{
+static int extract_vars(char* pattern, int igrp, int inkind, int ogrp) {
+
     int stat = NC_NOERR;
     int nvars;
     int varid;
 
+    char name[NC_MAX_NAME+1];
+
     stat = nc_inq_nvars(igrp, &nvars);
     CHECK(stat, nc_inq_nvars);
-    for (varid = 0; varid < nvars; varid++) {
-	stat = copy_var(igrp, inkind, varid, ogrp);
-	CHECK(stat, copy_var);
 
+    for (varid = 0; varid < nvars; varid++) {
+
+      stat = nc_inq_varname(igrp, varid, name);
+	    CHECK(stat, nc_inq_varname);
+
+      if (strstr(name,pattern)) {
+        fprintf(stdout,"%s matches pattern %s\n", name, pattern);
+	      stat = copy_var(igrp, inkind, varid, ogrp);
+	      CHECK(stat, copy_var);
+      } else {
+        //fprintf(stdout,"%s != %s\n", name, pattern);
+      }
     }
     return stat;
 }
@@ -192,9 +200,7 @@ copy_vars(int igrp, int inkind, int ogrp)
  * group igrp in input to parent group ogrp in destination.  inkind
  * is the kind of netCDF file that igrp identifies (1 -> classic, 2 -<
  * 64-bit offset, 3-> netCDF-4, 4-> netCDF-4 classic model). */
-static int
-copy_schema(int igrp, int inkind, int ogrp)
-{
+static int extract_schema(char* pattern, int igrp, int inkind, int ogrp) {
     int stat = NC_NOERR;
     int ogid;			/* like igrp but in output file */
     int i;
@@ -208,24 +214,24 @@ copy_schema(int igrp, int inkind, int ogrp)
     CHECK(stat, copy_dims);
     stat = copy_atts(igrp, NC_GLOBAL, ogid, NC_GLOBAL);
     CHECK(stat, copy_atts);
-    stat = copy_vars(igrp, inkind, ogid);
-    CHECK(stat, copy_vars);
+    stat = extract_vars(pattern, igrp, inkind, ogid);
+    CHECK(stat, extract_vars);
     return stat;
 }
 
 /* Return number of values for a variable varid in a group igrp, as
  * well as start and count arrays for array access, assumed to be
  * preallocated to hold one value for each dimension of variable */
-static int
-inq_nvals(int igrp, int varid,
+static int inq_nvals(int igrp, int varid,
 	  size_t *startp, size_t *countp, size_t *nvalsp) {
-    int stat = NC_NOERR;
-    int ndims;
-    int dimids[NC_MAX_DIMS];
-    int dim;
-    size_t nvals = 1;
 
-    stat = nc_inq_varndims(igrp, varid, &ndims);
+  int stat = NC_NOERR;
+  int ndims;
+  int dimids[NC_MAX_DIMS];
+  int dim;
+  size_t nvals = 1;
+
+  stat = nc_inq_varndims(igrp, varid, &ndims);
     CHECK(stat, nc_inq_varndims);
     stat = nc_inq_vardimid (igrp, varid, dimids);
     CHECK(stat, nc_inq_vardimid);
@@ -276,8 +282,7 @@ inq_value_size(int igrp, nc_type vartype, size_t *value_sizep) {
 
 /* Copy data from variable varid in group igrp to corresponding group
  * ogrp */
-static int
-copy_var_data(int igrp, int inkind, int varid, int ogrp) {
+static int copy_var_data(int igrp, int inkind, int varid, int ogrp) {
     int stat = NC_NOERR;
     nc_type vartype;
     size_t value_size;		/* size in bytes of one value of variable */
@@ -297,8 +302,7 @@ copy_var_data(int igrp, int inkind, int varid, int ogrp) {
      * distribution.  */
     stat = inq_nvals(igrp, varid, start, count, &nvalues);
     CHECK(stat, inq_nvals);
-    if(nvalues == 0)
-	return stat;
+    if (nvalues == 0) return stat;
     stat = nc_inq_vartype(igrp, varid, &vartype);
     CHECK(stat, nc_inq_vartype);
     /* from type, get size in memory needed for each value */
@@ -308,21 +312,24 @@ copy_var_data(int igrp, int inkind, int varid, int ogrp) {
     stat = nc_inq_varname(igrp, varid, varname);
     CHECK(stat, nc_inq_varname);
     stat = nc_inq_varid(ogrp, varname, &ovarid);
-    CHECK(stat, nc_inq_varid);
+
+    if (stat != NC_NOERR) return NC_NOERR;
+    //CHECK(stat, nc_inq_varid);
+
     buf = emalloc(value_size * nvalues);
     switch(vartype) {
     case NC_BYTE:
-	stat = nc_get_vara_schar(igrp, varid, start, count, buf);
-	CHECK(stat, nc_get_vara_schar);
-	stat = nc_put_vara_schar(ogrp, ovarid, start, count, buf);
-	CHECK(stat, nc_put_vara_schar);
-	break;
+ 	    stat = nc_get_vara_schar(igrp, varid, start, count, buf);
+	    CHECK(stat, nc_get_vara_schar);
+	    stat = nc_put_vara_schar(ogrp, ovarid, start, count, buf);
+	    CHECK(stat, nc_put_vara_schar);
+	    break;
     case NC_CHAR:
-	stat = nc_get_vara_text(igrp, varid, start, count, buf);
-	CHECK(stat, nc_get_vara_text);
-	stat = nc_put_vara_text(ogrp, ovarid, start, count, buf);
-	CHECK(stat, nc_put_vara_text);
-	break;
+	    stat = nc_get_vara_text(igrp, varid, start, count, buf);
+	    CHECK(stat, nc_get_vara_text);
+	    stat = nc_put_vara_text(ogrp, ovarid, start, count, buf);
+	    CHECK(stat, nc_put_vara_text);
+	    break;
     case NC_SHORT:
 	stat = nc_get_vara_short(igrp, varid, start, count, buf);
 	CHECK(stat, nc_get_vara_short);
@@ -358,9 +365,7 @@ copy_var_data(int igrp, int inkind, int varid, int ogrp) {
 /* Copy data from variables in group igrp to variables in
  * corresponding group with parent ogrp, and all subgroups
  * recursively  */
-static int
-copy_data(int igrp, int inkind, int ogrp)
-{
+static int extract_data(int igrp, int inkind, int ogrp) {
     int stat = NC_NOERR;
     int ogid;
     int numgrps;
@@ -387,9 +392,8 @@ copy_data(int igrp, int inkind, int ogrp)
 /* copy infile to outfile using netCDF API, kind specifies which
  * netCDF format for output: 0 -> same as input, 1 -> classic, 2 ->
  * 64-bit offset, 3 -> netCDF-4, 4 -> netCDF-4 classic model */
-static int
-copy(char* infile, char* outfile, int kind)
-{
+static int extract(char* pattern, char* infile, char* outfile, int kind) {
+
     int stat = NC_NOERR;
     int igrp, ogrp;
     int inkind, outkind;
@@ -403,30 +407,28 @@ copy(char* infile, char* outfile, int kind)
     outkind = (kind == SAME_AS_INPUT) ? inkind : kind;
 
     switch(outkind) {
-    case NC_FORMAT_CLASSIC:
-	stat = nc_create(outfile,NC_CLOBBER,&ogrp);
-	break;
-    case NC_FORMAT_64BIT:
-	stat = nc_create(outfile,NC_CLOBBER|NC_64BIT_OFFSET,&ogrp);
-	break;
-    case NC_FORMAT_NETCDF4:
-    case NC_FORMAT_NETCDF4_CLASSIC:
-	fprintf(stderr,
-		"%s built without ability to create netCDF-4 files\n",
-		progname);
-	exit(1);
-    default:
-	fprintf(stderr,"%s: bad value (%d) for -k option\n", progname, kind);
-	exit(1);
+      case NC_FORMAT_CLASSIC:
+	      stat = nc_create(outfile,NC_CLOBBER,&ogrp);
+	    break;
+      case NC_FORMAT_64BIT:
+	      stat = nc_create(outfile,NC_CLOBBER|NC_64BIT_OFFSET,&ogrp);
+	    break;
+      case NC_FORMAT_NETCDF4:
+      case NC_FORMAT_NETCDF4_CLASSIC:
+	      fprintf(stderr,"%s built without ability to create netCDF-4 files\n",progname);
+	      exit(1);
+      default:
+	      fprintf(stderr,"%s: bad value (%d) for -k option\n", progname, kind);
+	      exit(1);
     }
     CHECK(stat,nc_create);
 
-    stat = copy_schema(igrp, inkind, ogrp);
-    CHECK(stat,copy_schema);
+    stat = extract_schema(pattern, igrp, inkind, ogrp);
+    CHECK(stat,extract_schema);
     stat = nc_enddef(ogrp);
     CHECK(stat, nc_enddef);
-    stat = copy_data(igrp, inkind, ogrp);
-    CHECK(stat,copy_data);
+    stat = extract_data(igrp, inkind, ogrp);
+    CHECK(stat,extract_data);
 
     stat = nc_close(igrp);
     CHECK(stat,nc_close);
@@ -487,7 +489,7 @@ int main(int argc, char**argv) {
 	  exit(1);
   }
 
-  pattern = argv[0]
+  pattern = argv[0];
   inputfile = argv[1];
   outputfile = argv[2];
 
@@ -496,6 +498,6 @@ int main(int argc, char**argv) {
 	  exit(1);
   }
 
-  if (extract(inputfile, outputfile, kind) != NC_NOERR) exit(1);
+  if (extract(pattern,inputfile, outputfile, kind) != NC_NOERR) exit(1);
   return 0;
 }
