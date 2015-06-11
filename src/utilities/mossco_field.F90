@@ -138,6 +138,11 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
     endif
 
     do i=2,gridRank
+      if (ubnd(i)<lbnd(i)) then
+        write(message,'(A)') '  bounds problem, please check your foreign_grid specification'
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       width=order(ubnd(i)-lbnd(i)+1)+1
       write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
       if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
