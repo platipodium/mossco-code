@@ -1078,10 +1078,10 @@ if len(cplCompList)>0:
     if (allocated(cplNames)) deallocate(cplNames)
     allocate(cplAlarmList(numCplAlarm))
     allocate(cplNames(numCplAlarm))
-    
+
     !! The default coupler for all cplAlarms is the 'link' connector
     cplNames(:) = 'link'
-    
+
     !! For other explicitly given couplings, specify connectors
 ''')
 for idx,couplingItem in enumerate(couplingList):
@@ -1165,10 +1165,10 @@ fid.write('''
     call ESMF_ClockGetAlarmList(clock, ESMF_ALARMLIST_ALL, alarmCount=alarmCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     if (allocated(alarmList)) deallocate(alarmList)
     allocate(alarmList(alarmCount))
-    
+
     call ESMF_ClockGetAlarmList(clock,ESMF_ALARMLIST_ALL,alarmList=alarmList,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1344,9 +1344,9 @@ fid.write('''
           timeInterval=stopTime-currTime
           cycle
         endif
-        
+
         if (allocated(alarmList)) deallocate(alarmList)
-        allocate(alarmList(alarmCount))   
+        allocate(alarmList(alarmCount))
 
         call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
            alarmList=alarmList, rc=localrc)
@@ -1383,7 +1383,7 @@ fid.write('''
               exit
             endif
           enddo
-          
+
           ! Catch a possible memory leak problem when k overflows
           if (k > ubound(cplAlarmList,1)) then
             write(message,'(A)') 'You have some memory corruption, good luck searching ...'
@@ -1447,7 +1447,7 @@ fid.write('''
       !! Obtain all currently ringing Alarms, and run the components associated with these alarms
       !! When no alarms are ringing anymore, then obtain the minimum of the nextRinging alarms and advance
       !! myself with that timeStep
-      
+
       call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_RINGING, &
         alarmCount=alarmCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1466,7 +1466,7 @@ fid.write('''
         write(message,'(A,I2,A)') trim(myName)//'  '//trim(timeString)//' has',alarmCount,' ringing alarms'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       endif
-      
+
       do j=1,alarmCount
         call ESMF_AlarmGet(alarmList(j), name=alarmName, ringTime=time, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1489,10 +1489,10 @@ fid.write('''
         if (allocated(alarmList)) deallocate(alarmList)
         allocate(alarmList(alarmCount))
       endif
-#endif      
+#endif
 
       !! Loop through all components and check whether their clock is currently at the
-      !! same time as my own clock's currTime, if yes, then run the component and advance it's time 
+      !! same time as my own clock's currTime, if yes, then run the component and advance it's time
       !! until the next coupling Alarm of this component
       do i=1,numGridComp
         !! Determine for each child the clock
@@ -1540,7 +1540,7 @@ fid.write('''
           timeInterval=stopTime-currTime
         else
           if (allocated(alarmList)) deallocate(alarmList)
-          allocate(alarmList(alarmCount))   
+          allocate(alarmList(alarmCount))
           call ESMF_ClockGetAlarmList(childClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
              alarmList=alarmList, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1565,7 +1565,7 @@ fid.write('''
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timestring)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-     
+
           !! This might be problematic for components that need to run multiple times from multiple alarms
           !! For a process model the currTime+ringInterval should be taken if it advances it's own clock
           !! For a non-process model (i.e. output), the clock should only be advanced if all of it's current
@@ -1646,8 +1646,8 @@ fid.write('''
         timeInterval=stopTime-currTime
       else
         if (allocated(alarmList)) deallocate(alarmList)
-        allocate(alarmList(alarmCount))   
-        
+        allocate(alarmList(alarmCount))
+
         call ESMF_ClockGetAlarmList(myClock, alarmListFlag=ESMF_ALARMLIST_ALL, &
           alarmList=alarmList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1728,7 +1728,35 @@ fid.write('''
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     enddo
+''')
 
+for coupling in couplingList:
+  jtem = coupling[-1]
+  
+  if instanceDict.has_key(jtem):
+    if instanceDict[jtem] != 'netcdf': continue
+
+  item = coupling[0]
+  ito = gridCompList.index(jtem)
+  ifrom = gridCompList.index(item)
+  icpl = cplCompList.index(coupling[1])
+
+  fid.write('\n    !! Running final netcdf output coupling ' + item + ' to ' + jtem + '\n')
+  fid.write('    call ESMF_CplCompRun(cplCompList(' + str(icpl+1) + '), importState=gridImportStateList(' + str(ifrom + 1) + '), &\n')
+  fid.write('      exportState=gridExportStateList(' + str(ito+1) + '), clock=controlClock, rc=localrc)\n')
+  fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
+  fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
+  
+  fid.write('    do phase=1,gridCompPhaseCountList(' + str(ito+1) + ')\n')
+  fid.write('      call ESMF_GridCompRun(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito + 1) + '), &\n')
+  fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=controlClock, rc=localrc)')
+  fid.write('''
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+''')    
+    
+fid.write('''
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1736,7 +1764,6 @@ fid.write('''
     call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
