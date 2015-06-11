@@ -488,8 +488,9 @@ case ${SYSTEM} in
          else cat slurm.sh ; fi
          ;;
   BACKGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
+         PID=$!
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
-         echo "Job ${TITLE} interactively running in background"
+         echo "Job ${TITLE} with PID ${PID} interactively running in background"
          ;;
   FOREGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}"
