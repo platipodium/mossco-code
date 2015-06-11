@@ -331,19 +331,6 @@ implicit none
 class(type_sed) :: sed
 integer         :: n,i,j,k
 
-! Make sure we are in an aqueous environment
-if (associated(sed%mask)) then
-  if (.not. all(sed%mask .or. ((sed%porosity>0) .and. (sed%porosity<=1)))) then
-    write(0,*) 'FATAL Porosity out of range, cannot initialize sediment'
-    return
-  endif
-else
-  if (.not. all((sed%porosity>0) .and. (sed%porosity<=1))) then
-    write(0,*) 'FATAL Porosity out of range, cannot initialize sediment'
-    return
-  endif
-endif
-
 do n=1,sed%nvar
    sed%conc(:,:,:,n) = sed%model%state_variables(n)%initial_value/sed%porosity(:,:,:)
    call fabm_link_bulk_state_data(sed%model,n,sed%conc(:,:,:,n))
@@ -380,10 +367,18 @@ integer         :: i,j,k
             write(0,*) 'FATAL sediment porosity out of range at (i,j,k)',i,j,k
             stop
           end if
-          if ((sed%grid%dzc(i,j,k) <= 0) .or. (sed%grid%dz(i,j,k) <=0)) then
+          if (k < sed%knum) then
+            if (sed%grid%dzc(i,j,k) <= 0) then
+              write(0,*) 'FATAL sediment grid heights <= 0 at (i,j,k)',i,j,k
+              stop
+            end if
+          endif
+          if (sed%grid%dz(i,j,k) <=0) then
             write(0,*) 'FATAL sediment grid heights <= 0 at (i,j,k)',i,j,k
             stop
           end if
+        else ! if sed%mask
+          sed%conc(i,j,k,:)=1.d20
         end if
       end do
     end do
@@ -553,25 +548,6 @@ real(rk),dimension(grid%inum,grid%jnum,grid%knum),optional :: flux_cap
 ! -------------------------------------------------------------------------------
 
 dC = 0.0_rk
-
-! Make sure that dzc and dz are finite and positive
-!if (associated(sed%mask)) then
-!  if (.not. all(sed%mask .or. ((grid%dzc>0) .and. (grid%dz>0)))) then
-!    write(0,*)  'FATAL: nonpositive grid height'
-!    return
-!  endif
-!else
-!  if (.not. all((grid%dzc>0) .and. (grid%dz>0))) then
-!    write(0,*)  'FATAL: nonpositive grid height'
-!    return
-!  endif
-!endif
-
-!if (any(grid%dzc <= 0) .or. any(grid%dz <=0)) then
-  !write(0,*)  'FATAL: nonpositive grid height'
-  !> @todo only check within water mask
-  !return
-!endif
 
 ! Flux - first internal cells
 ! positive flux is directed downward
