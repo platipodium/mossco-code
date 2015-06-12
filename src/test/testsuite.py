@@ -15,6 +15,25 @@
 import os
 import sys
 import glob
+import re
+import datetime
+import platform
+
+def test_log(filename, name, value):
+  fid=open(filename,'a')
+  fid.write(name + ': ' + str(value) + '\n')       
+  fid.close()
+  
+def test_make_targets(filename,code_dir,targets):
+  for key,value in targets.iteritems():
+    rc=os.system('cd ' + code_dir + '; make ' + value)
+    test_log(test_result_name,'mk/'+key,True if rc == 0 else False)  
+  
+def test_make_subdirs(filename,code_dir,subdirs):
+  for subdir in subdirs:
+    rc=os.system('cd ' + code_dir + '; make -C ' + subdir)
+    subdir=re.sub('examples/','ex/',subdir)
+    test_log(test_result_name,'mk/' + subdir,True if rc == 0 else False)  
 
 try:
   code_dir=os.environ['MOSSCO_DIR']
@@ -27,48 +46,69 @@ if not os.path.exists(code_dir):
   rc=os.system('git clone git://git.code.sf.net/p/mossco/code ' + code_dir)
   if rc != 0:
     sys.exit('Fatal. Could not git clone mossco.')
-   
-tests={}
-
-rc=os.system('cd ' + code_dir + '; git pull -u')
-tests['git']=True if rc == 0 else False
 
 try:
   esmfmkfile=os.environ['ESMFMKFILE']
 except:
   sys.exit('Fatal. Could not find environment variables $ESMFMKFILE')
 
+
+now=str(datetime.datetime.utcnow().isoformat())[0:19]
+
+test_script_name=sys.argv[0]
+test_result_name=os.path.splitext(test_script_name)[0] + '_results_' \
+ + re.split('\.',platform.node())[0] + '_' \
+ + re.sub(' ','_',now) + '.txt'
+
+fid=open(test_result_name,'w') 
+fid.write('os/date: ' + now + '\n')
+fid.write('os/host: ' +re.split('\.',platform.node())[0] + '\n')
+fid.write('os/system: ' + platform.system() + '\n')
+fid.write('os/version: ' + platform.version() + '\n')
+fid.write('os/machine: ' + platform.machine() + '\n')
+
+fid.close()
+
+rc=os.system('cd ' + code_dir + '; git pull -u')
+test_log(test_result_name,'os/git',True if rc == 0 else False)
+
 rc=os.path.exists(esmfmkfile)
-tests['esmf.mk']=True if rc else False
+test_log(test_result_name,'esmf/esmf.mk',True if rc else False)
+
+for line in open(esmfmkfile).readlines():
+  if re.match('gotm', line): continue
 
 # Define a list of make targets to pass
-test_make_targets={'clean':'mossco_clean', 
-  'external':'external', 'utilities':'-C src/utilities',
+make_targets={#'clean':'mossco_clean', 
+  'external':'external',
   'fabm':'libfabm_external', 'gotm':'libgotm_external',
-  'getm':'libgetm_external', 'drivers':'-C src/drivers',
-  'connectors':'-C src/connectors', 'mediators':'-C src/mediators',
-  'components':'-C src/components', 'src': '-C src', 
+  'getm':'libgetm_external', 
   #'doc': '-C doc'
 }
+test_make_targets(test_result_name,code_dir,make_targets)
 
-test_make_examples=['standalone/omexdia_p','standalon/erosed',
+make_subdirs=['src/utilities', 'src/drivers', 'src/connectors', 
+'src/mediators','src/components', 'src']
+
+test_make_subdirs(test_result_name,code_dir,make_subdirs)
+
+make_examples=['standalone/omexdia_p','standalone/erosed',
   'standalone/benthos',
   'standalone/hamsom','standalone/tracer',
-  'esmf/benthos	','esmf/constant','esmf/getm','esmf/gotmfabm',
+  'esmf/benthos','esmf/constant','esmf/getm','esmf/gotmfabm',
   'esmf/pelagicfabm1','esmf/sediment','esmf/clm','esmf/empty','esmf/fabm0d',
   'esmf/gotm','esmf/remtc','esmf/simplewave'
 ]
 
+for i,example in enumerate(make_examples):
+  make_examples[i] = os.path.join('examples/',example)
 
-for key,value in test_make_targets.iteritems():
-  rc=os.system('cd ' + code_dir + '; make ' + value)
-  tests[key]=True if rc == 0 else False
-    
-for item in test_make_examples:
-  rc=os.system('cd ' + code_dir + '; make -C ' + os.path.join('examples',item))
-  tests['ex/'+ item]=True if rc == 0 else False
+test_make_subdirs(test_result_name,code_dir,make_examples)
   
-for filename in glob.glob(os.path.join(code_dir,'examples','generic','*.yaml')):
+make_yamls=glob.glob(os.path.join(code_dir,'examples','generic','*.yaml'))
+
+# Test generic yaml compilation
+for filename in make_yamls:
   
   # Skip links to yamls
   if os.path.islink(filename): continue
@@ -76,15 +116,70 @@ for filename in glob.glob(os.path.join(code_dir,'examples','generic','*.yaml')):
 
   # Skip yamls that already compiled successfully
   if os.path.isfile(os.path.splitext(filename)[0]): 
-    tests['ex/g/'+ example]=True
+    test_log(test_result_name,'ex/g/'+example,True)
     continue       
   
   rc=os.system('cd ' + os.path.join(code_dir,'examples','generic') + '; python create_coupling.py ' + example + '; make')
-  tests['ex/g/'+ example]=True if rc == 0 else False
+  test_log(test_result_name,'ex/g'+example,True if rc == 0 else False)
+ 
+# Tests in deep_lake setup 
+dl_dir=os.path.join(setup_dir,'deep_lake')
+
+fid= open(os.path.join(dl_dir,'mossco_run.nml'),'w')
+fid.write('''
+&mossco_run
+  title = "deep_lake-autmated-tests",
+  start = "2002-01-02 00:00:00",
+  stop= "2002-01-04 00:00:00",
+  loglevel = "all",
+  logflush = .true., /
+''')
+fid.close()
+
+os.system('cd ' + dl_dir + '; git checkout -- getm.inp')
+
+for yaml in glob.glob(os.path.join(code_dir,'examples','generic','*.yaml')):
   
-dl_examples=[]  
+  # Skip links to yamls
+  if os.path.islink(yaml): continue
+  
+  # Exclude yamls that contain 1D gotm
+  for line in open(yaml).readlines():
+    if re.match('gotm', line): continue
+        
+  example=os.path.splitext(os.path.split(yaml)[1])[0]
 
+  if not os.path.isfile(os.path.splitext(yaml)[0]): 
+    test_log(test_result_name,'dl/g/'+example,False)
+    continue   
+    
+  petname=os.path.join(dl_dir,'PET0.deep_lake-1x1-' + example)
 
-for key,value in tests.iteritems():
-  print key,'=',value
-   
+  if  os.path.isfile(petname): os.unlink(petname)
+
+  rc=os.system('cd ' + dl_dir + '; mossco -n1 -lA -sF ' + example)
+  if rc != 0: 
+    test_log(test_result_name,'dl/g/'+example,False)
+    continue
+      
+  petname=os.path.join(dl_dir,'PET0.deep_lake-1x1-' + example)
+  if not os.path.isfile(petname): 
+    test_log(test_result_name,'dl/g/'+example,False)
+    continue
+      
+  fid=open(os.path.join(dl_dir,'PET0.deep_lake-1x1-' + example),'r')
+  lines=fid.readlines()
+  
+  try:
+    lines[-1].index('finished')
+  except:
+    try:
+      lines[-1].index('Finalize')
+    except:
+      test_log(test_result_name,'dl/g/'+example,False)
+      continue
+     
+  test_log(test_result_name,'dl/g/'+example,True)
+
+  for line in open(test_result_name).readlines():
+    print line
