@@ -11,8 +11,10 @@
   hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
   LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
-  This software is modified from copyrighted software 'nccopy3.c'
-  @copyright Copyrighte(C) 1993-2014, University Corporation for Atmospheric Research/Unidata
+  This software is modified from copyrighted software that allows modification and
+  redistribution.  The original file 'nccopy3.c' is released under the terms of
+  the UCAR license, see the full terms at $MOSSCO_DIR/doc/license/LICENSE.UCAR
+  @copyright Copyright (C) 1993-2014, University Corporation for Atmospheric Research/Unidata
 
 **/
 
@@ -437,17 +439,17 @@ static int extract(char* pattern, char* infile, char* outfile, int kind) {
     return stat;
 }
 
-static void
-usage(void)
+static void usage(void)
 {
 #define USAGE   "\
   [-k n]    kind of netCDF format for output file, default same as input\n\
 	    1 classic, 2 64-bit offset\n\
+	pattern   substring to match variable names (no wildcards)\n\
   infile    name of netCDF input file\n\
   outfile   name for netCDF output file\n"
 
     (void) fprintf(stderr,
-		   "%s [-k n] infile outfile\n%s",
+		   "%s [-k n] pattern infile outfile\n%s",
 		   progname,
 		   USAGE);
 }
