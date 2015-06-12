@@ -113,7 +113,8 @@ flow2d3d-svn-export:
 flibs-cvs-clone:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/flibs-cvs),)
 	mkdir -p $(MOSSCO_DIR)/external/flibs-cvs
-	cvs -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs login
+	echo "/1 :pserver:anonymous@flibs.cvs.sourceforge.net:2401/cvsroot/flibs A" >> $(HOME)/.cvspass
+	#cvs -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs login
 	$(MAKE) flibs-cvs-update
 endif
 
