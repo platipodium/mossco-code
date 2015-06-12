@@ -12,7 +12,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 """
-import os
+import os, subprocess
 import sys
 import glob
 import re
@@ -70,7 +70,11 @@ fid.write('os/machine: ' + platform.machine() + '\n')
 fid.close()
 
 rc=os.system('cd ' + code_dir + '; git pull -u')
-test_log(test_result_name,'os/git',True if rc == 0 else False)
+test_log(test_result_name,'git/pull',True if rc == 0 else False)
+
+sha = subprocess.Popen("git log -n1 --oneline", shell=True, bufsize=1024,stdout=subprocess.PIPE).stdout.readline()
+sha = re.split(' ',sha)[0]
+test_log(test_result_name,'git/sha',sha)
 
 rc=os.path.exists(esmfmkfile)
 test_log(test_result_name,'esmf/esmf.mk',True if rc else False)
@@ -120,7 +124,7 @@ for filename in make_yamls:
     continue       
   
   rc=os.system('cd ' + os.path.join(code_dir,'examples','generic') + '; python create_coupling.py ' + example + '; make')
-  test_log(test_result_name,'ex/g'+example,True if rc == 0 else False)
+  test_log(test_result_name,'ex/g/'+example,True if rc == 0 else False)
  
 # Tests in deep_lake setup 
 dl_dir=os.path.join(setup_dir,'deep_lake')
