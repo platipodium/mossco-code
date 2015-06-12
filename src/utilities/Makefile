@@ -50,8 +50,8 @@ mossco_field.o : mossco_strings.o mossco_field.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
 
 nc_extract_restart: nc_extract_restart.c
-	gcc -I /opt/local/include -c $<
-	gcc -L /opt/local/lib -o $@ nc_extract_restart.o -lnetcdf
+	gcc -I $(MOSSCO_NETCDF_INCLUDE) -c $<
+	gcc  -o $@ nc_extract_restart.o -L $(MOSSCO_NETCDF_LIBPATH) $(MOSSCO_NETCDF_LIBS)
 
 #@todo there should be a generic rule for the mods
 #$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90

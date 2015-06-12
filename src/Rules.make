@@ -75,6 +75,9 @@ else
   ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
     export MOSSCO_NETCDF ?= true
+    export MOSSCO_NETCDF_INCLUDE ?= $(strip $(shell grep "\# ESMF_NETCDF_INCLUDE:" $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF_LIBS ?= $(strip $(shell grep "\# ESMF_NETCDF_LIBS:" $(ESMFMKFILE) | cut -d':' -f2-))
+    export MOSSCO_NETCDF_LIBPATH ?= $(strip $(shell grep "\# ESMF_NETCDF_LIBPATH:" $(ESMFMKFILE) | cut -d':' -f2-))
   else
     export MOSSCO_NETCDF ?= false
   endif
