@@ -154,6 +154,7 @@ module fabm_sediment_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(gridComp, importState, exportState, parentClock, rc)
+    use fabm_types, only: output_none
     implicit none
 
     type(ESMF_GridComp)  :: gridComp
@@ -487,20 +488,22 @@ module fabm_sediment_component
       end do
 #if 0
       do n=1,size(sed%model%diagnostic_variables)
-        diag => sed%diagnostic_variables(n)
-        statemesh_ptr => diag(:,1,:)
-        field = ESMF_FieldCreate(state_mesh,farrayPtr=statemesh_ptr, &
+        if (sed%model%diagnostic_variables(n)%output /= output_none) then
+          diag => sed%diagnostic_variables(n)
+          statemesh_ptr => diag(:,1,:)
+          field = ESMF_FieldCreate(state_mesh,farrayPtr=statemesh_ptr, &
                    name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message, '(A)') trim(name)//' created field'
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          write(message, '(A)') trim(name)//' created field'
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        end if
       end do
 #endif
 
@@ -665,27 +668,29 @@ module fabm_sediment_component
         end if
       end do
       do n=1,size(sed%model%diagnostic_variables)
-        diag => sed%diagnostic_variables(n)
-        field = ESMF_FieldCreate(flux_grid,farray=diag, &
+        if (sed%model%diagnostic_variables(n)%output /= output_none) then
+          diag => sed%diagnostic_variables(n)
+          field = ESMF_FieldCreate(flux_grid,farray=diag, &
                    indexflag=indexflag, &
                    ungriddedLBound=(/1/), &
                    ungriddedUBound=(/sed%grid%knum/), &
                    gridToFieldMap=(/1,2/), &
                    name=only_var_name(sed%model%diagnostic_variables(n)%long_name)//'_in_soil', rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'units',trim(sed%model%diagnostic_variables(n)%units))
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_AttributeSet(field,'units',trim(sed%model%diagnostic_variables(n)%units))
 
-        write(message, '(A)') trim(name)//' created diagnostic field'
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          write(message, '(A)') trim(name)//' created diagnostic field'
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        end if
       end do
 
       !! create boundary fields in import State
