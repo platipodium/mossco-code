@@ -32,7 +32,8 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
 ifeq ($(MOSSCO_NETCDF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o)
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o) \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_gridspec.o)
 endif
 endif
 
@@ -47,6 +48,7 @@ libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 mossco_state.o : mossco_field.o mossco_state.F90
 mossco_field.o : mossco_strings.o mossco_field.F90
+mossco_gridspec.o : mossco_strings.o
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
 
 nc_extract_variable: nc_extract_variable.c
@@ -56,16 +58,6 @@ nc_extract_variable: nc_extract_variable.c
 nc_extract_variable_lasttime: nc_extract_variable_lasttime.c
 	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
 	$(MOSSCO_CCOMPILER) -o $@ nc_extract_variable_lasttime.o -L $(MOSSCO_NETCDF_LIBPATH) $(MOSSCO_NETCDF_LIBS)
-
-#@todo there should be a generic rule for the mods
-#$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90
-#$(MOSSCO_MODULE_PATH)/mossco_variable_types.mod: mossco_variable_types.o
-#$(MOSSCO_MODULE_PATH)/mossco_state.mod: mossco_state.o
-#$(MOSSCO_MODULE_PATH)/mossco_field.mod: mossco_state.o
-#$(MOSSCO_MODULE_PATH)/mossco_time.mod: mossco_time.o
-#$(MOSSCO_MODULE_PATH)/mossco_strings.mod: mossco_strings.o
-#$(MOSSCO_MODULE_PATH)/mossco_netcdf.mod: mossco_netcdf.o mossco_variable_types.o
-#$(MOSSCO_MODULE_PATH)/mossco_dictionary.mod: mossco_dictionary.o
 
 clean: extraclean
 extraclean:
@@ -79,6 +71,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_gridspec.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
 	$(RM) *.o nc_extract_variable_lasttime nc_extract_variable
