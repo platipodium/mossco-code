@@ -38,7 +38,7 @@ endif
 
 # Make targets
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS += nc_extract_restart
+  TARGETS += nc_extract_variable nc_extract_variable_lasttime
 endif
 
 all: libsolver libmossco_util $(TARGETS)
@@ -49,9 +49,13 @@ mossco_state.o : mossco_field.o mossco_state.F90
 mossco_field.o : mossco_strings.o mossco_field.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
 
-nc_extract_restart: nc_extract_restart.c
-	gcc -I $(MOSSCO_NETCDF_INCLUDE) -c $<
-	gcc  -o $@ nc_extract_restart.o -L $(MOSSCO_NETCDF_LIBPATH) $(MOSSCO_NETCDF_LIBS)
+nc_extract_variable: nc_extract_variable.c
+	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
+	$(MOSSCO_CCOMPILER) -o $@ nc_extract_variable.o -L $(MOSSCO_NETCDF_LIBPATH) $(MOSSCO_NETCDF_LIBS)
+
+nc_extract_variable_lasttime: nc_extract_variable_lasttime.c
+	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
+	$(MOSSCO_CCOMPILER) -o $@ nc_extract_variable_lasttime.o -L $(MOSSCO_NETCDF_LIBPATH) $(MOSSCO_NETCDF_LIBS)
 
 #@todo there should be a generic rule for the mods
 #$(MOSSCO_MODULE_PATH)/solver_library.mod: solver_library.F90
@@ -77,4 +81,5 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
+	$(RM) *.o nc_extract_variable_lasttime nc_extract_variable
 
