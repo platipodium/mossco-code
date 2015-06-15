@@ -50,6 +50,7 @@ mossco_state.o : mossco_field.o mossco_state.F90
 mossco_field.o : mossco_strings.o mossco_field.F90
 mossco_gridspec.o : mossco_strings.o
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
+mossco_netcdf.o : mossco_gridspec.o
 
 nc_extract_variable: nc_extract_variable.c
 	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
