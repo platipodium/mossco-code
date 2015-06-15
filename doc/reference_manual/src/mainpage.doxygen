@@ -7,37 +7,33 @@ The overarching goal of the project Modular System for Shelves and Coasts (MOSSC
 
 @image latex MOSSCO-schema_400px.png "Schematic overview of the MOSSCO system" width=.6\hsize
 
-MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the Forschungsagenda Nord- und Ostsee within framework of the Research Agenda for Sustainable Development (FONA, [www.fona.de](http://www.fona.de/ "Forschung für Nachhaltige Entwicklung")). MOSSCO integrates physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure supports synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance with coastal policies. 
+MOSSCO will build a framework for a modular data and model system, an infrastructure, which has been identified as research demand by the Forschungsagenda Nord- und Ostsee within framework of the Research Agenda for Sustainable Development (FONA, [www.fona.de](http://www.fona.de/ "Forschung für Nachhaltige Entwicklung")). MOSSCO integrates physical, biological, chemical and geological modules in an exchangeable way. This modular infrastructure supports synoptic studies of coastal and shelf seas including their interfaces to adjacent Earth-system components, such as sediment, atmosphere, rivers and the open ocean. Benefits of this approach are most apparent for the description of cohesive sediments where strong interactions between the benthic and pelagic compartment and between hydrodynamic, biogeochemical (BGC), ecological and sedimentary processes are largely unresolved within state-of-the-art models. MOSSCO will therefore be applied to cohesive sediment dynamics and transport problems on two spatial coastal scales: In an application to the entire German North Sea and Baltic Sea, we will demonstrate the modular concept of MOSSCO, study sediment fluxes along the coast, and support other FONA projects. In a study of two estuaries, we will focus on the impact of maintenance dredging and channel deepening on water quality and ecosystem services, including potential effects of climate change. Using a webGIS frontend of the modular system, the estuarine results will be evaluated for their compliance with coastal policies.
 
 @section obtaining-code How to obtain the code
 
-While the public web site with documentation on the MOSSCO project is hosted at [www.mossco.de](http://www.mossco.de), the software, blog, and bug tracker is hosted on [sf.net/p/mossco](http://www.sf.net/p/mossco).  To obtain the code, change to the "Git" tab at that site, or follow this link [sf.net/p/mossco/code](http://www.sf.net/p/mossco/code).
+While the public web site with documentation on the MOSSCO project is hosted at [www.mossco.de](http://www.mossco.de), the software, blog, and bug tracker is hosted on [sf.net/p/mossco](http://www.sf.net/p/mossco).  To obtain the code, change to the @c Git tab at that site, or follow this link [sf.net/p/mossco/code](https://www.sf.net/p/mossco/code).
 
 @latexonly The web site interface could look as follows (depending on your browser)
 {\begin{center}\includegraphics[width=.7\hsize]{../../img/sf_git_screenshot.png}\\ {Screenshot of using sourceforge}\end{center}
 @endlatexonly
 
-Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable. 
+Choose a local directory @c $MOSSCO_DIR, where you would like the mossco code to reside;  you should make this an environment variable.
 
 		export MOSSCO_DIR=$HOME/some/local/directory # for bash users
-		setenv MOSSCO_DIR $HOME/some/local/directory # for csh users	
+		setenv MOSSCO_DIR $HOME/some/local/directory # for csh users
 
 
 The code is available via @c git for read-only access. If you don't have @c git, you can download and install a suitable version from [git-scm.com](http://git-scm.com "The GIT SCM website").
 
-~~~~sh
-git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
-~~~~
+		git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 
-or, alternatively using the http protocol 
+> or, alternatively using the http protocol
 
-~~~~sh
-git clone http://git.code.sf.net/p/mossco/code $MOSSCO_DIR
-~~~~
+		git clone http://git.code.sf.net/p/mossco/code $MOSSCO_DIR
 
-If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
+> If you are a developer and registered as a participant of the MOSSCO project, you may use a modified version of this command to gain write access.
 
-If you do not have @c git, you may also download a zipped version of the source code from the "Files" section at [sf.net/projects/mossco/files](https://sourceforge.net/projects/mossco/files/). Note, however, that these snapshots may be outdated at the time of your download.  Download the file to the directory where $MOSSCO_DIR points to, then unzip it.
+> If you do not have @c git, you may also download a zipped version of the source code from the "Files" section at [sf.net/projects/mossco/files](https://sourceforge.net/projects/mossco/files/). Note, however, that these snapshots may be outdated at the time of your download.  Download the file to the directory where $MOSSCO_DIR points to, then unzip it.
 
 @section installing Installing MOSSCO
 
@@ -51,36 +47,25 @@ Program | Minimum version and alternatives
 --------|----------
 GNU Make | 3.0
 Fortran 2003 Compiler | e.g. GNU  >= 4.8.2, Intel >= 12.0, PGI >= 13.2
-ESMF | 5.2.0rp3, preferably 6.3.0r
-
+ESMF | 5.2.0rp3, preferably 6.3.0r or 7.X beta versions
 
 @subsubsection optional-system-prereqs Optional system prerequisites
 
 Program | Minimum version and alternatives
 -------|-----------
 NetCDF | 3.6, preferably version 4
-Message Passing Interface | OpenMPI >= 1.7 or MPICH >= 3.0.4 
+Message Passing Interface | OpenMPI >= 1.7 or MPICH >= 3.0.4, or custom MPI
 
-We recommend strongly that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not necessarily been tested.  
+We recommend strongly that you delegate the installation of ESMF (including Fortran compiler, MPI, NetCDF) to your local tech support or IT department. Other versions of the necessary and optional required programs may also work, but have not necessarily been tested.
 
 You may also try to go ahead with an existing lower version of any of the required software packages, report possible errors, and argue why you would like us to support your version.  No argument, however, about the Fortran 2003 standard!
 
-For help and hints on installing ESMF, MPI, and NetCDF, see the appropriate sections below.  Please make sure to use the same compiler for all your software components. 
+For help and hints on installing ESMF, MPI, and NetCDF, see the appropriate sections below.  Please make sure to use the *same compiler* for all your software components.
 
 1. Choose a FORTRAN compiler
 2. Compile MPI for this specific compiler
 3. Compile NetCDF libraries with this specific compiler and MPI support
-4. Compile ESMF with matching NetCDF and MPI library settings 
-
-@subsubsection optional-installations Optional external model installations
-
-Program | Minimum version and alternatives
--------|-----------
-GOTM | > 13 August 2014 
-FABM | < 19 May 2014, sha 62ce4a5
-
-[GOTM's interface changed on 13 August 2014.  If you use an earlier version of GOTM, the 0D driver will not compile.  FABM's iow_spm model changed from May 19, and from August its build system changed.]
-
+4. Compile ESMF with matching NetCDF and MPI library settings
 
 @subsubsection doc-prereqs Documentation prerequisites
 
@@ -127,71 +112,55 @@ Environment variable | value
 ESMFMKFILE | $HOME/opt/src/esmf/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
 
 
-@subsection installing-fabm Installing FABM
+@subsection installing-gotm-fabm Auto-installing external programs
 
-Decide on a directory where to install FABM, and set the environment variable $FABMDIR to point to this directory
+Some external software packages will be installed for you by MOSSCO, if you like.  These are
 
-- download the git repository of FABM: @code git clone git://git.code.sf.net/p/fabm/code $FABMDIR @endcode
-- change into the new directory @code cd $FABMDIR @endcode
-- set a suitable @c $FORTRAN_COMPILER environment variable, such as IFORT, GFORTRAN, or PGIF90 (see the FABM documentation for more options)
+1. GOTM General Ocean Turbulence Model
+2. GETM General Estuariene Transport Model
+3. FABM Framework for Aquatic Biogeochemical Models
+4. EROSED DELFT3D Erosion/Sedimentation Module
+5. FLIBS Fortran utility library
+6. FJSON JSON Fortran implementation
 
-An example environment for FABM could look like this:
-Environment variable | value
+All these software packages will be downloaded to a subdirectory of `$MOSSCO_DIR/external` when you issue
+
+		make external
+
+You may have to set certain specific environment variables for these external packages, we recommend to set
+
+Variable | Package
 ---|---
-FABMDIR | $HOME/opt/src/fabm-code
-FORTRAN_COMPILER | GFORTRAN
+NETCDF_VERSION | GETM
+NETCDF | GOTM
+FORTRAN_COMPILER | GOTM, FABM
 
-In recent (from 9/2013) versions of FABM, the FABM_2003 macro is deprecated.  If you want MOSSCO to take care of the FABM compilation (and create object files in the FABM tree), please also set the environment variable MOSSCO_FABMDIR.
+@subsection using-external-programs Using external programs
 
-Environment variable | value
----|---
-MOSSCO_FABMDIR | $FABMDIR
+You can and should use MOSSCO with your own software packages.  We have already implemented a structure for the following packages
 
-In this case, you do not need to precompile FABM.  If you decide to take care of FABM builds yourself, do not set MOSSCO_FABMDIR, but only FABMDIR. In that case, you may want to build the following targets:
+1. FABM
+2. GOTM
+3. GETM
+4. HAMSOM
+5. TRACER
+6. EROSED
 
-~~~~.sh
-(cd $FABMDIR/src ; make distclean 0d gotm mossco)
-~~~~
-
-
-@subsection installing-gotm Installing GOTM
-
-Decide on a directory where to install GOTM, and set the environment variable $GOTMDIR to point to this directory
-
-- download the git repository of GOTM: @code git clone git://git.code.sf.net/p/gotm/code $GOTMDIR @endcode
-- change into the new directory @code cd $GOTMDIR @endcode
-- set a suitable @c $FORTRAN_COMPILER environment variable (see FABM section above)
-
-An example environment for GOTM could look like this:
-Environment variable | value
----|---
-GOTMDIR | $HOME/opt/src/gotm-code
-FORTRAN_COMPILER | GFORTRAN
-
-If you want MOSSCO to take care of the GOTM compilation, please also set the environment variable MOSSCO_GOTMDIR to the value of GOTMDIR.
-
-Only if you decide to maintain GOTMDIR yourself (and not set MOSSCO_GOTMDIR), you have to build GOTM yourself. Please make sure to compile GOTM without FABM support (unset the environment variable FABM), since MOSSCO provides its own GOTM-FABM driver using a different fabm host specification. Also consider the GOTM documentation on how to configure your netCDF installation. A working configuration could be:
-Environment variable | value
----|---
-NETCDF_VERSION | NETCDF4
-
-~~~~.sh
-(cd $GOTMDIR/src ; make distclean all)
-~~~~
+MOSSCO is aware of these packages as soon as you set the environment variables @c $MOSSCO_FABMDIR,  @c $MOSSCO_GETMDIR, etc.  These environment variables should point to the location of your software package.  MOSSCO will detect it, and build it according to rules we defined in @c $MOSSCO_DIR/src/Rules.make.
 
 @subsection building Building MOSSCO
 
 To create the MOSSCO libraries,  simply issue
-@c make in your @c $MOSSCO_DIR.  This will automaticall build the @c src target and provide the 
+@c make in your @c $MOSSCO_DIR.  This will automaticall build the @c src target and provide the
 libraries in @c $MOSSCO_DIR/lib/$FORTRAN_COMPILER
 
-To create the documentation (the file you're reading right now), issue 
+To create the documentation (the file you're reading right now), issue
 
 ~~~~sh
 make doc
 ~~~~
 
-(don't worry too much about the warning messages that occur with outdated doxygen version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have doxygen installed, you can alternatively consult the fairly recent online documentation at [www.mossco.de/doc](http://www.mossco.de/doc "Mossco Online Documentation"), or download a - probably outdated -  pdf of the documentation from [sf.net/projects/mossco/files/Reference%20Manual/](https://sourceforge.net/projects/mossco/files/Reference%20Manual/). 
+(don't worry too much about the warning messages that occur with outdated doxygen version.  Also, some of the heading and table markup may not render correctly with old doxygen versions). If you do not have doxygen installed, you can alternatively consult the fairly recent online documentation at [www.mossco.de/doc](http://www.mossco.de/doc "Mossco Online Documentation"), or download a - probably outdated -  pdf of the documentation from [sf.net/projects/mossco/files/Reference%20Manual/](https://sourceforge.net/projects/mossco/files/Reference%20Manual/).
 
 To create the examples and test your installation, issue
 
@@ -210,23 +179,23 @@ make distclean
 
 @subsection sum Summary settings
 
-It may be convenient for you to assemble all variable settings in a shell resource file or add variable settings to your shell's login commands.  Only very few environment variables should be set after your first installation.  
+It may be convenient for you to assemble all variable settings in a shell resource file or add variable settings to your shell's login commands.  Only very few environment variables should be set after your first installation.
 
 Sample setting for `bash` could look as follows
 
-	export MOSSCO_DIR=${HOME}/opt/mossco/code
-	export NETCDF_VERSION=NETCDF4
+		export MOSSCO_DIR=${HOME}/opt/mossco/code
+		export NETCDF_VERSION=NETCDF4
     export ESMFMKFILE=/opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
 
 For `csh` you would, in a similar fashion, say
 
-	setenv MOSSCO_DIR ${HOME}/opt/mossco/code
+		setenv MOSSCO_DIR ${HOME}/opt/mossco/code
     setenv NETCDF_VERSION NETCDF4
     setenv ESMFMKFILE /opt/esmf/lib/libo/Linux.gfortran.64.openmpi.ESMF_6_3_0rp1_beta_snapshot_09/esmf.mk
 
 @section reporting Reporting errors
 
-Bugs as well as annoyances and feature requests are collected in a bug tracker located at https://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.  
+Bugs as well as annoyances and feature requests are collected in a bug tracker located at https://sourceforge.net/projects/mossco/tickets/.  Please search for an existing ticket before reporting a new one.
 
 Do report any issue that you observe, even if this later turns out to be a problem related to your local computing environment and not to the MOSSCO code itself.  We encourage to document any problem that you encountered during the installation of MOSSCO: someone else might have the same issue and could profit from your experience.
 
@@ -243,12 +212,12 @@ MOSSCO itself is structured in a modular fashion, with usually three levels in a
 At the driver level, MOSSCO includes code that is *specific to an external model*.  The driver level code serves as an interface level between the external model and the component. Typically
 
 - a driver *uses* modules from an external model
-- does *not use esmf* 
+- does *not use esmf*
 - replaces or complements external model codes
 - is hand-coded
 
 @subsection structure-component Component
-At the component level, MOSSCO includes code that exhibits the data from external models wrapped in an ESMF component.  The component level code is a major product of MOSSCO, and should be integrateable into other ESMF coupled codes. 
+At the component level, MOSSCO includes code that exhibits the data from external models wrapped in an ESMF component.  The component level code is a major product of MOSSCO, and should be integrateable into other ESMF coupled codes.
 
 - a component *does not use* modules from an external model
 - a component *uses* a driver
@@ -261,9 +230,9 @@ At the component level, MOSSCO includes code that exhibits the data from externa
 At the example level, MOSSCO provides examples of ESMF coupled modular systems.  The example level code is a major product of MOSSCO, providing both scientifically exploitable coupled systems, as well as template code for user defined couplings.
 
 - an example represents a complete compile-time coupled system
-- results in a application, that is executed in a *setup* (see below) 
+- results in a application, that is executed in a *setup* (see below)
 - automatically processed (with the `examples/generic/create_coupling.py` script), or, for reference, hand-coded.
- 
+
 
 
 @section status MOSSCO status
@@ -307,13 +276,13 @@ This example describes a system of 3 coupled components [find a shorter way to s
 
 In this example, the GOTM component provides data to FABM0D at 40 min intervals and to FABMSED at 60 min intervals.  FABMSED provides data to FABM0D at 60 min intervals, and FABM0D provides data to GOTM at 90 minutes, and to FABMSED at 60 minutes intervals (note the direction "both" argument).
 
-During initialize, the components add alarms with the specified interval to the parent clock [demonstrate that this works], each alarm obtains as attributes the meta-information about each two-way coupling.  
+During initialize, the components add alarms with the specified interval to the parent clock [demonstrate that this works], each alarm obtains as attributes the meta-information about each two-way coupling.
 
-The parent clock in the top level component, which calls FABM0D, GOTM and FABMSED repeatedly in its @c Run() routine, examines its alarms for those next ringing ones and calls each component with a time duration until the next alarm suitable for that component. It then advance its own clock to the next alarm time, exchanges data, and calls the Run() routines of the two components whos alarm had triggered with a time duration until the next alarm related to each component. 
+The parent clock in the top level component, which calls FABM0D, GOTM and FABMSED repeatedly in its @c Run() routine, examines its alarms for those next ringing ones and calls each component with a time duration until the next alarm suitable for that component. It then advance its own clock to the next alarm time, exchanges data, and calls the Run() routines of the two components whos alarm had triggered with a time duration until the next alarm related to each component.
 
-In our example above.  
+In our example above.
 1) GOTM and FABM0D are run for 40 mins, FABMSED for 60 mins
-2) at t=40 GOTM gives data to FABM0D, GOTM and FABM0D are run for another 20 minutes 
+2) at t=40 GOTM gives data to FABM0D, GOTM and FABM0D are run for another 20 minutes
 3) at t=60 GOTM and FABM0D give data to FABMSED, FABMSED gives data to FABM0D; GOTM and FABM0D are run for 20 mins, FABMSED for 60 mins.
 4) at t=80 GOTM gives data to FABM0D, GOTM and FABM0D  are run for 10 mins
 5) at t=90 FABM0D gives data to GOTM, both are run for another 30 minutes
@@ -357,7 +326,7 @@ test cases should be installed in the directory $GOTMCASEDIR, then run
 ~~~~
 git clone git://git.code.sf.net/p/gotm/gotm-cases $GOTMCASEDIR
 ~~~~
-  
+
 To run the northern North Sea annual testcase, issue the following
 
 ~~~~
@@ -372,7 +341,7 @@ Prerequisites are both FABM and GOTM. FABM has to have the mossco driver compile
 ~~~~
 make -C $FABMDIR/src mossco
 ~~~~
-  
+
 Then compile MOSSCO, go to $MOSSCO_DIR/examples/esmf_fabm0d and run the example:
 
 ~~~~
@@ -383,17 +352,17 @@ All configuration files are contained in the example.
 
 @subsection Delft3D erosion-sedimentation (erosed) test case
 
-Prerequisite for this test case is ESMF.  You also need to obtain original Delft3D routines.  
+Prerequisite for this test case is ESMF.  You also need to obtain original Delft3D routines.
 Create a directory @c $EROSED_DIR, and get up-to-date sources via subversion
 
 ~~~~sh
 svn checkout https://svn.oss.deltares.nl/repos/openearthtools/trunk/programs/SandMudBedModule/03_Fortran/example/example $EROSED_DIR
 ~~~~
 
-Access to the Delft3D open source repository is restricted to registered users.  You can register at 
+Access to the Delft3D open source repository is restricted to registered users.  You can register at
 [oss.deltares.nl](http://oss.deltares.nl) (look at the top right)
 
-After compilation of the example, you can run it in the local directory.  
+After compilation of the example, you can run it in the local directory.
 
 @section references References
 
