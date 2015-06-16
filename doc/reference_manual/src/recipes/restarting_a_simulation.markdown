@@ -1,8 +1,8 @@
-# Recipe #13: Restarting a simulation
+# Recipe 13: Restarting a simulation {#recipe-restarting}
 
 Restarting a simulation with MOSSCO is a combination of two facilities
 
-1. The implementation of the `ReadRestart` ESMF phase in a component
+1. The implementation of the @ref `ReadRestart` ESMF phase in a component
 2. Using the MOSSCO NetCDF input component
 
 Restarting a simulation with models that do not implement the ESMF `ReadRestart` facility, but that 
