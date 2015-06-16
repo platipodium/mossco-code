@@ -929,6 +929,8 @@ contains
         end if
       else
         call ESMF_LogWrite(' export to internal field concentration_of_SPM_upward_flux_at_soil_surface',ESMF_LOGMSG_INFO)
+        !> @todo This allocation might be critical if the field has totalwidth (halo zones)
+        !>        We might have to allocate with these halo zones (not until we get into trouble)
         allocate (size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(inum, jnum))
         do j=1,jnum
           do i= 1, inum
