@@ -37,7 +37,7 @@ for i,filename in enumerate(test_results):
   
   for line in open(filename,'r').readlines():
     key=re.split(':',line)[0]
-    value=re.split(':',line)[1]
+    value=line[len(key)+1:]
     mytests[key]=value
 
     if key in testlist: 
