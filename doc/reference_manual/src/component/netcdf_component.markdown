@@ -51,5 +51,5 @@ Exclusion overrides inclusion, e.g., you can specify the following:
 		include: *DIN*
 		exclude *_in_water
 		
-to obtain only variables that contain the string `DIN` but do not end in `_in_water`.
+to obtain only variables that contain the string `DIN` but do not end in `_in_water`.  Be careful with the length of the line after any label in this ESMF configuration format, it is limited (depending on your system).
 
