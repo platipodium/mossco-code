@@ -697,7 +697,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (itemType /= ESMF_STATEITEM_FIELD) then
+    if (itemType /= ESMF_STATEITEM_FIELDBUNDLE) then
       call ESMF_LogWrite('  fieldBundle '//trim(bundleName)//' was not found', ESMF_LOGMSG_WARNING)
       return
     endif
