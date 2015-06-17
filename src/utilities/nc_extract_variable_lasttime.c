@@ -1,6 +1,7 @@
 /**
 
-  @brief Implementation of a netcdf utility that extracts a subset of variables
+  @brief Implementation of a netcdf utility that extracts a subset of variables a their
+  last index along the unlimited dimension
 
   This computer program is part of MOSSCO.
   @copyright Copyright (C) 2015, Helmholtz-Zentrum Geesthacht
@@ -152,11 +153,11 @@ static int copy_var(int igrp, int inkind, int varid, int ogrp) {
 
     /* get the corresponding dimids in the output file */
     for(i = 0; i < ndims; i++) {
-	char dimname[NC_MAX_NAME];
-	stat = nc_inq_dimname(igrp, idimids[i], dimname);
-	CHECK(stat, nc_inq_dimname);
-	stat = nc_inq_dimid(ogrp, dimname, &odimids[i]);
-	CHECK(stat, nc_inq_dimid);
+	    char dimname[NC_MAX_NAME];
+	    stat = nc_inq_dimname(igrp, idimids[i], dimname);
+	    CHECK(stat, nc_inq_dimname);
+	    stat = nc_inq_dimid(ogrp, dimname, &odimids[i]);
+	    CHECK(stat, nc_inq_dimid);
     }
 
     /* define the output variable */
@@ -232,36 +233,45 @@ static int inq_nvals(int igrp, int varid,
   int dimids[NC_MAX_DIMS];
   int dim;
   size_t nvals = 1;
+  int unlimid;
+
+	stat = nc_inq_unlimdim(igrp, &unlimid);
+  CHECK(stat, nc_inq_unlimdim);
 
   stat = nc_inq_varndims(igrp, varid, &ndims);
-    CHECK(stat, nc_inq_varndims);
-    stat = nc_inq_vardimid (igrp, varid, dimids);
-    CHECK(stat, nc_inq_vardimid);
-    for(dim = 0; dim < ndims; dim++) {
-	size_t len;
-	stat = nc_inq_dimlen(igrp, dimids[dim], &len);
-	CHECK(stat, nc_inq_dimlen);
-	nvals *= len;
-	startp[dim] = 0;
-	countp[dim] = len;
+  CHECK(stat, nc_inq_varndims);
+  stat = nc_inq_vardimid (igrp, varid, dimids);
+  CHECK(stat, nc_inq_vardimid);
+  for(dim = 0; dim < ndims; dim++) {
+	  size_t len;
+	  stat = nc_inq_dimlen(igrp, dimids[dim], &len);
+	  CHECK(stat, nc_inq_dimlen);
+	  nvals *= len;
+	  startp[dim] = 0;
+	  countp[dim] = len;
+
+    if (dimids[dim] == unlimid) {
+      startp[dim]=len-1;
+      countp[dim]=1;
     }
-    *nvalsp = nvals;
-    return stat;
+
+  }
+  *nvalsp = nvals;
+  return stat;
 }
 
 /* From netCDF type in group igrp, get size in memory needed for each
  * value */
-static int
-inq_value_size(int igrp, nc_type vartype, size_t *value_sizep) {
+ static int inq_value_size(int igrp, nc_type vartype, size_t *value_sizep) {
     int stat = NC_NOERR;
 
     switch(vartype) {
-    case NC_BYTE:
-	*value_sizep = sizeof(signed char);
-	break;
-    case NC_CHAR:
-	*value_sizep = sizeof(char);
-	break;
+      case NC_BYTE:
+	      *value_sizep = sizeof(signed char);
+	    break;
+      case NC_CHAR:
+	      *value_sizep = sizeof(char);
+	    break;
     case NC_SHORT:
 	*value_sizep = sizeof(short);
 	break;

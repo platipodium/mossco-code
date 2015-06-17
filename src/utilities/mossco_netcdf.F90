@@ -24,6 +24,7 @@ module mossco_netcdf
   use mossco_field
   use mossco_state
   use mossco_time
+  use mossco_gridspec
   use esmf
   use netcdf
 
@@ -563,6 +564,10 @@ module mossco_netcdf
         else
           coordnames=(/'x','y','z'/)
         endif
+
+        !call MOSSCO_GridWriteGridSpec(grid, trim(fieldname), localrc)
+        !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       elseif (geomType==ESMF_GEOMTYPE_MESH) then
         !call ESMF_FieldGet(field,mesh=mesh,rc=esmfrc)
