@@ -384,7 +384,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !write(message,'(A,I1,A)') trim(name)//' filter_pattern_exclude(1:',n,') = "'//trim(excludeAttributeString)//'"'
       !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      allocate(excludePatternList(n))
+      if (n>0) allocate(excludePatternList(n))
       do i=1,n
         j=index(excludeAttributeString,',')
         if (j>0) then
@@ -417,7 +417,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         if (includeAttributeString(i:i)==',') n=n+1
       enddo
 
-      allocate(includePatternList(n))
+      if (n>0) allocate(includePatternList(n))
+
       do i=1,n
         j=index(includeAttributeString,',')
         if (j>0) then
@@ -497,11 +498,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+    endif
 
-      call nc%update()
-      call nc%update_variables()
+    call nc%update()
+    call nc%update_variables()
 
-      do i=1,itemCount
+    do i=1,itemCount
 
         if (allocated(excludePatternList)) then
           isMatch = .false.
@@ -557,7 +559,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
 
-      enddo
+    enddo
 
       !> Remove from import state all fields, whether written or not, ensure that all processes have
       !> processed all states by using a barrier
@@ -575,37 +577,36 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !       endif
 
-      !! Somehow this did not help, so we ask again for the items
-      if (allocated(itemNameList)) deallocate(itemNameList)
-      call ESMF_StateReconcile(importState, rc=localrc)
+    !! Somehow this did not help, so we ask again for the items
+    if (allocated(itemNameList)) deallocate(itemNameList)
+    call ESMF_StateReconcile(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemcount>0) then
+
+      allocate(itemNameList(itemCount))
+
+      call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (itemcount>0) then
-
-        allocate(itemNameList(itemCount))
-
-        call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_StateRemove(importState, itemNameList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
-          write(message,'(A)') trim(name)//' ignores error above '
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
+      call ESMF_StateRemove(importState, itemNameList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+        write(message,'(A)') trim(name)//' ignores error above '
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-
-      if (allocated(itemTypeList)) deallocate(itemTypeList)
-      if (allocated(itemNameList)) deallocate(itemNameList)
-
-      call nc%close()
     endif
+
+    if (allocated(itemTypeList)) deallocate(itemTypeList)
+    if (allocated(itemNameList)) deallocate(itemNameList)
+
+    call nc%close()
 
     !call ESMF_LogOpen(log, "netcdf", rc=localrc)
     !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
