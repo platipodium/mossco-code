@@ -205,7 +205,10 @@ program main
     logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING, ESMF_LOGMSG_INFO/)
   elseif (logLevel == 'trace') then
     allocate(logMsgList(1))
-    logMsgList=(/ESMF_LOGMSG_TRACE/)
+    logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING, ESMF_LOGMSG_TRACE/)
+  elseif (logLevel == 'default') then
+    allocate(logMsgList(1))
+    logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING, ESMF_LOGMSG_TRACE/)
   else
     allocate(logMsgList(1))
     logMsgList=(/ESMF_LOGMSG_ALL/)

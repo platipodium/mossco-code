@@ -21,7 +21,7 @@ DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--netcdf  # Default ex
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp/gotmrun.nml
 POSTPROCESS=NONE
 NP=NONE
-LOGLEVEL='warning'
+LOGLEVEL='undefined'
 
 # Function for printing usage of this script
 function usage {
@@ -36,8 +36,8 @@ function usage {
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp/gotmrun.nml"
 	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
-	echo "    [-l A|W|E] :  specify the log level, as one of all|warning|error"
-	echo "            the default is warning"
+	echo "    [-l A|W|E|N|T|D] :  specify the log level, as one of all|warning|error"
+	echo "            |none|trace|default, if not specified, it is taken from mossco_run.nml."
 	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
 	echo "            MPI is not used at all. Default is content of par_setup.dat or n=1"
 	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system, which is"
@@ -393,13 +393,23 @@ rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
 # Unify loglevel input
 case ${LOGLEVEL} in
   A|a|all|ALL) LOGLEVEL=all
-    ;;
+     ;;
   W|w|warning|WARNING) LOGLEVEL=warning
-    ;;
+     ;;
   E|e|error|ERROR) LOGLEVEL=error
-    ;;
-  *)  echo "Loglevel ${LOGLEVEL} not defined in $0"; exit 1
-    ;;
+     ;;
+  T|t|trace|TRACE) LOGLEVEL=trace
+     ;;
+  N|n|none|NONE) LOGLEVEL=none
+     ;;
+  D|d|default|DEFAULT) LOGLEVEL=default
+     ;;
+  undefined)
+     ;;
+  *) echo "Loglevel ${LOGLEVEL} not defined in $0"
+     echo "valid values are A|W|E|T|N|D"
+     exit 1
+     ;;
 esac
 
 
@@ -407,11 +417,13 @@ SED=${SED:-$(which gsed)} 2> /dev/null
 SED=${SED:-$(which sed)} 2> /dev/null
 
 if test -f mossco_run.nml ; then
-  ${SED} -i 's/loglevel =.*/loglevel = "'${LOGLEVEL}'",/' mossco_run.nml
+  if [[ "${LOGLEVEL}" != "undefined" ]] ; then
+    ${SED} -i 's/loglevel =.*/loglevel = "'${LOGLEVEL}'",/' mossco_run.nml
+  fi
 fi
 
 
-if [[ RETITLE != 0 ]] ; then
+if [[ ${RETITLE} != 0 ]] ; then
 
   if ! test -x ${SED}; then
     echo
