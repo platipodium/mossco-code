@@ -1,4 +1,10 @@
 dependencies:
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - restart_soil:
+    - component: fabm_sediment
+      grid: temperature_in_soil
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
@@ -16,9 +22,10 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - mossco_gffrpdn: netcdf
-  - forcing_output: netcdf
+  - mossco_gffrpdr: netcdf
   - river_input: netcdf_input
+  - restart_soil: netcdf_input
+  - restart_water: netcdf_input
   - porosity_input: netcdf_input
   - deposition_input: netcdf_input
 
@@ -28,29 +35,21 @@ coupling:
      - fabm_pelagic
     interval: none
   - components:
-     - deposition_input
-     - forcing_output
-    interval: 10 d
+     - porosity_input
+     - fabm_sediment
+    interval: none
   - components:
-     - river_input
-     - forcing_output
-    interval: 10 d
+     - restart_water
+     - fabm_pelagic
+    interval: none
   - components:
-     - constant
-     - forcing_output
-    interval: 10 d
-  - components:
-     - river_input
-     - forcing_output
-    interval: 10 d
+     - restart_soil
+     - fabm_sediment
+    interval: none
   - components:
      - river_input
      - fabm_pelagic
     interval: 1 d
-  - components:
-     - porosity_input
-     - fabm_sediment
-    interval: none
   - components:
      - constant
      - fabm_sediment
@@ -80,13 +79,13 @@ coupling:
     interval: 30 m
   - components:
      - getm
-     - mossco_gffrpdn
+     - mossco_gffrpdr
     interval: 60 h
   - components:
      - fabm_pelagic
-     - mossco_gffrpdn
+     - mossco_gffrpdr
     interval: 60 h
   - components:
      - fabm_sediment
-     - mossco_gffrpdn
+     - mossco_gffrpdr
     interval: 60 h
