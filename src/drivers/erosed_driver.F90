@@ -1606,7 +1606,7 @@ function calcZ0rou (vonkar, sedd50, waterdepth,g)
     ks = 2.5_fp * sedd50     ! Soulsby (1997)
 !
     Chezy2d = 18._fp * log10 (12._fp * waterdepth/ks) ! Delft3D Manual page 210
-write(*,*) 'Chezy ', chezy2d
+!write(*,*) 'Chezy ', chezy2d
 !    rz        = 1.0 + delz/calcZ0rou   !Eq. 9.207 Delft3d manual p. 249
 !              = ln (rz)/vonkar
     calcZ0rou = waterdepth/(exp (1._fp)*(exp(vonkar*chezy2d/sqrt (g)) - 1.0))
