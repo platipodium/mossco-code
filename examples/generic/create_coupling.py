@@ -1595,19 +1595,33 @@ fid.write('''
           call ESMF_LogWrite(trim(myName)//" adaptive timestep must be implemented in "//trim(compName),ESMF_LOGMSG_WARNING)
         endif
 
-        timeInterval=ringTime-currTime
+        !! Change the controlClock with updated currTime and timeStep (if not zero)
+        if (ringTime < currTime) then
+          write(message,'(A)') trim(myName)//' should not run components with negative timestep'
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING, rc=localrc)
+          !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        elseif (ringTime > currTime) then
+          timeInterval=ringTime-currTime
 
-        call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_ClockSet(controlClock, currTime=currTime, timeStep=timeInterval, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
-          ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
+          call ESMF_TimeIntervalGet(timeInterval, h=hours, m=minutes, s=seconds, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
+            ' to run for ', hours, ':', minutes, ':', seconds, ' hours'
+        else
+          write(message,'(A,A,I5.5,A,I2.2,A,I2.2,A)') trim(myName)//' '//trim(timeString)//' calling '//trim(compName), &
+            ' to run without stepping forward'
+        endif
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
-
-        !! Change the controlClock with updated currTime and timeStep
-        call ESMF_ClockSet(controlClock, currTime=currTime, timeStep=timeInterval, rc=localrc)
+        call ESMF_ClockSet(controlClock, currTime=currTime,  rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
 
         !! Loop over all run phases, disregarding any action that could be taken between
         !! phases
@@ -1732,7 +1746,7 @@ fid.write('''
 
 for coupling in couplingList:
   jtem = coupling[-1]
-  
+
   if instanceDict.has_key(jtem):
     if instanceDict[jtem] != 'netcdf': continue
 
@@ -1746,7 +1760,7 @@ for coupling in couplingList:
   fid.write('      exportState=gridExportStateList(' + str(ito+1) + '), clock=controlClock, rc=localrc)\n')
   fid.write('    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &\n')
   fid.write('      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)\n\n')
-  
+
   fid.write('    do phase=1,gridCompPhaseCountList(' + str(ito+1) + ')\n')
   fid.write('      call ESMF_GridCompRun(gridCompList(' + str(ito+1) + '), importState=gridImportStateList(' + str(ito + 1) + '), &\n')
   fid.write('        exportState=gridExportStateList(' + str(ito+1) + '), clock=controlClock, rc=localrc)')
@@ -1754,8 +1768,8 @@ for coupling in couplingList:
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
-''')    
-    
+''')
+
 fid.write('''
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
