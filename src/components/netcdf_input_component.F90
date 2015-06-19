@@ -138,12 +138,14 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName, gridName
     type(ESMF_Config)          :: config
 
-    integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid
+    integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid, n
     integer(ESMF_KIND_I4)      :: fieldRank, gridRank
     type(ESMF_Time)            :: refTime, time
     real(ESMF_KIND_R8)         :: seconds
     type(ESMF_Field), allocatable :: fieldList(:)
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
+    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
+    character(len=4096)        :: aliasString
 
     rc = ESMF_SUCCESS
     hasGrid = .false.
@@ -232,6 +234,50 @@ module netcdf_input_component
         call ESMF_AttributeSet(importState, 'foreign_grid_field_name', trim(foreignGridFieldName), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      call ESMF_ConfigFindLabel(config, label='alias:', isPresent=labelIsPresent, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (labelIsPresent) then
+        n=ESMF_ConfigGetLen(config, label='alias:', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (n>0 .and. mod(n,2) == 0) then
+
+          allocate(aliasList(n/2,2))
+
+          call ESMF_ConfigFindLabel(config, label='alias:', rc = localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          do j=1, n/2
+            call ESMF_ConfigGetAttribute(config, value=aliasList(j,1), rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            call ESMF_ConfigGetAttribute(config, value=aliasList(j,2), rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' alias: '//trim(aliasList(j,1))
+            call MOSSCO_MessageAdd(message,' = '//trim(aliasList(j,2)))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+            if (len_trim(aliasString)<1) then
+              write(aliasString,'(A)') trim(aliasList(j,1))//'='//trim(aliasList(j,2))
+            else
+              write(aliasString,'(A)') ', '//trim(aliasList(j,1))//'='//trim(aliasList(j,2))
+            endif
+          enddo
+          if (allocated(aliasList)) deallocate(aliasList)
+
+          call ESMF_AttributeSet(importState, 'alias_list', trim(aliasString), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
       endif
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
