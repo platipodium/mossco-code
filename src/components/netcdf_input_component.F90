@@ -245,6 +245,8 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        aliasString=''
+
         if (n>0 .and. mod(n,2) == 0) then
 
           allocate(aliasList(n/2,2))
@@ -785,10 +787,10 @@ module netcdf_input_component
     character(len=19)       :: timestring
     type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime,startTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
-    integer(ESMF_KIND_I8)   :: i, j
+    integer(ESMF_KIND_I8)   :: i, j, advanceCount
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii, petCount
-    integer(ESMF_KIND_I4)   :: localDeCount
+    integer(ESMF_KIND_I4)   :: localDeCount, n
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
@@ -800,11 +802,21 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc, itime
     logical                    :: isPresent
+    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
+    character(len=4096)        :: aliasString
 
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -854,6 +866,44 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_AttributeGet(importState, name='alias_string', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(importState, name='aliasString', value=aliasString, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (advanceCount<1) &
+        call ESMF_LogWrite(trim(name)//' found aliasses '//trim(aliasString), ESMF_LOGMSG_INFO)
+
+      n=1
+      do i=1,len_trim(aliasString)
+        if (aliasString(i:i)==',') n=n+1
+      enddo
+
+      if (n>0) allocate(aliasList(n,2))
+      do i=1,n
+        j=index(aliasString,'=')
+        aliasList(i,1)=aliasString(1:j-1)
+
+        write(aliasString,'(A)') aliasString(j+1:len_trim(aliasString))
+        j=index(aliasString,',')
+        if (j>0) then
+          aliasList(i,2)=aliasString(1:j-1)
+        else
+          aliasList(i,2)=trim(aliasString)
+        endif
+
+        write(message,'(A,I1,A)') trim(name)//' alias(',i,') = "'//trim(aliasList(i,1))
+        call MOSSCO_MessageAdd(message, '='//trim(aliasList(i,2))//'"')
+        if (advanceCount<1) &
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      enddo
+
+    endif
+
     !> Go through list of export variables and fill their pointers with values from the file
     do i=1, itemCount
 
@@ -875,8 +925,15 @@ module netcdf_input_component
 
       if (localDeCount < 1) cycle
 
+      if (allocated(aliasList)) then
+        do j=1,ubound(aliasList,1)
+          if (trim(itemNameList(i)) == trim(aliasList(j,2))) itemNameList(i)=trim(aliasList(j,2))
+        enddo
+      endif
+
       var => nc%getvarvar(trim(itemNameList(i)))
       if (.not.associated(var)) cycle
+
 
       call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
