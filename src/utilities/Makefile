@@ -28,6 +28,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
@@ -49,9 +50,11 @@ libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 mossco_state.o : mossco_field.o mossco_state.F90
 mossco_field.o : mossco_strings.o mossco_field.F90
-mossco_gridspec.o : mossco_strings.o
+mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
-mossco_netcdf.o : mossco_gridspec.o
+mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90
+mossco_attribute.o : mossco_attribute.F90
+mossco_config.o : mossco_config.F90
 
 nc_extract_variable: nc_extract_variable.c
 	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
@@ -74,6 +77,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_config.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_gridspec.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
