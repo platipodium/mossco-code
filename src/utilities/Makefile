@@ -27,6 +27,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_component.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
@@ -68,6 +69,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_state.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_field.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_attribute.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_time.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
