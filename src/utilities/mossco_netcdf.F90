@@ -2569,4 +2569,28 @@ module mossco_netcdf
 
   end subroutine mossco_netcdf_maxtime
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GetFreeLun"
+  function MOSSCO_GetFreeLun(start, rc) result(unit)
+
+    integer(ESMF_KIND_I4), intent(in) :: start
+    integer(ESMF_KIND_I4) :: unit
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4) :: localrc
+    logical               :: isopen
+
+    if(present(rc)) rc=ESMF_SUCCESS
+
+    unit=start
+    do unit=1, huge(unit)
+      inquire(unit=unit, opened=isopen, iostat=localrc)
+      if (localrc /= 0) cycle
+      if (.not.isopen) return
+    enddo
+
+    unit=-1
+
+  end function MOSSCO_GetFreeLun
+
 end module
