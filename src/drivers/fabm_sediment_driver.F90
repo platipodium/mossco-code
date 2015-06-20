@@ -364,7 +364,7 @@ integer         :: i,j,k
         if (.not.sed%mask(i,j,k)) then
           ! Make sure we are in an aqueous environment
           if ((sed%porosity(i,j,k) <= 0) .or. (sed%porosity(i,j,k) > 1)) then
-            write(0,*) 'FATAL sediment porosity out of range at (i,j,k)',i,j,k
+            write(0,*) 'FATAL sediment porosity out of range at (i,j,k)',i,j,k, sed%porosity(:,:,1)
             stop
           end if
           if (k < sed%knum) then
