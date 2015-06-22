@@ -626,6 +626,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       else
         !! Otherwise look at the name and see whether it ends in ':needed', then expect a logical value
         len=len_trim(attributeName)
+        if (len<7) cycle
         if (.not.attributeName(len-6:len) == ':needed') cycle
 
         fieldName = trim(attributeName(1:len-7))
