@@ -30,20 +30,21 @@ Output will be collected in the file `mossco_gffrr.nc`.
 
 ## The restarted simulation
 
-Every restart (i.e. input) component can only have its data on a single grid.  Thus, the output data from the previous step has to be split into two files for the pelagic and the soil grid/input component.  Here, we do this with the NetCDF Operator `ncks`
-
-		ncks -v .*_in_soil mossco_gffrr.nc restart_soil.nc
-		ncks -v .*_in_water mossco_gffrr.nc restart_water.nc
-
-You should  use the `-d time,<index>` option to ncks to select only one point in time that will be used for reinitializing your state variables.
+Every restart (i.e. input) component can only have its data on a single grid.  Thus, the output data from the previous step has to be split into two files for the pelagic and the soil grid/input component, or, the new
+`include:` specification can be used.
  
 We tell the restart components to use this data by specifying two configuration files, that each contain a filename specification.
 
-		echo "filename: restart_soil.nc" > restart_soil.cfg
-		echo "filename: restart_water.nc" > restart_water.cfg
+		echo "filename: mossco_gffrr.nc" > restart_soil.nc
+		echo "include:  *_in_soil" >> restart_soil.nc
+		echo "exclude: *vertical_integral*" >> restart_soil.nc
+
+		echo "filename: mossco_gffrr.nc" > restart_water.nc
+		echo "include:  *_in_water" >> restart_water.nc
+		echo "exclude: *vertical_integral*" >> restart_water.nc
 		
 Now rerun your simulation
 
 		mossco -n1 gffrr
 
-FABM pelagic and benthic variables will be reinitialized with the values in `restart_soil.nc` and `restart_water.nc` at simulation start.
+FABM pelagic and benthic variables will be reinitialized with the values in `mossco_gffrr.nc` at simulation start.
