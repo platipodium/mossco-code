@@ -664,8 +664,6 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.isPresent) then
-      write(message,'(A)') trim(name)//' received no filename to read from'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       call MOSSCO_CompExit(gridComp)
       return
     endif
@@ -860,8 +858,6 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.isPresent) then
-      write(message,'(A)') trim(name)//' received no filename to read from'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       call MOSSCO_CompExit(gridComp)
       return
     endif

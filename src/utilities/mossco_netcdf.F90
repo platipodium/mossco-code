@@ -1220,7 +1220,7 @@ module mossco_netcdf
 
     localrc = nf90_inquire(self%ncid, nVariables=nvars, nAttributes=natts)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire file'//trim(self%name), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire file '//trim(self%name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 

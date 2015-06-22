@@ -373,10 +373,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-    endif
 
-    call nc%update()
-    call nc%update_variables()
+      call nc%update()
+      call nc%update_variables()
+    endif
 
     do i=1,itemCount
 
@@ -479,12 +479,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      call nc%close()
     endif
 
     if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(itemNameList)) deallocate(itemNameList)
-
-    call nc%close()
 
     !call ESMF_LogOpen(log, "netcdf", rc=localrc)
     !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
