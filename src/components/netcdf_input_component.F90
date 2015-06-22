@@ -149,6 +149,7 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterExcludeList(:), filterIncludeList(:)
     character(len=4096)        :: aliasString
     type(ESMF_Vm)              :: vm
+    logical                    :: isMatch
 
     rc = ESMF_SUCCESS
 
@@ -265,7 +266,7 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(aliasList)) then
-        call MOSSCO_AttributeSetList(importState, 'alias', aliasList, localrc)
+        call MOSSCO_AttributeSetList(importState, 'alias_definition', aliasList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -450,26 +451,68 @@ module netcdf_input_component
     if (itemCount>0) allocate(fieldList(itemCount))
 
     do i=1, itemCount
-      if (trim(nc%variables(i)%name) == 'time') cycle
-      if (trim(nc%variables(i)%name) == 'lat') cycle
-      if (trim(nc%variables(i)%name) == 'lon') cycle
-      write(message,'(A)') trim(name)//' found item "'
-      call MOSSCO_MessageAdd(message, trim(nc%variables(i)%standard_name)//'"')
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      itemName=trim(nc%variables(i)%standard_name)
+      if (len_trim(itemName)<1) itemName=trim(nc%variables(i)%name)
+      if (len_trim(itemName)<1) cycle
+
+      !! Convert aliases in file to proper item names
+      if (allocated(aliasList)) then
+        do j=1,ubound(aliasList,1)
+          if (trim(itemName) == trim(aliasList(j,1))) itemName=trim(aliasList(j,2))
+        enddo
+      endif
+
+      if (trim(itemName) == 'time') cycle
+      if (trim(itemName) == 'latitude') cycle
+      if (trim(itemName) == 'longitude') cycle
+
+      ! Look for an exclusion pattern on this field name
+      if (allocated(filterExcludeList)) then
+        do j=1,ubound(filterExcludeList,1)
+          call MOSSCO_StringMatch(itemName, filterExcludeList(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (ismatch) then
+          write(message,'(A)')  trim(name)//' excluded item'
+          call MOSSCO_MessageAdd(message, trim(itemName))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
+      endif
+
+      !! Look for an inclusion pattern on this field name
+      if (allocated(filterIncludeList)) then
+        do j=1,ubound(filterIncludeList,1)
+          call MOSSCO_StringMatch(itemName, filterIncludeList(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (.not.ismatch) then
+          write(message,'(A)')  trim(name)//' did not include item'
+          call MOSSCO_MessageAdd(message, trim(itemName))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
+      endif
 
       if (nc%variables(i)%rank < 2) then
-        write(message,'(A)') trim(name)//' reading of rank < 2 variables not implemented'
+        write(message,'(A)') trim(name)//' does not implemented reading of rank < 2 item'
+        call MOSSCO_MessageAdd(message, trim(itemName)//'"')
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
       endif
 
+      write(message,'(A)') trim(name)//' found item "'
+      call MOSSCO_MessageAdd(message, trim(itemName)//'"')
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       write(message,'(A,I3,A,I1,A)') trim(name)//' id = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      itemName=trim(nc%variables(i)%standard_name)
-      if (len_trim(itemName)<1) itemName=trim(nc%variables(i)%standard_name)
-      if (len_trim(itemName)<1) cycle
 
       fieldList(i) = ESMF_FieldEmptyCreate(name=trim(itemName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -790,8 +833,8 @@ module netcdf_input_component
 
     character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc, itime
-    logical                    :: isPresent
-    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterIncludeList(:,:), filterExcludeList(:,:)
+    logical                    :: isPresent, isMatch
+    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterIncludeList(:), filterExcludeList(:)
     character(len=4096)        :: aliasString, filterIncludeString, filterExcludeString
     type(ESMF_Vm)              :: vm
 
@@ -856,53 +899,44 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
     call MOSSCO_AttributeGetList(importState, 'filter_pattern_include', filterIncludeList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeGet(importState, name='alias_string', isPresent=isPresent, rc=localrc)
+    call MOSSCO_AttributeGetList(importState, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (isPresent) then
-      call ESMF_AttributeGet(importState, name='aliasString', value=aliasString, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (advanceCount<1) &
-        call ESMF_LogWrite(trim(name)//' found aliasses '//trim(aliasString), ESMF_LOGMSG_INFO)
-
-      n=1
-      do i=1,len_trim(aliasString)
-        if (aliasString(i:i)==',') n=n+1
-      enddo
-
-      if (n>0) allocate(aliasList(n,2))
-      do i=1,n
-        j=index(aliasString,'=')
-        aliasList(i,1)=aliasString(1:j-1)
-
-        write(aliasString,'(A)') aliasString(j+1:len_trim(aliasString))
-        j=index(aliasString,',')
-        if (j>0) then
-          aliasList(i,2)=aliasString(1:j-1)
-        else
-          aliasList(i,2)=trim(aliasString)
-        endif
-
-        write(message,'(A,I1,A)') trim(name)//' alias(',i,') = "'//trim(aliasList(i,1))
-        call MOSSCO_MessageAdd(message, '='//trim(aliasList(i,2))//'"')
-        if (advanceCount<1) &
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      enddo
-
-    endif
+    call MOSSCO_AttributeGetList(importState, 'alias_definition', aliasList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Go through list of export variables and fill their pointers with values from the file
     do i=1, itemCount
 
       if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
+
+      !! Look for an exclusion pattern on this field name
+      if (allocated(filterExcludeList)) then
+        do j=1,ubound(filterExcludeList,1)
+          call MOSSCO_StringMatch(itemNameList(i), filterExcludeList(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (ismatch) cycle
+      endif
+
+      !! Look for an inclusion pattern on this field name
+      if (allocated(filterIncludeList)) then
+        do j=1,ubound(filterIncludeList,1)
+          call MOSSCO_StringMatch(itemNameList(i), filterIncludeList(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (.not.ismatch) cycle
+      endif
 
       call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -920,6 +954,7 @@ module netcdf_input_component
 
       if (localDeCount < 1) cycle
 
+      !! Convert aliases in file to proper item names
       if (allocated(aliasList)) then
         do j=1,ubound(aliasList,1)
           if (trim(itemNameList(i)) == trim(aliasList(j,2))) itemNameList(i)=trim(aliasList(j,2))
@@ -929,6 +964,7 @@ module netcdf_input_component
       var => nc%getvarvar(trim(itemNameList(i)))
       if (.not.associated(var)) cycle
 
+      !! @todo check shape of variable agains shape of field
 
       call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -944,10 +980,6 @@ module netcdf_input_component
     if (allocated(itemNameList)) deallocate(itemNameList)
 
     call nc%close()
-    call ESMF_VmBarrier(vm, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 
     !! This component has no do loop over an internal timestep, it is advanced with the
     !! timestep written into its local clock from a parent component
