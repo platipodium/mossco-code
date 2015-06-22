@@ -60,12 +60,14 @@ contains
     if (n<=0) return
     allocate(stringList(n))
 
-    do i=1, n
+    call ESMF_ConfigFindLabel(config, label=trim(label), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigGetAttribute(config, label=trim(label), value=stringList(i), rc=localrc)
+    do i=1, n
+      call ESMF_ConfigGetAttribute(config, value=stringList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     enddo
 
   end subroutine MOSSCO_ConfigGetListVector
@@ -98,8 +100,12 @@ contains
 
     if (n>0) allocate(stringList(n,2))
 
+    call ESMF_ConfigFindLabel(config, label=trim(label), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     do i=1, n
-      call ESMF_ConfigGetAttribute(config, value=currString, label=trim(label), rc=localrc)
+      call ESMF_ConfigGetAttribute(config, value=currString, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
