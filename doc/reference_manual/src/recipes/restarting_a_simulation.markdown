@@ -35,13 +35,13 @@ Every restart (i.e. input) component can only have its data on a single grid.  T
  
 We tell the restart components to use this data by specifying two configuration files, that each contain a filename specification.
 
-		echo "filename: mossco_gffrr.nc" > restart_soil.nc
-		echo "include:  *_in_soil" >> restart_soil.nc
-		echo "exclude: *vertical_integral*" >> restart_soil.nc
+		echo "filename: mossco_gffrr.nc" > restart_soil.cfg
+		echo "include:  *_in_soil" >> restart_soil.cfg
+		echo "exclude: *vertical_integral*" >> restart_soil.cfg
 
-		echo "filename: mossco_gffrr.nc" > restart_water.nc
-		echo "include:  *_in_water" >> restart_water.nc
-		echo "exclude: *vertical_integral*" >> restart_water.nc
+		echo "filename: mossco_gffrr.nc" > restart_water.cfg
+		echo "include:  *_in_water" >> restart_water.cfg
+		echo "exclude: *vertical_integral*" >> restart_water.cfg
 		
 Now rerun your simulation
 
