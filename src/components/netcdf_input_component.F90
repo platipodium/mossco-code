@@ -304,8 +304,9 @@ module netcdf_input_component
 
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' cannot read file '//trim(fileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call MOSSCO_CompExit(gridComp)
+      return
     endif
 
     write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
@@ -867,6 +868,13 @@ module netcdf_input_component
     call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    inquire(file=trim(fileName), exist=isPresent)
+
+    if (.not.isPresent) then
+      call MOSSCO_CompExit(gridComp)
+      return
+    endif
 
     nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
