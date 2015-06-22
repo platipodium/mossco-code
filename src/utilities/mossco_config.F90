@@ -36,13 +36,16 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=ESMF_MAXSTR), intent(out), allocatable :: stringList(:)
+    character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
     logical                              :: isPresent
+    character(ESMF_MAXSTR)               :: message
 
     if (present(rc)) rc=ESMF_SUCCESS
+
+		if (allocated(stringList)) deallocate(stringList)
 
     call ESMF_ConfigFindLabel(config, label=trim(label), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -54,12 +57,15 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (n>0) allocate(stringList(n))
+    if (n<=0) return
+    allocate(stringList(n))
 
     do i=1, n
-      call ESMF_ConfigGetAttribute(config, value=stringList(i), rc=localrc)
+
+      call ESMF_ConfigGetAttribute(config, label=trim(label), value=stringList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     enddo
 
   end subroutine MOSSCO_ConfigGetListVector
@@ -71,13 +77,14 @@ contains
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
     character(len=ESMF_MAXSTR), intent(out), allocatable :: stringList(:,:)
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4), intent(inout), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, j, n
     logical                              :: isPresent
     character(ESMF_MAXSTR)               :: currString
 
     if (present(rc)) rc=ESMF_SUCCESS
+    if (allocated(stringList)) deallocate(stringList)
 
     call ESMF_ConfigFindLabel(config, label=trim(label), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -92,7 +99,7 @@ contains
     if (n>0) allocate(stringList(n,2))
 
     do i=1, n
-      call ESMF_ConfigGetAttribute(config, value=currString, rc=localrc)
+      call ESMF_ConfigGetAttribute(config, value=currString, label=trim(label), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
