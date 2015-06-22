@@ -25,6 +25,7 @@ module netcdf_component
   use mossco_component
   use mossco_field
   use mossco_state
+  use mossco_attribute
 
   implicit none
   private

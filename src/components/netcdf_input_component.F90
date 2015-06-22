@@ -604,6 +604,7 @@ module netcdf_input_component
     real(ESMF_KIND_R8)         :: seconds
     type(ESMF_Field), allocatable :: fieldList(:)
     type(ESMF_StateItem_Flag)  :: itemType
+    type(ESMF_Vm)              :: vm
 
     rc = ESMF_SUCCESS
     hasGrid = .false.
