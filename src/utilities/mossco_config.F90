@@ -71,7 +71,7 @@ contains
   end subroutine MOSSCO_ConfigGetListVector
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_ConfigGetListVector"
+#define ESMF_METHOD "MOSSCO_ConfigGetListKeyValue"
   subroutine MOSSCO_ConfigGetListKeyValue(config, label, stringList, rc)
 
     type(ESMF_Config), intent(inout)  :: config
@@ -111,6 +111,5 @@ contains
     enddo
 
   end subroutine MOSSCO_ConfigGetListKeyValue
-
 
 end module mossco_config
