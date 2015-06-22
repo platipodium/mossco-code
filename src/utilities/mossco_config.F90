@@ -41,11 +41,10 @@ contains
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
     logical                              :: isPresent
-    character(ESMF_MAXSTR)               :: message
 
     if (present(rc)) rc=ESMF_SUCCESS
 
-		if (allocated(stringList)) deallocate(stringList)
+    if (allocated(stringList)) deallocate(stringList)
 
     call ESMF_ConfigFindLabel(config, label=trim(label), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &

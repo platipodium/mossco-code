@@ -138,6 +138,7 @@ module netcdf_input_component
     type(ESMF_Grid)            :: grid2, grid3, grid, varGrid
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName, gridName
+    character(len=ESMF_MAXSTR) :: gridFileName
     type(ESMF_Config)          :: config
 
     integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid, n
@@ -219,24 +220,24 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, foreignGridFieldName, rc=localrc, default='none')
+        call ESMF_ConfigGetAttribute(config, gridFileName, rc=localrc, default='none')
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' grid: '//trim(fileName)
+        write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' grid: '//trim(gridFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call ESMF_AttributeGet(importState, 'foreign_grid_field_name', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(importState, 'grid_file_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
-        call ESMF_AttributeGet(importState, 'foreign_grid_field_name', value=foreignGridFieldName, rc=localrc)
+        call ESMF_AttributeGet(importState, 'grid_file_name', value=gridFileName, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (labelIsPresent) then
-        call ESMF_AttributeSet(importState, 'foreign_grid_field_name', trim(foreignGridFieldName), rc=localrc)
+        call ESMF_AttributeSet(importState, 'grid_file_name', trim(gridFileName), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
