@@ -55,6 +55,7 @@ module mossco_gridspec
 
     integer      :: ncid, varid, dimid
     integer(ESMF_KIND_I4), allocatable           :: dimids(:), ubnd(:), lbnd(:)
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
 
     if (present(rc)) rc=ESMF_SUCCESS
 
@@ -222,21 +223,53 @@ module mossco_gridspec
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    do i=1, rank
-      write(dimName, '(A,I1.1)') 'dim_',i
+    dimCount=rank
+    do i=1, dimCount
+      write(dimName,'(A,I1)') trim(gridName)//'_',i
+
       localrc = nf90_def_dim(ncid, trim(dimName), ubnd(i)-lbnd(i)+1,dimids(i))
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot create dimension '//trim(dimName), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
+
+      localrc = nf90_def_var(ncid, trim(dimName), ubnd(i)-lbnd(i)+1,varid)
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot create variable '//trim(dimName), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
     enddo
+
+    localrc=nf90_enddef(ncid)
 
     allocate(coordDimCount(dimCount))
     call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    do i=1, dimCount
 
+      write(dimName,'(A,I1)') trim(gridName)//'_',i
+      localrc = nf90_inq_varid(ncid, dimName, varid)
+
+      allocate(lbnd(coordDimCount(i)))
+      allocate(ubnd(coordDimCount(i)))
+
+      if (coordDimCount(i)==1) then
+        call ESMF_GridGetCoord(grid, coordDim=i, localDE=0, exclusiveLBound=lbnd, &
+          exclusiveUbound=ubnd, staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=farrayPtr1, rc=localrc)
+
+        localrc=nf90_put_var(ncid, varid, farrayPtr1(lbnd(1):ubnd(1)))
+      elseif (coordDimCount(i)==2) then
+        call ESMF_GridGetCoord(grid, coordDim=i, localDE=0, exclusiveLBound=lbnd, &
+          exclusiveUbound=ubnd, staggerloc=ESMF_STAGGERLOC_CENTER, farrayPtr=farrayPtr2, rc=localrc)
+
+        localrc=nf90_put_var(ncid, varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
+      endif
+
+      deallocate(lbnd)
+      deallocate(ubnd)
+   enddo
 
    ! nc.createDimension('bound',2)
    ! nc.createDimension('lon',nlon)
