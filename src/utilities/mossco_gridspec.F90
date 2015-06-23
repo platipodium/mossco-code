@@ -29,12 +29,15 @@ module mossco_gridspec
 
   integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
 
+#include "git-sha.h"
+
   contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridWriteGridSpec"
   subroutine MOSSCO_GridWriteGridSpec(grid, name, rc)
 
+    use iso_fortran_env
     implicit none
 
     type(ESMF_Grid), intent(in)                  :: grid
@@ -42,9 +45,10 @@ module mossco_gridspec
     character(len=*),optional, intent(in)        :: name
     integer(ESMF_KIND_I4), optional, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)                        :: rc_, localrc, dimCount, coordDimCount, staggerLocCount
+    integer(ESMF_KIND_I4)                        :: rc_, localrc, dimCount, staggerLocCount
+    integer(ESMF_KIND_I4), allocatable           :: coordDimCount(:)
     integer(ESMF_KIND_I4)                        :: localDeCount, rank, i
-    character(len=ESMF_MAXSTR)                   :: message, gridName, dimName
+    character(len=ESMF_MAXSTR)                   :: message, gridName, dimName, string
     type(ESMF_TypeKind_Flag)                     :: coordTypeKind
     type(ESMF_CoordSys_Flag)                     :: coordSys
     type(ESMF_GridStatus_Flag)                   :: status
@@ -54,7 +58,7 @@ module mossco_gridspec
 
     if (present(rc)) rc=ESMF_SUCCESS
 
-    call ESMF_GridGet(grid, status=status, name=gridName, rc=localrc)
+    call ESMF_GridGet(grid, status=status, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -63,6 +67,13 @@ module mossco_gridspec
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       return
     endif
+
+    call ESMF_GridGet(grid, dimCount=dimCount, name=gridName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call replace_character(gridName, ' ', '_')
+    if (dimCount<1) return
 
     call ESMF_GridGet(grid, coordSys=coordSys, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -137,6 +148,65 @@ module mossco_gridspec
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute mossco_sha_key', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+#ifndef NO_ISO_FORTRAN_ENV
+    !> @todo check cross-platform compatibility of the iso_fortran_env calls
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'compile_compiler_version',compiler_version())
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute compile_compiler_version', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'compile_compiler_options',compiler_options())
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute compile_compiler_options', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+#endif
+
+    call get_command(string)
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'run_command_line',trim(string))
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute run_command_line', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    call getcwd(string)
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'run_working_directory',trim(string))
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute run_working_directory', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+#ifndef NO_ISO_FORTRAN_ENV
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'run_process_id',getpid())
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute run_process_id', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+#endif
+    !> @todo check cross-platform compatibility of these gnu extensions
+    call getlog(string)
+#ifndef NO_ISO_FORTRAN_ENV
+    write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
+#endif
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'run_user',trim(string))
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute run_user', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+    call hostnm(string)
+    localrc = nf90_put_att(ncid,NF90_GLOBAL,'run_hostname',trim(string))
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute run_hostname', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
+
+
     call ESMF_GridGet(grid, rank=rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -160,6 +230,13 @@ module mossco_gridspec
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     enddo
+
+    allocate(coordDimCount(dimCount))
+    call ESMF_GridGet(grid, coordDimCount=coordDimCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
 
    ! nc.createDimension('bound',2)
    ! nc.createDimension('lon',nlon)
@@ -186,5 +263,36 @@ module mossco_gridspec
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_GridWriteGridSpec
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GetRegDecomp2"
+  subroutine MOSSCO_GetRegDecomp2(nx,ny,regDecomp, rc)
+
+    integer(ESMF_KIND_I4), intent(out) :: regDecomp(2)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4), intent(in)  :: nx,ny
+
+    type(ESMF_Vm)         :: vm
+    integer(ESMF_KIND_I4) :: localPet, petCount, localrc, rc_
+    integer(ESMF_KIND_I4) :: cellsPerPet, radius
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_VMGetCurrent(vm=vm, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_VmGet(vm, petCount=petCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! nx and ny are the dimensions in lon/lat direction
+    !! then try to find square root for cellsPerPet to get square domains
+    !! last, redistribute nx and ny over the radius of the square domain
+    cellsPerPet=nx * ny / localPet
+    radius=int(sqrt(cellsPerPet*1.0)+1)
+    regDecomp=(/nx/radius, ny/radius/)
+
+  end subroutine MOSSCO_GetRegDecomp2
 
 end module mossco_gridspec
