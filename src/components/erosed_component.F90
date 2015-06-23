@@ -1135,6 +1135,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
                 uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
  !   write (*,*) 'nm', inum*(j -1)+i, 'i,j', i,j,'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j), 'wavek', waveK(i,j)
+            !test
+!            uorb (inum*(j -1)+i) = 0.06_fp
+!             tper (inum*(j -1)+i) = 2.18_fp
             endif
 
            else
@@ -1361,6 +1364,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 #endif
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
+    sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
 
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
                 & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
@@ -1382,8 +1386,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
 
 #ifdef DEBUG
-        write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), &
-        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j)
+ !       write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), &
+ !       size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j),uorb (inum*(j -1)+i)
+        if (l==1)  write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, wavek(i,j) , waveH(i,j), waveT(i,j), uorb (nm), taub(nm), &
+        depth(i,j)
 #endif
 
 !        write (*, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM', sink(l,nm)* spm_concentration(i,j,l)
@@ -1554,11 +1560,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   end function d90_from_d50
 
-  function CalcOrbitalVelocity (WaveHeight, WaveNumber, WavePeriod, WaterDepth)
+  function CalcOrbitalVelocity (SigWaveHeight, WaveNumber, WavePeriod, WaterDepth)
+   ! RMS orbital velocity (uorb) to be used later in bedbc1993 (van Rijn, 1993) according to Eq. 144 Delft manual
    implicit none
-   real (ESMF_KIND_R8) :: CalcOrbitalVelocity
-   real (ESMF_KIND_R8) :: WaveHeight, WaveNumber, WavePeriod, WaterDepth
-     CalcOrbitalVelocity = 3.14159265359 * WaveHeight / (WavePeriod * sinh (WaveNumber * WaterDepth))
+   real (ESMF_KIND_R8) :: CalcOrbitalVelocity, Hrms
+   real (ESMF_KIND_R8) :: SigWaveHeight, WaveNumber, WavePeriod, WaterDepth
+     Hrms = SigWaveHeight/ sqrt (2.0_fp)
+     CalcOrbitalVelocity = 3.14159265359_fp * Hrms / (WavePeriod * sinh (WaveNumber * WaterDepth))
+     CalcOrbitalVelocity = sqrt (3.14159265359_fp)/2.0_fp * CalcOrbitalVelocity
   end function  CalcOrbitalVelocity
 
 end module erosed_component
