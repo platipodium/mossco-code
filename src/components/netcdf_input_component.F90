@@ -196,8 +196,8 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)')  trim(name)//' found in file '
-        call MOSSCO_MessageAdd(message,trim(configFileName)//' filename: '//trim(fileName))
+        write(message,'(A)')  trim(name)//' found in file'
+        call MOSSCO_MessageAdd(message,' '//trim(configFileName)//' filename: '//trim(fileName))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -313,6 +313,35 @@ module netcdf_input_component
     write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    call ESMF_AttributeGet(importState, name='grid_file_name', &
+      isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(importState, name='grid_file_name', &
+        value=gridFileName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (trim(gridFileName) /= 'none') then
+
+        grid = ESMF_GridCreate(filename=trim(gridFileName),fileFormat=ESMF_FILEFORMAT_SCRIP, &
+          regDecomp=(/1,1/), isSphere=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridAddCoord(grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message, '(A)') trim(name)//' obtains grid from file '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        hasGrid=.true.
+      endif
+    endif
+
     call ESMF_GridCompGet(gridComp, gridIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -353,11 +382,6 @@ module netcdf_input_component
 
         hasGrid=.true.
       endif
-    else
-      write(message,'(A)') trim(name)//' not implemented without foreign_grid'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      !rc = ESMF_RC_NOT_IMPL
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     if (.not.hasGrid) then
