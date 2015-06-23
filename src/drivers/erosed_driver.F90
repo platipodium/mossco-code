@@ -448,7 +448,7 @@ rdw = rdc                 !it is not used when iopkcw = 1
 sigsed = relativ_thick /2.0_fp -1.0_fp      ! Dimensionless distance of the middle of the lowest cell to the water surface
 sigmol = 6.7_fp     ! Schmidt number
 seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from input file
-!
+
 
     call init_mathconsts()
 
@@ -662,7 +662,7 @@ masking: if (mask(i,j) /=0) then
 
 
                  z0rou (l)= calcZ0rou (vonkar,sedd50(l),h (nm),g)
-                 z0cur (l)= z0rou (l)
+                 z0cur (l)= sedd50(l) /12.0_fp
 !write (*,*) 'z0rou', z0rou, 'mudfrac','(',nm,')', mudfrac(nm)
                  call bedbc1993_arguments%set (tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm), &
                            & zubed(nm)   ,sedd50(l)     ,sedd90(l)  ,z0cur(l) ,z0rou(l),dstar(l), &
