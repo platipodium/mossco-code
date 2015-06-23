@@ -79,6 +79,7 @@ module getm_component
 
   type :: ptrarray3D
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
+     real(ESMF_KIND_R8)                          :: hackmax=-1.0
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 
@@ -552,6 +553,16 @@ module getm_component
                   call ESMF_LogWrite('field '//trim(itemNameList(i))//' neither empty nor complete', &
                                      ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
                   call ESMF_Finalize(endflag=ESMF_END_ABORT)
+               end if
+
+               !> set maximum value for boundary condition
+               if (trim(itemNameList(i))=='Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water') then
+                 transport_conc(n)%hackmax=0.8
+                 call ESMF_LogWrite('  use maximum boundary value of 0.8 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
+               end if
+               if (trim(itemNameList(i))=='Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water') then
+                 transport_conc(n)%hackmax=8.0
+                 call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
                end if
 
 !              search for corresponding z_velocity
@@ -2034,7 +2045,7 @@ module getm_component
       end if
 
       call do_transport_3d(p_conc,p_ws)
-      call zero_gradient_3d_bdy(p_conc)
+      call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)
 
       if (noKindMatch) then
          transport_conc(n)%ptr = t_conc

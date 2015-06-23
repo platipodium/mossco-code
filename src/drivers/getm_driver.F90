@@ -816,12 +816,19 @@
 !-----------------------------------------------------------------------
 
 
-   subroutine zero_gradient_3d_bdy(f)
+   subroutine zero_gradient_3d_bdy(f,hackmax)
    use domain, only: imin,imax,jmin,jmax,kmax,az,au,av
    use halo_zones  ,only: update_3d_halo,wait_halo,H_TAG
 
    REALTYPE,dimension(I3DFIELD),intent(inout) :: f
+   REALTYPE, intent(in) :: hackmax
+   REALTYPE,dimension(0:kmax) :: hackmaxvec
+   logical :: clip=.false.
+   ! hackmax: if negative, do not change boundary state, otherwise clip
    integer :: i,j
+
+   clip = hackmax > 0.0
+   hackmaxvec(:) = hackmax
 
    ! a halo update is necessary here to be fully consistent in parallel
    call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
@@ -831,11 +838,21 @@
    do j=jmin,jmax
      do i=imin,imax
        ! western boundary
-       if ((au(i,j) .eq. 2) .and. (au(i-1,j) .eq. 0)) &
-         f(i,j,:) = f(i+1,j,:)
+       if ((au(i,j) .eq. 2) .and. (au(i-1,j) .eq. 0)) then
+         if (clip) then
+           f(i,j,:) = min(hackmaxvec,f(i+1,j,:))
+         else
+           f(i,j,:) = f(i+1,j,:)
+         end if
+       end if
        ! eastern boundary
-       if ((au(i-1,j) .eq. 2) .and. (au(i,j) .eq. 0)) &
-         f(i,j,:) = f(i-1,j,:)
+       if ((au(i-1,j) .eq. 2) .and. (au(i,j) .eq. 0)) then
+         if (clip) then
+           f(i,j,:) = min(hackmaxvec,f(i-1,j,:))
+         else
+           f(i,j,:) = f(i-1,j,:)
+         end if
+       end if
      end do
    end do
 
@@ -843,11 +860,21 @@
    do j=jmin,jmax
      do i=imin,imax
        ! southern boundary
-       if ((av(i,j) .eq. 2) .and. (av(i,j-1) .eq. 0)) &
-         f(i,j,:) = f(i,j+1,:)
+       if ((av(i,j) .eq. 2) .and. (av(i,j-1) .eq. 0)) then
+         if (clip) then
+           f(i,j,:) = min(hackmaxvec,f(i,j+1,:))
+         else
+           f(i,j,:) = f(i,j+1,:)
+         end if
+       end if
        ! northern boundary
-       if ((av(i,j-1) .eq. 2) .and. (av(i,j) .eq. 0)) &
-         f(i,j,:) = f(i,j-1,:)
+       if ((av(i,j-1) .eq. 2) .and. (av(i,j) .eq. 0)) then
+         if (clip) then
+           f(i,j,:) = min(hackmaxvec,f(i,j-1,:))
+         else
+           f(i,j,:) = f(i,j-1,:)
+         end if
+       end if
      end do
    end do
 
