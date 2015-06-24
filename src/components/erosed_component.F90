@@ -49,6 +49,7 @@ module erosed_component
      real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr=>NULL()
   end type ptrarray2D
   type(ptrarray2D),dimension(:),allocatable :: size_classes_of_upward_flux_of_pim_at_bottom
+  type(ptrarray2D) :: rms_orbital_velocity
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
   integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
@@ -875,10 +876,10 @@ contains
   !!       related to SPM fractions in the bed module
   !! after having external_index defined by nfrac, create nfrac_by_external_idx:
 
-  allocate(nfrac_by_external_idx(1:maxval(external_idx_by_nfrac)))
-  do n=1,ubound(external_idx_by_nfrac,1)
-    nfrac_by_external_idx(external_idx_by_nfrac(n))=n
-  end do
+    allocate(nfrac_by_external_idx(1:maxval(external_idx_by_nfrac)))
+    do n=1,ubound(external_idx_by_nfrac,1)
+      nfrac_by_external_idx(external_idx_by_nfrac(n))=n
+    end do
 
     call ESMF_StateGet(exportState,"concentration_of_SPM_upward_flux_at_soil_surface",fieldBundle,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -939,22 +940,47 @@ contains
         end do
         ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr
 
-    field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
+       field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
             name='concentration_of_SPM_upward_flux_at_soil_surface', rc=localrc)
-    call ESMF_AttributeSet(field,'external_index',external_idx_by_nfrac(n), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       call ESMF_AttributeSet(field,'external_index',external_idx_by_nfrac(n), rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       write(message,'(A)') trim(name)//' creates field'
+       call MOSSCO_FieldString(field, message)
+       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+       call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      end if
+
+    end do
+
+
+    call ESMF_LogWrite(' export to internal field rms_orbital_velocity_at_soil_surface',ESMF_LOGMSG_INFO)
+    !> @todo This allocation might be critical if the field has totalwidth (halo zones)
+    !>        We might have to allocate with these halo zones (not until we get into trouble)
+    allocate (rms_orbital_velocity%ptr(inum, jnum))
+    do j=1,jnum
+      do i= 1, inum
+        rms_orbital_velocity%ptr(i,j) = uorb(inum*(j -1)+i)
+      end do
+    end do
+    ptr_f2 => rms_orbital_velocity%ptr
+
+    field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
+            name='rms_orbital_velocity_at_soil_surface', rc=localrc)
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(name)//' creates field'
     call MOSSCO_FieldString(field, message)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-    call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      end if
-
-  end do
+    call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1041,7 +1067,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Clock)         :: clock
     integer                  :: external_index
     logical                  :: First_entry = .true.
+
     type(ESMF_StateItem_Flag) :: itemType
+    type(ESMF_FieldStatus_Flag) :: status
+    integer,dimension(2)            :: totalLBound,totalUBound
+    integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
+
 
 !#define DEBUG
     rc=ESMF_SUCCESS
@@ -1439,6 +1470,54 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    call ESMF_StateGet(exportState, 'rms_orbital_velocity_at_soil_surface', itemType=itemType, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message, '(A)') trim(name)//' did not find field rms_orbital_velocity_at_soil_surface'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(exportState, 'rms_orbital_velocity_at_soil_surface', field=field, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=status, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)') trim(name)//' received incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=rms_orbital_velocity%ptr, exclusiveLBound=exclusiveLBound, &
+      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @todo proper bounds checking with eLBound required here
+    if (.not. (      all(lbound(rms_orbital_velocity%ptr) .eq. (/   1,   1/) ) &
+                     .and. all(ubound(rms_orbital_velocity%ptr) .eq. (/inum,jnum/) ) ) ) then
+      write(message, '(A)') trim(name)//' invalid field bounds in field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    end if
+
+    if (.not. (      all(lbound(rms_orbital_velocity%ptr) .eq. totalLBound) &
+      .and. all(ubound(rms_orbital_velocity%ptr) .eq. totalUBound) ) ) then
+      write(message, '(A)') trim(name)//' bounds do not match total domain in field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+    end if
 
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
