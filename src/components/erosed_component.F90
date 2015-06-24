@@ -957,24 +957,18 @@ contains
 
     end do
 
-
-    call ESMF_LogWrite(' export to internal field rms_orbital_velocity_at_soil_surface',ESMF_LOGMSG_INFO)
     !> @todo This allocation might be critical if the field has totalwidth (halo zones)
     !>        We might have to allocate with these halo zones (not until we get into trouble)
     allocate (rms_orbital_velocity%ptr(inum, jnum))
-    do j=1,jnum
-      do i= 1, inum
-        rms_orbital_velocity%ptr(i,j) = uorb(inum*(j -1)+i)
-      end do
-    end do
-    ptr_f2 => rms_orbital_velocity%ptr
 
-    field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
+    rms_orbital_velocity%ptr(i,j)= 0.0_fp
+
+    field = ESMF_FieldCreate(grid, farrayPtr=rms_orbital_velocity%ptr, &
             name='rms_orbital_velocity_at_soil_surface', rc=localrc)
     call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(name)//' creates field'
+    write(message,'(A)') trim(name)//' created field'
     call MOSSCO_FieldString(field, message)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
@@ -1518,6 +1512,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
     end if
+
+    do j=1,jnum
+      do i= 1, inum
+        rms_orbital_velocity%ptr(i,j) = uorb(inum*(j -1)+i)
+      end do
+    end do
 
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
