@@ -49,7 +49,7 @@ module erosed_component
      real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr=>NULL()
   end type ptrarray2D
   type(ptrarray2D),dimension(:),allocatable :: size_classes_of_upward_flux_of_pim_at_bottom
-  type(ptrarray2D) :: rms_orbital_velocity
+  type(ptrarray2D) :: rms_orbital_velocity, bottom_shear_stress
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
   integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
@@ -976,6 +976,26 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> @todo This allocation might be critical if the field has totalwidth (halo zones)
+    !>        We might have to allocate with these halo zones (not until we get into trouble)
+    allocate (bottom_shear_stress%ptr(inum, jnum))
+
+    bottom_shear_stress%ptr(:,:)= 0.0_fp
+
+    field = ESMF_FieldCreate(grid, farrayPtr=bottom_shear_stress%ptr, &
+            name='shear_stress_at_soil_surface', rc=localrc)
+    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(name)//' created field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1497,6 +1517,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
+
     !> @todo proper bounds checking with eLBound required here
     if (.not. (      all(lbound(rms_orbital_velocity%ptr) .eq. (/   1,   1/) ) &
                      .and. all(ubound(rms_orbital_velocity%ptr) .eq. (/inum,jnum/) ) ) ) then
@@ -1518,6 +1540,47 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         rms_orbital_velocity%ptr(i,j) = uorb(inum*(j -1)+i)
       end do
     end do
+
+    call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface', itemType=itemType, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message, '(A)') trim(name)//' did not find field shear_stress_at_soil_surface'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface', field=field, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=status, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)') trim(name)//' received incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=bottom_shear_stress%ptr, exclusiveLBound=exclusiveLBound, &
+      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @todo proper bounds checking with eLBound required here
+
+    do j=1,jnum
+      do i= 1, inum
+        bottom_shear_stress%ptr(i,j) = taub(inum*(j -1)+i)
+      end do
+    end do
+
 
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
