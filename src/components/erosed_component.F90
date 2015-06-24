@@ -961,7 +961,7 @@ contains
     !>        We might have to allocate with these halo zones (not until we get into trouble)
     allocate (rms_orbital_velocity%ptr(inum, jnum))
 
-    rms_orbital_velocity%ptr(i,j)= 0.0_fp
+    rms_orbital_velocity%ptr(:,:)= 0.0_fp
 
     field = ESMF_FieldCreate(grid, farrayPtr=rms_orbital_velocity%ptr, &
             name='rms_orbital_velocity_at_soil_surface', rc=localrc)
