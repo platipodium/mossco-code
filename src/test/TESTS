@@ -10,7 +10,8 @@ test_FieldBounds
 test_FieldGet
 test_Grid
 test_MPI_Initialize
-test_Netcdf
+test_netcdf
+test_mossco_netcdf
 test_pointer
 test_Regrid2d
 test_Regrid2d_GridToMesh

@@ -40,8 +40,11 @@ test_Concurrency: libmossco_constant libmossco_info
 test_ClockDestroy: libmossco_empty 
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lempty -lmossco_util $(LIBS)
 
-test_Dictionary test_Netcdf: libmossco_util
+test_Dictionary test_mossco_netcdf: libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
+
+test_Dictionary test_netcdf: 
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(LIBS)
 
 test_Solver: libsolver
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lsolver $(LIBS)
@@ -65,5 +68,5 @@ clean: extraclean
 
 extraclean:
 	@- rm -f $(TESTS) PET*
-	@- rm -rf *.dSYM
+	@- rm -rf *.dSYM test_netcdf.nc
 
