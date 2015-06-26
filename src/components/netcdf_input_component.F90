@@ -518,8 +518,8 @@ module netcdf_input_component
           if (ismatch) exit
         enddo
         if (.not.ismatch) then
-          write(message,'(A)')  trim(name)//' did not include item'
-          call MOSSCO_MessageAdd(message, trim(itemName))
+          write(message,'(A)')  trim(name)//' did not include'
+          call MOSSCO_MessageAdd(message, ' '//trim(itemName))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
         endif
@@ -527,7 +527,7 @@ module netcdf_input_component
 
       if (nc%variables(i)%rank < 2) then
         write(message,'(A)') trim(name)//' does not implemented reading of rank < 2 item'
-        call MOSSCO_MessageAdd(message, trim(itemName)//'"')
+        call MOSSCO_MessageAdd(message, ' '//trim(itemName)//'"')
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
       endif
