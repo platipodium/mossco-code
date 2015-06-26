@@ -89,20 +89,24 @@ module netcdf_component
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
     call ESMF_AttributeAdd(gridComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(gridComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
 
@@ -118,7 +122,6 @@ module netcdf_component
     integer, intent(out) :: rc
 
     character(len=ESMF_MAXSTR) :: name, configFileName, fileName, message
-    character(len=ESMF_MAXSTR) :: filterPatternExclude
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc, j, n
     logical                    :: isPresent, fileIsPresent, labelIsPresent, configIsPresent
@@ -190,6 +193,12 @@ module netcdf_component
         call MOSSCO_AttributeSetList(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_AttributeGet(importState, 'filter_pattern_exclude', value=message, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' exclude patterns: '//trim(message)
       endif
 
       call MOSSCO_ConfigGetList(config, 'include:', filterIncludeList, localrc)
@@ -200,6 +209,12 @@ module netcdf_component
         call MOSSCO_AttributeSetList(importState, 'filter_pattern_include', filterIncludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_AttributeGet(importState, 'filter_pattern_include', value=message, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' include patterns: '//trim(message)
       endif
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
@@ -266,7 +281,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
     type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
     type(ESMF_IOFmt_Flag)      :: ioFmt
-    character(len=ESMF_MAXSTR) :: filterPatternExclude
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
     type(ESMF_log)             :: log
 
@@ -309,7 +323,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (advanceCount<huge(timeSlice)) then
       timeSlice=int(advanceCount, ESMF_KIND_I4)
@@ -324,10 +339,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
 
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
 
       call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=localrc)
@@ -390,9 +407,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         enddo
 
         if (isMatch .and. advanceCount < 1) then
-          write(message,'(A)') trim(name)//' excluded '
-          call MOSSCO_MessageAdd(message, trim(itemNameList(i))//' from pattern ')
-          call MOSSCO_MessageAdd(message,trim(filterExcludeList(j)))
+          write(message,'(A)') trim(name)//' excluded'
+          call MOSSCO_MessageAdd(message, ' '//trim(itemNameList(i))//' from pattern ')
+          call MOSSCO_MessageAdd(message, ' '//trim(filterExcludeList(j)))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
         endif
