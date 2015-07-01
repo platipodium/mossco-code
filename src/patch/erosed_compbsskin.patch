@@ -1,0 +1,161 @@
+--- ../compbsskin.f90	2015-07-01 18:22:43.460362392 +0200
++++ compbsskin.f90	2015-07-01 18:22:28.538363413 +0200
+@@ -2,33 +2,33 @@
+                      & teta  , kssilt, kssand, thcmud, taumax, rhowat, &
+                      & vicmol)
+ !----- GPL ---------------------------------------------------------------------
+-!                                                                               
+-!  Copyright (C)  Stichting Deltares, 2011-2013.                                
+-!                                                                               
+-!  This program is free software: you can redistribute it and/or modify         
+-!  it under the terms of the GNU General Public License as published by         
+-!  the Free Software Foundation version 3.                                      
+-!                                                                               
+-!  This program is distributed in the hope that it will be useful,              
+-!  but WITHOUT ANY WARRANTY; without even the implied warranty of               
+-!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                
+-!  GNU General Public License for more details.                                 
+-!                                                                               
+-!  You should have received a copy of the GNU General Public License            
+-!  along with this program.  If not, see <http://www.gnu.org/licenses/>.        
+-!                                                                               
+-!  contact: delft3d.support@deltares.nl                                         
+-!  Stichting Deltares                                                           
+-!  P.O. Box 177                                                                 
+-!  2600 MH Delft, The Netherlands                                               
+-!                                                                               
+-!  All indications and logos of, and references to, "Delft3D" and "Deltares"    
+-!  are registered trademarks of Stichting Deltares, and remain the property of  
+-!  Stichting Deltares. All rights reserved.                                     
+-!                                                                               
++!
++!  Copyright (C)  Stichting Deltares, 2011-2013.
++!
++!  This program is free software: you can redistribute it and/or modify
++!  it under the terms of the GNU General Public License as published by
++!  the Free Software Foundation version 3.
++!
++!  This program is distributed in the hope that it will be useful,
++!  but WITHOUT ANY WARRANTY; without even the implied warranty of
++!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++!  GNU General Public License for more details.
++!
++!  You should have received a copy of the GNU General Public License
++!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
++!
++!  contact: delft3d.support@deltares.nl
++!  Stichting Deltares
++!  P.O. Box 177
++!  2600 MH Delft, The Netherlands
++!
++!  All indications and logos of, and references to, "Delft3D" and "Deltares"
++!  are registered trademarks of Stichting Deltares, and remain the property of
++!  Stichting Deltares. All rights reserved.
++!
+ !-------------------------------------------------------------------------------
+ !  $Id: compbsskin.f90 2392 2013-03-28 14:27:50Z mourits $
+-!  $HeadURL: https://svn.oss.deltares.nl/repos/delft3d/tags/2514/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $
++!  $HeadURL: https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/compbsskin.f90 $
+ !!--description-----------------------------------------------------------------
+ !
+ ! Compute tau in case of muddy bed (skin fraction  only)
+@@ -114,7 +114,6 @@
+ !
+ !! executable statements -------------------------------------------------------
+ !
+-    !
+     ! Set constants
+     !
+     ar    = 0.26
+@@ -136,15 +135,16 @@
+     cdr    = ( 0.40 / (log(depth/z0silt)-1.0) )**2
+     phicur = atan2(vmean,umean) / degrad
+     if (phicur < 0.0) phicur = phicur + 360.0
+-    !
++     !
+     if (wave) then
+        phiwr  = (teta - phicur) * degrad
+        uorbm  = max( uorb , 0.01_fp )
+        aorb   = uorbm * tper / 2.0 / pi
+        rew    = uorbm * aorb / vicmol
+        fws    = 0.0521 * rew**(-0.187)
+-       fwr    = 1.39 * (aorb/z0silt)**(-0.52)
++       fwr    = 1.39 * (aorb/z0silt)**(-0.52)
+     endif
++
+     !
+     ! Determine flow regime
+     !
+@@ -176,21 +176,25 @@
+           else
+              taumax = 0.5 * rhowat * fws * uorbm * uorbm
+           endif
+-       endif
++       endif
++
++          write (*,*) 'compbsskin only tau_wave cohesive, max', taumax
+     elseif (umod >= 1.0e-6 .and. wave) then
+        !
+        ! Combined flow and waves
+-       !
+-       reccr = 2000.0 + (5.92e5 * rew)**0.35
+-       if (rec <= reccr .and. rew <= rewcr) then
+-          !
+-          ! laminar flow
+-          !
+-          taum   = 3.0 * rhowat * vicmol * umod / depth
+-          tauw   = rhowat * uorbm * uorbm / sqrt(rew)
+-          taumax = sqrt((taum +  tauw*abs(cos(phiwr)))**2 &
+-                       &      + (tauw*abs(sin(phiwr)))**2 )
+-       else
++!       !
++!       reccr = 2000.0 + (5.92e5 * rew)**0.35
++!       if (rec <= reccr .and. rew <= rewcr) then
++!          !
++!          ! laminar flow
++!          !
++!          taum   = 3.0 * rhowat * vicmol * umod / depth
++!          tauw   = rhowat * uorbm * uorbm / sqrt(rew)
++!          taumax = sqrt((taum +  tauw*abs(cos(phiwr)))**2 &
++!                       &      + (tauw*abs(sin(phiwr)))**2 )
++!!          write (*,*) 'laminar tau_wave_cur cohesive, mean', taum
++!!          write (*,*) 'laminar tau_wave_cur cohesive, max', taumax
++!       else
+           !
+           ! turbulent flow
+           !
+@@ -206,7 +210,9 @@
+           cdmax   = sqrt((cdm +  t3*(uorbm/umod)*sqrt(fwr/2.0)*abs(cos(phiwr)))**2 &
+                          &    + (t3*(uorbm/umod)*sqrt(fwr/2.0)*abs(sin(phiwr)))**2 )
+           taumr   = rhowat * cdm   * umod * umod
+-          taumaxr = rhowat * cdmax * umod * umod
++          taumaxr = rhowat * cdmax * umod * umod
++!
++
+           !
+           ! 2) compute shear stresses belonging with smooth bed
+           !
+@@ -227,12 +233,12 @@
+           !
+           if (taumaxs > taumaxr) then
+              taum   = taums
+-             taumax = taumaxs
++             taumax = taumaxs
+           else
+              taum   = taumr
+-             taumax = taumaxr
+-          endif
+-       endif
++             taumax = taumaxr
++          endif
++  !     endif
+     else
+        !
+        ! No flow and no waves
+@@ -240,4 +246,4 @@
+        taum   = 0.0
+        taumax = 0.0
+     endif
+-end subroutine compbsskin
++end subroutine compbsskin
+

@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 # 
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
@@ -16,7 +16,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README Rules.make
 
-SUBDIRS=include utilities drivers 
+SUBDIRS=include utilities drivers patch
 
 ifeq ($(MOSSCO_ESMF),true)
 SUBDIRS += components mediators connectors
@@ -26,7 +26,8 @@ endif
 
 all: subdirs
 
-components: drivers
+components: drivers patch
+drivers:  patch
 
 subdirs: $(SUBDIRS)
 

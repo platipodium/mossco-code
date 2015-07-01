@@ -1,0 +1,151 @@
+--- ../soursin_3d.f90	2015-07-01 18:20:51.246370066 +0200
++++ soursin_3d.f90	2015-07-01 18:19:41.321374847 +0200
+@@ -1,35 +1,35 @@
+ subroutine soursin_3d(h1          ,thick0      ,thick1      ,sigsed      ,thicksed    , &
+                     & r0          ,vicmol      ,sigmol      ,seddif      ,rhosol      , &
+                     & ce_nm       ,ws          ,aks         , &
+-                    & sour        ,sink                                               )
++                    & sour        ,sink        , timestep   , nm                         )
+ !----- GPL ---------------------------------------------------------------------
+-!                                                                               
+-!  Copyright (C)  Stichting Deltares, 2011-2013.                                
+-!                                                                               
+-!  This program is free software: you can redistribute it and/or modify         
+-!  it under the terms of the GNU General Public License as published by         
+-!  the Free Software Foundation version 3.                                      
+-!                                                                               
+-!  This program is distributed in the hope that it will be useful,              
+-!  but WITHOUT ANY WARRANTY; without even the implied warranty of               
+-!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                
+-!  GNU General Public License for more details.                                 
+-!                                                                               
+-!  You should have received a copy of the GNU General Public License            
+-!  along with this program.  If not, see <http://www.gnu.org/licenses/>.        
+-!                                                                               
+-!  contact: delft3d.support@deltares.nl                                         
+-!  Stichting Deltares                                                           
+-!  P.O. Box 177                                                                 
+-!  2600 MH Delft, The Netherlands                                               
+-!                                                                               
+-!  All indications and logos of, and references to, "Delft3D" and "Deltares"    
+-!  are registered trademarks of Stichting Deltares, and remain the property of  
+-!  Stichting Deltares. All rights reserved.                                     
+-!                                                                               
++!
++!  Copyright (C)  Stichting Deltares, 2011-2013.
++!
++!  This program is free software: you can redistribute it and/or modify
++!  it under the terms of the GNU General Public License as published by
++!  the Free Software Foundation version 3.
++!
++!  This program is distributed in the hope that it will be useful,
++!  but WITHOUT ANY WARRANTY; without even the implied warranty ofthick
++!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++!  GNU General Public License for more details.
++!
++!  You should have received a copy of the GNU General Public License
++!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
++!
++!  contact: delft3d.support@deltares.nl
++!  Stichting Deltares
++!  P.O. Box 177
++!  2600 MH Delft, The Netherlands
++!
++!  All indications and logos of, and references to, "Delft3D" and "Deltares"
++!  are registered trademarks of Stichting Deltares, and remain the property of
++!  Stichting Deltares. All rights reserved.
++!
+ !-------------------------------------------------------------------------------
+ !  $Id: soursin_3d.f90 2392 2013-03-28 14:27:50Z mourits $
+-!  $HeadURL: https://svn.oss.deltares.nl/repos/delft3d/tags/2514/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $
++!  $HeadURL: https://svn.oss.deltares.nl/repos/delft3d/tags/2399/src/engines_gpl/flow2d3d/packages/kernel/src/compute_sediment/soursin_3d.f90 $
+ !!--description-----------------------------------------------------------------
+ !
+ !    Function: Computes the sour and sink terms for the 3D case
+@@ -57,6 +57,8 @@
+     real(fp), intent(in)  :: aks
+     real(fp), intent(out) :: sour
+     real(fp), intent(out) :: sink
++integer (kind =8), intent(in)  ::timestep
++integer , intent(in)  :: nm
+ !
+ ! Local variables
+ !
+@@ -83,19 +85,19 @@
+ !! executable statements -------------------------------------------------------
+ !
+     dc0 = ce_nm*rhosol - r0
+-    !
++
+     ! Test if upward diffusion will exist
+     ! (test against concentration in bottom sand cell at
+     ! previous timestep)
+     !
+     if (dc0 > 0.0) then
+-       !
++        !
+        ! More accurate estimation of concentration and
+        ! concentration gradient at bottom of kmx cell
+        !
+        ce_nmtmp = max(1.0e-4_fp,ce_nm*rhosol)
+-       zkmx     = h1*(1.0 + sigsed)
+-       zkmxb    = zkmx - 0.5*thicksed*h1
++       zkmx     = h1*(1.0 + sigsed) +thicksed *h1
++       zkmxb    = zkmx - 0.5*thicksed*h1
+        r00      = max(r0, 1.0e-7_fp)
+        a0kmx    = (aks*(h1 - zkmx))/(zkmx*(h1 - aks))
+        power1   = log(r00/(ce_nmtmp))
+@@ -109,20 +111,22 @@
+                 & **(power - 1.0)
+        temp2    = ( -1.0/(h1 - aks))*((aks*h1)/zkmxb**2)
+        dcdz     = temp0*temp1*temp2
+-       dz       = (1.0 + sigsed)*h1 - aks
++       dz       = (1.0 + sigsed)*h1 - aks
++
+        if (abs(r00 - ce_nmtmp) < 1.0e-5) then
+-          alpha2 = 1
+-       else
++          alpha2 = 1
++        else
+           alpha2 = dcdz/((r00 - ce_nmtmp)/dz)
+        endif
+        !
+-       alpha1 = min(alpha1, 10.0_fp)
+-       alpha1 = max(alpha1,  0.1_fp)
+-       alpha2 = min(alpha2, 10.0_fp)
++       alpha1 = min(alpha1, 10.0_fp)
++       alpha1 = max(alpha1,  0.1_fp)
++       alpha2 = min(alpha2, 10.0_fp)
+        alpha2 = max(alpha2,  0.1_fp)
+-       !
+-       diffus = vicmol/sigmol + seddif
+-       !
++        !
++       diffus = vicmol/sigmol + seddif
++
++        !
+        sour = alpha2*ce_nmtmp*diffus/dz
+        sink = alpha2*diffus/dz + alpha1*ws
+        !
+@@ -131,9 +135,10 @@
+        !
+        ! Source and sink terms are calculated per unit
+        ! volume
+-       !
++       !
+        sour = sour / thick0
+-       sink = sink / thick1
++       sink = sink / thick1
++
+     else
+        !
+        ! (if downward diffusion into the bed would occur)
+@@ -141,6 +146,7 @@
+        ! use simple estimate for settling flux out of
+        ! bottom SAND cell
+        !
+-       sink = ws/thick1
++       sink = ws/thick1
++
+     endif
+ end subroutine soursin_3d
