@@ -58,10 +58,24 @@ Note that aliases don't reliably work  for `nf-config`, so we use soft links her
 
         cd $ESMF_DIR; make lib install
 
+## Installing py-yaml
+
+Download and install py-yaml
+
+        mkdir -p $HOME/opt/PYTHON/
+        cd $HOME/opt/PYTHON/
+        wget http://pyyaml.org/download/pyyaml/PyYAML-3.11.tar.gz
+        tar xzf PyYAML-3.11.tar.gz
+        cd PyYAML-3.11
+        python setup.py install --prefix=$HOME/opt
+
 ## Last steps
 
+        export PYTHONPATH=$PYTHONPATH:$HOME/opt/lib/python2.7/site-packages
         export ESMFMKFILE=$HOME/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_49/esmf.mk
 
         export NETCDF=NETCDF4
         export NETCDF_VERSION=$NETCDF
         export FORTRAN_COMPILER=IFORT
+
+Now you're ready to build and run MOSSCO applications by continuing with the [using_mossco_sh] recipe
