@@ -41,7 +41,7 @@ endif
 
 # Make targets
 ifeq ($(MOSSCO_NETCDF),true)
-  TARGETS += nc_extract_variable nc_extract_variable_lasttime
+  #TARGETS += nc_extract_variable nc_extract_variable_lasttime
 endif
 
 all: libsolver libmossco_util $(TARGETS)
