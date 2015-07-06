@@ -2,21 +2,22 @@
 
 Juropatest is the test environment for the next supercomputer at FZ Jülich.  You can apply for a testaccount by contacting their support at <dispatch.jsc@fz-juelich.de>.
 
-
 ## System description
 
 See <http://www.fz-juelich.de/ias/jsc/EN/Expertise/Supercomputers/JUROPATEST/Configuration/Configuration_node.html> for the configuration.  The batch system currently allows the use of 16 nodes with 2 CPU x 14 core processors, i.e. a total of 448 cores.
-
 
 ## Preparing your environment
 
 Load the appropriate modules
 
-	module purge
-	module load intel-para/2014.11
-    module load CMake/3.0.0 Doxygen/1.8.2 Python/2.7.8 PyYAML/3.10-Python-2.7.8
-    module load git/2.1.3 zlib/1.2.8
-    module load netCDF/4.2.1.1 netCDF-Fortran/4.2 parallel-netcdf/1.5.0
+		module purge
+
+		module load intel-para/2015.06-mt
+		module load CMake Doxygen
+		module load netCDF-Fortran
+		module load netCDF4-python PyYAML matplotlib
+		module load Xerces-C++
+		module load NCO
 
     export ESMFMKFILE=$HOME/opt/esmf/lib/libg/Linux.intel.64.mpich2.default/esmf.mk
 
@@ -46,7 +47,7 @@ You should not have to do this, it is documented here for administrators.
 	export ESMF_INSTALL_PREFIX=${HOME}/opt/esmf
 	export ESMF_COMPILER=intel
 	export ESMF_OS=Linux
-	
+
 	export ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
 	export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 	export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
