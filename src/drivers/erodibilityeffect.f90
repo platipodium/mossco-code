@@ -77,7 +77,7 @@ real (fp)    :: b2     = 5.08e-8
  do j = 1, jnum
   do i = 1, inum
 
-    if (trim(Mbalthica%units) == '-' )  then
+    if (trim(Mbalthica%units) == 'ind.m**-2' )  then
       if ((Mbalthica%intensity (i,j)==0.0_fp) ) then
 
         g_erod_Macrofauna = 1.0
@@ -100,12 +100,12 @@ real (fp)    :: b2     = 5.08e-8
 
 
       endif
-      
-    else if (trim(Mbalthica%units) == '' ) then    
+
+    else if (trim(Mbalthica%units) == '' ) then
 
        g_erod_Macrofauna = 1.0
 
-      write (*,*) ' Error: Macoma balthica misses units, the effect on the erodibility can be calculated at the moment based'// &
+      write (*,*) ' Warning: Macoma balthica misses units, the effect on the erodibility can be calculated at the moment based'// &
                   ' on intensity (refer to Paarlberg et al. (2005)) or biomas per square metere (Borsje et al (2008)'// &
                   '  therefore, the effect was set to 1.0'
      exit
