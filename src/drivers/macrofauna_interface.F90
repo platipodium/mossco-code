@@ -32,7 +32,7 @@ type (Mbalthica_Object),save   :: M_Balthica
 
 contains
 
-subroutine Macrofanua_init(Total_Bioturbation, inum, jnum)
+subroutine Macrofauna_init(Total_Bioturbation, inum, jnum)
 ! All macrofauna species are initialized here.
 ! In case feuther features of macrofauna effect have been added, the corresponding pointers should be
 ! deallocated here.
@@ -50,16 +50,18 @@ Total_Bioturbation%TauEffect=1.0_fp
 ! The initilize method of new species should be called here
 call M_Balthica%initialize(inum, jnum)
 
-end subroutine Macrofanua_init
+end subroutine Macrofauna_init
 !*********************************************************************************
-subroutine Macrofanua_set()
+subroutine Macrofauna_set(spatialvar,Biounit)
+real (fp), dimension (:,:), pointer, optional  :: spatialvar
+character (len = 10), optional  :: Biounit
 ! The set method of new species should be called here, to read and set data
 
-call M_Balthica%set()
+call M_Balthica%set(spatialvar,Biounit)
 
-end subroutine Macrofanua_set
+end subroutine Macrofauna_set
 !*********************************************************************************
-subroutine Macrofanua_run(Total_Bioturbation)
+subroutine Macrofauna_run(Total_Bioturbation)
 
 implicit none
 !#ifdef DEBUG
@@ -84,9 +86,9 @@ Total_Bioturbation%TauEffect         = M_Balthica%Bioturbation%TauEffect
 Write (*,*) ' The macrofauna effect on the sediment erodibility is the factor:'     , Total_Bioturbation%ErodibilityEffect
 Write (*,*) ' The macrofauna effect on the critical bed shear stress is the factor:',Total_Bioturbation%TauEffect
 #endif
-end subroutine Macrofanua_run
+end subroutine Macrofauna_run
 !*********************************************************************************
-subroutine Macrofanua_fin(Total_Bioturbation)
+subroutine Macrofauna_fin(Total_Bioturbation)
 ! The finialize method of new species should be called here.
 implicit none
 
@@ -98,7 +100,7 @@ call fin_Mbalthica(M_Balthica)
 ! deallocated here
 deallocate (Total_Bioturbation%ErodibilityEffect, Total_Bioturbation%TauEffect)
 
-end subroutine Macrofanua_fin
+end subroutine Macrofauna_fin
 !*********************************************************************************
 end module macrofauna_interface
 
