@@ -22,6 +22,7 @@ AUTOTITLE=1          # Whether to change the simulation title in mossco_run and 
 POSTPROCESS=NONE
 NP=NONE
 LOGLEVEL='undefined'
+WAIT=NO
 
 # Function for printing usage of this script
 function usage {
@@ -49,6 +50,7 @@ function usage {
 	echo "      [-s F]: Command line interactive, running in foreground"
 	echo "      [-s B]: Command line interactive, running in background"
 	echo
+  echo "    [-w] : wait until batch job finishes (only slurm)"
 	exit
 }
 
@@ -86,7 +88,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bn:s:l:" opt; do
+while getopts ":rt:bn:s:l:w" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -104,6 +106,8 @@ while getopts ":rt:bn:s:l:" opt; do
   s)  SYSTEM=${OPTARG}
       ;;
   l)  LOGLEVEL=${OPTARG}
+      ;;
+  w)  WAIT=YES
       ;;
   \?) usage
       ;;
@@ -496,13 +500,22 @@ case ${SYSTEM} in
              JOBID=$(sbatch --parsable --dependency=after:${JOBID} ${POSTPROCESS})
              echo "Postprocess job with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
            fi
-           squeue -u ${USER}
+           squeue -j ${JOBID}
+           if [[ ${WAIT} == YES ]]; then
+             while [[ 1 -eq 1 ]]; do
+               sleep 10
+               squeue -j ${JOBID} || break
+             done
+           fi
          else cat slurm.sh ; fi
          ;;
   BACKGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
          PID=$!
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
          echo "Job ${TITLE} with PID ${PID} interactively running in background"
+         if [[ ${WAIT} == YES ]]; then
+           wait $PID
+         fi
          ;;
   FOREGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}"
@@ -516,7 +529,3 @@ esac
 test -f ${STDOUT} && tail -n 20 ${STDOUT}
 test -f ${STDERR} && tail -n 20 ${STDERR}
 test -f PET0.${TITLE} && tail -n 100 PET0.${TITLE}
-
-
-
-
