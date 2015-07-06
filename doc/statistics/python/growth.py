@@ -7,10 +7,8 @@ import numpy
 import csv
 from matplotlib import pyplot
 
-# Map of author names to columns
 
-
-counters=['lines of code'] #, 'files by date']
+counters=['lines of code']#, 'files by date']
 titles={'lines of code':'total lines of code','files by date':'total files'}
 
 for counter in counters:
@@ -37,8 +35,8 @@ for counter in counters:
   ax = pylab.axes([0.1, 0.2, 0.8, 0.7])
   value=fields[:,fieldnames.index(counter)]
 
-  pyplot.plot(fds,value,'k-',linewidth=3)  
- 
+  pyplot.plot(fds,value,'k-',linewidth=3)
+
   ax=pylab.gca()
   ax.xaxis.set_major_formatter(hfmt)
   ax.xaxis.set_major_locator(dates.MonthLocator())
