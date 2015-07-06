@@ -49,7 +49,7 @@ module erosed_component
      real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr=>NULL()
   end type ptrarray2D
   type(ptrarray2D),dimension(:),allocatable :: size_classes_of_upward_flux_of_pim_at_bottom
-  type(ptrarray2D) :: rms_orbital_velocity, bottom_shear_stress
+  type(ptrarray2D) :: rms_orbital_velocity, bottom_shear_stress, bottom_shear_stress_noncoh, equilibrium_spm
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
   integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
@@ -85,7 +85,7 @@ real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer:: spm_concentration=>null()
     real(fp)    , dimension(:)  , allocatable   :: rhosol       ! specific sediment density [kg/m3]
     real(fp)    , dimension(:)  , allocatable   :: sedd50       ! 50% diameter sediment fraction [m]
     real(fp)    , dimension(:)  , allocatable   :: sedd90       ! 90% diameter sediment fraction [m]
-    real(fp)    , dimension(:)  , allocatable   :: taub         ! bottom shear stress [N/m2]
+    real(fp)    , dimension(:)  , allocatable   :: taub, taubn   ! bottom shear stress [N/m2]
     real(fp)    , dimension(:)  , allocatable   :: umod         ! depth averaged flow magnitude [m/s]
     real(fp)    , dimension(:)  , allocatable   :: u_bot        ! velocity at the (center of the) bottom cell in u-direction
     real(fp)    , dimension(:)  , allocatable   :: v_bot        ! velocity at the (center of the) bottom cell in v-direction
@@ -103,8 +103,7 @@ real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer:: spm_concentration=>null()
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
     logical                                     :: lexist, anymud, wave
     real(fp)    , dimension(:)  , allocatable   :: uorb, tper, teta ! Orbital velocity [m/s], Wave period, angle between current and wave
-
-    integer :: unit707
+real(fp)    , dimension(:)  , allocatable   :: eq_conc    ! equilibrium sand fraction concentration [g.m**-3]    integer :: unit707
 
 
 contains
@@ -421,6 +420,8 @@ contains
     allocate (v_bot     (nmlb:nmub))
     allocate (thick     (nmlb:nmub))
     allocate (taub      (nmlb:nmub))
+    allocate (taubn      (nmlb:nmub))
+    allocate (eq_conc     (nmlb:nmub))
 !    allocate (r0        (nfrac,nmlb:nmub))
 !    allocate (r1        (nfrac,nmlb:nmub))
 !    allocate (rn        (nfrac,nmlb:nmub))
@@ -558,6 +559,8 @@ contains
     v_bot   = 0.0_fp        ! flow velocity in v-direction at (center of the ) bottm cell
     thick   = 0.02_fp       ! height of the bottom cell
     taub    = 0.0_fp
+    taubn    = 0.0_fp
+    eq_conc =0.0_fp
 #ifdef DEBUG
     ! Open file for producing output
     call ESMF_UtilIOUnitGet(unit707, rc = localrc)
@@ -996,6 +999,44 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
+
+    allocate (bottom_shear_stress_noncoh%ptr(inum, jnum))
+
+    bottom_shear_stress_noncoh%ptr(:,:)= 0.0_fp
+
+    field = ESMF_FieldCreate(grid, farrayPtr=bottom_shear_stress_noncoh%ptr, &
+            name='shear_stress_at_soil_surface_noncohesive', rc=localrc)
+    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(name)//' created field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+   allocate (equilibrium_spm%ptr(inum, jnum))
+
+    equilibrium_spm%ptr(:,:)= 0.0_fp
+
+    field = ESMF_FieldCreate(grid, farrayPtr=equilibrium_spm%ptr, &
+            name='Equilibrium_SPM_concentration_at_soil_surface_noncohesive', rc=localrc)
+    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message,'(A)') trim(name)//' created field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1415,10 +1456,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
                 & tper   , teta   , spm_concentration , BioEffects     , nybot, thick, u_bot, &
-                & v_bot  , u2d    , v2d      , h0 , mask , advancecount  )
+                & v_bot  , u2d    , v2d      , h0 , mask , advancecount, taubn, eq_conc  )
 
 !if ((advancecount>= 70).and.(advancecount<=100)) write (*,*) '######### Timestep: ',advancecount , ' #########'
     !   Updating sediment concentration in water column over cells
+  n =0
     do l = 1, nfrac
       do nm = nmlb, nmub
 !                rn(l,nm) = r0(l,nm) ! explicit
@@ -1441,7 +1483,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !        write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm, 'sedd50',sedd50(l)
  !if (spm_concentration(i,j,l) >100.)  write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
 
-
+!if ((advancecount>11.and. advancecount< 17).and. (l==1)) then
+if (j==8) then
+if (i >1.and.i <=8)then
+if (n==0) write (0,*) 'timestep,nm,i,j,spm_upwardflux,sour,sink,spm_concentration(1), eq_conc'
+write (0,*) advancecount,',',nm,',', i,',',j ,',',size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j),',',sour(l,nm)*1000,',',sink(l,nm), ',',spm_concentration(i,j,l),',',eq_conc(nm)
+n = n+1
+endif
+endif
+!endif
         end if
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
@@ -1582,6 +1632,91 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     end do
 
 
+
+      call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface_noncohesive', itemType=itemType, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message, '(A)') trim(name)//' did not find field shear_stress_at_soil_surface_noncohesive'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(exportState, 'shear_stress_at_soil_surface_noncohesive', field=field, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=status, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)') trim(name)//' received incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=bottom_shear_stress_noncoh%ptr, exclusiveLBound=exclusiveLBound, &
+      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+    do j=1,jnum
+      do i= 1, inum
+        bottom_shear_stress_noncoh%ptr(i,j) = taubn(inum*(j -1)+i)
+      end do
+    end do
+
+
+
+      call ESMF_StateGet(exportState, 'Equilibrium_SPM_concentration_at_soil_surface_noncohesive', itemType=itemType, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message, '(A)') trim(name)//' did not find field Equilibrium_SPM_concentration_at_soil_surface_noncohesive'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(exportState, 'Equilibrium_SPM_concentration_at_soil_surface_noncohesive', field=field, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=status, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)') trim(name)//' received incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=equilibrium_spm%ptr, exclusiveLBound=exclusiveLBound, &
+      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @todo proper bounds checking with eLBound required here
+
+    do j=1,jnum
+      do i= 1, inum
+        equilibrium_spm%ptr(i,j) = eq_conc(inum*(j -1)+i)
+      end do
+    end do
+
+
+
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1633,7 +1768,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (u_bot)
     deallocate (v_bot)
     deallocate (thick)
-    deallocate (taub)
+    deallocate (taub, taubn, eq_conc)
 !    deallocate (r0)
 !    deallocate (r1)
 !    deallocate (rn)

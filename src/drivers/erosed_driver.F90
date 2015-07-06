@@ -283,7 +283,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                  & sink     , sinkf   , sour     , sourf   , anymud  , wave      , &
                  & uorb     , tper    , teta     , spm_concentration , Bioeffects, &
                  & turb_difz, relativ_thick      , u_bottom, v_bottom, u2d       , &
-                 & v2d      , h0      , mask, timestep)
+                 & v2d      , h0      , mask, timestep, taubn, eq_conc)
 
 !
 !    Function: Computes sedimentation and erosion fluxes
@@ -318,7 +318,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
   ! real(fp)    , dimension(nmlb:nmub)      , intent(in)   :: sedd90        ! 90% diameter sediment fraction [m]
     real(fp)    , dimension(nfrac)          , intent(in)   :: sedd50        ! 50% diameter sediment fraction [m]
     real(fp)    , dimension(nfrac)          , intent(in)   :: sedd90        ! 90% diameter sediment fraction [m]
-    real(fp)    , dimension(nmlb:nmub)      , intent(inout):: taub          ! bottom shear stress [N/m2]
+    real(fp)    , dimension(nmlb:nmub)      , intent(inout):: taub ,taubn   ! bottom shear stress [N/m2]
     real(fp)    , dimension(nmlb:nmub)      , intent(in)   :: umod          ! Depth-averaged flow velocity[m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub), intent(in)   :: ws            ! sediment settling velocity (hindered) [m/s]
     real(fp)    , dimension(nfrac,nmlb:nmub), intent(out)  :: sink          ! sediment sink flux [m/s]
@@ -335,11 +335,11 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: relativ_thick ! relative thickness of the lowest element
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: u_bottom, v_bottom ! flow velocity at the bottom cell (middle height) at x- and y-direction [m/s]
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: h0            ! water depth in old time step [m]
-
+real(fp)    , dimension(nmlb:nmub), intent(out)  :: eq_conc            ! Equilibrium concentration of sand fraction [g.m**-3]
 integer (kind=8) , intent (in):: timestep
 ! Local variables
 !
-    integer                                     :: l            ! sediment counter
+    integer                                     :: l ,k         ! sediment counter
     integer                                     :: nm           ! cell counter
     real(fp)                                    :: fracf,rhowat
     real(fp)                                    :: mfltot,vicmol! vicmol: molecular viscosity
@@ -416,6 +416,8 @@ integer (kind=8) , intent (in):: timestep
     sinkf       = 0.0_fp
     sourf       = 0.0_fp
     taub        = 0.0_fp
+    taubn       = 0.0_fp
+    eq_conc     = 0.0_fp
     rhowat      = 1000.0_fp
     vicmol      = 1.307e-6_fp
     thcmud      = 0.001_fp ! @ToDO: Total thickness of mud layer [m] should be read from data file
@@ -423,31 +425,31 @@ integer (kind=8) , intent (in):: timestep
                         ! z0 roughness for taub in compbsskin. Taub is the combined wave current shear
                         ! stress for cohesive soil
 
-mfltot = 0.0_fp
-flow2d = .false.
-rwave = 2.0_fp            ! Default value in Delft-3D
-iopkcw=1
-iopsus = 0                ! calculate suspended sediment size class, if = 1
-vonkar = 0.4_fp
-tauadd = 0.0_fp
-iform = -1                ! van Rijn 1993
-g = 9.81_fp
-factcr = 1.0
-eps = 1e-6
+    mfltot = 0.0_fp
+    flow2d = .false.
+    rwave = 2.0_fp            ! Default value in Delft-3D
+    iopkcw=1
+    iopsus = 0                ! calculate suspended sediment size class, if = 1
+    vonkar = 0.4_fp
+    tauadd = 0.0_fp
+    iform = -1                ! van Rijn 1993
+    g = 9.81_fp
+    factcr = 1.0
+    eps = 1e-6
 
-zubed = relativ_thick* h /2.0_fp   ! center of the first element at bed
-z0cur = sedd50/12._fp   ! initial z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
-z0rou = z0cur           ! z0 bed roughness height for wave: is calculated using a function in erosed, here initialized to z0cur
+    zubed = relativ_thick* h /2.0_fp   ! center of the first element at bed
+    z0cur = sedd50/12._fp   ! initial z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
+    z0rou = z0cur           ! z0 bed roughness height for wave: is calculated using a function in erosed, here initialized to z0cur
 
-aksfac = 1.0_fp         ! proportionality factor multiplied by ks (equivalent sand roughness height)
+    aksfac = 1.0_fp         ! proportionality factor multiplied by ks (equivalent sand roughness height)
                         ! to evaluate van Rijn concentration height "a"
-camax=0.65_fp
-rdc = 2.5_fp* sedd50(1)   !it is not used when iopkcw = 1
-rdw = rdc                 !it is not used when iopkcw = 1
+    camax=0.65_fp
+    rdc = 2.5_fp* sedd50(1)   !it is not used when iopkcw = 1
+    rdw = rdc                 !it is not used when iopkcw = 1
 
-sigsed = relativ_thick /2.0_fp -1.0_fp      ! Dimensionless distance of the middle of the lowest cell to the water surface
-sigmol = 6.7_fp     ! Schmidt number
-seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from input file
+    sigsed = relativ_thick /2.0_fp -1.0_fp      ! Dimensionless distance of the middle of the lowest cell to the water surface
+    sigmol = 6.7_fp     ! Schmidt number
+    seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from input file
 
 
     call init_mathconsts()
@@ -472,7 +474,7 @@ seddif = 1.e-3_fp   ! @ TODO: these two parameters should be later read from inp
     kssand = 0.0_fp
     i = 0
     j = 0
-
+    k = 0
     do l = 1, nfrac
 
        if (sedtyp(l)==SEDTYP_COHESIVE) then
@@ -514,7 +516,11 @@ masking: if (mask(i,j) /=0) then
  fractions: do l = 1, nfrac
             if (sedtyp(l)==SEDTYP_COHESIVE) then
 
-
+!if (timestep>= 54 .and. timestep <= 58) then
+!
+!    if ( (j==23 .and. i==99).or. (j==24 .and.i==99)) then
+!write (0,*) 'timestep =', timestep
+!write (*,*) 'timestep =', timestep
                 !   Compute source and sink fluxes for cohesive sediment (mud)
 !print*, 'cohesive','i,j', i,j, 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
                  call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
@@ -523,8 +529,9 @@ masking: if (mask(i,j) /=0) then
 
                  call compbsskin_arguments%run ()
                  call compbsskin_arguments%get(taub(nm))
-!write (*,*) 'taub', taub(nm), 'nm', nm
-
+!write (0,*) 'taub', taub(nm), 'nm', nm, 'i,j ', i, j
+!end if
+!end if
                  fracf   = 0.0_fp
                  if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
 
@@ -660,7 +667,8 @@ masking: if (mask(i,j) /=0) then
 
 !write (*,*)'taucr-sand', taucr(l), 'nm', nm, 'i,j', i,j
 
-
+!write (*,*) 'timestep =', timestep, 'nm', nm
+!write (0,*) 'timestep =', timestep, 'nm', nm
                  z0rou (l)= calcZ0rou (vonkar,sedd50(l),h (nm),g)
                  z0cur (l)= sedd50(l) /12.0_fp
 !write (*,*) 'z0rou', z0rou, 'mudfrac','(',nm,')', mudfrac(nm)
@@ -678,29 +686,42 @@ masking: if (mask(i,j) /=0) then
 !                 write(*,*) ' rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd '
 !                write(*,*)  rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd
 
+                 !call bedbc1993_arguments%run (timestep, nm)
                  call bedbc1993_arguments%run
-
 
                  call bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
 !write (*,*) ' taubcw- current wave bed shear', taubcw, 'current-only bed shear stress',tauc(nm), 'wave-only bed shear stress' ,tauwav(nm)
                  ce_nm =ce_nm * frac(l,nm)
-
+                 taubn(nm) = (ta +1.0_fp)*taucr(l)*(1.0_fp + mudfrac(nm))**3
+                 eq_conc (nm) = ce_nm * rhosol (l) *1000.0_fp   !g.m**-3
                  call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
 
                  thick0 = relativ_thick(nm) * h0(nm)
                  thick1 = relativ_thick(nm) * h (nm)
-                ! write (*,*) 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
+  !               write (0,*) 'step', timestep, 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
                  call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
                                    &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
 !if (nm== 103) write (*,*) ' sour before RUN:',  sour (l,nm)
-                 call soursin3d_arguments%run ()
+                ! call soursin3d_arguments%run (timestep, nm)
+                 call soursin3d_arguments%run
 !if (nm== 103)write (*,*) ' sour before get:',  sour (l,nm)
                  call soursin3d_arguments%get ( sour (l,nm), sink (l,nm))
  !if (nm== 103)write (*,*) ' sour after get:',  sour (l,nm)
                   ! change volume flux to kg/m**2/S
                  sour (l,nm) = sour (l,nm) * thick0
                  sink (l,nm) = sink (l,nm) * thick1
+!if (timestep > 20.and. timestep < 25) then
+!if (timestep >11.and. timestep < 17) then
+!    if (j==8) then
+!    if (i >1.and.i <=5)then
+!    if (k==1) write (0,*) 'i,j, nm, aks,ce_nm,taubcw,ta,ustarc,tauc(nm),tauwav(nm),sour, sink'
+!    write (0,*) i,',',j,',' nm,','aks,',' ce_nm,',' taubcw,',' ta,',' ustarc, ','tauc(nm),','tauwav(nm),',' sour (l,nm), ','sink (l,nm)
+!k = k +1
+!!    write (0,*) 'thick0 ,thick1',thick0 ,thick1
+!endif
+!endif
+!endif
 !write (*,*) 'thick0', thick0, 'thick1', thick1
 !                write (*,*) '+++++++++++++++++++++++++SPM class +++++++++++++++++++++++++++'
               end if !(2D/3D)
@@ -1354,11 +1375,12 @@ implicit none
 
 end subroutine set_bedbc
 
+!subroutine run_bedbc(bedbc1993_arguments,timestep, element)
 subroutine run_bedbc(bedbc1993_arguments)
-
 implicit none
-
 class (bedbc1993_argument) :: bedbc1993_arguments
+!integer (Kind = 8), intent(in)  ::timestep
+!integer , intent(in)  :: element
 
 call bedbc1993(          bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%ubed      , &
                        & bedbc1993_arguments%zubed     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
@@ -1367,8 +1389,8 @@ call bedbc1993(          bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb
                        & bedbc1993_arguments%tauc      ,bedbc1993_arguments%taubcw    ,bedbc1993_arguments%taurat    ,bedbc1993_arguments%ta        ,bedbc1993_arguments%ce_nm     , &
                        & bedbc1993_arguments%dss       ,bedbc1993_arguments%mudfrac   ,bedbc1993_arguments%eps       ,bedbc1993_arguments%aksfac    ,bedbc1993_arguments%rwave     , &
                        & bedbc1993_arguments%camax     ,bedbc1993_arguments%rdc       ,bedbc1993_arguments%rdw       ,bedbc1993_arguments%iopkcw    ,bedbc1993_arguments%iopsus    , &
-                       & bedbc1993_arguments%vonkar    ,bedbc1993_arguments%wave      ,bedbc1993_arguments%tauadd    )
-
+                       !& bedbc1993_arguments%vonkar    ,bedbc1993_arguments%wave      ,bedbc1993_arguments%tauadd    , timestep, element)
+                       & bedbc1993_arguments%vonkar    ,bedbc1993_arguments%wave      ,bedbc1993_arguments%tauadd )
 end subroutine run_bedbc
 
 subroutine get_tau (bedbc1993_arguments, aks, ce_nm, taubcw, ta, ustarc, tauc, tauwav)
@@ -1457,15 +1479,19 @@ soursin3d_arguments%aks    = aks
 end subroutine set_soursin3d
 
 
+!subroutine run_soursin3d(soursin3d_arguments, timestep, element)
 subroutine run_soursin3d(soursin3d_arguments)
-
 implicit none
 class (soursin3d_argument)    :: soursin3d_arguments
+!integer(kind=8) , intent(in)  ::timestep
+!integer , intent(in)  :: element
+
 
 call   soursin_3d(                soursin3d_arguments%h1            ,soursin3d_arguments%thick0   ,soursin3d_arguments%thick1 , &
                                &  soursin3d_arguments%sigsed        ,soursin3d_arguments%relativ_thick   ,soursin3d_arguments%r0    , &
                                &  soursin3d_arguments%vicmol        ,soursin3d_arguments%sigmol   ,soursin3d_arguments%seddif, &
                                &  soursin3d_arguments%rhosol        ,soursin3d_arguments%ce_nm    ,soursin3d_arguments%ws    , &
+                               !&  soursin3d_arguments%aks           ,soursin3d_arguments%sour     ,soursin3d_arguments%sink , timestep, element)
                                &  soursin3d_arguments%aks           ,soursin3d_arguments%sour     ,soursin3d_arguments%sink )
 
    if (soursin3d_arguments%ce_nm * soursin3d_arguments%rhosol - soursin3d_arguments%r0 .le. 0.0_fp) then
