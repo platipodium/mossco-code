@@ -503,7 +503,7 @@ case ${SYSTEM} in
            squeue -j ${JOBID}
            if [[ ${WAIT} == YES ]]; then
              while [[ 1 -eq 1 ]]; do
-               sleep 10
+               sleep 60
                squeue -j ${JOBID} || break
              done
            fi
@@ -514,7 +514,7 @@ case ${SYSTEM} in
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
          echo "Job ${TITLE} with PID ${PID} interactively running in background"
          if [[ ${WAIT} == YES ]]; then
-           wait $PID
+           wait ${PID}
          fi
          ;;
   FOREGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
