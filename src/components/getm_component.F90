@@ -68,8 +68,9 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL(),hbot(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: U2D (:,:)=>NULL(),V2D (:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: Ubot(:,:)=>NULL(),Vbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: U2D (:,:)  =>NULL(),V2D (:,:)  =>NULL()
+  real(ESMF_KIND_R8),pointer :: U3D (:,:,:)=>NULL(),V3D (:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: Ubot(:,:)  =>NULL(),Vbot(:,:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
@@ -358,6 +359,12 @@ module getm_component
     end if
     if (associated(V2D)) then
       call getmCmp_StateAddPtr("depth_averaged_y_velocity_in_water",V2D,exportState,"m s-1",name)
+    end if
+    if (associated(U3D)) then
+      call getmCmp_StateAddPtr("x_velocity_in_water",U3D,exportState,"m s-1",name)
+    end if
+    if (associated(V3D)) then
+      call getmCmp_StateAddPtr("y_velocity_in_water",V3D,exportState,"m s-1",name)
     end if
     if (associated(Ubot)) then
       call getmCmp_StateAddPtr("x_velocity_at_soil_surface",Ubot,exportState,"m s-1",name)
@@ -1009,15 +1016,56 @@ module getm_component
    allocate(zc(E2DFIELD ,1:klen))
    allocate(zx(E2DXFIELD,0:klen))
 
-   allocate(U2D(E2DFIELD))
-   allocate(V2D(E2DFIELD))
+   allocate(U3D(I3DFIELD))
+   allocate(V3D(I3DFIELD))
 
    if (klen .eq. 1) then
+      if (associated(U3D)) then
+#if 0
+         U2D(imin-HALO:,jmin-HALO:) => U3D(:,:,1)
+#else
+         p2d => U3D(:,:,1)
+         U2D(imin-HALO:,jmin-HALO:) => p2d
+#endif
+      else
+         allocate(U2D(E2DFIELD))
+      end if
+      if (associated(V3D)) then
+#if 0
+         V2D(imin-HALO:,jmin-HALO:) => U3D(:,:,1)
+#else
+         p2d => U3D(:,:,1)
+         V2D(imin-HALO:,jmin-HALO:) => p2d
+#endif
+      else
+         allocate(V2D(E2DFIELD))
+      end if
       Ubot => U2D
       Vbot => V2D
    else
-      allocate(Ubot(E2DFIELD))
-      allocate(Vbot(E2DFIELD))
+      allocate(U2D(E2DFIELD))
+      allocate(V2D(E2DFIELD))
+
+      if (associated(U3D)) then
+#if 0
+         Ubot(imin-HALO:,jmin-HALO:) => U3D(:,:,1)
+#else
+         p2d => U3D(:,:,1)
+         Ubot(imin-HALO:,jmin-HALO:) => p2d
+#endif
+      else
+         allocate(Ubot(E2DFIELD))
+      end if
+      if (associated(V3D)) then
+#if 0
+         Vbot(imin-HALO:,jmin-HALO:) => V3D(:,:,1)
+#else
+         p2d => V3D(:,:,1)
+         Vbot(imin-HALO:,jmin-HALO:) => p2d
+#endif
+      else
+         allocate(Vbot(E2DFIELD))
+      end if
    end if
 
    if (metforcing) then
@@ -1750,8 +1798,10 @@ module getm_component
 ! !LOCAL VARIABLES
    REALTYPE,dimension(E2DFIELD)         :: wrk
    REALTYPE,dimension(E2DFIELD),target  :: t_vel
-   REALTYPE,dimension(:,:),pointer      :: p_vel
-   integer                              :: klen
+   REALTYPE,dimension(I3DFIELD),target  :: t_vel3d
+   REALTYPE,dimension(:,:)  ,pointer    :: p_vel
+   REALTYPE,dimension(:,:,:),pointer    :: p_vel3d
+   integer                              :: k,klen
    REALTYPE,parameter                   :: vel_missing=-9999.0
 !EOP
 !-----------------------------------------------------------------------
@@ -1841,34 +1891,71 @@ module getm_component
    end if
 
    if (klen .gt. 1) then
-      if (noKindMatch) then
-         p_vel => t_vel
+      if (associated(U3D)) then
+         if (noKindMatch) then
+            p_vel3d => t_vel3d
+         else
+            p_vel3d => U3D
+         end if
+         do k=1,kmax
+            call to_u(imin,jmin,imax,jmax,az,                            &
+                      dt,grid_type,                                      &
+                      dxv,dyu,arcd1,                                     &
+                      xc,xu,xv,hn(:,:,k),ho(:,:,k),hvel(:,:,k),          &
+                      uu(:,:,k),hun(:,:,k),vv(:,:,k),hvn(:,:,k),         &
+                      ww(:,:,k-1),ww(:,:,k),vel_missing,p_vel3d(:,:,k))
+         end do
+         if (noKindMatch) then
+            U3D = t_vel3d
+         end if
       else
-         p_vel => Ubot
+         if (noKindMatch) then
+            p_vel => t_vel
+         else
+            p_vel => Ubot
+         end if
+         call to_u(imin,jmin,imax,jmax,az,                            &
+                   dt,grid_type,                                      &
+                   dxv,dyu,arcd1,                                     &
+                   xc,xu,xv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
+                   uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
+                   ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
+         if (noKindMatch) then
+            Ubot = t_vel
+         end if
       end if
-      call to_u(imin,jmin,imax,jmax,az,                            &
-                dt,grid_type,                                      &
-                dxv,dyu,arcd1,                                     &
-                xc,xu,xv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
-                uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
-                ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
-      if (noKindMatch) then
-         Ubot = t_vel
-      end if
-
-      if (noKindMatch) then
-         p_vel => t_vel
+      if (associated(V3D)) then
+         if (noKindMatch) then
+            p_vel3d => t_vel3d
+         else
+            p_vel3d => V3D
+         end if
+         do k=1,kmax
+            call to_v(imin,jmin,imax,jmax,az,                            &
+                      dt,grid_type,                                      &
+                      dxv,dyu,arcd1,                                     &
+                      yc,yu,yv,hn(:,:,k),ho(:,:,k),hvel(:,:,k),          &
+                      uu(:,:,k),hun(:,:,k),vv(:,:,k),hvn(:,:,k),         &
+                      ww(:,:,k-1),ww(:,:,k),vel_missing,p_vel3d(:,:,k))
+         end do
+         if (noKindMatch) then
+            V3D = t_vel3d
+         end if
       else
-         p_vel => Vbot
-      end if
-      call to_v(imin,jmin,imax,jmax,az,                            &
-                dt,grid_type,                                      &
-                dxv,dyu,arcd1,                                     &
-                yc,yu,yv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
-                uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
-                ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
-      if (noKindMatch) then
-         Vbot = t_vel
+         if (noKindMatch) then
+            p_vel => t_vel
+         else
+            p_vel => Vbot
+         end if
+         call to_v(imin,jmin,imax,jmax,az,                            &
+                   dt,grid_type,                                      &
+                   dxv,dyu,arcd1,                                     &
+                   yc,yu,yv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
+                   uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
+                   ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
+         if (noKindMatch) then
+            Vbot = t_vel
+         end if
       end if
    end if
 #endif
