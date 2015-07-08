@@ -25,9 +25,9 @@ use mossco_strings
 implicit none
 
 interface mossco_state_get
-    module procedure mossco_state_get_f1
-    module procedure mossco_state_get_f2
-    module procedure mossco_state_get_f3
+    module procedure MOSSCO_StateGetF1
+    module procedure MOSSCO_StateGetF2
+    module procedure MOSSCO_StateGetF3
 end interface
 
 interface MOSSCO_DestroyOwn
@@ -42,12 +42,12 @@ end interface
 contains
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_state_get_f1"
-  subroutine mossco_state_get_f1(state, fieldName, fpointer, lbnd, ubnd, rc)
+#define ESMF_METHOD "MOSSCO_StateGetF1"
+  subroutine MOSSCO_StateGetF1(state, fieldName, farrayPtr, lbnd, ubnd, rc)
 
     type(ESMF_State), intent(in)                 :: state
     character(len=*),dimension(:), intent(in)    :: fieldName
-    real(ESMF_KIND_R8),pointer,dimension(:), intent(inout) :: fpointer
+    real(ESMF_KIND_R8),pointer,dimension(:), intent(inout) :: farrayPtr
     integer,intent(out), optional                :: rc
     integer(ESMF_KIND_I4), intent(out),optional  :: ubnd(1),lbnd(1)
 
@@ -60,7 +60,7 @@ contains
     logical                       :: isPresent
     character(len=ESMF_MAXSTR)    :: message, name
 
-    nullify(fpointer)
+    nullify(farrayPtr)
 
     ubnd_(:)=-1
     lbnd_(:)=0
@@ -101,13 +101,13 @@ contains
         cycle
       endif
 
-      call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=farrayPtr,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       exit
     end do
 
-    if (associated(fpointer)) then
+    if (associated(farrayPtr)) then
       write(message, '(A)') '  found field '//trim(fieldName(i))//' in '//trim(name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
@@ -125,15 +125,15 @@ contains
     if (present(ubnd)) ubnd=ubnd_
     if (present(lbnd)) lbnd=lbnd_
 
-  end subroutine mossco_state_get_f1
+  end subroutine MOSSCO_StateGetF1
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_state_get_f2"
-  subroutine mossco_state_get_f2(state, fieldName, fpointer, lbnd, ubnd, rc)
+#define ESMF_METHOD "MOSSCO_StateGetF2"
+  subroutine MOSSCO_StateGetF2(state, fieldName, farrayPtr, lbnd, ubnd, rc)
 
     type(ESMF_State), intent(in)                 :: state
     character(len=*),dimension(:), intent(in)    :: fieldName
-    real(ESMF_KIND_R8),pointer,dimension(:,:), intent(inout) :: fpointer
+    real(ESMF_KIND_R8),pointer,dimension(:,:), intent(inout) :: farrayPtr
     integer,intent(out), optional                :: rc
     integer(ESMF_KIND_I4), intent(out),optional  :: ubnd(2),lbnd(2)
 
@@ -147,7 +147,7 @@ contains
     character(len=ESMF_MAXSTR)    :: message, name
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
 
-    nullify(fpointer)
+    nullify(farrayPtr)
     call ESMF_StateGet(state, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -189,13 +189,13 @@ contains
         cycle
       endif
 
-      call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=farrayPtr,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       exit
     end do
 
-    if (associated(fpointer)) then
+    if (associated(farrayPtr)) then
       write(message, '(A)') '  found field '//trim(fieldName(i))//' in '//trim(name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
@@ -212,21 +212,21 @@ contains
 
     if (present(rc)) then
       rc = ESMF_SUCCESS
-      if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
+      if (.not.associated(farrayPtr)) rc = ESMF_RC_NOT_FOUND
     endif
 
     if (present(ubnd)) ubnd=ubnd_
     if (present(lbnd)) lbnd=lbnd_
 
-  end subroutine mossco_state_get_f2
+  end subroutine MOSSCO_StateGetF2
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_state_get_f3"
-  subroutine mossco_state_get_f3(state, fieldName, fpointer, lbnd, ubnd, rc)
+#define ESMF_METHOD "MOSSCO_StateGetF3"
+  subroutine MOSSCO_StateGetF3(state, fieldName, farrayPtr, lbnd, ubnd, rc)
 
     type(ESMF_State), intent(in)                 :: state
     character(len=*),dimension(:), intent(in)    :: fieldName
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(inout) :: fpointer
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(inout) :: farrayPtr
     integer,intent(out), optional                :: rc
     integer(ESMF_KIND_I4), intent(out),optional  :: ubnd(3),lbnd(3)
 
@@ -240,7 +240,7 @@ contains
     character(len=ESMF_MAXSTR)    :: message, name
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
 
-    nullify(fpointer)
+    nullify(farrayPtr)
 
     call ESMF_StateGet(state, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -283,13 +283,13 @@ contains
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
-      call ESMF_FieldGet(field,localde=0,farrayPtr=fpointer,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
+      call ESMF_FieldGet(field,localde=0,farrayPtr=farrayPtr,exclusiveUBound=ubnd_, exclusiveLBound=lbnd_,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       exit
     end do
 
-    if (associated(fpointer)) then
+    if (associated(farrayPtr)) then
       write(message, '(A)') '  found field '//trim(fieldName(i))//' in '//trim(name)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
@@ -306,13 +306,13 @@ contains
 
     if (present(rc)) then
       rc = ESMF_SUCCESS
-      if (.not.associated(fpointer)) rc = ESMF_RC_NOT_FOUND
+      if (.not.associated(farrayPtr)) rc = ESMF_RC_NOT_FOUND
     endif
 
     if (present(ubnd)) ubnd=ubnd_
     if (present(lbnd)) lbnd=lbnd_
 
-  end subroutine mossco_state_get_f3
+  end subroutine MOSSCO_StateGetF3
 
 
   !> set ESMF attributes "required_flag", "required" and "optional" for
