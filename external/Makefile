@@ -21,6 +21,7 @@ SUBDIRS =
 .PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
 .PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone flibs-cvs-clone json_clone
 .PHONY: fabm_update gotm_update getm_update erosed-svn-update flibs-cvs-update json_update
+.PHONY: sqlite-zip sqlite
 
 all: clone
 
@@ -37,6 +38,14 @@ subdirs: $(SUBDIRS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@
+
+sqlite: sqlite/sqlite3.c
+sqlite/sqlite3.c: sqlite-zip
+sqlite-zip:
+	test -f sqlite3.zip || \
+	wget -O sqlite3.zip http://sqlite.org/2015/sqlite-amalgamation-3081002.zip
+	unzip -u -d sqlite -j sqlite3.zip
+	rm -f sqlite3.zip
 
 fabm_clone fabm_update:
 ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
