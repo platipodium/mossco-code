@@ -786,15 +786,8 @@ install:
 
 .PHONY: mossco_clean
 
-mossco_clean: distclean fabm_clean
-	$(MAKE) -C $(MOSSCO_DIR)/external gotm_distclean getm_distclean
-# Note (KK): These distcleans might be redundant, but might also operate outside MOSSCO_DIR.
-ifdef MOSSCO_GOTMDIR
-	$(MAKE) -C $(MOSSCO_GOTMDIR) distclean
-endif
-ifdef MOSSCO_GETMDIR
-	$(MAKE) -C $(MOSSCO_GETMDIR) distclean
-endif
+mossco_clean: distclean gotm_clean fabm_clean
+	$(MAKE) -C $(MOSSCO_DIR)/external getm_distclean
 #ifdef MOSSCO_TRACERDIR
 #	$(MAKE) -C $(MOSSCO_TRACERDIR) distclean
 #endif
