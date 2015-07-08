@@ -511,7 +511,6 @@ case ${SYSTEM} in
                fi
                echo "Waiting ${WAITTIME} seconds to poll job ${JOBID}"
                sleep ${WAITTIME}
-
              done
            fi
          else cat slurm.sh ; fi
