@@ -1724,11 +1724,7 @@ module getm_component
    use domain         ,only: imin,imax,jmin,jmax,kmax
    use domain         ,only: az
    use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv
-#if defined(CURVILINEAR) || defined(SPHERICAL)
    use domain         ,only: dxv,dyu,arcd1
-#else
-   use domain         ,only: dx,dy,ard1
-#endif
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
@@ -1818,11 +1814,7 @@ module getm_component
    end if
    call to_u(imin,jmin,imax,jmax,az,                                 &
              dtm,grid_type,                                          &
-#if defined(CURVILINEAR) || defined(SPHERICAL)
              dxv,dyu,arcd1,                                          &
-#else
-             dx,dy,ard1,                                             &
-#endif
              xc,xu,xv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
    if (noKindMatch) then
       U2D = t_vel
@@ -1835,11 +1827,7 @@ module getm_component
    end if
    call to_v(imin,jmin,imax,jmax,az,                                 &
              dtm,grid_type,                                          &
-#if defined(CURVILINEAR) || defined(SPHERICAL)
              dxv,dyu,arcd1,                                          &
-#else
-             dx,dy,ard1,                                             &
-#endif
              yc,yu,yv,z,zo,Dvel,U,DU,V,DV,wrk,wrk,vel_missing,p_vel)
    if (noKindMatch) then
       V2D = t_vel
@@ -1860,11 +1848,7 @@ module getm_component
       end if
       call to_u(imin,jmin,imax,jmax,az,                            &
                 dt,grid_type,                                      &
-#if defined(CURVILINEAR) || defined(SPHERICAL)
                 dxv,dyu,arcd1,                                     &
-#else
-                dx,dy,ard1,                                        &
-#endif
                 xc,xu,xv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
                 uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
                 ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
@@ -1879,11 +1863,7 @@ module getm_component
       end if
       call to_v(imin,jmin,imax,jmax,az,                            &
                 dt,grid_type,                                      &
-#if defined(CURVILINEAR) || defined(SPHERICAL)
                 dxv,dyu,arcd1,                                     &
-#else
-                dx,dy,ard1,                                        &
-#endif
                 yc,yu,yv,hn(:,:,1),ho(:,:,1),hvel(:,:,1),          &
                 uu(:,:,1),hun(:,:,1),vv(:,:,1),hvn(:,:,1),         &
                 ww(:,:,0),ww(:,:,1),vel_missing,p_vel)
