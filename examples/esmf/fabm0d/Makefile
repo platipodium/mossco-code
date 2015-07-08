@@ -24,7 +24,7 @@ endif
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_fabm0d -lsolver -lmossco_util
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
 LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += $(ESMF_LDFLAGS)
+LDFLAGS += $(ESMF_F90LDFLAGS)
 #ifeq ($(HAVE_LD_FORCE_LOAD),true)
 #LDFLAGS += -Wl,-force_load
 #endif

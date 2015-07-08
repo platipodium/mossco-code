@@ -28,7 +28,7 @@ LDFLAGS += $(GOTM_LDFLAGS)
 ifeq ($(MOSSCO_GOTM_FABM),true)
   LDFLAGS += $(FABM_LDFLAGS)
 endif
-  LDFLAGS += $(ESMF_LDFLAGS)
+  LDFLAGS += $(ESMF_F90LDFLAGS)
 
 
 .PHONY: all exec gotm libmossco_gotm libmossco_util

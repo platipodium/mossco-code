@@ -21,7 +21,7 @@ EXTRA_DIST=README
 
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_getm -lmossco_util
 LDFLAGS += $(GETM_LDFLAGS)
-LDFLAGS += $(ESMF_LDFLAGS)
+LDFLAGS += $(ESMF_F90LDFLAGS)
 
 .PHONY: all exec getm libmossco_getm libmossco_util
 
