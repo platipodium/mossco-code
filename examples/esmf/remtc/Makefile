@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lremtc -lmossco_util $(LIBS)
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec remtc libmossco_util libremtc
 

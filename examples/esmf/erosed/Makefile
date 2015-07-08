@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_erosed -lmossco_util -lesmf $(LIBS)
 
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec erosed
 

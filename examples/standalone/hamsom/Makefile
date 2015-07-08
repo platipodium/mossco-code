@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_hamsom $(LIBS)
 
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
 
 .PHONY: all exec hamsom-standalone libmossco_hamsom
 

@@ -18,7 +18,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 LIBS := -lmossco_benthos  $(LIBS)
 
 F90FLAGS += $(INCLUDES)
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 
 .PHONY: all exec benthos libmossco_benthos
 

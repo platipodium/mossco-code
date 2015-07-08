@@ -32,7 +32,7 @@ endif
 LIBS := -lsediment -lconstant $(EROSED_LIB) -lmossco_sediment -lmossco_connector -lmossco_netcdf -lesmf  $(LIBS)
 NC_LIBS += $(shell nf-config --flibs)
 
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += -lmossco_gotm -lmossco_fabmgotm -lpelagicbenthiccoupler -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += $(FABM_LDFLAGS)

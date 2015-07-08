@@ -16,7 +16,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lsediment -lmossco_sediment -lconstant -lmossco_util -lsolver -lesmf $(LIBS)
 
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) $(LIBS)
 LDFLAGS += $(FABM_LDFLAGS)
 
 .PHONY: all exec sediment libsediment libmossco_util
