@@ -210,7 +210,7 @@ module soil_pelagic_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (advanceCount < 1) verbose=.false.
+    if (advanceCount > 0) verbose=.false.
 
     !   DIN flux:
     call mossco_state_get(importState, (/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/), &
