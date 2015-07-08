@@ -22,7 +22,7 @@ AUTOTITLE=1          # Whether to change the simulation title in mossco_run and 
 POSTPROCESS=NONE
 NP=NONE
 LOGLEVEL='undefined'
-WAIT=NO
+WAITTIME=0
 
 # Function for printing usage of this script
 function usage {
@@ -50,7 +50,7 @@ function usage {
 	echo "      [-s F]: Command line interactive, running in foreground"
 	echo "      [-s B]: Command line interactive, running in background"
 	echo
-  echo "    [-w] : wait until batch job finishes (only slurm)"
+  echo "    [-w W] : wait W seconds for polling batch jobs (only -s J|B)"
 	exit
 }
 
@@ -88,7 +88,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bn:s:l:w" opt; do
+while getopts ":rt:bn:s:l:w:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -107,7 +107,7 @@ while getopts ":rt:bn:s:l:w" opt; do
       ;;
   l)  LOGLEVEL=${OPTARG}
       ;;
-  w)  WAIT=YES
+  w)  WAITTIME=${OPTARG}
       ;;
   \?) usage
       ;;
@@ -501,10 +501,17 @@ case ${SYSTEM} in
              echo "Postprocess job with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
            fi
            squeue -j ${JOBID}
-           if [[ ${WAIT} == YES ]]; then
-             while [[ 1 -eq 1 ]]; do
-               sleep 10
-               squeue -j ${JOBID} || break
+           if [[ ${WAITTIME} -gt 0 ]]; then
+             while true; do
+               if ! squeue -j ${JOBID} &> /dev/null; then
+                 break;
+               fi
+               if [[ "$(squeue -j ${JOBID} -h)" == "" ]]; then
+                 break;
+               fi
+               echo "Waiting ${WAITTIME} seconds to poll job ${JOBID}"
+               sleep ${WAITTIME}
+
              done
            fi
          else cat slurm.sh ; fi
@@ -513,7 +520,8 @@ case ${SYSTEM} in
          PID=$!
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
          echo "Job ${TITLE} with PID ${PID} interactively running in background"
-         if [[ ${WAIT} == YES ]]; then
+         if [[ ${WAITTIME>0} == YES ]]; then
+           echo "Waiting for process ${PID} to finish"
            wait $PID
          fi
          ;;
