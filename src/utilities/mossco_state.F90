@@ -571,6 +571,7 @@ contains
         enddo
         deallocate(logicalValueList)
       elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        if (allocated(characterValueList)) deallocate(characterValueList)
         allocate(characterValueList(itemCount))
         call ESMF_AttributeGet(state, name=attributeName, valueList=characterValueList, rc=localrc)
         if (localrc /= ESMF_SUCCESS) then
@@ -585,8 +586,8 @@ contains
           do j=2, itemCount-1
             write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
           enddo
-          deallocate(characterValueList)
         endif
+        if (allocated(characterValueList)) deallocate(characterValueList)
       elseif (typekind==ESMF_TYPEKIND_I4) then
         allocate(integer4ValueList(itemCount))
         call ESMF_AttributeGet(state, name=attributeName, valueList=integer4ValueList, rc=localrc)
