@@ -57,7 +57,7 @@ module erosed_component
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
-real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer:: spm_concentration=>null()
+  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer:: spm_concentration=>null(), layers_height=>null(), layers_thickness=>null(),sigma_midlayer=>null()
 
    integer                                      :: nmlb           ! first cell number
    integer                                      :: nmub           ! last cell number
@@ -363,6 +363,7 @@ contains
       call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
 
   inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
 
@@ -1034,9 +1035,6 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
-
-
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1098,6 +1096,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_Time)          :: stopTime
     type(ESMF_TimeInterval)  :: timestep
+    type(ESMF_Grid)          :: grid
     integer(ESMF_KIND_I8)    :: advancecount
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
@@ -1107,7 +1106,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
                               & Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
-    integer                  :: n, i, j, localrc
+    integer                  :: n, i, j, k, localrc, istat
     type(ESMF_Field)         :: field
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
@@ -1125,10 +1124,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_FieldStatus_Flag) :: status
-    integer,dimension(2)            :: totalLBound,totalUBound
-    integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
-
-
+    integer,dimension(2)     :: totalLBound,totalUBound
+    integer,dimension(2)     :: exclusiveLBound,exclusiveUBound
+    integer(ESMF_KIND_I4)    :: ubnd(3), lbnd(3), tubnd(3), tlbnd(3)
 !#define DEBUG
     rc=ESMF_SUCCESS
 
@@ -1152,6 +1150,151 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
        !> get import state
     if (forcing_from_coupler) then
+
+       !> get spm concentrations, particle sizes and density
+      call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if(n .eq. 0) then
+        !> run without SPM forcing from pelagic component
+!#ifdef DEBUG
+        call ESMF_LogWrite( &
+           'field Bundle concentration_of_SPM not found, run without pelagic forcing', &
+           ESMF_LOGMSG_INFO)
+!#endif
+      else
+
+        if (allocated(fieldlist)) deallocate(fieldlist)
+        allocate(fieldlist(n))
+        call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        do n=1,size(fieldlist)
+
+          field = fieldlist(n)
+          call ESMF_AttributeGet(field,'external_index', isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          if (isPresent) then
+            call ESMF_AttributeGet(field,'external_index',external_index, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          else
+            write(message,'(A)')  trim(name)//' did not find "external_index" attribute in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            external_index=1
+            write (*,*) 'external_index is not present, therefore set to 1)'
+          endif
+
+          call ESMF_AttributeGet(field,'mean_particle_diameter', isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          if (isPresent) then
+            call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          else
+            sedd50(nfrac_by_external_idx(external_index))=0.0
+            write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          endif
+
+          call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          if (isPresent) then
+            call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          else
+            rhosol(nfrac_by_external_idx(external_index))=0.0
+            write(message,'(A)')  trim(name)//' did not find "rhosol" attribute in field. It has bee set to zero'
+            call MOSSCO_FieldString(field, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          endif
+
+          call ESMF_FieldGet(field,farrayPtr=ptr_f3,exclusiveLBound=lbnd, &
+          & exclusiveUBound=ubnd,TotalLBound=tlbnd,TotalUBound=tubnd,rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          &   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           !> @todo proper bounds checking with eLBound required here
+!          if (.not. ( all(lbound(ptr_f3)== lbnd).and. all(ubound(ptr_f3)==ubnd ) ) ) then
+!            write(message, '(A)') trim(name)//' invalid field bounds in field'
+!            call MOSSCO_FieldString(field, message)
+!            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+!            call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!          end if
+!
+!          if (.not. (all(lbound(ptr_f3)==tlbnd).and. all(ubound(ptr_f3)==tubnd) ) ) then
+!            write(message, '(A)') trim(name)//' bounds do not match total domain in field'
+!            call MOSSCO_FieldString(field, message)
+!            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+!          end if
+
+          !> @todo unclear which localrc is excpected here
+          if (localrc == ESMF_SUCCESS) then
+            spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1)
+          else
+            write(0,*) 'cannot find SPM fraction',n
+          end if
+
+
+          call ESMF_FieldGet(field, grid=grid,rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          !> get z-positions of vertical layer interfaces
+          call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+           farrayPtr=layers_height, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          & call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        end do
+
+        !> get sinking velocities
+        call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity_in_water',fieldBundle,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        do n=1,size(fieldlist)
+          call ESMF_FieldGet(fieldlist(n), farrayPtr=ptr_f3,rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          call ESMF_AttributeGet(fieldlist(n),'external_index',isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (.not.isPresent) then
+            write(message,'(A)') trim(name)//' external_index attribute is missing from field '
+            call MOSSCO_FieldString(fieldList(n), message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            external_index = n
+          else
+            call ESMF_AttributeGet(fieldlist(n),'external_index',external_index, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          endif
+
+          do j=1,jnum
+            do i= 1, inum
+              ! filtering missing values (land)
+              if (mask(i,j)/=0) then
+               ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1)
+               else
+               ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = 0.0_fp
+               endif
+            end do
+          end do
+        end do
+      end if
+
+    else
+      !> use initial values
+      h0=h1
+    end if
+
+!-----
 
       depth => importList(1)%data
       hbot  => importList(2)%data
@@ -1194,10 +1337,33 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          first_entry = .false.
       end if
 
-!write (*,*) 'layer_height_at_soil_surface', hbot
-!write (*,*)'depth_averaged_x_velocity_in_water', u2d
+      if (.not. associated (layers_thickness)) then
+        allocate (layers_thickness(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
+        if (istat/=0) write (*,*) 'Warning/Error in allocation of layers_thickness in erosed_component'
+      end if
+
+      if (.not. associated (sigma_midlayer)) then
+        allocate (sigma_midlayer  (lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat = istat)
+        if (istat /= 0) Write (*,*) 'Error allocation of pointer sigma_midlayer in erosed'
+      end if
 
       if (localrc == 0) then
+
+        do k = 1,ubound (layers_height,3)
+
+         layers_thickness(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
+                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1)
+        !Sigma [-1,0] levels of layer centers (in sigma model)
+         sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = -(layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
+                                                           & +layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1) ) &
+                                                           & /(2.0_fp *layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),0) )
+        end do
+
+!write (*,*)'advancecount, layers_height_k, layers_height_elev k and k-1, sima_layer'
+!!
+!        do k = 1,ubound (layers_height,3)
+!write (*,*) advancecount, k, layers_height(5,13,k),layers_height(5,13,k-1), sigma_midlayer(5,13,k)
+!        end do
 
         do j=1,jnum
           do i= 1, inum
@@ -1205,6 +1371,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
            if (mask(i,j)/=0)then
             umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
             thick (inum*(j -1)+i) = hbot (i,j)/depth(i,j)
+            !write (*,*) 'old thick',thick (inum*(j -1)+i)
+!            thick (inum*(j -1)+i,:) = layers_thickness(i,j,:)
+!            write (*,*) 'new thick',thick (inum*(j -1)+i)
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
 !                umod (inum*(j -1)+i) = 1.0_fp
@@ -1237,121 +1406,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         umod = 0.2
       end if
 
-       !> get spm concentrations, particle sizes and density
-      call ESMF_StateGet(importState,'concentration_of_SPM_in_water',fieldBundle,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldBundleGet(fieldBundle,fieldCount=n,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-   &    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if(n .eq. 0) then
-        !> run without SPM forcing from pelagic component
-!#ifdef DEBUG
-        call ESMF_LogWrite( &
-           'field Bundle concentration_of_SPM not found, run without pelagic forcing', &
-           ESMF_LOGMSG_INFO)
-!#endif
-      else
-
-        if (allocated(fieldlist)) deallocate(fieldlist)
-        allocate(fieldlist(n))
-        call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        do n=1,size(fieldlist)
-
-          field = fieldlist(n)
-          call ESMF_AttributeGet(field,'external_index', isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          if (isPresent) then
-            call ESMF_AttributeGet(field,'external_index',external_index, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          else
-            write(message,'(A)')  trim(name)//' did not find "external_index" attribute in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-            external_index=1
-            write (*,*) 'external_index is not present, therefore set to 1)'
-          endif
-
-          call ESMF_FieldGet(field,farrayPtr=ptr_f3,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          call ESMF_AttributeGet(field,'mean_particle_diameter', isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          if (isPresent) then
-            call ESMF_AttributeGet(field,'mean_particle_diameter',sedd50(nfrac_by_external_idx(external_index)), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          else
-            sedd50(nfrac_by_external_idx(external_index))=0.0
-            write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          endif
-
-          call ESMF_AttributeGet(field,'particle_density', isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          if (isPresent) then
-            call ESMF_AttributeGet(field,'particle_density',rhosol(nfrac_by_external_idx(external_index)), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          else
-            rhosol(nfrac_by_external_idx(external_index))=0.0
-            write(message,'(A)')  trim(name)//' did not find "rhosol" attribute in field. It has bee set to zero'
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          endif
-
-          !> @todo unclear which localrc is excpected here
-          if (localrc == ESMF_SUCCESS) then
-            spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1)
-          else
-            write(0,*) 'cannot find SPM fraction',n
-          end if
-        end do
-
-        !> get sinking velocities
-        call ESMF_StateGet(importState,'concentration_of_SPM_z_velocity_in_water',fieldBundle,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_FieldBundleGet(fieldBundle,fieldlist=fieldlist,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        do n=1,size(fieldlist)
-          call ESMF_FieldGet(fieldlist(n), farrayPtr=ptr_f3,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          call ESMF_AttributeGet(fieldlist(n),'external_index',isPresent=isPresent, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (.not.isPresent) then
-            write(message,'(A)') trim(name)//' external_index attribute is missing from field '
-            call MOSSCO_FieldString(fieldList(n), message)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-            external_index = n
-          else
-            call ESMF_AttributeGet(fieldlist(n),'external_index',external_index, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-
-          do j=1,jnum
-            do i= 1, inum
-              ! filtering missing values (land)
-              if (mask(i,j)/=0) then
-               ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1)
-               else
-               ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = 0.0_fp
-               endif
-            end do
-          end do
-        end do
-      end if
-
-    else
-      !> use initial values
-      h0=h1
-    end if
+!-------
 
     !> get bio effects
     !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else
@@ -1436,7 +1491,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
    ! filtering missing values (land)
     do j = 1, jnum
-    do i = 1, inum
+         do i = 1, inum
             if (mask(i,j)== 0) then
                 BioEffects%TauEffect (i,j) = 1.0_fp
                 BioEffects%ErodibilityEffect(i,j) = 1.0_fp
@@ -1455,9 +1510,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
                 & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
-                & tper   , teta   , spm_concentration , BioEffects     , nybot, thick, u_bot, &
-                & v_bot  , u2d    , v2d      , h0 , mask , advancecount, taubn, eq_conc  )
-
+                & tper   , teta   , spm_concentration , BioEffects     , nybot    , sigma_midlayer, &
+                & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
+                & layers_thickness )
 !if ((advancecount>= 70).and.(advancecount<=100)) write (*,*) '######### Timestep: ',advancecount , ' #########'
     !   Updating sediment concentration in water column over cells
   n =0
@@ -1484,13 +1539,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
  !if (spm_concentration(i,j,l) >100.)  write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
 
 !if ((advancecount>11.and. advancecount< 17).and. (l==1)) then
-if (j==8) then
-if (i >1.and.i <=8)then
-if (n==0) write (0,*) 'timestep,nm,i,j,spm_upwardflux,sour,sink,spm_concentration(1), eq_conc'
-write (0,*) advancecount,',',nm,',', i,',',j ,',',size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j),',',sour(l,nm)*1000,',',sink(l,nm), ',',spm_concentration(i,j,l),',',eq_conc(nm)
-n = n+1
-endif
-endif
+!if (j==8) then
+!if (i >1.and.i <=8)then
+!if (n==0) write (0,*) 'timestep,nm,i,j,spm_upwardflux,sour,sink,spm_concentration(1), eq_conc'
+!write (0,*) advancecount,',',nm,',', i,',',j ,',',size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j),',',sour(l,nm)*1000,',',sink(l,nm), ',',spm_concentration(i,j,l),',',eq_conc(nm)
+!n = n+1
+!endif
+!endif
 !endif
         end if
      enddo
@@ -1790,6 +1845,7 @@ endif
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
     deallocate (spm_concentration)
+    deallocate (layers_thickness, sigma_midlayer)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 
