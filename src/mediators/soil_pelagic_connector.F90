@@ -330,6 +330,7 @@ module soil_pelagic_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+#if 0
     !! Safely destroy the parameter state if it exists in either import or export states
     paramName=trim(name)//'Parameters'
     call ESMF_StateGet(importState, paramName, itemType=importItemType, rc=localrc)
@@ -365,6 +366,7 @@ module soil_pelagic_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+#endif
 
     !! Exit the method
     call MOSSCO_CompExit(cplComp, localrc)
