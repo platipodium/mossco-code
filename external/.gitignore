@@ -7,4 +7,5 @@ getm-*/
 *-git/
 *-svn/
 *-cvs/
-json*
+sqlite
+json

@@ -16,7 +16,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_simplewave -lmossco_util
-LDFLAGS += $(ESMF_LDFLAGS)
+LDFLAGS += $(ESMF_F90LDFLAGS)
 
 .PHONY: all exec simplewave libmossco_simplewave libmossco_util
 

@@ -580,10 +580,8 @@ ifndef HAVE_LD_FORCE_LOAD
   export HAVE_LD_FORCE_LOAD
 endif
 
-export ESMF_LIBRARY_PATH=$(ESMF_F90LINKPATHS)
-export ESMF_LINKOPTS=$(ESMF_F90LINKRPATHS)
-export ESMF_LIBS=$(ESMF_F90ESMFLINKLIBS)
-export ESMF_LDFLAGS = $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) $(ESMF_F90ESMFLINKLIBS)
+export ESMF_F90LIBS=$(ESMF_F90ESMFLINKLIBS)
+export ESMF_F90LDFLAGS = $(ESMF_F90LINKOPTS) $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS) $(ESMF_F90ESMFLINKLIBS)
 
 LIBRARY_PATHS += $(ESMF_F90LINKPATHS) $(ESMF_F90LINKRPATHS)
 LIBRARY_PATHS += -L$(MOSSCO_LIBRARY_PATH)
@@ -606,9 +604,9 @@ endif
 endif
 export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
 
-MOSSCO_LDFLAGS += $(ESMF_F90LINKOPTS)
-MOSSCO_LDFLAGS += $(LIBRARY_PATHS)
-export MOSSCO_LDFLAGS
+MOSSCO_F90LDFLAGS += $(ESMF_F90LINKOPTS)
+MOSSCO_F90LDFLAGS += $(LIBRARY_PATHS)
+export MOSSCO_F90LDFLAGS
 
 endif # End of MAKELEVEL 1 preamble
 
@@ -788,15 +786,8 @@ install:
 
 .PHONY: mossco_clean
 
-mossco_clean: distclean fabm_clean
-	$(MAKE) -C $(MOSSCO_DIR)/external gotm_distclean getm_distclean
-# Note (KK): These distcleans might be redundant, but might also operate outside MOSSCO_DIR.
-ifdef MOSSCO_GOTMDIR
-	$(MAKE) -C $(MOSSCO_GOTMDIR) distclean
-endif
-ifdef MOSSCO_GETMDIR
-	$(MAKE) -C $(MOSSCO_GETMDIR) distclean
-endif
+mossco_clean: distclean gotm_clean fabm_clean
+	$(MAKE) -C $(MOSSCO_DIR)/external getm_distclean
 #ifdef MOSSCO_TRACERDIR
 #	$(MAKE) -C $(MOSSCO_TRACERDIR) distclean
 #endif

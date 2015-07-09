@@ -53,68 +53,97 @@ allocate (this%ErodibilityEffect (inum,jnum),stat= istatus)
 
 end subroutine init_microphyt
 
-subroutine set_microphyt (this)
+subroutine set_microphyt (this, spatialvar, biounit)
 
 implicit none
 
 class (Microphytobenthos)  :: this
+real (fp), dimension (:,:), pointer, optional  :: spatialvar
+character (len = 10), optional  :: Biounit
+
 real (fp), dimension (:,:), allocatable  :: Biomass
 character (len = 10)       :: units
 integer                    :: StringLength, UnitNr, istat
 logical                    :: opnd, exst
 real (fp)                  :: Mass
 
+
 namelist /Microphyto/ units, Mass
 
-allocate ( Biomass ( this%inum , this%jnum ) )
 
-this%Species='Microphytobenthos'
+if (.not.present(spatialvar)) then
 
-inquire ( file = 'microphyt.nml', exist=exst , opened =opnd, Number = UnitNr )
-!write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+  allocate ( Biomass ( this%inum , this%jnum ) )
 
-if (exst.and.(.not.opnd)) then
+  this%Species='Microphytobenthos'
+  Units = ''
+  Mass = 0.0_fp
+  Biomass(:,:) = Mass
 
- UnitNr = 11
- open (unit = UnitNr, file = 'microphyt.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
-! write (*,*) ' in Microphytobenthos the file unit ', UnitNr, ' was just opened'
+  inquire ( file = 'microphyt.nml', exist=exst , opened =opnd, Number = UnitNr )
+  !write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
- read (UnitNr, nml=Microphyto, iostat = istat)
- if (istat /= 0 ) stop ' Error in reading Microphytobenthos data'
+  if (exst.and.(.not.opnd)) then
 
-elseif (opnd) then
+    UnitNr = 11
+    open (unit = UnitNr, file = 'microphyt.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
+  ! write (*,*) ' in Microphytobenthos the file unit ', UnitNr, ' was just opened'
 
- write (*,*) ' In Microphytobenthos the file unit ', UnitNr, ' already opened'
- read (UnitNr, nml=Microphyto, iostat = istat)
+    read (UnitNr, nml=Microphyto, iostat = istat)
+    if (istat /= 0 ) stop ' Error in reading Microphytobenthos data'
 
- if (istat /= 0 ) stop ' Error in reading Microphytobenthos data'
+  elseif (opnd) then
 
-else
+    write (*,*) ' In Microphytobenthos the file unit ', UnitNr, ' already opened'
+    read (UnitNr, nml=Microphyto, iostat = istat)
 
- write (*,*) ' Warning: The input file for Microphytobenthos doesnot exists!'
- write (*,*) ' Biological effects on erodibility and bed shear stress are set to 1.'
+    if (istat /= 0 ) stop ' Error in reading Microphytobenthos data'
 
-end if
+  else
 
- this%UnitNr = UnitNr
- Biomass(:,:) = Mass
- !write (*,*) ' In Microphytobenthos_class, the amount of Chl biomass is ', Mass
- write (*,*) ' Units are ', units
+    write (*,*) ' Warning: The input file for Microphytobenthos doesnot exists!'
+    write (*,*) ' Biological effects on erodibility and bed shear stress are set to 1.'
 
- This%BioMass%amount = Biomass
+    This%BioMass%amount=Biomass
 
- StringLength = len_trim (units)
+    allocate (This%BioMass%units)
+    This%BioMass%units = trim (units)
 
-if (StringLength /= 0 ) then
+    return
+
+   end if
+
+  this%UnitNr = UnitNr
+  Biomass(:,:) = Mass
+  write (*,*) ' In Microphytobenthos_class, the amount of Chl biomass is ', Mass
+  write (*,*) ' Units are ', units
+
+  This%BioMass%amount = Biomass
+
+  StringLength = len_trim (units)
+
+  if (StringLength /= 0 ) then
     !allocate (character(StringLength) :: This%BioMass%units)
     allocate (This%BioMass%units)
     This%BioMass%units = trim (units)
-end if
+  end if
 
 
 
-close (UnitNr)
+  close (UnitNr)
 
+else
+
+  This%BioMass%amount = spatialvar
+  StringLength = len_trim (biounit)
+
+  if (StringLength /= 0 ) then
+    !allocate (character(StringLength) :: This%BioMass%units)
+    if (.not.associated (This%Biomass%units))allocate (This%BioMass%units)
+    This%BioMass%units = trim (biounit)
+  end if
+
+endif
 end subroutine set_microphyt
 
 
@@ -124,7 +153,7 @@ implicit none
 !#define DEBUG
 class (Microphytobenthos) :: this
 
-integer                   :: i,j
+!integer                   :: i,j
 
 !do i = 1, this%inum
  !do j = 1, this%jnum

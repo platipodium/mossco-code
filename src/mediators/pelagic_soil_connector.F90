@@ -171,22 +171,33 @@ module pelagic_soil_connector
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc, oxyrc, odurc
+    integer(ESMF_KIND_I8)       :: advanceCount
+    logical                     :: verbose=.true.
 
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (advanceCount > 0) verbose=.false.
     !> fdet + sdet = CN_det*det
     !> NC_fdet*fdet + NC_sdet*sdet = det
     !> fdet = fac_fdet*det
     !> sdet = fac_sdet*det
 
     ! water temperature:
-    call mossco_state_get(importState,(/'temperature_in_water'/),ptr_f3,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+    call mossco_state_get(importState, (/'temperature_in_water'/), ptr_f3, lbnd=lbnd, &
+      ubnd=ubnd, verbose=verbose, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'temperature_at_soil_surface'/),ptr_f2,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call mossco_state_get(exportState,(/'temperature_at_soil_surface'/), ptr_f2, &
+        verbose=verbose, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       ptr_f2 = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
     end if
@@ -197,16 +208,20 @@ module pelagic_soil_connector
         'concentration_of_dissolved_oxygen_in_water', &
         'oxygen_in_water                           ', &
         'dissolved_oxygen_oxy_in_water             ', &
-        'dissolved_oxygen_in_water                 '/),ptr_f3,lbnd=lbnd,ubnd=ubnd,rc=oxyrc)
+        'dissolved_oxygen_in_water                 '/), &
+        ptr_f3,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=oxyrc)
 
     ! dissolved_reduced_substances:
     call mossco_state_get(importState,(/ &
         'dissolved_reduced_substances_odu_in_water ', &
-        'dissolved_reduced_substances_in_water     '/),ptr_f3_2nd,lbnd=lbnd,ubnd=ubnd,rc=odurc)
+        'dissolved_reduced_substances_in_water     '/), &
+        ptr_f3_2nd,lbnd=lbnd,ubnd=ubnd,verbose=verbose, rc=odurc)
 
     if (oxyrc == ESMF_SUCCESS) then
-      call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/),ptr_f2,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call mossco_state_get(exportState,(/'dissolved_oxygen_at_soil_surface'/), &
+        ptr_f2,verbose=verbose, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (.not.associated(oxy)) allocate(oxy(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
       if (.not.associated(odu)) allocate(odu(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
@@ -223,8 +238,9 @@ module pelagic_soil_connector
         end do
         ptr_f2 = oxy(:,:)
       end if
-      
-      call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/),ptr_f2,rc=odurc)
+
+      call mossco_state_get(exportState,(/'dissolved_reduced_substances_at_soil_surface'/), &
+        ptr_f2, verbose=verbose, rc=odurc)
       if (odurc == ESMF_SUCCESS) odu = ptr_f3_2nd(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       ptr_f2 = odu(:,:)
     end if
@@ -234,7 +250,8 @@ module pelagic_soil_connector
     call mossco_state_get(importState,(/ &
             'detritus_in_water              ', &
             'detN_in_water                  ', &
-            'Detritus_Nitrogen_detN_in_water'/),DETN,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+            'Detritus_Nitrogen_detN_in_water'/), &
+            DETN,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #if DEBUG
     if ( ubnd(1)-lbnd(1)<0 .or. ubnd(2)-lbnd(2)<0 .or. ubnd(3)-lbnd(3)<0 ) then
@@ -249,7 +266,7 @@ module pelagic_soil_connector
     call mossco_state_get(importState,(/ &
             'detritus_z_velocity_in_water              ', &
             'detN_z_velocity_in_water                  ', &
-            'Detritus_Nitrogen_detN_z_velocity_in_water'/),vDETN,rc=localrc)
+            'Detritus_Nitrogen_detN_z_velocity_in_water'/),vDETN, verbose=verbose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       inum=ubnd(1)-lbnd(1)+1
@@ -258,7 +275,8 @@ module pelagic_soil_connector
       if (.not.associated(fac_fdet)) allocate(fac_fdet(1:inum,1:jnum))
       if (.not.associated(fac_sdet)) allocate(fac_sdet(1:inum,1:jnum))
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
-      call mossco_state_get(importState,(/'Detritus_Carbon_detC_in_water'/),DETC,lbnd=Clbnd,ubnd=Cubnd,rc=localrc)
+      call mossco_state_get(importState,(/'Detritus_Carbon_detC_in_water'/), &
+        DETC,lbnd=Clbnd,ubnd=Cubnd, verbose=verbose, rc=localrc)
 
       if (localrc /= 0) then
          CN_det=106.0d0/16.0d0
@@ -293,33 +311,39 @@ module pelagic_soil_connector
 !      fac_sdet = (1.0d0-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
       call mossco_state_get(exportState, &
-        (/'fast_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
+        (/'fast_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)
       if (localrc==0) ptr_f2 = fac_fdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       call mossco_state_get(exportState, &
-        (/'slow_detritus_C_at_soil_surface'/), ptr_f2, rc=localrc)
+        (/'slow_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)
       if(localrc==0) ptr_f2 = fac_sdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
-      call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/), &
+        ptr_f2, verbose=verbose, rc=localrc)
       if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
-      call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/), &
+        ptr_f2, verbose=verbose, rc=localrc)
       if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
-      call mossco_state_get(exportState,(/'detritus-P_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'detritus-P_at_soil_surface'/), &
+        ptr_f2, verbose=verbose, rc=localrc)
       call mossco_state_get(importState,(/ &
           'detP_in_water                    ', &
-          'Detritus_Phosphorus_detP_in_water'/),DETP,lbnd=Plbnd,ubnd=Pubnd,rc=localrc)
+          'Detritus_Phosphorus_detP_in_water'/), &
+          DETP,lbnd=Plbnd,ubnd=Pubnd, verbose=verbose, rc=localrc)
       if (localrc == 0) then
         ptr_f2 = DETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),plbnd(3))
       else
         ptr_f2 = 1.0d0/16.0d0 * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
 
-      call mossco_state_get(exportState,(/'detritus-P_z_velocity_at_soil_surface'/),ptr_f2,rc=localrc)
+      call mossco_state_get(exportState,(/'detritus-P_z_velocity_at_soil_surface'/), &
+        ptr_f2, verbose=verbose, rc=localrc)
       call mossco_state_get(importState,(/ &
               'detP_z_velocity_in_water                    ', &
-              'Detritus_Phosphorus_detP_z_velocity_in_water'/),vDETP,rc=localrc)
+              'Detritus_Phosphorus_detP_z_velocity_in_water'/), &
+              vDETP, verbose=verbose, rc=localrc)
       if (localrc==0) then
         ptr_f2 = sinking_factor * vDETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),Plbnd(3))
       else
@@ -328,33 +352,40 @@ module pelagic_soil_connector
 
       ! DIM concentrations:
 
-      call mossco_state_get(importState,(/'nitrate_in_water'/),nit,ubnd=ubnd,lbnd=lbnd,rc=nitrc)
+      call mossco_state_get(importState,(/'nitrate_in_water'/), &
+        nit,ubnd=ubnd,lbnd=lbnd, verbose=verbose, rc=nitrc)
       if (nitrc /= 0) then
         call mossco_state_get(importState,(/ &
               'nutrients_in_water                            ', &
               'DIN_in_water                                  ', &
-              'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/),DIN,lbnd=lbnd,ubnd=ubnd,rc=localrc)
+              'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water'/), &
+              DIN,lbnd=lbnd,ubnd=ubnd, verbose=verbose, rc=localrc)
       end if
       call mossco_state_get(importState,(/ &
         'ammonium_in_water              ', &
-        'dissolved_ammonium_nh3_in_water'/),amm,lbnd=AMMlbnd,ubnd=AMMubnd,rc=ammrc)
+        'dissolved_ammonium_nh3_in_water'/), &
+        amm,lbnd=AMMlbnd,ubnd=AMMubnd, verbose=verbose, rc=ammrc)
 
       call ESMF_StateGet(exportState,'mole_concentration_of_ammonium_at_soil_surface',field,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (ammrc == 0) then
         ptr_f2 = amm(AMMlbnd(1):AMMubnd(1),AMMlbnd(2):AMMubnd(2),AMMlbnd(3))
       else
         ptr_f2 = 0.5d0 * DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
-      call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface',field,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateGet(exportState,'mole_concentration_of_nitrate_at_soil_surface', field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (nitrc == 0) then
         ptr_f2 = nit(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
@@ -370,23 +401,27 @@ module pelagic_soil_connector
       call mossco_state_get(importState,(/ &
           'DIP_in_water                                    ', &
           'phosphate_in_water                              ', &
-          'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'/),DIP,lbnd=Plbnd,ubnd=Pubnd,rc=localrc)
+          'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water'/), &
+          DIP,lbnd=Plbnd,ubnd=Pubnd, verbose=verbose, rc=localrc)
     if (localrc /= 0) then
         if (.not.(associated(DIP))) allocate(DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1))
         DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),1) = 1.0d0/16.0d0 * DIN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
         Plbnd(3)=1
     end if
 
-    call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface',field,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(exportState,'mole_concentration_of_phosphate_at_soil_surface', field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldGet(field,localde=0,farrayPtr=ptr_f2,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ptr_f2 = DIP(lbnd(1):ubnd(1),lbnd(2):ubnd(2),Plbnd(3))
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
@@ -414,5 +449,3 @@ module pelagic_soil_connector
 
 
 end module pelagic_soil_connector
-
-

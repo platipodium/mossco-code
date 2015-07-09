@@ -11,7 +11,7 @@
 \usepackage[table]{xcolor}
 \usepackage{textcomp}
 \usepackage{alltt}
-\usepackage[mark]{gitinfo2}
+\IfFileExists{gitinfo2.sty}{\usepackage[mark]{gitinfo2}}{}
 \usepackage{ifpdf}
 \ifpdf
 \usepackage[pdftex,
@@ -62,8 +62,8 @@
 %\dedication{BMBF}
 %
 
-\newcommand{\clearemptydoublepage}{\newpage{\pagestyle{empty}\cleardoubl 
-epage}} 
+\newcommand{\clearemptydoublepage}{\newpage{\pagestyle{empty}\cleardoubl
+epage}}
 
 % Start the document proper
 
@@ -78,4 +78,3 @@ epage}}
 \clearpage
 \pagenumbering{arabic}
 \hypersetup{pageanchor=true,citecolor=blue}
-

@@ -883,6 +883,13 @@ module fabm_pelagic_component
       end if
     end do
 
+    !> add column_area to export state
+    field = ESMF_FieldCreate(horizontal_grid,farrayPtr=pel%column_area, &
+      name='water_column_area', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     !> also update export states again with sinking velocities
     !! todo: this has to go into a second init phase,
     !!       when real forcing is linked. Also diagnostic variables could

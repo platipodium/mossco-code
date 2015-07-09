@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_sediment -lsolver -lmossco_util $(LIBS)
 
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
 LDFLAGS += $(FABM_LDFLAGS)
 F90FLAGS += $(FABM_CPPFLAGS)
 

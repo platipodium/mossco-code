@@ -25,9 +25,9 @@ call Micro%set()
 call Micro%run()
 
 ! setting up macrofauna effect (currently only Macoma balthica)
-call Macrofanua_init (Total_Bioturb,1,1)
-call Macrofanua_set ()
-call Macrofanua_run (Total_Bioturb)
+call Macrofauna_init (Total_Bioturb,1,1)
+call Macrofauna_set ()
+call Macrofauna_run (Total_Bioturb)
 
 ! assuming an abiotic critical bed shear stress (tau) and erodibility
 tau0 = 1.9
@@ -84,7 +84,7 @@ write (12,*) 'Erodibility (macrofaunau and microphytobenthos)=', Erod
 
 ! finalizing the classes
  call Micro%finalize()
- call Macrofanua_fin(Total_Bioturb)
+ call Macrofauna_fin(Total_Bioturb)
 
  close (12)
 

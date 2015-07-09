@@ -234,6 +234,7 @@
 #ifdef _FABM_
    use getm_fabm, only: fabm_calc
    use getm_fabm, only: init_getm_fabm, postinit_getm_fabm
+   use getm_fabm, only: init_getm_fabm_fields
    use rivers, only: init_rivers_fabm
 #endif
 #ifdef GETM_BIO
@@ -243,6 +244,9 @@
 #endif
 #endif
    use meteo, only: metforcing,met_method,init_meteo,do_meteo
+#ifndef NO_BAROCLINIC
+   use meteo, only: swr,albedo
+#endif
    use waves, only: init_waves,do_waves,waveforcing_method,NO_WAVES
    use integration,  only: MinN,MaxN
    use exceptions
@@ -293,7 +297,7 @@
       call init_spm(trim(input_dir) // 'spm.inp',runtype)
 #endif
 #ifdef _FABM_
-      call init_getm_fabm(trim(input_dir) // 'getm_fabm.inp')
+      call init_getm_fabm(trim(input_dir) // 'getm_fabm.inp',hotstart)
       call init_rivers_fabm
 #endif
 #ifdef GETM_BIO
@@ -328,6 +332,7 @@
       call write_time_string()
       LEVEL3 timestr
       MinN = MinN+1
+#ifndef NO_3D
 #ifndef NO_BAROCLINIC
       if (calc_temp) then
          LEVEL2 'hotstart temperature:'
@@ -337,6 +342,13 @@
          LEVEL2 'hotstart salinity:'
          call init_salinity_field()
       end if
+#endif
+#ifdef _FABM_
+      if (fabm_calc) then
+         LEVEL2 'hotstart getm_fabm:'
+         call init_getm_fabm_fields()
+      end if
+#endif
 #endif
    end if
 
@@ -363,6 +375,7 @@
             call get_meteo_data(MinN-1)
             call do_meteo(MinN-1,T(:,:,kmax))
          end if
+         swr = swr*(_ONE_-albedo)
 #endif
       end if
    end if
@@ -411,12 +424,12 @@
    IMPLICIT NONE
 !
 ! !INPUT PARAMETERS:
+   character(len=19),intent(in),optional :: start_external,stop_external
 !
 ! !INPUT/OUTPUT PARAMETERS:
 !
 ! !OUTPUT PARAMETERS:
    integer, intent(out)                  :: MinN,MaxN
-   character(len=19),intent(in),optional :: start_external,stop_external
 !
 ! !DESCRIPTION:
 !  Reads the namelist and makes calls to the init functions of the
@@ -446,6 +459,7 @@
    days_in_mon(1,:) = (/31,29,31,30,31,30,31,31,30,31,30,31/)
 
    use_external = ( present(start_external) .and. present(stop_external) )
+
 !
 !  Read time specific things from the namelist.
 !
@@ -457,6 +471,7 @@
       start = start_external
       stop = stop_external
    end if
+
 !
 !  Calculate MaxN -> MinN is 1 if not changed by HotStart
 !
@@ -550,12 +565,14 @@
 ! !USES:
    use time,     only: update_time,timestep
    use domain,   only: kmax
-   use meteo,    only: do_meteo,tausx,tausy,airp,fwf_method,evap,precip
+   use meteo,    only: do_meteo,tausx,tausy,airp,swr,albedo
+   use meteo,    only: fwf_method,evap,precip
    use waves,    only: do_waves,waveforcing_method,NO_WAVES
    use m2d,      only: no_2d,integrate_2d
    use variables_2d, only: fwf,fwf_int,Dvel
 #ifndef NO_3D
    use m3d,      only: integrate_3d,M
+   use variables_3d, only: sseo,ssen,ho,hn
 #ifndef NO_BAROCLINIC
    use variables_3d, only: T
 #endif
@@ -612,6 +629,7 @@
 #ifndef NO_BAROCLINIC
       else
          call do_meteo(n,T(:,:,kmax))
+         swr = swr*(_ONE_-albedo)
 #endif
 #endif
       end if
@@ -631,6 +649,10 @@
       if (.not. no_2d) call integrate_2d(runtype,n,tausx,tausy,airp)
 #endif
 #ifndef NO_3D
+      if (do_3d) then
+         sseo = ssen ! true sseo (without rivers and fwf)
+         ho   = hn   ! true ho   (without rivers and fwf)
+      end if
       call do_rivers(n,do_3d)
       if (do_3d) then
          call integrate_3d(runtype,n)

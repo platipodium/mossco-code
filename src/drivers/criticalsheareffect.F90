@@ -44,9 +44,9 @@ integer                            :: i,j
 
        fcr_microphyto= 1.0
 
-      write (*,*) ' Error: the microphytobenthos effect on critical shear stress can be only'// &
+      write (*,*) ' Warning: Missing unit: the microphytobenthos effect on critical shear stress can be only'// &
                   ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment,'// &
-                  '  and not in microgram/ m**2 area. therefore, the effect was not calculated.'
+                  ' therefore, the effect was not calculated.'
       exit
      end if
   end do
@@ -72,7 +72,7 @@ integer                          :: i,j
  do j = 1, jnum
   do i = 1, inum
 
-    if (trim(Mbalthica%units) == '-' )  then       ! according to Borsje et al. (2008)
+    if (trim(Mbalthica%units) == 'ind.m**-2' )  then       ! according to Borsje et al. (2008)
         if (Mbalthica%intensity(i,j) == 0.0_fp ) then
 
          fcr_macrofauna = 1.0
@@ -94,14 +94,14 @@ integer                          :: i,j
           fcr_macrofauna (i,j) = -0.15 * log (Mbalthica%amount(i,j)) + 0.978
  !write (*,*) ' in shearfunction mbalthica%amount = ',Mbalthica%amount(i,j)
          endif
-         
+
     else if (trim(Mbalthica%units) == '' ) then
 
       fcr_macrofauna = 1.0
-      
+
       write (*,*) ' WARNING!! Missing unit. The Macoma balthica effect on critical bed shear stress can at the'// &
                   ' moment be calculated base on intensity (refer to Knaapen et al. (2003)),'// &
-                  ' therefore, without unit this effect is ignored.'
+                  ' ,therefore, without unit this effect is ignored.'
       exit
     end if
   end do

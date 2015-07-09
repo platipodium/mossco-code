@@ -879,10 +879,12 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,' s) to file '//trim(self%name)
+      write(message,'(A,I4,A,F10.0,A)') '  added timestep ',dimlen+1,' (', seconds,' s) to file'
+      call MOSSCO_MessageAdd(message,' '//trim(self%name))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
-      write(message,'(A,I4,A,F10.0,A)') '  did not add existing timestep ',dimlen,' (', seconds,' s) to file '//trim(self%name)
+      write(message,'(A,I4,A,F10.0,A)') '  did not add existing timestep ',dimlen,' (', seconds,' s) to file'
+      call MOSSCO_MessageAdd(message,' '//trim(self%name))
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 

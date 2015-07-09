@@ -25,7 +25,7 @@ endif
 ifneq ($(MOSSCO_EROSED),true)
 $(error This example only works with MOSSCO_EROSED = true)
 endif
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
 LDFLAGS += -lconstant
 LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)
 LDFLAGS += -lsediment -lmossco_sediment -lsolver $(FABM_LDFLAGS)

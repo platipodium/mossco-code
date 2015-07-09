@@ -24,7 +24,7 @@ endif
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lmossco_gotmfabm -lmossco_fabmpelagic -lmossco_gotm -lsolver -lmossco_util
 LDFLAGS += $(GOTM_LDFLAGS)
 LDFLAGS += $(FABM_LDFLAGS)
-LDFLAGS += $(ESMF_LDFLAGS)
+LDFLAGS += $(ESMF_F90LDFLAGS)
 
 .PHONY: all exec pelagicfabm1d libmossco_gotmfabm
 

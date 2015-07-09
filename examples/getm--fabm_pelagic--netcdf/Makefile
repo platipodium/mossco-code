@@ -21,7 +21,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 ifneq ($(MOSSCO_GETM),true)
 $(error This example only works with MOSSCO_GETM = true)
 endif
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
 LDFLAGS += -lmossco_connector
 LDFLAGS += -lmossco_netcdf
 LDFLAGS += -lmossco_getm $(GETM_LDFLAGS)

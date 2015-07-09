@@ -2065,7 +2065,7 @@ for item in gridCompSet.union(cplCompSet):
         fid.write('\n')
 
 #fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
-fid.write('LDFLAGS += -lmossco_util $(ESMF_LDFLAGS)  \n\n')
+fid.write('LDFLAGS += -lmossco_util $(ESMF_F90LDFLAGS)  \n\n')
 
 #for item in gridCompSet.union(cplCompSet):
 #    if libs.has_key(item):

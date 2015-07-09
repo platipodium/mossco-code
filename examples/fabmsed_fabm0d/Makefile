@@ -19,7 +19,7 @@ EXTRA_DIST=README
 LDFLAGS += -L$(MOSSCO_LIBRARY_PATH) -lsediment -lmossco_fabm0d -lmossco_sediment -lsolver -lmossco_util
 LDFLAGS += $(FABM_LDFLAGS)
 LDFLAGS += -L$(GOTM_LIBRARY_PATH) -lairsea -linput -lutil
-LDFLAGS += $(ESMF_LDFLAGS)
+LDFLAGS += $(ESMF_F90LDFLAGS)
 
 .PHONY: all exec fabmsed_fabm0d
 

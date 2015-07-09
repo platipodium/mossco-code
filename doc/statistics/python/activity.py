@@ -12,7 +12,8 @@ from matplotlib import pyplot
 
 authorinstitute={'Carsten Lemmen':'HZG','Richard Hofmeister':'HZG',
   'Ulrich Körner':'HZG','Knut Klingbeil':'IOW','Hassan Nasermoaddeli':'BAW',
-  'Markus Kreus':'HZG', 'Onur Kerimoglu':'HZG', 'Kai Wirtz':'HZG'}
+  'Markus Kreus':'HZG', 'Onur Kerimoglu':'HZG', 'Kai Wirtz':'HZG',
+  'Nils Weiher':'HZG'}
 
 authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Richard Hofmeister','Richard':'Richard Hofmeister','hofmeist':
@@ -20,7 +21,8 @@ authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli',
   'Mohammed Hassan Nasermoaddeli':'Hassan Nasermoaddeli','Hassan Nasermoaddeli':
   'Hassan Nasermoaddeli','Knut':'Knut Klingbeil','Kai Wirtz':'Kai Wirtz',
-  'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus','Onur':'Onur Kerimoglu'}
+  'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus','Onur':'Onur Kerimoglu',
+  'Nils Weiher':'Nils Weiher'}
 
 # Get committer names from one of the output gnuplot files
 with open('../gitstats/lines_of_code_by_author.plot', 'r') as fid:

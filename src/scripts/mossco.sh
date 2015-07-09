@@ -22,6 +22,7 @@ AUTOTITLE=1          # Whether to change the simulation title in mossco_run and 
 POSTPROCESS=NONE
 NP=NONE
 LOGLEVEL='undefined'
+WAITTIME=0
 
 # Function for printing usage of this script
 function usage {
@@ -49,6 +50,7 @@ function usage {
 	echo "      [-s F]: Command line interactive, running in foreground"
 	echo "      [-s B]: Command line interactive, running in background"
 	echo
+  echo "    [-w W] : wait W seconds for polling batch jobs (only -s J|B)"
 	exit
 }
 
@@ -86,7 +88,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bn:s:l:" opt; do
+while getopts ":rt:bn:s:l:w:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -104,6 +106,8 @@ while getopts ":rt:bn:s:l:" opt; do
   s)  SYSTEM=${OPTARG}
       ;;
   l)  LOGLEVEL=${OPTARG}
+      ;;
+  w)  WAITTIME=${OPTARG}
       ;;
   \?) usage
       ;;
@@ -414,8 +418,8 @@ case ${LOGLEVEL} in
 esac
 
 
-SED=${SED:-$(which gsed)} 2> /dev/null
-SED=${SED:-$(which sed)} 2> /dev/null
+SED=${SED:-$(which gsed 2> /dev/null )}
+SED=${SED:-$(which sed 2> /dev/null )}
 
 if test -f mossco_run.nml ; then
   if [[ "${LOGLEVEL}" != "undefined" ]] ; then
@@ -497,13 +501,29 @@ case ${SYSTEM} in
              JOBID=$(sbatch --parsable --dependency=after:${JOBID} ${POSTPROCESS})
              echo "Postprocess job with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
            fi
-           squeue -u ${USER}
+           squeue -j ${JOBID}
+           if [[ ${WAITTIME} -gt 0 ]]; then
+             while true; do
+               if ! squeue -j ${JOBID} &> /dev/null; then
+                 break;
+               fi
+               if [[ "$(squeue -j ${JOBID} -h)" == "" ]]; then
+                 break;
+               fi
+               echo "Waiting ${WAITTIME} seconds to poll job ${JOBID}"
+               sleep ${WAITTIME}
+             done
+           fi
          else cat slurm.sh ; fi
          ;;
   BACKGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR} &
          PID=$!
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
          echo "Job ${TITLE} with PID ${PID} interactively running in background"
+         if [[ ${WAITTIME>0} == YES ]]; then
+           echo "Waiting for process ${PID} to finish"
+           wait $PID
+         fi
          ;;
   FOREGROUND)  ${MPI_PREFIX} ${EXE}  1>  ${STDOUT}  2> ${STDERR}
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}"
@@ -517,7 +537,3 @@ esac
 test -f ${STDOUT} && tail -n 20 ${STDOUT}
 test -f ${STDERR} && tail -n 20 ${STDERR}
 test -f PET0.${TITLE} && tail -n 100 PET0.${TITLE}
-
-
-
-

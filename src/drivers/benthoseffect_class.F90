@@ -35,11 +35,13 @@ integer, intent (in) :: inum, jnum
 end subroutine init
 
 
-subroutine setting (this)
+subroutine setting (this,spatialvar,Biounit)
 import :: BenthosEffect
 implicit none
 
 class (BenthosEffect) :: this
+real(kind=8), dimension (:,:), pointer, optional  :: spatialvar
+character (len = 10), optional  :: Biounit
 
 end subroutine setting
 

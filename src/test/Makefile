@@ -19,7 +19,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 TESTS = $(shell cat TESTS)
 
 LIBS := -lesmf  $(LIBS)
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBRARY_PATHS) 
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) 
 
 .PHONY: libmossco_empty libmossco_constant libmossco_info libmossco_util
 

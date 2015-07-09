@@ -19,7 +19,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 LIBS := -lmossco_tracer $(LIBS)
 
-LDFLAGS += $(MOSSCO_LDFLAGS) $(LIBS)
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBS)
 
 .PHONY: all exec tracer-standalone libmossco_tracer
 
