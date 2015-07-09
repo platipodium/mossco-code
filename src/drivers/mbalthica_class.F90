@@ -169,7 +169,7 @@ else
 
   if (StringLength /= 0 ) then
    ! allocate (character(StringLength) :: This%StateVar%units)
-    allocate (This%StateVar%units)
+    if (.not.associated (This%StateVar%units)) allocate (This%StateVar%units)
     This%StateVar%units = trim (biounit)
   end if
 

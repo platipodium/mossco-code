@@ -139,7 +139,7 @@ else
 
   if (StringLength /= 0 ) then
     !allocate (character(StringLength) :: This%BioMass%units)
-    allocate (This%BioMass%units)
+    if (.not.associated (This%Biomass%units))allocate (This%BioMass%units)
     This%BioMass%units = trim (biounit)
   end if
 
