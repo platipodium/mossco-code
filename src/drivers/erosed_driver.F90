@@ -701,8 +701,8 @@ masking: if (mask(i,j) /=0) then
 !                 write(*,*) ' rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd '
 !                write(*,*)  rdc         ,rdw           ,iopkcw     ,iopsus   ,vonkar  ,wave,tauadd
 
-                 call bedbc1993_arguments%run (timestep, nm)
-               !  call bedbc1993_arguments%run
+               !  call bedbc1993_arguments%run (timestep, nm)
+                 call bedbc1993_arguments%run
 
                  call bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
 !write (*,*) ' taubcw- current wave bed shear', taubcw, 'current-only bed shear stress',tauc(nm), 'wave-only bed shear stress' ,tauwav(nm)
@@ -1410,12 +1410,12 @@ implicit none
 
 end subroutine set_bedbc
 
-subroutine run_bedbc(bedbc1993_arguments,timestep, element)
-!subroutine run_bedbc(bedbc1993_arguments)
+!subroutine run_bedbc(bedbc1993_arguments,timestep, element)
+subroutine run_bedbc(bedbc1993_arguments)
 implicit none
 class (bedbc1993_argument) :: bedbc1993_arguments
-integer(kind=8) , intent(in)  ::timestep
-integer , intent(in)  :: element
+!integer(kind=8) , intent(in)  ::timestep
+!integer , intent(in)  :: element
 
 call bedbc1993(          bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb      ,bedbc1993_arguments%rhowat    ,bedbc1993_arguments%h1        ,bedbc1993_arguments%ubed      , &
                        & bedbc1993_arguments%zubed     ,bedbc1993_arguments%d50       ,bedbc1993_arguments%d90       ,bedbc1993_arguments%z0cur     ,bedbc1993_arguments%z0rou     , &
@@ -1424,8 +1424,8 @@ call bedbc1993(          bedbc1993_arguments%tp        ,bedbc1993_arguments%uorb
                        & bedbc1993_arguments%tauc      ,bedbc1993_arguments%taubcw    ,bedbc1993_arguments%taurat    ,bedbc1993_arguments%ta        ,bedbc1993_arguments%ce_nm     , &
                        & bedbc1993_arguments%dss       ,bedbc1993_arguments%mudfrac   ,bedbc1993_arguments%eps       ,bedbc1993_arguments%aksfac    ,bedbc1993_arguments%rwave     , &
                        & bedbc1993_arguments%camax     ,bedbc1993_arguments%rdc       ,bedbc1993_arguments%rdw       ,bedbc1993_arguments%iopkcw    ,bedbc1993_arguments%iopsus    , &
-                       & bedbc1993_arguments%vonkar    ,bedbc1993_arguments%wave      ,bedbc1993_arguments%tauadd    , timestep, element)
-                       !& bedbc1993_arguments%vonkar    ,bedbc1993_arguments%wave      ,bedbc1993_arguments%tauadd )
+                       !& bedbc1993_arguments%vonkar    ,bedbc1993_arguments%wave      ,bedbc1993_arguments%tauadd    , timestep, element)
+                       & bedbc1993_arguments%vonkar    ,bedbc1993_arguments%wave      ,bedbc1993_arguments%tauadd )
 end subroutine run_bedbc
 
 subroutine get_tau (bedbc1993_arguments, aks, ce_nm, taubcw, ta, ustarc, tauc, tauwav)
