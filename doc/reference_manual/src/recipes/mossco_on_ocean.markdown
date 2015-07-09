@@ -4,13 +4,13 @@ Ocean is the local cluster at HZG. It offers recent Intel and PGI compilers and 
 
     /home/lemmen/opt
 
-Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the version `/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_04/esmf.mk`
+Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the version `/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_43/esmf.mk`
 
 
 ## Preparing your environment
 
     export PATH=$PATH:/home/lemmen/opt/bin # for cmake
-    export ESMFMKFILE=/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_04/esmf.mk
+    export ESMFMKFILE=/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_43/esmf.mk
     module load intel openmpi_ib  netcdf/3.6.2
 
     export NETCDF=NETCDF3
@@ -42,4 +42,30 @@ It is advisable to have `$MOSSCO_DIR` somewhere in your `/home` and `$MOSSCO_SET
 > if you want to enable debugging, you can set `$MOSSCO_FFLAGS`
 
 	export MOSSCO_FFLAGS="-g -C -check -traceback -check noarg_temp_created"
+
+## Install ESMF on ocean
+
+It is already done (usually), but in case you want to do this again:
+
+		export ESMF_DIR=$HOME/ESMF/esmf-code
+		mkdir -p $ESMF_DIR
+                git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
+		export ESMF_BOPT=g
+		export ESMF_ABI=64
+		export ESMF_MOAB=OFF
+		export ESMF_OPTLEVEL=2
+		export ESMF_INSTALL_PREFIX=$ESMF_DIR
+		export ESMF_LAPACK=internal
+		export ESMF_NETCDF=standard
+		export ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/intel/include
+		export ESMF_NETCDF_LIBPATH=/opt/netcdf/3.6.2/intel/lib
+		export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
+		unset ESMF_PIO
+		export ESMF_SITE=ESMF_7_0_0_beta_snapshot_43
+		export ESMF_COMPILER=intel
+		export ESMF_COMM=openmpi
+		unset ESMF_XERCES
+		
+		cd $ESMF_DIR
+		make lib
 
