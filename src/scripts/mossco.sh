@@ -417,8 +417,8 @@ case ${LOGLEVEL} in
 esac
 
 
-SED=${SED:-$(which gsed)} 2> /dev/null
-SED=${SED:-$(which sed)} 2> /dev/null
+SED=${SED:-$(which gsed 2> /dev/null )}
+SED=${SED:-$(which sed 2> /dev/null )}
 
 if test -f mossco_run.nml ; then
   if [[ "${LOGLEVEL}" != "undefined" ]] ; then
