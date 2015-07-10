@@ -1349,7 +1349,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       if (localrc == 0) then
 
-        do k = 1,ubound (layers_height,3)
+        do k = 1,ubnd(3)
 
          layers_thickness(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
                                                            & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1)
