@@ -24,6 +24,7 @@ ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
 TARGETS += pelagicsoilconnector soilpelagicconnector
+TARGETS += soilpelagicmediator
 TARGETS += libmossco_mediator
 TARGETS += benthicpelagiccoupler
 endif
@@ -39,7 +40,7 @@ SUBDIRS=
 all: subdirs $(TARGETS)
 
 #libmossco_mediator: libpelagicbenthic_mediator pelagicsoilconnector soilpelagicconnector
-libmossco_mediator: pelagicsoilconnector soilpelagicconnector
+libmossco_mediator: pelagicsoilconnector soilpelagicconnector soilpelagicmediator
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
@@ -55,6 +56,7 @@ pelagicbenthiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthicco
 pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_soil_connector.o)
 pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_connector.o)
 benthicpelagiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(benthic_pelagic_coupler.o)
+soilpelagicmediator: libmossco_util $(MOSSCO_LIBRARY_PATH)/libsoilpelagicmediator.a(soil_pelagic_mediator.o)
 
 libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
@@ -96,6 +98,9 @@ $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o ben
 
 $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a: pelagic_soil_connector.o pelagic_benthic_mediator.o soil_pelagic_connector.o
 	$(AR) cruvs $@ $?
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_mediator.o): soil_pelagic_mediator.F90 soil_pelagic_mediator.o
+	$(AR) cruvs $@ soil_pelagic_mediator.o
 
 subdirs:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done
