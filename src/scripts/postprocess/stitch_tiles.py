@@ -20,7 +20,7 @@ if len(sys.argv) > 1:
   prefix = sys.argv[1]
 else:
   prefix = u"netcdf_out"
-  prefix = u"/Volumes/Kiwi/output/gsn/mossco_gsn"
+  prefix = u"/Volumes/Kiwi/output/sn-m/mossco_gffrr"
 
 if len(sys.argv) > 2:
   excl_variables = sys.argv[2].split(',')
@@ -200,7 +200,7 @@ for f in files[:]:
     ubnd=[]
     for i in range(0,n):
       lbnd.append(0)
-      ubnd.append(len(ncout.dimensions[dims[0]]))
+      ubnd.append(len(ncout.dimensions[dims[i]]))
       for item in coords:
         if ncout.variables[item].dimensions[0]==dims[i]:
           if alon.has_key(item):
@@ -213,19 +213,20 @@ for f in files[:]:
 
     #print lbnd, ubnd, value.shape
 
-    if n==1:
-      if (var[lbnd[0]:ubnd[0]]).shape != value.shape: continue
+    success=True
+    
+    if n==1 and (var[lbnd[0]:ubnd[0]]).shape == value.shape:  
       var[lbnd[0]:ubnd[0]]=value[:]
-    elif n==2:
-      if (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]).shape != value.shape: continue
+    elif n==2 and  (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]).shape == value.shape:
       var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]=value[:,:]
-    elif n==3:
-      if (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]]).shape != value.shape: continue
+    elif n==3 and (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]]).shape == value.shape:
       var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]]=value[:,:,:]
-    elif n==4:
-      if (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]]).shape != value.shape: continue
+    elif n==4 and (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]]).shape == value.shape:
       var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]]=value[:,:,:,:]
     else:
+      success=False
+
+    if not success:
       print 'skipped ' + key
       continue
 

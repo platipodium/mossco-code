@@ -520,7 +520,7 @@ case ${SYSTEM} in
          PID=$!
          echo "${MPI_PREFIX} ${EXE}  " '1>'  "${STDOUT}"  ' 2> ' "${STDERR}" ' &'
          echo "Job ${TITLE} with PID ${PID} interactively running in background"
-         if [[ ${WAITTIME>0} == YES ]]; then
+         if [[ ${WAITTIME} -gt 0 ]]; then
            echo "Waiting for process ${PID} to finish"
            wait $PID
          fi
