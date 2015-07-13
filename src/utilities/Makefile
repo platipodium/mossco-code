@@ -21,7 +21,8 @@ EXTRA_DIST=README
 
 LIBMOSSCO_UTIL_OBJS=							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_dictionary.o)	\
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)	\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_db.o)
 ifeq ($(MOSSCO_ESMF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_component.o)		\
@@ -32,6 +33,8 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
+
+
 ifeq ($(MOSSCO_NETCDF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o) \
@@ -55,6 +58,7 @@ mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_compo
 mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90
 mossco_attribute.o : mossco_attribute.F90
 mossco_config.o : mossco_config.F90
+mossco_db.o : mossco_db.F90
 
 nc_extract_variable: nc_extract_variable.c
 	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
@@ -81,5 +85,6 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_gridspec.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_db.mod
 	$(RM) *.o nc_extract_variable_lasttime nc_extract_variable
 

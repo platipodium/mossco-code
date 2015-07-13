@@ -304,8 +304,9 @@ end function MOSSCO_GridCreateRegional2D
     call ESMF_GridAddCoord(gridb, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_GridCopyCoords(grida, gridb, coordDims=(/1,2/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !> @todo: implement multidimensional grid coordinates in MOSSCO_GridCopyCoords
+    !call MOSSCO_GridCopyCoords(grida, gridb, coordDims=(/1,2/), rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
     if (present(rc)) rc=rc_

@@ -1016,8 +1016,13 @@ module getm_component
    allocate(zc(E2DFIELD ,1:klen))
    allocate(zx(E2DXFIELD,0:klen))
 
-   allocate(U3D(I3DFIELD))
-   allocate(V3D(I3DFIELD))
+#ifdef FOREIGN_GRID
+   allocate(U3D(I2DFIELD,0:klen))
+   allocate(V3D(I2DFIELD,0:klen))
+#else
+   allocate(U3D(I2DFIELD,1:klen))
+   allocate(V3D(I2DFIELD,1:klen))
+#endif
 
    if (klen .eq. 1) then
       if (associated(U3D)) then
@@ -1906,7 +1911,7 @@ module getm_component
                       ww(:,:,k-1),ww(:,:,k),vel_missing,p_vel3d(:,:,k))
          end do
          if (noKindMatch) then
-            U3D = t_vel3d
+            U3D(:,:,1:kmax) = t_vel3d(:,:,1:kmax)
          end if
       else
          if (noKindMatch) then
@@ -1939,7 +1944,7 @@ module getm_component
                       ww(:,:,k-1),ww(:,:,k),vel_missing,p_vel3d(:,:,k))
          end do
          if (noKindMatch) then
-            V3D = t_vel3d
+            V3D(:,:,1:kmax) = t_vel3d(:,:,1:kmax)
          end if
       else
          if (noKindMatch) then
