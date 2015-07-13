@@ -28,14 +28,18 @@ private
     character(len=ESMF_MAXSTR)                  :: dbname = "mossco.db"
     type(SQLITE_DATABASE)                       :: db
 
-    !@todo: declare all states here and use replace function for ~VARS
-    !type(SQLITE_STATEMENT) :: sql_getsubstanceprimaryname = &
-    !    "SELECT * FROM tblsubstances JOIN tblnames on &
-    !    tblsubstances.id= tblnames.substance_id WHERE &
-    !    tblnames.alias=~ALIAS;" 
-    !type(SQLITE_STATEMENT) :: sql_ =
+    !Declare SQL States
+    character(len=ESMF_MAXSTR), parameter :: sql_GetSubstanceNames &
+        = "SELECT name FROM tblsubstances JOIN tblnames on &
+        tblsubstances.id= tblnames.substance_id WHERE &
+        tblnames.alias=~name;"
 
-public get_substance_list
+    character(len=ESMF_MAXSTR), parameter :: sql_StateName &
+        = "SELECT ;"
+
+
+
+    public get_substance_list
 
 contains
 
@@ -45,28 +49,82 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_list"
-  subroutine get_substance_list(name)
+subroutine get_substance_list(alias) !Test-Case: alias = "TN"
     !INITIALIZATION
     implicit none
 
     !DECLARATIONS
-    character(len=ESMF_MAXSTR), intent(in)  :: name
-    character(len=ESMF_MAXSTR)              :: sql
+    character(len=ESMF_MAXSTR), intent(in) :: alias
+    character(len=ESMF_MAXSTR)             :: sql,Replace_String
+    logical                                :: err
 
     !Receive names
-    sql= "SELECT name FROM tblsubstances JOIN tblnames on &
-        tblsubstances.id= tblnames.substance_id WHERE &
-        tblnames.alias='" // name // "';"
-    call sqlite3_do( db, sql )
+    sql=Replace_String(sql_GetSubstanceNames,"~name",alias)
+    !call sqlite3_do( db, sql )
 
+    !err = sqlite3_error( db )
+    !if (err == .true.) then call end_connection(.true.)
 
     call sqlite3_commit( db )
-    call sqlite3_close( db )
 
+    !call end_connection(.false.)
 
-  end subroutine get_substance_list
-
+end subroutine get_substance_list
+!
+!
+!#undef  ESMF_METHOD
+!#define ESMF_METHOD "start_connection"
+!subroutine start_connection
+!    !INITIALIZATION
+!    implicit none
+!
+!    call sqlite3_open( "mossco.db", db )
+!
+!end subroutine start_connection
+!
+!
+!#undef  ESMF_METHOD
+!#define ESMF_METHOD "end_connection"
+!subroutine end_connection(abort)
+!    !INITIALIZATION
+!    implicit none
+!
+!    logical, intent(in), optional     :: abort
+!    if not (present(abort)) then abort = .false.
+!
+!    !@Error Undo changes made to database
+!    if abort then call sqlite3_rollback( db )
+!
+!    !Quit connection
+!    call sqlite3_close( db )
+!
+!    if abort then call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!end subroutine start_connection
+!
+!
+!
+!
+!
 end module mossco_db
+
+
+
+!Part of http://fortranwiki.org/fortran/show/String_Functions
+!Created on August 30, 2013 00:43:41 by Jason Blevins (174.101.45.6) (5815 characters / 2.0 pages)
+FUNCTION Replace_String (s,text,rep)  RESULT(outs)
+    CHARACTER(*)        :: s,text,rep
+    CHARACTER(LEN(s)+100) :: outs     ! provide outs with extra 100 char len
+    INTEGER             :: i, nt, nr
+
+    outs = s ; nt = LEN_TRIM(text) ; nr = LEN_TRIM(rep)
+    DO
+       i = INDEX(outs,text(:nt)) ; IF (i == 0) EXIT
+       outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
+    END DO
+END FUNCTION Replace_String
+
+!@todo: Umschreiben zu LoadSQL Funktion, die ein benanntes state läd und eine beliebige Anzahl ~VARS ersetzt
 
 
 
