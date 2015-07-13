@@ -22,7 +22,7 @@ EXTRA_DIST=README
 LIBMOSSCO_UTIL_OBJS=							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_dictionary.o)	\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_strings.o)	\
-	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_db.o)
+	#$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_db.o)
 ifeq ($(MOSSCO_ESMF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_component.o)		\
