@@ -476,14 +476,14 @@ endif
 MOSSCO_SQLITE=false
 
 ifndef SQLITE_DIR
-  external_SQLITE_DIR = $(MOSSCO_DIR)/external/flibs/sqlite
-  ifneq ($(wildcard $(external_EROSED_DIR)),)
-    EROSED_DIR=$(external_EROSED_DIR)
+  external_SQLITE_DIR = $(MOSSCO_DIR)/external/flibs-cvs/src/sqlite
+  ifneq ($(wildcard $(external_SQLITE_DIR)),)
+    SQLITE_DIR=$(external_SQLITE_DIR)
   endif
-  export EROSED_DIR
+  export SQLITE_DIR
 endif
 
-ifdef EROSED_DIR
+ifdef SQLITE_DIR
   MOSSCO_SQLITE=true
   ifeq ($(FORTRAN_COMPILER), XLF)
     DEFINES += -WF,-DMOSSCO_SQLITE
@@ -491,7 +491,7 @@ ifdef EROSED_DIR
     DEFINES += -DMOSSCO_SQLITE
   endif
 endif
-export MOSSCO_SQLITE
+export MOSSCO_SQLITE SQLITE_DIR
 
 # 7. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
@@ -685,6 +685,9 @@ ifeq ($(MOSSCO_GETM),true)
 	@env | grep ^GETM | sort
 	@echo STATIC = $(STATIC)
 endif
+ifeq ($(MOSSCO_SQLITE),true)
+	@env | grep ^SQLITE | sort
+endif
 	@env | grep ^MOSSCO_ | sort
 
 
@@ -854,6 +857,9 @@ mossco_clean: distclean gotm_clean fabm_clean
 %.mod: %.f90
 	@echo "Compiling $<"
 	$(F90) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+%.o: %.c
+	@echo "Compiling $<"
+	$(MOSSCO_CCOMPILER) $(CPPFLAGS) $(DEFINES) -c $< -o $@
 
 # %.o: %.f90
 #	@echo "Compiling $<"

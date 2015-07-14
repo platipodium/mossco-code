@@ -24,9 +24,11 @@ ifeq ($(MOSSCO_FABM),true)
 TARGETS += liboceansedimentcoupler
 TARGETS += pelagicbenthiccoupler
 TARGETS += pelagicsoilconnector soilpelagicconnector
-TARGETS += soilpelagicmediator
 TARGETS += libmossco_mediator
 TARGETS += benthicpelagiccoupler
+endif
+ifeq ($(MOSSCO_SQLITE),true)
+TARGETS += soilpelagicmediator
 endif
 ifeq ($(MOSSCO_GOTM),true)
 TARGETS += libverticalmeancoupler

@@ -34,12 +34,20 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_grid.o)
 
-
 ifeq ($(MOSSCO_NETCDF),true)
 LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_netcdf.o) \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_gridspec.o)
 endif
+endif
+
+# SQLITE section
+SQLITE_OBJS= \
+  $(SQLITE_DIR)/fsqlite.o  \
+  $(SQLITE_DIR)/csqlite.o
+
+ifeq ($(MOSSCO_SQLITE),true)
+  TARGETS += $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 endif
 
 # Make targets
@@ -58,7 +66,14 @@ mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_compo
 mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90
 mossco_attribute.o : mossco_attribute.F90
 mossco_config.o : mossco_config.F90
-mossco_db.o : mossco_db.F90
+mossco_db.o : mossco_db.F90 \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o)
+
+$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o): $(SQLITE_DIR)/fsqlite.F90
+	make -C $(SQLITE_DIR)
+	$(AR) cruvs $(MOSSCO_LIBRARY_PATH)/libmossco_db.a $(SQLITE_DIR)/fsqlite.o
+	$(AR) cruvs $(MOSSCO_LIBRARY_PATH)/libmossco_db.a $(SQLITE_DIR)/csqlite.o
+	cp  $(SQLITE_DIR)/*mod $(MOSSCO_MODULE_PATH)/
 
 nc_extract_variable: nc_extract_variable.c
 	$(MOSSCO_CCOMPILER) -I $(MOSSCO_NETCDF_INCLUDE) -c $<
@@ -87,4 +102,3 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_component.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_db.mod
 	$(RM) *.o nc_extract_variable_lasttime nc_extract_variable
-
