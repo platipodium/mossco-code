@@ -129,4 +129,4 @@ endif
 
 flibs-cvs-update:
 	(cd $(MOSSCO_DIR)/external/flibs-cvs; \
-	cvs -z3 -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs checkout src )
+	cvs -z3 -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs checkout configure.sh config src make )
