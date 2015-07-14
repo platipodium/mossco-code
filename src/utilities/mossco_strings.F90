@@ -194,8 +194,6 @@ contains
     len1=len_trim(message)
     len2=len_trim(string)
 
-
-
     if (len1 + len2 <= len0) then
       write(message, '(A)') trim(message)//trim(string)
     elseif (len1 > len0 - 2 ) then

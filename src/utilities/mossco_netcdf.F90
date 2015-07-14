@@ -2438,7 +2438,12 @@ module mossco_netcdf
 
       itime_ = 1
       ntime = self%dimlens(self%timeDimId)
-      allocate(farray(ntime))
+      if (ntime < 1) then
+        call ESMF_LogWrite('  time dimension has length zero', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      if (.not.allocated(farray)) allocate(farray(ntime))
 
       localrc = nf90_get_var(self%ncid, varid, farray)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2453,6 +2458,8 @@ module mossco_netcdf
         endif
       enddo
       if (farray(ntime) <= ticks*1.0D0) itime_ = ntime
+
+      if (allocated(farray)) deallocate(farray)
     endif
 
     if (present(rc)) rc=rc_
