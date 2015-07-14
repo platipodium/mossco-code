@@ -69,7 +69,7 @@ mossco_config.o : mossco_config.F90
 mossco_db.o : mossco_db.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o)
 
-$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o): $(SQLITE_DIR)/fsqlite.F90
+$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o): $(SQLITE_DIR)/fsqlite.f90
 	make -C $(SQLITE_DIR)
 	$(AR) cruvs $(MOSSCO_LIBRARY_PATH)/libmossco_db.a $(SQLITE_DIR)/fsqlite.o
 	$(AR) cruvs $(MOSSCO_LIBRARY_PATH)/libmossco_db.a $(SQLITE_DIR)/csqlite.o

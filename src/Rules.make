@@ -484,6 +484,12 @@ ifndef SQLITE_DIR
 endif
 
 ifdef SQLITE_DIR
+  ifeq ($(wildcard $(SQLITE_DIR)/../../config/config.mk),)
+    SQLITE_DIR=
+  endif
+endif
+
+ifdef SQLITE_DIR
   MOSSCO_SQLITE=true
   ifeq ($(FORTRAN_COMPILER), XLF)
     DEFINES += -WF,-DMOSSCO_SQLITE
