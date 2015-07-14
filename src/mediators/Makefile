@@ -41,9 +41,11 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
-#libmossco_mediator: libpelagicbenthic_mediator pelagicsoilconnector soilpelagicconnector
-libmossco_mediator: pelagicsoilconnector soilpelagicconnector \
-	soilpelagicmediator
+ifeq ($(MOSSCO_SQLITE),true)
+libmossco_mediator: pelagicsoilconnector soilpelagicconnector soilpelagicmediator
+else
+libmossco_mediator: pelagicsoilconnector soilpelagicconnector
+endif
 
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
