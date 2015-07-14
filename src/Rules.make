@@ -472,6 +472,27 @@ ifeq ($(MOSSCO_HAMSOM),true)
 
 endif
 
+## 6d. SQLITE
+MOSSCO_SQLITE=false
+
+ifndef SQLITE_DIR
+  external_SQLITE_DIR = $(MOSSCO_DIR)/external/flibs/sqlite
+  ifneq ($(wildcard $(external_EROSED_DIR)),)
+    EROSED_DIR=$(external_EROSED_DIR)
+  endif
+  export EROSED_DIR
+endif
+
+ifdef EROSED_DIR
+  MOSSCO_SQLITE=true
+  ifeq ($(FORTRAN_COMPILER), XLF)
+    DEFINES += -WF,-DMOSSCO_SQLITE
+  else
+    DEFINES += -DMOSSCO_SQLITE
+  endif
+endif
+export MOSSCO_SQLITE
+
 # 7. MOSSCO declarations. The MOSSCO_DIR and the build prefix are set, as well as the bin/mod/lib paths relative
 #    to the PREFIX
 #
