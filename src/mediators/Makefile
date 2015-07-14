@@ -42,7 +42,9 @@ SUBDIRS=
 all: subdirs $(TARGETS)
 
 #libmossco_mediator: libpelagicbenthic_mediator pelagicsoilconnector soilpelagicconnector
-libmossco_mediator: pelagicsoilconnector soilpelagicconnector soilpelagicmediator
+libmossco_mediator: pelagicsoilconnector soilpelagicconnector \
+	soilpelagicmediator
+
 libpelagicbenthic_mediator: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_benthic_mediator.o)
 
 libinoutcoupler: prefix $(MOSSCO_LIBRARY_PATH)/libinoutcoupler.a
@@ -101,8 +103,10 @@ $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a: pelagic_benthic_coupler.o ben
 $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a: pelagic_soil_connector.o pelagic_benthic_mediator.o soil_pelagic_connector.o
 	$(AR) cruvs $@ $?
 
+ifeq ($(MOSSCO_SQLITE),true)
 $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_mediator.o): soil_pelagic_mediator.F90 soil_pelagic_mediator.o
 	$(AR) cruvs $@ soil_pelagic_mediator.o
+endif
 
 subdirs:
 	@for dir in $(SUBDIRS); do $(MAKE) -C $$dir ; done
