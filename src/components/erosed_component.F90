@@ -57,8 +57,8 @@ module erosed_component
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
-  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer:: spm_concentration=>null(), layers_height=>null(), layers_thickness=>null(),sigma_midlayer=>null()
-
+  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer::  layers_height=>null(), relative_thickness_of_layers=>null(),sigma_midlayer=>null()
+  real(kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer::spm_concentration=>null()
    integer                                      :: nmlb           ! first cell number
    integer                                      :: nmub           ! last cell number
    integer                                      :: inum, jnum     ! number of elements in x and y directions , inum * jnum== nmub - nmlb + 1
@@ -387,18 +387,6 @@ contains
     read (UnitNr, nml=benthic, iostat = istat)
     close (UnitNr)
   end if
-!    nmlb    = 1                 ! first cell number
-!    nmub    = 1                 ! last cell number
-!    morfac  = 1.0               ! morphological scale factor [-]
-!    !
-!    ! -----------------------------------------------------------
-!    !
-!    nfrac       = 2             ! number of sediment fractions
-!    iunderlyr   = 2             ! Underlayer mechanism (default = 1)
-!    flufflyr    = 1             ! switch for fluff layer concept
-!                                !  0: no fluff layer (default)
-!                                !  1: all mud to fluff layer, burial to bed layers
-!                                !  2: part mud to fluff layer, other part to bed layers (no burial)
 
     nmlb=1
     nmub = inum * jnum
@@ -406,7 +394,7 @@ contains
 
     if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
     if (.not.associated(BioEffects%TauEffect))         allocate (BioEffects%TauEffect(inum,jnum))
-    if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,nfrac))
+    if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,5,nfrac))
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
     allocate (sedd50    (nfrac))
@@ -423,9 +411,6 @@ contains
     allocate (taub      (nmlb:nmub))
     allocate (taubn      (nmlb:nmub))
     allocate (eq_conc     (nmlb:nmub))
-!    allocate (r0        (nfrac,nmlb:nmub))
-!    allocate (r1        (nfrac,nmlb:nmub))
-!    allocate (rn        (nfrac,nmlb:nmub))
     allocate (ws        (nfrac,nmlb:nmub))
     !
     allocate (mass      (nfrac,nmlb:nmub))
@@ -529,11 +514,11 @@ contains
         ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
 !write (*,*) 'wave', wave
-      do i = 1, inum
-        do j = 1, jnum
-          spm_concentration (i,j,:) = spm_const (:)
-        end do
-      end do
+!      do i = 1, inum
+!        do j = 1, jnum
+!          spm_concentration (i,j,:) = spm_const (:)
+!        end do
+!      end do
 
     else
       Write (0,*) 'Error: sedparams.txt for use in erosed does not exit.!!'
@@ -554,8 +539,6 @@ contains
     h1      = 0.03_fp        ! water depth [m]
     h0      = h1            ! @ToDo : read h0 from input data
     umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
- !   ws      = 0.001_fp      ! Settling velocity [m/s]
-!    r1(:,:) = 2.0e-1_fp    ! sediment concentration [kg/m3]
     u_bot   = 0.0_fp        ! flow velocity in u-direction at (center of the ) bottm cell
     v_bot   = 0.0_fp        ! flow velocity in v-direction at (center of the ) bottm cell
     thick   = 0.02_fp       ! height of the bottom cell
@@ -1127,6 +1110,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer,dimension(2)     :: totalLBound,totalUBound
     integer,dimension(2)     :: exclusiveLBound,exclusiveUBound
     integer(ESMF_KIND_I4)    :: ubnd(3), lbnd(3), tubnd(3), tlbnd(3)
+    integer                  :: kmaxsd !(kmax-layer index)
 !#define DEBUG
     rc=ESMF_SUCCESS
 
@@ -1236,8 +1220,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !          end if
 
           !> @todo unclear which localrc is excpected here
+          !write (0,*) 'shape of spm_concentration original', shape (ptr_f3)
           if (localrc == ESMF_SUCCESS) then
-            spm_concentration(:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1)
+            spm_concentration(:,:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1:5)
           else
             write(0,*) 'cannot find SPM fraction',n
           end if
@@ -1324,7 +1309,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           do i= 1, inum
            if (mask(i,j)/=0)then
              h1(inum*(j -1)+i) = depth(i,j)
- !          write (*,*) ' water depth ',depth(i,j), 'i,j', i,j, 'nm',inum*(j -1)+i
            endif   ! else use initial value in phase 1
           end do
          end do
@@ -1337,9 +1321,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          first_entry = .false.
       end if
 
-      if (.not. associated (layers_thickness)) then
-        allocate (layers_thickness(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
-        if (istat/=0) write (*,*) 'Warning/Error in allocation of layers_thickness in erosed_component'
+      if (.not. associated (relative_thickness_of_layers)) then
+        allocate (relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
+        if (istat/=0) write (*,*) 'Warning/Error in allocation of relative_thickness_of_layers in erosed_component'
       end if
 
       if (.not. associated (sigma_midlayer)) then
@@ -1351,19 +1335,21 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         do k = 1,ubnd(3)
 
-         layers_thickness(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
-                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1)
-        !Sigma [-1,0] levels of layer centers (in sigma model)
-         sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = -(layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
-                                                           & +layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1) ) &
-                                                           & /(2.0_fp *layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),0) )
+         relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
+                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1) )/ &
+                                                           & (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) &
+                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),0) )
         end do
 
-!write (*,*)'advancecount, layers_height_k, layers_height_elev k and k-1, sima_layer'
-!!
-!        do k = 1,ubound (layers_height,3)
-!write (*,*) advancecount, k, layers_height(5,13,k),layers_height(5,13,k-1), sigma_midlayer(5,13,k)
-!        end do
+
+        do k = ubnd(3),1,-1
+         if (k ==ubnd(3)) then
+            sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) = -0.5_fp * relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3))
+         else
+            sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k+1) -0.5_fp * &
+            &          ( relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) +relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k+1) )
+         endif
+        end do
 
         do j=1,jnum
           do i= 1, inum
@@ -1371,28 +1357,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
            if (mask(i,j)/=0)then
             umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
             thick (inum*(j -1)+i) = hbot (i,j)/depth(i,j)
-            !write (*,*) 'old thick',thick (inum*(j -1)+i)
-!            thick (inum*(j -1)+i,:) = layers_thickness(i,j,:)
-!            write (*,*) 'new thick',thick (inum*(j -1)+i)
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
-!                umod (inum*(j -1)+i) = 1.0_fp
-!                u_bot (inum*(j -1)+i)= 0.32_fp
-!                v_bot (inum*(j -1)+i) = u_bot(inum*(j -1)+i)
-!                u2d(i,j)=1.0_fp/1.414213_fp
-!                v2d(i,j)=u2d(i,j)
-!            write (*,*) 'ubot', ubot(i,j)
-!            write (*,*) 'vbot', vbot(i,j)
-!            write (*,*) 'u2d, v2d', u2d(i,j), v2d(i,j)
-!            write (*,*) 'nm',inum*(j -1)+i, 'thick',thick(inum*(j -1)+i), 'i,j', i,j ,'depth', depth(i,j), 'hbot',hbot (i,j)
             if (wave) then
                 tper (inum*(j -1)+i) = waveT (i,j)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
                 uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
- !   write (*,*) 'nm', inum*(j -1)+i, 'i,j', i,j,'waveT', waveT(i,j), 'waveH', WaveH(i,j),'waveDir',waveDir(i,j), 'wavek', waveK(i,j)
-            !test
-!            uorb (inum*(j -1)+i) = 0.06_fp
-!             tper (inum*(j -1)+i) = 2.18_fp
             endif
 
            else
@@ -1424,12 +1394,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
       if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!write (*,*) 'inum, jnum',inum, jnum
-!write (*,*) 'shape(ptr_f2)', shape(ptr_f2)
 
       BioEffects%ErodibilityEffect = ptr_f2
 #ifdef DEBUG
- !       write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+        write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
 #endif
     end if
 
@@ -1495,13 +1463,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             if (mask(i,j)== 0) then
                 BioEffects%TauEffect (i,j) = 1.0_fp
                 BioEffects%ErodibilityEffect(i,j) = 1.0_fp
-                spm_concentration (i,j,:)    = 0.0_fp
+                spm_concentration (i,j,:,:)    = 0.0_fp
             end if
          end do
      end do
 #ifdef DEBUG
- !      write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
- !      write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%TauEffect=', BioEffects%TauEffect
+       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
+       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%TauEffect=', BioEffects%TauEffect
 #endif
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
@@ -1512,9 +1480,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
                 & tper   , teta   , spm_concentration , BioEffects     , nybot    , sigma_midlayer, &
                 & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
-                & layers_thickness )
-!if ((advancecount>= 70).and.(advancecount<=100)) write (*,*) '######### Timestep: ',advancecount , ' #########'
-    !   Updating sediment concentration in water column over cells
+                & relative_thickness_of_layers, kmaxsd )
+
   n =0
     do l = 1, nfrac
       do nm = nmlb, nmub
@@ -1523,9 +1490,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
-        if (mask(i,j) /=0) then
+       if (mask(i,j) /=0) then
 
-        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,kmaxsd,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
 
 #ifdef DEBUG
  !       write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), &
@@ -1534,20 +1501,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         depth(i,j)
 #endif
 
-!        write (*, *) ' SOUR', sour(l,nm)*1000.0, 'SINK', sink(l,nm), 'SINKTERM', sink(l,nm)* spm_concentration(i,j,l)
-!        write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm, 'sedd50',sedd50(l)
- !if (spm_concentration(i,j,l) >100.)  write (*,*) ' SPM_conc',spm_concentration(i,j,l), 'i,j,l',i,j,l, 'nm', nm
-
-!if ((advancecount>11.and. advancecount< 17).and. (l==1)) then
-!if (j==8) then
-!if (i >1.and.i <=8)then
-!if (n==0) write (0,*) 'timestep,nm,i,j,spm_upwardflux,sour,sink,spm_concentration(1), eq_conc'
-!write (0,*) advancecount,',',nm,',', i,',',j ,',',size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j),',',sour(l,nm)*1000,',',sink(l,nm), ',',spm_concentration(i,j,l),',',eq_conc(nm)
-!n = n+1
-!endif
-!endif
-!endif
-        end if
+       end if
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
@@ -1845,7 +1799,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
     deallocate (spm_concentration)
-    deallocate (layers_thickness, sigma_midlayer)
+    deallocate (relative_thickness_of_layers, sigma_midlayer)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 
