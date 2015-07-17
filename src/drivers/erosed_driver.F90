@@ -727,7 +727,7 @@ masking: if (mask(i,j) /=0) then
                    enddo
 
                  sigsed (nm) = sigma_midlayer(i,j,kmaxsd)    ! sigam-distance of the kmx-layer to the water surface
-                 write (0,*)'timestep', timestep, 'nm,', nm,'sigsed', sigsed(nm), 'kmaxsd', kmaxsd
+ !                write (0,*)'timestep', timestep, 'nm,', nm,'sigsed', sigsed(nm), 'kmaxsd', kmaxsd
                  call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
 
                  thick0 = relative_thickness_of_layers(i,j,kmaxsd)* h0(nm)
