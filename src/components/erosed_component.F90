@@ -103,7 +103,7 @@ module erosed_component
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
     logical                                     :: lexist, anymud, wave
     real(fp)    , dimension(:)  , allocatable   :: uorb, tper, teta ! Orbital velocity [m/s], Wave period, angle between current and wave
-real(fp)    , dimension(:)  , allocatable   :: eq_conc    ! equilibrium sand fraction concentration [g.m**-3]    integer :: unit707
+    real(fp)    , dimension(:)  , allocatable   :: eq_conc    ! equilibrium sand fraction concentration [g.m**-3]    integer :: unit707
 
 
 contains
@@ -394,7 +394,7 @@ contains
 
     if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
     if (.not.associated(BioEffects%TauEffect))         allocate (BioEffects%TauEffect(inum,jnum))
-    if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,5,nfrac))
+    if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,30,nfrac))
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
     allocate (sedd50    (nfrac))
@@ -1222,7 +1222,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           !> @todo unclear which localrc is excpected here
           !write (0,*) 'shape of spm_concentration original', shape (ptr_f3)
           if (localrc == ESMF_SUCCESS) then
-            spm_concentration(:,:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1:5)
+            spm_concentration(:,:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1:30)
           else
             write(0,*) 'cannot find SPM fraction',n
           end if
