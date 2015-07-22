@@ -1321,9 +1321,17 @@ module fabm_pelagic_component
       ! integrate bottom upward fluxes
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
       !       have to be updated from importState here in Run
-      do n=1,pel%nvar
-        pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
-      end do
+      if (any(pel%layer_height(RANGE2D,1) <= 0)) then
+        write(message,'(A)') '  non-positive layer height detected'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize()
+      endif
+
+      !where (pel%layer_height(RANGE2D,1) > 0)
+        do n=1,pel%nvar
+          pel%conc(RANGE2D,1,n) = pel%conc(RANGE2D,1,n) + bfl(n)%p(RANGE2D)*dt/pel%layer_height(RANGE2D,1)
+        end do
+      !endwhere
 
       call integrate_flux_in_water(pel, importState)
 
@@ -1474,20 +1482,32 @@ module fabm_pelagic_component
         pel%cell_per_column_volume = 0.0d0
       end if
       do k=1,pel%knum
-        pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
+        if (any(pel%layer_height(RANGE2D,k) <= 0)) then
+          write(message,'(A)') '  non-positive layer height detected'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize()
+        endif
+        pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
+          (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
       end do
 
       do n=1,pel%nvar
         varname = trim(pel%export_states(n)%standard_name)
         if (associated(pel%volume_flux)) then
-          do k=1,pel%knum
-            !> river dilution
-            if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
-              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
-                (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
-            end if
-          end do
-        end if
+          if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
+            do k=1,pel%knum
+              !> river dilution
+              if (any(dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k) > 0.5d0)) then
+                write(message,'(A)') '  cfl for volume flux exceeded'
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+                call ESMF_Finalize()
+              else
+                pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
+                  (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
+              endif
+            enddo
+          endif
+        endif
         call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', itemType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (itemType == ESMF_STATEITEM_FIELD) then
