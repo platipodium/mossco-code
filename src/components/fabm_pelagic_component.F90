@@ -1504,9 +1504,10 @@ module fabm_pelagic_component
               else
                 pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
                   (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
-            end do
-          end if
-        end if
+              endif
+            enddo
+          endif
+        endif
         call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', itemType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (itemType == ESMF_STATEITEM_FIELD) then
