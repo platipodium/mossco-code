@@ -50,7 +50,7 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_list"
-subroutine get_substance_list(alias,hold_con,listout) !Test-Case: alias = "TN"
+subroutine get_substance_list(alias,listout) !Test-Case: alias = "TN"
     !INITIALIZATION
     implicit none
 
@@ -75,41 +75,35 @@ subroutine sql_select_state(sql,search_list,replace_list,rsout)
     implicit none
 
     !DECLARATIONS
-    character(len=ESMF_MAXSTR), intent(out) :: rsout !als recordset setzen
+    type(SQLITE_COLUMN), intent(out)        :: rsout
     character(len=ESMF_MAXSTR), intent (in) :: search_list, &
                                                replace_list, sql
+    type(SQLITE_STATEMENT)                  :: stmt
     logical                                 :: err
+    real                                    :: i
+
+
 
     !Receive names
-    forall (search_list)
-        sql=Replace_String(sql_GetSubstanceNames,search_list,replace_list)
+    forall (i=1:N,search_list(i) .ne. 0.0)
+        sql=Replace_String(sql,search_list(i),replace_list(i))
     end forall
 
-    call sqlite3_do( db, sql )
-    !@todo: woher kommen hier die Ergebnisse????
+    load_session
 
-    if (sqlite3_error( db ) .eqv. .true.) then
-        call finalize_session(.true.)
-        return
-    end if
+    call sqlite3_prepare( db, sql, stmt, rsout )
+    call sqlite3_step( stmt, completion )
+
+    finalize_session(.false.,(completion .ne. SQLITE_DONE)))
 
 end subroutine sql_select_state
 
 !Manage multiple commands in one transaction
 #undef  ESMF_METHOD
 #define ESMF_METHOD "load_session"
-subroutine load_session(id)
+subroutine load_session
     !INITIALIZATION
     implicit none
-
-    integer,intent(inout),optional    ::  id !@todo: Standardwert wenn nicht angegeben = 0
-
-    !Treat new or one-time sessions
-    if not (curr_session_id==id) then
-        call finalize_session
-        curr_session_id=id
-        return
-    end if
 
     !Init connection to database file given by module
     if (con_active .eqv. .false.) then
@@ -117,19 +111,8 @@ subroutine load_session(id)
         con_active=.true.
     end if
 
-    !For unknown or 0 session id execute changes and close session
-    if ((session_active .eqv. .true.) &
-      and ((id==0) or not (curr_session_id==id)) then
-        call sqlite3_commit( db )
-        call finalize_session
-    end if
-
-    !For new session id store the id
-    if ((session_active .eqv. .true.) &
-      and not (curr_session_id==id)) then
-        curr_session_id=id
-    end if
-
+    !Execute previous session commands and reinit
+    if (session_active .eqv. .true.) call finalize_session(.true.,.false.)
     session_active=.true.
 
     !@todo: start async timer to terminate connection
@@ -141,32 +124,34 @@ end subroutine load_session
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "finalize_session"
-subroutine finalize_session(abort)
+subroutine finalize_session(hold_con,abort)
     !INITIALIZATION
     implicit none
 
     logical, intent(in), optional     :: hold_con,abort
     integer                           :: localrc
 
-    !Catch wrong call
+    !Catch wrong call, end session
     if not ((session_active .eqv. .true.) OR (con_active .eqv. .true.)) return
+    session_active=.false.
 
     !Commit current changes   @todo: muss hier geprüft werden ob etwas vorhanden ist?
     if not (abort .eqv. .true.) call sqlite3_commit( db )
-    session_active=.false.
-    curr_session_id=0
 
-    !check external error flag and current errors
+    !check external error flag / current errors and treat them
     if (abort .eqv. .true.) OR (sqlite3_error( db ) .eqv. .true.) then  !@todo: Kann es hier zu einem Fehler kommen, wenn noch nichts getan wurde?
         !@Error Undo changes made to database
         call sqlite3_rollback( db )
+        hold_con = .false.
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         !@todo: @Frage: funktioniert der Aufruf so und läuft die Funktion danach weiter oder wird alles abgebrochen?
     end if
 
-    !Quit connection and clear flag
-    con_active = .false.
-    call sqlite3_close( db )
+    !Quit connection and clear flag for regular shutdowns and errors
+    if (hold_con .eqv. .false.) then
+        con_active = .false.
+        call sqlite3_close( db )
+    end if
 
 end subroutine finalize_session
 
