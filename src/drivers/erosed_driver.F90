@@ -283,7 +283,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                  & sink     , sinkf   , sour     , sourf   , anymud  , wave      , &
                  & uorb     , tper    , teta     , spm_concentration , Bioeffects, &
                  & turb_difz, sigma_midlayer     , u_bottom, v_bottom, u2d       , &
-                 & v2d      , h0      , mask     , timestep, taubn   , eq_conc, layers_thickness   )
+                 & v2d      , h0      , mask     , timestep, taubn   , eq_conc, relative_thickness_of_layers,kmaxsd   )
 
 
 !
@@ -303,9 +303,9 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     type (compbsskin_argument)                             :: compbsskin_arguments
     !
     integer     , dimension(:,:)            , pointer      :: mask
-    real(fp)    , dimension(:,:,:)          , pointer      :: spm_concentration
+    real(fp)    , dimension(:,:,:,:)        , pointer      :: spm_concentration
     real(fp)    , dimension(:,:,:)          , pointer      :: sigma_midlayer !Sigma [-1,0] levels of layer centers (in sigma model)
-    real(fp)    , dimension(:,:,:)          , pointer      :: layers_thickness ! thickness of the vertcial layers
+    real(fp)    , dimension(:,:,:)          , pointer      :: relative_thickness_of_layers ! thickness of the vertcial layers
     real(fp)    , dimension(:,:)            , pointer      :: turb_difz
     real(fp)    , dimension(:,:)            , pointer      :: mfluff        ! composition of fluff layer: mass of mud fractions [kg/m2]
     real(fp)    , dimension(:,:)            , pointer      :: u2d, v2d      ! Depth-averaged velocity in u and v or x and y directions
@@ -339,6 +339,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     real(fp)    , dimension(nmlb:nmub)      , intent (in)  :: h0            ! water depth in old time step [m]
     real(fp)    , dimension(nmlb:nmub)      , intent(out)  :: eq_conc            ! Equilibrium concentration of sand fraction in kmx-layer[g.m**-3]
     integer (kind=8)                        , intent (in)  :: timestep
+    integer                                 , intent(out)  :: kmaxsd       ! index-number for kmx-layer for sand calculation
 
 ! Local variables
     real(fp)    , dimension(nmlb:nmub)          :: relativ_thick
@@ -361,8 +362,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     logical                                     :: flow2d
     integer                                     :: istat
     integer                                     :: kmx          ! index-number of the layer for calculation of zumod and umod in bedbc1993
-    integer                                     :: kmaxsd       ! index-number for kmx-layer for sand calculation
-    real(fp)                                    :: cc, lci
+    real(fp)                                    :: cc, zkmxb
 ! Bedbc1993 variables
     real(fp)                                    :: aks, ce_nm   ! aks: Van Rijn's reference height, ce_nm: equilibrium sand concentration [Kg/m^3]
     real(fp)                                    :: delr         ! Delta: ripple height
@@ -408,7 +408,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     real(fp)                                    :: thick1
 
 !
-!! executable statements ------------------lbound(layers_thickness,2):ubound(layers_thickness,2)
+!! executable statements ------------------lbound(relative_thickness_of_layers,2):ubound(relative_thickness_of_layers,2)
 !
 !#define DEBUG
     !   User defined parameters
@@ -677,7 +677,7 @@ masking: if (mask(i,j) /=0) then
 
 !
 !     calculation of kmx-cell for determination of zubed from Delft3d dwnvel subroutine
-                 do k = ubound(sigma_midlayer,3), 1, -1
+                 do k = lbound(sigma_midlayer,3),ubound(sigma_midlayer,3)
                      cc  = (1.0_fp + sigma_midlayer(i,j,k))*h(nm)
                      kmx = k
                      if (cc>=0.05_fp*h(nm) .or. cc>=0.05_fp) then
@@ -718,24 +718,23 @@ masking: if (mask(i,j) /=0) then
                       !
                       ! Calculate level of lower cell interface
                       !
-                      lci = (1.0_fp + sigma_midlayer(i,j,k)) * h(nm)- layers_thickness(i,j,k)/2.0_fp
-  !                    write (*,*) 'lci',lci,'aks',aks, 'k', k, 'sigma_midlayer (k)', sigma_midlayer(i,j,k), 'layer_thickness',layers_thickness(i,j,k)
-                      if (lci >= aks) then
+                      zkmxb = (1.0_fp + sigma_midlayer(i,j,k) - relative_thickness_of_layers(i,j,k)/2.0_fp ) * h(nm)
+  !                    write (*,*) 'zkmxb',zkmxb,'aks',aks, 'k', k, 'sigma_midlayer (k)', sigma_midlayer(i,j,k), 'layer_thickness',relative_thickness_of_layers(i,j,k)
+                      if (zkmxb >= aks) then
                          kmaxsd = k
                          exit
                       endif
                    enddo
 
                  sigsed (nm) = sigma_midlayer(i,j,kmaxsd)    ! sigam-distance of the kmx-layer to the water surface
- !                write (*,*)'sigsed', sigsed(nm), 'kmaxsd', kmaxsd
+ !                write (0,*)'timestep', timestep, 'nm,', nm,'sigsed', sigsed(nm), 'kmaxsd', kmaxsd
                  call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
 
-                 relativ_thick(nm) = layers_thickness (i,j,kmaxsd) / h(nm)
-                 thick0 = relativ_thick(nm) * h0(nm)
-                 thick1 = relativ_thick(nm) * h (nm)
+                 thick0 = relative_thickness_of_layers(i,j,kmaxsd)* h0(nm)
+                 thick1 = relative_thickness_of_layers(i,j,kmaxsd)* h (nm)
  !                write (0,*) 'step', timestep, 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
-                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relativ_thick(nm) , &
-                                   &  spm_concentration(i,j,l)/1000._fp   , vicmol ,sigmol, &
+                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relative_thickness_of_layers(i,j,kmaxsd), &
+                                   &  spm_concentration(i,j,kmaxsd,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
 !if (nm== 103) write (*,*) ' sour before RUN:',  sour (l,nm)
                 ! call soursin3d_arguments%run (timestep, nm)
