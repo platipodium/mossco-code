@@ -25,8 +25,11 @@ implicit none
 
 !DECLARATIONS
 private
-    character(len=ESMF_MAXSTR)                  :: dbname = "mossco.db"
-    type(SQLITE_DATABASE)                       :: db
+    character(len=ESMF_MAXSTR)      :: dbfile = "mossco.db"
+    type(SQLITE_DATABASE)           :: db
+    logical                         :: session_active = .false. &
+                                       con_active = .false.
+    integer                         :: curr_session_id = 0
 
     !Declare SQL States
     character(len=ESMF_MAXSTR), parameter :: sql_GetSubstanceNames &
@@ -36,8 +39,6 @@ private
 
     character(len=ESMF_MAXSTR), parameter :: sql_StateName &
         = "SELECT ;"
-
-
 
     public get_substance_list
 
@@ -49,65 +50,128 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_list"
-subroutine get_substance_list(alias) !Test-Case: alias = "TN"
+subroutine get_substance_list(alias,hold_con,listout) !Test-Case: alias = "TN"
     !INITIALIZATION
     implicit none
 
     !DECLARATIONS
     character(len=ESMF_MAXSTR), intent(in) :: alias
-    character(len=ESMF_MAXSTR)             :: sql,Replace_String
-    logical                                :: err
+    logical, intent(in)                    :: hold_con
+    character(len=ESMF_MAXSTR), intent(out):: listout
 
     !Receive names
-    sql=Replace_String(sql_GetSubstanceNames,"~name",alias)
-    !call sqlite3_do( db, sql )
-
-    !err = sqlite3_error( db )
-    !if (err == .true.) then call end_connection(.true.)
-
-    call sqlite3_commit( db )
-
-    !call end_connection(.false.)
+    call sql_select_state(sql_GetSubstanceNames,"~name",alias,listout)
 
 end subroutine get_substance_list
-!
-!
-!#undef  ESMF_METHOD
-!#define ESMF_METHOD "start_connection"
-!subroutine start_connection
-!    !INITIALIZATION
-!    implicit none
-!
-!    call sqlite3_open( "mossco.db", db )
-!
-!end subroutine start_connection
-!
-!
-!#undef  ESMF_METHOD
-!#define ESMF_METHOD "end_connection"
-!subroutine end_connection(abort)
-!    !INITIALIZATION
-!    implicit none
-!
-!    logical, intent(in), optional     :: abort
-!    if not (present(abort)) then abort = .false.
-!
-!    !@Error Undo changes made to database
-!    if abort then call sqlite3_rollback( db )
-!
-!    !Quit connection
-!    call sqlite3_close( db )
-!
-!    if abort then call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!
-!end subroutine start_connection
-!
-!
-!
-!
-!
-end module mossco_db
 
+!----------------------------------------------------------------------
+!------------------- Basic SQL Routines -------------------------------
+!----------------------------------------------------------------------
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "sql_select_state"
+subroutine sql_select_state(sql,search_list,replace_list,rsout)
+    !INITIALIZATION
+    implicit none
+
+    !DECLARATIONS
+    character(len=ESMF_MAXSTR), intent(out) :: rsout !als recordset setzen
+    character(len=ESMF_MAXSTR), intent (in) :: search_list, &
+                                               replace_list, sql
+    logical                                 :: err
+
+    !Receive names
+    forall (search_list)
+        sql=Replace_String(sql_GetSubstanceNames,search_list,replace_list)
+    end forall
+
+    call sqlite3_do( db, sql )
+    !@todo: woher kommen hier die Ergebnisse????
+
+    if (sqlite3_error( db ) .eqv. .true.) then
+        call finalize_session(.true.)
+        return
+    end if
+
+end subroutine sql_select_state
+
+!Manage multiple commands in one transaction
+#undef  ESMF_METHOD
+#define ESMF_METHOD "load_session"
+subroutine load_session(id)
+    !INITIALIZATION
+    implicit none
+
+    integer,intent(inout),optional    ::  id !@todo: Standardwert wenn nicht angegeben = 0
+
+    !Treat new or one-time sessions
+    if not (curr_session_id==id) then
+        call finalize_session
+        curr_session_id=id
+        return
+    end if
+
+    !Init connection to database file given by module
+    if (con_active .eqv. .false.) then
+        call sqlite3_open( dbfile, db )
+        con_active=.true.
+    end if
+
+    !For unknown or 0 session id execute changes and close session
+    if ((session_active .eqv. .true.) &
+      and ((id==0) or not (curr_session_id==id)) then
+        call sqlite3_commit( db )
+        call finalize_session
+    end if
+
+    !For new session id store the id
+    if ((session_active .eqv. .true.) &
+      and not (curr_session_id==id)) then
+        curr_session_id=id
+    end if
+
+    session_active=.true.
+
+    !@todo: start async timer to terminate connection
+
+end subroutine load_session
+
+
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "finalize_session"
+subroutine finalize_session(abort)
+    !INITIALIZATION
+    implicit none
+
+    logical, intent(in), optional     :: hold_con,abort
+    integer                           :: localrc
+
+    !Catch wrong call
+    if not ((session_active .eqv. .true.) OR (con_active .eqv. .true.)) return
+
+    !Commit current changes   @todo: muss hier geprüft werden ob etwas vorhanden ist?
+    if not (abort .eqv. .true.) call sqlite3_commit( db )
+    session_active=.false.
+    curr_session_id=0
+
+    !check external error flag and current errors
+    if (abort .eqv. .true.) OR (sqlite3_error( db ) .eqv. .true.) then  !@todo: Kann es hier zu einem Fehler kommen, wenn noch nichts getan wurde?
+        !@Error Undo changes made to database
+        call sqlite3_rollback( db )
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !@todo: @Frage: funktioniert der Aufruf so und läuft die Funktion danach weiter oder wird alles abgebrochen?
+    end if
+
+    !Quit connection and clear flag
+    con_active = .false.
+    call sqlite3_close( db )
+
+end subroutine finalize_session
+
+
+end module mossco_db
 
 
 !Part of http://fortranwiki.org/fortran/show/String_Functions
@@ -123,8 +187,6 @@ FUNCTION Replace_String (s,text,rep)  RESULT(outs)
        outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
     END DO
 END FUNCTION Replace_String
-
-!@todo: Umschreiben zu LoadSQL Funktion, die ein benanntes state läd und eine beliebige Anzahl ~VARS ersetzt
 
 
 
