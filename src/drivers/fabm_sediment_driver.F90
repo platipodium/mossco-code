@@ -98,36 +98,53 @@ contains
 !! Allocate memory, create a grid and fill the sed_grid_type. The number of
 !! layers is set outside in beforehand by the sediment component.
 
-subroutine init_grid(self)
-class(fabm_sed_grid) :: self
-real(rk)             :: grid_fac=10
-integer              :: i,j,k
-real(rk)             :: self_fac
+subroutine init_grid(self, rc)
 
-!! grid%inum and grid%jnum are set outside
-if ((self%inum == -1).or.(self%jnum == -1)) &
-  write(0,*) 'fabm_sediment_driver: grid size < 0'
-! total depth = 18cm
-self_fac = 0.18_rk/((self%knum+1)/2.0_rk * self%dzmin) - 1.0_rk ! the last layer is 10x thicker than the first layer
+  implicit none
 
-! create grid
-allocate(self%dz( self%inum,self%jnum,self%knum))
-allocate(self%zc( self%inum,self%jnum,self%knum))
-allocate(self%zi( self%inum,self%jnum,1:self%knum+1))
-allocate(self%dzc(self%inum,self%jnum,self%knum-1))
+  class(fabm_sed_grid) :: self
+  integer, optional    :: rc
 
-self%zi(:,:,1) = 0_rk
-do k=1,self%knum
-   do j=1,self%jnum
-      do i=1,self%inum
+  real(rk)             :: grid_fac=10
+  integer              :: i,j,k, rc_
+  real(rk)             :: self_fac
+
+  !! grid%inum and grid%jnum are set outside
+  if ((self%inum == -1).or.(self%jnum == -1)) then
+    write(0,*) 'FATAL: fabm_sediment_driver: grid size < 0'
+    stop
+  endif
+
+  !> @todo total depth should be a configurable parameter
+  ! total depth = 18cm
+  ! the last layer is 10x thicker than the first layer
+  self_fac = 0.18_rk/((self%knum+1)/2.0_rk * self%dzmin) - 1.0_rk
+
+  ! create grid with
+  ! zi = depth of interfaces of layers (vector extended by 1)
+  ! zc = depth of center of layer i
+  ! dz = layer height of layer i
+  ! dzc = difference between layer centers (vector reduced by 1)
+  allocate(self%dz( self%inum,self%jnum,self%knum))
+  allocate(self%zc( self%inum,self%jnum,self%knum))
+  allocate(self%zi( self%inum,self%jnum,1:self%knum+1))
+  allocate(self%dzc(self%inum,self%jnum,self%knum-1))
+
+  self%zi(:,:,1) = 0_rk ! by definition
+  do k=1,self%knum; do j=1,self%jnum; do i=1,self%inum
          self%dz(i,j,k) = (1.0_rk + (self_fac-1.0_rk)*(k-1)/(self%knum-1)) * self%dzmin
          self%zc(i,j,k) = self%zi(i,j,k) + 0.5_rk*self%dz(i,j,k)
          self%zi(i,j,k+1) = self%zi(i,j,k)+self%dz(i,j,k)
-      end do
-   end do
-end do
+        end do
+     end do
+  end do
 
-self%dzc = self%zc(:,:,2:self%knum) - self%zc(:,:,1:self%knum-1)
+  self%dzc = self%zc(:,:,2:self%knum) - self%zc(:,:,1:self%knum-1)
+
+  write(0,*) 'zc=',self%zc(50,10,:)
+  write(0,*) 'zi=',self%zi(50,10,:)
+  write(0,*) 'dz=',self%dz(50,10,:)
+  write(0,*) 'dzc=',self%dzc(50,10,:)
 
 end subroutine init_grid
 
@@ -352,37 +369,56 @@ end subroutine init_concentrations
 !!
 !! Check, if dzc and dz are > 0.0 and 0<porosity<1.
 
-subroutine fabm_sed_check_domain(sed)
-implicit none
+subroutine fabm_sed_check_domain(sed, rc)
 
-class(type_sed) :: sed
-integer         :: i,j,k
+  implicit none
 
-  do k=1,sed%knum
-    do j=1,sed%jnum
-      do i=1,sed%inum
-        if (.not.sed%mask(i,j,k)) then
-          ! Make sure we are in an aqueous environment
-          if ((sed%porosity(i,j,k) <= 0) .or. (sed%porosity(i,j,k) > 1)) then
-            write(0,*) 'FATAL sediment porosity out of range at (i,j,k)',i,j,k, sed%porosity(:,:,1)
-            stop
-          end if
-          if (k < sed%knum) then
-            if (sed%grid%dzc(i,j,k) <= 0) then
-              write(0,*) 'FATAL sediment grid heights <= 0 at (i,j,k)',i,j,k
-              stop
-            end if
-          endif
-          if (sed%grid%dz(i,j,k) <=0) then
-            write(0,*) 'FATAL sediment grid heights <= 0 at (i,j,k)',i,j,k
-            stop
-          end if
-        else ! if sed%mask
-          sed%conc(i,j,k,:)=1.d20
-        end if
-      end do
-    end do
-  end do
+  class(type_sed) :: sed
+  integer, optional :: rc
+  integer         :: i,j,k,rc_
+
+  rc_=0
+
+  write(0,*) 'Checking domain of size ',sed%inum,sed%jnum,sed%knum
+  write(0,*) 'shape(cond)=',shape(sed%conc),' shape(mask)=', shape(sed%mask)
+
+  if (any(.not.sed%mask.and.sed%porosity<=0)) then
+    write(0,*) 'FATAL sediment porosity <=0 '
+    stop
+  endif
+
+  if (any(.not.sed%mask.and.sed%porosity > 1)) then
+    write(0,*) 'FATAL sediment porosity > 1 '
+    stop
+  endif
+
+  if (any(.not.sed%mask(:,:,1:sed%knum-1).and..not.sed%mask(:,:,2:sed%knum) &
+    .and.sed%grid%dzc <= 0)) then
+    write(0,*) 'FATAL sediment central layer difference <= 0 '
+    do k=1,sed%knum-1; do j=1,sed%jnum; do i=1,sed%inum
+      if (.not.sed%mask(i,j,k).and..not.sed%mask(i,j,k+1).and.sed%grid%dzc(i,j,k) <= 0) &
+        write(0,*) 'dz(i,j,k) ',i,j,k, sed%grid%dzc(i,j,k)
+    enddo; enddo; enddo
+    stop
+  endif
+
+  if (any(.not.sed%mask.and.sed%grid%dz < sed%grid%dzmin)) then
+    write(0,*) 'FATAL sediment layer height < minimum value ', sed%grid%dzmin
+    do k=1,sed%knum; do j=1,sed%jnum; do i=1,sed%inum
+      if (.not.sed%mask(i,j,k).and.sed%grid%dz(i,j,k) < sed%grid%dzmin) &
+        write(0,*) 'dz(i,j,k) ',i,j,k, sed%grid%dz(i,j,k)
+    enddo; enddo; enddo
+    stop
+  endif
+
+  do k=1,sed%knum; do j=1,sed%jnum; do i=1,sed%inum
+    if (sed%mask(i,j,k)) then
+      sed%conc(i,j,k,:)=1.d20
+    endif
+  enddo; enddo; enddo
+
+  if (present(rc)) rc=rc_
+
 end subroutine fabm_sed_check_domain
 
 
