@@ -1,14 +1,14 @@
 # This Makefile is part of MOSSCO
-# 
+#
 # @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
-# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht    
-# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde  
+# @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
+# @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
-# terms of the GNU General Public License v3+.  MOSSCO is distributed in the 
-# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file 
-# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+# hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+# LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
 export MOSSCO_DIR=$(subst /src/test$,,$(PWD))
@@ -19,7 +19,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 TESTS = $(shell cat TESTS)
 
 LIBS := -lesmf  $(LIBS)
-LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) 
+LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS)
 
 .PHONY: libmossco_empty libmossco_constant libmossco_info libmossco_util libmossco_db
 
@@ -31,19 +31,22 @@ tests: $(TESTS)
 test_StateGet test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize test_FieldBounds test_FieldGet test_Grid test_GridCreate test_MPI_Initialize test_Redist test_Regrid2d test_Ugrid test_Regrid3d test_RegridLocStream test_Regrid2d_GridToMesh test_Regrid2d_GridToMesh2 test_GetArea test_precision:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@  $(LDFLAGS)  $(LIBS)
 
+test_mossco_db: test_mossco_db.F90 libmossco_db
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_db -lsqlite3 -lesmf
+
 test_mossco_strings: test_mossco_strings.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util
 
 test_Concurrency: libmossco_constant libmossco_info
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lconstant -lmossco_info -lmossco_util $(LIBS)
 
-test_ClockDestroy: libmossco_empty 
+test_ClockDestroy: libmossco_empty
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lempty -lmossco_util $(LIBS)
 
 test_Dictionary test_mossco_netcdf: libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
-test_Dictionary test_netcdf: 
+test_Dictionary test_netcdf:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(LIBS)
 
 test_Solver: libsolver
@@ -55,21 +58,14 @@ test_FabmDependencies:
 test_pointer: test_pointer.F90
 	$(F90) $< -o $@
 
-libsolver libmossco_util:
+libsolver libmossco_util libmossco_db:
 	make -C $(MOSSCO_DIR)/src/utilities $@
 
 libmossco_empty libmossco_info libmossco_constant:
-	$(MAKE) -C ../components $@
-
-libmossco_util:
-	$(MAKE) -C ../utilities $@
-
-test_mossco_db: test_mossco_db.F90 libmossco_db
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_db
+	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 clean: extraclean
 
 extraclean:
 	@- rm -f $(TESTS) PET*
 	@- rm -rf *.dSYM test_netcdf.nc
-

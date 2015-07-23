@@ -1,26 +1,29 @@
 !> @file test_mossco_db.F90
 !! @brief Tests running a simple sql state to the db
 !! @author Nils Weiher
+!! @author Carsten Lemmen
 !!
 
 program test_mossco_db
 
-use esmf
-!use sqlite
-!@todo: Kann das umgangen werden? Ist hier nötig damit SQLITE_COLUMN bekannt ist
-!aber: sqlite liegt mit in libmossco_db und wird dennoch nicht gefunden
-use mossco_db
+  !> ESMF is used here only for the ESMF_MAXSTR macro
+  use esmf, only : ESMF_MAXSTR
 
-    implicit none
-    character(len=ESMF_MAXSTR)                  :: alias
-    !type(SQLITE_COLUMN),dimension(:),pointer    :: listout
-    !Dieser Datentyp verursacht das problem
+  !> The sqlite module is used, check that $MOSSCO_DIR/modules/<your-compiler>/
+  !> sqlite.mod and sqlite_types.mod are present
+  use sqlite
+  use mossco_db
 
-    !Enter search string for test here:
-    alias = "TN"
+  implicit none
 
-    !call get_substance_list(alias,listout)
+  character(len=ESMF_MAXSTR)                  :: alias
+  type(SQLITE_COLUMN),dimension(:),pointer    :: listout
 
-    write (*,*) listout
+  !Enter search string for test here:
+  alias = "TN"
+
+  call get_substance_list(alias,listout)
+
+  write (*,*) listout
 
 end program

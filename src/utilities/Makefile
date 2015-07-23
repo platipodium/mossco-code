@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-.PHONY: libsolver libmossco_util
+.PHONY: libsolver libmossco_util libmossco_db
 
 LIBMOSSCO_UTIL_OBJS=							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_dictionary.o)	\
@@ -47,7 +47,7 @@ SQLITE_OBJS= \
   $(SQLITE_DIR)/csqlite.o
 
 ifeq ($(MOSSCO_SQLITE),true)
-  TARGETS += $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
+  TARGETS += libmossco_db
 endif
 
 # Make targets
@@ -59,6 +59,7 @@ all: libsolver libmossco_util $(TARGETS)
 
 libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
+libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 mossco_state.o : mossco_field.o mossco_state.F90
 mossco_field.o : mossco_strings.o mossco_field.F90
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
