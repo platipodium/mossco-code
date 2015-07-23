@@ -25,19 +25,19 @@ implicit none
 
 !DECLARATIONS
 private
-    character(len=ESMF_MAXSTR)                  :: dbname = "mossco.db"
-    type(SQLITE_DATABASE)                       :: db
+    character(len=ESMF_MAXSTR)      :: dbfile = "mossco.db"
+    type(SQLITE_DATABASE)           :: db
+    logical                         :: session_active=.false.
+    logical                         :: con_active=.false.
 
     !Declare SQL States
-    character(len=ESMF_MAXSTR), parameter :: sql_GetSubstanceNames &
+    character(255), parameter :: sql_GetSubstanceNames &
         = "SELECT name FROM tblsubstances JOIN tblnames on &
         tblsubstances.id= tblnames.substance_id WHERE &
         tblnames.alias=~name;"
 
     character(len=ESMF_MAXSTR), parameter :: sql_StateName &
         = "SELECT ;"
-
-
 
     public get_substance_list
 
@@ -49,73 +49,128 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_list"
-subroutine get_substance_list(alias) !Test-Case: alias = "TN"
+subroutine get_substance_list(alias,listout) !Test-Case: alias = "TN"
     !INITIALIZATION
     implicit none
 
     !DECLARATIONS
     character(len=ESMF_MAXSTR), intent(in) :: alias
-    character(len=ESMF_MAXSTR)             :: sql,Replace_String
-    logical                                :: err
+    type(SQLITE_COLUMN),dimension(:),pointer,intent(out):: listout
 
     !Receive names
-    sql=Replace_String(sql_GetSubstanceNames,"~name",alias)
-    !call sqlite3_do( db, sql )
-
-    !err = sqlite3_error( db )
-    !if (err == .true.) then call end_connection(.true.)
-
-    call sqlite3_commit( db )
-
-    !call end_connection(.false.)
+    call sql_select_state(sql_GetSubstanceNames,"~name",alias,listout)
 
 end subroutine get_substance_list
-!
-!
-!#undef  ESMF_METHOD
-!#define ESMF_METHOD "start_connection"
-!subroutine start_connection
-!    !INITIALIZATION
-!    implicit none
-!
-!    call sqlite3_open( "mossco.db", db )
-!
-!end subroutine start_connection
-!
-!
-!#undef  ESMF_METHOD
-!#define ESMF_METHOD "end_connection"
-!subroutine end_connection(abort)
-!    !INITIALIZATION
-!    implicit none
-!
-!    logical, intent(in), optional     :: abort
-!    if not (present(abort)) then abort = .false.
-!
-!    !@Error Undo changes made to database
-!    if abort then call sqlite3_rollback( db )
-!
-!    !Quit connection
-!    call sqlite3_close( db )
-!
-!    if abort then call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!
-!end subroutine start_connection
-!
-!
-!
-!
-!
-end module mossco_db
+
+!----------------------------------------------------------------------
+!------------------- Basic SQL Routines -------------------------------
+!----------------------------------------------------------------------
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "sql_select_state"
+subroutine sql_select_state(sql,search_list,replace_list,rsout)
+    !INITIALIZATION
+    implicit none
+
+    !DECLARATIONS
+    type(SQLITE_COLUMN),dimension(:),pointer,intent(out):: rsout
+    !character(*),dimension(:),intent(in)    :: search_list
+    !character(*),dimension(:),intent(in)    :: replace_list
+    !@todo: als array
+    character(*),intent(in)                :: search_list
+    character(*),intent(in)                :: replace_list
+
+    character(255)                          :: sql
+    type(SQLITE_STATEMENT)                  :: stmt
+    logical                                 :: err
+    integer                                 :: i, completion
+
+    !Receive names
+
+    sql=Replace_String(sql,search_list,replace_list)
+!    do i=1,20 !@todo: dynamische Länge - dim(search_list)
+!        if (search_list(i)=="") exit !temp Lsg
+!        sql=Replace_String(sql,search_list(i),replace_list(i))
+!    end do
+
+    !forall (i=1:20) !funktioniert nicht
+        !call Replace_String(sql,search_list(i),replace_list(i))
+    !end forall
+
+    call sqlite3_prepare( db, sql, stmt, rsout )
+    call sqlite3_step( stmt, completion )
+
+    call finalize_session(.false.,(completion .ne. SQLITE_DONE))
+
+end subroutine sql_select_state
 
 
+!Manage multiple commands in one transaction
+!Commits pending transaction and starts new session
+#undef  ESMF_METHOD
+#define ESMF_METHOD "load_session"
+subroutine load_session
+    !INITIALIZATION
+    implicit none
+
+    !Init connection to database file given by module
+    if (con_active .eqv. .false.) then
+        call sqlite3_open( dbfile, db )
+        con_active=.true.
+    end if
+
+    !Execute previous session commands and reinit
+    if (session_active .eqv. .true.) call finalize_session(.true.,.false.)
+    session_active=.true.
+
+    !@todo: start async timer to terminate connection
+
+end subroutine load_session
+
+
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "finalize_session"
+subroutine finalize_session(hold_con,abort)
+    !INITIALIZATION
+    implicit none
+
+    logical, intent(in), optional     :: hold_con,abort
+    logical                           :: hcon
+    integer                           :: localrc
+    hcon=hold_con
+
+    !Catch wrong call, end session
+    if ((session_active .neqv. .true.) .and. (con_active .neqv. .true.)) return
+    session_active=.false.
+
+    !Commit current changes             @todo: muss hier vorher geprüft werden ob etwas vorhanden ist?
+    if (abort .eqv. .false.) call sqlite3_commit( db )
+
+    !check external error flag / current errors and treat them
+    if ((abort .eqv. .true.) .OR. (sqlite3_error( db ) .eqv. .true.)) then  !@todo: Kann es hier zu einem Fehler kommen, wenn noch nichts getan wurde?
+        !@Error Undo changes made to database
+        call sqlite3_rollback( db )
+        hcon = .false.
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !@todo: @Frage: funktioniert der Aufruf so und läuft die Funktion danach weiter oder wird alles abgebrochen?
+    end if
+
+    !Quit connection and clear flag for regular shutdowns and errors
+    if (hcon .eqv. .false.) then
+        con_active = .false.
+        call sqlite3_close( db )
+    end if
+
+end subroutine finalize_session
 
 !Part of http://fortranwiki.org/fortran/show/String_Functions
 !Created on August 30, 2013 00:43:41 by Jason Blevins (174.101.45.6) (5815 characters / 2.0 pages)
 FUNCTION Replace_String (s,text,rep)  RESULT(outs)
-    CHARACTER(*)        :: s,text,rep
-    CHARACTER(LEN(s)+100) :: outs     ! provide outs with extra 100 char len
-    INTEGER             :: i, nt, nr
+    CHARACTER(*),intent(in)         :: s,text,rep
+    CHARACTER(LEN(s)+100)           :: outs     ! provide outs with extra 100 char len
+    INTEGER                         :: i, nt, nr
 
     outs = s ; nt = LEN_TRIM(text) ; nr = LEN_TRIM(rep)
     DO
@@ -124,7 +179,9 @@ FUNCTION Replace_String (s,text,rep)  RESULT(outs)
     END DO
 END FUNCTION Replace_String
 
-!@todo: Umschreiben zu LoadSQL Funktion, die ein benanntes state läd und eine beliebige Anzahl ~VARS ersetzt
+end module mossco_db
+
+
 
 
 
