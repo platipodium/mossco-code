@@ -18,6 +18,31 @@ include $(MOSSCO_DIR)/src/Rules.make
 EXTRA_DIST =
 SUBDIRS =
 
+CVS?=$(shell which cvs)
+SVN?=$(shell which svn)
+GIT?=$(shell which git)
+
+ifeq ($(GIT),)
+  $(error "could not find `git´ executable")
+  GIT_CLONE_TARGETS=
+else
+  GIT_CLONE_TARGETS=git-clone
+endif
+
+ifeq ($(SVN),)
+  $(warning "could not find `svn´ executable")
+  SVN_CLONE_TARGETS=
+else
+  SVN_CLONE_TARGETS=svn-clone
+endif
+
+ifeq ($(CVS),)
+  $(warning "could not find `cvs´ executable")
+  CVS_CLONE_TARGETS=
+else
+  CVS_CLONE_TARGETS=cvs-clone
+endif
+
 .PHONY: all clean extraclean subdirs $(SUBDIRS) clone update
 .PHONY: fabm_clone  gotm_clone  getm_clone  erosed-svn-clone flibs-cvs-clone json_clone
 .PHONY: fabm_update gotm_update getm_update erosed-svn-update flibs-cvs-update json_update
@@ -25,7 +50,12 @@ SUBDIRS =
 
 all: clone
 
-clone:  fabm_clone  gotm_clone  getm_clone  flibs-cvs-clone json_clone #erosed-svn-clone
+clone: $(GIT_CLONE_TARGETS) $(SVN_CLONE_TARGETS) $(CVS_CLONE_TARGETS)
+
+git-clone: fabm_clone  gotm_clone  getm_clone  json_clone
+cvs-clone: flibs-cvs-clone json_clone
+svn-clone: #erosed-svn-clone
+
 update: fabm_update gotm_update getm_update flibs-cvs-update json_update #erosed-svn-update
 
 clean: extraclean
@@ -49,31 +79,31 @@ sqlite-zip:
 
 fabm_clone fabm_update:
 ifeq ($(wildcard $(external_FABMDIR)/src/fabm.F90),)
-	git clone http://git.code.sf.net/p/fabm/code $(external_FABMDIR)
+	$(GIT) clone http://git.code.sf.net/p/fabm/code $(external_FABMDIR)
 else
-	( cd $(external_FABMDIR) && git pull )
+	( cd $(external_FABMDIR) && $(GIT) pull )
 endif
 ifeq ($(wildcard $(external_FABMDIR)/.git/refs/remotes/mossco/master),)
-	( cd $(external_FABMDIR) && git remote add -f mossco http://git.code.sf.net/p/mossco/fabm && git checkout -b mossco mossco/master )
+	( cd $(external_FABMDIR) && $(GIT) remote add -f mossco http://git.code.sf.net/p/mossco/fabm && $(GIT) checkout -b mossco mossco/master )
 endif
 
 json_clone json_update:
 ifeq ($(wildcard $(external_JSONDIR)/src/json_module.F90),)
-	git clone https://github.com/jacobwilliams/json-fortran.git $(external_JSONDIR)
+	$(GIT) clone https://github.com/jacobwilliams/json-fortran.$(GIT) $(external_JSONDIR)
 else
-	( cd $(external_JSONDIR) && git pull )
+	( cd $(external_JSONDIR) && $(GIT) pull )
 endif
 
 gotm_clone:
 ifeq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
-	git clone http://git.code.sf.net/p/gotm/code $(external_GOTMDIR)
+	$(GIT) clone http://git.code.sf.net/p/gotm/code $(external_GOTMDIR)
 else
 	$(MAKE) gotm_update
 endif
 
 gotm_update:
 ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
-	( cd $(external_GOTMDIR) ; git pull origin master )
+	( cd $(external_GOTMDIR) ; $(GIT) pull origin master )
 endif
 
 gotm_distclean:
@@ -83,15 +113,15 @@ endif
 
 getm_clone:
 ifeq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	git clone http://git.code.sf.net/p/getm/code $(external_GETMDIR)
-	( cd $(external_GETMDIR) ; git checkout -b iow origin/iow )
+	$(GIT) clone http://git.code.sf.net/p/getm/code $(external_GETMDIR)
+	( cd $(external_GETMDIR) ; $(GIT) checkout -b iow origin/iow )
 else
 	$(MAKE) getm_update
 endif
 
 getm_update:
 ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
-	( cd $(external_GETMDIR) ; git pull origin iow)
+	( cd $(external_GETMDIR) ; $(GIT) pull origin iow)
 endif
 
 getm_distclean:
