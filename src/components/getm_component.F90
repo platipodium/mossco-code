@@ -1807,7 +1807,7 @@ module getm_component
    REALTYPE,dimension(:,:)  ,pointer    :: p_vel
    REALTYPE,dimension(:,:,:),pointer    :: p_vel3d
    integer                              :: k,klen
-   REALTYPE,parameter                   :: vel_missing=-9999.0
+   REALTYPE,parameter                   :: vel_missing=0.0d0
 !EOP
 !-----------------------------------------------------------------------
 !BOC
