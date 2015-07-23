@@ -3,7 +3,6 @@ test_Clock
 test_ClockDestroy
 test_Concurrency
 test_DerivedTypes
-test_Dictionary
 test_ESMF_Initialize
 test_FabmDependencies
 test_FieldBounds
@@ -19,3 +18,4 @@ test_Regrid3d
 test_RegridLocStream
 test_Solver
 test_Ugrid
+test_mossco_db

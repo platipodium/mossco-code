@@ -27,12 +27,11 @@ implicit none
 private
     character(len=ESMF_MAXSTR)      :: dbfile = "mossco.db"
     type(SQLITE_DATABASE)           :: db
-    logical                         :: session_active = .false. &
-                                       con_active = .false.
-    integer                         :: curr_session_id = 0
+    logical                         :: session_active=.false.
+    logical                         :: con_active=.false.
 
     !Declare SQL States
-    character(len=ESMF_MAXSTR), parameter :: sql_GetSubstanceNames &
+    character(255), parameter :: sql_GetSubstanceNames &
         = "SELECT name FROM tblsubstances JOIN tblnames on &
         tblsubstances.id= tblnames.substance_id WHERE &
         tblnames.alias=~name;"
@@ -56,8 +55,7 @@ subroutine get_substance_list(alias,listout) !Test-Case: alias = "TN"
 
     !DECLARATIONS
     character(len=ESMF_MAXSTR), intent(in) :: alias
-    logical, intent(in)                    :: hold_con
-    character(len=ESMF_MAXSTR), intent(out):: listout
+    type(SQLITE_COLUMN),dimension(:),pointer,intent(out):: listout
 
     !Receive names
     call sql_select_state(sql_GetSubstanceNames,"~name",alias,listout)
@@ -75,30 +73,40 @@ subroutine sql_select_state(sql,search_list,replace_list,rsout)
     implicit none
 
     !DECLARATIONS
-    type(SQLITE_COLUMN), intent(out)        :: rsout
-    character(len=ESMF_MAXSTR), intent (in) :: search_list, &
-                                               replace_list, sql
+    type(SQLITE_COLUMN),dimension(:),pointer,intent(out):: rsout
+    !character(*),dimension(:),intent(in)    :: search_list
+    !character(*),dimension(:),intent(in)    :: replace_list
+    !@todo: als array
+    character(*),intent(in)                :: search_list
+    character(*),intent(in)                :: replace_list
+
+    character(255)                          :: sql
     type(SQLITE_STATEMENT)                  :: stmt
     logical                                 :: err
-    real                                    :: i
-
-
+    integer                                 :: i, completion
 
     !Receive names
-    forall (i=1:N,search_list(i) .ne. 0.0)
-        sql=Replace_String(sql,search_list(i),replace_list(i))
-    end forall
 
-    load_session
+    sql=Replace_String(sql,search_list,replace_list)
+!    do i=1,20 !@todo: dynamische Länge - dim(search_list)
+!        if (search_list(i)=="") exit !temp Lsg
+!        sql=Replace_String(sql,search_list(i),replace_list(i))
+!    end do
+
+    !forall (i=1:20) !funktioniert nicht
+        !call Replace_String(sql,search_list(i),replace_list(i))
+    !end forall
 
     call sqlite3_prepare( db, sql, stmt, rsout )
     call sqlite3_step( stmt, completion )
 
-    finalize_session(.false.,(completion .ne. SQLITE_DONE)))
+    call finalize_session(.false.,(completion .ne. SQLITE_DONE))
 
 end subroutine sql_select_state
 
+
 !Manage multiple commands in one transaction
+!Commits pending transaction and starts new session
 #undef  ESMF_METHOD
 #define ESMF_METHOD "load_session"
 subroutine load_session
@@ -129,42 +137,40 @@ subroutine finalize_session(hold_con,abort)
     implicit none
 
     logical, intent(in), optional     :: hold_con,abort
+    logical                           :: hcon
     integer                           :: localrc
+    hcon=hold_con
 
     !Catch wrong call, end session
-    if not ((session_active .eqv. .true.) OR (con_active .eqv. .true.)) return
+    if ((session_active .neqv. .true.) .and. (con_active .neqv. .true.)) return
     session_active=.false.
 
-    !Commit current changes   @todo: muss hier geprüft werden ob etwas vorhanden ist?
-    if not (abort .eqv. .true.) call sqlite3_commit( db )
+    !Commit current changes             @todo: muss hier vorher geprüft werden ob etwas vorhanden ist?
+    if (abort .eqv. .false.) call sqlite3_commit( db )
 
     !check external error flag / current errors and treat them
-    if (abort .eqv. .true.) OR (sqlite3_error( db ) .eqv. .true.) then  !@todo: Kann es hier zu einem Fehler kommen, wenn noch nichts getan wurde?
+    if ((abort .eqv. .true.) .OR. (sqlite3_error( db ) .eqv. .true.)) then  !@todo: Kann es hier zu einem Fehler kommen, wenn noch nichts getan wurde?
         !@Error Undo changes made to database
         call sqlite3_rollback( db )
-        hold_con = .false.
+        hcon = .false.
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         !@todo: @Frage: funktioniert der Aufruf so und läuft die Funktion danach weiter oder wird alles abgebrochen?
     end if
 
     !Quit connection and clear flag for regular shutdowns and errors
-    if (hold_con .eqv. .false.) then
+    if (hcon .eqv. .false.) then
         con_active = .false.
         call sqlite3_close( db )
     end if
 
 end subroutine finalize_session
 
-
-end module mossco_db
-
-
 !Part of http://fortranwiki.org/fortran/show/String_Functions
 !Created on August 30, 2013 00:43:41 by Jason Blevins (174.101.45.6) (5815 characters / 2.0 pages)
 FUNCTION Replace_String (s,text,rep)  RESULT(outs)
-    CHARACTER(*)        :: s,text,rep
-    CHARACTER(LEN(s)+100) :: outs     ! provide outs with extra 100 char len
-    INTEGER             :: i, nt, nr
+    CHARACTER(*),intent(in)         :: s,text,rep
+    CHARACTER(LEN(s)+100)           :: outs     ! provide outs with extra 100 char len
+    INTEGER                         :: i, nt, nr
 
     outs = s ; nt = LEN_TRIM(text) ; nr = LEN_TRIM(rep)
     DO
@@ -172,6 +178,10 @@ FUNCTION Replace_String (s,text,rep)  RESULT(outs)
        outs = outs(:i-1) // rep(:nr) // outs(i+nt:)
     END DO
 END FUNCTION Replace_String
+
+end module mossco_db
+
+
 
 
 

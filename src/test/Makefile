@@ -21,7 +21,7 @@ TESTS = $(shell cat TESTS)
 LIBS := -lesmf  $(LIBS)
 LDFLAGS += $(MOSSCO_F90LDFLAGS) $(LIBRARY_PATHS) 
 
-.PHONY: libmossco_empty libmossco_constant libmossco_info libmossco_util
+.PHONY: libmossco_empty libmossco_constant libmossco_info libmossco_util libmossco_db
 
 .PHONY: all tests $(TESTS)
 all: tests
@@ -63,6 +63,9 @@ libmossco_empty libmossco_info libmossco_constant:
 
 libmossco_util:
 	$(MAKE) -C ../utilities $@
+
+test_mossco_db: test_mossco_db.F90 libmossco_db
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_db
 
 clean: extraclean
 
