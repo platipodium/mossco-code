@@ -19,4 +19,6 @@ test_Regrid3d
 test_RegridLocStream
 test_Solver
 test_Ugrid
+test_mossco_netcdf
+test_mossco_db
 *dSYM

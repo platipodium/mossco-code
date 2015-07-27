@@ -23,21 +23,17 @@ use sqlite
 
 implicit none
 
-!DECLARATIONS
 private
+    !MODULE VARS
     character(len=ESMF_MAXSTR)      :: dbfile = "mossco.db"
+    !@dev: atm file must be present in the EYXECUTING folder (i.e. in src/test)
     type(SQLITE_DATABASE)           :: db
     logical                         :: session_active=.false.
     logical                         :: con_active=.false.
 
-    !Declare SQL States
-    character(255), parameter :: sql_GetSubstanceNames &
-        = "SELECT name FROM tblsubstances JOIN tblnames on &
-        tblsubstances.id= tblnames.substance_id WHERE &
-        tblnames.alias=~name;"
+    !@dev: shift all sql states as parameter to here
 
-    character(len=ESMF_MAXSTR), parameter :: sql_StateName &
-        = "SELECT ;"
+
 
     public get_substance_list
 
@@ -49,16 +45,68 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_list"
-subroutine get_substance_list(alias,listout) !Test-Case: alias = "TN"
-    !INITIALIZATION
+subroutine get_substance_list(alias,listout)
+    !------------------------------------------------------------------
     implicit none
 
-    !DECLARATIONS
-    character(len=ESMF_MAXSTR), intent(in) :: alias
-    type(SQLITE_COLUMN),dimension(:),pointer,intent(out):: listout
+    !INPUTS/OUTPUTS
+    character(len=ESMF_MAXSTR), intent(in) &
+                                       :: alias
+    !character(len=ESMF_MAXSTR),dimension(:),pointer,intent(out) &
+    character(ESMF_MAXSTR) &
+                                       :: listout
 
-    !Receive names
-    call sql_select_state(sql_GetSubstanceNames,"~name",alias,listout)
+    !LOCAL VARS
+    character(255)                     :: sql &
+       = "SELECT Alias FROM tblnames WHERE tblnames.Alias='TN';"
+!        = "SELECT ts.SubstanceName &
+!        FROM (tblSubstances JOIN tblNames &
+!        ON tblSubstances.ID=tblNames.Substance_ID) ts &
+!        WHERE tblNames.Alias='~name';"
+!        = "SELECT SubstanceName FROM tblSubstances WHERE SubstanceName='N';"
+
+    character(len=ESMF_MAXSTR)         :: search_list="~name"
+
+    type(SQLITE_STATEMENT)             :: stmt
+    integer                            :: completion
+    type(SQLITE_COLUMN), dimension(:), pointer &
+                                       :: col
+    character(ESMF_MAXSTR)             :: SubstanceName
+    logical                            :: finished
+    !------------------------------------------------------------------
+
+    !Construct recordset for return values
+    allocate( col(1) )
+    call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
+
+
+!@dev: automation in sql_select_state
+ !problem: connection closes in select state, recordset must be automatically built before closing the connection
+!......................................................................
+    !connect to database
+    call sqlite3_open( 'mossco.db', db )
+
+    if (.not. (search_list=="")) sql=Replace_String(sql,search_list,alias)
+
+    !@temp
+    write (*,*) sql
+
+    call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_prepare( db, sql, stmt, col )
+    call sqlite3_step( stmt, completion )
+
+    !@todo: Loop zum Schreiben aller Werte in den Array
+    call sqlite3_next_row( stmt, col, finished )
+    call sqlite3_get_column( col(1), SubstanceName)
+
+    listout=SubstanceName
+
+    call sqlite3_close( db )
+!......................................................................
+
+    !call sql_select_state(sql,"","",listout)
+
+    !@todo: listout umwandeln in MOSSCO-ARRAY
 
 end subroutine get_substance_list
 
@@ -66,52 +114,19 @@ end subroutine get_substance_list
 !------------------- Basic SQL Routines -------------------------------
 !----------------------------------------------------------------------
 
-#undef  ESMF_METHOD
-#define ESMF_METHOD "sql_select_state"
-subroutine sql_select_state(sql,search_list,replace_list,rsout)
-    !INITIALIZATION
-    implicit none
-
-    !DECLARATIONS
-    type(SQLITE_COLUMN),dimension(:),pointer,intent(out):: rsout
-    !character(*),dimension(:),intent(in)    :: search_list
-    !character(*),dimension(:),intent(in)    :: replace_list
-    !@todo: als array
-    character(*),intent(in)                :: search_list
-    character(*),intent(in)                :: replace_list
-
-    character(255)                          :: sql
-    type(SQLITE_STATEMENT)                  :: stmt
-    logical                                 :: err
-    integer                                 :: i, completion
-
-    !Receive names
-
-    sql=Replace_String(sql,search_list,replace_list)
-!    do i=1,20 !@todo: dynamische Länge - dim(search_list)
-!        if (search_list(i)=="") exit !temp Lsg
-!        sql=Replace_String(sql,search_list(i),replace_list(i))
-!    end do
-
-    !forall (i=1:20) !funktioniert nicht
-        !call Replace_String(sql,search_list(i),replace_list(i))
-    !end forall
-
-    call sqlite3_prepare( db, sql, stmt, rsout )
-    call sqlite3_step( stmt, completion )
-
-    call finalize_session(.false.,(completion .ne. SQLITE_DONE))
-
-end subroutine sql_select_state
-
-
 !Manage multiple commands in one transaction
 !Commits pending transaction and starts new session
 #undef  ESMF_METHOD
 #define ESMF_METHOD "load_session"
 subroutine load_session
-    !INITIALIZATION
+    !------------------------------------------------------------------
     implicit none
+
+    !INPUTS/OUTPUTS
+
+    !LOCAL VARS
+
+    !------------------------------------------------------------------
 
     !Init connection to database file given by module
     if (con_active .eqv. .false.) then
@@ -133,12 +148,17 @@ end subroutine load_session
 #undef  ESMF_METHOD
 #define ESMF_METHOD "finalize_session"
 subroutine finalize_session(hold_con,abort)
-    !INITIALIZATION
+    !------------------------------------------------------------------
     implicit none
 
+    !INPUTS/OUTPUTS
     logical, intent(in), optional     :: hold_con,abort
+
+    !LOCAL VARS
     logical                           :: hcon
     integer                           :: localrc
+    !------------------------------------------------------------------
+
     hcon=hold_con
 
     !Catch wrong call, end session
@@ -153,7 +173,7 @@ subroutine finalize_session(hold_con,abort)
         !@Error Undo changes made to database
         call sqlite3_rollback( db )
         hcon = .false.
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) @todo: Meldung aktivieren
         !@todo: @Frage: funktioniert der Aufruf so und läuft die Funktion danach weiter oder wird alles abgebrochen?
     end if
 
@@ -164,6 +184,62 @@ subroutine finalize_session(hold_con,abort)
     end if
 
 end subroutine finalize_session
+
+!----------------------------------------------------------------------
+!------------------- IN DEV - BASIC SQL ROUTINES ----------------------
+!----------------------------------------------------------------------
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "sql_select_state"
+subroutine sql_select_state(sql,search_list,replace_list,rsout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS / OUTPUTS
+    character(len=ESMF_MAXSTR),intent(in),optional &
+                                           :: search_list, replace_list !@todo: Als Arrays
+    type(SQLITE_COLUMN),dimension(:),pointer &
+                                           :: col
+    character(255)                         :: sql
+    character(len=ESMF_MAXSTR), dimension(:), intent(out) &
+                                           :: rsout
+
+    !LOCAL VARS
+    !character(*),dimension(:),intent(in)  :: search_list
+    !character(*),dimension(:),intent(in)  :: replace_list
+    !@todo: als array
+    type(SQLITE_STATEMENT)                 :: stmt
+    logical                                :: err, finished
+    integer                                :: i, completion
+    !------------------------------------------------------------------
+
+    !@temp
+    return
+
+    !Replace tags with values given by variables
+    if (.not. (search_list=="")) sql=Replace_String(sql,search_list,replace_list)
+    !@todo: dynamische Länge - dim(search_list)
+!    do i=1,20
+!        if (search_list(i)=="") exit !temp Lsg
+!        sql=Replace_String(sql,search_list(i),replace_list(i))
+!    end do
+
+    !Init connection and start a new Transaction
+    call load_session
+
+    call sqlite3_prepare( db, sql, stmt, col )
+    call sqlite3_step( stmt, completion )
+
+    call finalize_session(.false.,(completion .ne. SQLITE_DONE))
+
+    !@dev: auto-create fitting "column" for query
+
+end subroutine sql_select_state
+
+
+!----------------------------------------------------------------------
+!------------------- GENERAL FUNCTIONS --------------------------------
+!----------------------------------------------------------------------
 
 !Part of http://fortranwiki.org/fortran/show/String_Functions
 !Created on August 30, 2013 00:43:41 by Jason Blevins (174.101.45.6) (5815 characters / 2.0 pages)

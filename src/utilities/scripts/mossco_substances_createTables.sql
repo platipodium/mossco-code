@@ -33,8 +33,10 @@ CREATE TABLE  IF NOT EXISTS "tblRecipesSubstances" (
      FOREIGN KEY ("Substance_ID") REFERENCES "tblSubstances" ("ID")
 );
 
-INSERT INTO "tblsubstances" (SubstanceName) VALUES ("N");
-INSERT INTO "tblnames" (substance_id, alias) VALUES ( last_insert_rowid(), "TN");
-
 ANALYZE sqlite_master;
 COMMIT;
+
+INSERT INTO "tblsubstances" (SubstanceName) VALUES ("N");
+INSERT INTO "tblnames" (Substance_ID, alias) VALUES ( last_insert_rowid(), "TN");
+
+SELECT SubstanceName FROM (tblSubstances JOIN tblNames on tblSubstances.ID=tblNames.Substance_ID) tb WHERE tblNames.Alias='TN';

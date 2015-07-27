@@ -5,25 +5,42 @@
 !!
 
 program test_mossco_db
+    !> ESMF is used here only for the ESMF_MAXSTR macro
+    use esmf, only : ESMF_MAXSTR
 
-  !> ESMF is used here only for the ESMF_MAXSTR macro
-  use esmf, only : ESMF_MAXSTR
+    !> The sqlite module is used, check that $MOSSCO_DIR/modules/<your-compiler>/
+    !> sqlite.mod and sqlite_types.mod are present
+    use sqlite
+    use mossco_db
 
-  !> The sqlite module is used, check that $MOSSCO_DIR/modules/<your-compiler>/
-  !> sqlite.mod and sqlite_types.mod are present
-  use sqlite
-  use mossco_db
+    !------------------------------------------------------------------
+    implicit none
 
-  implicit none
+    !INPUTS/OUTPUTS
 
-  character(len=ESMF_MAXSTR)                  :: alias
-  type(SQLITE_COLUMN),dimension(:),pointer    :: listout
+    !LOCAL VARS
+    !@temp
+    character(len=ESMF_MAXSTR)           :: alias
+    !character(len=ESMF_MAXSTR),dimension(:),pointer &
+    character(ESMF_MAXSTR) &
+                                         :: listout
+    logical                              :: finished
+    !------------------------------------------------------------------
 
-  !Enter search string for test here:
-  alias = "TN"
+    !******************************************************************
+    !************* Enter search string for test here: *****************
+    !******************************************************************
+    alias = "TN"
+    !******************************************************************
+    !******************************************************************
 
-  call get_substance_list(alias,listout)
+    write (*,*) "Searching db for name & 
+    connected to alias '" // alias // "', found:"
 
-  write (*,*) listout
+    call get_substance_list(alias,listout)
+
+    write (*,*) listout
+
+    write (*,*) "test finished"
 
 end program

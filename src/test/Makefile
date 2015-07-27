@@ -32,7 +32,7 @@ test_StateGet test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize te
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@  $(LDFLAGS)  $(LIBS)
 
 test_mossco_db: test_mossco_db.F90 libmossco_db
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_db -lsqlite3 -lesmf
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_db -lsqlite3
 
 test_mossco_strings: test_mossco_strings.F90 libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util

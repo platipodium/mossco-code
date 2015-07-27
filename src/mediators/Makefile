@@ -61,8 +61,10 @@ libsurfacescoupler: prefix $(MOSSCO_LIBRARY_PATH)/libsurfacescoupler.a(surfaces_
 pelagicbenthiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(pelagic_benthic_coupler.o)
 pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(pelagic_soil_connector.o)
 pelagicsoilconnector: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_connector.o)
+ifeq ($(MOSSCO_SQLITE),true)
+soilpelagicmediator: libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_mediator.a(soil_pelagic_mediator.o)
+endif
 benthicpelagiccoupler: libmossco_util $(MOSSCO_LIBRARY_PATH)/libpelagicbenthiccoupler.a(benthic_pelagic_coupler.o)
-soilpelagicmediator: libmossco_util $(MOSSCO_LIBRARY_PATH)/libsoilpelagicmediator.a(soil_pelagic_mediator.o)
 
 libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
