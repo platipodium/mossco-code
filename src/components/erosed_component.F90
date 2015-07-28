@@ -921,11 +921,11 @@ contains
         !> @todo This allocation might be critical if the field has totalwidth (halo zones)
         !>        We might have to allocate with these halo zones (not until we get into trouble)
         allocate (size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(inum, jnum))
-!        do j=1,jnum
-!          do i= 1, inum
-!            size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(i,j) = sink(n,inum*(j -1)+i)-sour(n,inum*(j -1)+i)
-!          end do
-!        end do
+        do j=1,jnum
+          do i= 1, inum
+            size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(i,j) = sink(n,inum*(j -1)+i)-sour(n,inum*(j -1)+i)
+          end do
+        end do
         ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr
 
        field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
