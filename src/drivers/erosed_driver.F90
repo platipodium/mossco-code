@@ -305,7 +305,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     integer     , dimension(:,:)            , pointer      :: mask
     real(fp)    , dimension(:,:,:,:)        , pointer      :: spm_concentration
     real(fp)    , dimension(:,:,:)          , pointer      :: sigma_midlayer !Sigma [-1,0] levels of layer centers (in sigma model)
-    real(fp)    , dimension(:,:,:)          , pointer      :: relative_thickness_of_layers ! thickness of the vertcial layers
+    real(fp)    , dimension(:)              , pointer      :: relative_thickness_of_layers ! thickness of the vertcial layers
     real(fp)    , dimension(:,:)            , pointer      :: turb_difz
     real(fp)    , dimension(:,:)            , pointer      :: mfluff        ! composition of fluff layer: mass of mud fractions [kg/m2]
     real(fp)    , dimension(:,:)            , pointer      :: u2d, v2d      ! Depth-averaged velocity in u and v or x and y directions
@@ -707,7 +707,7 @@ masking: if (mask(i,j) /=0) then
                  call bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
 !write (*,*) ' taubcw- current wave bed shear', taubcw, 'current-only bed shear stress',tauc(nm), 'wave-only bed shear stress' ,tauwav(nm)
                  ce_nm =ce_nm * frac(l,nm)
-                 taubn(nm) = (ta +1.0_fp)*taucr(l)*(1.0_fp + mudfrac(nm))**3
+                 taubn(nm) = taubcw
                  eq_conc (nm) = ce_nm * rhosol (l) *1000.0_fp   !g.m**-3
 
 
@@ -718,8 +718,8 @@ masking: if (mask(i,j) /=0) then
                       !
                       ! Calculate level of lower cell interface
                       !
-                      zkmxb = (1.0_fp + sigma_midlayer(i,j,k) - relative_thickness_of_layers(i,j,k)/2.0_fp ) * h(nm)
-  !                    write (*,*) 'zkmxb',zkmxb,'aks',aks, 'k', k, 'sigma_midlayer (k)', sigma_midlayer(i,j,k), 'layer_thickness',relative_thickness_of_layers(i,j,k)
+                      zkmxb = (1.0_fp + sigma_midlayer(i,j,k) - relative_thickness_of_layers(k)/2.0_fp ) * h(nm)
+  !                    write (*,*) 'zkmxb',zkmxb,'aks',aks, 'k', k, 'sigma_midlayer (k)', sigma_midlayer(i,j,k), 'layer_thickness',relative_thickness_of_layers(k)
                       if (zkmxb >= aks) then
                          kmaxsd = k
                          exit
@@ -730,10 +730,10 @@ masking: if (mask(i,j) /=0) then
  !                write (0,*)'timestep', timestep, 'nm,', nm,'sigsed', sigsed(nm), 'kmaxsd', kmaxsd
                  call calc_seddif (seddif, ws (l,nm), tauwav(nm), tauc(nm), turb_difz(i,j), ustarc)
 
-                 thick0 = relative_thickness_of_layers(i,j,kmaxsd)* h0(nm)
-                 thick1 = relative_thickness_of_layers(i,j,kmaxsd)* h (nm)
+                 thick0 = relative_thickness_of_layers(kmaxsd)* h0(nm)
+                 thick1 = relative_thickness_of_layers(kmaxsd)* h (nm)
  !                write (0,*) 'step', timestep, 'nm= ', nm, 'relativ_thick', relativ_thick(nm),'h0 ', h0(nm), ' h',h(nm)
-                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relative_thickness_of_layers(i,j,kmaxsd), &
+                 call soursin3d_arguments%set (h (nm)  ,thick0 ,thick1    , sigsed (nm) ,relative_thickness_of_layers(kmaxsd), &
                                    &  spm_concentration(i,j,kmaxsd,l)/1000._fp   , vicmol ,sigmol, &
                                    &  seddif, rhosol (l),ce_nm , ws (l,nm), aks  )
 !if (nm== 103) write (*,*) ' sour before RUN:',  sour (l,nm)
