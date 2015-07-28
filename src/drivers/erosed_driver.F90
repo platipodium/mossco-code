@@ -713,9 +713,11 @@ masking: if (mask(i,j) /=0) then
 
 
                  ! Delft3d-Find bottom cell for SAND sediment calculations
-                   !
+                   !in delft3d sig (1:kmax) starts from toplayer to the bottom kmax
+                   ! and the following loop starts from kmax-1 to 1, with -1 steps
+                   ! Wehereas in getm the layers start from bottom (1) to the toplayer (kmax)
                    kmaxsd = 1
-                   do k = lbound(sigma_midlayer,3),ubound(sigma_midlayer,3)
+                   do k = lbound(sigma_midlayer,3)+1,ubound(sigma_midlayer,3)
                       !
                       ! Calculate level of lower cell interface
                       !
