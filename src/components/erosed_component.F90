@@ -57,8 +57,9 @@ module erosed_component
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
-  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer::  layers_height=>null(), relative_thickness_of_layers=>null(),sigma_midlayer=>null()
+  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer::  layers_height=>null(),sigma_midlayer=>null()
   real(kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer::spm_concentration=>null()
+  real(kind=ESMF_KIND_R8),dimension(:)  ,pointer:: relative_thickness_of_layers=>null()
    integer                                      :: nmlb           ! first cell number
    integer                                      :: nmub           ! last cell number
    integer                                      :: inum, jnum     ! number of elements in x and y directions , inum * jnum== nmub - nmlb + 1
@@ -89,7 +90,7 @@ module erosed_component
     real(fp)    , dimension(:)  , allocatable   :: umod         ! depth averaged flow magnitude [m/s]
     real(fp)    , dimension(:)  , allocatable   :: u_bot        ! velocity at the (center of the) bottom cell in u-direction
     real(fp)    , dimension(:)  , allocatable   :: v_bot        ! velocity at the (center of the) bottom cell in v-direction
-    real(fp)    , dimension(:)  , allocatable   :: thick        ! thickness of the bottom cell layer
+
     real(fp)    , dimension(:,:), allocatable   :: mass         ! change in sediment composition of top layer, [kg/m2]
     real(fp)    , dimension(:,:), allocatable   :: massfluff    ! change in sediment composition of fluff layer [kg/m2]
 !   real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
@@ -407,7 +408,7 @@ contains
     allocate (umod      (nmlb:nmub))
     allocate (u_bot     (nmlb:nmub))
     allocate (v_bot     (nmlb:nmub))
-    allocate (thick     (nmlb:nmub))
+
     allocate (taub      (nmlb:nmub))
     allocate (taubn      (nmlb:nmub))
     allocate (eq_conc     (nmlb:nmub))
@@ -541,7 +542,7 @@ contains
     umod    = 0.0_fp        ! depth averaged flow magnitude [m/s]
     u_bot   = 0.0_fp        ! flow velocity in u-direction at (center of the ) bottm cell
     v_bot   = 0.0_fp        ! flow velocity in v-direction at (center of the ) bottm cell
-    thick   = 0.02_fp       ! height of the bottom cell
+
     taub    = 0.0_fp
     taubn    = 0.0_fp
     eq_conc =0.0_fp
@@ -920,11 +921,11 @@ contains
         !> @todo This allocation might be critical if the field has totalwidth (halo zones)
         !>        We might have to allocate with these halo zones (not until we get into trouble)
         allocate (size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(inum, jnum))
-        do j=1,jnum
-          do i= 1, inum
-            size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(i,j) = sink(n,inum*(j -1)+i)-sour(n,inum*(j -1)+i)
-          end do
-        end do
+!        do j=1,jnum
+!          do i= 1, inum
+!            size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr(i,j) = sink(n,inum*(j -1)+i)-sour(n,inum*(j -1)+i)
+!          end do
+!        end do
         ptr_f2 => size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr
 
        field = ESMF_FieldCreate(grid, farrayPtr=ptr_f2, &
@@ -1322,7 +1323,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       end if
 
       if (.not. associated (relative_thickness_of_layers)) then
-        allocate (relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
+        allocate (relative_thickness_of_layers(lbnd(3):ubnd(3) ), stat=istat)
         if (istat/=0) write (*,*) 'Warning/Error in allocation of relative_thickness_of_layers in erosed_component'
       end if
 
@@ -1335,19 +1336,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         do k = 1,ubnd(3)
 
-         relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
-                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1) )/ &
-                                                           & (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) &
-                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),0) )
+         relative_thickness_of_layers(k)= (layers_height(lbnd(1),lbnd(2),k) &
+                                                           & -layers_height(lbnd(1),lbnd(2), k-1) )/ &
+                                                           & (layers_height(lbnd(1),lbnd(2),ubnd(3)) &
+                                                           & -layers_height(lbnd(1),lbnd(2),0) )
         end do
 
 
         do k = ubnd(3),1,-1
          if (k ==ubnd(3)) then
-            sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) = -0.5_fp * relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3))
+            sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) = -0.5_fp * relative_thickness_of_layers(ubnd(3))
          else
             sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k+1) -0.5_fp * &
-            &          ( relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) +relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k+1) )
+            &          ( relative_thickness_of_layers(k) +relative_thickness_of_layers(k+1) )
          endif
         end do
 
@@ -1356,7 +1357,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
            ! filtering missing values (land)
            if (mask(i,j)/=0)then
             umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
-            thick (inum*(j -1)+i) = hbot (i,j)/depth(i,j)
+
             u_bot (inum*(j -1)+i) = ubot (i,j)
             v_bot (inum*(j -1)+i) = vbot (i,j)
             if (wave) then
@@ -1776,7 +1777,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (umod)
     deallocate (u_bot)
     deallocate (v_bot)
-    deallocate (thick)
+
     deallocate (taub, taubn, eq_conc)
 !    deallocate (r0)
 !    deallocate (r1)
@@ -1848,7 +1849,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
   end function d90_from_d50
 
   function CalcOrbitalVelocity (SigWaveHeight, WaveNumber, WavePeriod, WaterDepth)
-   ! RMS orbital velocity (uorb) to be used later in bedbc1993 (van Rijn, 1993) according to Eq. 144 Delft manual
+   ! RMS orbital velocity (uorb) to be used later in bedbc1993 (van Rijn, 1993) according to Eq. 11.144 Delft manual
    implicit none
    real (ESMF_KIND_R8) :: CalcOrbitalVelocity, Hrms
    real (ESMF_KIND_R8) :: SigWaveHeight, WaveNumber, WavePeriod, WaterDepth
