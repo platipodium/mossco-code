@@ -707,6 +707,7 @@ masking: if (mask(i,j) /=0) then
                  call bedbc1993_arguments%get (aks, ce_nm, taubcw, ta, ustarc, tauc(nm),tauwav(nm))
 !write (*,*) ' taubcw- current wave bed shear', taubcw, 'current-only bed shear stress',tauc(nm), 'wave-only bed shear stress' ,tauwav(nm)
                  ce_nm =ce_nm * frac(l,nm)
+                 ! now correct non-cohesive bed shear stress output
                  taubn(nm) = taubcw
                  eq_conc (nm) = ce_nm * rhosol (l) *1000.0_fp   !g.m**-3
 
