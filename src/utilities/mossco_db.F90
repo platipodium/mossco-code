@@ -45,6 +45,8 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_list"
+!> @brief
+!> @param
 subroutine get_substance_list(alias,listout)
     !------------------------------------------------------------------
     implicit none
@@ -53,7 +55,7 @@ subroutine get_substance_list(alias,listout)
     character(len=ESMF_MAXSTR), intent(in) &
                                        :: alias
     !character(len=ESMF_MAXSTR),dimension(:),pointer,intent(out) &
-    character(ESMF_MAXSTR) &
+    character(ESMF_MAXSTR), intent(out) &
                                        :: listout
 
     !LOCAL VARS
@@ -70,7 +72,7 @@ subroutine get_substance_list(alias,listout)
     type(SQLITE_STATEMENT)             :: stmt
     integer                            :: completion
     type(SQLITE_COLUMN), dimension(:), pointer &
-                                       :: col
+                                       :: col =>null()
     character(ESMF_MAXSTR)             :: SubstanceName
     logical                            :: finished
     !------------------------------------------------------------------
@@ -114,10 +116,11 @@ end subroutine get_substance_list
 !------------------- Basic SQL Routines -------------------------------
 !----------------------------------------------------------------------
 
-!Manage multiple commands in one transaction
-!Commits pending transaction and starts new session
 #undef  ESMF_METHOD
 #define ESMF_METHOD "load_session"
+!> @brief Manage multiple commands in one transaction
+!> @details Commits pending transaction and starts new session
+!> @param
 subroutine load_session
     !------------------------------------------------------------------
     implicit none
@@ -147,6 +150,8 @@ end subroutine load_session
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "finalize_session"
+!> @brief
+!> @param
 subroutine finalize_session(hold_con,abort)
     !------------------------------------------------------------------
     implicit none
@@ -191,6 +196,8 @@ end subroutine finalize_session
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "sql_select_state"
+!> @brief
+!> @param
 subroutine sql_select_state(sql,search_list,replace_list,rsout)
     !------------------------------------------------------------------
     implicit none
@@ -199,7 +206,7 @@ subroutine sql_select_state(sql,search_list,replace_list,rsout)
     character(len=ESMF_MAXSTR),intent(in),optional &
                                            :: search_list, replace_list !@todo: Als Arrays
     type(SQLITE_COLUMN),dimension(:),pointer &
-                                           :: col
+                                           :: col =>null()
     character(255)                         :: sql
     character(len=ESMF_MAXSTR), dimension(:), intent(out) &
                                            :: rsout

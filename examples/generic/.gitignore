@@ -50,4 +50,6 @@ remtc_ocean--remtc_atmosphere--netcdf
 remtc_ocean--remtc_atmosphere
 river--netcdf
 test_create_coupling
-
+getm--fabm_pelagic--fabm_sediment--river--porosity--restart
+gotm--fabm_pelagic--fabm_sediment--netcdf
+restart.yaml

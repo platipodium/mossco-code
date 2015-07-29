@@ -19,120 +19,87 @@
 
 module soil_pelagic_mediator
 
-  use esmf
-  use mossco_state
-  use mossco_field
-  use mossco_componentake
+    !use mossco_mediator
+    use esmf
+    use mossco_state
+    use mossco_field
+    use mossco_component
 
-  implicit none
+!> @todo: please check if anything can be outsourced in the general method
+!----------------------------------------------------------------------
+!------------------- Soil Pelagic Config ------------------------------
+!----------------------------------------------------------------------
 
-  private
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP=>null(),vDETP=>null()
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2=>null(),val1_f2=>null(),val2_f2=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux=>null(),DETPflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETCflux=>null(),DINflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: DIPflux=>null(),OXYflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: ODUflux=>null(),omexDETPflux=>null()
-  real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),fDETCflux=>null()
-  real(ESMF_KIND_R8) :: dinflux_const=0.0
-  real(ESMF_KIND_R8) :: dipflux_const=-1.
-  public SetServices
-
-  contains
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "SetServices"
-  subroutine SetServices(cplComp, rc)
-
+    !------------------------------------------------------------------
     implicit none
 
-    type(ESMF_CplComp)   :: cplComp
-    integer, intent(out) :: rc
+    private
+    !MODULE VARS
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP=>null(),vDETP=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3=>null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2=>null(),val1_f2=>null(),val2_f2=>null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux=>null(),DETPflux=>null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETCflux=>null(),DINflux=>null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: DIPflux=>null(),OXYflux=>null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ODUflux=>null(),omexDETPflux=>null()
+    real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),fDETCflux=>null()
+    real(ESMF_KIND_R8) :: dinflux_const=0.0
+    real(ESMF_KIND_R8) :: dipflux_const=-1.
+    !------------------------------------------------------------------
 
-    integer              :: localrc
+    public SetServices
 
-    rc = ESMF_SUCCESS
+    contains
 
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
-      userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
-      userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine SetServices
+!----------------------------------------------------------------------
+!------------------- Soil Pelagic Routines ----------------------------
+!----------------------------------------------------------------------
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "InitializeP0"
-  subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
+#define ESMF_METHOD "mcpl_InitializeP0"
+!> @brief Implementation of User-Code in Phase 0
+!> @details Contains untouched States
+!> @param
+subroutine mcpl_InitializeP0(cplComp, importState, exportState, parentClock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_cplComp)          :: cplComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: parentClock
+    integer, intent(out)        :: rc
 
-    implicit none
+    !LOCAL VARS
 
-    type(ESMF_cplComp)    :: cplComp
-    type(ESMF_State)      :: importState
-    type(ESMF_State)      :: exportState
-    type(ESMF_Clock)      :: parentClock
-    integer, intent(out)  :: rc
+    !------------------------------------------------------------------
 
-    integer              :: localrc
-    character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
-    type(ESMF_Time)       :: currTime
+end subroutine mcpl_InitializeP0
 
-    rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    InitializePhaseMap(1) = "IPDv00p1=1"
-
-    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-  end subroutine InitializeP0
-
+!> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
-#define ESMF_METHOD "InitializeP1"
-  subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+#define ESMF_METHOD "mcpl_InitializeP1"
+!> @brief Implementation of User-Code in Phase 1
+!> @details Contains untouched States
+!> @param
+subroutine mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_cplComp)          :: cplComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer, intent(out)        :: rc
 
-    type(ESMF_CplComp)   :: cplcomp
-    type(ESMF_State)     :: importState
-    type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: externalclock
-    type(ESMF_Field)     :: newfield
-    integer, intent(out) :: rc
-
+    !LOCAL VARS
     character(len=ESMF_MAXSTR)  :: name, message
-    type(ESMF_State)      :: paramState
-    type(ESMF_Time)       :: currTime
-    logical               :: isPresent
-    integer               :: nmlunit=127, localrc
+    type(ESMF_State)            :: paramState
+    type(ESMF_Time)             :: currTime
+    logical                     :: isPresent
+    integer                     :: nmlunit=127, localrc
+    !------------------------------------------------------------------
 
     namelist /soil_pelagic_mediator/ dinflux_const,dipflux_const
 
@@ -173,20 +140,27 @@ module soil_pelagic_mediator
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  end subroutine InitializeP1
+end subroutine mcpl_InitializeP1
 
+
+!> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
-#define ESMF_METHOD "Run"
+#define ESMF_METHOD "mcpl_Run_pre_recipe"
+!> @brief Implementation of User-Code in Run Phase,
+!! before automatic recipe search via database
+!> @details Contains normalized inventory lists of substances known by database
+!> @param
+subroutine mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_cplComp)          :: cplComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer, intent(out)        :: rc
 
-  subroutine Run(cplcomp, importState, exportState, externalclock, rc)
-
-    type(ESMF_CplComp)   :: cplcomp
-    type(ESMF_State)     :: importState
-    type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: externalclock
-    integer, intent(out) :: rc
-    integer              :: ammrc, nitrc, oxyrc, odurc
-
+    !LOCAL VARS
+    integer                     :: ammrc, nitrc, oxyrc, odurc
     character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime, stopTime
     integer                     :: localrc
@@ -196,10 +170,11 @@ module soil_pelagic_mediator
     type(ESMF_Field)            :: field
     integer(ESMF_KIND_R8)       :: advanceCount
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
-    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20d0
-    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
+    real(ESMF_KIND_R8),parameter:: NC_fdet=0.20d0
+    real(ESMF_KIND_R8),parameter:: NC_sdet=0.04d0
     integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
     logical                     :: verbose=.true.
+    !------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
@@ -309,22 +284,197 @@ module soil_pelagic_mediator
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  end subroutine Run
+end subroutine mcpl_Run_pre_recipe
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mcpl_Run_pre_log"
+!> @brief Implementation of User-Code in Run Phase,
+!! after automatic recipe search, before missing log is created
+!> @details Contains inventory lists reduced by found substances
+!> @param
+subroutine mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_cplComp)          :: cplComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+
+    !------------------------------------------------------------------
+
+end subroutine mcpl_Run_pre_log
+
+
+
+
+
+
+!############################################################################################
+!############################################################################################
+!############################################################################################
+
+
+
+
+
+
+
+!@dev: To be outsourced (see bottom)
+!----------------------------------------------------------------------
+!------------------- General MOSSCO coupler Routines ------------------
+!----------------------------------------------------------------------
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
+!> @brief Specifies entry points for ESMF methods
+!> @details Required public ESMF method
+!> @param cplComp, rc Component Class and Return Code
+subroutine SetServices(cplComp, rc)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+    type(ESMF_CplComp)          :: cplComp
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+    integer                     :: localrc
+    !------------------------------------------------------------------
+
+    rc = ESMF_SUCCESS
+
+    !>Define phase 0 method
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !>Define phase 1 method
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !>Define run method
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !>Definde finalize method
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+end subroutine SetServices
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
+subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
+    !------------------------------------------------------------------
+    implicit none
+    !INPUTS / OUTPUTS
+    type(ESMF_cplComp)          :: cplComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: parentClock
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+    integer                     :: localrc
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime
+    !------------------------------------------------------------------
+
+    rc = ESMF_SUCCESS
+
+    !> Calls incoming couple/grid component method and receives clock
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Defines number of ESMF Initialization phases according to NUOPC,
+    !! adds the configuration to the Component
+    InitializePhaseMap(1) = "IPDv00p1=1"
+    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Calls outgoing couple/grid component method and passes clock
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+end subroutine InitializeP0
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
+subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_CplComp)          :: cplcomp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    type(ESMF_Field)            :: newfield
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+
+    !------------------------------------------------------------------
+    !> Call user-code method
+    call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+
+end subroutine InitializeP1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
+subroutine Run(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_CplComp)          :: cplcomp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+
+    !------------------------------------------------------------------
+
+    !> Call user-code method
+    call mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
+
+end subroutine Run
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
-    type(ESMF_CplComp)   :: cplcomp
-    type(ESMF_State)     :: importState
-    type(ESMF_State)     :: exportState
-    type(ESMF_Clock)     :: externalclock
-    integer,intent(out)  :: rc
+subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_CplComp)          :: cplcomp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer,intent(out)         :: rc
 
+    !LOCAL VARS
     character(len=ESMF_MAXSTR)  :: name, message, paramName
     type(ESMF_State)            :: paramState
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
     type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
+    !------------------------------------------------------------------
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -373,6 +523,34 @@ module soil_pelagic_mediator
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  end subroutine Finalize
+end subroutine Finalize
 
 end module soil_pelagic_mediator
+
+
+
+!@dev: area for all general coupler routines
+!Outsource and 'use' in all Coupler modules
+!----------------------------------------------------------------------
+!------------------- General MOSSCO coupler Routines ------------------
+!----------------------------------------------------------------------
+!module mossco_mediator
+!
+!
+!end module mossco_mediator
+
+
+!####### TEMPLATE #####################################################
+!#undef  ESMF_METHOD
+!#define ESMF_METHOD "User_Code"
+!> @brief
+!> @param
+!subroutine User_Code()
+!    !------------------------------------------------------------------
+!    !INPUTS / OUTPUTS
+!
+!    !LOCAL VARS
+!
+!    !------------------------------------------------------------------
+!
+!end subroutine User_Code
