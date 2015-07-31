@@ -57,9 +57,9 @@ module erosed_component
   type (BioturbationEffect)                     :: BioEffects
   integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                       :: ubnd(4),lbnd(4)
-  real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer::  layers_height=>null(),sigma_midlayer=>null()
+  real(kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer::  layers_height=>null(),sigma_midlayer=>null(),relative_thickness_of_layers=>null()
   real(kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer::spm_concentration=>null()
-  real(kind=ESMF_KIND_R8),dimension(:)  ,pointer:: relative_thickness_of_layers=>null()
+
    integer                                      :: nmlb           ! first cell number
    integer                                      :: nmub           ! last cell number
    integer                                      :: inum, jnum     ! number of elements in x and y directions , inum * jnum== nmub - nmlb + 1
@@ -1323,7 +1323,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       end if
 
       if (.not. associated (relative_thickness_of_layers)) then
-        allocate (relative_thickness_of_layers(lbnd(3):ubnd(3) ), stat=istat)
+        allocate (relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
         if (istat/=0) write (*,*) 'Warning/Error in allocation of relative_thickness_of_layers in erosed_component'
       end if
 
@@ -1336,19 +1336,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         do k = 1,ubnd(3)
 
-         relative_thickness_of_layers(k)= (layers_height(lbnd(1),lbnd(2),k) &
-                                                           & -layers_height(lbnd(1),lbnd(2), k-1) )/ &
-                                                           & (layers_height(lbnd(1),lbnd(2),ubnd(3)) &
-                                                           & -layers_height(lbnd(1),lbnd(2),0) )
+         relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
+                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2), k-1) )/ &
+                                                           & (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) &
+                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),0) )
         end do
 
 
         do k = ubnd(3),1,-1
          if (k ==ubnd(3)) then
-            sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) = -0.5_fp * relative_thickness_of_layers(ubnd(3))
+            sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) = -0.5_fp * relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3))
          else
             sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) = sigma_midlayer (lbnd(1):ubnd(1),lbnd(2):ubnd(2),k+1) -0.5_fp * &
-            &          ( relative_thickness_of_layers(k) +relative_thickness_of_layers(k+1) )
+            &          ( relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) +relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k+1) )
          endif
         end do
 
