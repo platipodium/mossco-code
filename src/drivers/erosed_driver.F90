@@ -525,7 +525,7 @@ masking: if (mask(i,j) /=0) then
                 !   Compute source and sink fluxes for cohesive sediment (mud)
 !print*, 'cohesive','i,j', i,j, 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
                  call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
-                                              & uorb(nm), tper  (nm), teta(nm), kssilt,       &
+                                              & 2.0_fp* uorb(nm)/sqrt (3.14159265358979323846_fp), tper  (nm), teta(nm), kssilt,       &
                                               & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
 
                  call compbsskin_arguments%run ()
