@@ -1850,12 +1850,17 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   function CalcOrbitalVelocity (SigWaveHeight, WaveNumber, WavePeriod, WaterDepth)
    ! RMS orbital velocity (uorb) to be used later in bedbc1993 (van Rijn, 1993) according to Eq. 11.144 Delft manual
+!  According to Delft3d Manual p. 366 (definition of notations) RMS orbital velocity is
+! taken from wave module and is multiplied by aquare root of 2.0 to get the desired peak orbital velocity
+! at the bed in bedbc1993 (vanRijn(1993)). Therefore, here the rms orbital velocity is calculated based on the setwave
+! routine within Delft3d.
+! It should be noted that for cohesive sediment transport the orbital velocity is used for Soulsby (2004).
    implicit none
    real (ESMF_KIND_R8) :: CalcOrbitalVelocity, Hrms
    real (ESMF_KIND_R8) :: SigWaveHeight, WaveNumber, WavePeriod, WaterDepth
      Hrms = SigWaveHeight/ sqrt (2.0_fp)
-     CalcOrbitalVelocity = 3.14159265359_fp * Hrms / (WavePeriod * sinh (WaveNumber * WaterDepth))
-     CalcOrbitalVelocity = sqrt (3.14159265359_fp)/2.0_fp * CalcOrbitalVelocity
+     CalcOrbitalVelocity = 3.14159265358979323846_fp * Hrms / (WavePeriod * sinh (WaveNumber * WaterDepth))
+     CalcOrbitalVelocity = sqrt (3.14159265358979323846_fp)/2.0_fp * CalcOrbitalVelocity
   end function  CalcOrbitalVelocity
 
 end module erosed_component
