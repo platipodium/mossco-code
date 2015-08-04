@@ -20,10 +20,7 @@ program test_mossco_db
 
     !LOCAL VARS
     !@temp
-    character(len=ESMF_MAXSTR)           :: alias
-    !character(len=ESMF_MAXSTR),dimension(:),pointer &
-    character(ESMF_MAXSTR) &
-                                         :: listout
+    character(len=ESMF_MAXSTR)           :: alias, name="nothing"
     logical                              :: finished
     !------------------------------------------------------------------
 
@@ -37,9 +34,9 @@ program test_mossco_db
     write (*,*) "Searching db for name & 
     connected to alias '" // alias // "', found:"
 
-    call get_substance_list(alias,listout)
+    call get_substance_name(alias,name)
 
-    write (*,*) listout
+    write (*,*) name
 
     write (*,*) "test finished"
 

@@ -25,6 +25,7 @@ module soil_pelagic_mediator
     use mossco_field
     use mossco_component
 
+
 !> @todo: please check if anything can be outsourced in the general method
 !----------------------------------------------------------------------
 !------------------- Soil Pelagic Config ------------------------------
@@ -59,6 +60,7 @@ module soil_pelagic_mediator
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mcpl_InitializeP0"
+!> @subsubsection mcpl_InitializeP0 "User Code in Initialization Phase 0"
 !> @brief Implementation of User-Code in Phase 0
 !> @details Contains untouched States
 !> @param
@@ -74,6 +76,7 @@ subroutine mcpl_InitializeP0(cplComp, importState, exportState, parentClock, rc)
     !LOCAL VARS
 
     !------------------------------------------------------------------
+    rc = ESMF_SUCCESS
 
 end subroutine mcpl_InitializeP0
 
@@ -81,6 +84,7 @@ end subroutine mcpl_InitializeP0
 !> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mcpl_InitializeP1"
+!> @subsubsection mcpl_InitializeP1 "User Code in Initialization Phase 1"
 !> @brief Implementation of User-Code in Phase 1
 !> @details Contains untouched States
 !> @param
@@ -101,9 +105,10 @@ subroutine mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, r
     integer                     :: nmlunit=127, localrc
     !------------------------------------------------------------------
 
+
     namelist /soil_pelagic_mediator/ dinflux_const,dipflux_const
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -146,6 +151,7 @@ end subroutine mcpl_InitializeP1
 !> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mcpl_Run_pre_recipe"
+!> @subsubsection mcpl_Run_pre_recipe "User Code before automatic recipe search"
 !> @brief Implementation of User-Code in Run Phase,
 !! before automatic recipe search via database
 !> @details Contains normalized inventory lists of substances known by database
@@ -177,6 +183,7 @@ subroutine mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock,
     !------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
+
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -289,6 +296,7 @@ end subroutine mcpl_Run_pre_recipe
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mcpl_Run_pre_log"
+!> @subsubsection mcpl_Run_pre_log "User Code before log creation"
 !> @brief Implementation of User-Code in Run Phase,
 !! after automatic recipe search, before missing log is created
 !> @details Contains inventory lists reduced by found substances
@@ -306,175 +314,34 @@ subroutine mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc
 
     !------------------------------------------------------------------
 
+    rc = ESMF_SUCCESS
+
 end subroutine mcpl_Run_pre_log
 
 
-
-
-
-
-!############################################################################################
-!############################################################################################
-!############################################################################################
-
-
-
-
-
-
-
-!@dev: To be outsourced (see bottom)
-!----------------------------------------------------------------------
-!------------------- General MOSSCO coupler Routines ------------------
-!----------------------------------------------------------------------
-
+!> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
-#define ESMF_METHOD "SetServices"
-!> @brief Specifies entry points for ESMF methods
-!> @details Required public ESMF method
-!> @param cplComp, rc Component Class and Return Code
-subroutine SetServices(cplComp, rc)
+#define ESMF_METHOD "mcpl_finalize"
+!> @subsubsection mcpl_finalize "User Code at end of execution"
+!> @brief Implementation of User-Code in Finalize Phase,
+!> @details
+!> @param
+subroutine mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
-    implicit none
-
-    !INPUTS/OUTPUTS
-    type(ESMF_CplComp)          :: cplComp
-    integer, intent(out)        :: rc
-
-    !LOCAL VARS
-    integer                     :: localrc
-    !------------------------------------------------------------------
-
-    rc = ESMF_SUCCESS
-
-    !>Define phase 0 method
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
-      userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !>Define phase 1 method
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
-      userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !>Define run method
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !>Definde finalize method
-    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-end subroutine SetServices
-
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "InitializeP0"
-subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
-    !------------------------------------------------------------------
-    implicit none
     !INPUTS / OUTPUTS
     type(ESMF_cplComp)          :: cplComp
     type(ESMF_State)            :: importState
     type(ESMF_State)            :: exportState
-    type(ESMF_Clock)            :: parentClock
+    type(ESMF_Clock)            :: externalclock
     integer, intent(out)        :: rc
 
     !LOCAL VARS
-    integer                     :: localrc
-    character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
     type(ESMF_Time)             :: currTime
+    integer                     :: localrc
+    character(len=ESMF_MAXSTR)  :: name
     !------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
-
-    !> Calls incoming couple/grid component method and receives clock
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !> Defines number of ESMF Initialization phases according to NUOPC,
-    !! adds the configuration to the Component
-    InitializePhaseMap(1) = "IPDv00p1=1"
-    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
-      attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
-      convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !> Calls outgoing couple/grid component method and passes clock
-    call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-end subroutine InitializeP0
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "InitializeP1"
-subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
-    !------------------------------------------------------------------
-    !INPUTS / OUTPUTS
-    type(ESMF_CplComp)          :: cplcomp
-    type(ESMF_State)            :: importState
-    type(ESMF_State)            :: exportState
-    type(ESMF_Clock)            :: externalclock
-    type(ESMF_Field)            :: newfield
-    integer, intent(out)        :: rc
-
-    !LOCAL VARS
-
-    !------------------------------------------------------------------
-    !> Call user-code method
-    call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
-
-end subroutine InitializeP1
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "Run"
-subroutine Run(cplcomp, importState, exportState, externalclock, rc)
-    !------------------------------------------------------------------
-    !INPUTS / OUTPUTS
-    type(ESMF_CplComp)          :: cplcomp
-    type(ESMF_State)            :: importState
-    type(ESMF_State)            :: exportState
-    type(ESMF_Clock)            :: externalclock
-    integer, intent(out)        :: rc
-
-    !LOCAL VARS
-
-    !------------------------------------------------------------------
-
-    !> Call user-code method
-    call mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
-
-end subroutine Run
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "Finalize"
-subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
-    !------------------------------------------------------------------
-    !INPUTS / OUTPUTS
-    type(ESMF_CplComp)          :: cplcomp
-    type(ESMF_State)            :: importState
-    type(ESMF_State)            :: exportState
-    type(ESMF_Clock)            :: externalclock
-    integer,intent(out)         :: rc
-
-    !LOCAL VARS
-    character(len=ESMF_MAXSTR)  :: name, message, paramName
-    type(ESMF_State)            :: paramState
-    type(ESMF_Time)             :: currTime
-    integer                     :: localrc
-    type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
-    !------------------------------------------------------------------
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -518,10 +385,342 @@ subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
     endif
 #endif
 
-    !! Exit the method
+end subroutine mcpl_finalize
+
+
+
+
+!############################################################################################
+!############################################################################################
+!############################################################################################
+
+
+
+
+
+
+
+!@dev: To be outsourced (see bottom)
+!----------------------------------------------------------------------
+!------------------- General MOSSCO coupler Routines ------------------
+!----------------------------------------------------------------------
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "SetServices"
+!> @subsubsection SetServices "SetServices Method"
+!> @brief Specifies entry points for ESMF methods
+!> @details Required public ESMF method
+!> @param cplComp, rc Component Class and Return Code
+subroutine SetServices(cplComp, rc)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+    type(ESMF_CplComp)          :: cplComp
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+    integer                     :: localrc
+    !------------------------------------------------------------------
+
+    rc = ESMF_SUCCESS
+
+    !>Register phase 0 method for ESMF
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
+      userRoutine=InitializeP0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !>Register phase 1 method for ESMF
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
+      userRoutine=InitializeP1, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !>Register run method for ESMF
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !>Register finalize method for ESMF
+    call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+end subroutine SetServices
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP0"
+!> @subsubsection InitializeP0 "Initialize Method Phase 0"
+!> @brief ESMF preperation method
+!> @details Allocate Space, open files, set initial conditions
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
+    !------------------------------------------------------------------
+    implicit none
+    !INPUTS / OUTPUTS
+    type(ESMF_cplComp)          :: cplComp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: parentClock
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+    integer                     :: localrc
+    character(len=10)           :: InitializePhaseMap(1)
+    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_Time)             :: currTime
+    !------------------------------------------------------------------
+
+    rc = ESMF_SUCCESS
+
+    !> Calls incoming couple/grid component method and receives clock
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Defines number of ESMF Initialization phases according to NUOPC standard,
+    !! adds the configuration to the Component
+    InitializePhaseMap(1) = "IPDv00p1=1"
+    call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
+      attrList=(/"InitializePhaseMap"/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
+      convention="NUOPC", purpose="General", rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Calls outgoing couple/grid component method and passes clock
     call MOSSCO_CompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+end subroutine InitializeP0
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "InitializeP1"
+!> @subsubsection InitializeP1 "Initialize Method Phase 1"
+!> @brief ESMF preperation method
+!> @details Allocate Space, open files, set initial conditions
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS / OUTPUTS
+    type(ESMF_CplComp)          :: cplcomp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+    type(ESMF_State), target    :: dba_import, dba_export
+    type(ESMF_State), pointer   :: dba
+    character(len=ESMF_MAXSTR)  :: name
+    integer                     :: localrc, dba_rc,i,j
+    real                        :: dba_value
+    type(ESMF_Time)             :: currTime
+    logical                     :: dba_verbose
+
+    character(len=ESMF_MAXSTR), dimension (:), pointer &
+                                :: namelist => null()
+    !------------------------------------------------------------------
+
+    rc = ESMF_SUCCESS
+
+    !> Call user-code method
+    call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+
+    !> @paragraph dba "Database Array States"
+    !> @brief Create database array states (dba) for import and export
+
+    !> receive coupler component information
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    dba_import=ESMF_StateCreate(name=trim(name)//'Database Array Import', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    dba_export=ESMF_StateCreate(name=trim(name)//'Database Array Export', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Query the Import and Export State for all substances
+!***@todo
+
+
+    !!!Option 1: Search all entries in the database within the States
+    call get_substance_list(namelist)
+
+    do i = 1, 2
+        !> run import / export database array seriell
+        if (i==1) then
+            dba => dba_import
+        else
+            dba => dba_export
+        end if
+
+        do j=1, size(namelist)
+            !> search value in State
+
+            !call mossco_state_get(importState,(/'test'/), &
+            !     verbose=dba_verbose, rc=dba_rc)
+        end do
+
+    end do
+
+
+
+!        call mossco_state_get(importState, (/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/), &
+!            dba_value, verbose=verbose, rc=dba_rc)
+!        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!        !
+!        call mossco_state_get(dba,(/namelist(j)/),val, vb, rc=rcs)
+!        call mossco_state_get(importState,namelist(j), &
+!        !     !value, verbose=verbose, rc=rcs)
+!        > @todo: Add further information - amount and unit
+!        if (rc==ESMF_SUCCESS) call ESMF_AttributeSet(dba, namelist(j), value, rc=localrc)
+
+
+!    do (i=1,2)
+!        !> Get Import/Export Database Array
+!        select case (i)
+!            case(1)
+!                dba=>dba_import
+!            case(2)
+!                dba=>dba_export
+!        end select
+!
+!        !>
+!        forall(j=lbound(namelist):ubound(namelist))
+!            !> Search Substance in State
+!            call mossco_state_get(importState,namelist(j), &
+!                value, verbose=verbose, rc=rcs)
+!
+!            if (rc==ESMF_SUCCESS) then
+!                call ESMF_AttributeSet(dba, namelist(j), value, rc=localrc)
+!            end if
+!        end forall
+!    end do
+
+    !!!Option 2: Search all entries in State in the database
+    !repeat for import/export
+    !forall
+        !if () then
+            !>if known by database add to dba
+             !call ESMF_AttributeSet(paramState, trim(name)//'::dipflux_const', dipflux_const, rc=localrc)
+             !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+             !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !else
+            !> if unknown add to logg array
+        !end if
+    !stop
+
+    !> Complete database Arrays
+    call ESMF_StateAdd(importState, (/dba_import/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateAdd(exportState, (/dba_export/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_CompExit(cplComp, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @paragraph log "Log"
+    !> @brief: Log unknown substances
+!***@todo
+
+
+end subroutine InitializeP1
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Run"
+!> @subsubsection Run "Run Method"
+!> @brief ESMF Simulation step execution method
+!> @details Executes Transformations between import and export State
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+subroutine Run(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_CplComp)          :: cplcomp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer, intent(out)        :: rc
+
+    !LOCAL VARS
+
+    !------------------------------------------------------------------
+
+    rc = ESMF_SUCCESS
+
+    !> Call user-code method
+    call mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
+
+    !> Automatic Recipe Search
+    ! @dev: Recursurve search in the database for fitting recipes
+    ! Receive equation as string, read and execute the equation
+
+    !> Log Substances found by automatic recipe
+!***@todo
+
+    call mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc)
+
+    !> Log missing Substances
+!***@todo
+
+end subroutine Run
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
+!> @brief ESMF End of Execution method
+!> @details deallocate space, close files, print results
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
+    !------------------------------------------------------------------
+    !INPUTS / OUTPUTS
+    type(ESMF_CplComp)          :: cplcomp
+    type(ESMF_State)            :: importState
+    type(ESMF_State)            :: exportState
+    type(ESMF_Clock)            :: externalclock
+    integer,intent(out)         :: rc
+
+    !LOCAL VARS
+    character(len=ESMF_MAXSTR)  :: name, message, paramName
+    type(ESMF_State)            :: paramState
+    type(ESMF_Time)             :: currTime
+    integer                     :: localrc
+    type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
+    !------------------------------------------------------------------
+
+    rc = ESMF_SUCCESS
+
+    call mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
+
+!    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+
+!    call MOSSCO_CompExit(cplComp, localrc)
+!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 end subroutine Finalize
 

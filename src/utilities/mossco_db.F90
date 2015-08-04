@@ -33,9 +33,7 @@ private
 
     !@dev: shift all sql states as parameter to here
 
-
-
-    public get_substance_list
+    public get_substance_name
 
 contains
 
@@ -44,73 +42,105 @@ contains
 !----------------------------------------------------------------------
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "get_substance_list"
+#define ESMF_METHOD "get_substance_name"
 !> @brief
 !> @param
-subroutine get_substance_list(alias,listout)
+subroutine get_substance_name(alias,name)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS/OUTPUTS
     character(len=ESMF_MAXSTR), intent(in) &
-                                       :: alias
-    !character(len=ESMF_MAXSTR),dimension(:),pointer,intent(out) &
-    character(ESMF_MAXSTR), intent(out) &
-                                       :: listout
+                                :: alias
+    character(len=ESMF_MAXSTR), intent(out) &
+                                :: name
 
     !LOCAL VARS
-    character(255)                     :: sql &
+    character(255)              :: sql &
        = "SELECT Alias FROM tblnames WHERE tblnames.Alias='TN';"
 !        = "SELECT ts.SubstanceName &
 !        FROM (tblSubstances JOIN tblNames &
 !        ON tblSubstances.ID=tblNames.Substance_ID) ts &
 !        WHERE tblNames.Alias='~name';"
-!        = "SELECT SubstanceName FROM tblSubstances WHERE SubstanceName='N';"
+!       = "SELECT s.SubstanceName FROM tblSubstances s WHERE s.SubstanceName='N';"
 
-    character(len=ESMF_MAXSTR)         :: search_list="~name"
+    character(len=ESMF_MAXSTR)  :: search_list="~name"
 
-    type(SQLITE_STATEMENT)             :: stmt
-    integer                            :: completion
+    type(SQLITE_STATEMENT)      :: stmt
+    integer                     :: completion
     type(SQLITE_COLUMN), dimension(:), pointer &
-                                       :: col =>null()
-    character(ESMF_MAXSTR)             :: SubstanceName
-    logical                            :: finished
+                                :: col =>null()
+    logical                     :: finished
     !------------------------------------------------------------------
 
     !Construct recordset for return values
     allocate( col(1) )
     call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
 
+    call sql_select_state(sql,search_list,alias,stmt,col)
 
-!@dev: automation in sql_select_state
- !problem: connection closes in select state, recordset must be automatically built before closing the connection
-!......................................................................
-    !connect to database
-    call sqlite3_open( 'mossco.db', db )
-
-    if (.not. (search_list=="")) sql=Replace_String(sql,search_list,alias)
-
-    !@temp
-    write (*,*) sql
-
-    call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
-    call sqlite3_prepare( db, sql, stmt, col )
-    call sqlite3_step( stmt, completion )
+!***@temp
+!    write (*,*) sql
 
     !@todo: Loop zum Schreiben aller Werte in den Array
     call sqlite3_next_row( stmt, col, finished )
-    call sqlite3_get_column( col(1), SubstanceName)
-
-    listout=SubstanceName
-
-    call sqlite3_close( db )
-!......................................................................
-
-    !call sql_select_state(sql,"","",listout)
+    call sqlite3_get_column( col(1), name)
 
     !@todo: listout umwandeln in MOSSCO-ARRAY
 
+end subroutine get_substance_name
+
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_substance_list"
+!> @subsubsection get_substance_list "Get Substance List"
+!> @brief Receives list of all known substances by name from the database
+!> @param listout array
+subroutine get_substance_list(listout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+!***@temp
+    character(len=ESMF_MAXSTR), dimension (:), intent(out) &
+                                :: listout
+
+    !LOCAL VARS
+
+    !------------------------------------------------------------------
+
+!***@temp
+    listout(1) = "TN"
+
 end subroutine get_substance_list
+
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_substance_alias_list"
+!> @subsubsection get_substance_alias_list "Get Substance Alias List"
+!> @brief Receives list of all alias for the substance name from the database
+!> @param listout array
+subroutine get_substance_alias_list(name, listout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+!***@temp
+    character(len=ESMF_MAXSTR), dimension (:), intent(out) &
+                                :: listout
+
+    !LOCAL VARS
+
+    !------------------------------------------------------------------
+
+!***@temp
+    listout(1) = "TN"
+
+end subroutine get_substance_alias_list
+
+
 
 !----------------------------------------------------------------------
 !------------------- Basic SQL Routines -------------------------------
@@ -167,10 +197,11 @@ subroutine finalize_session(hold_con,abort)
     hcon=hold_con
 
     !Catch wrong call, end session
-    if ((session_active .neqv. .true.) .and. (con_active .neqv. .true.)) return
+    if ((session_active .eqv. .false.) .and. (con_active .eqv. .false.)) return
     session_active=.false.
 
-    !Commit current changes             @todo: muss hier vorher geprüft werden ob etwas vorhanden ist?
+    !Commit current changes
+    !@todo: muss hier vorher geprüft werden ob etwas vorhanden ist?
     if (abort .eqv. .false.) call sqlite3_commit( db )
 
     !check external error flag / current errors and treat them
@@ -198,34 +229,38 @@ end subroutine finalize_session
 #define ESMF_METHOD "sql_select_state"
 !> @brief
 !> @param
-subroutine sql_select_state(sql,search_list,replace_list,rsout)
+subroutine sql_select_state(sql,search_list,replace_list,stmt,col)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS / OUTPUTS
-    character(len=ESMF_MAXSTR),intent(in),optional &
-                                           :: search_list, replace_list !@todo: Als Arrays
-    type(SQLITE_COLUMN),dimension(:),pointer &
-                                           :: col =>null()
     character(255)                         :: sql
-    character(len=ESMF_MAXSTR), dimension(:), intent(out) &
-                                           :: rsout
+!***@todo: Als Arrays
+    character(len=ESMF_MAXSTR),intent(in),optional &
+                                           :: search_list, replace_list
+    type(SQLITE_STATEMENT), intent(out)    :: stmt
+    !character(len=ESMF_MAXSTR), dimension(:), intent(out) &
+!***@temp
+    type(SQLITE_COLUMN),dimension(:),pointer, intent(out) &
+                                           :: col =>null()
+
+    character(len=ESMF_MAXSTR)             :: name
 
     !LOCAL VARS
     !character(*),dimension(:),intent(in)  :: search_list
     !character(*),dimension(:),intent(in)  :: replace_list
     !@todo: als array
-    type(SQLITE_STATEMENT)                 :: stmt
     logical                                :: err, finished
     integer                                :: i, completion
     !------------------------------------------------------------------
 
-    !@temp
-    return
+!***@temp
+    !return
 
     !Replace tags with values given by variables
     if (.not. (search_list=="")) sql=Replace_String(sql,search_list,replace_list)
-    !@todo: dynamische Länge - dim(search_list)
+
+!***@todo: dynamische Länge - dim(search_list)
 !    do i=1,20
 !        if (search_list(i)=="") exit !temp Lsg
 !        sql=Replace_String(sql,search_list(i),replace_list(i))
@@ -237,7 +272,16 @@ subroutine sql_select_state(sql,search_list,replace_list,rsout)
     call sqlite3_prepare( db, sql, stmt, col )
     call sqlite3_step( stmt, completion )
 
+
+!***@temp
+    write(*,*) "--- database info ---"
+    write (*,*) sql
+    write(*,*) sqlite3_errmsg( db )
+    write(*,*) "----------------------------"
+
     call finalize_session(.false.,(completion .ne. SQLITE_DONE))
+
+!    write(*,*) name
 
     !@dev: auto-create fitting "column" for query
 
