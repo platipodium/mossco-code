@@ -36,7 +36,10 @@ integer, public, parameter :: FOREIGN_GRID=2
 type, public :: fabm_sed_grid !< sediment grid type (part of type_sed)
    ! dz - layer heights (difference between interface depths zi)
    ! dzc - distance between layer center positions zc
-   real(rk),dimension(:,:,:),pointer :: zi,dz,zc,dzc
+   real(rk),dimension(:,:,:),pointer :: zi=>null()
+   real(rk),dimension(:,:,:),pointer :: zc=>null()
+   real(rk),dimension(:,:,:),pointer :: dz=>null()
+   real(rk),dimension(:,:,:),pointer :: dzc=>null()
    integer  :: knum,inum=-1,jnum=-1
    real(rk) :: dzmin
    logical  :: use_ugrid=.false.
@@ -141,10 +144,10 @@ subroutine init_grid(self, rc)
 
   self%dzc = self%zc(:,:,2:self%knum) - self%zc(:,:,1:self%knum-1)
 
-  write(0,*) 'zc=',self%zc(50,10,:)
-  write(0,*) 'zi=',self%zi(50,10,:)
-  write(0,*) 'dz=',self%dz(50,10,:)
-  write(0,*) 'dzc=',self%dzc(50,10,:)
+  write(0,*) 'zc=',self%zc(min(self%inum,50),min(self%jnum,10),:)
+  write(0,*) 'zi=',self%zi(min(self%inum,50),min(self%jnum,10),:)
+  write(0,*) 'dz=',self%dz(min(self%inum,50),min(self%jnum,10),:)
+  write(0,*) 'dzc=',self%dzc(min(self%inum,50),min(self%jnum,10),:)
 
 end subroutine init_grid
 
