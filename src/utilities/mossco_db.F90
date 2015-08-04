@@ -95,8 +95,9 @@ end subroutine get_substance_name
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_list"
 !> @subsubsection get_substance_list "Get Substance List"
-!> @brief Receives list of all known substances by name from the database
-!> @param listout array
+!> @brief Receives list of all known substances from the database name
+!> @detail list by unique identifier: Substance name
+!> @param listout dim (:) char(ESMF_MAXSTR) Array with all Substance Names
 subroutine get_substance_list(listout)
     !------------------------------------------------------------------
     implicit none
@@ -121,19 +122,23 @@ end subroutine get_substance_list
 #define ESMF_METHOD "get_substance_alias_list"
 !> @subsubsection get_substance_alias_list "Get Substance Alias List"
 !> @brief Receives list of all alias for the substance name from the database
-!> @param listout array
+!> @param name char(ESMF_MAXSTR) Name or Alias of Substance
+!> @param listout dim (:) char(ESMF_MAXSTR) Array with all aliases
 subroutine get_substance_alias_list(name, listout)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS/OUTPUTS
-!***@temp
-    character(len=ESMF_MAXSTR), dimension (:), intent(out) &
+    character(len=ESMF_MAXSTR)  :: name
+    character(len=ESMF_MAXSTR), dimension (:), pointer, intent(out) &
                                 :: listout
 
     !LOCAL VARS
 
     !------------------------------------------------------------------
+
+    !> Check if name
+
 
 !***@temp
     listout(1) = "TN"

@@ -520,15 +520,16 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 
     !LOCAL VARS
     type(ESMF_State), target    :: dba_import, dba_export
-    type(ESMF_State), pointer   :: dba
+    type(ESMF_State), pointer   :: dba =>null(), ste =>null()
     character(len=ESMF_MAXSTR)  :: name
     integer                     :: localrc, dba_rc,i,j
-    real                        :: dba_value
+    real(ESMF_KIND_R8), dimension(:), pointer &
+                                :: dba_value
     type(ESMF_Time)             :: currTime
     logical                     :: dba_verbose
 
     character(len=ESMF_MAXSTR), dimension (:), pointer &
-                                :: namelist => null()
+                                :: names, aliases
     !------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
@@ -536,7 +537,7 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     !> Call user-code method
     call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 
-    !> @paragraph dba "Database Array States"
+    !> @paragraph dba "Database Arrays"
     !> @brief Create database array states (dba) for import and export
 
     !> receive coupler component information
@@ -552,77 +553,36 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> Query the Import and Export State for all substances
-!***@todo
+    !> Get all Substances by unique name from database
+    call get_substance_list(names)
 
-
-    !!!Option 1: Search all entries in the database within the States
-    call get_substance_list(namelist)
-
+    !> run import / export database array serially
     do i = 1, 2
-        !> run import / export database array seriell
         if (i==1) then
             dba => dba_import
+            ste = importState
+            !> @todo: is it possible to use pointer here?
+            !! declaration of importState as target causes error in SetServices
         else
             dba => dba_export
+            ste = exportState
         end if
 
-        do j=1, size(namelist)
-            !> search value in State
+        !> Search all names in Import/Export State
+        do j=1, size(names)
+            call get_substance_alias_list(names(j), aliases)
+            call mossco_state_get(ste, aliases, dba_value, rc=dba_rc)
 
-            !call mossco_state_get(importState,(/'test'/), &
-            !     verbose=dba_verbose, rc=dba_rc)
+            !> If found add them to dba
+            if (dba_rc==ESMF_SUCCESS) then
+                call ESMF_AttributeSet(dba, names(j), dba_value, rc=localrc)
+                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            end if
+
         end do
 
     end do
-
-
-
-!        call mossco_state_get(importState, (/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/), &
-!            dba_value, verbose=verbose, rc=dba_rc)
-!        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!        !
-!        call mossco_state_get(dba,(/namelist(j)/),val, vb, rc=rcs)
-!        call mossco_state_get(importState,namelist(j), &
-!        !     !value, verbose=verbose, rc=rcs)
-!        > @todo: Add further information - amount and unit
-!        if (rc==ESMF_SUCCESS) call ESMF_AttributeSet(dba, namelist(j), value, rc=localrc)
-
-
-!    do (i=1,2)
-!        !> Get Import/Export Database Array
-!        select case (i)
-!            case(1)
-!                dba=>dba_import
-!            case(2)
-!                dba=>dba_export
-!        end select
-!
-!        !>
-!        forall(j=lbound(namelist):ubound(namelist))
-!            !> Search Substance in State
-!            call mossco_state_get(importState,namelist(j), &
-!                value, verbose=verbose, rc=rcs)
-!
-!            if (rc==ESMF_SUCCESS) then
-!                call ESMF_AttributeSet(dba, namelist(j), value, rc=localrc)
-!            end if
-!        end forall
-!    end do
-
-    !!!Option 2: Search all entries in State in the database
-    !repeat for import/export
-    !forall
-        !if () then
-            !>if known by database add to dba
-             !call ESMF_AttributeSet(paramState, trim(name)//'::dipflux_const', dipflux_const, rc=localrc)
-             !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-             !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !else
-            !> if unknown add to logg array
-        !end if
-    !stop
 
     !> Complete database Arrays
     call ESMF_StateAdd(importState, (/dba_import/), rc=localrc)
@@ -715,8 +675,6 @@ subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
 !    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
 !    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
 !      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-
 
 !    call MOSSCO_CompExit(cplComp, localrc)
 !    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
