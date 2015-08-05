@@ -885,6 +885,15 @@ module fabm_sediment_component
             call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           end if
+#ifdef DEBUG
+          if (trim(varname) == 'porosity_in_soil') then
+            write(0,*) 'debugging output just before restart update of porosity_in_soil'
+            write(0,*) 'ptr_f3',shape(ptr_f3),lbound(ptr_f3),ptr_f3(:,1,1)
+            write(0,*) 'export',sed%export_states(n)%data(:,1,1)
+            write(0,*) 'mask',sed%mask(:,1,1)
+            write(0,*) 'porosity',sed%porosity(:,1,1)
+          end if
+#endif
           sed%export_states(n)%data = ptr_f3
           write(message,'(A)') trim(name)//' hotstarted field'
           call mossco_fieldString(field, message)
@@ -902,6 +911,7 @@ module fabm_sediment_component
     end do
 
     !> check for valid grid and porosity
+    write(0,*) 'fabm_sediment ReadRestart: check domain'
     call sed%check_domain()
 
     call MOSSCO_CompExit(gridComp, localrc)
