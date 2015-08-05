@@ -341,6 +341,8 @@ module fabm_sediment_component
     allocate(conc(_INUM_,_JNUM_,_KNUM_,sed%nvar))
     ! link conc to fabm_sediment_driver
     sed%conc => conc
+    ! check for valid grid and porosity
+    call sed%check_domain()
     ! initialise values
     conc = 0.0_rk
     call sed%init_concentrations()
@@ -359,7 +361,7 @@ module fabm_sediment_component
     call sed1d%grid%init_grid()
     call sed1d%initialize()
     !> check for valid grid and porosity
-    call sed%check_domain()
+    call sed1d%check_domain()
     close(33)
     allocate(sed1d%conc(1,1,1:sed%knum,1:sed%nvar))
     call sed1d%init_concentrations()
