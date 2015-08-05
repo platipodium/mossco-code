@@ -1,42 +1,96 @@
 PRAGMA foreign_keys=ON;
 BEGIN TRANSACTION;
-  DROP TABLE IF EXISTS "tblRecipesSubstances";
-  DROP TABLE IF EXISTS "tblnames";
-  DROP TABLE IF EXISTS "tblrecipes";
-  DROP TABLE IF EXISTS "tblSubstances";
-  
+ DROP TABLE IF EXISTS "tblSubstancesEquivalents";    
+ DROP TABLE IF EXISTS "tblAppendix";
+ DROP TABLE IF EXISTS "tblEquivalents";
+ DROP TABLE IF EXISTS "tblRulesets";
+ DROP TABLE IF EXISTS "tblSubstances";  
+   
 CREATE TABLE IF NOT EXISTS "tblSubstances" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "SubstanceName" TEXT NOT NULL,
-    "IsParameter" INTEGER DEFAULT (0),
-    "ParameterValue" REAL
+    "DefaultUnit" TEXT
 );
-CREATE TABLE  IF NOT EXISTS "tblnames" (
+
+CREATE TABLE  IF NOT EXISTS "tblAppendix" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "Substance_ID" INTEGER NOT NULL,
-    "Alias" TEXT NOT NULL,
+    "Substance_ID" TEXT NOT NULL,
+    "Condition" TEXT,
+    "Location" TEXT,
+    "Unit" TEXT,
     FOREIGN KEY ("Substance_ID") REFERENCES "tblSubstances" ("ID")
 );
-CREATE TABLE  IF NOT EXISTS "tblrecipes" (
-    "ID" INTEGER NOT NULL,
-    "Substance_ID_Base" INTEGER NOT NULL,
-    "quality" INTEGER NOT NULL,
-     FOREIGN KEY ("Substance_ID_Base") REFERENCES "tblSubstances" ("ID")
-);
-CREATE TABLE  IF NOT EXISTS "tblRecipesSubstances" (
+
+CREATE TABLE  IF NOT EXISTS "tblEquivalents" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "Recipe_ID" INTEGER NOT NULL,
+    "EquivalentName" TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE  IF NOT EXISTS "tblRulesets" (
+    "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+    "RulesetName" TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE  IF NOT EXISTS "tblSubstancesEquivalents" (
+     "Ruleset_ID" INTEGER NOT NULL,
     "Substance_ID" INTEGER NOT NULL,
-    "Relation" TEXT NOT NULL,
-    "Group" INTEGER,
-     FOREIGN KEY ("Recipe_ID") REFERENCES "tblRecipes" ("ID")
-     FOREIGN KEY ("Substance_ID") REFERENCES "tblSubstances" ("ID")
+    "Equivalent_ID" INTEGER NOT NULL,
+    "Rule" TEXT,
+     FOREIGN KEY ("Ruleset_ID") REFERENCES "tblRulesets" ("ID"),
+     FOREIGN KEY ("Substance_ID") REFERENCES "tblSubstances" ("ID"),
+     FOREIGN KEY ("Equivalent_ID") REFERENCES "tblEquivalents" ("ID")
 );
 
 ANALYZE sqlite_master;
 COMMIT;
 
-INSERT INTO "tblsubstances" (SubstanceName) VALUES ("N");
-INSERT INTO "tblnames" (Substance_ID, alias) VALUES ( last_insert_rowid(), "TN");
+BEGIN TRANSACTION;
 
-SELECT SubstanceName FROM (tblSubstances JOIN tblNames on tblSubstances.ID=tblNames.Substance_ID) tb WHERE tblNames.Alias='TN';
+INSERT INTO "tblSubstances" (SubstanceName) VALUES ("O_2");
+
+INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
+	"_at_soil_surface");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
+	"_upward_flux", "_at_soil_surface");	
+
+INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("oxygen");
+INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("dissolved_oxygen");
+INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("dissolved_oxygen_oxy");
+
+INSERT INTO "tblRulesets" (RulesetName) VALUES ("General");
+INSERT INTO "tblRulesets" (RulesetName) VALUES ("HZG KW");
+
+INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
+	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="oxygen"));
+INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
+	(SELECT ID FROM tblRulesets WHERE RulesetName="General"),
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_oxygen"));
+	
+INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID) VALUES (
+	(SELECT ID FROM tblRulesets WHERE RulesetName="HZG KW"),
+	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"),
+	(SELECT ID FROM tblEquivalents WHERE EquivalentName="dissolved_oxygen_oxy"));	
+	
+COMMIT;
+
+
+
+SELECT t.SubstanceName  FROM (tblEquivalents
+	JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID
+	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID
+	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t
+	WHERE tblRulesets.RulesetName="General" AND tblEquivalents.EquivalentName="oxygen";
+
+SELECT t.SubstanceName || coalesce(tb.Condition,"") || coalesce(tb.Location,"") 
+	FROM (tblAppendix 
+	JOIN tblSubstances ON tblAppendix.Substance_ID=tblSubstances.ID) t;
+
+SELECT tb.EquivalentName || coalesce(tb.Condition,"") || coalesce(tb.Location,"") 
+	FROM (tblAppendix
+	JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID
+	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) tb;

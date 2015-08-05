@@ -12,6 +12,8 @@ program test_mossco_db
     !> sqlite.mod and sqlite_types.mod are present
     use sqlite
     use mossco_db
+    !> @todo: atm database file must be in the EXECUTING folder
+    !! fix so that database needs only to be in the utilities folder
 
     !------------------------------------------------------------------
     implicit none
@@ -20,21 +22,23 @@ program test_mossco_db
 
     !LOCAL VARS
     !@temp
-    character(len=ESMF_MAXSTR)           :: alias, name="nothing"
-    logical                              :: finished
+    character(len=ESMF_MAXSTR)  :: alias, name="nothing"
+    logical                     :: finished
+    character(len=ESMF_MAXSTR), dimension(1) &
+                                :: rulesets = (/'General'/)
     !------------------------------------------------------------------
 
     !******************************************************************
     !************* Enter search string for test here: *****************
     !******************************************************************
-    alias = "TN"
+    alias = "oxygen"
     !******************************************************************
     !******************************************************************
 
     write (*,*) "Searching db for name & 
-    connected to alias '" // alias // "', found:"
+    connected to equivalent '" // alias // "', found:"
 
-    call get_substance_name(alias,name)
+    call get_substance_name(alias,rulesets,name)
 
     write (*,*) name
 

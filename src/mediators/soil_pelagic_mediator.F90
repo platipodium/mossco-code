@@ -35,6 +35,9 @@ module soil_pelagic_mediator
     implicit none
 
     private
+    !COUPLER CONFIG
+    character(len=ESMF_MAXSTR), dimension(1)     :: rulesets = (/"General"/)
+
     !MODULE VARS
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP=>null(),vDETP=>null()

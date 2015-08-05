@@ -45,46 +45,59 @@ contains
 #define ESMF_METHOD "get_substance_name"
 !> @brief
 !> @param
-subroutine get_substance_name(alias,name)
+subroutine get_substance_name(equivalent,rulesets,name)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS/OUTPUTS
     character(len=ESMF_MAXSTR), intent(in) &
-                                :: alias
+                                :: equivalent
+    character(len=ESMF_MAXSTR), dimension (:), intent(in) &
+                                :: rulesets
     character(len=ESMF_MAXSTR), intent(out) &
                                 :: name
 
     !LOCAL VARS
-    character(255)              :: sql &
-       = "SELECT Alias FROM tblnames WHERE tblnames.Alias='TN';"
-!        = "SELECT ts.SubstanceName &
-!        FROM (tblSubstances JOIN tblNames &
-!        ON tblSubstances.ID=tblNames.Substance_ID) ts &
-!        WHERE tblNames.Alias='~name';"
-!       = "SELECT s.SubstanceName FROM tblSubstances s WHERE s.SubstanceName='N';"
+    character(1000)              :: sql &
+        ="SELECT t.SubstanceName  FROM (tblEquivalents &
+        JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
+        JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
+        JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
+        WHERE tblRulesets.RulesetName='General' AND tblEquivalents.EquivalentName='oxygen';"
 
-    character(len=ESMF_MAXSTR)  :: search_list="~name"
+!    = "SELECT t.SubstanceName  FROM (tblEquivalents &
+!    JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
+!    JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
+!    JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
+!    WHERE tblRulesets.RulesetName='General' AND tblEquivalents.EquivalentName='~equivalent';"
+
+    !> @todo: Implement as Vector (then include ruleset)
+    character(len=ESMF_MAXSTR)  :: search_list="~equivalent", res
 
     type(SQLITE_STATEMENT)      :: stmt
-    integer                     :: completion
     type(SQLITE_COLUMN), dimension(:), pointer &
                                 :: col =>null()
-    logical                     :: finished
+    logical                     :: finished=.false.
     !------------------------------------------------------------------
 
     !Construct recordset for return values
     allocate( col(1) )
     call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
 
-    call sql_select_state(sql,search_list,alias,stmt,col)
-
-!***@temp
-!    write (*,*) sql
+    call sql_select_state(sql,search_list,equivalent,stmt,col)
 
     !@todo: Loop zum Schreiben aller Werte in den Array
+
+!***@temp fix for test
     call sqlite3_next_row( stmt, col, finished )
-    call sqlite3_get_column( col(1), name)
+    finished = .false.
+
+    do while (finished .eqv. .false.)
+        call sqlite3_next_row( stmt, col, finished )
+        call sqlite3_get_column( col(1), name)
+    end do
+
+    call sqlite3_finalize( stmt )
 
     !@todo: listout umwandeln in MOSSCO-ARRAY
 
@@ -195,7 +208,7 @@ subroutine finalize_session(hold_con,abort)
     logical, intent(in), optional     :: hold_con,abort
 
     !LOCAL VARS
-    logical                           :: hcon
+    logical                           :: hcon, critical
     integer                           :: localrc
     !------------------------------------------------------------------
 
@@ -203,31 +216,36 @@ subroutine finalize_session(hold_con,abort)
 
     !Catch wrong call, end session
     if ((session_active .eqv. .false.) .and. (con_active .eqv. .false.)) return
-    session_active=.false.
 
-    !Commit current changes
-    !@todo: muss hier vorher geprüft werden ob etwas vorhanden ist?
+    !> Commit current changes
     if (abort .eqv. .false.) call sqlite3_commit( db )
 
     !check external error flag / current errors and treat them
     if ((abort .eqv. .true.) .OR. (sqlite3_error( db ) .eqv. .true.)) then  !@todo: Kann es hier zu einem Fehler kommen, wenn noch nichts getan wurde?
-        !@Error Undo changes made to database
+        !> Undo changes made to database
         call sqlite3_rollback( db )
         hcon = .false.
-        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT) @todo: Meldung aktivieren
-        !@todo: @Frage: funktioniert der Aufruf so und läuft die Funktion danach weiter oder wird alles abgebrochen?
+        critical = .true.
     end if
 
-    !Quit connection and clear flag for regular shutdowns and errors
+    !> End session
+    session_active=.false.
+
+    !> Quit connection and clear flag for regular shutdowns and errors
     if (hcon .eqv. .false.) then
         con_active = .false.
         call sqlite3_close( db )
     end if
 
+    !> On critical error run ESMF_END_ABORT routine after connection has been shut down
+    !if (critical .eqv. .true.) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!***@temp: @todo: Meldung aktivieren!
 end subroutine finalize_session
 
+
+
 !----------------------------------------------------------------------
-!------------------- IN DEV - BASIC SQL ROUTINES ----------------------
+!------------------- BASIC SQL ROUTINES -------------------------------
 !----------------------------------------------------------------------
 
 #undef  ESMF_METHOD
@@ -239,7 +257,7 @@ subroutine sql_select_state(sql,search_list,replace_list,stmt,col)
     implicit none
 
     !INPUTS / OUTPUTS
-    character(255)                         :: sql
+    character(len=*)                         :: sql
 !***@todo: Als Arrays
     character(len=ESMF_MAXSTR),intent(in),optional &
                                            :: search_list, replace_list
