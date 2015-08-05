@@ -1,3 +1,4 @@
+test_mossco_db
 test_ArrayGet
 test_Clock
 test_ClockDestroy
@@ -20,6 +21,5 @@ test_RegridLocStream
 test_Solver
 test_Ugrid
 test_mossco_netcdf
-test_mossco_db
 test_netcdf.nc
 *dSYM
