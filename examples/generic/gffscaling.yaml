@@ -1,0 +1,38 @@
+dependencies:
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - restart_soil:
+    - component: fabm_sediment
+      grid: temperature_in_soil
+  - fabm_sediment:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+
+coupling:
+  - components:
+     - getm
+     - fabm_sediment
+    interval: 30 m
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 10 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval:  30 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
+    interval: 30 m
