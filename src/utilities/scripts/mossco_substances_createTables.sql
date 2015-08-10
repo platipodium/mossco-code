@@ -78,19 +78,19 @@ INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID)
 	
 COMMIT;
 
-
-
 SELECT t.SubstanceName  FROM (tblEquivalents
 	JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID
 	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID
 	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t
 	WHERE tblRulesets.RulesetName="General" AND tblEquivalents.EquivalentName="oxygen";
 
-SELECT t.SubstanceName || coalesce(tb.Condition,"") || coalesce(tb.Location,"") 
+SELECT t.SubstanceName || coalesce(t.Condition,"") || coalesce(t.Location,"") 
 	FROM (tblAppendix 
 	JOIN tblSubstances ON tblAppendix.Substance_ID=tblSubstances.ID) t;
 
-SELECT tb.EquivalentName || coalesce(tb.Condition,"") || coalesce(tb.Location,"") 
+SELECT t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"") 
 	FROM (tblAppendix
 	JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID
-	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) tb;
+	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t;
+	
+SELECT SubstanceName FROM tblSubstances;

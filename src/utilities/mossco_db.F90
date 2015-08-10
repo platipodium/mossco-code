@@ -45,116 +45,101 @@ contains
 #define ESMF_METHOD "get_substance_name"
 !> @brief
 !> @param
-subroutine get_substance_name(equivalent,rulesets,name)
+subroutine get_substance_name(equivalent,rulesets,nameout)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in) &
-                                :: equivalent
-    character(len=ESMF_MAXSTR), dimension (:), intent(in) &
-                                :: rulesets
-    character(len=ESMF_MAXSTR), intent(out) &
-                                :: name
+    character(len=ESMF_MAXSTR), intent(in)                :: equivalent
+    character(len=ESMF_MAXSTR), dimension (:), intent(in) :: rulesets
+    character(len=ESMF_MAXSTR), intent(out)               :: nameout
 
     !LOCAL VARS
-    character(1000)              :: sql &
+    integer                     :: columns = 1
+    character(len=ESMF_MAXSTR), dimension(1) &
+                                :: search_list, replace_list
+
+    type(SQLITE_COLUMN), dimension(:), pointer            :: col =>null()
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba
+    character(1000)                                       :: sql &
         ="SELECT t.SubstanceName  FROM (tblEquivalents &
         JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
         JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
-        WHERE tblRulesets.RulesetName='General' AND tblEquivalents.EquivalentName='oxygen';"
+        WHERE tblRulesets.RulesetName='General' AND tblEquivalents.EquivalentName='~equivalent';"
+!***@todo: Ruleset
 
-!    = "SELECT t.SubstanceName  FROM (tblEquivalents &
-!    JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
-!    JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
-!    JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
-!    WHERE tblRulesets.RulesetName='General' AND tblEquivalents.EquivalentName='~equivalent';"
-
-    !> @todo: Implement as Vector (then include ruleset)
-    character(len=ESMF_MAXSTR)  :: search_list="~equivalent", res
-
-    type(SQLITE_STATEMENT)      :: stmt
-    type(SQLITE_COLUMN), dimension(:), pointer &
-                                :: col =>null()
-    logical                     :: finished=.false.
     !------------------------------------------------------------------
 
+    search_list = (/"~equivalent"/)
+    replace_list = (/equivalent/)
+
     !Construct recordset for return values
-    allocate( col(1) )
+    allocate( col(columns) )
     call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
 
-    call sql_select_state(sql,search_list,equivalent,stmt,col)
+    call sql_select_state(sql,col,1,search_list,replace_list,dba)
+    if (allocated(dba)) nameout=dba(1,1)
 
-    !@todo: Loop zum Schreiben aller Werte in den Array
-
-!***@temp fix for test
-    call sqlite3_next_row( stmt, col, finished )
-    finished = .false.
-
-    do while (finished .eqv. .false.)
-        call sqlite3_next_row( stmt, col, finished )
-        call sqlite3_get_column( col(1), name)
-    end do
-
-    call sqlite3_finalize( stmt )
-
-    !@todo: listout umwandeln in MOSSCO-ARRAY
+    deallocate(col)
 
 end subroutine get_substance_name
 
 
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "get_substance_list"
+#define ESMF_METHOD "get_substances_list"
 !> @subsubsection get_substance_list "Get Substance List"
 !> @brief Receives list of all known substances from the database name
 !> @detail list by unique identifier: Substance name
-!> @param listout dim (:) char(ESMF_MAXSTR) Array with all Substance Names
-subroutine get_substance_list(listout)
+!> @param dbaout: Array with all Substance Names
+subroutine get_substances_list(dbaout)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS/OUTPUTS
-!***@temp
-    character(len=ESMF_MAXSTR), dimension (:), intent(out) &
-                                :: listout
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dbaout
 
     !LOCAL VARS
+    integer                                             :: columns = 1
+    type(SQLITE_COLUMN), dimension(:), pointer          :: col =>null()
+
+    character(1000)                                     :: sql &
+        ="SELECT SubstanceName FROM tblSubstances;"
 
     !------------------------------------------------------------------
 
-!***@temp
-    listout(1) = "TN"
+    !Construct recordset for return values
+    allocate( col(columns) )
+    call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
 
-end subroutine get_substance_list
+    call sql_select_state(sql,col,1,dba=dbaout)
+
+end subroutine get_substances_list
 
 
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_alias_list"
 !> @subsubsection get_substance_alias_list "Get Substance Alias List"
-!> @brief Receives list of all alias for the substance name from the database
+!> @brief Receives list of all aliases of the substance from the database
 !> @param name char(ESMF_MAXSTR) Name or Alias of Substance
 !> @param listout dim (:) char(ESMF_MAXSTR) Array with all aliases
-subroutine get_substance_alias_list(name, listout)
+subroutine get_substance_alias_list(name, dba)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR)  :: name
+    character(len=ESMF_MAXSTR), intent(in) &
+                                :: name
     character(len=ESMF_MAXSTR), dimension (:), pointer, intent(out) &
-                                :: listout
+                                :: dba
 
     !LOCAL VARS
 
     !------------------------------------------------------------------
 
-    !> Check if name
 
-
-!***@temp
-    listout(1) = "TN"
 
 end subroutine get_substance_alias_list
 
@@ -250,63 +235,92 @@ end subroutine finalize_session
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "sql_select_state"
-!> @brief
-!> @param
-subroutine sql_select_state(sql,search_list,replace_list,stmt,col)
+!> @brief Runs a sql select state and returns the result
+!> @param sql: SQL Command ready to roll
+!> @param columns: number of columns in resulting array
+!> @param search_list,replace_list: Replaces values from sl with rl
+!> @param dba: allocatable array, returns results of select state
+subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS / OUTPUTS
-    character(len=*)                         :: sql
+    character(len=*)            :: sql
+    type(SQLITE_COLUMN), dimension(:), pointer, intent (in) :: col
+
 !***@todo: Als Arrays
-    character(len=ESMF_MAXSTR),intent(in),optional &
-                                           :: search_list, replace_list
-    type(SQLITE_STATEMENT), intent(out)    :: stmt
+    character(len=ESMF_MAXSTR),dimension(:), optional,intent(in) &
+                                :: search_list, replace_list
+    integer, intent(in)         :: columns
+    Character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+                                :: dba
+
     !character(len=ESMF_MAXSTR), dimension(:), intent(out) &
 !***@temp
-    type(SQLITE_COLUMN),dimension(:),pointer, intent(out) &
-                                           :: col =>null()
-
-    character(len=ESMF_MAXSTR)             :: name
 
     !LOCAL VARS
-    !character(*),dimension(:),intent(in)  :: search_list
-    !character(*),dimension(:),intent(in)  :: replace_list
-    !@todo: als array
-    logical                                :: err, finished
-    integer                                :: i, completion
+    logical                     :: err, finished
+    type(SQLITE_STATEMENT)      :: stmt
+    integer                     :: i, j, completion, rows
+
     !------------------------------------------------------------------
 
-!***@temp
-    !return
-
     !Replace tags with values given by variables
-    if (.not. (search_list=="")) sql=Replace_String(sql,search_list,replace_list)
+    if (present(search_list) .and. present(replace_list)) then
+        do i=1, size(search_list)
+            if ((.not. search_list(i) == "") .and. (.not. replace_list(i)=="")) &
+                sql=Replace_String(sql,search_list(i),replace_list(i))
+        end do
+    end if
 
-!***@todo: dynamische Länge - dim(search_list)
-!    do i=1,20
-!        if (search_list(i)=="") exit !temp Lsg
-!        sql=Replace_String(sql,search_list(i),replace_list(i))
-!    end do
+    !write(*,*) sql
 
-    !Init connection and start a new Transaction
+    !> Init connection and start a new Transaction
     call load_session
 
+    !> Run the statement
     call sqlite3_prepare( db, sql, stmt, col )
     call sqlite3_step( stmt, completion )
 
+    !> Count rows in result
+    !> @todo: better way to get row number!?
+    !Reset position in database array
+    do while (finished .eqv. .false.)
+        call sqlite3_next_row( stmt, col, finished )
+    end do
+    finished=.false.
+    rows=0
+    !Loop and count
+    do while (finished .eqv. .false.)
+        rows=rows+1
+        call sqlite3_next_row( stmt, col, finished )
+    end do
 
-!***@temp
-    write(*,*) "--- database info ---"
-    write (*,*) sql
-    write(*,*) sqlite3_errmsg( db )
-    write(*,*) "----------------------------"
+    write(*,*) columns
+    write(*,*) rows
+
+    allocate(dba(rows*columns, columns))
+    !dba=reshape(
+
+    do j=1, rows
+        !write(*,*) "ping"
+        call sqlite3_next_row( stmt, col, finished )
+            do i=1, columns
+                !write(*,*) "pong"
+                call sqlite3_get_column( col(i), dba(j,i))
+            end do
+    end do
+
+
+! Debug Info
+!    write(*,*) "--- database info ---"
+!    write (*,*) sql
+!    write(*,*) sqlite3_errmsg( db )
+!    write(*,*) "----------------------------"
 
     call finalize_session(.false.,(completion .ne. SQLITE_DONE))
 
 !    write(*,*) name
-
-    !@dev: auto-create fitting "column" for query
 
 end subroutine sql_select_state
 

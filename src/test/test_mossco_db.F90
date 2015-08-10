@@ -22,10 +22,12 @@ program test_mossco_db
 
     !LOCAL VARS
     !@temp
-    character(len=ESMF_MAXSTR)  :: alias, name="nothing"
-    logical                     :: finished
-    character(len=ESMF_MAXSTR), dimension(1) &
-                                :: rulesets = (/'General'/)
+    character(len=ESMF_MAXSTR)               :: alias, name="nothing"
+    logical                                  :: finished
+    character(len=ESMF_MAXSTR),dimension(1)  :: rulesets = (/'General'/)
+    !integer, dimension(:,:), allocatable :: test
+    integer :: i
+    !character(len=ESMF_MAXSTR),dimension(:),pointer :: dba
     !------------------------------------------------------------------
 
     !******************************************************************
@@ -39,8 +41,18 @@ program test_mossco_db
     connected to equivalent '" // alias // "', found:"
 
     call get_substance_name(alias,rulesets,name)
-
     write (*,*) name
+
+    write(*,*) "Get list of all substances:"
+    !call get_substances_list(dba)
+    !write(*,*) dba
+
+
+    !allocate(test(2,5))
+    !test=reshape((/1,2,1,2,1,2,1,2,1,2/),shape(test))
+
+    !write(*,*) ( test(1,i), i=1,5 )
+    !write(*,*) ( test(2,i), i=1,5 )
 
     write (*,*) "test finished"
 
