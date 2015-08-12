@@ -30,10 +30,13 @@ private
     type(SQLITE_DATABASE)           :: db
     logical                         :: session_active=.false.
     logical                         :: con_active=.false.
+    logical                         :: DEBUG = .false.
 
     !@dev: shift all sql states as parameter to here
 
-    public get_substance_name
+    public get_substance_name, &
+           get_substances_list, &
+           get_substance_aliases_list
 
 contains
 
@@ -55,20 +58,18 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
     character(len=ESMF_MAXSTR), intent(out)               :: nameout
 
     !LOCAL VARS
-    integer                     :: columns = 1
-    character(len=ESMF_MAXSTR), dimension(1) &
-                                :: search_list, replace_list
-
-    type(SQLITE_COLUMN), dimension(:), pointer            :: col =>null()
+    integer                                          :: columns = 1
+    character(len=ESMF_MAXSTR), dimension(1)         :: search_list, &
+                                                        replace_list
+    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
     character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba
-    character(1000)                                       :: sql &
+    character(1000)                                  :: sql &
         ="SELECT t.SubstanceName  FROM (tblEquivalents &
         JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
         JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
         WHERE tblRulesets.RulesetName='General' AND tblEquivalents.EquivalentName='~equivalent';"
 !***@todo: Ruleset
-
     !------------------------------------------------------------------
 
     search_list = (/"~equivalent"/)
@@ -86,7 +87,6 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
 end subroutine get_substance_name
 
 
-
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substances_list"
 !> @subsubsection get_substance_list "Get Substance List"
@@ -98,13 +98,13 @@ subroutine get_substances_list(dbaout)
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dbaout
-
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+                                                     :: dbaout
     !LOCAL VARS
-    integer                                             :: columns = 1
-    type(SQLITE_COLUMN), dimension(:), pointer          :: col =>null()
+    integer                                          :: columns = 1
+    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
 
-    character(1000)                                     :: sql &
+    character(1000)                                  :: sql &
         ="SELECT SubstanceName FROM tblSubstances;"
 
     !------------------------------------------------------------------
@@ -115,33 +115,55 @@ subroutine get_substances_list(dbaout)
 
     call sql_select_state(sql,col,1,dba=dbaout)
 
+    deallocate(col)
+
 end subroutine get_substances_list
 
 
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "get_substance_alias_list"
+#define ESMF_METHOD "get_substance_aliases_list"
 !> @subsubsection get_substance_alias_list "Get Substance Alias List"
 !> @brief Receives list of all aliases of the substance from the database
 !> @param name char(ESMF_MAXSTR) Name or Alias of Substance
 !> @param listout dim (:) char(ESMF_MAXSTR) Array with all aliases
-subroutine get_substance_alias_list(name, dba)
+subroutine get_substance_aliases_list(name, dbaout)
     !------------------------------------------------------------------
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in) &
-                                :: name
-    character(len=ESMF_MAXSTR), dimension (:), pointer, intent(out) &
-                                :: dba
-
+    character(len=ESMF_MAXSTR), intent(in)           :: name
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+                                                     :: dbaout
     !LOCAL VARS
+    integer                                          :: columns = 1
+    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
+    character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
+                                                        replace_list
 
+    character(1000)                                  :: sql &
+        ="SELECT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+        FROM (tblAppendix &
+        JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
+        JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
+        JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
+        JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
+        WHERE tblRulesets.RulesetName='~ruleset' AND tblSubstances.SubstanceName='~name';"
+    !> @todo: Multiple Rulesets - IN State
     !------------------------------------------------------------------
 
+    search_list = [character(len=ESMF_MAXSTR) :: "~ruleset", "~name"]
+    replace_list = [character(len=ESMF_MAXSTR) :: "General", name]
 
+    !Construct recordset for return values
+    allocate( col(columns) )
+    call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
 
-end subroutine get_substance_alias_list
+    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+
+    deallocate(col)
+
+end subroutine get_substance_aliases_list
 
 
 
@@ -245,18 +267,14 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     implicit none
 
     !INPUTS / OUTPUTS
-    character(len=*)            :: sql
-    type(SQLITE_COLUMN), dimension(:), pointer, intent (in) :: col
+    character(len=*)                                    :: sql
+    type(SQLITE_COLUMN),dimension(:),pointer,intent(in) :: col
 
-!***@todo: Als Arrays
-    character(len=ESMF_MAXSTR),dimension(:), optional,intent(in) &
-                                :: search_list, replace_list
-    integer, intent(in)         :: columns
+    character(len=*),dimension(:),optional,intent(in) :: search_list, &
+                                                         replace_list
+    integer, intent(in)                               :: columns
     Character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
-                                :: dba
-
-    !character(len=ESMF_MAXSTR), dimension(:), intent(out) &
-!***@temp
+                                                      :: dba
 
     !LOCAL VARS
     logical                     :: err, finished
@@ -267,7 +285,9 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
 
     !Replace tags with values given by variables
     if (present(search_list) .and. present(replace_list)) then
+        !write(*,*) "ping"
         do i=1, size(search_list)
+            !write(*,*) "pong"
             if ((.not. search_list(i) == "") .and. (.not. replace_list(i)=="")) &
                 sql=Replace_String(sql,search_list(i),replace_list(i))
         end do
@@ -296,8 +316,7 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
         call sqlite3_next_row( stmt, col, finished )
     end do
 
-    write(*,*) columns
-    write(*,*) rows
+
 
     allocate(dba(rows*columns, columns))
     !dba=reshape(
@@ -312,11 +331,15 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     end do
 
 
-! Debug Info
-!    write(*,*) "--- database info ---"
-!    write (*,*) sql
-!    write(*,*) sqlite3_errmsg( db )
-!    write(*,*) "----------------------------"
+    if (DEBUG .eqv. .true.) then
+        write(*,*) "--- database info ---"
+        write(*,*) "cols/rows:"
+        write(*,*) columns
+        write(*,*) rows
+        write (*,*) sql
+        write(*,*) sqlite3_errmsg( db )
+        write(*,*) "----------------------------"
+    end if
 
     call finalize_session(.false.,(completion .ne. SQLITE_DONE))
 

@@ -47,6 +47,8 @@ COMMIT;
 BEGIN TRANSACTION;
 
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("O_2");
+INSERT INTO "tblSubstances" (SubstanceName) VALUES ("NH_3");
+INSERT INTO "tblSubstances" (SubstanceName) VALUES ("N");
 
 INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
@@ -92,5 +94,13 @@ SELECT t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"")
 	FROM (tblAppendix
 	JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID
 	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t;
+
+SELECT t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"") 
+	FROM (tblAppendix
+	JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID
+	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID
+	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID
+	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t
+	WHERE tblRulesets.RulesetName="General" AND tblSubstances.SubstanceName="O_2";
 	
 SELECT SubstanceName FROM tblSubstances;

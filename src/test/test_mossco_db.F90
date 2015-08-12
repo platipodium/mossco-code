@@ -22,30 +22,47 @@ program test_mossco_db
 
     !LOCAL VARS
     !@temp
-    character(len=ESMF_MAXSTR)               :: alias, name="nothing"
+    character(len=ESMF_MAXSTR)               :: equivalent, &
+                                                name="nothing"
     logical                                  :: finished
     character(len=ESMF_MAXSTR),dimension(1)  :: rulesets = (/'General'/)
     !integer, dimension(:,:), allocatable :: test
     integer :: i
-    !character(len=ESMF_MAXSTR),dimension(:),pointer :: dba
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba
     !------------------------------------------------------------------
 
     !******************************************************************
     !************* Enter search string for test here: *****************
     !******************************************************************
-    alias = "oxygen"
+    equivalent = "oxygen"
+
     !******************************************************************
     !******************************************************************
 
+    !Receive full list of substances saved in db
+    write (*,*) "******************************************"
+    write(*,*) "Get list of all substances:"
+    call get_substances_list(dba)
+    write(*,*) dba
+
+    write (*,*) "******************************************"
+
+    !search for manually entered equivalent name
     write (*,*) "Searching db for name & 
-    connected to equivalent '" // alias // "', found:"
+    connected to equivalent '" // equivalent // "', found:"
 
-    call get_substance_name(alias,rulesets,name)
+    call get_substance_name(equivalent,rulesets,name)
     write (*,*) name
 
-    write(*,*) "Get list of all substances:"
-    !call get_substances_list(dba)
-    !write(*,*) dba
+    write (*,*) "******************************************"
+
+    write(*,*) "Get list of all equivalent-appendix combinations &
+    for " // name // ":"
+
+    call get_substance_aliases_list(name, dba)
+    write(*,*) dba
+
+    write (*,*) "******************************************"
 
 
     !allocate(test(2,5))
