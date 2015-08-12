@@ -244,6 +244,7 @@
 #endif
 #endif
    use meteo, only: metforcing,met_method,init_meteo,do_meteo
+   use meteo, only: ssu,ssv
 #ifndef NO_BAROCLINIC
    use meteo, only: swr,albedo
 #endif
@@ -362,6 +363,7 @@
    call toc(TIM_INITIALIZE)
 
    if (metforcing) then
+      call set_sea_surface_state(runtype,ssu,ssv,.true.)
       if(runtype .le. 2) then
          call do_meteo(MinN-1)
          if (met_method .eq. 2) then
@@ -566,6 +568,7 @@
    use time,     only: update_time,timestep
    use domain,   only: kmax
    use meteo,    only: do_meteo,tausx,tausy,airp,swr,albedo
+   use meteo,    only: ssu,ssv
    use meteo,    only: fwf_method,evap,precip
    use waves,    only: do_waves,waveforcing_method,NO_WAVES
    use m2d,      only: no_2d,integrate_2d
@@ -623,6 +626,7 @@
       do_3d = (runtype .ge. 2 .and. mod(n,M) .eq. 0)
 #endif
       call do_input(n,do_3d)
+      call set_sea_surface_state(runtype,ssu,ssv,do_3d)
       if(runtype .le. 2) then
          call do_meteo(n)
 #ifndef NO_3D
