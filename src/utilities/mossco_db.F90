@@ -36,7 +36,9 @@ private
 
     public get_substance_name, &
            get_substances_list, &
-           get_substance_aliases_list
+           get_substance_aliases_list, &
+           get_substance_appendices_list, &
+           get_substance_appendix_aliases_list
 
 contains
 
@@ -117,6 +119,99 @@ subroutine get_substances_list(dbaout)
     deallocate(col)
 
 end subroutine get_substances_list
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_substance_appendices_list"
+!> @subsubsection get_substance_appendices_list "Get Substance Appendices List"
+!> @brief Receives list of all known appendices-IDs for a substance
+!> @detail list by unique identifier: Substance name
+!> @param name: Array with all Substance Names
+!> @param dbaout: Array with all Substance Names
+subroutine get_substance_appendices_list(name, dbaout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+    character(len=ESMF_MAXSTR), intent(in)           :: name
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+                                                     :: dbaout
+
+    !LOCAL VARS
+    integer                                          :: columns = 1
+    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
+    character(len=ESMF_MAXSTR), dimension(1)         :: search_list, &
+                                                        replace_list
+
+    character(1000)                                  :: sql &
+        = "SELECT DISTINCT tblAppendix.ID &
+            FROM (tblAppendix &
+            JOIN tblSubstances ON tblSubstances.ID=tblAppendix.Substance_ID) t &
+            WHERE tblSubstances.SubstanceName='~name';"   
+
+    !------------------------------------------------------------------
+
+    search_list = [character(len=ESMF_MAXSTR) :: "~name"]
+    replace_list = [character(len=ESMF_MAXSTR) :: name]
+
+    !Construct recordset for return values
+    allocate( col(columns) )
+    call sqlite3_column_query( col(1), 'Appendix ID', SQLITE_CHAR, ESMF_MAXSTR )
+
+    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+
+    deallocate(col)
+
+end subroutine get_substance_appendices_list
+
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_substance_appendix_aliases_list"
+!> @subsubsection get_substance_appendix_aliases_list "Get Substance Appendix-Aliases List"
+!> @brief Receives list of all aliases of the substance connected with one appendix
+!> @param
+subroutine get_substance_appendix_aliases_list(SubstanceName, apdxID, rulesets, dbaout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+    character(len=ESMF_MAXSTR), intent(in)           :: SubstanceName
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+                                                     :: dbaout
+    character(len=*), intent(in)                     :: rulesets, apdxID
+
+    !LOCAL VARS
+    integer                                          :: columns = 1
+    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
+    character(len=ESMF_MAXSTR), dimension(3)         :: search_list, &
+                                                        replace_list
+
+    character(1000)                                  :: sql &
+        = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+            FROM (tblAppendix &
+            JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
+            JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
+            JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
+            JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
+            WHERE tblRulesets.RulesetName IN(~rulesets) &
+            AND tblSubstances.SubstanceName='~name' &
+            AND tblAppendix.ID=~apdxID; "   
+
+    !------------------------------------------------------------------
+
+    search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name", "~apdxID"]
+    replace_list = [character(len=ESMF_MAXSTR) :: rulesets, SubstanceName, apdxID]
+
+    !Construct recordset for return values
+    allocate( col(columns) )
+    call sqlite3_column_query( col(1), 'Substance aliases', SQLITE_CHAR, ESMF_MAXSTR )
+
+    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+
+    deallocate(col)
+
+end subroutine get_substance_appendix_aliases_list
 
 
 

@@ -524,17 +524,22 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     integer, intent(out)        :: rc
 
     !LOCAL VARS
-    type(ESMF_State), target    :: dba_import, dba_export
-    type(ESMF_State), pointer   :: dba =>null(), ste =>null()
+!    type(ESMF_State), target    :: dba_import, dba_export
+    type(ESMF_State), pointer   :: ste =>null()
+    type(ESMF_State)            :: dba_import, dba_export
+
+
     character(len=ESMF_MAXSTR)  :: name
     integer                     :: localrc, dba_rc,i,j
     real(ESMF_KIND_R8), dimension(:), pointer &
-                                :: dba_value
+                                :: dba_value => null()
     type(ESMF_Time)             :: currTime
     logical                     :: dba_verbose
 
-    character(len=ESMF_MAXSTR), dimension (:), pointer &
-                                :: names, aliases
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable &
+                                                   :: dba_substances, &
+                                                      dba_appendices, &
+                                                      dba_equivalents
     !------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
@@ -564,34 +569,36 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Get all Substances by unique name from database
-    call get_substance_list(names)
+    call get_substances_list(dba_substances)
 
-    !> run import / export database array serially
-    do i = 1, 2
-        if (i==1) then
-            dba => dba_import
-            ste = importState
-            !> @todo: is it possible to use pointer here?
-            !! declaration of importState as target causes error in SetServices
-        else
-            dba => dba_export
-            ste = exportState
-        end if
+    !> run import / export database array
 
-        !> Search all names in Import/Export State
-        do j=1, size(names)
-            call get_substance_alias_list(names(j), aliases)
-            call mossco_state_get(ste, aliases, dba_value, rc=dba_rc)
+    !> Loop all Substances in database
+    do j=1, size(dba_substances)
+        call get_substance_appendices_list(dba_substances(j,1), dba_appendices)
+        !> Loop all appendices for the substance
+        do i=1, size(dba_appendices)
+            !> Retreive set of equivalent name-appendix combinations
+            call get_substance_appendix_aliases_list(dba_substances(j,1), dba_appendices(i,1), rulesets, dba_equivalents)
 
-            !> If found add them to dba
+            !> Search combinations in import and add them to inventory State
+            !call mossco_state_get(importState, dba_equivalents, dba_value, rc=dba_rc)
+!***********@todo: cast dba_equivalents as 1D array
+
             if (dba_rc==ESMF_SUCCESS) then
-                call ESMF_AttributeSet(dba, names(j), dba_value, rc=localrc)
+                call ESMF_AttributeSet(dba_import, dba_substances(j,1) // dba_appendices(i,1), dba_value, rc=localrc)
                 if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-                    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             end if
 
+            !> Search combinations in export and add them to inventory State
+            !call mossco_state_get(exportState, dba_equivalents, dba_value, rc=dba_rc)
+            if (dba_rc==ESMF_SUCCESS) then
+                call ESMF_AttributeSet(dba_export, dba_substances(j,1) // dba_appendices(i,1), dba_value, rc=localrc)
+                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            end if
         end do
-
     end do
 
     !> Complete database Arrays

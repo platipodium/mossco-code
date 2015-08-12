@@ -30,13 +30,16 @@ program test_mossco_db
     !LOCAL VARS
     !@temp
     character(len=ESMF_MAXSTR)               :: equivalent, &
-                                                name="nothing"
+                                                name="nothing", &
+                                                tmp
     logical                                  :: finished
 
 
-    !integer, dimension(:,:), allocatable :: test
+    integer, dimension(:,:), allocatable :: test, test2
     integer :: i
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba, &
+                                                             dba2, &
+                                                             dba3
     !type(ESMF_ARRAY) :: dba_ESMF
     !------------------------------------------------------------------
 
@@ -75,18 +78,38 @@ program test_mossco_db
 
     write (*,*) "******************************************"
 
-    !allocate(test(2,5))
-    !test=reshape((/1,2,1,2,1,2,1,2,1,2/),shape(test))
+    write(*,'(A)') "Get list of all appendix IDs used by '" // name // "':"
+    call get_substance_appendices_list(name, dba2)
 
-    !write(*,*) ( test(1,i), i=1,5 )
-    !write(*,*) ( test(2,i), i=1,5 )
+    write(*,'(A)') dba2
+    !> @todo: Bug - one ID too much (double-2)
 
+    write (*,*) "******************************************"
 
+    write(*,'(A)') "Get list of all substance-appendix combinations for '" // name // "':"
 
+    do i=1, size(dba2)
+        call get_substance_appendix_aliases_list &
+             (name, dba2(i,1), rulesets, dba3)
+        write(*,'(A)') dba3
+        !> @todo: Bug - doubled resulsts (even if DISTINCT is used)
+    end do
 
-
+    write (*,*) "******************************************"
 
 
     write (*,*) "test finished"
+
+
+
+
+
+!    allocate(test(2,5))
+!    test=reshape((/1,2,1,2,1,2,1,2,1,2/),shape(test))
+!
+!    write(*,*) ( test(1,i), i=1,5 )
+!    write(*,*) ( test(2,i), i=1,5 )
+!
+!    allocate( test2( 1,(size(test)/2) ) )
 
 end program
