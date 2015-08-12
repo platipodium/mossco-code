@@ -542,6 +542,11 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     !> Call user-code method
     call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 
+
+!***@temp
+    return
+
+
     !> @paragraph dba "Database Arrays"
     !> @brief Create database array states (dba) for import and export
 

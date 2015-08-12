@@ -15,7 +15,7 @@
 module inout_coupler
 
   use esmf
-  use mossco_component
+!  use mossco_component
 
   implicit none
 
