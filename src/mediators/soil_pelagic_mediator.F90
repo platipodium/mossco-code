@@ -36,7 +36,9 @@ module soil_pelagic_mediator
 
     private
     !COUPLER CONFIG
-    character(len=ESMF_MAXSTR), dimension(1)     :: rulesets = (/"General"/)
+    character(len=ESMF_MAXSTR)                   :: rulesets &
+                                                    ="'General', &
+                                                     'HZG KW'"
 
     !MODULE VARS
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()

@@ -18,6 +18,13 @@ program test_mossco_db
     !------------------------------------------------------------------
     implicit none
 
+    !CONFIG
+!    character(len=ESMF_MAXSTR)               :: rulesets &
+!                                                = "'General'"
+    character(len=ESMF_MAXSTR)               :: rulesets &
+                                                = "'General', &
+                                                  'HZG KW'"
+
     !INPUTS/OUTPUTS
 
     !LOCAL VARS
@@ -25,10 +32,12 @@ program test_mossco_db
     character(len=ESMF_MAXSTR)               :: equivalent, &
                                                 name="nothing"
     logical                                  :: finished
-    character(len=ESMF_MAXSTR),dimension(1)  :: rulesets = (/'General'/)
+
+
     !integer, dimension(:,:), allocatable :: test
     integer :: i
     character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba
+    !type(ESMF_ARRAY) :: dba_ESMF
     !------------------------------------------------------------------
 
     !******************************************************************
@@ -39,11 +48,13 @@ program test_mossco_db
     !******************************************************************
     !******************************************************************
 
+    write (*,*) "use ruleset: " // rulesets
+
     !Receive full list of substances saved in db
     write (*,*) "******************************************"
     write(*,*) "Get list of all substances:"
     call get_substances_list(dba)
-    write(*,*) dba
+    write(*,'(A)') dba
 
     write (*,*) "******************************************"
 
@@ -52,24 +63,29 @@ program test_mossco_db
     connected to equivalent '" // equivalent // "', found:"
 
     call get_substance_name(equivalent,rulesets,name)
-    write (*,*) name
+    write (*,'(A)') name
 
     write (*,*) "******************************************"
 
-    write(*,*) "Get list of all equivalent-appendix combinations &
+    write(*,'(A)') "Get list of all equivalent-appendix combinations &
     for " // name // ":"
 
-    call get_substance_aliases_list(name, dba)
-    write(*,*) dba
+    call get_substance_aliases_list(name, rulesets, dba)
+    write(*,'(A)') dba
 
     write (*,*) "******************************************"
-
 
     !allocate(test(2,5))
     !test=reshape((/1,2,1,2,1,2,1,2,1,2/),shape(test))
 
     !write(*,*) ( test(1,i), i=1,5 )
     !write(*,*) ( test(2,i), i=1,5 )
+
+
+
+
+
+
 
     write (*,*) "test finished"
 

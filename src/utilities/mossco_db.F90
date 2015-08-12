@@ -54,12 +54,12 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
 
     !INPUTS/OUTPUTS
     character(len=ESMF_MAXSTR), intent(in)                :: equivalent
-    character(len=ESMF_MAXSTR), dimension (:), intent(in) :: rulesets
+    character(len=ESMF_MAXSTR), intent(in)                :: rulesets
     character(len=ESMF_MAXSTR), intent(out)               :: nameout
 
     !LOCAL VARS
     integer                                          :: columns = 1
-    character(len=ESMF_MAXSTR), dimension(1)         :: search_list, &
+    character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
                                                         replace_list
     type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
     character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba
@@ -68,12 +68,11 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
         JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
         JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
-        WHERE tblRulesets.RulesetName='General' AND tblEquivalents.EquivalentName='~equivalent';"
-!***@todo: Ruleset
+        WHERE tblRulesets.RulesetName IN (~rulesets) AND tblEquivalents.EquivalentName='~equivalent';"
     !------------------------------------------------------------------
 
-    search_list = (/"~equivalent"/)
-    replace_list = (/equivalent/)
+    search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~equivalent"]
+    replace_list = [character(len=ESMF_MAXSTR) :: rulesets, equivalent]
 
     !Construct recordset for return values
     allocate( col(columns) )
@@ -127,7 +126,7 @@ end subroutine get_substances_list
 !> @brief Receives list of all aliases of the substance from the database
 !> @param name char(ESMF_MAXSTR) Name or Alias of Substance
 !> @param listout dim (:) char(ESMF_MAXSTR) Array with all aliases
-subroutine get_substance_aliases_list(name, dbaout)
+subroutine get_substance_aliases_list(name, rulesets, dbaout)
     !------------------------------------------------------------------
     implicit none
 
@@ -135,6 +134,8 @@ subroutine get_substance_aliases_list(name, dbaout)
     character(len=ESMF_MAXSTR), intent(in)           :: name
     character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
                                                      :: dbaout
+    character(len=ESMF_MAXSTR), intent(in)           ::rulesets
+
     !LOCAL VARS
     integer                                          :: columns = 1
     type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
@@ -148,16 +149,15 @@ subroutine get_substance_aliases_list(name, dbaout)
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
         JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
         JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
-        WHERE tblRulesets.RulesetName='~ruleset' AND tblSubstances.SubstanceName='~name';"
-    !> @todo: Multiple Rulesets - IN State
+        WHERE tblRulesets.RulesetName IN(~rulesets) AND tblSubstances.SubstanceName='~name';"
     !------------------------------------------------------------------
 
-    search_list = [character(len=ESMF_MAXSTR) :: "~ruleset", "~name"]
-    replace_list = [character(len=ESMF_MAXSTR) :: "General", name]
+    search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name"]
+    replace_list = [character(len=ESMF_MAXSTR) :: rulesets, name]
 
     !Construct recordset for return values
     allocate( col(columns) )
-    call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_column_query( col(1), 'Substance Equivalent', SQLITE_CHAR, ESMF_MAXSTR )
 
     call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
 

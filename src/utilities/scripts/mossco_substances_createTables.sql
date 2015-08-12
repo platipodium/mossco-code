@@ -101,6 +101,6 @@ SELECT t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"")
 	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID
 	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID
 	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t
-	WHERE tblRulesets.RulesetName="General" AND tblSubstances.SubstanceName="O_2";
+	WHERE tblRulesets.RulesetName IN("General", "HZG KW") AND tblSubstances.SubstanceName="O_2";
 	
 SELECT SubstanceName FROM tblSubstances;
