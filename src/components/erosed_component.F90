@@ -1363,7 +1363,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             if (wave) then
                 tper (inum*(j -1)+i) = waveT (i,j)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
-                uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
+                uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j), wave)
             endif
 
            else
@@ -1848,19 +1848,167 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   end function d90_from_d50
 
-  function CalcOrbitalVelocity (SigWaveHeight, WaveNumber, WavePeriod, WaterDepth)
+  function CalcOrbitalVelocity (SigWaveHeight, WaveNumber, WavePeriod, WaterDepth, wave)
    ! RMS orbital velocity (uorb) to be used later in bedbc1993 (van Rijn, 1993) according to Eq. 11.144 Delft manual
 !  According to Delft3d Manual p. 366 (definition of notations) RMS orbital velocity is
 ! taken from wave module and is multiplied by aquare root of 2.0 to get the desired peak orbital velocity
-! at the bed in bedbc1993 (vanRijn(1993)). Therefore, here the rms orbital velocity is calculated based on the setwave
+! at the bed in bedbc1993 (vanRijn(1993)).
 ! routine within Delft3d.
 ! It should be noted that for cohesive sediment transport the orbital velocity is used for Soulsby (2004).
    implicit none
    real (ESMF_KIND_R8) :: CalcOrbitalVelocity, Hrms
    real (ESMF_KIND_R8) :: SigWaveHeight, WaveNumber, WavePeriod, WaterDepth
+   real (ESMF_KIND_R8), parameter :: pi = 3.14159265358979323846_fp, g = 9.86
+   logical             :: wave
+   real (ESMF_KIND_R8) :: gammax  ! ratio of wave height to the water depth
+   real (ESMF_KIND_R8) :: omega, k, k0, k0h
+
+
+   if (waterdepth >1.0_fp .and.WavePeriod> 1.0_fp .and.WavePeriod < 30.0_fp .and. SigWaveHeight < 0.1_fp ) then
+     gammax = 0.2
+
      Hrms = SigWaveHeight/ sqrt (2.0_fp)
-     CalcOrbitalVelocity = 3.14159265358979323846_fp * Hrms / (WavePeriod * sinh (WaveNumber * WaterDepth))
-     CalcOrbitalVelocity = sqrt (3.14159265358979323846_fp)/2.0_fp * CalcOrbitalVelocity
+     Hrms = min (Hrms, gammax * WaterDepth)
+
+     omega      = 2.0_fp*pi/WavePeriod
+     k0         = omega*omega/g
+     k0h        = k0*WaterDepth
+     if (k0h>pi) then
+         WaveNumber = k0
+     elseif (k0h<0.005) then
+         WaveNumber = omega/sqrt(g*WaterDepth)
+     else
+         WaveNumber = wavenr(WaterDepth,WavePeriod,g)
+     endif
+
+     if (WaveNumber*WaterDepth<80.) then
+
+         CalcOrbitalVelocity  = 0.5*Hrms*omega/sinh(WaveNumber*WaterDepth)
+         CalcOrbitalVelocity = CalcOrbitalVelocity*sqrt(pi)/2.0
+
+     endif
+
+
+   else
+      CalcOrbitalVelocity =0.0_fp
+      wave=.false.
+   endif
+
   end function  CalcOrbitalVelocity
+
+function wavenr(h,t,ag)
+!----- GPL ---------------------------------------------------------------------
+!
+!  Copyright (C)  Stichting Deltares, 2011-2013.
+!
+!  This program is free software: you can redistribute it and/or modify
+!  it under the terms of the GNU General Public License as published by
+!  the Free Software Foundation version 3.
+!
+!  This program is distributed in the hope that it will be useful,
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  GNU General Public License for more details.
+!
+!  You should have received a copy of the GNU General Public License
+!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+!
+!  contact: delft3d.support@deltares.nl
+!  Stichting Deltares
+!  P.O. Box 177
+!  2600 MH Delft, Thsubroutine wavenr(h         ,t         ,k         ,ag        )
+!----- GPL ---------------------------------------------------------------------
+!
+!  Copyright (C)  Stichting Deltares, 2011-2013.
+!
+!  This program is free software: you can redistribute it and/or modify
+!  it under the terms of the GNU General Public License as published by
+!  the Free Software Foundation version 3.
+!
+!  This program is distributed in the hope that it will be useful,
+!  but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+!  GNU General Public License for more details.
+!
+!  You should have received a copy of the GNU General Public License
+!  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+!
+!  contact: delft3d.support@deltares.nl
+!  Stichting Deltares
+!  P.O. Box 177
+!  2600 MH Delft, the Netherlands
+!
+!  All indications and logos of, and references to, "Delft3D" and "Deltares"
+!  are registered trademarks of Stichting Deltares, and remain the property of
+!  Stichting Deltares. All rights reserved.
+!
+!-------------------------------------------------------------------------------
+!  $Id: wavenr.f90 2392 2013-03-28 14:27:50Z mourits $
+!  $HeadURL: https://svn.oss.deltares.nl/repos/delft3d/tags/2514/engines_gpl/flow2d3d/packages/io/src/output/wavenr.f90 $
+!!--description-----------------------------------------------------------------
+!
+!    Function: Approximation of the dispersion, original sub-
+!              routine Disp10 (L, T, h, g)
+! Method used: relation according to linear wave theory:
+!
+!  = k TANH k
+!
+! h k = 2 pi h / L and w = (2 pi / T) sqrt (h/g), and L as
+! nown.
+! ational function approximation is made of the form :
+!
+!     1 + a1 w^2 + a2 w^4 + a3 w^6 + a4 w^8 + a5 w^10 + a6 w^12
+! w^2 ---------------------------------------------------------
+!     1 + b1 w^2 + b2 w^4 + b3 w^6 + b4 w^8           + a6 w^10
+!
+! ing the exact values for L for:
+!  0.4, 0.7, 1.0, 1.3, 1.6, 1.95, 2.35, 2.9, 3.8 and 6.5,
+!  a relative error less than 1.7E-6 for all w.
+!
+!
+!!--pseudo code and references--------------------------------------------------
+! NONE
+!!--declarations----------------------------------------------------------------
+    use precision
+    use mathconsts
+    !
+    implicit none
+    !
+!
+! Local parameters
+!
+    real(fp)            :: wavenr
+    real(hp), parameter :: a1 = 5.060219360721177D-01, a2 = 2.663457535068147D-01,&
+                         & a3 = 1.108728659243231D-01, a4 = 4.197392043833136D-02,&
+                         & a5 = 8.670877524768146D-03, a6 = 4.890806291366061D-03,&
+                         & b1 = 1.727544632667079D-01, b2 = 1.191224998569728D-01,&
+                         & b3 = 4.165097693766726D-02, b4 = 8.674993032204639D-03
+!
+! Global variables
+!
+    real(fp), intent(in)               :: h  !!  Waterheight
+
+    real(fp), intent(in)               :: t  !!  Period
+    real(fp), intent(in)               :: ag !!  Gravitational acceleration
+!
+!
+! Local variables
+!
+    real(hp)               :: den                  ! Denominator
+    real(hp)               :: kd                   ! Double value for K
+    real(hp)               :: num                  ! Numerator
+    real(hp)               :: ome2                 ! Omega
+!
+!
+!! executable statements -------------------------------------------------------
+!
+    ome2 = (2.0D0*pi_hp/real(t, hp))**2*real(h, hp)/real(ag, hp)
+    !
+    num = 1.0D0 +                                                               &
+        & ome2*(a1 + ome2*(a2 + ome2*(a3 + ome2*(a4 + ome2*(a5 + ome2*a6)))))
+    den = 1.0D0 + ome2*(b1 + ome2*(b2 + ome2*(b3 + ome2*(b4 + ome2*a6))))
+    kd = sqrt(ome2*num/den)/real(h, hp)
+    wavenr = real(kd, fp)
+end function wavenr
 
 end module erosed_component
