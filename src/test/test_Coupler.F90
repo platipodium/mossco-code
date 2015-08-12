@@ -6,7 +6,7 @@
 program test_Coupler
 
 use esmf
-use soil_pelagic_connector, only : soil_pelagic_connector_SetServices => SetServices 
+use soil_pelagic_mediator, only : soil_pelagic_connector_SetServices => SetServices
 
 integer                     :: rc
 type(ESMF_State)            :: importState, exportState
