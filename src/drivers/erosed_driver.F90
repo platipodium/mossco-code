@@ -676,7 +676,7 @@ masking: if (mask(i,j) /=0) then
 
 
 !
-!     calculation of kmx-cell for determination of zubed from Delft3d dwnvel subroutine
+!     calculation of kmx-cell for determination of zubed and ubed from Delft3d dwnvel subroutine
                  do k = lbound(sigma_midlayer,3),ubound(sigma_midlayer,3)
                      cc  = (1.0_fp + sigma_midlayer(i,j,k))*h(nm)
                      kmx = k
@@ -684,7 +684,7 @@ masking: if (mask(i,j) /=0) then
                         exit
                      endif
                  enddo
-
+                 ! @ ToDo: ubed must be selceted from kmx-layer, whenever u3d is available
                  zubed(nm) = h(nm) * (1.0_fp+sigma_midlayer(i,j,kmx))
 
                  call bedbc1993_arguments%set (tper(nm) ,uorb(nm)   ,rhowat   ,h(nm)   ,ubed(nm), &
@@ -719,7 +719,7 @@ masking: if (mask(i,j) /=0) then
                    kmaxsd = 1
                    do k = lbound(sigma_midlayer,3)+1,ubound(sigma_midlayer,3)
                       !
-                      ! Calculate level of lower cell interface
+                      ! Calculate level of the lower cell interface
                       !
                       zkmxb = (1.0_fp + sigma_midlayer(i,j,k) - relative_thickness_of_layers(i,j,k)/2.0_fp ) * h(nm)
   !                    write (*,*) 'zkmxb',zkmxb,'aks',aks, 'k', k, 'sigma_midlayer (k)', sigma_midlayer(i,j,k), 'layer_thickness',relative_thickness_of_layers(k)
