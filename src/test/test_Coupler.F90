@@ -37,7 +37,7 @@ call ESMF_CplCompSetServices(couplerComp, soil_pelagic_connector_SetServices, rc
 grid  = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/2,2/), rc=rc)
 
 !! add importState fields (from soil)
-varnames = (/ &
+varnames(1:8) = (/ &
   'mole_concentration_of_nitrate_upward_flux_at_soil_surface  ', &
   'mole_concentration_of_ammonium_upward_flux_at_soil_surface ', &
   'mole_concentration_of_phosphate_upward_flux_at_soil_surface', &
@@ -63,12 +63,14 @@ do i=1,size(varnames)
 end do
 
 !! add exportState fields (to water)
-varnames(1:3) = (/ &
-  'nutrients_upward_flux_at_soil_surface  ', &
-  'detritus_upward_flux_at_soil_surface   ', &
-  'oxygen_upward_flux_at_soil_surface     ' /)
+varnames(1:5) = (/ &
+  'nutrients_upward_flux_at_soil_surface                       ', &
+  'detritus_upward_flux_at_soil_surface                        ', &
+  'dissolved_reduced_substances_odu_upward_flux_at_soil_surface', &
+  'dissolved_oxygen_oxy_upward_flux_at_soil_surface            ', &
+  'oxygen_upward_flux_at_soil_surface                          ' /)
 
-do i=1,3
+do i=1,5
   field = ESMF_FieldCreate(grid=grid, &
             name=trim(varnames(i)), &
             typekind=ESMF_TYPEKIND_R8, &
@@ -92,6 +94,19 @@ write(0,*) 'oxygen flux before coupler'
 write(0,*) 'ptr_f2 = ',ptr_f2
 
 
+
+!> dump nutrients in exportState
+call ESMF_StateGet(exportState,'nutrients_upward_flux_at_soil_surface',field,rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
+call ESMF_FieldGet(field,farrayPtr=ptr_f2, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
+write(0,*) 'nutrients flux before coupler'
+write(0,*) 'ptr_f2 = ',ptr_f2
+
+write(0,*) ''
+write(0,*) ' .. coupler is running ..'
+write(0,*) ''
+
 !> now run the system
 call ESMF_CplCompInitialize(couplerComp, importState=importState, exportState=exportState, clock=clock, rc=rc)
 
@@ -103,6 +118,22 @@ if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
 call ESMF_FieldGet(field,farrayPtr=ptr_f2, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
 write(0,*) 'oxygen flux after coupler'
+write(0,*) 'ptr_f2 = ',ptr_f2
+
+!> dump oxygen in exportState
+call ESMF_StateGet(exportState,'dissolved_oxygen_oxy_upward_flux_at_soil_surface',field,rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
+call ESMF_FieldGet(field,farrayPtr=ptr_f2, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
+write(0,*) 'dissolved_oxygen_oxy flux after coupler'
+write(0,*) 'ptr_f2 = ',ptr_f2
+
+!> dump nutrients in exportState
+call ESMF_StateGet(exportState,'nutrients_upward_flux_at_soil_surface',field,rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
+call ESMF_FieldGet(field,farrayPtr=ptr_f2, rc=rc)
+if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
+write(0,*) 'nutrients flux after coupler'
 write(0,*) 'ptr_f2 = ',ptr_f2
 
 call ESMF_CplCompFinalize(couplerComp, importState=importState, exportState=exportState, clock=clock, rc=rc)
