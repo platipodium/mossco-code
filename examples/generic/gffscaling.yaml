@@ -1,10 +1,4 @@
 dependencies:
-  - restart_water:
-    - component: getm
-      grid: temperature_in_water
-  - restart_soil:
-    - component: fabm_sediment
-      grid: temperature_in_soil
   - fabm_sediment:
     - component: getm
       grid: temperature_at_soil_surface
