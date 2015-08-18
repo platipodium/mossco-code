@@ -378,6 +378,8 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     type(SQLITE_STATEMENT)      :: stmt
     integer                     :: i, j, completion, rows
 
+    character(len=ESMF_MAXSTR) :: test
+
     !------------------------------------------------------------------
 
     !Replace tags with values given by variables
@@ -413,10 +415,9 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
         call sqlite3_next_row( stmt, col, finished )
     end do
 
-
-
-    allocate(dba(rows*columns, columns))
+    allocate(dba(columns, rows))
     !dba=reshape(
+    if (DEBUG .eqv. .true.) write(*,*) "Shape of dba: ", shape(dba)
 
     do j=1, rows
         !write(*,*) "ping"
@@ -427,15 +428,26 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
             end do
     end do
 
+!    j=0
+!    do while (finished .eqv. .false.)
+!        j=j+1
+!        call sqlite3_next_row( stmt, col, finished )
+!        do i=1, columns
+!            !write(*,*) "pong"
+!            call sqlite3_get_column( col(i), test)
+!            write(*,'(A)') test
+!        end do
+!    end do
+
 
     if (DEBUG .eqv. .true.) then
+        write(*,*) ""
         write(*,*) "--- database info ---"
-        write(*,*) "cols/rows:"
-        write(*,*) columns
-        write(*,*) rows
-        write (*,*) sql
-        write(*,*) sqlite3_errmsg( db )
+        write(*,*) "cols/rows: ", columns, rows
+        write (*,*) "SQL-State: ", sql
+        write(*,*) "Errors: ", sqlite3_errmsg( db )
         write(*,*) "----------------------------"
+        write(*,*) ""
     end if
 
     call finalize_session(.false.,(completion .ne. SQLITE_DONE))

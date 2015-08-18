@@ -19,10 +19,10 @@ program test_mossco_db
     implicit none
 
     !CONFIG
-!    character(len=ESMF_MAXSTR)               :: rulesets &
-!                                                = "'General'"
-    character(len=ESMF_MAXSTR)               :: rulesets &
-                                                = "'General', &
+!    character(len=ESMF_MAXSTR)             :: rulesets &
+!                                               = "'General'"
+    character(len=ESMF_MAXSTR)              :: rulesets &
+                                               = "'General', &
                                                   'HZG KW'"
 
 
@@ -30,17 +30,21 @@ program test_mossco_db
 
     !LOCAL VARS
     !@temp
-    character(len=ESMF_MAXSTR)               :: equivalent, &
-                                                name="nothing", &
-                                                tmp
-    logical                                  :: finished
+    character(len=ESMF_MAXSTR)              :: equivalent, &
+                                               name="nothing", &
+                                               tmp
+    logical                                 :: finished
 
 
     integer, dimension(:,:), allocatable :: test, test2
-    integer :: i,j
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba, &
-                                                             dba2, &
-                                                             dba3
+    integer :: i,j,h,n,c
+    character(len=ESMF_MAXSTR),dimension(:,:),allocatable &
+                                            :: dba, &
+                                               dba2, &
+                                               dba3, &
+                                               dba_aliases
+
+    character(len=ESMF_MAXSTR)              :: str1, str2
     !type(ESMF_ARRAY) :: dba_ESMF
     !------------------------------------------------------------------
 
@@ -60,18 +64,42 @@ program test_mossco_db
     call get_substances_list(dba)
     write(*,'(A)') dba
 
-    write(*,*) sum(index(dba, "O_2"))
-    write(*,*) sum(index(dba, "NH_3"))
-    write(*,*) sum(index(dba, "N"))
-    write(*,*) sum(index(dba, "efefewgG"))
+!    write(*,*) sum(index(dba, "O_2"))
+!    write(*,*) sum(index(dba, "NH_3"))
+!    write(*,*) sum(index(dba, "N"))
+!    write(*,*) sum(index(dba, "efefewgG"))
+
+    write(*,*) ""
+    do i=1, size(dba)
+        write(*,*) "+++++++++++++++++++++++++++++++++++++++"
+        write(*,'(A)') "Substance: ", dba(i,1)
+        call get_substance_aliases_list(dba(i,1), rulesets, dba_aliases)
+        do j=1, size(dba_aliases)/2
+            write(*,'(A)') "Substance-Alias: ", dba_aliases(i,1)
+            write(*,'(A)') "Equivalent-Alias: ", dba_aliases(i,2)
+        end do
+        write(*,*) "+++++++++++++++++++++++++++++++++++++++"
+    end do
+!        str1="O_2"
+!        str2="NH_3"
+!        call get_substance_aliases_list(str1, rulesets, dba_aliases)
+!        do j=1, size(dba_aliases)
+!            write(*,'(A)') "Alias: ", dba_aliases(i,1), dba_aliases(i,2)
+!        end do
+!
+!        call get_substance_aliases_list(str2, rulesets, dba_aliases)
+!        do j=1, size(dba_aliases)
+!            write(*,'(A)') "Alias: ", dba_aliases(i,1), dba_aliases(i,2)
+!        end do
 
 
+    return
 
     write (*,*) "******************************************"
 
     !search for manually entered equivalent name
     write (*,*) "Searching db for name & 
-    connected to equivalent '" // equivalent // "', found:"
+    connected to equivalent '" , equivalent , "', found:"
 
     call get_substance_name(equivalent,rulesets,name)
     write (*,'(A)') name
