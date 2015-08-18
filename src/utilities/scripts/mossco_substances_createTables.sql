@@ -119,3 +119,6 @@ SELECT t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"")
 	AND tblAppendix.ID=1;
 
 SELECT SubstanceName FROM tblSubstances;
+
+           7
+ SELECT t.SubstanceName || coalesce(t.Condition,'') || coalesce(t.Location,''), t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') FROM (tblAppendix JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t WHERE tblRulesets.RulesetName IN('General', 'HZG KW') AND tblSubstances.SubstanceName='O_2'; 

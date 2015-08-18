@@ -25,6 +25,7 @@ program test_mossco_db
                                                 = "'General', &
                                                   'HZG KW'"
 
+
     !INPUTS/OUTPUTS
 
     !LOCAL VARS
@@ -36,7 +37,7 @@ program test_mossco_db
 
 
     integer, dimension(:,:), allocatable :: test, test2
-    integer :: i
+    integer :: i,j
     character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba, &
                                                              dba2, &
                                                              dba3
@@ -59,6 +60,13 @@ program test_mossco_db
     call get_substances_list(dba)
     write(*,'(A)') dba
 
+    write(*,*) sum(index(dba, "O_2"))
+    write(*,*) sum(index(dba, "NH_3"))
+    write(*,*) sum(index(dba, "N"))
+    write(*,*) sum(index(dba, "efefewgG"))
+
+
+
     write (*,*) "******************************************"
 
     !search for manually entered equivalent name
@@ -70,11 +78,23 @@ program test_mossco_db
 
     write (*,*) "******************************************"
 
+    write(*,'(A)') "Get list of all substance-appendix combinations &
+    for " // name // ":"
+
+
+    call get_substance_aliases_list(name, rulesets, dba)
+    !write(*,*) size(dba)
+    write(*,'(A)') (dba(j,1), j=1, (size(dba)/4))
+    !> @todo: why is the size that big???
+    !> 2 cols, 6 "hits", but size 24
+    !> @todo: Too many results
+
+    write (*,*) "******************************************"
     write(*,'(A)') "Get list of all equivalent-appendix combinations &
     for " // name // ":"
 
-    call get_substance_aliases_list(name, rulesets, dba)
-    write(*,'(A)') dba
+    !call get_substance_aliases_list(name, rulesets, dba)
+    write(*,'(A)') (dba(j,2), j=1, (size(dba)/4))
 
     write (*,*) "******************************************"
 

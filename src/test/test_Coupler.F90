@@ -92,6 +92,7 @@ call ESMF_FieldGet(field,farrayPtr=ptr_f2, rc=rc)
 if (rc /= ESMF_SUCCESS) call ESMF_Finalize(rc=rc, endflag=ESMF_END_ABORT)
 write(0,*) 'oxygen flux before coupler'
 write(0,*) 'ptr_f2 = ',ptr_f2
+!> output = indices in coupler, substract oxygen - reduced substances
 
 
 

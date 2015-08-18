@@ -229,16 +229,17 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
     character(len=ESMF_MAXSTR), intent(in)           :: name
     character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
                                                      :: dbaout
-    character(len=ESMF_MAXSTR), intent(in)           ::rulesets
+    character(len=ESMF_MAXSTR), intent(in)           :: rulesets
 
     !LOCAL VARS
-    integer                                          :: columns = 1
+    integer                                          :: columns = 2
     type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
     character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
                                                         replace_list
 
     character(1000)                                  :: sql &
-        ="SELECT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+        ="SELECT t.SubstanceName || coalesce(t.Condition,'') || coalesce(t.Location,''), &
+        t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
         FROM (tblAppendix &
         JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
@@ -247,14 +248,15 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
         WHERE tblRulesets.RulesetName IN(~rulesets) AND tblSubstances.SubstanceName='~name';"
     !------------------------------------------------------------------
 
-    search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name"]
+    search_list  = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name"]
     replace_list = [character(len=ESMF_MAXSTR) :: rulesets, name]
 
     !Construct recordset for return values
     allocate( col(columns) )
-    call sqlite3_column_query( col(1), 'Substance Equivalent', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_column_query( col(1), 'Substance-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_column_query( col(2), 'Equivalent-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
 
-    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+    call sql_select_state(sql,col,2,search_list,replace_list,dbaout)
 
     deallocate(col)
 
