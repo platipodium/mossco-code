@@ -24,6 +24,7 @@ module soil_pelagic_mediator
     use mossco_state
     use mossco_field
     use mossco_component
+    use mossco_db
 
 
 !> @todo: please check if anything can be outsourced in the general method

@@ -32,10 +32,10 @@ test_StateGet test_ArrayGet test_Clock test_DerivedTypes test_ESMF_Initialize te
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@  $(LDFLAGS)  $(LIBS)
 
 test_mossco_db: test_mossco_db.F90 libmossco_db
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_db -lsqlite3
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(SQLITE_LIBS)
 
 test_Coupler: test_Coupler.F90 libmossco_mediator
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_mediator -lmossco_util $(LIBS)
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_mediator $(SQLITE_LIBS) -lmossco_util $(LIBS)
 
 libmossco_mediator:
 	$(MAKE) -C $(MOSSCO_DIR)/src/mediators $@

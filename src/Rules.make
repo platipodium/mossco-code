@@ -496,6 +496,7 @@ ifdef SQLITE_DIR
   else
     DEFINES += -DMOSSCO_SQLITE
   endif
+  SQLITE_LIBS = -lmossco_db -lsqlite3
 endif
 export MOSSCO_SQLITE SQLITE_DIR
 
