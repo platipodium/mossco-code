@@ -21,7 +21,7 @@ program test_mossco_db
     !CONFIG
 !    character(len=ESMF_MAXSTR)             :: rulesets &
 !                                               = "'General'"
-    character(len=ESMF_MAXSTR)              :: rulesets &
+    character(len=ESMF_MAXSTR), target      :: rulesets &
                                                = "'General', &
                                                   'HZG KW'"
 
@@ -30,19 +30,21 @@ program test_mossco_db
 
     !LOCAL VARS
     !@temp
-    character(len=ESMF_MAXSTR)              :: equivalent, &
-                                               name="nothing", &
-                                               tmp
+    character(len=ESMF_MAXSTR), target      :: equivalent, &
+                                               name="nothing"
+    character(len=ESMF_MAXSTR), pointer     :: res
+    character(len=ESMF_MAXSTR)              :: tmp
     logical                                 :: finished
 
 
     integer, dimension(:,:), allocatable :: test, test2
     integer :: i,j,h,n,c
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable &
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer &
                                             :: dba, &
                                                dba2, &
                                                dba3, &
-                                               dba_aliases
+                                               dba_aliases, &
+                                               dba_substances
 
     character(len=ESMF_MAXSTR)              :: str1, str2
     !type(ESMF_ARRAY) :: dba_ESMF
@@ -55,6 +57,83 @@ program test_mossco_db
 
     !******************************************************************
     !******************************************************************
+
+    call get_substances_list(dba_substances)
+    write(*,*) "List of all substances"
+    write(*,'(A)') dba_substances
+
+    do i=1, (size(dba_substances))
+        call get_substance_aliases_list(dba_substances(i,1),rulesets,dba_aliases)
+        write(*,*) ""
+        write(*,*) "List of aliases for substance ", dba_substances(i,1), ": "
+        write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)/2))
+    end do
+
+
+
+    return
+
+    write (*,*) "******************************************"
+
+    !search for manually entered equivalent name
+    write (*,*) "Searching db for name & 
+    connected to equivalent '" , equivalent , "', found:"
+
+
+    call get_substance_name(equivalent,rulesets,res)
+
+    if (associated(res)) then
+        name=res
+        write (*,'(A)') name
+    else
+        write(*,*) "error (res), quitting"
+        return
+    end if
+
+    return
+
+    write (*,*) "******************************************"
+
+    write(*,'(A)') "Get list of all substance-appendix combinations &
+    for " // name // ":"
+
+
+    call get_substance_aliases_list(name, rulesets, dba)
+    write(*,'(A)') (dba(j,1), j=1, (size(dba)/2))
+
+    write (*,*) "******************************************"
+    write(*,'(A)') "Get list of all equivalent-appendix combinations &
+    for " // name // ":"
+
+    !call get_substance_aliases_list(name, rulesets, dba)
+    write(*,'(A)') (dba(j,2), j=1, (size(dba)/2))
+
+    write (*,*) "******************************************"
+
+    write(*,'(A)') "Get list of all appendix IDs used by '" // name // "':"
+    call get_substance_appendices_list(name, dba2)
+
+    write(*,'(A)') dba2
+
+    write (*,*) "******************************************"
+
+    write(*,'(A)') "Get list of all substance-appendix combinations for '" // name // "':"
+
+    do i=1, size(dba2)
+        call get_substance_appendix_aliases_list &
+             (name, dba2(i,1), rulesets, dba3)
+        write(*,'(A)') dba3
+        !> @todo: Bug - doubled resulsts (even if DISTINCT is used)
+    end do
+
+    write (*,*) "******************************************"
+
+
+    write (*,*) "test finished"
+
+
+    return
+
 
     write (*,*) "use ruleset: " // rulesets
 
@@ -80,6 +159,13 @@ program test_mossco_db
         end do
         write(*,*) "+++++++++++++++++++++++++++++++++++++++"
     end do
+
+
+
+
+
+!#####################################################################
+
 !        str1="O_2"
 !        str2="NH_3"
 !        call get_substance_aliases_list(str1, rulesets, dba_aliases)
@@ -91,65 +177,6 @@ program test_mossco_db
 !        do j=1, size(dba_aliases)
 !            write(*,'(A)') "Alias: ", dba_aliases(i,1), dba_aliases(i,2)
 !        end do
-
-
-    return
-
-    write (*,*) "******************************************"
-
-    !search for manually entered equivalent name
-    write (*,*) "Searching db for name & 
-    connected to equivalent '" , equivalent , "', found:"
-
-    call get_substance_name(equivalent,rulesets,name)
-    write (*,'(A)') name
-
-    write (*,*) "******************************************"
-
-    write(*,'(A)') "Get list of all substance-appendix combinations &
-    for " // name // ":"
-
-
-    call get_substance_aliases_list(name, rulesets, dba)
-    !write(*,*) size(dba)
-    write(*,'(A)') (dba(j,1), j=1, (size(dba)/4))
-    !> @todo: why is the size that big???
-    !> 2 cols, 6 "hits", but size 24
-    !> @todo: Too many results
-
-    write (*,*) "******************************************"
-    write(*,'(A)') "Get list of all equivalent-appendix combinations &
-    for " // name // ":"
-
-    !call get_substance_aliases_list(name, rulesets, dba)
-    write(*,'(A)') (dba(j,2), j=1, (size(dba)/4))
-
-    write (*,*) "******************************************"
-
-    write(*,'(A)') "Get list of all appendix IDs used by '" // name // "':"
-    call get_substance_appendices_list(name, dba2)
-
-    write(*,'(A)') dba2
-    !> @todo: Bug - one ID too much (double-2)
-
-    write (*,*) "******************************************"
-
-    write(*,'(A)') "Get list of all substance-appendix combinations for '" // name // "':"
-
-    do i=1, size(dba2)
-        call get_substance_appendix_aliases_list &
-             (name, dba2(i,1), rulesets, dba3)
-        write(*,'(A)') dba3
-        !> @todo: Bug - doubled resulsts (even if DISTINCT is used)
-    end do
-
-    write (*,*) "******************************************"
-
-
-    write (*,*) "test finished"
-
-
-
 
 
 !    allocate(test(2,5))

@@ -55,22 +55,27 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in)                :: equivalent
-    character(len=ESMF_MAXSTR), intent(in)                :: rulesets
-    character(len=ESMF_MAXSTR), intent(out)               :: nameout
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: equivalent
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
+    character(len=ESMF_MAXSTR), intent(out),pointer  :: nameout
 
     !LOCAL VARS
-    integer                                          :: columns = 1
     character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
                                                         replace_list
-    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable :: dba
+
     character(1000)                                  :: sql &
         ="SELECT t.SubstanceName  FROM (tblEquivalents &
         JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
         JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
         WHERE tblRulesets.RulesetName IN (~rulesets) AND tblEquivalents.EquivalentName='~equivalent';"
+
+    integer                                          :: columns = 1
+
+    !LOCAL POINTER/ALLOCS
+    type(SQLITE_COLUMN), dimension(:), allocatable, target :: col
+
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer:: dba
     !------------------------------------------------------------------
 
     search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~equivalent"]
@@ -81,7 +86,10 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
     call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
 
     call sql_select_state(sql,col,1,search_list,replace_list,dba)
-    if (allocated(dba)) nameout=dba(1,1)
+    if (associated(dba)) nameout=>dba(1,1)
+    !write(*,*) nameout
+    !if (associated(dba)) write(*,*) "yes"
+    !write(*,*) dba(1,1)
 
     deallocate(col)
 
@@ -99,7 +107,7 @@ subroutine get_substances_list(dbaout)
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
                                                      :: dbaout
     !LOCAL VARS
     integer                                          :: columns = 1
@@ -107,7 +115,6 @@ subroutine get_substances_list(dbaout)
 
     character(1000)                                  :: sql &
         ="SELECT SubstanceName FROM tblSubstances;"
-
     !------------------------------------------------------------------
 
     !Construct recordset for return values
@@ -133,8 +140,8 @@ subroutine get_substance_appendices_list(name, dbaout)
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in)           :: name
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: name
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
                                                      :: dbaout
 
     !LOCAL VARS
@@ -177,9 +184,10 @@ subroutine get_substance_appendix_aliases_list(SubstanceName, apdxID, rulesets, 
 
     !INPUTS/OUTPUTS
     character(len=ESMF_MAXSTR), intent(in)           :: SubstanceName
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
-                                                     :: dbaout
     character(len=*), intent(in)                     :: rulesets, apdxID
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
+                                                     :: dbaout
+
 
     !LOCAL VARS
     integer                                          :: columns = 1
@@ -226,10 +234,10 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in)           :: name
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: name
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
                                                      :: dbaout
-    character(len=ESMF_MAXSTR), intent(in)           :: rulesets
 
     !LOCAL VARS
     integer                                          :: columns = 2
@@ -315,7 +323,6 @@ subroutine finalize_session(hold_con,abort)
     logical                           :: hcon, critical
     integer                           :: localrc
     !------------------------------------------------------------------
-
     hcon=hold_con
 
     !Catch wrong call, end session
@@ -367,13 +374,15 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     character(len=*)                                    :: sql
     type(SQLITE_COLUMN),dimension(:),pointer,intent(in) :: col
 
-    character(len=*),dimension(:),optional,intent(in) :: search_list, &
-                                                         replace_list
-    integer, intent(in)                               :: columns
-    Character(len=ESMF_MAXSTR),dimension(:,:),allocatable,intent(out) &
-                                                      :: dba
+    character(len=*),dimension(:),optional,intent(in)   :: search_list, &
+                                                           replace_list
+    integer, intent(in)                                 :: columns
+    Character(len=ESMF_MAXSTR),dimension(:,:),&
+        pointer,intent(out)                             :: dba
 
     !LOCAL VARS
+    !Character(len=ESMF_MAXSTR),dimension(:,:),&
+    !    allocatable,target                              :: dba_local
     logical                     :: err, finished
     type(SQLITE_STATEMENT)      :: stmt
     integer                     :: i, j, completion, rows
@@ -416,7 +425,6 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     end do
 
     allocate(dba(columns, rows))
-    !dba=reshape(
     if (DEBUG .eqv. .true.) write(*,*) "Shape of dba: ", shape(dba)
 
     do j=1, rows
