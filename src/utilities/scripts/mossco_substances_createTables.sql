@@ -198,3 +198,4 @@ SELECT t.SubstanceName || coalesce(t.Condition,'') || coalesce(t.Location,''), t
 	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t 
 	WHERE tblRulesets.RulesetName IN('General', 'HZG KW') 
 	AND tblSubstances.SubstanceName='O_2'; 
+

@@ -37,7 +37,7 @@ module soil_pelagic_mediator
 
     private
     !COUPLER CONFIG
-    character(len=ESMF_MAXSTR)                  :: rulesets &
+    character(len=ESMF_MAXSTR), target          :: rulesets &
                                                    ="'General', &
                                                      'HZG KW'"
     logical                                     :: DEBUG = .true.
@@ -546,7 +546,7 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
                                                export_itemTypes2(:), &
                                                import_itemTypes2(:)
 
-    character(len=ESMF_MAXSTR),dimension(:,:),allocatable &
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer &
                                             :: dba_substances, &
                                                dba_aliases, &
                                                dba_equivalents
@@ -567,7 +567,7 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 !***@temp
     if (debug .eqv. .true.) then
         write(*,*) ""
-        write(*,*) "Coupler 2.0 Init"
+        write(*,*) "> Coupler 2.0 Init"
     end if
 
     !> @paragraph dba "Database Arrays"
@@ -599,11 +599,11 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 !!***@temp
     if (debug .eqv. .true.) then
         write(*,*) ""
-        write(*,*) "*******Import/Export Count********"
+        write(*,*) ">*******Import/Export Count********"
         write(*,*) import_itemCount, export_itemCount
-        write(*,*) "**********************************"
+        write(*,*) "> **********************************"
         write(*,*) ""
-        write(*,*) "List of Substances (db)"
+        write(*,*) "> List of Substances (db)"
         write(*,'(A)') dba_substances
         write(*,*) ""
     end if
@@ -618,10 +618,10 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 
     if (debug .eqv. .true.) then
         write(*,*) ""
-        write(*,*) "All Import Items"
+        write(*,*) "> All Import Items"
         write(*,'(A)') import_itemNames
         write(*,*) ""
-        write(*,*) "All Export Items"
+        write(*,*) "> All Export Items"
         write(*,'(A)') export_itemNames
         write(*,*) ""
     end if
@@ -630,63 +630,73 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     !> Loop all SubstanceName - Appendices Comibnations from the database
     do j=1, size(dba_substances)
         call get_substance_aliases_list(dba_substances(j,1), rulesets,dba_aliases)
-        if (debug) then
-            write(*,*) ""
-            write(*,*) "List of Aliases for ", trim(dba_substances(j,1)), ":"
-            write(*,'(A)') (dba_aliases(i,2), i=1,(size(dba_aliases)/2))
-            write(*,*) ""
+
+        if (associated(dba_aliases)) then
+            if (debug) then
+                write(*,*) ""
+                write(*,*) "> List of Aliases for ", trim(dba_substances(j,1)), ":"
+                write(*,'(A)') (dba_aliases(i,1), i=1,(size(dba_aliases)))
+                write(*,*) ""
+            end if
+
+            do i=1, (size(dba_aliases))
+
+                if (debug) then
+                    write(*,*) "---"
+                    write(*,*) "> searching ", trim(dba_aliases(i,1)), " in import"
+                end if
+
+                !> Search combinations in import
+                do h=1, size(import_itemNames)
+                    !> If found add them to import inventory
+                    if (import_itemNames(h)==dba_aliases(i,1)) then
+                    !> @todo: check the TYPE of the found items too
+                        if (debug) write(*,*) "> adding ", trim(dba_aliases(i,1)), " to import attributes"
+
+
+    !                    call ESMF_AttributeAdd(cplComp, attrList=(/dba_aliases(i,1)/), &
+    !                        convention="NUOPC", purpose="Import",rc=localrc)
+    !                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !                    call ESMF_AttributeSet(cplComp, name=dba_aliases(i,1), valueList=dba_aliases(i,2), &
+    !                        convention="NUOPC", purpose="Export", rc=localrc)
+    !                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+                        exit
+                    end if
+                end do
+
+                if (debug) then
+                    write(*,*) "---"
+                    write(*,*) "> searching ", trim(dba_aliases(i,1)), " in export"
+                end if
+
+                !> Search combinations in export
+                do h=1, size(export_itemNames)
+                    !> If found add them to export inventory
+                    if (export_itemNames(h)==dba_aliases(i,1)) then
+                        if (debug) write(*,*) "> adding ", trim(dba_aliases(i,1)), " to export attributes"
+
+    !                    call ESMF_AttributeAdd(cplComp, attrList=(/dba_aliases(i,1)/), &
+    !                        convention="NUOPC", purpose="Import",rc=localrc)
+    !                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !                    call ESMF_AttributeSet(cplComp, name=dba_aliases(i,1), valueList=dba_aliases(i,2), &
+    !                        convention="NUOPC", purpose="Export", rc=localrc)
+    !                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+                        exit
+                    end if
+                end do
+            end do
+        else
+            if (debug) then
+                write(*,*) ""
+                write(*,*) "> No Aliases found for ", trim(dba_substances(j,1))
+                write(*,*) ""
+            end if
         end if
-
-        do i=1, (size(dba_aliases)/2)
-
-            if (debug) then
-                write(*,*) "---"
-                write(*,*) "searching ", trim(dba_aliases(i,2)), " in import"
-            end if
-
-            !> Search combinations in import
-            do h=1, size(import_itemNames)
-                !> If found add them to import inventory
-                if (import_itemNames(h)==dba_aliases(i,2)) then
-                !> @todo: check the TYPE of the found items too
-                    if (debug) write(*,*) "adding ", trim(dba_aliases(i,1)), " with value ", trim(dba_aliases(i,2)), " to import attributes"
-
-!                    call ESMF_AttributeAdd(cplComp, attrList=(/dba_aliases(i,1)/), &
-!                        convention="NUOPC", purpose="Import",rc=localrc)
-!                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!                    call ESMF_AttributeSet(cplComp, name=dba_aliases(i,1), valueList=dba_aliases(i,2), &
-!                        convention="NUOPC", purpose="Export", rc=localrc)
-!                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-                    exit
-                end if
-            end do
-
-            if (debug) then
-                write(*,*) "---"
-                write(*,*) "searching ", trim(dba_aliases(i,2)), " in export"
-            end if
-
-            !> Search combinations in export
-            do h=1, size(export_itemNames)
-                !> If found add them to export inventory
-                if (export_itemNames(h)==dba_aliases(i,2)) then
-                    if (debug) write(*,*) "adding ", trim(dba_aliases(i,1)), " with value ", trim(dba_aliases(i,2)), " to export attributes"
-
-!                    call ESMF_AttributeAdd(cplComp, attrList=(/dba_aliases(i,1)/), &
-!                        convention="NUOPC", purpose="Import",rc=localrc)
-!                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!                    call ESMF_AttributeSet(cplComp, name=dba_aliases(i,1), valueList=dba_aliases(i,2), &
-!                        convention="NUOPC", purpose="Export", rc=localrc)
-!                        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!                        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                    exit
-                end if
-            end do
-        end do
     end do
 
 !***@temp:
@@ -700,12 +710,12 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 !
 !        call ESMF_StateGet(dba_import, itemTypeList=import_itemTypes2, itemNameList=import_itemNames2, rc=localRc)
 !        write(*,*) ""
-!        write(*,*) "Found the following substances in import state:"
+!        write(*,*) "> Found the following substances in import state:"
 !        write(*,'(A)') import_itemNames2
 !
 !        call ESMF_StateGet(dba_export, itemTypeList=export_itemTypes2, itemNameList=export_itemNames2, rc=localRc)
 !        write(*,*) ""
-!        write(*,*) "Found the following substances in import state:"
+!        write(*,*) "> Found the following substances in import state:"
 !        write(*,'(A)') export_itemNames2
 !    end if
 
@@ -777,7 +787,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 !***@temp
     if (debug .eqv. .true.) then
         write(*,*) ""
-        write(*,*) "Coupler 2.0 run"
+        write(*,*) "> Coupler 2.0 run"
     end if
 
     !> receive coupler component information
@@ -806,9 +816,9 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 
 !***@temp
     if (debug .eqv. .true.) then
-        write(*,*) "*******Import/Export Count********"
+        write(*,*) ">*******Import/Export Count********"
         write(*,*) import_itemCount, export_itemCount
-        write(*,*) "**********************************"
+        write(*,*) ">**********************************"
     end if
 
     !> Receive the Name and Type lists
