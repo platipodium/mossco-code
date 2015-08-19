@@ -57,19 +57,41 @@ program test_mossco_db
 
     !******************************************************************
     !******************************************************************
+    write(*,*) ""
+    write(*,*) "- - - - - - - - Starting test mossco_db - - - - - - - - "
+    write(*,*) "Using rulesets: ", rulesets
 
     call get_substances_list(dba_substances)
-    write(*,*) "List of all substances"
+    write(*,*) ""
+    write(*,*) "###### List of all substances ######"
     write(*,'(A)') dba_substances
 
+    write(*,*) "###### List of all aliases ######"
     do i=1, (size(dba_substances))
         call get_substance_aliases_list(dba_substances(i,1),rulesets,dba_aliases)
         write(*,*) ""
-        write(*,*) "List of aliases for substance ", dba_substances(i,1), ": "
-        write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)/2))
+        write(*,*) "** List of aliases for substance ", dba_substances(i,1)
+        if (.not. associated(dba_aliases)) then
+            write(*,*) "nothing found"
+        else
+            write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)))
+        end if
     end do
 
+    write(*,*) "- - - - - - - - Finishing test mossco_db - - - - - - - -"
 
+
+    !----------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
+    !----------------------------------------------------------------------------------------------
+
+
+    return
+
+    !search for manually entered equivalent name
+    write (*,*) "Searching db for name & 
+    connected to equivalent '" , equivalent , "', found:"
+    call get_equivalent_name(equivalent,rulesets,res)
 
     return
 
@@ -79,8 +101,7 @@ program test_mossco_db
     write (*,*) "Searching db for name & 
     connected to equivalent '" , equivalent , "', found:"
 
-
-    call get_substance_name(equivalent,rulesets,res)
+   call get_equivalent_name(equivalent,rulesets,res)
 
     if (associated(res)) then
         name=res

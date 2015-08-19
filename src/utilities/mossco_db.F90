@@ -34,7 +34,8 @@ private
 
     !@dev: shift all sql states as parameter to here
 
-    public get_substance_name, &
+    public get_equivalent_name, &
+           get_alias_name, &
            get_substances_list, &
            get_substance_aliases_list, &
            get_substance_appendices_list, &
@@ -47,10 +48,10 @@ contains
 !----------------------------------------------------------------------
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "get_substance_name"
+#define ESMF_METHOD "get_equivalent_name"
 !> @brief
 !> @param
-subroutine get_substance_name(equivalent,rulesets,nameout)
+subroutine get_equivalent_name(equivalent,rulesets,nameout)
     !------------------------------------------------------------------
     implicit none
 
@@ -63,12 +64,7 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
     character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
                                                         replace_list
 
-    character(1000)                                  :: sql &
-        ="SELECT t.SubstanceName  FROM (tblEquivalents &
-        JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
-        JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
-        JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
-        WHERE tblRulesets.RulesetName IN (~rulesets) AND tblEquivalents.EquivalentName='~equivalent';"
+    character(1000)                                  :: sql
 
     integer                                          :: columns = 1
 
@@ -77,6 +73,12 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
 
     character(len=ESMF_MAXSTR),dimension(:,:),pointer:: dba
     !------------------------------------------------------------------
+    nameout=>null()
+    sql = "SELECT t.SubstanceName  FROM (tblEquivalents &
+        JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID &
+        JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
+        JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID) t &
+        WHERE tblRulesets.RulesetName IN (~rulesets) AND tblEquivalents.EquivalentName='~equivalent';"
 
     search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~equivalent"]
     replace_list = [character(len=ESMF_MAXSTR) :: rulesets, equivalent]
@@ -86,6 +88,7 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
     call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
 
     call sql_select_state(sql,col,1,search_list,replace_list,dba)
+
     if (associated(dba)) nameout=>dba(1,1)
     !write(*,*) nameout
     !if (associated(dba)) write(*,*) "yes"
@@ -93,7 +96,58 @@ subroutine get_substance_name(equivalent,rulesets,nameout)
 
     deallocate(col)
 
-end subroutine get_substance_name
+end subroutine get_equivalent_name
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_alias_name"
+!> @brief
+!> @param
+subroutine get_alias_name(alias,rulesets,nameout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: alias
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
+    character(len=ESMF_MAXSTR), intent(out),pointer  :: nameout
+
+    !LOCAL VARS
+    character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
+                                                        replace_list
+    character(len=ESMF_MAXSTR), target               :: empty = ""
+
+    character(1000)                                  :: sql
+
+    integer                                          :: columns = 1
+
+    !LOCAL POINTER/ALLOCS
+    type(SQLITE_COLUMN), dimension(:), allocatable, target :: col
+
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer:: dba
+    !------------------------------------------------------------------
+    nameout=>null()
+    sql = "SELECT t.SubstanceName || coalesce(t.Condition,"") || coalesce(t.Location,"") &
+            FROM (tblAppendix &
+            JOIN tblSubstances ON tblAppendix.Substance_ID=tblSubstances.ID &
+            JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblSubstances.ID &
+            JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
+            JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
+            WHERE tblRulesets.RulesetName in ('~rulesets') &
+            AND t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"") == '~alias';"
+
+    search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~alias"]
+    replace_list = [character(len=ESMF_MAXSTR) :: rulesets, alias]
+
+    !Construct recordset for return values
+    allocate( col(columns) )
+    call sqlite3_column_query( col(1), 'Name', SQLITE_CHAR, ESMF_MAXSTR )
+
+    call sql_select_state(sql,col,1,search_list,replace_list,dba)
+    if (associated(dba)) nameout=>dba(1,1)
+
+    deallocate(col)
+
+end subroutine get_alias_name
 
 
 #undef  ESMF_METHOD
@@ -113,10 +167,11 @@ subroutine get_substances_list(dbaout)
     integer                                          :: columns = 1
     type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
 
-    character(1000)                                  :: sql &
-        ="SELECT SubstanceName FROM tblSubstances;"
-    !------------------------------------------------------------------
+    character(1000)                                  :: sql
 
+    !------------------------------------------------------------------
+    dbaout=>null()
+    sql = "SELECT SubstanceName FROM tblSubstances;"
     !Construct recordset for return values
     allocate( col(columns) )
     call sqlite3_column_query( col(1), 'SubstanceName', SQLITE_CHAR, ESMF_MAXSTR )
@@ -126,6 +181,57 @@ subroutine get_substances_list(dbaout)
     deallocate(col)
 
 end subroutine get_substances_list
+
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_substance_aliases_list"
+!> @subsubsection get_substance_alias_list "Get Substance Alias List"
+!> @brief Receives list of all aliases of the substance from the database
+!> @param name char(ESMF_MAXSTR) Name or Alias of Substance
+!> @param listout dim (:) char(ESMF_MAXSTR) Array with all aliases
+subroutine get_substance_aliases_list(name, rulesets, dbaout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+    character(len=ESMF_MAXSTR), intent(in)           :: name
+    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
+                                                     :: dbaout
+
+    !LOCAL VARS
+    integer                                          :: columns = 1
+    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
+    character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
+                                                        replace_list
+
+    character(1000)                                  :: sql
+    !------------------------------------------------------------------
+    dbaout=>null()
+    sql = "SELECT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+        FROM (tblAppendix &
+        JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
+        JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
+        JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
+        JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
+        WHERE tblRulesets.RulesetName IN(~rulesets) AND tblSubstances.SubstanceName='~name';"
+
+    search_list  = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name"]
+    replace_list = [character(len=ESMF_MAXSTR) :: rulesets, name]
+
+    !Construct recordset for return values
+    allocate( col(columns) )
+    !call sqlite3_column_query( col(1), 'Substance-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_column_query( col(1), 'Equivalent-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
+
+    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+
+    deallocate(col)
+
+    sql=""
+
+end subroutine get_substance_aliases_list
 
 
 #undef  ESMF_METHOD
@@ -150,13 +256,13 @@ subroutine get_substance_appendices_list(name, dbaout)
     character(len=ESMF_MAXSTR), dimension(1)         :: search_list, &
                                                         replace_list
 
-    character(1000)                                  :: sql &
-        = "SELECT DISTINCT tblAppendix.ID &
+    character(1000)                                  :: sql
+    !------------------------------------------------------------------
+
+    sql = "SELECT DISTINCT tblAppendix.ID &
             FROM (tblAppendix &
             JOIN tblSubstances ON tblSubstances.ID=tblAppendix.Substance_ID) t &
             WHERE tblSubstances.SubstanceName='~name';"   
-
-    !------------------------------------------------------------------
 
     search_list = [character(len=ESMF_MAXSTR) :: "~name"]
     replace_list = [character(len=ESMF_MAXSTR) :: name]
@@ -195,8 +301,10 @@ subroutine get_substance_appendix_aliases_list(SubstanceName, apdxID, rulesets, 
     character(len=ESMF_MAXSTR), dimension(3)         :: search_list, &
                                                         replace_list
 
-    character(1000)                                  :: sql &
-        = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+    character(1000)                                  :: sql
+
+    !------------------------------------------------------------------
+    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
             FROM (tblAppendix &
             JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
             JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
@@ -205,8 +313,6 @@ subroutine get_substance_appendix_aliases_list(SubstanceName, apdxID, rulesets, 
             WHERE tblRulesets.RulesetName IN(~rulesets) &
             AND tblSubstances.SubstanceName='~name' &
             AND tblAppendix.ID=~apdxID; "   
-
-    !------------------------------------------------------------------
 
     search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name", "~apdxID"]
     replace_list = [character(len=ESMF_MAXSTR) :: rulesets, SubstanceName, apdxID]
@@ -220,55 +326,6 @@ subroutine get_substance_appendix_aliases_list(SubstanceName, apdxID, rulesets, 
     deallocate(col)
 
 end subroutine get_substance_appendix_aliases_list
-
-
-
-#undef  ESMF_METHOD
-#define ESMF_METHOD "get_substance_aliases_list"
-!> @subsubsection get_substance_alias_list "Get Substance Alias List"
-!> @brief Receives list of all aliases of the substance from the database
-!> @param name char(ESMF_MAXSTR) Name or Alias of Substance
-!> @param listout dim (:) char(ESMF_MAXSTR) Array with all aliases
-subroutine get_substance_aliases_list(name, rulesets, dbaout)
-    !------------------------------------------------------------------
-    implicit none
-
-    !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in), pointer  :: name
-    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
-    character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
-                                                     :: dbaout
-
-    !LOCAL VARS
-    integer                                          :: columns = 2
-    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
-    character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
-                                                        replace_list
-
-    character(1000)                                  :: sql &
-        ="SELECT t.SubstanceName || coalesce(t.Condition,'') || coalesce(t.Location,''), &
-        t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
-        FROM (tblAppendix &
-        JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
-        JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
-        JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
-        JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
-        WHERE tblRulesets.RulesetName IN(~rulesets) AND tblSubstances.SubstanceName='~name';"
-    !------------------------------------------------------------------
-
-    search_list  = [character(len=ESMF_MAXSTR) :: "~rulesets", "~name"]
-    replace_list = [character(len=ESMF_MAXSTR) :: rulesets, name]
-
-    !Construct recordset for return values
-    allocate( col(columns) )
-    call sqlite3_column_query( col(1), 'Substance-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
-    call sqlite3_column_query( col(2), 'Equivalent-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
-
-    call sql_select_state(sql,col,2,search_list,replace_list,dbaout)
-
-    deallocate(col)
-
-end subroutine get_substance_aliases_list
 
 
 
@@ -406,35 +463,43 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     !> Init connection and start a new Transaction
     call load_session
 
+!    if (debug) then
+!        write(*,*) "> Completition: ", completion
+!    end if
+
     !> Run the statement
     call sqlite3_prepare( db, sql, stmt, col )
     call sqlite3_step( stmt, completion )
 
-    !> Count rows in result
-    !> @todo: better way to get row number!?
-    !Reset position in database array
-    do while (finished .eqv. .false.)
-        call sqlite3_next_row( stmt, col, finished )
-    end do
-    finished=.false.
-    rows=0
-    !Loop and count
-    do while (finished .eqv. .false.)
-        rows=rows+1
-        call sqlite3_next_row( stmt, col, finished )
-    end do
+    if (completion==100) then
+        !> Count rows in result
+        !> @todo: better way to get row number!?
+        !Reset position in database array
+        do while (finished .eqv. .false.)
+            call sqlite3_next_row( stmt, col, finished )
+        end do
+        finished=.false.
+        rows=0
+        !Loop and count
+        do while (finished .eqv. .false.)
+            rows=rows+1
+            call sqlite3_next_row( stmt, col, finished )
+        end do
 
-    allocate(dba(columns, rows))
-    if (DEBUG .eqv. .true.) write(*,*) "Shape of dba: ", shape(dba)
+        allocate(dba(columns, rows))
+        if (DEBUG .eqv. .true.) then
+            write(*,*) ""
+            write(*,*) "> Shape of dba: ", shape(dba)
+        end if
 
-    do j=1, rows
-        !write(*,*) "ping"
-        call sqlite3_next_row( stmt, col, finished )
-            do i=1, columns
-                !write(*,*) "pong"
-                call sqlite3_get_column( col(i), dba(j,i))
-            end do
-    end do
+        do j=1, rows
+            !write(*,*) "ping"
+            call sqlite3_next_row( stmt, col, finished )
+                do i=1, columns
+                    !write(*,*) "pong"
+                    call sqlite3_get_column( col(i), dba(j,i))
+                end do
+        end do
 
 !    j=0
 !    do while (finished .eqv. .false.)
@@ -448,14 +513,22 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
 !    end do
 
 
-    if (DEBUG .eqv. .true.) then
-        write(*,*) ""
-        write(*,*) "--- database info ---"
-        write(*,*) "cols/rows: ", columns, rows
-        write (*,*) "SQL-State: ", sql
-        write(*,*) "Errors: ", sqlite3_errmsg( db )
-        write(*,*) "----------------------------"
-        write(*,*) ""
+        if (DEBUG .eqv. .true.) then
+            write(*,*) ""
+            write(*,*) ""
+            write(*,*) "> cols/rows: ", columns, rows
+            write (*,*) "> SQL-State: ", sql
+            write(*,*) "> Errors: ", sqlite3_errmsg( db )
+            write(*,*) ""
+        end if
+    else
+        if (DEBUG .eqv. .true.) then
+            write(*,*) ""
+            write (*,*) "> SQL-State: ", sql
+            write(*,*) "> NO RESULTS"
+            write(*,*) "> Errors: ", sqlite3_errmsg( db )
+            write(*,*) ""
+        end if
     end if
 
     call finalize_session(.false.,(completion .ne. SQLITE_DONE))
