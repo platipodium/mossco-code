@@ -210,8 +210,8 @@ program main
     allocate(logMsgList(1))
     logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING, ESMF_LOGMSG_TRACE/)
   else
-    allocate(logMsgList(1))
-    logMsgList=(/ESMF_LOGMSG_ALL/)
+    allocate(logMsgList(4))
+    logMsgList=(/ESMF_LOGMSG_ERROR, ESMF_LOGMSG_WARNING, ESMF_LOGMSG_TRACE, ESMF_LOGMSG_INFO/)
   endif
 
   call ESMF_LogSet(logMsgList=logMsgList, flush=logFlush, rc=localrc)
