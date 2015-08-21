@@ -60,7 +60,7 @@ program test_mossco_db
     write(*,*) ""
     write(*,*) "- - - - - - - - Starting test mossco_db - - - - - - - - "
     write(*,*) "Using rulesets: ", rulesets
-
+    return
     call get_substances_list(dba_substances)
     write(*,*) ""
     write(*,*) "###### List of all substances ######"
