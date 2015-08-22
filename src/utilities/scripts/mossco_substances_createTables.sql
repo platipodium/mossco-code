@@ -198,4 +198,13 @@ SELECT t.SubstanceName || coalesce(t.Condition,'') || coalesce(t.Location,''), t
 	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t 
 	WHERE tblRulesets.RulesetName IN('General', 'HZG KW') 
 	AND tblSubstances.SubstanceName='O_2'; 
-
+	
+	
+SELECT t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"") 
+	FROM (tblAppendix
+	JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID
+	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID
+	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID
+	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t
+	WHERE tblRulesets.RulesetName IN("General", "HZG KW") 
+	AND tblSubstances.SubstanceName || coalesce(tblAppendix.Condition,"") || coalesce(tblAppendix.Location,"") == "O_2_at_soil_surface";

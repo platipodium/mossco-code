@@ -579,11 +579,13 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    dba_import=ESMF_StateCreate(name=trim(name)//'Database Array Import', rc=localrc)
+    !dba_import=ESMF_StateCreate(name=trim(name)//'Database Array Import', rc=localrc)
+    dba_import=ESMF_StateCreate(name='dba_import', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    dba_export=ESMF_StateCreate(name=trim(name)//'Database Array Export', rc=localrc)
+    !dba_export=ESMF_StateCreate(name=trim(name)//'Database Array Export', rc=localrc)
+    dba_export=ESMF_StateCreate(name='dba_export', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -657,12 +659,13 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
                         call ESMF_AttributeSet(dba_import, dba_aliases(i,1), 0, rc=localrc)
                             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-                        call ESMF_AttributeGet(state=dba_import, name=trim(dba_aliases(i,1)), value=dba_value, rc=localrc)
-                        if (localrc==ESMF_SUCCESS) then
-                            write(*,*) "> Found: ", trim(dba_aliases(i,1)), " used times: ", dba_value
-                        else
-                            write(*,*) "> Not found:", trim(dba_aliases(i,1))
+                        if (debug) then
+                            call ESMF_AttributeGet(state=dba_import, name=trim(dba_aliases(i,1)), value=dba_value, rc=localrc)
+                            if (localrc==ESMF_SUCCESS) then
+                                write(*,*) "> Found: ", trim(dba_aliases(i,1)), " used times: ", dba_value
+                            else
+                                write(*,*) "> Not found:", trim(dba_aliases(i,1))
+                            end if
                         end if
 
                         exit
@@ -685,11 +688,13 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
                             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-                        call ESMF_AttributeGet(state=dba_export, name=trim(dba_aliases(i,1)), value=dba_value, rc=localrc)
-                        if (localrc==ESMF_SUCCESS) then
-                            write(*,*) "> Found: ", trim(dba_aliases(i,1)), " used times: ", dba_value
-                        else
-                            write(*,*) "> Not found:", trim(dba_aliases(i,1))
+                        if (debug) then
+                            call ESMF_AttributeGet(state=dba_export, name=trim(dba_aliases(i,1)), value=dba_value, rc=localrc)
+                            if (localrc==ESMF_SUCCESS) then
+                                write(*,*) "> Found: ", trim(dba_aliases(i,1)), " used times: ", dba_value
+                            else
+                                write(*,*) "> Not found:", trim(dba_aliases(i,1))
+                            end if
                         end if
 
                         exit
@@ -705,37 +710,46 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
         end if
     end do
 
-!***@temp:
-    if (debug .eqv. .true.) then
-        call ESMF_AttributeGet(dba_import, count=import_itemCount2)
-        call ESMF_AttributeGet(dba_export, count=export_itemCount2)
-
-        write(*,*) "> count import", import_itemCount2
-        write(*,*) "> count export", export_itemCount2
-
-        write(*,*) ""
-        write(*,*) "> Found the following substances in import state:"
-        do i=1,import_itemCount2
-            call ESMF_AttributeGet(dba_import,i,attributeName)
-            write(*,'(A)') trim(attributeName)
-        end do
-
-        write(*,*) ""
-        write(*,*) "> Found the following substances in export state:"
-        do i=1,export_itemCount2
-            call ESMF_AttributeGet(dba_export,i,attributeName)
-            write(*,'(A)') trim(attributeName)
-        end do
-    end if
-
     !> Complete database Arrays
-    call ESMF_StateAdd(importState, (/dba_import/), rc=localrc)
+    call ESMF_StateAddReplace(importState, (/dba_import/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateAdd(exportState, (/dba_export/), rc=localrc)
+    call ESMF_StateAddReplace(exportState, (/dba_export/), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+!    call ESMF_StateGet(importState, "dba_import", dba_import, rc=localrc)
+!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!    call ESMF_StateGet(exportState, "dba_export", dba_export, rc=localrc)
+!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!
+!    call ESMF_AttributeGet(dba_import, count=import_itemCount)
+!    call ESMF_AttributeGet(dba_export, count=export_itemCount)
+!
+!    if (debug .eqv. .true.) then
+!        write(*,*) ""
+!        write(*,*) "> *******Import/Export Count********"
+!        write(*,*) import_itemCount, export_itemCount
+!        write(*,*) "> **********************************"
+!
+!        write(*,*) ""
+!        write(*,*) "> Found the following substances in import state:"
+!        do i=1,import_itemCount
+!            call ESMF_AttributeGet(dba_import,i,attributeName)
+!            write(*,'(A)') trim(attributeName)
+!        end do
+!
+!        write(*,*) ""
+!        write(*,*) "> Found the following substances in export state:"
+!        do i=1,export_itemCount
+!            call ESMF_AttributeGet(dba_export,i,attributeName)
+!            write(*,'(A)') trim(attributeName)
+!        end do
+!    end if
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -768,31 +782,38 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     character(len=ESMF_MAXSTR),dimension(1:3) &
                                             :: substances_import, &
                                                substances_export
-    character(len=ESMF_MAXSTR)              :: val, name
+    character(len=ESMF_MAXSTR)              :: val, name, attributeName
 
-    integer                                 :: import_itemCount, &
-                                               export_itemCount, &
-                                               c, c_imp, c_exp, &
-                                               i, j, n, localrc,verbose
+    integer(ESMF_KIND_I4)                   :: dba_value
+    integer                                 :: c, n_i, n_e, c_f=0, &
+                                               i, j, h, n, localrc, &
+                                               n_req=0, n_inv, &
+                                               used=0, used_max=0
+
+    logical                                 :: hit
 
     !LOCAL POINTER
-    character(len=ESMF_MAXSTR),allocatable  :: import_itemNames(:), &
-                                               export_itemNames(:)
-
-
     type(ESMF_StateItem_Flag), allocatable  :: import_itemTypes(:), &
                                                export_itemTypes(:)
 
-    character(len=ESMF_MAXSTR),allocatable  :: a_imp, a_exp
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer &
+                                            :: dba_aliases
+    character(len=ESMF_MAXSTR),allocatable  :: import_itemNames(:), &
+                                               export_itemNames(:)
+    character(len=ESMF_MAXSTR),allocatable,dimension(:) &
+                                            :: required, &
+                                               inventory
+    character(len=ESMF_MAXSTR),pointer      :: sa_name
 
     real(ESMF_KIND_R8),dimension(:,:),pointer :: field=>null()
+
     !------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
 
     !> Call user-code method
     call mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
-    return
+
 !***@temp
     if (debug .eqv. .true.) then
         write(*,*) ""
@@ -804,47 +825,208 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> @paragraph: automated_copy  "Automated copy of Substances"
-    !> @brief: Substances directly found in Import State are copied to the export State
-
     call ESMF_StateGet(importState, "dba_import", dba_import, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateGet(exportState, "dba_export", dba_import, rc=localrc)
+    call ESMF_StateGet(exportState, "dba_export", dba_export, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> Dimension the Names and Types Arrays for ESMF_StateGet
-    call ESMF_StateGet(dba_import, itemCount=import_itemCount)
-    call ESMF_StateGet(dba_export, itemCount=export_itemCount)
-    allocate(import_itemNames(import_itemCount))
-    allocate(import_itemTypes(import_itemCount))
-    allocate(export_itemNames(export_itemCount))
-    allocate(export_itemTypes(export_itemCount))
+    call ESMF_AttributeGet(dba_import, count=n_i)
+    call ESMF_AttributeGet(dba_export, count=n_e)
 
-!***@temp
+    !> @paragraph analyse "Analyse Data structure of Import and Export State"
+    !> @brief: Search and classify fields according to there substance
+
+    !> @todo: implement
+
+    !> @paragraph: automated_copy  "Automated copy of Substances"
+    !> @brief: Substances directly found in Import State are copied to the export State
+
+    !> 1) Search all items directly by alias
+    do i=1,n_e
+        call ESMF_AttributeGet(dba_export,i,attributeName, rc=localrc)
+        !if (localrc/=ESMF_SUCCESS) exit
+        call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value,rc=localrc)
+
+        if (localrc==ESMF_SUCCESS) then
+            if (debug) write(*,*) "> Found value: ", dba_value
+            !> If found set used (import) and found (export) to 1
+            dba_value=1
+            call ESMF_AttributeSet(dba_import,name=attributeName,value=dba_value,rc=localrc)
+            call ESMF_AttributeSet(dba_export,name=attributeName,value=dba_value,rc=localrc)
+            c_f=c_f+1
+
+            !> Copy data
+            !> @todo
+        end if
+    end do
+
+
+    !> 2) Loop used level
+    do while ( (c_f<n_e) .and. (used<=used_max) )
+        hit=.true.
+
+        !> Loop current used level until no more substances are found
+        do while (hit)
+            hit=.false.
+            if(debug) then
+                write(*,*) ""
+                write(*,*) "> Start search (used", used, ")"
+            end if
+            !> Redim the Substance arrays
+            if (allocated(required)) deallocate(required)
+            if (allocated(inventory)) deallocate(inventory)
+            n_req=n_e-c_f
+            allocate(required(n_req))
+            if (debug) write(*,*) "> ", n_req, " required substances remaining"
+
+            !> Get required substances with found=0
+            j=0
+            do i=1,n_e
+                call ESMF_AttributeGet(dba_export,i,attributeName, rc=localrc)
+                call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value,rc=localrc)
+                if (dba_value==0) then
+                    j=j+1
+                    required(j)=attributeName
+                end if
+            end do
+
+
+            !> Get inventory substances with current used level or below
+            n_inv=0
+            do i=1,n_i
+                call ESMF_AttributeGet(dba_import,i,attributeName, rc=localrc)
+                call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value,rc=localrc)
+                if (dba_value<=used) n_inv=n_inv+1
+            end do
+            allocate(inventory(n_inv))
+            if (debug) write(*,*) "> Found ", n_inv, " substances in inventory for current used level"
+            j=0
+            do i=1,n_i
+                call ESMF_AttributeGet(dba_import,i,attributeName, rc=localrc)
+                call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value,rc=localrc)
+                if (dba_value<=used) then
+                    j=j+1
+                    inventory(j)=attributeName
+                end if
+            end do
+
+            !write(*,*) "ping"
+
+            !> 3) Loop all export substances
+            do i=1,n_req
+                if (debug) write(*,*) "> Looping ", required(i)
+                call get_alias_name(required(i),rulesets,sa_name)
+                call get_substance_appendix_aliases_list(sa_name, rulesets, dba_aliases)
+
+                !> 4) Loop all alias combinations for all substances
+                do j=1, size(dba_aliases)
+
+                    !> 5) Check all inventory entries at the current used level for all combinations
+                    if (debug) write(*,*) "> Searching alias ", dba_aliases(j,1)
+                    do h=1,n_inv
+                        if (dba_aliases(j,1)==inventory(h)) then
+                            !> Increase used value of Substance and max used if neccesary
+                            call ESMF_AttributeGet(dba_import,name=inventory(h),value=dba_value,rc=localrc)
+                            dba_value=dba_value+1
+                            call ESMF_AttributeSet(dba_import,name=inventory(h),value=dba_value,rc=localrc)
+                            if (dba_value>used_max) used_max=dba_value
+
+                            !> Set found value to 1
+                            dba_value=1
+                            call ESMF_AttributeSet(dba_export,name=required(i),value=dba_value,rc=localrc)
+                            c_f=c_f+1
+
+                            !> Copy data
+                            !> @todo
+
+                            hit=.true.
+                            if (debug) write(*,*) "> Found hit"
+                        end if
+                        if (hit) exit
+                    end do
+                    if (hit) exit
+                end do
+                if (hit) exit
+            end do
+        end do
+        if (debug) write(*,*) "> No more hits found, increasing used level"
+        used=used+1
+    end do
+
+
     if (debug .eqv. .true.) then
-        write(*,*) ">*******Import/Export Count********"
-        write(*,*) import_itemCount, export_itemCount
-        write(*,*) ">**********************************"
+        write(*,*) ""
+        write(*,*) "> *******Import/Export Count********"
+        write(*,*) n_i, n_e
+        write(*,*) "> **********************************"
+
+        write(*,*) ""
+        write(*,*) "> Found the following substances in import state:"
+        do i=1,n_i
+            call ESMF_AttributeGet(dba_import,i,attributeName)
+            call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
+            write(*,*) "- ", trim(attributeName), " used times ", dba_value
+        end do
+
+        write(*,*) ""
+        write(*,*) "> Found the following substances in export state:"
+        do i=1,n_e
+            call ESMF_AttributeGet(dba_export,i,attributeName)
+            call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
+            write(*,*) "- ", trim(attributeName), " found ", dba_value
+        end do
     end if
 
-    !> Receive the Name and Type lists
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_StateGet(dba_import, itemTypeList=import_itemTypes, itemNameList=import_itemNames, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_StateGet(exportState, itemTypeList=export_itemTypes, itemNameList=export_itemNames, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+!    !> Dimension the Names and Types Arrays for ESMF_StateGet
+!    call ESMF_StateGet(dba_import, itemCount=import_itemCount)
+!    call ESMF_StateGet(dba_export, itemCount=export_itemCount)
+!    allocate(import_itemNames(import_itemCount))
+!    allocate(import_itemTypes(import_itemCount))
+!    allocate(export_itemNames(export_itemCount))
+!    allocate(export_itemTypes(export_itemCount))
+!
+!    !> Receive the Name and Type lists
+!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!    call ESMF_S!***@temp:
+!    !***@temp:
+!    tateGet(dba_import, itemTypeList=import_itemTypes, itemNameList=import_itemNames, rc=localRc)
+!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!    call ESMF_StateGet(exportState, itemTypeList=export_itemTypes, itemNameList=export_itemNames, rc=localRc)
+!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !
 !    !> Prepare import array
-!    c_imp = import_itemCount - sum(index(import_itemNames, "_used"))
-!    allocate(a_imp((6*c_imp)-1))
-!    a_imp=repeat("0,0,0,",c_imp)
-!    substances_import=reshape((/a_imp/,(/c_imp,2/))
+!    n_i = import_itemCount - sum(index(import_itemNames, "_used"))
+!    allocate(a_imp((6*n_i)-1))
+!    a_imp=repeat("0,0,0,",n_i)
+!    substances_import=reshape((/a_imp/,(/n_i,2/))
 !
 !    j=0
 !    !> Read import inventory to array
@@ -869,10 +1051,10 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 !    end do
 !
 !    !> Prepare export array
-!    c_exp = export_itemCount - sum(index(export_itemNames, "_used"))
-!    allocate(a_exp((6*c_exp)-1))
-!    a_imp=repeat("0,0,0,",c_exp)
-!    substances_export=reshape((/a_exp/,(/c_exp,2/))
+!    n_e = export_itemCount - sum(index(export_itemNames, "_used"))
+!    allocate(a_exp((6*n_e)-1))
+!    a_imp=repeat("0,0,0,",n_e)
+!    substances_export=reshape((/a_exp/,(/n_e,2/))
 !    !> Read export inventory to array
 !
 !    j=0
@@ -893,9 +1075,9 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 !    end do
 !
 !    !> Find the lowest used number for the substance
-!    do i=1, c_exp
+!    do i=1, n_e
 !        n=2147483647
-!        do j=1, c_imp
+!        do j=1, n_i
 !            if ((substances_export(i,1) == substances_import(j,1)) &
 !                .and. substances_import(j,3)<n ) n=j
 !        end do
@@ -933,13 +1115,13 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     !> @brief: Log with found and not found substances
 
     !> @todo: ESMF log --> shift in RUN method
-    call ESMF_StateGet(dba_import, itemTypeList=import_itemTypes, itemNameList=import_itemNames, rc=localRc)
-    write(*,*) "Found the following substances in import state:"
-    write(*,'(A)') import_itemNames
-
-    call ESMF_StateGet(dba_export, itemTypeList=export_itemTypes, itemNameList=export_itemNames, rc=localRc)
-    write(*,*) "Found the following substances in import state:"
-    write(*,'(A)') export_itemNames
+!    call ESMF_StateGet(dba_import, itemTypeList=import_itemTypes, itemNameList=import_itemNames, rc=localRc)
+!    write(*,*) "Found the following substances in import state:"
+!    write(*,'(A)') import_itemNames
+!
+!    call ESMF_StateGet(dba_export, itemTypeList=export_itemTypes, itemNameList=export_itemNames, rc=localRc)
+!    write(*,*) "Found the following substances in import state:"
+!    write(*,'(A)') export_itemNames
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &

@@ -47,6 +47,7 @@ program test_mossco_db
                                                dba_substances
 
     character(len=ESMF_MAXSTR)              :: str1, str2
+    character(len=ESMF_MAXSTR),pointer      :: alias
     !type(ESMF_ARRAY) :: dba_ESMF
     !------------------------------------------------------------------
 
@@ -60,7 +61,8 @@ program test_mossco_db
     write(*,*) ""
     write(*,*) "- - - - - - - - Starting test mossco_db - - - - - - - - "
     write(*,*) "Using rulesets: ", rulesets
-    return
+
+
     call get_substances_list(dba_substances)
     write(*,*) ""
     write(*,*) "###### List of all substances ######"
@@ -77,6 +79,27 @@ program test_mossco_db
             write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)))
         end if
     end do
+
+    write(*,*) "###### Functions for alias search ######"
+    call get_substance_aliases_list(dba_substances(1,1),rulesets,dba_aliases)
+    write(*,*) "Analyse alias: ", dba_aliases(1,1)
+
+    call get_alias_name(dba_aliases(1,1),rulesets,alias)
+
+    if (associated(alias)) then
+        write(*,*) ""
+        write(*,*) "Get substance-appendix name for alias: ", alias
+        write(*,*) "Get full alias list for substance-appendix name: "
+
+        call get_substance_appendix_aliases_list(alias, rulesets, dba_aliases)
+        if (.not. associated(dba_aliases)) then
+            write(*,*) "No aliases found"
+        else
+            write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)))
+        end if
+    else
+        write(*,*) "Alias not found"
+    end if
 
     write(*,*) "- - - - - - - - Finishing test mossco_db - - - - - - - -"
 

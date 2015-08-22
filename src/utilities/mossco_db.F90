@@ -26,13 +26,16 @@ implicit none
 private
     !MODULE VARS
     character(len=ESMF_MAXSTR)      :: dbfile = "mossco.db"
-    !@dev: atm file must be present in the EYXECUTING folder (i.e. in src/test)
+    !@todo: atm file must be present in the EXECUTING folder (i.e. in src/test)
     type(SQLITE_DATABASE)           :: db
     logical                         :: session_active=.false.
     logical                         :: con_active=.false.
     logical                         :: DEBUG = .false.
 
-    !@dev: shift all sql states as parameter to here
+    interface get_substance_appendix_aliases_list
+        module procedure get_substance_appendix_aliases_list_1
+        module procedure get_substance_appendix_aliases_list_2
+    end interface
 
     public get_equivalent_name, &
            get_alias_name, &
@@ -107,8 +110,8 @@ subroutine get_alias_name(alias,rulesets,nameout)
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in), pointer  :: alias
-    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
+    character(len=ESMF_MAXSTR), intent(in)           :: alias
+    character(len=ESMF_MAXSTR), intent(in)           :: rulesets
     character(len=ESMF_MAXSTR), intent(out),pointer  :: nameout
 
     !LOCAL VARS
@@ -126,14 +129,14 @@ subroutine get_alias_name(alias,rulesets,nameout)
     character(len=ESMF_MAXSTR),dimension(:,:),pointer:: dba
     !------------------------------------------------------------------
     nameout=>null()
-    sql = "SELECT t.SubstanceName || coalesce(t.Condition,"") || coalesce(t.Location,"") &
+    sql = "SELECT t.SubstanceName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
             FROM (tblAppendix &
             JOIN tblSubstances ON tblAppendix.Substance_ID=tblSubstances.ID &
             JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblSubstances.ID &
             JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
             JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
-            WHERE tblRulesets.RulesetName in ('~rulesets') &
-            AND t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"") == '~alias';"
+            WHERE tblRulesets.RulesetName in (~rulesets) &
+            AND t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') == '~alias';"
 
     search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~alias"]
     replace_list = [character(len=ESMF_MAXSTR) :: rulesets, alias]
@@ -280,11 +283,11 @@ end subroutine get_substance_appendices_list
 
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "get_substance_appendix_aliases_list"
+#define ESMF_METHOD "get_substance_appendix_aliases_list_1"
 !> @subsubsection get_substance_appendix_aliases_list "Get Substance Appendix-Aliases List"
 !> @brief Receives list of all aliases of the substance connected with one appendix
 !> @param
-subroutine get_substance_appendix_aliases_list(SubstanceName, apdxID, rulesets, dbaout)
+subroutine get_substance_appendix_aliases_list_1(SubstanceName, apdxID, rulesets, dbaout)
     !------------------------------------------------------------------
     implicit none
 
@@ -325,7 +328,54 @@ subroutine get_substance_appendix_aliases_list(SubstanceName, apdxID, rulesets, 
 
     deallocate(col)
 
-end subroutine get_substance_appendix_aliases_list
+end subroutine get_substance_appendix_aliases_list_1
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "get_substance_appendix_aliases_list_2"
+!> @subsubsection get_substance_appendix_aliases_list "Get Substance Appendix-Aliases List"
+!> @brief Receives list of all aliases of the substance connected with one appendix
+!> @param
+subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, dbaout)
+    !------------------------------------------------------------------
+    implicit none
+
+    !INPUTS/OUTPUTS
+    character(len=ESMF_MAXSTR), intent(in)           :: SubstanceAppendix
+    character(len=*), intent(in)                     :: rulesets
+    character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
+                                                     :: dbaout
+
+    !LOCAL VARS
+    integer                                          :: columns = 1
+    type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
+    character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
+                                                        replace_list
+
+    character(1000)                                  :: sql
+
+    !------------------------------------------------------------------
+    sql = "SELECT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') & 
+    FROM (tblAppendix &
+    JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
+    JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
+    JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID &
+    JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t &
+    WHERE tblRulesets.RulesetName IN(~rulesets) &
+    AND tblSubstances.SubstanceName || coalesce(tblAppendix.Condition,'') || coalesce(tblAppendix.Location,'') == '~SubstanceAppendix';" 
+
+    search_list = [character(len=ESMF_MAXSTR) :: "~rulesets", "~SubstanceAppendix"]
+    replace_list = [character(len=ESMF_MAXSTR) :: rulesets, SubstanceAppendix]
+
+    !Construct recordset for return values
+    allocate( col(columns) )
+    call sqlite3_column_query( col(1), 'Substance aliases', SQLITE_CHAR, ESMF_MAXSTR )
+
+    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+
+    deallocate(col)
+
+end subroutine get_substance_appendix_aliases_list_2
 
 
 
@@ -347,15 +397,18 @@ subroutine load_session
     !LOCAL VARS
 
     !------------------------------------------------------------------
-
     !Init connection to database file given by module
     if (con_active .eqv. .false.) then
+        if (debug) write(*,*) "> Opening Session"
         call sqlite3_open( dbfile, db )
         con_active=.true.
     end if
 
     !Execute previous session commands and reinit
-    if (session_active .eqv. .true.) call finalize_session(.true.,.false.)
+    if (session_active .eqv. .true.) then
+        if (debug) write(*,*) "> Found open session, finalize"
+        call finalize_session(.true.,.false.)
+    end if
     session_active=.true.
 
     !@todo: start async timer to terminate connection
@@ -382,27 +435,30 @@ subroutine finalize_session(hold_con,abort)
     !------------------------------------------------------------------
     hcon=hold_con
 
-    !Catch wrong call, end session
+    !> Catch wrong call, end session
     if ((session_active .eqv. .false.) .and. (con_active .eqv. .false.)) return
 
-    !> Commit current changes
-    if (abort .eqv. .false.) call sqlite3_commit( db )
-
     !check external error flag / current errors and treat them
-    if ((abort .eqv. .true.) .OR. (sqlite3_error( db ) .eqv. .true.)) then  !@todo: Kann es hier zu einem Fehler kommen, wenn noch nichts getan wurde?
+    if (abort .eqv. .true.) then
         !> Undo changes made to database
         call sqlite3_rollback( db )
         hcon = .false.
         critical = .true.
+        if (debug) write(*,*) "> Abort current database session"
+    else
+        call sqlite3_commit( db )
+        if (debug) write(*,*) "> Commit current changes"
     end if
 
     !> End session
     session_active=.false.
+    if (debug) write(*,*) "> Closing current session"
 
     !> Quit connection and clear flag for regular shutdowns and errors
     if (hcon .eqv. .false.) then
         con_active = .false.
         call sqlite3_close( db )
+        if (debug) write(*,*) "> Closing database connection"
     end if
 
     !> On critical error run ESMF_END_ABORT routine after connection has been shut down
@@ -460,17 +516,16 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
 
     !write(*,*) sql
 
+
     !> Init connection and start a new Transaction
     call load_session
-
-!    if (debug) then
-!        write(*,*) "> Completition: ", completion
-!    end if
 
     !> Run the statement
     call sqlite3_prepare( db, sql, stmt, col )
     call sqlite3_step( stmt, completion )
+    if (debug) write(*,*) "> Completition: ", completion
 
+    !write(*,*) "Compl:", completion
     if (completion==100) then
         !> Count rows in result
         !> @todo: better way to get row number!?
@@ -522,6 +577,7 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
             write(*,*) ""
         end if
     else
+        dba=>null()
         if (DEBUG .eqv. .true.) then
             write(*,*) ""
             write (*,*) "> SQL-State: ", sql
@@ -531,7 +587,7 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
         end if
     end if
 
-    call finalize_session(.false.,(completion .ne. SQLITE_DONE))
+    call finalize_session(.false.,(completion /= 100))
 
 !    write(*,*) name
 
