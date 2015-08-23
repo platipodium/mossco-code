@@ -208,3 +208,5 @@ SELECT t.EquivalentName || coalesce(t.Condition,"") || coalesce(t.Location,"")
 	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t
 	WHERE tblRulesets.RulesetName IN("General", "HZG KW") 
 	AND tblSubstances.SubstanceName || coalesce(tblAppendix.Condition,"") || coalesce(tblAppendix.Location,"") == "O_2_at_soil_surface";
+	
+

@@ -523,7 +523,7 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     !> Run the statement
     call sqlite3_prepare( db, sql, stmt, col )
     call sqlite3_step( stmt, completion )
-    if (debug) write(*,*) "> Completition: ", completion
+    !if (debug) write(*,*) "> Completition: ", completion
 
     !write(*,*) "Compl:", completion
     if (completion==100) then
