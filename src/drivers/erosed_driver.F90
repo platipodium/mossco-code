@@ -427,8 +427,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     eq_conc     = 0.0_fp
     rhowat      = 1000.0_fp
     vicmol      = 1.307e-6_fp
-    thcmud      = 0.001_fp ! @ToDO: Total thickness of mud layer [m] should be read from data file
-                        ! if thcmud > 0.01 m then the average d50 of sand will be used to calculated
+    thcmud      = 0.02_fp ! @ToDO: Total thickness of mud layer [m] should be read from data file
+                        ! if thcmud > 0.01 m then the average d50 of silt will be used to calculated
                         ! z0 roughness for taub in compbsskin. Taub is the combined wave current shear
                         ! stress for cohesive soil
 
