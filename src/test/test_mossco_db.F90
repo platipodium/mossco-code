@@ -84,7 +84,7 @@ program test_mossco_db
     call get_substance_aliases_list(dba_substances(1,1),rulesets,dba_aliases)
     write(*,*) "Analyse alias: ", dba_aliases(1,1)
 
-    call get_alias_name(dba_aliases(1,1),rulesets,alias)
+    call get_equivalent_appendix_name(dba_aliases(1,1),rulesets,alias)
 
     if (associated(alias)) then
         write(*,*) ""

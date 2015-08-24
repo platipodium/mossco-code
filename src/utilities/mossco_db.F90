@@ -38,7 +38,7 @@ private
     end interface
 
     public get_equivalent_name, &
-           get_alias_name, &
+           get_equivalent_appendix_name, &
            get_substances_list, &
            get_substance_aliases_list, &
            get_substance_appendices_list, &
@@ -52,8 +52,11 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_equivalent_name"
-!> @brief
-!> @param
+!> @subsubsection get_equivalent_name "Get equivalent name"
+!> @brief Get the primary name of the substance
+!> @param equivalent: Equivalent name for the substance [e.g. dissolved_oxygen]
+!> @param rulesets: Names of the active rulesets [e.g. 'General']
+!> @param nameout: Primary name of the substance [e.g. O_2]
 subroutine get_equivalent_name(equivalent,rulesets,nameout)
     !------------------------------------------------------------------
     implicit none
@@ -101,11 +104,17 @@ subroutine get_equivalent_name(equivalent,rulesets,nameout)
 
 end subroutine get_equivalent_name
 
+
 #undef  ESMF_METHOD
-#define ESMF_METHOD "get_alias_name"
-!> @brief
-!> @param
-subroutine get_alias_name(alias,rulesets,nameout)
+#define ESMF_METHOD "get_equivalent_appendix_name"
+!> @subsubsection get_equivalent_appendix_name "Get equivalent-appendix name"
+!> @brief Get the primary name of the equivalent-appendix combination
+!> @param alias: Equivalent name for the substance with appendix
+!! [e.g. dissolved_oxygen_at_soil_surface]
+!> @param rulesets: Names of the active rulesets [e.g. 'General']
+!> @param nameout: Primary name of the substance with appendix
+!! [e.g. O_2_at_soil_surface]
+subroutine get_equivalent_appendix_name(alias,rulesets,nameout)
     !------------------------------------------------------------------
     implicit none
 
@@ -150,15 +159,14 @@ subroutine get_alias_name(alias,rulesets,nameout)
 
     deallocate(col)
 
-end subroutine get_alias_name
+end subroutine get_equivalent_appendix_name
 
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substances_list"
 !> @subsubsection get_substance_list "Get Substance List"
-!> @brief Receives list of all known substances from the database name
-!> @detail list by unique identifier: Substance name
-!> @param dbaout: Array with all Substance Names
+!> @brief Receives list of all known substances from the database
+!> @param dbaout: 2D Array with all Substance Names
 subroutine get_substances_list(dbaout)
     !------------------------------------------------------------------
     implicit none
@@ -189,10 +197,13 @@ end subroutine get_substances_list
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "get_substance_aliases_list"
-!> @subsubsection get_substance_alias_list "Get Substance Alias List"
-!> @brief Receives list of all aliases of the substance from the database
-!> @param name char(ESMF_MAXSTR) Name or Alias of Substance
-!> @param listout dim (:) char(ESMF_MAXSTR) Array with all aliases
+!> @subsubsection get_substance_aliases_list "Get Substance Aliases List"
+!> @brief Receives list of all equivalent-appendix combinations
+!! of the substance from the database
+!> @param name: Primary name of the substance [e.g. "O_2"]
+!> @param rulesets: Names of the active rulesets,
+!! each in apostrophe seperated by comma [e.g. "'General','...'"]
+!> @param dbaout: 2D Array with all aliases
 subroutine get_substance_aliases_list(name, rulesets, dbaout)
     !------------------------------------------------------------------
     implicit none
@@ -242,8 +253,8 @@ end subroutine get_substance_aliases_list
 !> @subsubsection get_substance_appendices_list "Get Substance Appendices List"
 !> @brief Receives list of all known appendices-IDs for a substance
 !> @detail list by unique identifier: Substance name
-!> @param name: Array with all Substance Names
-!> @param dbaout: Array with all Substance Names
+!> @param name: Primary name of the substance
+!> @param dbaout: 2D Array with all Substance Names
 subroutine get_substance_appendices_list(name, dbaout)
     !------------------------------------------------------------------
     implicit none
@@ -286,7 +297,11 @@ end subroutine get_substance_appendices_list
 #define ESMF_METHOD "get_substance_appendix_aliases_list_1"
 !> @subsubsection get_substance_appendix_aliases_list "Get Substance Appendix-Aliases List"
 !> @brief Receives list of all aliases of the substance connected with one appendix
-!> @param
+!> @param SubstanceName: Primary name of the substance [e.g. O_2]
+!> @param apdxID: Database ID of the appendix
+!> @param rulesets: Names of the active rulesets,
+!! each in apostrophe seperated by comma [e.g. "'General','...'"]
+!> @param dbaout: 2D Array with the equivalent-appendix combinations
 subroutine get_substance_appendix_aliases_list_1(SubstanceName, apdxID, rulesets, dbaout)
     !------------------------------------------------------------------
     implicit none
@@ -335,7 +350,11 @@ end subroutine get_substance_appendix_aliases_list_1
 #define ESMF_METHOD "get_substance_appendix_aliases_list_2"
 !> @subsubsection get_substance_appendix_aliases_list "Get Substance Appendix-Aliases List"
 !> @brief Receives list of all aliases of the substance connected with one appendix
-!> @param
+!> @param SubstanceAppendix: Primary name of the
+!! substance connected with one appendix [e.g. O_2_at_soil_surface]
+!> @param rulesets: Names of the active rulesets,
+!! each in apostrophe seperated by comma [e.g. "'General','...'"]
+!> @param dbaout: 2D Array with the equivalent-appendix combinations
 subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, dbaout)
     !------------------------------------------------------------------
     implicit none
@@ -385,9 +404,8 @@ end subroutine get_substance_appendix_aliases_list_2
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "load_session"
-!> @brief Manage multiple commands in one transaction
-!> @details Commits pending transaction and starts new session
-!> @param
+!> @subsubsection load_session "Load Session"
+!> @brief Commits pending transaction and starts new session
 subroutine load_session
     !------------------------------------------------------------------
     implicit none
@@ -420,8 +438,10 @@ end subroutine load_session
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "finalize_session"
-!> @brief
-!> @param
+!> @subsubsection finalize_session "Finalize Session"
+!> @brief Quits the current session
+!> @param hold_con: keeps the connection open if .true.
+!> @param abort: rolls back changes during session if .true.
 subroutine finalize_session(hold_con,abort)
     !------------------------------------------------------------------
     implicit none
@@ -474,6 +494,7 @@ end subroutine finalize_session
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "sql_select_state"
+!> @subsubsection sql_select_state "SQL select state"
 !> @brief Runs a sql select state and returns the result
 !> @param sql: SQL Command ready to roll
 !> @param columns: number of columns in resulting array

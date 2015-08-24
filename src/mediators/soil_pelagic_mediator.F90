@@ -70,7 +70,8 @@ module soil_pelagic_mediator
 !> @subsubsection mcpl_InitializeP0 "User Code in Initialization Phase 0"
 !> @brief Implementation of User-Code in Phase 0
 !> @details Contains untouched States
-!> @param
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine mcpl_InitializeP0(cplComp, importState, exportState, parentClock, rc)
     !------------------------------------------------------------------
     !INPUTS / OUTPUTS
@@ -94,7 +95,8 @@ end subroutine mcpl_InitializeP0
 !> @subsubsection mcpl_InitializeP1 "User Code in Initialization Phase 1"
 !> @brief Implementation of User-Code in Phase 1
 !> @details Contains untouched States
-!> @param
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     !INPUTS / OUTPUTS
@@ -162,7 +164,8 @@ end subroutine mcpl_InitializeP1
 !> @brief Implementation of User-Code in Run Phase,
 !! before automatic recipe search via database
 !> @details Contains normalized inventory lists of substances known by database
-!> @param
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     !INPUTS / OUTPUTS
@@ -310,7 +313,8 @@ end subroutine mcpl_Run_pre_recipe
 !> @brief Implementation of User-Code in Run Phase,
 !! after automatic recipe search, before missing log is created
 !> @details Contains inventory lists reduced by found substances
-!> @param
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     !INPUTS / OUTPUTS
@@ -334,8 +338,8 @@ end subroutine mcpl_Run_pre_log
 #define ESMF_METHOD "mcpl_finalize"
 !> @subsubsection mcpl_finalize "User Code at end of execution"
 !> @brief Implementation of User-Code in Finalize Phase,
-!> @details
-!> @param
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     !INPUTS / OUTPUTS
@@ -352,7 +356,6 @@ subroutine mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
 
     rc = ESMF_SUCCESS
-    return
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -421,7 +424,8 @@ end subroutine mcpl_finalize
 !> @subsubsection SetServices "SetServices Method"
 !> @brief Specifies entry points for ESMF methods
 !> @details Required public ESMF method
-!> @param cplComp, rc Component Class and Return Code
+!> @param cplComp, importState, exportState, parentClock, rc
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine SetServices(cplComp, rc)
     !------------------------------------------------------------------
     implicit none
@@ -467,7 +471,7 @@ end subroutine SetServices
 !> @brief ESMF preperation method
 !> @details Allocate Space, open files, set initial conditions
 !> @param cplComp, importState, exportState, parentClock, rc
-!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
     !------------------------------------------------------------------
     implicit none
@@ -517,7 +521,7 @@ end subroutine InitializeP0
 !> @brief ESMF preperation method
 !> @details Allocate Space, open files, set initial conditions
 !> @param cplComp, importState, exportState, parentClock, rc
-!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     implicit none
@@ -773,7 +777,7 @@ end subroutine InitializeP1
 !> @brief ESMF Simulation step execution method
 !> @details Executes Transformations between import and export State
 !> @param cplComp, importState, exportState, parentClock, rc
-!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     !INPUTS / OUTPUTS
@@ -945,7 +949,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
             !> 3) Loop all export substances
             do i=1,n_req
                 if (debug) write(*,*) "> Looping ", required(i)
-                call get_alias_name(required(i),rulesets,sa_name)
+                call get_equivalent_appendix_name(required(i),rulesets,sa_name)
                     if (.not. associated(sa_name)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                 call get_substance_appendix_aliases_list(sa_name, rulesets, dba_aliases)
                     if (.not. associated(dba_aliases)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1020,7 +1024,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     do i=1,n_i
         call ESMF_AttributeGet(dba_import,i,attributeName)
         call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
-        call get_alias_name(attributeName,rulesets,sa_name)
+        call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
 
         !> @todo: Log message
         if (debug) write(*,*) "- ", trim(attributeName), ", identified as ", sa_name , ", used times ", dba_value
@@ -1035,7 +1039,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     do i=1,n_e
         call ESMF_AttributeGet(dba_export,i,attributeName)
         call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
-        call get_alias_name(attributeName,rulesets,sa_name)
+        call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
 
         if (dba_value == 1) then
             if (debug) write(*,*) "- ", trim(attributeName), ", identified as ", sa_name , ", found."
@@ -1069,10 +1073,11 @@ end subroutine Run
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
+!> @subsubsection Finalize "Finalize Method"
 !> @brief ESMF End of Execution method
 !> @details deallocate space, close files, print results
 !> @param cplComp, importState, exportState, parentClock, rc
-!! ComponentObject; Incoming Parameters; outgoing parameters; Simulation Time; Return Code
+!! ESMF Coupler Component; ESMF States; Simulation Time; ESMF Return Code
 subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
     !------------------------------------------------------------------
     !INPUTS / OUTPUTS
