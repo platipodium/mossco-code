@@ -59,7 +59,7 @@ subroutine get_equivalent_name(equivalent,rulesets,nameout)
     implicit none
 
     !INPUTS/OUTPUTS
-    character(len=ESMF_MAXSTR), intent(in), pointer  :: equivalent
+    character(len=ESMF_MAXSTR), intent(in)           :: equivalent
     character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
     character(len=ESMF_MAXSTR), intent(out),pointer  :: nameout
 
