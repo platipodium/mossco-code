@@ -1,0 +1,19 @@
+{   
+
+
+    "x_dims": ["ocean_grid_1", "getmGrid3D_getm_1", "getmGrid2D_getm_1", "pelagic_horizontal_grid_1", "lonc", "lon", "nMesh2_node", "x", "xc", "x_T"],
+
+    "y_dims": ["ocean_grid_2", "getmGrid3D_getm_2", "getmGrid2D_getm_2", "pelagic_horizontal_grid_2", "latc", "lat", "y", "yc", "y_T"],
+
+    "z_dims": ["ocean_grid_3", "getmGrid3D_getm_3", "pelagic_horizontal_grid_3", "ungridded00024", "z", "level", "zc"],
+
+    "t_dims": ["time"],
+
+    "valid_range_attribute_names": ["range", "Range", "valid_range", "Valid_range"],
+
+
+    "lat_dims": ["lat", "lats", "getmGrid2D_getm_lat"], 
+    "lon_dims": ["lon", "lons", "getmGrid2D_getm_lon"],
+
+    "artificial_relative_layer_thickness": false
+}
