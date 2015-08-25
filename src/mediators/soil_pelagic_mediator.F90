@@ -82,8 +82,14 @@ subroutine mcpl_InitializeP0(cplComp, importState, exportState, parentClock, rc)
     integer, intent(out)        :: rc
 
     !LOCAL VARS
-
+    character(len=ESMF_MAXSTR)  :: message
     !------------------------------------------------------------------
+    write(message,'(A)') "coupler      User-code init phase 0"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
 end subroutine mcpl_InitializeP0
@@ -113,11 +119,16 @@ subroutine mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, r
     logical                     :: isPresent
     integer                     :: nmlunit=127, localrc
     !------------------------------------------------------------------
-
-
     namelist /soil_pelagic_mediator/ dinflux_const,dipflux_const
 
+    write(message,'(A)') "coupler      User-code init phase 1"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
+
 
     call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -191,9 +202,15 @@ subroutine mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock,
     integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
     logical                     :: verbose=.true.
     !------------------------------------------------------------------
-
+    write(message,'(A)') "coupler      User-code run phase, pre-recipe"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
+    write(*,*) ""
     write(*,*) "> ABORTING PRE-RECIPE USER CODE"
     return
 
@@ -325,9 +342,14 @@ subroutine mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc
     integer, intent(out)        :: rc
 
     !LOCAL VARS
-
+    character(len=ESMF_MAXSTR)  :: message
     !------------------------------------------------------------------
-
+    write(message,'(A)') "coupler      User-code run phase, pre-log"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
 end subroutine mcpl_Run_pre_log
@@ -352,9 +374,8 @@ subroutine mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
     !LOCAL VARS
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
-    character(len=ESMF_MAXSTR)  :: name
+    character(len=ESMF_MAXSTR)  :: name, message
     !------------------------------------------------------------------
-
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
@@ -435,9 +456,16 @@ subroutine SetServices(cplComp, rc)
     integer, intent(out)        :: rc
 
     !LOCAL VARS
+    character(len=ESMF_MAXSTR)  :: message
+
     integer                     :: localrc
     !------------------------------------------------------------------
-
+    write(message,'(A)') "coupler      SetServices"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
     !>Register phase 0 method for ESMF
@@ -483,12 +511,19 @@ subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
     integer, intent(out)        :: rc
 
     !LOCAL VARS
-    integer                     :: localrc
+    type(ESMF_Time)             :: currTime
+
     character(len=10)           :: InitializePhaseMap(1)
     character(len=ESMF_MAXSTR)  :: name, message
-    type(ESMF_Time)             :: currTime
-    !------------------------------------------------------------------
 
+    integer                     :: localrc
+    !------------------------------------------------------------------
+    write(message,'(A)') "coupler      Init phase 0"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
     !> Calls incoming couple/grid component method and receives clock
@@ -538,12 +573,12 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     type(ESMF_Time)                         :: currTime
 
     character(len=ESMF_MAXSTR)              :: name, substanceName, &
-                                               attributeName
+                                               attributeName, message
 
     integer                                 :: import_itemCount, &
                                                export_itemCount, &
-                                               import_itemCount2, &
-                                               export_itemCount2, &
+                                               import_fieldCount=0, &
+                                               export_fieldCount=0, &
                                                localrc, dba_rc,i,j, h
 
     logical                                 :: dba_verbose
@@ -551,33 +586,28 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     !LOCAL POINTER
     type(ESMF_State), pointer               :: ste =>null()
     type(ESMF_StateItem_Flag), allocatable  :: export_itemTypes(:), &
-                                               import_itemTypes(:), &
-                                               export_itemTypes2(:), &
-                                               import_itemTypes2(:)
+                                               import_itemTypes(:)
 
     character(len=ESMF_MAXSTR),dimension(:,:),pointer &
                                             :: dba_substances, &
                                                dba_aliases, &
                                                dba_equivalents
     character(len=ESMF_MAXSTR),allocatable  :: export_itemNames(:), &
-                                               import_itemNames(:), &
-                                               export_itemNames2(:), &
-                                               import_itemNames2(:)
+                                               import_itemNames(:)
 
 
     integer(ESMF_KIND_I4)                   :: dba_value
     !------------------------------------------------------------------
-
+    write(message,'(A)') "coupler      Init phase 1"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
     !> Call user-code method
     call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
-
-!***@temp
-    if (debug .eqv. .true.) then
-        write(*,*) ""
-        write(*,*) "> Coupler 2.0 Init"
-    end if
 
     !> @paragraph dba "Database Arrays"
     !> @brief Create database array states (dba) for import and export
@@ -626,27 +656,52 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (debug .eqv. .true.) then
+    !> Log Items in Import / Export State
+
+
+    write(message,'(A)') "All import fields"
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    if (debug) then
         write(*,*) ""
-        write(*,*) "> All Import Items"
-        write(*,'(A)') "- " // import_itemNames
-        !> @todo: Log message
-        write(*,*) ""
-        write(*,*) "> All Export Items"
-        write(*,'(A)') "- " // export_itemNames
-        !> @todo: Log message
-        write(*,*) ""
+        write(*,*) "> ", message
     end if
 
+    do i=1, import_itemCount
+        !> Print and count fields in import state
+        if (import_itemTypes(i)==ESMF_STATEITEM_FIELD) then
+            import_fieldCount=import_fieldCount+1
+            write(message,'(A)') import_itemNames(i)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,'(A)') "- " //import_itemNames(i)
+        end if
+    end do
 
-    !> Loop all SubstanceName - Appendices Comibnations from the database
+    write(message,'(A)') "All export fields"
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
+
+    do i=1, export_itemCount
+        !> Print and count fields in import state
+        if (import_itemTypes(i)==ESMF_STATEITEM_FIELD) then
+            import_fieldCount=import_fieldCount+1
+            write(message,'(A)') export_itemNames(i)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,'(A)') "- " //export_itemNames(i)
+        end if
+    end do
+
+
+    !> Loop all SubstanceName - Appendices Combinations from the database
     do j=1, size(dba_substances)
         call get_substance_aliases_list(dba_substances(j,1), rulesets,dba_aliases)
 
         if (associated(dba_aliases)) then
             if (debug) then
                 write(*,*) ""
-                write(*,*) "> List of Aliases for ", trim(dba_substances(j,1)), ":"
+                write(*,*) "> Searching list of aliases for ", trim(dba_substances(j,1)), ":"
                 write(*,'(A)') ("- " // dba_aliases(i,1), i=1,(size(dba_aliases)))
                 write(*,*) ""
             end if
@@ -659,24 +714,14 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 !                end if
 
                 !> Search combinations in import
-                do h=1, size(import_itemNames)
+                do h=1, import_itemCount
                     !> If found add them to import inventory
-                    if (import_itemNames(h)==dba_aliases(i,1)) then
-                    !> @todo: check the TYPE of the found items too
+                    if ((import_itemNames(h)==dba_aliases(i,1)) .and. import_itemTypes(h)==ESMF_STATEITEM_FIELD) then
                         if (debug) write(*,*) "> adding ", trim(dba_aliases(i,1)), " to import attributes"
 
                         call ESMF_AttributeSet(dba_import, dba_aliases(i,1), 0, rc=localrc)
                             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!                        if (debug) then
-!                            call ESMF_AttributeGet(state=dba_import, name=trim(dba_aliases(i,1)), value=dba_value, rc=localrc)
-!                            if (localrc==ESMF_SUCCESS) then
-!                                write(*,*) "> Found import item: ", trim(dba_aliases(i,1)), " used times: ", dba_value
-!                            else
-!                                write(*,*) "> Not found (import):", trim(dba_aliases(i,1))
-!                            end if
-!                        end if
-
                         exit
                     end if
                 end do
@@ -687,9 +732,9 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 !                end if
 
                 !> Search combinations in export
-                do h=1, size(export_itemNames)
+                do h=1, export_itemCount
                     !> If found add them to export inventory
-                    if (export_itemNames(h)==dba_aliases(i,1)) then
+                    if ((export_itemNames(h)==dba_aliases(i,1)) .and. export_itemTypes(h)==ESMF_STATEITEM_FIELD) then
                         if (debug) write(*,*) "> adding ", trim(dba_aliases(i,1)), " to export attributes"
 
                         dba_value=0
@@ -711,14 +756,9 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
                 end do
             end do
         else
-            !> @todo: Error log
-            !call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
-
-            if (debug) then
-                write(*,*) ""
-                write(*,*) "> No Aliases found for ", trim(dba_substances(j,1))
-                write(*,*) ""
-            end if
+            write(message,*) "No aliases found for ", trim(dba_substances(j,1))
+            call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+            if (debug) write(*,*) "> ", message
         end if
     end do
 
@@ -731,42 +771,9 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-!    call ESMF_StateGet(importState, "dba_import", dba_import, rc=localrc)
-!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!
-!    call ESMF_StateGet(exportState, "dba_export", dba_export, rc=localrc)
-!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!
-!    call ESMF_AttributeGet(dba_import, count=import_itemCount)
-!    call ESMF_AttributeGet(dba_export, count=export_itemCount)
-!
-!    if (debug .eqv. .true.) then
-!        write(*,*) ""
-!        write(*,*) "> *******Import/Export Count********"
-!        write(*,*) import_itemCount, export_itemCount
-!        write(*,*) "> **********************************"
-!
-!        write(*,*) ""
-!        write(*,*) "> Found the following substances in import state:"
-!        do i=1,import_itemCount
-!            call ESMF_AttributeGet(dba_import,i,attributeName)
-!            write(*,'(A)') trim(attributeName)
-!        end do
-!
-!        write(*,*) ""
-!        write(*,*) "> Found the following substances in export state:"
-!        do i=1,export_itemCount
-!            call ESMF_AttributeGet(dba_export,i,attributeName)
-!            write(*,'(A)') trim(attributeName)
-!        end do
-!    end if
-
     call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 
 end subroutine InitializeP1
 
@@ -794,7 +801,8 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     character(len=ESMF_MAXSTR),dimension(1:3) &
                                             :: substances_import, &
                                                substances_export
-    character(len=ESMF_MAXSTR)              :: val, name, attributeName
+    character(len=ESMF_MAXSTR)              :: val, name, &
+                                               attributeName, message
 
     integer(ESMF_KIND_I4)                   :: dba_value
     integer                                 :: c, n_i, n_e, c_f=0, &
@@ -824,20 +832,16 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                                                  field_exp=>null()
 
     !------------------------------------------------------------------
-
+    write(message,'(A)') "coupler      Run"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
     !> Call user-code method
     call mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
-
-!    write(*,*) "> ABORTING GENERIC CODE"
-!    return
-
-!***@temp
-    if (debug .eqv. .true.) then
-        write(*,*) ""
-        write(*,*) "> Coupler 2.0 run"
-    end if
 
     !> receive coupler component information
     call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
@@ -887,8 +891,9 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                 !> Copy data
                 field_exp=field_imp
             else
-                !> @todo: error log
-                !call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+                write(message,*) "Field ", attributeName, ", listed in dba_export, is no longer available in import or export state"
+                call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR)
+                if (debug) write(*,*) "> ", message
             end if
 
         end if
@@ -984,8 +989,9 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                                 !> Copy data
                                 field_exp=field_imp
                             else
-                                !> @todo: Error log
-                                !call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+                                write(message,*) "Field ", attributeName, ", listed in dba_export, is no longer available in import or export state"
+                                call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR)
+                                if (debug) write(*,*) "> ", message
                             end if
                         end if
                         if (hit) exit
@@ -1014,11 +1020,11 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     !> @paragraph: final_log "Final log"
     !> @brief: Analyse data, Log found and not found substances
 
+    write(message,'(A)') "Identified the following substances in import state:"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
     if (debug) then
         write(*,*) ""
-        write(*,*) ""
-        write(*,*) "* * * * * * * * * * * * * * * * * * * * * * * * * "
-        write(*,*) "> Identified the following substances in import state:"
+        write(*,*) "> ", message
     end if
 
     do i=1,n_i
@@ -1026,14 +1032,19 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
         call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
         call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
 
-        !> @todo: Log message
-        if (debug) write(*,*) "- ", trim(attributeName), ", identified as ", sa_name , ", used times ", dba_value
+        write(message,"(A)") trim(attributeName)// ", identified as"
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (debug) write(*,*) "- ", trim(message)
+        write(message,"(A113,A13,I2)") sa_name, ", used times ", dba_value
+        call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
+        if (debug) write(*,*) "  ", adjustl(message)
+    end do
 
-   end do
-
+    write(message,'(A)') "Identified the following substances in export state:"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
     if (debug) then
         write(*,*) ""
-        write(*,*) "> Identified the following substances in export state:"
+        write(*,*) "> ", message
     end if
 
     do i=1,n_e
@@ -1042,27 +1053,46 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
         call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
 
         if (dba_value == 1) then
-            if (debug) write(*,*) "- ", trim(attributeName), ", identified as ", sa_name , ", found."
-            !> @todo: Log message
+            write(message,'(A)') trim(attributeName) // ", identified as "
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,*) "- ", trim(message)
+
+            write(message,'(A113, A15)') sa_name, ", found.       "
+            call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,*) "  ", trim(message)
         else
-            if (debug) write(*,*) "- ", trim(attributeName), ", identified as ", sa_name , ", not found."
-            !> @todo: Log message
+            write(message,'(A)') trim(attributeName) // ", identified as "
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,*) "- ", trim(message)
+
+            write(message,'(A113, A15)') sa_name, ", not found.   "
+            call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,*) "  ", adjustl(message)
         end if
     end do
 
-    if (debug) write(*,*) c_f, " of the ", n_e, " export fields have been found."
-    !> @todo: Log message
-
-    if (used_max<=1) then
-        if (debug) write(*,*) "> All import fields only used up to 1 time."
-        !> @todo: Log message
-    else
-        if (debug) write(*,*) "> Import fields were used up to ", used_max, " times."
-        !> @todo: Log message
+    write(message,'(I2,A8,I2,A)') c_f, " of the ", n_e, " export fields have been found."
+    call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
     end if
 
-    if (debug) write(*,*) "* * * * * * * * * * * * * * * * * * * * * * * * * "
-
+    if (used_max<=1) then
+        write(message,'(A)') "All import fields only used up to 1 time."
+        call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+        if (debug) then
+            write(*,*) ""
+            write(*,*) "> ", message
+        end if
+    else
+        write(message,'(A30,I2,A7)') "Import fields were used up to ", used_max, " times."
+        call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+        if (debug) then
+            write(*,*) ""
+            write(*,*) "> ", message
+        end if
+    end if
 
     call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1094,7 +1124,12 @@ subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
     integer                     :: localrc
     type(ESMF_StateItem_Flag)   :: exportItemType, importItemType
     !------------------------------------------------------------------
-
+    write(message,'(A)') "coupler      Finalize"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
     rc = ESMF_SUCCESS
 
     call mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)

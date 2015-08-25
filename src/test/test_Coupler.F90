@@ -110,6 +110,7 @@ write(0,*) ''
 
 !> now run the system
 call ESMF_CplCompInitialize(couplerComp, importState=importState, exportState=exportState, clock=clock, rc=rc)
+!> @todo: Phase 0 is not started
 
 call ESMF_CplCompRun(couplerComp, importState=importState, exportState=exportState, clock=clock, rc=rc)
 
