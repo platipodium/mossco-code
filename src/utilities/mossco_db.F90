@@ -63,7 +63,7 @@ subroutine get_equivalent_name(equivalent,rulesets,nameout)
 
     !INPUTS/OUTPUTS
     character(len=ESMF_MAXSTR), intent(in)           :: equivalent
-    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
+    character(len=ESMF_MAXSTR), intent(in)           :: rulesets
     character(len=ESMF_MAXSTR), intent(out),pointer  :: nameout
 
     !LOCAL VARS
@@ -210,7 +210,7 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
 
     !INPUTS/OUTPUTS
     character(len=ESMF_MAXSTR), intent(in)           :: name
-    character(len=ESMF_MAXSTR), intent(in), pointer  :: rulesets
+    character(len=ESMF_MAXSTR), intent(in)           :: rulesets
     character(len=ESMF_MAXSTR),dimension(:,:),pointer,intent(out) &
                                                      :: dbaout
 

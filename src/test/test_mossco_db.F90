@@ -21,7 +21,7 @@ program test_mossco_db
     !CONFIG
 !    character(len=ESMF_MAXSTR)             :: rulesets &
 !                                               = "'General'"
-    character(len=ESMF_MAXSTR), target      :: rulesets &
+    character(len=ESMF_MAXSTR)              :: rulesets &
                                                = "'General', &
                                                   'HZG KW'"
 

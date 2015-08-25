@@ -4,7 +4,7 @@ BEGIN TRANSACTION;
  DROP TABLE IF EXISTS "tblAppendix";
  DROP TABLE IF EXISTS "tblEquivalents";
  DROP TABLE IF EXISTS "tblRulesets";
- DROP TABLE IF EXISTS "tblSubstances";  
+ DROP TABLE IF EXISTS "tblSubstances";
    
 CREATE TABLE IF NOT EXISTS "tblSubstances" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
@@ -60,8 +60,6 @@ INSERT INTO "tblSubstances" (SubstanceName) VALUES ("slow_detritus_C");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("fast_detritus_C");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("phosphate");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("nutrients");
-
-
 
 
 INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
@@ -297,5 +295,3 @@ INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID)
 	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nutrients"));		
 
 COMMIT;
-	
-

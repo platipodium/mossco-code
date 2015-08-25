@@ -37,7 +37,7 @@ module soil_pelagic_mediator
 
     private
     !COUPLER CONFIG
-    character(len=ESMF_MAXSTR), target          :: rulesets &
+    character(len=ESMF_MAXSTR)                    :: rulesets &
                                                    ="'General', &
                                                      'HZG KW'"
     logical                                     :: DEBUG = .true.
