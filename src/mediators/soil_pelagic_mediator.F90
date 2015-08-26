@@ -129,10 +129,10 @@ subroutine mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, r
     end if
     rc = ESMF_SUCCESS
 
-
+    !> receive coupler component information
     call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !read namelist
     inquire(file=trim(name)//'.nml', exist=isPresent)
@@ -144,6 +144,7 @@ subroutine mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, r
     endif
 
     if (dipflux_const < 0.0) dipflux_const=dinflux_const/16.0d0
+
 
     paramState=ESMF_StateCreate(name=trim(name)//'Parameters', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -187,19 +188,26 @@ subroutine mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock,
     integer, intent(out)        :: rc
 
     !LOCAL VARS
-    integer                     :: ammrc, nitrc, oxyrc, odurc
-    character(len=ESMF_MAXSTR)  :: name, message
+    type(ESMF_State)            :: dba_import, dba_export
     type(ESMF_Time)             :: currTime, stopTime
-    integer                     :: localrc
-    integer                     :: myrank
     type(ESMF_Time)             :: localtime
-    character (len=ESMF_MAXSTR) :: timestring
     type(ESMF_Field)            :: field
+
+    character(len=ESMF_MAXSTR)  :: name, message
+    character (len=ESMF_MAXSTR) :: timestring
+
     integer(ESMF_KIND_R8)       :: advanceCount
-    !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
+    integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), &
+                                   itemCount, dba_value
+
     real(ESMF_KIND_R8),parameter:: NC_fdet=0.20d0
     real(ESMF_KIND_R8),parameter:: NC_sdet=0.04d0
-    integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
+    !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
+
+    integer                     :: ammrc, nitrc, oxyrc, odurc
+    integer                     :: localrc
+    integer                     :: myrank
+
     logical                     :: verbose=.true.
     !------------------------------------------------------------------
     write(message,'(A)') "coupler      User-code run phase, pre-recipe"
@@ -210,13 +218,10 @@ subroutine mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock,
     end if
     rc = ESMF_SUCCESS
 
-    write(*,*) ""
-    write(*,*) "> ABORTING PRE-RECIPE USER CODE"
-    return
-
-    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    !> receive coupler component information
+    call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -224,100 +229,41 @@ subroutine mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock,
 
     if (advanceCount > 0) verbose=.false.
 
-    !   DIN flux:
-    call mossco_state_get(importState, (/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/), &
-      val1_f2, verbose=verbose, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_StateGet(importState, "dba_import", dba_import, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(exportState, "dba_export", dba_export, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+    !DIN flux:
+    !> User code to get nutrients
+    call mossco_state_get(exportState,(/'nutrients_upward_flux_at_soil_surface'/),DINflux,verbose=verbose)
+    call mossco_state_get(importState, (/'mole_concentration_of_nitrate_upward_flux_at_soil_surface'/), &
+      val1_f2, verbose=verbose)
     call mossco_state_get(importState, (/'mole_concentration_of_ammonium_upward_flux_at_soil_surface'/), &
       val2_f2, verbose=verbose, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    DINflux = val1_f2 + val2_f2
 
-    call mossco_state_get(exportState, &
-             (/'nitrate_upward_flux_at_soil_surface'/), &
-             DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=nitrc)
-    if (nitrc == 0) DINflux = val1_f2
-    call mossco_state_get(exportState, &
-             (/'ammonium_upward_flux_at_soil_surface               ',   &
-               'dissolved_ammonium_nh3_upward_flux_at_soil_surface '/), &
-             DINflux, ubnd=ubnd, lbnd=lbnd, verbose=verbose, rc=ammrc)
-    if (ammrc == 0) DINflux = val2_f2
+    !> Tell the coupler that the export substance has been found ("found" value=1)
+    dba_value=1
+    call ESMF_AttributeSet(state=dba_export, name='nutrients_upward_flux_at_soil_surface', value=dba_value, rc=localrc)
 
-    !RH: weak check, needs to be replaced:
-    if (nitrc /= 0) then
-        call mossco_state_get(exportState,(/ &
-              'nutrients_upward_flux_at_soil_surface                            ', &
-              'DIN_upward_flux_at_soil_surface                                  ', &
-              'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux_at_soil_surface'/), &
-              DINflux,ubnd=ubnd,lbnd=lbnd, verbose=verbose, rc=localrc)
-        if(localrc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-        DINflux = val1_f2 + val2_f2
-        ! add constant boundary flux of DIN (through groundwater, advection, rain
-        DINflux = DINflux + dinflux_const/(86400.0*365.0)
+    !> Tell the coupler that the two import substances have been used
+    if (localrc==ESMF_SUCCESS) then
+        call ESMF_AttributeGet(state=dba_import, name='mole_concentration_of_nitrate_upward_flux_at_soil_surface', value=dba_value)
+        dba_value=dba_value+1
+        call ESMF_AttributeSet(state=dba_import, name='mole_concentration_of_nitrate_upward_flux_at_soil_surface', value=dba_value)
+
+        call ESMF_AttributeGet(state=dba_import, name='mole_concentration_of_ammonium_upward_flux_at_soil_surface', value=dba_value)
+        dba_value=dba_value+1
+        call ESMF_AttributeSet(state=dba_import, name='mole_concentration_of_ammonium_upward_flux_at_soil_surface', value=dba_value)
     end if
 
-    !   DIP flux:
-    call mossco_state_get(exportState,(/ &
-              'DIP_upward_flux_at_soil_surface                                    ', &
-              'phosphate_upward_flux_at_soil_surface                              ', &
-              'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface'/), &
-              DIPflux, verbose=verbose, rc=rc)
-    if (rc == 0)  then
-        call mossco_state_get(importState,(/ &
-              'mole_concentration_of_phosphate_upward_flux_at_soil_surface'/), &
-              val1_f2, verbose=verbose, rc=rc)
-         DIPflux = val1_f2 + dipflux_const/(86400.0*365.0)
-    end if
-
-      !   Det flux:
-    call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/), &
-      SDETCflux, verbose=verbose, rc=rc)
-    call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/), &
-      FDETCflux, verbose=verbose, rc=rc)
-    call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/), &
-      omexDETPflux, verbose=verbose, rc=rc)
-
-    call mossco_state_get(exportState,(/ &
-            'detritus_upward_flux_at_soil_surface              ', &
-            'detN_upward_flux_at_soil_surface                  ', &
-            'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'/), &
-            DETNflux, verbose=verbose, rc=rc)
-      if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      DETNflux = NC_fdet*FDETCflux + NC_sdet*SDETCflux
-
-      !> search for Detritus-C
-      call mossco_state_get(exportState,(/ &
-         'Detritus_Carbon_detC_upward_flux_at_soil_surface'/),DETCflux, verbose=verbose, rc=rc)
-      if (rc == 0) then
-         DETCflux = FDETCflux + SDETCflux
-      end if
-
-      !> check for Detritus-P and calculate flux either N-based
-      !> or as present through the Detritus-P pool
-      call mossco_state_get(exportState,(/ &
-          'detP_upward_flux_at_soil_surface                    ', &
-          'Detritus_Phosphorus_detP_upward_flux_at_soil_surface'/),DETPflux, verbose=verbose, rc=rc)
-      if (rc == 0) then
-        DETPflux = omexDETPflux
-      end if
-
-      !> oxygen and odu fluxes
-      call mossco_state_get(exportState,(/ &
-        'oxygen_upward_flux_at_soil_surface               ', &
-        'dissolved_oxygen_oxy_upward_flux_at_soil_surface '/),OXYflux, verbose=verbose, rc=oxyrc)
-      call mossco_state_get(exportState,(/ &
-        'dissolved_reduced_substances_odu_upward_flux_at_soil_surface'/),ODUflux, verbose=verbose, rc=odurc)
-      call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux_at_soil_surface'/), &
-        val1_f2, verbose=verbose, rc=rc)
-      call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux_at_soil_surface'/), &
-        val2_f2, verbose=verbose, rc=rc)
-      if (oxyrc == 0) OXYflux = val1_f2
-      if ((oxyrc == 0) .and. (odurc /= 0)) OXYflux = OXYflux - val2_f2
-      if (odurc == 0) ODUflux = val2_f2
-
-    call MOSSCO_CompExit(cplComp, localrc)
+    call MOSSCO_CompExit(cplComp, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -419,6 +365,10 @@ subroutine mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 #endif
+
+    call MOSSCO_CompExit(cplComp, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 end subroutine mcpl_finalize
 
@@ -526,6 +476,16 @@ subroutine InitializeP0(cplComp, importState, exportState, parentClock, rc)
     end if
     rc = ESMF_SUCCESS
 
+    !> Call user-code method
+    call mcpl_InitializeP0(cplcomp, importState, exportState, parentClock, rc)
+
+    write(message,'(A)') "coupler      Return to init phase 0"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
+
     !> Calls incoming couple/grid component method and receives clock
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -606,16 +566,24 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     end if
     rc = ESMF_SUCCESS
 
-    !> Call user-code method
-    call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
-
-    !> @paragraph dba "Database Arrays"
-    !> @brief Create database array states (dba) for import and export
-
     !> receive coupler component information
     call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Call user-code method
+    call mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, rc)
+
+    write(message,'(A)') "coupler      Return to init phase 1"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
+
+    !> @paragraph dba "Database Arrays"
+    !> @brief Create database array states (dba) for import and export
+
 
     !dba_import=ESMF_StateCreate(name=trim(name)//'Database Array Import', rc=localrc)
     dba_import=ESMF_StateCreate(name='dba_import', rc=localrc)
@@ -637,16 +605,16 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     allocate(export_itemNames(export_itemCount))
     allocate(export_itemTypes(export_itemCount))
 
-!    if (debug .eqv. .true.) then
-!        write(*,*) ""
-!        write(*,*) ">*******Import/Export Count********"
-!        write(*,*) import_itemCount, export_itemCount
-!        write(*,*) "> **********************************"
-!        write(*,*) ""
-!        write(*,*) "> List of Substances (db)"
-!        write(*,'(A)') dba_substances
-!        write(*,*) ""
-!    end if
+    if (debug .eqv. .true.) then
+        write(*,*) ""
+        write(*,*) ">*******Import/Export Count********"
+        write(*,*) import_itemCount, export_itemCount
+        write(*,*) "> **********************************"
+        write(*,*) ""
+        write(*,*) "> List of Substances (db)"
+        write(*,'(A)') dba_substances
+        write(*,*) ""
+    end if
 
     !> get list and types of all items found in import / export state
     call ESMF_StateGet(importState, itemTypeList=import_itemTypes, itemNameList=import_itemNames, rc=localRc)
@@ -657,7 +625,6 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Log Items in Import / Export State
-
 
     write(message,'(A)') "All import fields"
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -803,7 +770,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                                                substances_export
     character(len=ESMF_MAXSTR)              :: val, name, &
                                                attributeName, message
-
+    integer(ESMF_KIND_R8)                   :: advanceCount
     integer(ESMF_KIND_I4)                   :: dba_value
     integer                                 :: c, n_i, n_e, c_f=0, &
                                                i, j, h, n, localrc, &
@@ -831,6 +798,8 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                                                  field_imp=>null(), &
                                                  field_exp=>null()
 
+    logical                                 :: verbose=.true.
+
     !------------------------------------------------------------------
     write(message,'(A)') "coupler      Run"
     call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
@@ -840,13 +809,26 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     end if
     rc = ESMF_SUCCESS
 
-    !> Call user-code method
-    call mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
-
     !> receive coupler component information
     call MOSSCO_CompEntry(cplComp, externalClock, name=name, currTime=currTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(externalClock, advanceCount=advanceCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (advanceCount > 0) verbose=.false.
+
+    !> Call user-code method
+    call mcpl_Run_pre_recipe(cplcomp, importState, exportState, externalclock, rc)
+
+    write(message,'(A)') "coupler      Return to run"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
 
     call ESMF_StateGet(importState, "dba_import", dba_import, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -876,8 +858,8 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
         if ((localrc==ESMF_SUCCESS) .and. (checkrc==ESMF_SUCCESS)) then
 
             !> Check if field is still available
-            call mossco_state_get(importState,(/attributeName/), field_exp, rc=localrc)
-            call mossco_state_get(exportState,(/attributeName/), field_imp, rc=checkrc)
+            call mossco_state_get(importState,(/attributeName/), field_imp, rc=localrc)
+            call mossco_state_get(exportState,(/attributeName/), field_exp, rc=checkrc)
 
             if ((localrc==ESMF_SUCCESS) .and. (checkrc==ESMF_SUCCESS)) then
                 if (debug) write(*,*) "> Found value: ", dba_value
@@ -967,8 +949,8 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                     do h=1,n_inv
                         if (dba_aliases(j,1)==inventory(h)) then
                         !> Check if field is still available
-                        call mossco_state_get(importState,(/inventory(h)/), field_exp, rc=localrc)
-                        call mossco_state_get(exportState,(/required(i)/), field_imp, rc=checkrc)
+                        call mossco_state_get(importState,(/inventory(h)/), field_imp, rc=localrc)
+                        call mossco_state_get(exportState,(/required(i)/), field_exp, rc=checkrc)
 
                             if ((localrc==ESMF_SUCCESS) .and. (checkrc==ESMF_SUCCESS)) then
 
@@ -1015,6 +997,13 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 
 
     call mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc)
+
+    write(message,'(A)') "coupler      Return to run"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
 
 
     !> @paragraph: final_log "Final log"
@@ -1132,15 +1121,22 @@ subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
     end if
     rc = ESMF_SUCCESS
 
+    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call mcpl_finalize(cplcomp, importState, exportState, externalclock, rc)
 
-!    call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
-!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message,'(A)') "coupler      Return to finalize"
+    call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
+    if (debug) then
+        write(*,*) ""
+        write(*,*) "> ", message
+    end if
 
-!    call MOSSCO_CompExit(cplComp, localrc)
-!    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_CompExit(cplComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 end subroutine Finalize
 

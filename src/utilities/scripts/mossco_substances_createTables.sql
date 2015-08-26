@@ -61,7 +61,6 @@ INSERT INTO "tblSubstances" (SubstanceName) VALUES ("fast_detritus_C");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("phosphate");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("nutrients");
 
-
 INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
 	"_at_soil_surface");
@@ -295,3 +294,22 @@ INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID)
 	(SELECT ID FROM tblEquivalents WHERE EquivalentName="nutrients"));		
 
 COMMIT;
+
+
+SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') 
+	FROM (tblAppendix JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID 
+	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID 
+	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID 
+	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t 
+	WHERE tblRulesets.RulesetName IN('General', 'HZG KW') 
+	AND tblSubstances.SubstanceName='nutrients';
+	
+SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') 
+	FROM (tblAppendix JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID 
+	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID 
+	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID 
+	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t 
+	WHERE tblRulesets.RulesetName IN('General', 'HZG KW') 
+	AND tblSubstances.SubstanceName='nutrients';	
+	
+ SELECT SubstanceName FROM tblSubstances;

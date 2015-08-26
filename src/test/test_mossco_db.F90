@@ -62,7 +62,6 @@ program test_mossco_db
     write(*,*) "- - - - - - - - Starting test mossco_db - - - - - - - - "
     write(*,*) "Using rulesets: ", rulesets
 
-
     call get_substances_list(dba_substances)
     write(*,*) ""
     write(*,*) "###### List of all substances ######"
@@ -167,7 +166,6 @@ program test_mossco_db
         call get_substance_appendix_aliases_list &
              (name, dba2(i,1), rulesets, dba3)
         write(*,'(A)') dba3
-        !> @todo: Bug - doubled resulsts (even if DISTINCT is used)
     end do
 
     write (*,*) "******************************************"

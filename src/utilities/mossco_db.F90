@@ -223,7 +223,7 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
     character(1000)                                  :: sql
     !------------------------------------------------------------------
     dbaout=>null()
-    sql = "SELECT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
         FROM (tblAppendix &
         JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
@@ -374,7 +374,7 @@ subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, db
     character(1000)                                  :: sql
 
     !------------------------------------------------------------------
-    sql = "SELECT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') & 
+    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') & 
     FROM (tblAppendix &
     JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
     JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
@@ -429,8 +429,6 @@ subroutine load_session
     end if
     session_active=.true.
 
-    !@todo: start async timer to terminate connection
-
 end subroutine load_session
 
 
@@ -450,7 +448,7 @@ subroutine finalize_session(hold_con,abort)
     logical, intent(in), optional     :: hold_con,abort
 
     !LOCAL VARS
-    logical                           :: hcon, critical
+    logical                           :: hcon, critical = .false.
     integer                           :: localrc
     !------------------------------------------------------------------
     hcon=hold_con
@@ -482,8 +480,7 @@ subroutine finalize_session(hold_con,abort)
     end if
 
     !> On critical error run ESMF_END_ABORT routine after connection has been shut down
-    !if (critical .eqv. .true.) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!***@temp: @todo: Meldung aktivieren!
+    if (critical) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 end subroutine finalize_session
 
 
@@ -549,7 +546,6 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
     !write(*,*) "Compl:", completion
     if (completion==100) then
         !> Count rows in result
-        !> @todo: better way to get row number!?
         !Reset position in database array
         do while (finished .eqv. .false.)
             call sqlite3_next_row( stmt, col, finished )
@@ -563,9 +559,13 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
         end do
 
         allocate(dba(columns, rows))
+
+        !> @todo: Don't know why but this fixes an allocation error
+        write (test,*) shape(dba)
+
         if (DEBUG .eqv. .true.) then
             write(*,*) ""
-            write(*,*) "> Shape of dba: ", shape(dba)
+            write(*,*) "> " // test
         end if
 
         do j=1, rows
@@ -608,7 +608,7 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
         end if
     end if
 
-    call finalize_session(.false.,(completion /= 100))
+    call finalize_session(.false.,sqlite3_error(db))
 
 !    write(*,*) name
 
