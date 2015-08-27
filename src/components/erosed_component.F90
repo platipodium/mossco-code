@@ -1363,7 +1363,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             if (wave) then
                 tper (inum*(j -1)+i) = waveT (i,j)
                 teta (inum*(j -1)+i) = WaveDir (i,j)
-                uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j), wave)
+                uorb (inum*(j -1)+i) = CalcOrbitalVelocity (waveH(i,j), waveK(i,j), waveT(i,j), depth (i,j))
             endif
 
            else
@@ -1848,7 +1848,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
   end function d90_from_d50
 
-  function CalcOrbitalVelocity (SigWaveHeight, WaveNumber, WavePeriod, WaterDepth, wave)
+  function CalcOrbitalVelocity (SigWaveHeight, WaveNumber, WavePeriod, WaterDepth)
    ! RMS orbital velocity (uorb) to be used later in bedbc1993 (van Rijn, 1993) according to Eq. 11.144 Delft manual
 !  According to Delft3d Manual p. 366 (definition of notations) RMS orbital velocity is
 ! taken from wave module and is multiplied by aquare root of 2.0 to get the desired peak orbital velocity
@@ -1859,7 +1859,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
    real (ESMF_KIND_R8) :: CalcOrbitalVelocity, Hrms
    real (ESMF_KIND_R8) :: SigWaveHeight, WaveNumber, WavePeriod, WaterDepth
    real (ESMF_KIND_R8), parameter :: pi = 3.14159265358979323846_fp, g = 9.86
-   logical             :: wave
+!   logical             :: wave
    real (ESMF_KIND_R8) :: gammax  ! ratio of wave height to the water depth
    real (ESMF_KIND_R8) :: omega, k, k0, k0h
 
@@ -1891,7 +1891,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
    else
       CalcOrbitalVelocity =0.0_fp
-      wave=.false.
    endif
 
   end function  CalcOrbitalVelocity
