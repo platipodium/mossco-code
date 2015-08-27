@@ -38,8 +38,8 @@ module soil_pelagic_mediator
     private
     !COUPLER CONFIG
     character(len=ESMF_MAXSTR),dimension(2)       :: rulesets &
-                                                   =(/'General  ', &
-                                                      'HZG KW   '/)
+                                                   =(/'HZG KW   ', &
+                                                      'General  '/)
     character(len=ESMF_MAXSTR)                    :: active_rulesets
 
     logical                                     :: DEBUG = .true.
@@ -595,7 +595,8 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
 
     !> Get all Substances by unique name from database
     call get_substances_list(dba_substances)
-    !> @todo: First execution after State declaration somehow causes wrong results (Array dimension +1)
+    !> @bug: First execution after State declaration somehow causes wrong results (Array dimension +1)
+    !! Seems to be correlated with the execution of the StateCreate Routine
     call get_substances_list(dba_substances)
 
     call ESMF_StateGet(importState, itemCount=import_itemCount)
@@ -672,19 +673,16 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
             if (debug) then
                 write(*,*) ""
                 write(*,*) "> Searching list of aliases for ", trim(dba_substances(j,1)), ":"
-                write(*,'(A)') ("- " // dba_aliases(i,1), i=1,(size(dba_aliases)))
+                write(*,'(A)') ("- " // dba_aliases(i,1), i=1,(size(dba_aliases)/2))
                 write(*,*) ""
             end if
 
-            do i=1, (size(dba_aliases))
-
-!                if (debug) then
-!                    write(*,*) "---"
-!                    write(*,*) "> searching ", trim(dba_aliases(i,1)), " in import"
-!                end if
+            do i=1, (size(dba_aliases)/2)
 
                 !> Search combinations in import
                 do h=1, import_itemCount
+                    !> @remark: Retreive Unit here in dba_aliases(i,2)
+
                     !> If found add them to import inventory
                     if ((import_itemNames(h)==dba_aliases(i,1)) .and. import_itemTypes(h)==ESMF_STATEITEM_FIELD) then
                         if (debug) write(*,*) "> adding ", trim(dba_aliases(i,1)), " to import attributes"
@@ -696,31 +694,19 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
                     end if
                 end do
 
-!                if (debug) then
-!                    write(*,*) "---"
-!                    write(*,*) "> searching ", trim(dba_aliases(i,1)), " in export"
-!                end if
-
                 !> Search combinations in export
                 do h=1, export_itemCount
                     !> If found add them to export inventory
                     if ((export_itemNames(h)==dba_aliases(i,1)) .and. export_itemTypes(h)==ESMF_STATEITEM_FIELD) then
+
+                        !> @remark: Retreive Unit here in dba_aliases(i,2)
+
                         if (debug) write(*,*) "> adding ", trim(dba_aliases(i,1)), " to export attributes"
 
                         dba_value=0
                         call ESMF_AttributeSet(state=dba_export, name=trim(dba_aliases(i,1)), value=dba_value, rc=localrc)
                             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-!                        if (debug) then
-!                            call ESMF_AttributeGet(state=dba_export, name=trim(dba_aliases(i,1)), value=dba_value, rc=localrc)
-!                            if (localrc==ESMF_SUCCESS) then
-!                                write(*,*) "> Found export item: ", trim(dba_aliases(i,1)), " used times: ", dba_value
-!                            else
-!                                write(*,*) "> Not found (export):", trim(dba_aliases(i,1))
-!                            end if
-!                        end if
-
                         exit
                     end if
                 end do
@@ -932,11 +918,9 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                 do i=1,n_e
                     call ESMF_AttributeGet(dba_export,i,attributeName)
                     call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
-                    !write(*,'(A20, A)') "Searching attribute ", attributeName
                     if (dba_value==0) then
                         j=j+1
                         required(j)=attributeName
-                        !write(*,'(A20,A)') "Adding attribute ", attributeName
                     end if
                 end do
 
@@ -969,7 +953,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 
                     if (associated(dba_aliases)) then
                         !> 4) Loop all alias combinations for all substances
-                        do j=1, size(dba_aliases)
+                        do j=1, (size(dba_aliases)/2)
 
                             !> 5) Check all inventory entries at the current used level for all combinations
                             do h=1,n_inv
@@ -1009,7 +993,6 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                         if (hit) exit
                     else
                         write(message,'(A,A21)') trim("No aliases found for " // required(i)) , " in current rulesets."
-                        call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR)
                         if (debug) write(*,*) "> ", message
                     end if
 
@@ -1035,11 +1018,11 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     call ESMF_AttributeGet(dba_import, count=n_i)
     call ESMF_AttributeGet(dba_export, count=n_e)
 
+    !> Count items declared as found by user-code
     c_f=0
     do i=1,n_e
         call ESMF_AttributeGet(dba_export,i,attributeName, rc=localrc)
         call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
-        !> Count items declared as found by user-code
         if (dba_value==1) c_f=c_f+1
     end do
     n_req=n_e-c_f
@@ -1188,31 +1171,3 @@ subroutine Finalize(cplcomp, importState, exportState, externalclock, rc)
 end subroutine Finalize
 
 end module soil_pelagic_mediator
-
-
-
-!@dev: area for all general coupler routines
-!Outsource and 'use' in all Coupler modules
-!----------------------------------------------------------------------
-!------------------- General MOSSCO coupler Routines ------------------
-!----------------------------------------------------------------------
-!module mossco_mediator
-!
-!
-!end module mossco_mediator
-
-
-!####### TEMPLATE #####################################################
-!#undef  ESMF_METHOD
-!#define ESMF_METHOD "User_Code"
-!> @brief
-!> @param
-!subroutine User_Code()
-!    !------------------------------------------------------------------
-!    !INPUTS / OUTPUTS
-!
-!    !LOCAL VARS
-!
-!    !------------------------------------------------------------------
-!
-!end subroutine User_Code

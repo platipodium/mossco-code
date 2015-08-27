@@ -96,9 +96,6 @@ subroutine get_equivalent_name(equivalent,rulesets,nameout)
     call sql_select_state(sql,col,1,search_list,replace_list,dba)
 
     if (associated(dba)) nameout=>dba(1,1)
-    !write(*,*) nameout
-    !if (associated(dba)) write(*,*) "yes"
-    !write(*,*) dba(1,1)
 
     deallocate(col)
 
@@ -215,7 +212,7 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
                                                      :: dbaout
 
     !LOCAL VARS
-    integer                                          :: columns = 1
+    integer                                          :: columns = 2
     type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
     character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
                                                         replace_list
@@ -223,7 +220,8 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
     character(1000)                                  :: sql
     !------------------------------------------------------------------
     dbaout=>null()
-    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,''), &
+        t.Unit &
         FROM (tblAppendix &
         JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
         JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
@@ -236,10 +234,10 @@ subroutine get_substance_aliases_list(name, rulesets, dbaout)
 
     !Construct recordset for return values
     allocate( col(columns) )
-    !call sqlite3_column_query( col(1), 'Substance-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
     call sqlite3_column_query( col(1), 'Equivalent-Appendix', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_column_query( col(2), 'Unit', SQLITE_CHAR, ESMF_MAXSTR )
 
-    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+    call sql_select_state(sql,col,2,search_list,replace_list,dbaout)
 
     deallocate(col)
 
@@ -314,7 +312,7 @@ subroutine get_substance_appendix_aliases_list_1(SubstanceName, apdxID, rulesets
 
 
     !LOCAL VARS
-    integer                                          :: columns = 1
+    integer                                          :: columns = 2
     type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
     character(len=ESMF_MAXSTR), dimension(3)         :: search_list, &
                                                         replace_list
@@ -322,7 +320,8 @@ subroutine get_substance_appendix_aliases_list_1(SubstanceName, apdxID, rulesets
     character(1000)                                  :: sql
 
     !------------------------------------------------------------------
-    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') &
+    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,''), &
+            t.Unit &
             FROM (tblAppendix &
             JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
             JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
@@ -338,8 +337,9 @@ subroutine get_substance_appendix_aliases_list_1(SubstanceName, apdxID, rulesets
     !Construct recordset for return values
     allocate( col(columns) )
     call sqlite3_column_query( col(1), 'Substance aliases', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_column_query( col(2), 'Unit', SQLITE_CHAR, ESMF_MAXSTR )
 
-    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+    call sql_select_state(sql,col,2,search_list,replace_list,dbaout)
 
     deallocate(col)
 
@@ -366,7 +366,7 @@ subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, db
                                                      :: dbaout
 
     !LOCAL VARS
-    integer                                          :: columns = 1
+    integer                                          :: columns = 2
     type(SQLITE_COLUMN), dimension(:), pointer       :: col =>null()
     character(len=ESMF_MAXSTR), dimension(2)         :: search_list, &
                                                         replace_list
@@ -374,7 +374,8 @@ subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, db
     character(1000)                                  :: sql
 
     !------------------------------------------------------------------
-    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') & 
+    sql = "SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,''), & 
+    t.Unit &
     FROM (tblAppendix &
     JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID &
     JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID &
@@ -389,8 +390,9 @@ subroutine get_substance_appendix_aliases_list_2(SubstanceAppendix, rulesets, db
     !Construct recordset for return values
     allocate( col(columns) )
     call sqlite3_column_query( col(1), 'Substance aliases', SQLITE_CHAR, ESMF_MAXSTR )
+    call sqlite3_column_query( col(2), 'Unit', SQLITE_CHAR, ESMF_MAXSTR )
 
-    call sql_select_state(sql,col,1,search_list,replace_list,dbaout)
+    call sql_select_state(sql,col,2,search_list,replace_list,dbaout)
 
     deallocate(col)
 
@@ -480,7 +482,8 @@ subroutine finalize_session(hold_con,abort)
     end if
 
     !> On critical error run ESMF_END_ABORT routine after connection has been shut down
-    if (critical) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !if (critical) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !> @todo: Call causes error
 end subroutine finalize_session
 
 
@@ -532,27 +535,23 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
         end do
     end if
 
-    !write(*,*) sql
-
-
     !> Init connection and start a new Transaction
     call load_session
 
     !> Run the statement
     call sqlite3_prepare( db, sql, stmt, col )
     call sqlite3_step( stmt, completion )
-    !if (debug) write(*,*) "> Completition: ", completion
 
-    !write(*,*) "Compl:", completion
+    !> Check successfull execution
     if (completion==100) then
         !> Count rows in result
-        !Reset position in database array
+        !! Reset position in database array
         do while (finished .eqv. .false.)
             call sqlite3_next_row( stmt, col, finished )
         end do
         finished=.false.
         rows=0
-        !Loop and count
+        !> Loop and count
         do while (finished .eqv. .false.)
             rows=rows+1
             call sqlite3_next_row( stmt, col, finished )
@@ -560,33 +559,18 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
 
         allocate(dba(columns, rows))
 
-        !> @todo: Don't know why but this fixes an allocation error
-        write (test,*) shape(dba)
-
         if (DEBUG .eqv. .true.) then
             write(*,*) ""
             write(*,*) "> " // test
         end if
 
+        !> Write values into result array
         do j=1, rows
-            !write(*,*) "ping"
             call sqlite3_next_row( stmt, col, finished )
                 do i=1, columns
-                    !write(*,*) "pong"
                     call sqlite3_get_column( col(i), dba(j,i))
                 end do
         end do
-
-!    j=0
-!    do while (finished .eqv. .false.)
-!        j=j+1
-!        call sqlite3_next_row( stmt, col, finished )
-!        do i=1, columns
-!            !write(*,*) "pong"
-!            call sqlite3_get_column( col(i), test)
-!            write(*,'(A)') test
-!        end do
-!    end do
 
 
         if (DEBUG .eqv. .true.) then
@@ -598,6 +582,7 @@ subroutine sql_select_state(sql,col,columns,search_list,replace_list,dba)
             write(*,*) ""
         end if
     else
+        !> Unallocated return value for failed execution
         dba=>null()
         if (DEBUG .eqv. .true.) then
             write(*,*) ""

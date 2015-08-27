@@ -8,16 +8,15 @@ BEGIN TRANSACTION;
    
 CREATE TABLE IF NOT EXISTS "tblSubstances" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
-    "SubstanceName" TEXT NOT NULL,
-    "DefaultUnit" TEXT
+    "SubstanceName" TEXT NOT NULL
 );
 
 CREATE TABLE  IF NOT EXISTS "tblAppendix" (
     "ID" INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     "Substance_ID" TEXT NOT NULL,
-    "Condition" TEXT,
-    "Location" TEXT,
-    "Unit" TEXT,
+     "Unit" TEXT NOT NULL,
+     "Condition" TEXT,
+     "Location" TEXT,
     FOREIGN KEY ("Substance_ID") REFERENCES "tblSubstances" ("ID")
 );
 
@@ -61,85 +60,84 @@ INSERT INTO "tblSubstances" (SubstanceName) VALUES ("fast_detritus_C");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("phosphate");
 INSERT INTO "tblSubstances" (SubstanceName) VALUES ("nutrients");
 
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="O_2"), 
-	"_upward_flux", "_at_soil_surface");	
+	"_upward_flux", "_at_soil_surface","x");	
 
-	INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+	INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nitrate"), 
-	"_upward_flux", "_at_soil_surface");	
+	"_upward_flux", "_at_soil_surface","x");	
 	
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="N"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="N"), 
-	"_upward_flux", "_at_soil_surface");			
+	"_upward_flux", "_at_soil_surface","x");			
 	
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="NH_3"), 
-	"_upward_flux", "_at_soil_surface");	
+	"_upward_flux", "_at_soil_surface","x");	
 	
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="slow_detritus_C"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="slow_detritus_C"), 
-	"_upward_flux", "_at_soil_surface");	
+	"_upward_flux", "_at_soil_surface","x");	
 	
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="fast_detritus_C"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="fast_detritus_C"), 
-	"_upward_flux", "_at_soil_surface");	
+	"_upward_flux", "_at_soil_surface","x");	
 
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-P"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus-P"), 
-	"_upward_flux", "_at_soil_surface");		
+	"_upward_flux", "_at_soil_surface","x");		
 	
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="phosphate"), 
-	"_upward_flux", "_at_soil_surface");			
+	"_upward_flux", "_at_soil_surface","x");			
 
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="dissolved_reduced_substances"), 
-	"_upward_flux", "_at_soil_surface");		
+	"_upward_flux", "_at_soil_surface","x");		
 	
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="detritus"), 
-	"_upward_flux", "_at_soil_surface");		
+	"_upward_flux", "_at_soil_surface","x");		
 	
-INSERT INTO "tblAppendix" (Substance_ID,	Location) VALUES (
+INSERT INTO "tblAppendix" (Substance_ID,	Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nutrients"), 
-	"_at_soil_surface");
-INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location) VALUES (
+	"_at_soil_surface","x");
+INSERT INTO "tblAppendix" (Substance_ID,	Condition, Location, Unit) VALUES (
 	(SELECT ID FROM tblSubstances WHERE SubstanceName="nutrients"), 
-	"_upward_flux", "_at_soil_surface");		
+	"_upward_flux", "_at_soil_surface","x");		
 
 
-	
 
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("oxygen");
 INSERT INTO "tblEquivalents" (EquivalentName) VALUES ("dissolved_oxygen");
@@ -295,21 +293,3 @@ INSERT INTO "tblSubstancesEquivalents" (Ruleset_ID, Substance_ID, Equivalent_ID)
 
 COMMIT;
 
-
-SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') 
-	FROM (tblAppendix JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID 
-	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID 
-	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID 
-	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t 
-	WHERE tblRulesets.RulesetName IN('General', 'HZG KW') 
-	AND tblSubstances.SubstanceName='nutrients';
-	
-SELECT DISTINCT t.EquivalentName || coalesce(t.Condition,'') || coalesce(t.Location,'') 
-	FROM (tblAppendix JOIN tblSubstancesEquivalents ON tblSubstancesEquivalents.Substance_ID=tblAppendix.Substance_ID 
-	JOIN tblSubstances ON tblSubstances.ID=tblSubstancesEquivalents.Substance_ID 
-	JOIN tblRulesets ON tblRulesets.ID=tblSubstancesEquivalents.Ruleset_ID 
-	JOIN tblEquivalents ON tblSubstancesEquivalents.Equivalent_ID=tblEquivalents.ID) t 
-	WHERE tblRulesets.RulesetName IN('General', 'HZG KW') 
-	AND tblSubstances.SubstanceName='nutrients';	
-	
- SELECT SubstanceName FROM tblSubstances;

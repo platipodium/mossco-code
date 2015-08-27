@@ -75,7 +75,7 @@ program test_mossco_db
         if (.not. associated(dba_aliases)) then
             write(*,*) "nothing found"
         else
-            write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)))
+            write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)/2))
         end if
     end do
 
@@ -94,7 +94,7 @@ program test_mossco_db
         if (.not. associated(dba_aliases)) then
             write(*,*) "No aliases found"
         else
-            write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)))
+            write(*,'(A)') (dba_aliases(j,1), j=1,(size(dba_aliases)/2))
         end if
     else
         write(*,*) "Alias not found"
@@ -195,7 +195,7 @@ program test_mossco_db
         write(*,*) "+++++++++++++++++++++++++++++++++++++++"
         write(*,'(A)') "Substance: ", dba(i,1)
         call get_substance_aliases_list(dba(i,1), rulesets, dba_aliases)
-        do j=1, size(dba_aliases)/2
+        do j=1, (size(dba_aliases)/2)
             write(*,'(A)') "Substance-Alias: ", dba_aliases(i,1)
             write(*,'(A)') "Equivalent-Alias: ", dba_aliases(i,2)
         end do
