@@ -1861,11 +1861,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
    real (ESMF_KIND_R8), parameter :: pi = 3.14159265358979323846_fp, g = 9.86
 !   logical             :: wave
    real (ESMF_KIND_R8) :: gammax  ! ratio of wave height to the water depth
-   real (ESMF_KIND_R8) :: omega, k, k0, k0h
+   real (ESMF_KIND_R8) :: omega, k0, k0h
 
 
-   if (waterdepth >1.0_fp .and.WavePeriod> 1.0_fp .and.WavePeriod < 30.0_fp .and. SigWaveHeight < 0.1_fp ) then
      gammax = 0.2
+     waterdepth = max(0.01_fp, waterdepth)
+     WavePeriod = max(0.01_fp,WavePeriod )
 
      Hrms = SigWaveHeight/ sqrt (2.0_fp)
      Hrms = min (Hrms, gammax * WaterDepth)
@@ -1875,23 +1876,20 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
      k0h        = k0*WaterDepth
      if (k0h>pi) then
          WaveNumber = k0
-     elseif (k0h<0.005) then
+     elseif (k0h<0.005_fp) then
          WaveNumber = omega/sqrt(g*WaterDepth)
      else
          WaveNumber = wavenr(WaterDepth,WavePeriod,g)
      endif
 
-     if (WaveNumber*WaterDepth<80.) then
+     if (WaveNumber*WaterDepth<80.0_fp) then
 
          CalcOrbitalVelocity  = 0.5*Hrms*omega/sinh(WaveNumber*WaterDepth)
          CalcOrbitalVelocity = CalcOrbitalVelocity*sqrt(pi)/2.0
 
+     else
+         CalcOrbitalVelocity =0.0_fp
      endif
-
-
-   else
-      CalcOrbitalVelocity =0.0_fp
-   endif
 
   end function  CalcOrbitalVelocity
 
@@ -1982,7 +1980,7 @@ function wavenr(h,t,ag)
                          & a5 = 8.670877524768146D-03, a6 = 4.890806291366061D-03,&
                          & b1 = 1.727544632667079D-01, b2 = 1.191224998569728D-01,&
                          & b3 = 4.165097693766726D-02, b4 = 8.674993032204639D-03
-!
+
 ! Global variables
 !
     real(fp), intent(in)               :: h  !!  Waterheight
@@ -2001,6 +1999,7 @@ function wavenr(h,t,ag)
 !
 !! executable statements -------------------------------------------------------
 !
+    call init_mathconsts()
     ome2 = (2.0D0*pi_hp/real(t, hp))**2*real(h, hp)/real(ag, hp)
     !
     num = 1.0D0 +                                                               &
