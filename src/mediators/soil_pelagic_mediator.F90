@@ -19,6 +19,7 @@
 
 module soil_pelagic_mediator
 
+    !> @todo: Outsource the default methods to a generic coupler module
     !use mossco_mediator
     use esmf
     use mossco_state
@@ -27,7 +28,6 @@ module soil_pelagic_mediator
     use mossco_db
 
 
-!> @todo: please check if anything can be outsourced in the general method
 !----------------------------------------------------------------------
 !------------------- Soil Pelagic Config ------------------------------
 !----------------------------------------------------------------------
@@ -43,16 +43,8 @@ module soil_pelagic_mediator
     logical                                     :: DEBUG = .true.
 
     !MODULE VARS
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DETN=>null(),DIN=>null(),vDETN=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: DIP=>null(),DETP=>null(),vDETP=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC=>null(),DETC=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3=>null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2=>null(),val1_f2=>null(),val2_f2=>null()
-    real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETNflux=>null(),DETPflux=>null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: DETCflux=>null(),DINflux=>null()
-    real(ESMF_KIND_R8),dimension(:,:),   pointer :: DIPflux=>null(),OXYflux=>null()
-    real(ESMF_KIND_R8),dimension(:,:),   pointer :: ODUflux=>null(),omexDETPflux=>null()
-    real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),fDETCflux=>null()
     real(ESMF_KIND_R8) :: dinflux_const=0.0
     real(ESMF_KIND_R8) :: dipflux_const=-1.
     !------------------------------------------------------------------
@@ -95,7 +87,6 @@ subroutine mcpl_InitializeP0(cplComp, importState, exportState, parentClock, rc)
 end subroutine mcpl_InitializeP0
 
 
-!> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mcpl_InitializeP1"
 !> @subsubsection mcpl_InitializeP1 "User Code in Initialization Phase 1"
@@ -169,7 +160,6 @@ subroutine mcpl_InitializeP1(cplcomp, importState, exportState, externalclock, r
 end subroutine mcpl_InitializeP1
 
 
-!> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mcpl_Run_pre_recipe"
 !> @subsubsection mcpl_Run_pre_recipe "User Code before automatic recipe search"
@@ -301,7 +291,6 @@ subroutine mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc
 end subroutine mcpl_Run_pre_log
 
 
-!> @todo: please check if anything can be outsourced in the general method
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mcpl_finalize"
 !> @subsubsection mcpl_finalize "User Code at end of execution"
@@ -584,18 +573,17 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
     !> @paragraph dba "Database Arrays"
     !> @brief Create database array states (dba) for import and export
 
-
-    !dba_import=ESMF_StateCreate(name=trim(name)//'Database Array Import', rc=localrc)
     dba_import=ESMF_StateCreate(name='dba_import', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !dba_export=ESMF_StateCreate(name=trim(name)//'Database Array Export', rc=localrc)
     dba_export=ESMF_StateCreate(name='dba_export', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Get all Substances by unique name from database
+    call get_substances_list(dba_substances)
+    !> @todo: First execution after State declaration somehow causes wrong results (Array dimension +1)
     call get_substances_list(dba_substances)
 
     call ESMF_StateGet(importState, itemCount=import_itemCount)
@@ -637,9 +625,9 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
         !> Print and count fields in import state
         if (import_itemTypes(i)==ESMF_STATEITEM_FIELD) then
             import_fieldCount=import_fieldCount+1
-            write(message,'(A)') import_itemNames(i)
+            write(message,'(A2,A126)') "+ ", import_itemNames(i)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-            if (debug) write(*,'(A)') "- " //import_itemNames(i)
+            if (debug) write(*,'(A)') message
         end if
     end do
 
@@ -654,9 +642,9 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
         !> Print and count fields in import state
         if (import_itemTypes(i)==ESMF_STATEITEM_FIELD) then
             import_fieldCount=import_fieldCount+1
-            write(message,'(A)') export_itemNames(i)
+            write(message,'(A2,A126)') "+ ", export_itemNames(i)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-            if (debug) write(*,'(A)') "- " //export_itemNames(i)
+            if (debug) write(*,'(A)') message
         end if
     end do
 
@@ -842,7 +830,6 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     call ESMF_AttributeGet(dba_import, count=n_i)
     call ESMF_AttributeGet(dba_export, count=n_e)
 
-
     !> @paragraph: automated_copy  "Automated copy of Substances"
     !> @brief: Substances directly found in Import State are copied to the export State
 
@@ -851,10 +838,16 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
         call ESMF_AttributeGet(dba_export,i,attributeName, rc=localrc)
         !> Check if used and found still are zero
         call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
-            if (dba_value/=0) localrc=ESMF_RC_ARG_BAD
+            !> Count items declared as found by user-code
+            if (dba_value/=0) then
+                localrc=ESMF_RC_ARG_BAD
+                c_f=c_f+1
+            end if
+
         call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value,rc=checkrc)
             if (dba_value/=0) checkrc=ESMF_RC_ARG_BAD
 
+        !> Add matching attributes with used=0 and found=0
         if ((localrc==ESMF_SUCCESS) .and. (checkrc==ESMF_SUCCESS)) then
 
             !> Check if field is still available
@@ -866,12 +859,14 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 
                 !> If found set used (import) and found (export) to 1
                 dba_value=1
-                call ESMF_AttributeSet(dba_import,name=attributeName,value=dba_value,rc=localrc)
                 call ESMF_AttributeSet(dba_export,name=attributeName,value=dba_value,rc=localrc)
-                c_f=c_f+1
+                call ESMF_AttributeSet(dba_import,name=attributeName,value=dba_value,rc=localrc)
 
                 !> Copy data
                 field_exp=field_imp
+
+                !> Add found item
+                c_f=c_f+1
             else
                 write(message,*) "Field ", attributeName, ", listed in dba_export, is no longer available in import or export state"
                 call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR)
@@ -906,12 +901,13 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
             do i=1,n_e
                 call ESMF_AttributeGet(dba_export,i,attributeName)
                 call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
+                !write(*,'(A20, A)') "Searching attribute ", attributeName
                 if (dba_value==0) then
                     j=j+1
                     required(j)=attributeName
+                    !write(*,'(A20,A)') "Adding attribute ", attributeName
                 end if
             end do
-
 
             !> Get inventory substances with current used level or below
             n_inv=0
@@ -945,7 +941,6 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
                 do j=1, size(dba_aliases)
 
                     !> 5) Check all inventory entries at the current used level for all combinations
-                    !if (debug) write(*,*) "> Searching alias ", dba_aliases(j,1)
                     do h=1,n_inv
                         if (dba_aliases(j,1)==inventory(h)) then
                         !> Check if field is still available
@@ -998,6 +993,20 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
 
     call mcpl_Run_pre_log(cplcomp, importState, exportState, externalclock, rc)
 
+    !> Get attribute number of import and export dba
+    call ESMF_AttributeGet(dba_import, count=n_i)
+    call ESMF_AttributeGet(dba_export, count=n_e)
+
+    c_f=0
+    do i=1,n_e
+        call ESMF_AttributeGet(dba_export,i,attributeName, rc=localrc)
+        call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
+        !> Count items declared as found by user-code
+        if (dba_value==1) c_f=c_f+1
+    end do
+    n_req=n_e-c_f
+
+
     write(message,'(A)') "coupler      Return to run"
     call ESMF_LogWrite(message, ESMF_LOGMSG_TRACE)
     if (debug) then
@@ -1021,12 +1030,12 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
         call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
         call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
 
-        write(message,"(A)") trim(attributeName)// ", identified as"
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        if (debug) write(*,*) "- ", trim(message)
-        write(message,"(A113,A13,I2)") sa_name, ", used times ", dba_value
-        call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
-        if (debug) write(*,*) "  ", adjustl(message)
+        write(message,"(A,A)") "+ ", trim(attributeName)// ", identified as"
+        call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+        if (debug) write(*,*) message
+        write(message,"(A2, A111,A13,I2)") "  ", adjustl(sa_name), ", used times ", dba_value
+        call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
+        if (debug) write(*,*) message
     end do
 
     write(message,'(A)') "Identified the following substances in export state:"
@@ -1042,19 +1051,19 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
         call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
 
         if (dba_value == 1) then
-            write(message,'(A)') trim(attributeName) // ", identified as "
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-            if (debug) write(*,*) "- ", trim(message)
-
-            write(message,'(A113, A15)') sa_name, ", found.       "
+            write(message,'(A, A)') "+ ", trim(attributeName) // ", identified as "
             call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
-            if (debug) write(*,*) "  ", trim(message)
-        else
-            write(message,'(A)') trim(attributeName) // ", identified as "
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-            if (debug) write(*,*) "- ", trim(message)
+            if (debug) write(*,*) adjustl(message)
 
-            write(message,'(A113, A15)') sa_name, ", not found.   "
+            write(message,'(A2, A111, A15)') "  ", adjustl(sa_name), ", found.       "
+            call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,*) "  ", adjustl(message)
+        else
+            write(message,'(A, A)') "+ ", trim(attributeName) // ", identified as "
+            call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
+            if (debug) write(*,*) adjustl(message)
+
+            write(message,'(A2, A111, A15)') "  ", adjustl(sa_name), ", not found.   "
             call ESMF_LogWrite(adjustl(message), ESMF_LOGMSG_INFO)
             if (debug) write(*,*) "  ", adjustl(message)
         end if
