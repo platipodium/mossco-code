@@ -37,9 +37,11 @@ module soil_pelagic_mediator
 
     private
     !COUPLER CONFIG
-    character(len=ESMF_MAXSTR)                    :: rulesets &
-                                                   ="'General', &
-                                                     'HZG KW'"
+    character(len=ESMF_MAXSTR),dimension(2)       :: rulesets &
+                                                   =(/'General  ', &
+                                                      'HZG KW   '/)
+    character(len=ESMF_MAXSTR)                    :: active_rulesets
+
     logical                                     :: DEBUG = .true.
 
     !MODULE VARS
@@ -528,7 +530,7 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
                                                export_itemCount, &
                                                import_fieldCount=0, &
                                                export_fieldCount=0, &
-                                               localrc, dba_rc,i,j, h
+                                               localrc,dba_rc,i,j,h,k
 
     logical                                 :: dba_verbose
 
@@ -569,6 +571,16 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
         write(*,*) ""
         write(*,*) "> ", message
     end if
+
+    !> Build full string with rulesets
+    do i=1,size(rulesets)
+        if (i==1) then
+            active_rulesets="'" // trim(rulesets(1)) // "'"
+        else
+            write (active_rulesets,*) trim(active_rulesets) // ",'" // trim(rulesets(i)) // "'"
+        end if
+    end do
+
 
     !> @paragraph dba "Database Arrays"
     !> @brief Create database array states (dba) for import and export
@@ -648,10 +660,13 @@ subroutine InitializeP1(cplcomp, importState, exportState, externalclock, rc)
         end if
     end do
 
+    write(*,*) ""
+    write(*,*) "ping"
+    write(*,*) active_rulesets
 
     !> Loop all SubstanceName - Appendices Combinations from the database
     do j=1, size(dba_substances)
-        call get_substance_aliases_list(dba_substances(j,1), rulesets,dba_aliases)
+        call get_substance_aliases_list(dba_substances(j,1), active_rulesets,dba_aliases)
 
         if (associated(dba_aliases)) then
             if (debug) then
@@ -761,7 +776,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     integer(ESMF_KIND_R8)                   :: advanceCount
     integer(ESMF_KIND_I4)                   :: dba_value
     integer                                 :: c, n_i, n_e, c_f=0, &
-                                               i, j, h, n, localrc, &
+                                               i,j,h,k,n,localrc, &
                                                n_req=0, n_inv, &
                                                used=0, used_max=0, &
                                                checkrc
@@ -878,110 +893,133 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     end do
 
 
-    !> 2) Loop used level
-    do while ( (c_f<n_e) .and. (used<=used_max) )
-        hit=.true.
-
-        !> Loop current used level until no more substances are found
-        do while (hit)
-            hit=.false.
-            if(debug) then
-                write(*,*) ""
-                write(*,*) "> Start search (used", used, ")"
+    do k=1,size(rulesets)
+        !> Add next ruleset to search
+        do i=1,k
+            if (i==1) then
+                active_rulesets="'" // trim(rulesets(1)) // "'"
+            else
+                write (active_rulesets,*) trim(active_rulesets) // ",'" // trim(rulesets(i)) // "'"
             end if
-            !> Redim the Substance arrays
-            if (allocated(required)) deallocate(required)
-            if (allocated(inventory)) deallocate(inventory)
-            n_req=n_e-c_f
-            allocate(required(n_req))
-            if (debug) write(*,*) "> ", n_req, " required substances remaining"
-
-            !> Get required substances with found=0
-            j=0
-            do i=1,n_e
-                call ESMF_AttributeGet(dba_export,i,attributeName)
-                call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
-                !write(*,'(A20, A)') "Searching attribute ", attributeName
-                if (dba_value==0) then
-                    j=j+1
-                    required(j)=attributeName
-                    !write(*,'(A20,A)') "Adding attribute ", attributeName
-                end if
-            end do
-
-            !> Get inventory substances with current used level or below
-            n_inv=0
-            do i=1,n_i
-                call ESMF_AttributeGet(dba_import,i,attributeName)
-                call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
-                if (dba_value<=used) n_inv=n_inv+1
-            end do
-            allocate(inventory(n_inv))
-            if (debug) write(*,*) "> Found ", n_inv, " substances in inventory for current used level"
-            j=0
-            do i=1,n_i
-                call ESMF_AttributeGet(dba_import,i,attributeName)
-                call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
-                if (dba_value<=used) then
-                    j=j+1
-                    inventory(j)=attributeName
-                end if
-            end do
-
-
-            !> 3) Loop all export substances
-            do i=1,n_req
-                if (debug) write(*,*) "> Looping ", required(i)
-                call get_equivalent_appendix_name(required(i),rulesets,sa_name)
-                    if (.not. associated(sa_name)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-                call get_substance_appendix_aliases_list(sa_name, rulesets, dba_aliases)
-                    if (.not. associated(dba_aliases)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-                !> 4) Loop all alias combinations for all substances
-                do j=1, size(dba_aliases)
-
-                    !> 5) Check all inventory entries at the current used level for all combinations
-                    do h=1,n_inv
-                        if (dba_aliases(j,1)==inventory(h)) then
-                        !> Check if field is still available
-                        call mossco_state_get(importState,(/inventory(h)/), field_imp, rc=localrc)
-                        call mossco_state_get(exportState,(/required(i)/), field_exp, rc=checkrc)
-
-                            if ((localrc==ESMF_SUCCESS) .and. (checkrc==ESMF_SUCCESS)) then
-
-                                !> Increase used value of Substance and max used if neccesary
-                                call ESMF_AttributeGet(dba_import,name=inventory(h),value=dba_value,rc=localrc)
-                                dba_value=dba_value+1
-                                call ESMF_AttributeSet(dba_import,name=inventory(h),value=dba_value,rc=localrc)
-                                if (dba_value>used_max) used_max=dba_value
-
-                                !> Set found value to 1
-                                dba_value=1
-                                call ESMF_AttributeSet(dba_export,name=required(i),value=dba_value,rc=localrc)
-                                c_f=c_f+1
-
-                                hit=.true.
-                                if (debug) write(*,*) "> Found hit"
-
-                                !> Copy data
-                                field_exp=field_imp
-                            else
-                                write(message,*) "Field ", attributeName, ", listed in dba_export, is no longer available in import or export state"
-                                call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR)
-                                if (debug) write(*,*) "> ", message
-                            end if
-                        end if
-                        if (hit) exit
-                    end do
-                    if (hit) exit
-                end do
-                if (hit) exit
-            end do
         end do
-        if (debug) write(*,*) ">> No more hits found, increasing used level"
-        used=used+1
+
+        if (debug) then
+            write(*,*) ""
+            write(*,*) "> Start substance search with rulesets:", active_rulesets
+        end if
+        used=0
+
+        !> 2) Loop used level
+        do while ( (c_f<n_e) .and. (used<=used_max) )
+            hit=.true.
+
+            !> Loop current used level until no more substances are found
+            do while (hit)
+                hit=.false.
+                if(debug) then
+                    write(*,*) ""
+                    write(*,*) "> Start search (used", used, ")"
+                end if
+                !> Redim the Substance arrays
+                if (allocated(required)) deallocate(required)
+                if (allocated(inventory)) deallocate(inventory)
+                n_req=n_e-c_f
+                allocate(required(n_req))
+                if (debug) write(*,*) "> ", n_req, " required substances remaining"
+
+                !> Get required substances with found=0
+                j=0
+                do i=1,n_e
+                    call ESMF_AttributeGet(dba_export,i,attributeName)
+                    call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
+                    !write(*,'(A20, A)') "Searching attribute ", attributeName
+                    if (dba_value==0) then
+                        j=j+1
+                        required(j)=attributeName
+                        !write(*,'(A20,A)') "Adding attribute ", attributeName
+                    end if
+                end do
+
+                !> Get inventory substances with current used level or below
+                n_inv=0
+                do i=1,n_i
+                    call ESMF_AttributeGet(dba_import,i,attributeName)
+                    call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
+                    if (dba_value<=used) n_inv=n_inv+1
+                end do
+                allocate(inventory(n_inv))
+                if (debug) write(*,*) "> Found ", n_inv, " substances in inventory for current used level"
+                j=0
+                do i=1,n_i
+                    call ESMF_AttributeGet(dba_import,i,attributeName)
+                    call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
+                    if (dba_value<=used) then
+                        j=j+1
+                        inventory(j)=attributeName
+                    end if
+                end do
+
+
+                !> 3) Loop all export substances
+                do i=1,n_req
+                    if (debug) write(*,*) "> Looping ", required(i)
+                    dba_aliases=>null()
+                    call get_equivalent_appendix_name(required(i),active_rulesets,sa_name)
+                        if (associated(sa_name)) call get_substance_appendix_aliases_list(sa_name, active_rulesets, dba_aliases)
+
+                    if (associated(dba_aliases)) then
+                        !> 4) Loop all alias combinations for all substances
+                        do j=1, size(dba_aliases)
+
+                            !> 5) Check all inventory entries at the current used level for all combinations
+                            do h=1,n_inv
+                                if (dba_aliases(j,1)==inventory(h)) then
+                                !> Check if field is still available
+                                call mossco_state_get(importState,(/inventory(h)/), field_imp, rc=localrc)
+                                call mossco_state_get(exportState,(/required(i)/), field_exp, rc=checkrc)
+
+                                    if ((localrc==ESMF_SUCCESS) .and. (checkrc==ESMF_SUCCESS)) then
+
+                                        !> Increase used value of Substance and max used if neccesary
+                                        call ESMF_AttributeGet(dba_import,name=inventory(h),value=dba_value,rc=localrc)
+                                        dba_value=dba_value+1
+                                        call ESMF_AttributeSet(dba_import,name=inventory(h),value=dba_value,rc=localrc)
+                                        if (dba_value>used_max) used_max=dba_value
+
+                                        !> Set found value to 1
+                                        dba_value=1
+                                        call ESMF_AttributeSet(dba_export,name=required(i),value=dba_value,rc=localrc)
+                                        c_f=c_f+1
+
+                                        hit=.true.
+                                        if (debug) write(*,*) "> Found hit"
+
+                                        !> Copy data
+                                        field_exp=field_imp
+                                    else
+                                        write(message,*) "Field ", attributeName, ", listed in dba_export, is no longer available in import or export state"
+                                        call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR)
+                                        if (debug) write(*,*) "> ", message
+                                    end if
+                                end if
+                                if (hit) exit
+                            end do
+                            if (hit) exit
+                        end do
+                        if (hit) exit
+                    else
+                        write(message,'(A,A21)') trim("No aliases found for " // required(i)) , " in current rulesets."
+                        call ESMF_LogWrite(message, ESMF_LOGMSG_ERROR)
+                        if (debug) write(*,*) "> ", message
+                    end if
+
+                end do
+            end do
+            if (debug) write(*,*) ">> No more hits found, increasing used level"
+            used=used+1
+        end do
+        if (debug) write(*,*) ">> Everything found or nothing more to find"
     end do
-    if (debug) write(*,*) ">> Everything found or nothing more to find"
 
 
     !> @paragraph: automated_recipe "Automatic Recipe Search"
@@ -1028,7 +1066,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     do i=1,n_i
         call ESMF_AttributeGet(dba_import,i,attributeName)
         call ESMF_AttributeGet(dba_import,name=attributeName,value=dba_value)
-        call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
+        call get_equivalent_appendix_name(attributeName,active_rulesets,sa_name)
 
         write(message,"(A,A)") "+ ", trim(attributeName)// ", identified as"
         call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
@@ -1048,7 +1086,7 @@ subroutine Run(cplcomp, importState, exportState, externalclock, rc)
     do i=1,n_e
         call ESMF_AttributeGet(dba_export,i,attributeName)
         call ESMF_AttributeGet(dba_export,name=attributeName,value=dba_value)
-        call get_equivalent_appendix_name(attributeName,rulesets,sa_name)
+        call get_equivalent_appendix_name(attributeName,active_rulesets,sa_name)
 
         if (dba_value == 1) then
             write(message,'(A, A)') "+ ", trim(attributeName) // ", identified as "
