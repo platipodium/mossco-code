@@ -1288,8 +1288,6 @@ module mossco_netcdf
 
     if (allocated(self%dimlens)) deallocate(self%dimlens)
 
-    localrc = nf90_inquire(self%ncid, unlimitedDimId=self%timeDimId)
-
     localrc = nf90_inquire(self%ncid, nDimensions=ndims)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire file '//trim(self%name), ESMF_LOGMSG_ERROR)
