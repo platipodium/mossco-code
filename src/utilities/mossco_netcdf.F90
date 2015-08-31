@@ -2094,11 +2094,13 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)                        :: fieldRank, gridRank, itime_, j, i
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
     integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:), lbnd(:)
-    real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:), farrayPtr2(:,:)
+    integer(ESMF_KIND_I4), allocatable           :: ncubnd(:),fstart(:)
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr1(:)=>null(), farrayPtr2(:,:)=>null()
+    real(ESMF_KIND_R8), pointer                  :: netcdfPtr1(:)=>null()
     real(ESMF_KIND_R8), pointer                  :: netcdfPtr2(:,:)=>null()
     real(ESMF_KIND_R8), pointer                  :: netcdfPtr3(:,:,:)=>null()
     real(ESMF_KIND_R8), pointer                  :: netcdfPtr4(:,:,:,:)=>null()
-    real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
+    real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:)=>null(), farrayPtr4(:,:,:,:)=>null()
     character(len=ESMF_MAXSTR)                   :: message
 
     integer(ESMF_KIND_I4)                        :: deCount,localPet
@@ -2174,52 +2176,72 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(start(fieldRank))
-    allocate(count(fieldRank))
+    allocate(start(fieldRank)); start(1:fieldRank) = 1
+    allocate(count(fieldRank)); count(1:fieldRank)=1
     allocate(ubnd(fieldRank))
+    allocate(ncubnd(fieldRank))
+    allocate(fstart(fieldRank)); fstart(1:fieldRank)=1
     allocate(lbnd(fieldRank))
-
-    start(1:gridRank)=minIndexPDe(:,localPet+1)
-    if (fieldRank>gridRank) start(gridRank+1:fieldRank)=1
-
-    where (start < 1)
-      start=1
-    endwhere
 
     call ESMF_FieldGetBounds(field, exclusiveUbound=ubnd, exclusiveLBound=lbnd, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ubnd(1:gridRank)=maxIndexPDe(:,localPet+1)
+    ncubnd = ubnd ! initialize array size from local field bounds
+    
+    !> First asssume to read part of a global field in the netcdf file
+    !! adjust array size to match global field indexation:
+    ncubnd(1:gridRank)=maxIndexPDe(:,localPet+1) 
+    start(1:gridRank)=minIndexPDe(:,localPet+1)
+    where (start < 1)
+      start=1
+    endwhere
 
-    j=0
+    !! set start indices for target field
+    fstart(1:gridRank)=start(1:gridRank)-minIndexPDe(1:gridRank,localPet+1)+1
+
+    !! restrict length of field to read from netcdf to available size 
     do i=1, fieldRank
-      j=j+1
-      if (var%dimids(i)==self%timeDimId) j=j+1
-      if (ubnd(i)>self%dimlens(var%dimids(j))) ubnd(i)=self%dimlens(var%dimids(j))
+      if (ncubnd(i)>self%dimlens(var%dimids(i))) ncubnd(i)=self%dimlens(var%dimids(i))
+    enddo
+    count=count+ncubnd-start
+
+    !> overwrite global indexing, if matching netcdf data domain
+    !! then simply copy whole array:
+    do i=1, fieldRank
+      if (ubnd(i)-lbnd(i)+1==self%dimlens(var%dimids(i))) then
+        start(i) = 1
+        count(i) = ubnd(i)-lbnd(i)+1
+        fstart(i) = 1
+      end if
     enddo
 
-    count(:)=1
-    count=count+ubnd-start
-
-    if (any(count <= 0)) return
+    if (any(count <= 0)) then
+      write(0,*) 'count<0 for variable ',trim(var%name)
+      if (present(rc)) rc=ESMF_RC_CANNOT_GET
+      return
+    end if
 
     if (fieldRank == 1) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      allocate(netcdfPtr1(count(1)))
       if (var%rank==fieldRank) then
-        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, start, count)
+        localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr1, start, count)
       elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
-        localrc = nf90_get_var(self%ncid, var%varid, farrayPtr1, (/start(1),itime_/), (/count(1),1/))
+        localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr1, (/start(1),itime_/), (/count(1),1/))
       else
-        rc = ESMF_RC_NOT_IMPL
+        rc_ = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+      farrayPtr1(fstart(1):fstart(1)+count(1)) = netcdfPtr1
+      if (associated(netcdfPtr1)) deallocate(netcdfPtr1)
+
     elseif (fieldRank == 2) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2231,7 +2253,7 @@ module mossco_netcdf
       elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr2, (/start(1),start(2),itime/), (/count(1),count(2),1/))
       else
-        rc = ESMF_RC_NOT_IMPL
+        rc_ = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2239,12 +2261,11 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      !> @todo: this assumes that index 1 is the first exclusive Index &
-      !! and possible LWidths are appended before (index 0 and negative indexes:
-      farrayPtr2(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1),start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2)) &
+      farrayPtr2(fstart(1):fstart(1)+count(1), &
+                 fstart(2):fstart(2)+count(2)) &
         = netcdfPtr2
-      if (associated(netcdfPtr2)) deallocate(netcdfPtr2)
 
+      if (associated(netcdfPtr2)) deallocate(netcdfPtr2)
 
     elseif (fieldRank == 3) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr3, rc=localrc)
@@ -2257,7 +2278,7 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
           (/start(1),start(2),start(3),itime_/), (/count(1),count(2), count(3),1/))
       else
-        rc = ESMF_RC_NOT_IMPL
+        rc_ = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2265,29 +2286,12 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      write(0,*) 'varname = ', trim(var%name), 'rank=', var%rank
-      write(0,*) 'minindexPDE shape ', shape(minIndexPDE), ' value ', minindexPDE
+      farrayPtr3(fstart(1):fstart(1)+count(1), &
+                 fstart(2):fstart(2)+count(2), &
+                 fstart(3):fstart(3)+count(3)) &
+        = netcdfPtr3
 
-      !> @todo: this assumes that index 1 is the first exclusive Index &
-      !! and possible LWidths are appended before (index 0 and negative indexes:
-      if (size(minIndexPDE,1)==3) then
-
-        farrayPtr3(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
-                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
-                 start(3)-minindexPDE(3,localPET+1)+1:start(3)-minindexPDE(3,localPET+1)+count(3)) &
-          = netcdfPtr3
-
-      elseif (size(minIndexPDE,1)==2) then
-        farrayPtr3(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
-                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
-                 start(3):start(3)-1+count(3)) &
-          = netcdfPtr3
-      else
-        call ESMF_LogWrite('  unimplemented constellation of minIndexPDE and field rank', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
       if (associated(netcdfPtr3)) deallocate(netcdfPtr3)
-
     elseif (fieldRank == 4) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2299,7 +2303,7 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr4, &
           (/start(1),start(2),start(3),start(4),itime_/), (/count(1),count(2),count(3),count(4),1/))
       else
-        rc = ESMF_RC_NOT_IMPL
+        rc_ = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2307,45 +2311,21 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      !> @todo: this assumes that index 1 is the first exclusive Index &
-      !! and possible LWidths are appended before (index 0 and negative indexes:
-      if (size(minIndexPDE,1)==4) then
-        farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
-                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
-                 start(3)-minindexPDE(3,localPET+1)+1:start(3)-minindexPDE(3,localPET+1)+count(3), &
-                 start(4)-minindexPDE(4,localPET+1)+1:start(4)-minindexPDE(4,localPET+1)+count(4)) &
-          = netcdfPtr4
-      elseif (size(minIndexPDE,1)==3) then
-        farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
-                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
-                 start(3)-minindexPDE(3,localPET+1)+1:start(3)-minindexPDE(3,localPET+1)+count(3), &
-                 start(4):start(4)-1+count(4)) &
-          = netcdfPtr4
-      elseif (size(minIndexPDE,1)==2) then
-        farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
-                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
-                 start(3):start(3)-1+count(3), &
-                 start(4):start(4)-1+count(4)) &
-          = netcdfPtr4
-      else
-        call ESMF_LogWrite('  unimplemented constellation of minIndexPDE and field rank', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
-      !> @todo: this assumes that index 1 is the first exclusive Index &
-      !! and possible LWidths are appended before (index 0 and negative indexes:
-      farrayPtr4(start(1)-minindexPDE(1,localPET+1)+1:start(1)-minindexPDE(1,localPET+1)+count(1), &
-                 start(2)-minindexPDE(2,localPET+1)+1:start(2)-minindexPDE(2,localPET+1)+count(2), &
-                 start(3)-minindexPDE(3,localPET+1)+1:start(3)-minindexPDE(3,localPET+1)+count(3), &
-                 start(4)-minindexPDE(4,localPET+1)+1:start(4)-minindexPDE(4,localPET+1)+count(4)) &
+      farrayPtr4(fstart(1):fstart(1)+count(1), &
+                 fstart(2):fstart(2)+count(2), &
+                 fstart(3):fstart(3)+count(3), &
+                 fstart(4):fstart(4)+count(4)) &
         = netcdfPtr4
+
       if (associated(netcdfPtr4)) deallocate(netcdfPtr4)
     endif
 
     if (allocated(lbnd))  deallocate(lbnd)
     if (allocated(ubnd))  deallocate(ubnd)
+    if (allocated(ncubnd))  deallocate(ncubnd)
     if (allocated(count)) deallocate(count)
     if (allocated(start)) deallocate(start)
+    if (allocated(fstart)) deallocate(fstart)
 
     if (present(rc)) rc=rc_
 
