@@ -1,0 +1,72 @@
+dependencies:
+  - erosed:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - simplewave:
+    - component: getm
+      grid: water_depth_at_soil_surface
+  - river_input:
+    - component: getm
+      grid: temperature_at_soil_surface
+
+instances:
+  - mossco_gfsen: netcdf
+  - river_input: netcdf_input
+
+coupling:
+  - components:
+     - getm
+     - erosed
+    interval: 12 m
+  - components:
+     - simplewave
+     - erosed
+    interval: 12 m
+  - components:
+     - fabm_pelagic
+     - erosed
+    interval: 12 m
+  - components:
+     - erosed
+     - fabm_pelagic
+    interval: 12 m
+  - components:
+     - river_input
+     - fabm_pelagic
+    interval: 1 d 
+  - components: 
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components: 
+     - getm
+     - fabm_pelagic
+    interval: 12 m
+  - components: 
+     - getm
+     - simplewave
+    interval: 12 m
+  - components:
+    - simplewave
+    - getm
+    interval: 12 m
+  - components: 
+     - getm
+     - mossco_gfsen
+    interval: 30 m
+  - components: 
+     - simplewave
+     - mossco_gfsen
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - mossco_gfsen
+    interval: 30 m
+  - components:
+     - erosed
+     - mossco_gfsen
+    interval: 30 m
