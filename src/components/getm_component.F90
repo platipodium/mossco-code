@@ -821,6 +821,7 @@ module getm_component
    use domain         ,only: xcord,ycord,xx,yx,lonx,latx
    use domain         ,only: xxcord,yxcord,xc,yc,lonc,latc
    use domain         ,only: grid_type,convc,arcd1
+   use domain         ,only: getm_has_lonlat => have_lonlat
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
@@ -878,10 +879,17 @@ module getm_component
             allocate(lonx1D(-1+_IRANGE_HALO_))
             allocate(latx1D(-1+_JRANGE_HALO_))
          case(3)
-            allocate(xx2D(E2DXFIELD)) ; xx2D = xx
-            allocate(yx2D(E2DXFIELD)) ; yx2D = yx
-            allocate(xc2D(E2DFIELD )) ; xc2D = xc
-            allocate(yc2D(E2DFIELD )) ; yc2D = yc
+            if (getm_has_lonlat) then
+               allocate(lonx2D(E2DXFIELD)) ; lonx2D = lonx
+               allocate(latx2D(E2DXFIELD)) ; latx2D = latx
+               allocate(lonc2D(E2DFIELD )) ; lonc2D = lonc
+               allocate(latc2D(E2DFIELD )) ; latc2D = latc
+            else
+               allocate(xx2D(E2DXFIELD)) ; xx2D = xx
+               allocate(yx2D(E2DXFIELD)) ; yx2D = yx
+               allocate(xc2D(E2DFIELD )) ; xc2D = xc
+               allocate(yc2D(E2DFIELD )) ; yc2D = yc
+            end if
          case(4)
             allocate(lonx2D(E2DXFIELD)) ; lonx2D = lonx
             allocate(latx2D(E2DXFIELD)) ; latx2D = latx
@@ -928,10 +936,17 @@ module getm_component
             lonx1D => xxcord
             latx1D => yxcord
          case(3)
-            xx2D => xx
-            yx2D => yx
-            xc2D => xc
-            yc2D => yc
+            if (getm_has_lonlat) then
+               lonx2D => lonx
+               latx2D => latx
+               lonc2D => lonc
+               latc2D => latc
+            else
+               xx2D => xx
+               yx2D => yx
+               xc2D => xc
+               yc2D => yc
+            end if
          case(4)
             lonx2D => lonx
             latx2D => latx
@@ -1118,6 +1133,7 @@ module getm_component
     use initialise, only: runtype
     use domain    , only: ioff,joff,imax,jmax,kmax
     use domain    , only: grid_type
+    use domain    , only: getm_has_lonlat => have_lonlat
     implicit none
 !
 ! !INPUT/OUTPUT PARAMETERS:
@@ -1380,6 +1396,83 @@ module getm_component
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       case(3)
+        !> if getm has longitude and latitude information on the grid, then
+        !! use this for the ESMF exchange arrays rather than Cartesian coordinates.
+        !! Please be aware, that the curvilinear grid itself is created and defined
+        !! inside GETM in Cartesian coordinates only for grid_type=3.
+        if (getm_has_lonlat) then
+         coordSys = ESMF_COORDSYS_SPH_DEG                         ! (default)
+         coordDimCount = (/ 2 , 2 , 3 /)
+         coordDimMap = reshape( (/1,1,1,2,2,2,0,0,3/) , (/3,3/) ) ! (default)
+         xxArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xxArray2D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xxArray2D,'units', 'degrees_east', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         yxArray2D = ESMF_ArrayCreate(getmDistGrid2D,latx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(yxArray2D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(yxArray2D,'units', 'degrees_north', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         xxArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xxArray3D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xxArray3D,'units', 'degrees_east', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         yxArray3D = ESMF_ArrayCreate(getmDistGrid3D,latx2D,         &
+                                      indexflag=ESMF_INDEX_DELOCAL,  &
+                                      totalLWidth=(/HALO+1,HALO+1/), &
+                                      totalUWidth=(/HALO,HALO/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(yxArray3D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(yxArray3D,'units', 'degrees_north', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         xcArray2D = ESMF_ArrayCreate(getmDistGrid2D,lonc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xcArray2D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xcArray2D,'units', 'degrees_east', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         ycArray2D = ESMF_ArrayCreate(getmDistGrid2D,latc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(ycArray2D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(ycArray2D,'units', 'degrees_north', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         xcArray3D = ESMF_ArrayCreate(getmDistGrid3D,lonc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xcArray3D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(xcArray3D,'units', 'degrees_east', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         ycArray3D = ESMF_ArrayCreate(getmDistGrid3D,latc2D,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(ycArray3D,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+         call ESMF_AttributeSet(ycArray3D,'units', 'degrees_north', rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        else
          coordSys = ESMF_COORDSYS_CART
          coordDimCount = (/ 2 , 2 , 3 /)
          coordDimMap = reshape( (/1,1,1,2,2,2,0,0,3/) , (/3,3/) ) ! (default)
@@ -1452,6 +1545,7 @@ module getm_component
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          call ESMF_AttributeSet(ycArray3D,'creator', trim(name), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        end if ! getm_has_lonlat
 
       case(4)
          coordSys = ESMF_COORDSYS_SPH_DEG                         ! (default)
