@@ -2239,7 +2239,7 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', could not read variable '//trim(var%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-      farrayPtr1(fstart(1):fstart(1)+count(1)) = netcdfPtr1
+      farrayPtr1(fstart(1):fstart(1)+count(1)-1) = netcdfPtr1
       if (associated(netcdfPtr1)) deallocate(netcdfPtr1)
 
     elseif (fieldRank == 2) then
@@ -2261,8 +2261,8 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      farrayPtr2(fstart(1):fstart(1)+count(1), &
-                 fstart(2):fstart(2)+count(2)) &
+      farrayPtr2(fstart(1):fstart(1)+count(1)-1, &
+                 fstart(2):fstart(2)+count(2)-1) &
         = netcdfPtr2
 
       if (associated(netcdfPtr2)) deallocate(netcdfPtr2)
@@ -2286,9 +2286,9 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      farrayPtr3(fstart(1):fstart(1)+count(1), &
-                 fstart(2):fstart(2)+count(2), &
-                 fstart(3):fstart(3)+count(3)) &
+      farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                 fstart(2):fstart(2)+count(2)-1, &
+                 fstart(3):fstart(3)+count(3)-1) &
         = netcdfPtr3
 
       if (associated(netcdfPtr3)) deallocate(netcdfPtr3)
@@ -2311,10 +2311,10 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      farrayPtr4(fstart(1):fstart(1)+count(1), &
-                 fstart(2):fstart(2)+count(2), &
-                 fstart(3):fstart(3)+count(3), &
-                 fstart(4):fstart(4)+count(4)) &
+      farrayPtr4(fstart(1):fstart(1)+count(1)-1, &
+                 fstart(2):fstart(2)+count(2)-1, &
+                 fstart(3):fstart(3)+count(3)-1, &
+                 fstart(4):fstart(4)+count(4)-1) &
         = netcdfPtr4
 
       if (associated(netcdfPtr4)) deallocate(netcdfPtr4)
