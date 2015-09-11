@@ -470,6 +470,12 @@ module netcdf_input_component
       ! todo find time index (default is one)
       ! allocate(time(nc%variables(timid)%dimlens(1)))
       ! localrc=nf90_var_get(nc%ncid, timeid, time)
+      call nc%timeIndex(currTime, itime, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !write(message,'(A,I4)')  trim(name)//' use itime = ',itime
+      !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+
     else
       udimid=-1
     endif
@@ -746,6 +752,10 @@ module netcdf_input_component
       ! todo find time index (default is one)
       ! allocate(time(nc%variables(timid)%dimlens(1)))
       ! localrc=nf90_var_get(nc%ncid, timeid, time)
+      call nc%timeIndex(currTime, itime, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     else
       udimid=-1
     endif
