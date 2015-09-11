@@ -360,10 +360,10 @@ module fabm_sediment_component
     open(33,file='run_sed.nml',action='read',status='old')
     call sed1d%grid%init_grid()
     call sed1d%initialize()
+    close(33)
+    allocate(sed1d%conc(1,1,_KNUM_,1:sed%nvar))
     !> check for valid grid and porosity
     call sed1d%check_domain()
-    close(33)
-    allocate(sed1d%conc(1,1,1:sed%knum,1:sed%nvar))
     call sed1d%init_concentrations()
     if (presimulation_years.gt.0) then
       write(0,*) '  postinit run sediment model on initial profiles for ',presimulation_years,' years'

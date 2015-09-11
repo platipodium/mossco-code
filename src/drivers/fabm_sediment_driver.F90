@@ -414,11 +414,13 @@ subroutine fabm_sed_check_domain(sed, rc)
     stop
   endif
 
-  do k=1,sed%knum; do j=1,sed%jnum; do i=1,sed%inum
-    if (sed%mask(i,j,k)) then
-      sed%conc(i,j,k,:)=1.d20
-    endif
-  enddo; enddo; enddo
+  if (associated(sed%conc)) then
+    do k=1,sed%knum; do j=1,sed%jnum; do i=1,sed%inum
+      if (sed%mask(i,j,k)) then
+        sed%conc(i,j,k,:)=1.d20
+      endif
+    enddo; enddo; enddo
+  end if
 
   if (present(rc)) rc=rc_
 
