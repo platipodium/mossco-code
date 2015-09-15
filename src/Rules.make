@@ -347,6 +347,9 @@ ifeq ($(MOSSCO_GETM),true)
   else
     export STATIC += $(GETM_STATIC_DEFINES)
   endif
+  ifeq ($(GETM_SLICE_MODEL),true) # Compile for slice model option
+    export STATIC += -DSLICE_MODEL
+  endif
   export GETM_CPPFLAGS = $(STATIC)
   ifeq ($(GETM_PARALLEL),true) # Compile for parallel execution
     export GETM_CPPFLAGS += -DGETM_PARALLEL
