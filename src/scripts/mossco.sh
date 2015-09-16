@@ -332,7 +332,7 @@ case ${SYSTEM} in
   SLURM) cat << EOT > slurm.sh
 #!/bin/bash -x
 
-#SBATCH --account=${USER}
+###SBATCH --account=${USER}
 #SBATCH --ntasks=${NP}
 #SBATCH --ntasks-per-core=1
 #####SBATCH --nodes=${NODES}
