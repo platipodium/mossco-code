@@ -39,14 +39,17 @@ function usage {
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-l A|W|E|N|T|D] :  specify the log level, as one of all|warning|error"
 	echo "            |none|trace|default, if not specified, it is taken from mossco_run.nml."
-	echo "    [-n X]: build for or/and run on X processors.  If you set n=0, then"
-	echo "            MPI is not used at all. Default is content of par_setup.dat or n=1"
+	echo "    [-n X]: build for or/and run on X processors.  Default is content of par_setup.dat or n=1"
+  echo
+	echo "      [-n 0]:   MPI is not used at all."
+  echo "      [-n XxY]: The layout X cpu-per-node times Y nodes is used"
+  echo
 	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system, which is"
   echo "            autodetected by default"
 	echo
-	echo "      [-s M]: MOAB system, e.g. juropa.fz-juelich.de, writes moab.sh"
+	echo "      [-s M]: MOAB system, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
-	echo "      [-s J]: Slurm system, e.g. juropatest, writes slurm.sh"
+	echo "      [-s J]: Slurm system, e.g. Jureca, Mistral, writes slurm.sh"
 	echo "      [-s F]: Command line interactive, running in foreground"
 	echo "      [-s B]: Command line interactive, running in background"
 	echo
@@ -274,22 +277,32 @@ if [[ ${NP} == 0 ]]; then
   MPI_PREFIX=""
 fi
 
+NODES=1
+PPN=$(echo ${NP} | cut -d'x' -f1)
 
+if [[ ${PPN} -lt ${NP} ]]; then
+  NODES = $(echo ${NP} | cut -d'x' -f2)
+else
+  case ${SYSTEM} in
+    MOAB)  NODES=$(expr \( $NP - 1 \) / 8 + 1 )
+           PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
+           NP=$(expr $NODES \* $PPN )
+           ;;
+    SLURM)  NODES=$(expr \( $NP - 1 \) / 24 + 1 )
+           PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
+           #NP=$(expr $NODES \* $PPN )
+           if [[ ${POSTPROCESS} -eq NONE ]]; then
+             POSTPROCESS=slurm_postprocess.sh
+           fi
+           ;;
+    *)     ;;
+  esac
+fi
 
 echo "Building scripts for system ${SYSTEM} with MPI_PREFIX ${MPI_PREFIX} -np ${NP}"
 
-NODES=1
-PPN=${NP}
-
 case ${SYSTEM} in
-  MOAB)  NODES=$(expr \( $NP - 1 \) / 8 + 1 )
-         PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
-         NP=$(expr $NODES \* $PPN )
-         ;;
-  SLURM)  NODES=$(expr \( $NP - 1 \) / 28 + 1 )
-         PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
-         #NP=$(expr $NODES \* $PPN )
-         if [[ ${POSTPROCESS} -eq NONE ]]; then
+  SLURM) if [[ ${POSTPROCESS} -eq NONE ]]; then
            POSTPROCESS=slurm_postprocess.sh
          fi
          ;;
