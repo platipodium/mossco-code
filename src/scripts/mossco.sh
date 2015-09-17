@@ -280,9 +280,7 @@ fi
 NODES=1
 PPN=$(echo ${NP} | cut -d'x' -f1)
 
-if [[ ${PPN} -lt ${NP} ]]; then
-  NODES = $(echo ${NP} | cut -d'x' -f2)
-else
+if [[ "${PPN}" ==  "${NP}" ]]; then
   case ${SYSTEM} in
     MOAB)  NODES=$(expr \( $NP - 1 \) / 8 + 1 )
            PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
@@ -297,6 +295,10 @@ else
            ;;
     *)     ;;
   esac
+else
+  NODES=$(echo ${NP} | cut -d'x' -f2)
+  TPP=$(echo ${NP} | cut -d'x' -f3)
+  NP=$(expr ${NODES} \* ${PPN})
 fi
 
 echo "Building scripts for system ${SYSTEM} with MPI_PREFIX ${MPI_PREFIX} -np ${NP}"
@@ -347,7 +349,7 @@ case ${SYSTEM} in
 
 ###SBATCH --account=${USER}
 #SBATCH --ntasks=${NP}
-#SBATCH --ntasks-per-core=1
+#####SBATCH --ntasks-per-core=1
 #####SBATCH --nodes=${NODES}
 #####SBATCH --tasks-per-node=${PPN}
 #SBATCH --output=${TITLE}-%j.stdout
