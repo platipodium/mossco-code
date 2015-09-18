@@ -1,0 +1,106 @@
+//
+// ---------------------------------------------------------------------------
+// > @brief NCINFO - Visualization tool for NOSSCO-output files
+//
+//   This file program is part of MOSSCO.
+// > @copyright Copyright (C) 2013, 2014, 2015 Bundesanstalt fuer Wasserbau
+// > @author Nikolai Chernikov, <nikolai.chernikov.ru@gmail.com>
+//
+//  MOSSCO is free software: you can redistribute it and/or modify it under the
+//  terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+//  hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+//  LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+// ----------------------------------------------------------------------------
+
+// Place your settings in the file "./settings/settings_user.json", which
+// overrides the settings in file settings_default.json
+
+{   
+
+    // Follwoing settings: "t_dims", "x_dims", "y_dims", "z_dims" are used
+    // to detect the dimensions of the selected variable, and Enable/Disable
+    // selection lineEdits and spinBoxes. Program will try to match all
+    // dimension names of current variable to one of the elements in 
+    // "t_dims", "x_dims", "y_dims", "z_dims"
+    //
+    // Example:
+    //      assume we have a 4D array $DATA(dim1, dim2, dim3, dim4)$
+    //      after loading this array into programm, the list of the existing
+    //      dimension names will be created: ["dim1", "dim2", "dim3", "dim4"]
+    //      Then, script will cycle through names in this list and try to match
+    //      "dim1" to names specified in lists "t_dims", "x_dims", "y_dims", "z_dims".
+    //      If "dim1" is found in namelist "t_dims", then script will assume, 
+    //      that time-dimension has been found, and will proceed with next dimensions
+
+    // sets the possible DIMENSION names of the x-dimension (last dimension) in netcdf file
+    "x_dims": ["ocean_grid_1", "getmGrid3D_getm_1", "getmGrid2D_getm_1", "pelagic_horizontal_grid_1", "lonc", "lon", "nMesh2_node", "x", "xc", "x_T"],
+
+    // sets the possible DIMENSION names of the y-dimension (one before last) in netcdf file
+    "y_dims": ["ocean_grid_2", "getmGrid3D_getm_2", "getmGrid2D_getm_2", "pelagic_horizontal_grid_2", "latc", "lat", "y", "yc", "y_T"],
+
+    // sets the possible DIMENSION names of the z-dimension (two before last) in netcdf file
+    "z_dims": ["ocean_grid_3", "getmGrid3D_getm_3", "pelagic_horizontal_grid_3", "ungridded00024", "z", "level", "zc"],
+
+    // sets the possible DIMENSION names of the time-dimension (four before last) in netcdf file
+    "t_dims": ["time"],
+    
+    
+    
+    // sets the possible ATTRIBUTE name of a variable, this attribute should contain min and max
+    // values of the whole array. Example:
+    // 
+    // float64 bathymetry(lat, lon)
+    //         bathymetry.range: [-0.45, 86.2]
+    "valid_range_attribute_names": ["range", "Range", "valid_range", "Valid_range"],
+    
+    
+    
+    
+    // Following two namelists "lat_dims", "lon_dims" are used to show
+    // additionally Lat and Lon information of the grid cells,
+    //
+    // WARNING !!! ONLY if XY-2D plot is enabled !!!
+    //
+    // This can be seen only on the main-dialog plots (the dialog)
+    // This information is also needed to project data. If dimension name
+    // is not found in variables, returns $None$ (see example 2) for 
+    // that one dimension
+    // 
+    // Example (1):
+    //      assume we have 2D variable $bathymetry(dim1, dim2)$. Also
+    //      assume that these two dimesnions were seccessfully detected,
+    //      and are X, Y dimensions. Let $dim2$ be the x-dimension and
+    //      $dim1$ - the y-dimension. The script will try to FIND in 
+    //      current file VARIABLES that have names specified in the lists
+    //      below ("lat_dims", "lon_dims"). If found in "lat_dims", it will try
+    //      to match the size of found VARIABLE with the $dim1$ (same for 
+    //      "lon_dims" and $dim2$). If so, script assumes that correct lat(lon)
+    //      variable is found and will map data into array of lat/lon values.
+    //      Additional information on mouse-hover will be shown in Tollbar
+    //      
+    // 
+    // Example (2):
+    //    Lets assume we have following 3 dimensions in netcdf file (100x50 grid):
+    //        - lat(100)
+    //        - lon(50)
+    //        - sigma_layer(10)
+    //    and following variable:
+    //        - lat(lat)
+    //        - lon(lon)
+    //        - data(sigma_layer, lat, lon)
+    //
+    //    Then the output of this script for variable $data$ will be list [None, lat, lon],
+    //    
+
+
+    // sets the possible VARIABLE names of the Lat/Lon 1D arrays
+    "lat_dims": ["lat", "lats", "getmGrid2D_getm_lat"], 
+    "lon_dims": ["lon", "lons", "getmGrid2D_getm_lon"],
+    
+    // used when function <Mass fluxes through i,j section> is executed
+    // if true - the program will ignore missing <relative_layer_thickness> variable
+    // and generate some dummy values. This may be usefull to show how script works
+    // if false - user should specify real <relative_layer_thickness> of dimensions
+    // (z,y,x), in order to calculate fluxes
+    "artificial_relative_layer_thickness": true
+}
