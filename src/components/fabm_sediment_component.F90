@@ -846,45 +846,119 @@ module fabm_sediment_component
 
     character(len=ESMF_MAXSTR)  :: name,message,varname
     type(ESMF_Time)             :: currTime
-    integer                     :: localrc,n
+    integer                     :: localrc,n, rank
 
-    integer(ESMF_KIND_I4)          :: ubnd(3),lbnd(3),ownshape(3)
+    integer(ESMF_KIND_I4)          :: ubnd(3),lbnd(3)!,ownshape(3)
+    integer(ESMF_KIND_I4)          :: exportUbnd(3),exportLbnd(3),ownshape(3)
     real(ESMF_KIND_R8), pointer    :: ptr_f3(:,:,:)
     type(ESMF_FieldStatus_Flag)    :: fieldstatus
     type(ESMF_StateItem_Flag)      :: itemtype
-    type(ESMF_Field)               :: field
+    type(ESMF_Field)               :: field, exportField
 
     rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> browse through list of state variables and
     !! copy data from importState fields with same name
     do n=1,size(sed%export_states)
+
       varname=trim(sed%export_states(n)%standard_name)//'_in_soil'
       call ESMF_StateGet(importState, trim(varname), itemType=itemType, rc=localrc)
-      if (itemType==ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
-        call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
-        if (fieldstatus== ESMF_FIELDSTATUS_COMPLETE) then
-          call ESMF_FieldGet(field, farrayPtr=ptr_f3, &
-               exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-          ownshape = shape(sed%export_states(n)%data)
-          if ((ubnd(1)-lbnd(1)+1.ne.ownshape(1)).or. &
-              (ubnd(2)-lbnd(2)+1.ne.ownshape(2)).or. &
-              (ubnd(3)-lbnd(3)+1.ne.ownshape(3))) then
-            write(message,'(A)') trim(name)//' incompatible shape of field'
-            call mossco_fieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            write(message,'(A,4I3,A,4I3)') trim(name)//' own shape', ownshape, ' other shape ', &
-              ubnd(:)-lbnd(:)+ (/1,1,1/)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          end if
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState, rc=localrc)
+        cycle
+      endif
+
+      call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
+
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState, rc=localrc)
+        write(message,'(A)') trim(name)//' incomplete field '
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+
+      endif
+
+      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank /= 3) then
+
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState, rc=localrc)
+        write(message,'(A)') trim(name)//' expected rank 3 but got field '
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+
+      endif
+
+      call ESMF_FieldGet(field, farrayPtr=ptr_f3, &
+        exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !! Need to get shape from exportState field of same name to constrain the indices of the conc field
+      call ESMF_StateGet(exportState, trim(varname), itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(exportState, trim(varname), field=exportfield, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGetBounds(exportField, exclusiveUbound=exportUbnd, exclusiveLbound=exportLbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (any (exportUbnd /= ubnd) .or. any(exportLbnd /= lbnd)) then
+        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        call MOSSCO_StateLog(importState, rc=localrc)
+        write(message,'(A)') trim(name)//' array bounds do not match '
+        call mossco_fieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+
+      endif
+
+
+
+      ! ownshape = shape(sed%export_states(n)%data)
+      !
+      ! if ((ubnd(1)-lbnd(1)+1.ne.ownshape(1)).or. &
+      !         (ubnd(2)-lbnd(2)+1.ne.ownshape(2)).or. &
+      !         (ubnd(3)-lbnd(3)+1.ne.ownshape(3))) then
+      !       write(message,'(A)') trim(name)//' incompatible shape of field'
+      !       call mossco_fieldString(field, message)
+      !       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      !       write(message,'(A,4I3,A,4I3)') trim(name)//' own shape', ownshape, ' other shape ', &
+      !         ubnd(:)-lbnd(:)+ (/1,1,1/)
+      !       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      !       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      ! end if
 #ifdef DEBUG
           if (trim(varname) == 'porosity_in_soil') then
             write(0,*) 'debugging output just before restart update of porosity_in_soil'
@@ -894,25 +968,28 @@ module fabm_sediment_component
             write(0,*) 'porosity',sed%porosity(:,1,1)
           end if
 #endif
-          sed%export_states(n)%data = ptr_f3
-          write(message,'(A)') trim(name)//' hotstarted field'
-          call mossco_fieldString(field, message)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        else
-          write(message,'(A)') trim(name)//' incomplete field'
-          call mossco_fieldString(field, message)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        end if
-      else
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-      end if
+        !   sed%export_states(n)%data = ptr_f3
+        !   write(message,'(A)') trim(name)//' hotstarted field'
+        !   call mossco_fieldString(field, message)
+        !   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        ! else
+        !   write(message,'(A)') trim(name)//' incomplete field'
+        !   call mossco_fieldString(field, message)
+        !   call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        ! end if
+      !end if
+
+      sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), exportLBnd(3):exportUBnd(3)) &
+        = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+      write(message,'(A)') trim(name)//' hotstarted field'
+      call mossco_fieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end do
 
+    !call sed%update_export_states()
     !> check for valid grid and porosity
-    write(0,*) 'fabm_sediment ReadRestart: check domain'
-    call sed%check_domain()
+    !write(0,*) 'fabm_sediment ReadRestart: check domain'
+    !call sed%check_domain()
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
