@@ -84,7 +84,7 @@ function predict_time {
     exit
   fi
   D=$(expr \( ${Y2} - ${Y1} \) \* 365 + \( ${M2} - ${M1} \) \* 31 + ${D2} - ${D1} + 1)
-  M=$(expr $D \* 140 / ${NP})
+  M=$(expr $D \* 40 / ${NP})
   H=$(expr $M / 60)
   M=$(expr $M % 60)
   echo  $H:$M:00
@@ -286,7 +286,7 @@ if [[ "${PPN}" ==  "${NP}" ]]; then
            PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
            NP=$(expr $NODES \* $PPN )
            ;;
-    SLURM)  NODES=$(expr \( $NP - 1 \) / 24 + 1 )
+    SLURM)  NODES=$(expr \( $NP - 1 \) / 48 + 1 )
            PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
            #NP=$(expr $NODES \* $PPN )
            if [[ ${POSTPROCESS} -eq NONE ]]; then
@@ -349,9 +349,9 @@ case ${SYSTEM} in
 
 ###SBATCH --account=${USER}
 #SBATCH --ntasks=${NP}
-#####SBATCH --ntasks-per-core=1
-#####SBATCH --nodes=${NODES}
-#####SBATCH --tasks-per-node=${PPN}
+#SBATCH --ntasks-per-core=1
+#SBATCH --nodes=${NODES}
+#SBATCH --tasks-per-node=${PPN}
 #SBATCH --output=${TITLE}-%j.stdout
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=${WALLTIME}
