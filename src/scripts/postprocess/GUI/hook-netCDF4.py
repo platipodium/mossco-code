@@ -1,1 +1,0 @@
-hiddenimports = ['netCDF4_utils', 'netcdftime']
