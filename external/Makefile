@@ -57,7 +57,7 @@ cvs-clone: flibs-cvs-clone json_clone
 svn-clone: #erosed-svn-clone
 
 update: fabm_update gotm_update getm_update \
-  #flibs-cvs-update json_update #erosed-svn-update
+  flibs-cvs-update json_update #erosed-svn-update
 
 clean: extraclean
 
