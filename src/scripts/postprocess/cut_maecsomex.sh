@@ -27,11 +27,12 @@ fi
 # Determine number of processors to use
 if (( "$#" >2 )) ; then
   n=$3
-else 
+else
   n=4
 fi
 
 latlon='getmGrid3D_getm_lon,getmGrid3D_getm_lat,getmGrid2D_getm_lat,getmGrid2D_getm_lon'
+latloncurv='getmGrid3D_getm_X,getmGrid3D_getm_Y,getmGrid2D_getm_X,getmGrid2D_getm_Y'
 timedim='-d time,1,,2'
 vertdimW='-d getmGrid3D_getm_3,0,29,29'
 vertdimS='-d ungridded00024,0,4,4'
@@ -52,11 +53,11 @@ Svars='dissolved_oxygen_in_soil,dissolved_reduced_substances_in_soil,denitrifica
 
 p=-1
 for F  in $fnameroot.*.nc; do
-  ((p++))  
+  ((p++))
   G='cut.'$p'.nc'
   echo  "$F -> $G"
   #'lat-lon'
-  ncks -O -v $latlon $F $G &
+  ncks -O -v $latlon $latloncurv $F $G &
   pids[$p]=$!
   if [[ $(expr $p % $n) == $(expr $n - 1) ]] ; then
     wait ${pids[$p]}
@@ -75,7 +76,7 @@ echo " done"
 
 p=-1
 for F  in $fnameroot.*.nc; do
-  ((p++))  
+  ((p++))
   G='cut.'$p'.nc'
   #2D vars
   ncks -A $timedim -v ${Hvars} $F $G &
@@ -97,9 +98,9 @@ echo " done"
 
 p=-1
 for F  in $fnameroot.*.nc; do
-  ((p++))  
+  ((p++))
   G='cut.'$p'.nc'
-  #3D vars in water   
+  #3D vars in water
   ncks -A $timedim $vertdimW -v ${Wvars} $F $G &
   pids[$p]=$!
   if [[ $(expr $p % $n) == $(expr $n - 1) ]] ; then
@@ -118,10 +119,10 @@ echo "done"
 
 p=-1
 for F  in $fnameroot.*.nc; do
-  ((p++))  
+  ((p++))
   G='cut.'$p'.nc'
-  #3D vars in soil   
-  ncks -A $timedim $vertdimS -v ${Svars} $F $G &   
+  #3D vars in soil
+  ncks -A $timedim $vertdimS -v ${Svars} $F $G &
   pids[$p]=$!
   if [[ $(expr $p % $n) == $(expr $n - 1) ]] ; then
     wait ${pids[$p]}
@@ -138,4 +139,3 @@ done
 echo " all done"
 
 exit
-
