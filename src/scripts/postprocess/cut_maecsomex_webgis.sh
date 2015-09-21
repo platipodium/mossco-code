@@ -19,7 +19,7 @@ else
 fi
 
 if (( "$#" < 2));then
- fnameroot=mossco_gffn
+ fnameroot=mossco_gffrr
 else
  fnameroot=$2
 fi
@@ -33,15 +33,15 @@ fi
 
 latlon='getmGrid3D_getm_lon,getmGrid3D_getm_lat,getmGrid2D_getm_lat,getmGrid2D_getm_lon'
 latloncurv='getmGrid3D_getm_X,getmGrid3D_getm_Y,getmGrid2D_getm_X,getmGrid2D_getm_Y'
-timedim='-d time,1,,2'
-vertdimW='-d getmGrid3D_getm_3,0,29,29'
-vertdimS='-d ungridded00024,0,4,4'
+timedim='-d time,446,,3'
+#vertdimW='-d getmGrid3D_getm_3,0,29,29'
+#vertdimS='-d ungridded00024,0,4,4'
 
 # Declare a list of variables to extract: 3D fields (Hvars), 4D water fields (Wvars) and 4D soil fields (Svars)
-Hvars='water_depth_at_soil_surface,depth_averaged_x_velocity_in_water,depth_averaged_y_velocity_in_water,dissolved_oxygen_upward_flux_at_soil_surface,dissolved_reduced_substances_upward_flux_at_soil_surface,fast_detritus_C_upward_flux_at_soil_surface' # wave_height,
-Wvars='getmGrid3D_getm_layer,temperature_in_water,Detritus_Carbon_detC_in_water,Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water,Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water,Phytplankton_Carbon_phyC_in_water,Zooplankton_Carbon_zooC_in_water,Chl_chl_in_water'
+Hvars='water_depth_at_soil_surface'
+Wvars='getmGrid3D_getm_layer,temperature_in_water,Detritus_Carbon_detC_in_water,Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water,Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water,Phytplankton_Carbon_phyC_in_water,Chl_chl_in_water'
 #'concentration_of_SPM_in_water_001,concentration_of_SPM_in_water_002'
-Svars='dissolved_oxygen_in_soil,dissolved_reduced_substances_in_soil,denitrification_rate_in_soil,fast_detritus_C_in_soil,slow_detritus_C_in_soil,detritus-P_in_soil,mole_concentration_of_phosphate_in_soil,mole_concentration_of_ammonium_in_soil,mole_concentration_of_nitrate_in_soil'
+Svars='dissolved_oxygen_in_soil,denitrification_rate_in_soil,detritus-P_in_soil,mole_concentration_of_phosphate_in_soil,mole_concentration_of_ammonium_in_soil,mole_concentration_of_nitrate_in_soil'
 
 #another way would be:
 #declare -a vn=("pet_getmGrid2D_getm" "Photosynthetically_Active_Radiation_dPAR_in_water" "temperature_in_water")
