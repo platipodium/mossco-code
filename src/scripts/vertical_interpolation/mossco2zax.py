@@ -26,7 +26,8 @@ if depthname in ncv.keys():
   depth = squeeze(ncv[depthname][:])
 
 if zaxname not in ncv.keys():
-  zlevels = array([250.0,200.0,150.0,100.0,75.0,50.0,40.0,30.0,20.0,10.0,5.0,1.0],dtype='f8')
+  #zlevels = array([250.0,200.0,150.0,100.0,75.0,50.0,40.0,30.0,20.0,10.0,5.0,1.0],dtype='f8')
+  zlevels = array([50.0,45.0,40.0,35.0,30.0,25.0,20.0,15.0,12.5,10.0,7.5,5.0,2.5,1.0],dtype='f8')
   #zlevels = array([0.0,5.0,10.0,20.0,30.0,40.0,50.0,75.0,100.0,150.,200.0,250.0],dtype='f8')
   nc.createDimension(zaxname,len(zlevels))
   v = nc.createVariable(zaxname,'f8',(zaxname,))
