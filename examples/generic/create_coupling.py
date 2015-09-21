@@ -278,6 +278,15 @@ for item in componentList:
     else:
         cplCompList.append(item)
 
+# sort netcdf instances to the beginning of the gridCompList
+sortedGridCompList = []
+for item in gridCompList:
+  if item=='netcdf' or (instanceDict.has_key(item) and instanceDict[item]=='netcdf'):
+    sortedGridCompList.insert(0,item)
+  else:
+    sortedGridCompList.append(item)
+gridCompList = sortedGridCompList
+
 if 'rename_connector' in cplCompList:
   c=cplCompList.pop(cplCompList.index('rename_connector'))
   cplCompList.insert(0,c)
