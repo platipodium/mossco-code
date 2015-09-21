@@ -286,7 +286,7 @@ if [[ "${PPN}" ==  "${NP}" ]]; then
            PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
            NP=$(expr $NODES \* $PPN )
            ;;
-    SLURM)  NODES=$(expr \( $NP - 1 \) / 48 + 1 )
+    SLURM)  NODES=$(expr \( $NP - 1 \) / 24 + 1 )
            PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
            #NP=$(expr $NODES \* $PPN )
            if [[ ${POSTPROCESS} -eq NONE ]]; then
@@ -303,13 +303,13 @@ fi
 
 echo "Building scripts for system ${SYSTEM} with MPI_PREFIX ${MPI_PREFIX} -np ${NP}"
 
-case ${SYSTEM} in
-  SLURM) if [[ ${POSTPROCESS} -eq NONE ]]; then
-           POSTPROCESS=slurm_postprocess.sh
-         fi
-         ;;
-  *)     ;;
-esac
+#case ${SYSTEM} in
+#  SLURM) if [[ ${POSTPROCESS} -eq NONE ]]; then
+#           POSTPROCESS=slurm_postprocess.sh
+#         fi
+#         ;;
+#  *)     ;;
+#esac
 
 if [[ AUTOTITLE -eq 1 ]]; then
   TITLE=${SETUP}-${NODES}x${PPN}-$(basename ${ARG})
