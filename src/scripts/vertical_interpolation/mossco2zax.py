@@ -59,7 +59,7 @@ for var in variables:
     v.standard_name = ncv[var].standard_name
     v.missing_value = fillvalue
     #v.coordinates = zaxname+' '+coords[1]+' '+coords[2]
-    v.coordinates = coords[1]+' '+coords[2]
+    v.coordinates = coords[2]+' '+coords[1]
 
 
 # so far assume sigma coordinates
