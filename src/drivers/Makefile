@@ -24,7 +24,7 @@ ifeq ($(MOSSCO_NETCDF),true)
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-  TARGETS+=libmossco_sediment libmossco_fabmpelagic libmossco_fabm0d
+  TARGETS+=libmossco_sediment libmossco_fabmpelagic #libmossco_fabm0d
   ifeq ($(MOSSCO_GOTM),true)
     ifeq ($(MOSSCO_NETCDF),true)
       TARGETS+=libmossco_fabmgotm
