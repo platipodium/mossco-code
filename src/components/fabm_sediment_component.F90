@@ -987,7 +987,7 @@ module fabm_sediment_component
     end do
 
     !call sed%update_export_states()
-    > check for valid grid and porosity
+    !> check for valid grid and porosity
     write(0,*) 'fabm_sediment ReadRestart: check domain'
     call sed%check_domain()
 
