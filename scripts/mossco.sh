@@ -155,7 +155,7 @@ if ! test -d ${DIR} ; then
 fi
 
 EXE=${DIR}/${ARG}
-EXE=${EXE%%.yaml}
+EXE=${ARG%%.yaml}
 OWD=$(pwd)
 SETUP=${OWD##*/}
 
@@ -188,17 +188,19 @@ if [[ ${GENERIC} == 1 ]] ; then
       fi
     elif test -f ${DIR}/${ARG} ; then
       echo "Using generic file ${ARG} as coupling specification."
+      ARG=${DIR}/$(basename ${ARG})
     elif test -f ${DIR}/${ARG}.yaml ; then
       echo "Using generic file ${ARG}.yaml as coupling specification."
+      ARG=${DIR}/$(basename ${ARG})
     else
       echo
       echo "ERROR: coupling spec ${ARG} or ${DIR}/${ARG}.yaml does not exist"
       echo
       exit 1
     fi
-    cd ${DIR};
-    python create_coupling.py ${ARG} || exit 1
-    cd ${OWD}
+    #cd ${DIR};
+    python ${DIR}/create_coupling.py ${ARG} || exit 1
+    #cd ${OWD}
 
     rm -f ${EXE}
     make -C ${DIR}
@@ -210,6 +212,7 @@ else
   if  [[ ${REMAKE} == 1 ]] ; then
     rm -f ${EXE}
     make -C ${DIR}
+    cp  ${DIR}/{EXE} .
   fi
 fi
 
