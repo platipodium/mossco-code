@@ -43,7 +43,7 @@ export MOSSCO_DIR=/your/path/to/mossco/code
 
 		mkdir -p ${HOME}/opt/bin
 		export PATH=${PATH}:${HOME}/opt/bin
-		ln -sf ${MOSSCO_DIR}/src/scripts/mossco.sh ${HOME}/opt/bin/mossco
+		ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/opt/bin/mossco
 
 > These instructions are valid for a bash/dash shell, your commands may
 > vary for a csh/ksh-like shell.  Of course, you can choose a different

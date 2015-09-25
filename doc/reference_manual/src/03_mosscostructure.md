@@ -21,7 +21,7 @@ At the component level, MOSSCO includes code that exhibits the data from externa
 - is a fully specified ESMF component, i.e. contains SetServices, Initialize, Finalize, and Run routines
 - handles an externally provided clock
 - creates fields on which the external model data is represented
-- is hand-coded or automatically processed (with the `src/scripts/create_component.py` script)
+- is hand-coded or automatically processed (with the `scripts/create_component.py` script)
 
 @subsection structure-example Example
 At the example level, MOSSCO provides examples of ESMF coupled modular systems.  The example level code is a major product of MOSSCO, providing both scientifically exploitable coupled systems, as well as template code for user defined couplings.

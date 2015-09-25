@@ -8,7 +8,7 @@ For this recipe, we assume that you have defined the two environment variables `
 
 First of all, link the script to a convenient location in your local `PATH`, for example by issuing
 
-		ln -s ${MOSSCO_DIR}/src/scripts/mossco.sh ${HOME}/bin/mossco
+		ln -s ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/bin/mossco
 
 If not already done by your system, add this local binary path to your `$PATH` variable
 

@@ -30,8 +30,8 @@ This recipe also assumes that you have downloaded or `git clone`d MOSSCO into a 
         mkdir -p $HOME/opt/bin
         ln -sf /sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/bin/nf-config $HOME/opt/bin
         ln -sf /sw/rhel6-x64/netcdf/netcdf_fortran-4.4.2-intel14/bin/nf-config $HOME/opt/bin
-        ln -sf $MOSSCO_DIR/src/scripts/mossco.sh $HOME/opt/bin/mossco
-        ln -sf $MOSSCO_DIR/src/scripts/postprocess/stitch_tiles.py $HOME/opt/bin/stitch
+        ln -sf $MOSSCO_DIR/scripts/mossco.sh $HOME/opt/bin/mossco
+        ln -sf $MOSSCO_DIR/scripts/postprocess/stitch_tiles.py $HOME/opt/bin/stitch
         export PATH=$HOME/opt/bin:$PATH
 
 Note that aliases don't reliably work  for `nf-config`, so we use soft links here.
