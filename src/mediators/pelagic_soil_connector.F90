@@ -32,6 +32,11 @@ module pelagic_soil_connector
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
 
+  !> parameters
+  real(ESMF_KIND_R8) :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
+  real(ESMF_KIND_R8) :: NC_fdet=0.20d0
+  real(ESMF_KIND_R8) :: NC_sdet=0.04d0
+
   public SetServices
 
   contains
@@ -124,11 +129,23 @@ module pelagic_soil_connector
     integer(ESMF_KIND_I4)       :: rank, ubnd2(2), lbnd2(2), itemCount
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
+    logical                     :: isPresent
+    integer                     :: nmlunit=127
+
+    namelist /pelagic_soil_connector/ sinking_factor,NC_fdet,NC_sdet
 
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, externalClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !read namelist
+    inquire(file=trim(name)//'.nml', exist=isPresent)
+    if (isPresent) then
+      open(nmlunit,file='pelagic_soil_connector.nml',action='read',status='old')
+      read(nmlunit,pelagic_soil_connector)
+      close(nmlunit)
+    endif
 
     !> @todo: check for necessary fields in export state?
 
@@ -157,11 +174,7 @@ module pelagic_soil_connector
     type(ESMF_Time)             :: localtime
     character (len=ESMF_MAXSTR) :: timestring
     type(ESMF_Field)            :: field
-    real(ESMF_KIND_R8),parameter      :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
     real(ESMF_KIND_R8),dimension(:,:),pointer :: CN_det=>null()
-    !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
-    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20d0
-    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet=>null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
