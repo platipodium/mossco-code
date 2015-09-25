@@ -46,6 +46,12 @@ fid.close()
 
 # Search for the key with name "coupling".  If part of the filename is the word "coupling" then assume that the first item on the list read is the name of the coupling
 coupling_name = os.path.splitext(os.path.basename(filename))[0]
+make_path = os.path.dirname( os.path.realpath(__file__) )
+#IamLocal = os.path.relpath( os.getcwd() , make_path ) == '.'
+if os.getcwd() == make_path:
+  coupling_exe = coupling_name
+else:
+  coupling_exe  = os.path.join ( os.getcwd() , coupling_name )
 variables = []
 coupling_properties = []
 
@@ -303,7 +309,7 @@ print 'Base instances to process:', instanceList
 
 # Done parsing the list, now write the new toplevel_component file
 
-outfilename = 'toplevel_component.F90'
+outfilename = os.path.join( os.path.dirname( os.path.realpath(__file__) ) , 'toplevel_component.F90' )
 fid = file(outfilename,'w')
 
 fid.write('''!> @brief Implementation of an ESMF toplevel coupling
@@ -1935,7 +1941,7 @@ end module toplevel_component
 
 fid.close()
 
-outfilename='Makefile.coupling'
+outfilename = os.path.join( os.path.dirname( os.path.realpath(__file__) ) , 'Makefile.coupling' )
 fid = file(outfilename,'w')
 
 fid.write('# This Makefile is part of MOSSCO\n#\n')
@@ -2095,8 +2101,8 @@ for item in gridCompSet.union(cplCompSet):
             fid.write(' ' + dep)
 fid.write(' ' + coupling_name + '\n\n')
 fid.write(coupling_name + ': toplevel_component.o ../common/main.o\n')
-fid.write('\t$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@\n')
-fid.write('\t@echo "Created example binary $(PWD)/$@"\n')
+fid.write('\t$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o '+ coupling_exe + '\n')
+fid.write('\t@echo "Created example binary ' + coupling_exe + '"\n')
 fid.write('''
 
 # Other subsidiary targets that might not be needed, these should evetually
@@ -2143,9 +2149,10 @@ atmos.nc:
 
 clean: extraclean
 extraclean:
-	@-rm -f %s
+''')
 
-'''%coupling_name)
+if os.getcwd() == make_path:
+  fid.write('	@-rm -f ' + coupling_exe)
 fid.close()
 
 
