@@ -36,6 +36,8 @@ The `deep_lake` setup contains suitable information of 3D examples, such as `get
 
 This will take care of all compilation necessary and of executing the script in this setup.
 
+The generation of coupled systems relies on a coupling specification in a `.yaml` format.  You can find several of those configuration specifications in `${MOSSCO_DIR}/examples/generic`. If your personal yaml file (not necessarily located in ${MOSSCO_DIR}/examples/generic) cannot be found, an existing homonymous generic example will be taken. The hardcoded examples are no longer available for this script.
+
 
 ## Options to mossco.sh
 
@@ -45,12 +47,3 @@ After changing the code in `${MOSSCO_DIR}`, you might want to recompile before e
 
 		mossco -r getm--fabm_pelagic--netcdf
 
-### -g: generic
-
-Next to the hardcoded coupled examples in `${MOSSCO_DIR}/examples`, you can also generated coupled system on the fly.  This generation of coupled systems relies on a coupling specification in a `.yaml` format.  You can find several of those configuration specifications in `${MOSSCO_DIR}/examples/generic`
-
-		ls {MOSSCO_DIR}/examples/generic/*.yaml
-
-The hardcoded example from the previous section can also be generated on the the fly when using the `-g` option:
-
-		mossco -g getm--fabm_pelagic--netcdf
