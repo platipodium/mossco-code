@@ -815,8 +815,8 @@ endif
 
 install:
 	mkdir -p $(MOSSCO_DIR)/bin
-	ln -sf $(MOSSCO_DIR)/src/scripts/mossco.sh  $(MOSSCO_DIR)/src/scripts/mossco
-	install  $(MOSSCO_DIR)/src/scripts/mossco $(MOSSCO_INSTALL_PREFIX)/mossco
+	ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_DIR)/bin/mossco
+	install  $(MOSSCO_DIR)/bin/mossco $(MOSSCO_INSTALL_PREFIX)/mossco
 
 .PHONY: mossco_clean
 

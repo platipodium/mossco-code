@@ -23,7 +23,7 @@ fi
 if (( "$#" > 2 ));then
   MOSSCO_DIR=$3
 fi
-toolpath=$MOSSCO_DIR/src/scripts/postprocess
+toolpath=$MOSSCO_DIR/scripts/postprocess
 
 #absname_ncf=$PWD/mossco_gffn.00.nc
 #absname=$outdir/$fnameroot.00.nc
@@ -31,7 +31,7 @@ toolpath=$MOSSCO_DIR/src/scripts/postprocess
 #outdir=$(dirname $absname_ncf)
 #fnameroot="${fname%.*.nc}" #mossco_gffn
 
-toolpath=$MOSSCO_DIR/src/scripts/postprocess
+toolpath=$MOSSCO_DIR/scripts/postprocess
 cutscript=$toolpath/cut_maecsomex.sh 
 pystitchscript=$toolpath/stitch_tiles.py
 pyplotscript=$toolpath/plot_mossco2Dmap.py

@@ -65,7 +65,7 @@ mossco -n ${NP} -t ${TITLE} ${COUPLING}
 INPUT=${PREFIX}.nc ## todo: add index for multi-proc output
 
 # Extract the last timestep
-${MOSSCO_DIR}/src/scripts/cut_revert_last_time.sh ${INPUT}
+${MOSSCO_DIR}/scripts/cut_revert_last_time.sh ${INPUT}
 
 # Find out what file was produced and link it to a generic name, then create
 # the file restart.cfg pointing to this file

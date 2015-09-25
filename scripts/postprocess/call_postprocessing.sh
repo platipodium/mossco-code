@@ -17,7 +17,7 @@ if (( "$#" > 0 ));then
 fi
 system=$2 #todo: doing it as a slurm or sge command on cluster
 
-proc_script=$MOSSCO_DIR/src/scripts/postprocess/process_fabmout.sh
+proc_script=$MOSSCO_DIR/scripts/postprocess/process_fabmout.sh
 fnameroot=mossco_gffn
 user=kerimogl
 remotemachine=grpsrv09
