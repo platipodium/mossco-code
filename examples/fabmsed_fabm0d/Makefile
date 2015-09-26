@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/fabmsed_fabm0d$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/fabmsed_fabm0d$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -28,7 +28,7 @@ exec: libmossco_util libmossco_fabm0d libsediment fabmsed_fabm0d
 
 fabmsed_fabm0d: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_fabm0d libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@

@@ -12,7 +12,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/getm$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/getm$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -33,7 +33,7 @@ libmossco_getm:
 
 getm: toplevel_component.o ../../common/main.o
 	$(F90) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@

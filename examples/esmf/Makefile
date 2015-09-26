@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make

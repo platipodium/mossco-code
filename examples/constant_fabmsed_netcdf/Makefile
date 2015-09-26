@@ -11,7 +11,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/constant_fabmsed_netcdf$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/constant_fabmsed_netcdf$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -44,7 +44,7 @@ deprecation:
 
 constant_fabmsed_netcdf: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@

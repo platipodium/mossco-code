@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/standalone/hamsom/src$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/standalone/hamsom/src$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -34,7 +34,7 @@ hamsom-standalone: F90FLAGS += $(HAMSOM_FFLAGS)
 hamsom-standalone: CPPFLAGS += $(HAMSOM_CPPFLAGS)
 hamsom-standalone: hamsom-standalone.o
 	$(F90) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 #	$(F90)  $(HAMSOM_CPPFLAGS) $(CPPFLAGS) $(HAMSOM_FFLAGS) $(F90FLAGS) $(LDFLAGS) -c $< -o $@
 

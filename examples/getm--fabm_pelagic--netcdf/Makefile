@@ -13,7 +13,7 @@
 TARGET=getm--fabm_pelagic--netcdf
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/getm--fabm_pelagic--netcdf$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/getm--fabm_pelagic--netcdf$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -36,7 +36,7 @@ exec: libmossco_util  libmossco_connector libmossco_netcdf libmossco_getm libmos
 
 $(TARGET): toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) -o $@  $^ $(LDFLAGS)
-	@echo "Created example $(PWD)/$@"
+	@echo "Created example $(CURDIR)/$@"
 
 # Other subsidiary targets that might not be needed, these should evetually
 # end up in some global Rules.make

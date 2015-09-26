@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/common$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/common$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -33,7 +33,7 @@ all: exec
 
 exec: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o example $^ $(LDFLAGS)
-	@echo "Created example binary example in  $(PWD)"	
+	@echo "Created example binary example in  $(CURDIR)"	
 
 main.o: toplevel_component.o
 

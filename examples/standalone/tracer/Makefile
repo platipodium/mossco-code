@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/standalone/tracer/src$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/standalone/tracer/src$,,$(CURDIR))
 endif
 
 #export TRACER_FORCING_ONLINE=false
@@ -31,7 +31,7 @@ libmossco_tracer:
 
 tracer-standalone: tracer-standalone.o
 	$(F90) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 clean: extraclean
 

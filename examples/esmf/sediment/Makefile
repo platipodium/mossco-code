@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/sediment$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/sediment$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -26,7 +26,7 @@ exec: libmossco_util libsediment libconstant sediment
 
 sediment: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
-	@echo "Created example $(PWD)/$@"
+	@echo "Created example $(CURDIR)/$@"
 
 libconstant libsediment:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@

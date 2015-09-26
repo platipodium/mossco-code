@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/constant$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/constant$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -27,7 +27,7 @@ libmossco_util:
 
 constant: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) $(LIBS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libconstant:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@

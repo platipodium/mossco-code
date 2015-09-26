@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/standalone/omexdia_p$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/standalone/omexdia_p$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -31,7 +31,7 @@ libmossco_sediment:
 
 omexdia_p: main.o
 	$(F90) $^ $(FABM_CPPFLAGS) $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 clean: extraclean
 

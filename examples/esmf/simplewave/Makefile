@@ -10,7 +10,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/simplewave$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/simplewave$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -26,7 +26,7 @@ exec: libmossco_util libmossco_simplewave simplewave
 
 simplewave: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@" 
+	@echo "Created example binary $(CURDIR)/$@" 
 
 libmossco_simplewave:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@

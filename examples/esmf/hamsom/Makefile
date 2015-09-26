@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/hamsom$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/hamsom$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -28,7 +28,7 @@ libmossco_util:
 
 hamsom: toplevel_component.o ../../common/main.o
 	$(F90) $^ $(LDFLAGS) $(LIBS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_hamsom:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@

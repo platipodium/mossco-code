@@ -10,7 +10,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/test$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/test$,,$(CURDIR))
 endif
 
 EXTRA_DIST=README.md

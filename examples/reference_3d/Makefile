@@ -11,7 +11,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/reference_3d$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/reference_3d$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -50,7 +50,7 @@ exec: libmossco_util  libconstant libmossco_getm libsediment libmossco_sediment 
 
 reference_3d: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 
 # Other subsidiary targets that might not be needed, these should evetually

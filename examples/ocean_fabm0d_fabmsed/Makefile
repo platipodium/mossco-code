@@ -11,7 +11,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/ocean_fabm0d_fabmsed$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/ocean_fabm0d_fabmsed$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -31,7 +31,7 @@ exec: libmossco_util libmossco_fabm0d libsediment libremtc liboceansedimentcoupl
 
 ocean_fabm0d_fabmsed: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS)  $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@

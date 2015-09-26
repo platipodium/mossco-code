@@ -10,7 +10,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/benthos$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/benthos$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -25,7 +25,7 @@ exec: libmossco_util libmossco_benthos benthos
 
 benthos: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
-	@echo "Created example $(PWD)/$@"
+	@echo "Created example $(CURDIR)/$@"
 
 libmossco_benthos:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@

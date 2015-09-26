@@ -11,7 +11,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/fabm_benthic_pelagic$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/fabm_benthic_pelagic$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -46,7 +46,7 @@ exec: libmossco_util libmossco_fabmgotm libsediment libmossco_sediment libconsta
 
 fabm_benthic_pelagic: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS) $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_fabmgotm libmossco_gotm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@

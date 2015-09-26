@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms. 
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/standalone/erosed$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/standalone/erosed$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -29,7 +29,7 @@ libmossco_erosed libmossco_benthos:
 
 erosed: delft_erosed_example.o
 	$(F90) -o $@ $< $(LDFLAGS)
-	@echo "Created example binary erosed in  $(PWD)" 
+	@echo "Created example binary erosed in  $(CURDIR)" 
 	@echo "Please change to $(MOSSCO_DIR)/examples/standalone/erosed to run the example." > $(MOSSCO_BIN_PATH)/erosed.txt
 
 clean: extraclean

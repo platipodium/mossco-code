@@ -11,7 +11,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/ocean_fabm0d$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/ocean_fabm0d$,,$(CURDIR))
 endif
 
 OCEAN?=GOTM
@@ -43,7 +43,7 @@ exec: libmossco_util libmossco_fabm0d $(dep) ocean_fabm0d
 
 ocean_fabm0d: toplevel_component.o ../common/main.o
 	$(F90) $(F90FLAGS)  $^ $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libremtc:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/remtc $@

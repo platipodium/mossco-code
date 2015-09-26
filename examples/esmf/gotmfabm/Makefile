@@ -10,7 +10,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/gotmfabm$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/gotmfabm$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -33,7 +33,7 @@ exec: libmossco_util libsolver libmossco_gotmfabm gotmfabm
 
 gotmfabm: toplevel_component.o ../../common/main.o
 	$(F90) $^ $(F90FLAGS) $(LDFLAGS) -o $@
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 libmossco_gotmfabm:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components/gotm $@

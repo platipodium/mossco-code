@@ -10,7 +10,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /examples/esmf/fabm0d$,,$(PWD))
+export MOSSCO_DIR=$(subst /examples/esmf/fabm0d$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make
@@ -42,7 +42,7 @@ libmossco_util:
 
 fabm0d: toplevel_component.o ../../common/main.o
 	$(F90) $(F90FLAGS) $^ -o $@ $(LDFLAGS)
-	@echo "Created example binary $(PWD)/$@"
+	@echo "Created example binary $(CURDIR)/$@"
 
 clean: extraclean
 
