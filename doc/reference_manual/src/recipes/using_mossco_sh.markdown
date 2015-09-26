@@ -36,7 +36,7 @@ The `deep_lake` setup contains suitable information of 3D examples, such as `get
 
 This will take care of all compilation necessary and of executing the script in this setup.
 
-The generation of coupled systems relies on a coupling specification in a `.yaml` format.  You can find several of those configuration specifications in `${MOSSCO_DIR}/examples/generic`. If your personal yaml file (not necessarily located in ${MOSSCO_DIR}/examples/generic) cannot be found, an existing homonymous generic example will be taken. The hardcoded examples are no longer available for this script.
+The generation of coupled systems relies on a coupling specification in a `.yaml` format.  You can find several of those configuration specifications in `${MOSSCO_DIR}/examples/generic`. If your personal yaml file (not necessarily located in ${MOSSCO_DIR}/examples/generic) cannot be found, an existing homonymous generic example or an existing homonymous hardcoded examples will be taken.
 
 
 ## Options to mossco.sh
