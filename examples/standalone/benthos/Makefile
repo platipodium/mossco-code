@@ -30,7 +30,7 @@ libmossco_benthos:
 
 benthos: BioDriver.o
 	$(F90) -o $@ $< $(LDFLAGS)
-	@echo "Created example $(MOSSCO_DIR)/examples/standalone/benthos/benthos" 
+	@echo "Created example $(CURDIR)/$@" 
 
 clean: extraclean
 
