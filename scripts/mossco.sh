@@ -137,44 +137,28 @@ if [[ "x${ESMFMKFILE}" == "x" ]]; then
   exit 1
 fi
 
-
-if [[ ${GENERIC} == 1 ]] ; then
-  DIR=${MOSSCO_DIR}/examples/generic
-else
-  DIR=${MOSSCO_DIR}/examples/${ARG}
-fi
-
-if ! test -d ${DIR} ; then
-  echo
-  if [[ ${GENERIC} == 0 ]] ; then
-    echo "ERROR:  \"${ARG}\" is not a valid hardcoded example, ${DIR} does not exist."
-  else
-    echo "ERROR:	${DIR} does not exist. Check your MOSSCO installation."
-  fi
-  usage
-fi
-
-EXE=${DIR}/${ARG}
-EXE=${ARG%%.yaml}
+EXE_BASE=$(basename ${ARG%%.yaml})
 OWD=$(pwd)
 SETUP=${OWD##*/}
 
-
-if [[ ${GENERIC} == 1 ]] ; then
-  if [[ ${REMAKE} == 0 ]] ; then
-    test -x  ${EXE} || REMAKE=1
+if [[ ${REMAKE} == 0 ]] ; then
+  if test -x ${EXE_BASE}; then
+    EXE=${EXE_BASE}
+    echo "Using existing local ${EXE}"
+  else
+    EXE=${MOSSCO_DIR}/examples/${ARG}/${EXE_BASE}
+    if test -x ${EXE}; then
+      echo "Using existing ${EXE}"
+    else
+      REMAKE=1
+      EXE=
+    fi
   fi
-  if  [[ ${REMAKE} == 1 ]] ; then
-    if ! test -f ${DIR}/create_coupling.py ; then
-      echo
-      echo "ERROR: Script create_coupling.py does not exist, check your MOSSCO installation."
-      exit 1
-    fi
-    if ! test -x ${DIR}/create_coupling.py ; then
-      echo
-      echo "ERROR: Script create_coupling.py is not executable, please chmod +x this file."
-      exit 1
-    fi
+fi
+
+if  [[ ${REMAKE} == 1 ]] ; then
+  if [[ ${GENERIC} == 1 ]] ; then
+    DIR=${MOSSCO_DIR}/examples/generic
 
     if test -f ${ARG}; then
       echo "Using local file ${ARG} as coupling specification."
@@ -193,26 +177,36 @@ if [[ ${GENERIC} == 1 ]] ; then
       echo "Using generic file ${ARG}.yaml as coupling specification."
       ARG=${DIR}/$(basename ${ARG})
     else
-      echo
-      echo "ERROR: coupling spec ${ARG} or ${DIR}/${ARG}.yaml does not exist"
-      echo
-      exit 1
+      echo "Coupling spec ${ARG} or ${DIR}/${ARG}.yaml does not exist"
+      GENERIC=0
+      DIR=${MOSSCO_DIR}/examples/${ARG}
+      echo "Trying hardcoded example ${DIR}"
+      if ! test -d ${DIR} ; then
+        echo
+        echo "ERROR:  \"${ARG}\" is not a valid hardcoded example, ${DIR} does not exist."
+        usage
+        exit 1
+      fi
+      EXE=${DIR}/${EXE}
     fi
-    #cd ${DIR};
-    python ${DIR}/create_coupling.py ${ARG} || exit 1
-    #cd ${OWD}
 
-    rm -f ${EXE}
+    if [[ ${GENERIC} == 1 ]]; then
+      if ! test -f ${DIR}/create_coupling.py ; then
+        echo
+        echo "ERROR: Script create_coupling.py does not exist, check your MOSSCO installation."
+        exit 1
+      fi
+      if ! test -x ${DIR}/create_coupling.py ; then
+        echo
+        echo "ERROR: Script create_coupling.py is not executable, please chmod +x this file."
+        exit 1
+      fi
+      python ${DIR}/create_coupling.py ${ARG} || exit 1
+      EXE=${EXE_BASE}
+    fi
+
     make -C ${DIR}
-  fi
-else
-  if [[ ${REMAKE} == 0 ]] ; then
-    test -x  ${EXE} || REMAKE=1
-  fi
-  if  [[ ${REMAKE} == 1 ]] ; then
-    rm -f ${EXE}
-    make -C ${DIR}
-    cp  ${DIR}/{EXE} .
+
   fi
 fi
 
