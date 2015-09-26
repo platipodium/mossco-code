@@ -33,7 +33,7 @@ all: exec
 
 exec: toplevel_component.o main.o
 	$(F90) $(F90FLAGS) -o example $^ $(LDFLAGS)
-	@echo "Created example binary example in  $(CURDIR)"	
+	@echo "Created example binary $(CURDIR)/example"
 
 main.o: toplevel_component.o
 
