@@ -61,11 +61,11 @@ Next, define the NETCDF environment variable needed for GOTM:
 
 # Linking the mossco executable
 
-MOSSCO provides a startup script located in `$MOSSCO_DIR/src/scripts/mossco.sh`.  We recommend that you create a link to this script somewhere in your `$PATH`, e.g.
+MOSSCO provides a startup script located in `$MOSSCO_DIR/scripts/mossco.sh`.  We recommend that you create a link to this script somewhere in your `$PATH`, e.g.
 
 	mkdir -p $HOME/opt/bin
 	export PATH=$PATH:$HOME/opt/bin
-	ln -sf $MOSSCO_DIR/src/scripts/mossco.sh $HOME/opt/bin/mossco
+	ln -sf $MOSSCO_DIR/scripts/mossco.sh $HOME/opt/bin/mossco
 
 Type
 
