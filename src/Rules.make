@@ -22,8 +22,8 @@ ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
 endif
 
-MOSSCO_INSTALL_PREFIX ?= $(PREFIX)/
-MOSSCO_INSTALL_PREFIX ?= $(HOME)/opt/bin/
+PREFIX?=$(HOME)/opt
+MOSSCO_INSTALL_PREFIX?=$(PREFIX)
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the preamble section of this Rules.make in repeated calls.  In most circumstances,
@@ -529,7 +529,7 @@ export MOSSCO_PREFIX
 
 export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
 export MOSSCO_LIBRARY_PATH=$(MOSSCO_PREFIX)/lib/$(FORTRAN_COMPILER)
-export MOSSCO_BIN_PATH=$(MOSSCO_PREFIX)/bin
+export MOSSCO_BIN_PATH=$(MOSSCO_INSTALL_PREFIX)/bin
 
 # 7. Putting everything together.
 # This is the list of ESMF-supported compilers:
@@ -814,9 +814,9 @@ endif
 #$(AR) Trus $(MOSSCO_LIBRARY_PATH)/libgetm_external.a $(GETM_LIBRARY_PATH)/lib*_prod.a
 
 install:
-	mkdir -p $(MOSSCO_DIR)/bin
-	ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_DIR)/bin/mossco
-	install  $(MOSSCO_DIR)/bin/mossco $(MOSSCO_INSTALL_PREFIX)/mossco
+	#mkdir -p $(MOSSCO_DIR)/bin
+	ln -sf $(MOSSCO_DIR)/scripts/mossco.sh  $(MOSSCO_INSTALL_PREFIX)/bin/mossco
+	#install  $(MOSSCO_DIR)/bin/mossco $(MOSSCO_INSTALL_PREFIX)/bin
 
 .PHONY: mossco_clean
 
