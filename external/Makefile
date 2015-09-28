@@ -181,3 +181,12 @@ pyyaml-svn-update:
 	svn update $(MOSSCO_DIR)/external/pyyaml-svn
 	(cd $(MOSSCO_DIR)/external/pyyaml-svn;  $(PYTHON) setup.py install --prefix=$(HOME)/opt)
 	export PYTHONPATH=$(PYTHONPATH):$(HOME)/opt
+
+gitstats-git-clone gitstats-git-update:
+ifeq ($(wildcard $(external_GITSTATSDIR)/src),)
+	$(GIT) clone git://github.com/hoxu/gitstats.git $(external_GITSTATSDIR)
+else
+	( cd $(external_GITSTATSDIR) && $(GIT) pull )
+endif
+	mkdir -p $(HOME)/opt
+	make install PREFIX=$(HOME)/opt
