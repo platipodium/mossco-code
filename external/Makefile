@@ -22,6 +22,7 @@ CVS?=$(shell which cvs)
 SVN?=$(shell which svn)
 GIT?=$(shell which git)
 PYTHON?=$(shell which python)
+PREFIX?=$(HOME)/opt
 
 ifeq ($(GIT),)
   $(error "could not find `git´ executable")
@@ -170,17 +171,15 @@ flibs-cvs-update:
 	(cd $(MOSSCO_DIR)/external/flibs-cvs; \
 	cvs -z3 -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs checkout configure.sh config src make )
 
-pyyaml-svn-clone:
+pyyaml-svn-clone pyyaml-svn-update:
 ifeq ($(wildcard $(MOSSCO_DIR)/external/pyyaml-svn),)
 	svn checkout http://svn.pyyaml.org/pyyaml/trunk pyyaml-svn
-	(cd $(MOSSCO_DIR)/external/pyyaml-svn;  $(PYTHON) setup.py install --prefix=$(HOME)/opt)
-	export PYTHONPATH=$(PYTHONPATH):$(HOME)/opt
-endif
-
-pyyaml-svn-update:
+else
 	svn update $(MOSSCO_DIR)/external/pyyaml-svn
-	(cd $(MOSSCO_DIR)/external/pyyaml-svn;  $(PYTHON) setup.py install --prefix=$(HOME)/opt)
-	export PYTHONPATH=$(PYTHONPATH):$(HOME)/opt
+endif
+	mkdir -p $(PREFIX)
+	(cd $(MOSSCO_DIR)/external/pyyaml-svn;  $(PYTHON) setup.py install --prefix=$(PREFIX))
+	export PYTHONPATH=$(PYTHONPATH):$(PREFIX)
 
 gitstats-git-clone gitstats-git-update:
 ifeq ($(wildcard $(external_GITSTATSDIR)/src),)
@@ -188,5 +187,5 @@ ifeq ($(wildcard $(external_GITSTATSDIR)/src),)
 else
 	( cd $(external_GITSTATSDIR) && $(GIT) pull )
 endif
-	mkdir -p $(HOME)/opt
-	make install PREFIX=$(HOME)/opt
+	mkdir -p $(PREFIX)
+	make install PREFIX=$(PREFIX)
