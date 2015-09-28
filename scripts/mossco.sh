@@ -143,7 +143,7 @@ SETUP=${OWD##*/}
 
 if [[ ${REMAKE} == 0 ]] ; then
   if test -x ${EXE_BASE}; then
-    EXE=${EXE_BASE}
+    EXE=./${EXE_BASE}
     echo "Using existing local ${EXE}"
   else
     EXE=${MOSSCO_DIR}/examples/${ARG}/${EXE_BASE}
@@ -196,7 +196,7 @@ if  [[ ${REMAKE} == 1 ]] ; then
         exit 1
       fi
       python ${DIR}/create_coupling.py ${ARG} || exit 1
-      EXE=${EXE_BASE}
+      EXE=./${EXE_BASE}
     fi
 
     make -C ${DIR}
