@@ -52,16 +52,16 @@ all: clone
 
 clone: $(GIT_CLONE_TARGETS) $(SVN_CLONE_TARGETS) $(CVS_CLONE_TARGETS)
 
-git-clone: fabm_clone  gotm_clone  getm_clone  json_clone
-cvs-clone: flibs-cvs-clone json_clone
+git-clone: fabm_clone  gotm_clone  getm_clone  #json_clone
+cvs-clone: flibs-cvs-clone #json_clone
 svn-clone: #erosed-svn-clone
 
 update: fabm_update gotm_update getm_update \
-  flibs-cvs-update json_update #erosed-svn-update
+  flibs-cvs-update #json_update #erosed-svn-update
 
 clean: extraclean
 
-distclean: getm_distclean gotm_distclean fabm_clean json_clean
+distclean: getm_distclean gotm_distclean fabm_clean #json_clean
 
 extraclean:
 
@@ -90,7 +90,7 @@ endif
 
 json_clone json_update:
 ifeq ($(wildcard $(external_JSONDIR)/src/json_module.F90),)
-	$(GIT) clone https://github.com/jacobwilliams/json-fortran.$(GIT) $(external_JSONDIR)
+	$(GIT) clone https://github.com/jacobwilliams/json-fortran.git $(external_JSONDIR)
 else
 	( cd $(external_JSONDIR) && $(GIT) pull )
 endif
