@@ -21,12 +21,20 @@ SUBDIRS =
 CVS?=$(shell which cvs)
 SVN?=$(shell which svn)
 GIT?=$(shell which git)
+PYTHON?=$(shell which python)
 
 ifeq ($(GIT),)
   $(error "could not find `git´ executable")
   GIT_CLONE_TARGETS=
 else
   GIT_CLONE_TARGETS=git-clone
+endif
+
+ifeq ($(PYTHON),)
+  $(error "could not find `git´ executable")
+  PYTHON_CLONE_TARGETS=
+else
+  PYTHON_CLONE_TARGETS=python-clone
 endif
 
 ifeq ($(SVN),)
@@ -161,3 +169,15 @@ endif
 flibs-cvs-update:
 	(cd $(MOSSCO_DIR)/external/flibs-cvs; \
 	cvs -z3 -d:pserver:anonymous@flibs.cvs.sourceforge.net:/cvsroot/flibs checkout configure.sh config src make )
+
+pyyaml-svn-clone:
+ifeq ($(wildcard $(MOSSCO_DIR)/external/pyyaml-svn),)
+	svn checkout http://svn.pyyaml.org/pyyaml/trunk pyyaml-svn
+	(cd $(MOSSCO_DIR)/external/pyyaml-svn;  $(PYTHON) setup.py install --prefix=$(HOME)/opt)
+	export PYTHONPATH=$(PYTHONPATH):$(HOME)/opt
+endif
+
+pyyaml-svn-update:
+	svn update $(MOSSCO_DIR)/external/pyyaml-svn
+	(cd $(MOSSCO_DIR)/external/pyyaml-svn;  $(PYTHON) setup.py install --prefix=$(HOME)/opt)
+	export PYTHONPATH=$(PYTHONPATH):$(HOME)/opt
