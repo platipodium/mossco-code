@@ -156,28 +156,22 @@ if [[ ${REMAKE} == 0 ]] ; then
   fi
 fi
 
+ARG=${ARG%%.yaml}
+
 if  [[ ${REMAKE} == 1 ]] ; then
   if [[ ${GENERIC} == 1 ]] ; then
     DIR=${MOSSCO_DIR}/examples/generic
 
-    if test -f ${ARG}; then
-      echo "Using local file ${ARG} as coupling specification."
-      if [[ $(dirname ${ARG}) == "." ]] ; then
-        ARG=$(pwd)/$(basename ${ARG})
-      fi
-    elif test -f ${ARG}.yaml; then
+    if test -f ${ARG}.yaml; then
       echo "Using local file ${ARG}.yaml as coupling specification."
       if [[ $(dirname ${ARG}) == "." ]] ; then
         ARG=$(pwd)/$(basename ${ARG})
       fi
-    elif test -f ${DIR}/${ARG} ; then
-      echo "Using generic file ${ARG} as coupling specification."
-      ARG=${DIR}/$(basename ${ARG})
     elif test -f ${DIR}/${ARG}.yaml ; then
       echo "Using generic file ${ARG}.yaml as coupling specification."
       ARG=${DIR}/$(basename ${ARG})
     else
-      echo "Coupling spec ${ARG} or ${DIR}/${ARG}.yaml does not exist"
+      echo "Coupling spec ${ARG}.yaml or ${DIR}/${ARG}.yaml does not exist"
       GENERIC=0
       DIR=${MOSSCO_DIR}/examples/${ARG}
       echo "Trying hardcoded example ${DIR}"
