@@ -11,11 +11,11 @@ Choose a version that has both an `esmf.mk` and a `esmf.mod` file.
 This example assumes that you have downloaded or `git clone`d MOSSCO into a directory referred to by the environment variable `$MOSSCO_DIR`, and have `git clone`d the MOSSCO setups into `$MOSSCO_SETUPDIR`.
 
     export MOSSCO_DIR=/my/path/to/mossco/code
-      export MOSSCO_SETUPDIR=/my/path/to/mossco/setups
+    export MOSSCO_SETUPDIR=/my/path/to/mossco/setups
 
 ## Preparing your environment
 
-    export COMPILER=gnu  # or intel or pgi
+    export COMPILER=intel  # choose from gnu intel, or pgi
     export PATH=/opt/${COMPILER}/openmpi/bin:/opt/${COMPILER}/netcdf/bin:${PATH}
     export PATH=$PATH:$HOME/opt/bin # for mossco.sh link
     export NETCDF=NETCDF4
