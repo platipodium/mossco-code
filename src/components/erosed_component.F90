@@ -575,58 +575,48 @@ contains
 
 
     !! Prepare import state for fields needed in run
-!    if (wave) then
-!      allocate(importList(15))
-!    else
-!      allocate(importList(11))
-!    end if
     if (wave) then
-      allocate(importList(11))
+      allocate(importList(15))
     else
-      allocate(importList(7))
+      allocate(importList(11))
     end if
-    importList(1)%name  = 'water_depth_at_soil_surface'
-    importList(1)%units = 'm'
-    importList(2)%name  = 'layer_height_at_soil_surface'
-    importList(2)%units = 'm'
-    importList(3)%name  = 'depth_averaged_x_velocity_in_water'
-    importList(3)%units = 'm s**-1'
-    importList(4)%name  = 'depth_averaged_y_velocity_in_water'
-    importList(4)%units = 'm s**-1'
-    importList(5)%name  = 'x_velocity_at_soil_surface'
-    importList(5)%units = 'm s**-1'
-    importList(6)%name  = 'y_velocity_at_soil_surface'
-    importList(6)%units = 'm s**-1'
-    importList(7)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
-    importList(7)%units = 'm**2 s**-1'
-!    importList( 8)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
-!    importList( 8)%units = '-'
-!    importList( 9)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
-!    importList( 9)%units = '-'
-!    importList(10)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
-!    importList(10)%units = '-'
-!    importList(11)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
-!    importList(11)%units = '-'
 
-!  if (wave) then
-!       importList(12)%name  = 'wave_height'
-!       importList(12)%units = 'm'
-!       importList(13)%name  = 'wave_period'
-!       importList(13)%units = 's'
-!       importList(14)%name  = 'wave_number'
-!       importList(14)%units = 'm**-1'
-!       importList(15)%name  = 'wave_direction'
-!       importList(15)%units = 'rad'
-!    end if
+    importList( 1)%name  = 'water_depth_at_soil_surface'
+    importList( 1)%units = 'm'
+    importList( 2)%name  = 'layer_height_at_soil_surface'
+    importList( 2)%units = 'm'
+    importList( 3)%name  = 'depth_averaged_x_velocity_in_water'
+    importList( 3)%units = 'm s**-1'
+    importList( 4)%name  = 'depth_averaged_y_velocity_in_water'
+    importList( 4)%units = 'm s**-1'
+    importList( 5)%name  = 'x_velocity_at_soil_surface'
+    importList( 5)%units = 'm s**-1'
+    importList( 6)%name  = 'y_velocity_at_soil_surface'
+    importList( 6)%units = 'm s**-1'
+    importList( 7)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
+    importList( 7)%units = 'm**2 s**-1'
+    importList( 8)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
+    importList( 8)%units = '-'
+    importList( 8)%optional = .true.
+    importList( 9)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
+    importList( 9)%units = '-'
+    importList( 9)%optional = .true.
+    importList(10)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
+    importList(10)%units = '-'
+    importList(10)%optional = .true.
+    importList(11)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
+    importList(11)%units = '-'
+    importList(11)%optional = .true.
+
     if (wave) then
-       importList( 8)%name  = 'wave_height'
-       importList( 8)%units = 'm'
-       importList( 9)%name  = 'wave_period'
-       importList( 9)%units = 's'
-       importList(10)%name  = 'wave_number'
-       importList(10)%units = 'm**-1'
-       importList(11)%name  = 'wave_direction'
-       importList(11)%units = 'rad'
+       importList(12)%name  = 'wave_height'
+       importList(12)%units = 'm'
+       importList(13)%name  = 'wave_period'
+       importList(13)%units = 's'
+       importList(14)%name  = 'wave_number'
+       importList(14)%units = 'm**-1'
+       importList(15)%name  = 'wave_direction'
+       importList(15)%units = 'rad'
     end if
 
     do i=1,size(importList)
@@ -788,6 +778,7 @@ contains
       call ESMF_StateGet(importState,trim(importList(i)%name),field)
       call ESMF_FieldGet(field,status=status)
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+        if ( importList(i)%optional ) cycle
         call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
         call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
@@ -1086,6 +1077,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null(),nybot=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveH=>null(),waveT=>null(),waveK=>null(),waveDir=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: microEro=>null(),microTau=>null(),macroEro=>null(),macroTau=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
@@ -1282,29 +1274,26 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
 !-----
 
-      depth => importList(1)%data
-      hbot  => importList(2)%data
-      u2d   => importList(3)%data
-      v2d   => importList(4)%data
-      ubot  => importList(5)%data
-      vbot  => importList(6)%data
-      nybot => importList(7)%data
+      depth    => importList( 1)%data
+      hbot     => importList( 2)%data
+      u2d      => importList( 3)%data
+      v2d      => importList( 4)%data
+      ubot     => importList( 5)%data
+      vbot     => importList( 6)%data
+      nybot    => importList( 7)%data
+
+      microTau => importList( 8)%data
+      microEro => importList( 9)%data
+      macroTau => importList(10)%data
+      macroEro => importList(11)%data
 
       if (wave) then
-        waveH   => importList( 8)%data
-        waveT   => importList( 9)%data
-        waveK   => importList(10)%data
-        waveDir => importList(11)%data
-
+        waveH   => importList(12)%data
+        waveT   => importList(13)%data
+        waveK   => importList(14)%data
+        waveDir => importList(15)%data
       end if
 
-!     if (wave) then
-!        waveH   => importList(12)%data
-!        waveT   => importList(13)%data
-!        waveK   => importList(14)%data
-!        waveDir => importList(15)%data
-!
-!      end if
       if (localrc == 0) then
          do j=1,jnum
           do i= 1, inum
@@ -1380,83 +1369,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !-------
 
     !> get bio effects
-    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else
-    !> in else-case the initial values equalt to 1.0 are used.
-    call ESMF_StateGet(importState, 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
-      itemType=itemType, rc=localrc)
-    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    BioEffects%ErodibilityEffect = 1.0_fp
+    if ( associated(microEro) ) BioEffects%ErodibilityEffect = BioEffects%ErodibilityEffect * microEro
+    if ( associated(macroEro) ) BioEffects%ErodibilityEffect = BioEffects%ErodibilityEffect * macroEro
 
-    if (itemType == ESMF_STATEITEM_FIELD) then
-      call ESMF_StateGet(importState,'Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
-        Microphytobenthos_erodibility,rc=localrc)
-      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet (field = Microphytobenthos_erodibility, farrayPtr=ptr_f2, rc=localrc)
-      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    BioEffects%TauEffect = 1.0_fp
+    if ( associated(microEro) ) BioEffects%TauEffect = BioEffects%TauEffect * microTau
+    if ( associated(macroEro) ) BioEffects%TauEffect = BioEffects%TauEffect * macroTau
 
-      BioEffects%ErodibilityEffect = ptr_f2
-#ifdef DEBUG
-        write (*,*) 'in erosed component run:MPB BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
-#endif
-    end if
-
-    !> Find Effect_of_MPB_on_sediment_erodibility_at_soil_surface, if found, apply it, else
-    !> in else-case the initial values equalt to 1.0 are used.
-    call ESMF_StateGet(importState, 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
-      itemType=itemType, rc=localrc)
-    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemType == ESMF_STATEITEM_FIELD) then
-      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
-        Macrofauna_erodibility,rc=localrc)
-      if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet (field = Macrofauna_erodibility, farrayPtr=ptr_f2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      BioEffects%ErodibilityEffect = ptr_f2 * BioEffects%ErodibilityEffect
-
-    endif
-
-    call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
-      itemType=itemType ,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemType==ESMF_STATEITEM_FIELD) then
-      call ESMF_StateGet(importState,'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface', &
-        Microphytobenthos_critical_bed_shearstress ,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet (field = Microphytobenthos_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      BioEffects%TauEffect = ptr_f2
-    endif
-
-    call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
-      itemType=itemType ,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemType==ESMF_STATEITEM_FIELD) then
-      call ESMF_StateGet(importState,'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface', &
-        Macrofauna_critical_bed_shearstress ,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet (field = Macrofauna_critical_bed_shearstress , farrayPtr=ptr_f2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      BioEffects%TauEffect = ptr_f2 * BioEffects%TauEffect
-    endif
 
    ! filtering missing values (land)
     do j = 1, jnum
