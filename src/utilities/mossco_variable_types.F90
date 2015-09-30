@@ -13,6 +13,7 @@ module mossco_variable_types
     character(len=255) :: units = ''    ! Units
     character(len=511) :: standard_name = '' ! CF standard name
     character(len=511) :: description = '' ! long description
+    logical            :: optional = .false.
     contains
       procedure :: as_yaml
 
