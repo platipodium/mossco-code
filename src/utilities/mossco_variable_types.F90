@@ -32,24 +32,24 @@ integer, parameter :: MOSSCO_KIND_R8=selected_real_kind(13)
   end type
 
   type, extends(MOSSCO_VariableFloat), public :: MOSSCO_VariableFArray0d
-     real(MOSSCO_KIND_R8), pointer :: data=NULL()
+     real(MOSSCO_KIND_R8), pointer :: data=>NULL()
      integer :: rank = 0
   end type
   type, extends(MOSSCO_VariableFloat), public :: MOSSCO_VariableFArray1d
-     real(MOSSCO_KIND_R8), pointer, dimension(:) :: data=NULL()
+     real(MOSSCO_KIND_R8), pointer, dimension(:) :: data=>NULL()
      integer :: rank = 1
   end type
   type, extends(MOSSCO_VariableFloat), public :: MOSSCO_VariableFArray2d
-     real(MOSSCO_KIND_R8), pointer, dimension(:,:) :: data=NULL()
+     real(MOSSCO_KIND_R8), pointer, dimension(:,:) :: data=>NULL()
      integer :: rank = 2
 
   end type
   type, extends(MOSSCO_VariableFloat), public :: MOSSCO_VariableFArray3d
-     real(MOSSCO_KIND_R8), pointer, dimension(:,:,:) :: data=NULL()
+     real(MOSSCO_KIND_R8), pointer, dimension(:,:,:) :: data=>NULL()
      integer :: rank = 3
   end type
   type, extends(MOSSCO_VariableFloat), public :: MOSSCO_VariableFArray4d
-     real(MOSSCO_KIND_R8), pointer, dimension(:,:,:,:) :: data=NULL()
+     real(MOSSCO_KIND_R8), pointer, dimension(:,:,:,:) :: data=>NULL()
      integer :: rank = 4
   end type
 
