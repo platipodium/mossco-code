@@ -1374,8 +1374,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if ( associated(macroEro) ) BioEffects%ErodibilityEffect = BioEffects%ErodibilityEffect * macroEro
 
     BioEffects%TauEffect = 1.0_fp
-    if ( associated(microEro) ) BioEffects%TauEffect = BioEffects%TauEffect * microTau
-    if ( associated(macroEro) ) BioEffects%TauEffect = BioEffects%TauEffect * macroTau
+    if ( associated(microTau) ) BioEffects%TauEffect = BioEffects%TauEffect * microTau
+    if ( associated(macroTau) ) BioEffects%TauEffect = BioEffects%TauEffect * macroTau
 
 
    ! filtering missing values (land)
