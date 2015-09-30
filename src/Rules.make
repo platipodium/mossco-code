@@ -22,8 +22,7 @@ ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
 endif
 
-PREFIX?=$(HOME)/opt
-MOSSCO_INSTALL_PREFIX?=$(PREFIX)
+MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
 
 # Filter out all MAKELEVELS that are not 1 or 0 to avoid unneccessary execution
 # of the preamble section of this Rules.make in repeated calls.  In most circumstances,
@@ -519,12 +518,7 @@ ifeq ($(wildcard $(MOSSCO_DIR)),)
 $(error the directory MOSSCO_DIR=$(MOSSCO_DIR) does not exist)
 endif
 
-MOSSCO_PREFIX=$(MOSSCO_DIR)
-ifdef PREFIX
-  ifneq ($(wildcard $(PREFIX)),)
-    MOSSCO_PREFIX=$(PREFIX)
-  endif
-endif
+MOSSCO_PREFIX?=$(MOSSCO_DIR)
 export MOSSCO_PREFIX
 
 export MOSSCO_MODULE_PATH=$(MOSSCO_PREFIX)/modules/$(FORTRAN_COMPILER)
