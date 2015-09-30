@@ -12,7 +12,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /src/components$,,$(PWD))
+export MOSSCO_DIR=$(subst /src/components$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make

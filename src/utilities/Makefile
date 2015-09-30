@@ -10,7 +10,7 @@
 #
 
 ifndef MOSSCO_DIR
-export MOSSCO_DIR=$(subst /src/utilities$,,$(PWD))
+export MOSSCO_DIR=$(subst /src/utilities$,,$(CURDIR))
 endif
 
 include $(MOSSCO_DIR)/src/Rules.make

@@ -510,7 +510,7 @@ ifndef MOSSCO_DIR
   ifdef MOSSCODIR
     MOSSCO_DIR=$(MOSSCODIR)
   else
-    MOSSCO_DIR=$(subst /src$,,$(PWD))
+    MOSSCO_DIR=$(subst /src$,,$(CURDIR))
   endif
 endif
 export MOSSCO_DIR
