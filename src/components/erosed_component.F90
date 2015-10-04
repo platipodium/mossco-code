@@ -395,6 +395,7 @@ contains
 
     if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
     if (.not.associated(BioEffects%TauEffect))         allocate (BioEffects%TauEffect(inum,jnum))
+!   TODO: Replace static allocation to 30 layers !!!!!
     if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,30,nfrac))
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
@@ -1215,7 +1216,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           !> @todo unclear which localrc is excpected here
           !write (0,*) 'shape of spm_concentration original', shape (ptr_f3)
           if (localrc == ESMF_SUCCESS) then
-            spm_concentration(:,:,:,nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1:30)
+            spm_concentration(:,:,:ubnd(3),nfrac_by_external_idx(external_index)) = ptr_f3(1:inum,1:jnum,1:)
           else
             write(0,*) 'cannot find SPM fraction',n
           end if
