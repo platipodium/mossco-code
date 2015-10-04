@@ -61,11 +61,12 @@ call M_Balthica%set(spatialvar,Biounit)
 
 end subroutine Macrofauna_set
 !*********************************************************************************
-subroutine Macrofauna_run(Total_Bioturbation)
+subroutine Macrofauna_run(Total_Bioturbation, inum, jnum)
 
 implicit none
 !#ifdef DEBUG
 type (BioturbationEffect) ::Total_Bioturbation
+integer , intent (in)     :: inum, jnum  ! dimesions of grid in x and y directions
 
 
 ! The run method of new species should be called here, to calculate the biological effect of
@@ -80,8 +81,8 @@ call M_Balthica%run()
 ! In case of extending the following equation to further effects such as i.e. Tellina fabula it should look like the following:
 !Total_Bioturbation%TauEffect = M_Balthica%Bioturbation%TauEffect * T_fabula%Taueffect * ...
 
-Total_Bioturbation%ErodibilityEffect = M_Balthica%Bioturbation%ErodibilityEffect
-Total_Bioturbation%TauEffect         = M_Balthica%Bioturbation%TauEffect
+Total_Bioturbation%ErodibilityEffect(1:inum,1:jnum) = M_Balthica%Bioturbation%ErodibilityEffect
+Total_Bioturbation%TauEffect        (1:inum,1:jnum) = M_Balthica%Bioturbation%TauEffect
 #ifdef DEBUG
 Write (*,*) ' The macrofauna effect on the sediment erodibility is the factor:'     , Total_Bioturbation%ErodibilityEffect
 Write (*,*) ' The macrofauna effect on the critical bed shear stress is the factor:',Total_Bioturbation%TauEffect
