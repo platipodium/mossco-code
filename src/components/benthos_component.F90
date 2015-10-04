@@ -34,15 +34,9 @@ module benthos_component
   private
 
   !! @todo hn: read CF documnetation for correct name
-  type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
+  type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList,exportList
   ! Dimensions (x,y,z)
-  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_MPB_on_sediment_erodibility_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_MPB_on_critical_bed_shearstress
-  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
-  real(ESMF_KIND_R8), dimension(:,:), pointer :: Effect_of_Mbalthica_on_critical_bed_shearstress
   integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
-  type(ESMF_Field), save         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
-    &                               Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
   integer                        :: ubnd(3),lbnd(3)
 
   type (microphytobenthos) ,save :: Micro
@@ -168,7 +162,6 @@ contains
 
     type(ESMF_Grid)        :: grid, foreign_grid
     type(ESMF_DistGrid)    :: distgrid
-    type(ESMF_Array)       :: array
     type(ESMF_Field)       :: field
 
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
@@ -311,14 +304,6 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
-    call Micro%initialize(inum, jnum)
-    call Micro%set()
-
-    call Macrofauna_init(Total_Bioturb,inum, jnum)
-    call Macrofauna_set()
-
-
     !> create import lists for reading abunadnace and biomass from fields
     !> (for example read by netcdf-input component)
     allocate (importList(2))
@@ -356,133 +341,37 @@ contains
 
     end do
 
+!!! Advertise Export Fields
+    allocate (exportList(4))
+    exportList(1)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
+    exportList(1)%units = ''
+    exportList(2)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
+    exportList(2)%units = ''
+    exportList(3)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
+    exportList(3)%units = ''
+    exportList(4)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
+    exportList(4)%units = ''
 
-   !> create export fields
-    allocate(Effect_of_MPB_on_sediment_erodibility_at_bottom(inum,jnum))
-    Effect_of_MPB_on_sediment_erodibility_at_bottom => Micro%ErodibilityEffect
-!#define DEBUG
-
-#ifdef DEBUG
-    write(0,*) ' Effect_of_MPB_on_sediment_erodibility_at_soil_surface', &
-    Effect_of_MPB_on_sediment_erodibility_at_bottom !, ubound(Effect_of_MPB_on_sediment_erodibility_at_bottom)
-#endif
-
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag, &
-      farray=Effect_of_MPB_on_sediment_erodibility_at_bottom,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    Microphytobenthos_erodibility = ESMF_FieldCreate(grid, array, &
-      name="Effect_of_MPB_on_sediment_erodibility_at_soil_surface", &
-      staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_AttributeSet(Microphytobenthos_erodibility, 'creator', trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    allocate(Effect_of_MPB_on_critical_bed_shearstress(inum,jnum))
-
-    Effect_of_MPB_on_critical_bed_shearstress => Micro%TauEffect
-
-#ifdef DEBUG
-    write(0,*) 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface',&
-     Effect_of_MPB_on_critical_bed_shearstress
-#endif
-
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag, &
-      farray=Effect_of_MPB_on_critical_bed_shearstress, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    Microphytobenthos_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_AttributeSet(Microphytobenthos_critical_bed_shearstress, 'creator', trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    allocate( Effect_of_Mbalthica_on_sediment_erodibility_at_bottom(inum,jnum))
-
-    Effect_of_Mbalthica_on_sediment_erodibility_at_bottom => Total_Bioturb%ErodibilityEffect
-
-#ifdef DEBUG
-    write(0,*) 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface', &
-    Effect_of_Mbalthica_on_sediment_erodibility_at_bottom
-#endif
-
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag,  &
-      farray=Effect_of_Mbalthica_on_sediment_erodibility_at_bottom, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    Macrofauna_erodibility= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_AttributeSet(Macrofauna_erodibility, 'creator', trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    allocate(Effect_of_Mbalthica_on_critical_bed_shearstress(inum,jnum))
-
-    Effect_of_Mbalthica_on_critical_bed_shearstress => Total_Bioturb%TauEffect
-
-#ifdef DEBUG
-    write(0,*) 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface',&
-    Effect_of_Mbalthica_on_critical_bed_shearstress
-#endif
-
-    array = ESMF_ArrayCreate(distgrid=distgrid,indexflag=indexFlag, &
-      farray=Effect_of_Mbalthica_on_critical_bed_shearstress, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    Macrofauna_critical_bed_shearstress= ESMF_FieldCreate(grid, array, &
-      name="Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_AttributeSet(Macrofauna_critical_bed_shearstress, 'creator', trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !> set export state
-    call ESMF_StateAdd(exportState,(/Microphytobenthos_erodibility/),rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateAdd(exportState,(/Microphytobenthos_critical_bed_shearstress/),rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateAdd(exportState,(/Macrofauna_erodibility/),rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateAdd(exportState,(/Macrofauna_critical_bed_shearstress/),rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_StatePrint(exportstate, nestedFlag=.true.,rc=rc)
-#ifdef DEBUG
-    call ESMF_FieldPrint (Microphytobenthos_erodibility)
-      write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
-
-    call ESMF_FieldPrint (Microphytobenthos_critical_bed_shearstress)
-      write(0,*) 'Mircrophy. Tau effect', Micro%TauEffect
-
-    call ESMF_FieldPrint (Macrofauna_erodibility)
-      write(0,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
-
-    call ESMF_FieldPrint (Macrofauna_critical_bed_shearstress)
-      write(0,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
-#endif
+    do i=1,size(exportList)
+      field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldEmptySet(field,grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'creator',trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(field,'units',trim(exportList(i)%units), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_StateAdd(exportState,(/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end do
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
+
+
 #undef  ESMF_METHOD
 #define ESMF_METHOD "InitializeP2"
   subroutine InitializeP2(gridComp, importState, exportState, clock, rc)
@@ -610,6 +499,55 @@ contains
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
+
+!   Complete Export Fields
+    do i=1,size(exportList)
+      call ESMF_StateGet(exportState,trim(exportList(i)%name),field)
+      call ESMF_FieldGet(field,status=status)
+      if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
+        call ESMF_LogWrite(' export to internal field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
+        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+        call ESMF_FieldEmptyComplete(field,exportList(i)%data,                &
+                                     ESMF_INDEX_DELOCAL,                      &
+                                     totalLWidth=exclusiveLBound-totalLBound, &
+                                     totalUWidth=totalUBound-exclusiveUBound)
+        exportList(i)%data = 0.0d0
+      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
+        call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
+        call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
+        if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
+        if (.not. (      all(lbound(exportList(i)%data) .eq. totalLBound) &
+                   .and. all(ubound(exportList(i)%data) .eq. totalUBound) ) ) then
+          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        end if
+      else
+        call ESMF_LogWrite('empty field: '//trim(exportList(i)%name),ESMF_LOGMSG_ERROR, &
+                           line=__LINE__,file=__FILE__,method='InitializeP2()')
+        call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      end if
+    end do
+
+    call Micro%initialize(inum, jnum)
+    call Macrofauna_init(Total_Bioturb,inum, jnum)
+
+    deallocate(Micro%ErodibilityEffect)
+    deallocate(Micro%TauEffect)
+    deallocate(Total_Bioturb%ErodibilityEffect)
+    deallocate(Total_Bioturb%TauEffect)
+
+    Micro%ErodibilityEffect         => exportList(1)%data
+    Micro%TauEffect                 => exportList(2)%data
+    Total_Bioturb%ErodibilityEffect => exportList(3)%data
+    Total_Bioturb%TauEffect         => exportList(4)%data
+
+    call Micro%set()
+    call Macrofauna_set()
+
+!#define DEBUG
+#ifdef DEBUG
+    call ESMF_StatePrint(exportstate, nestedFlag=.true.,rc=rc)
+#endif
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -744,29 +682,16 @@ contains
 
 
     call Micro%run()
-    call Macrofauna_run(Total_Bioturb)
+    call Macrofauna_run(Total_Bioturb, inum, jnum)
 
 
 #ifdef DEBUG
-    call ESMF_FieldPrint (Microphytobenthos_erodibility)
-
     write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
-
-    call ESMF_FieldPrint (Microphytobenthos_critical_bed_shearstress)
-
     write(0,*) 'Mircrophy. Tau effect', Micro%TauEffect
-
-    call ESMF_FieldPrint (Macrofauna_erodibility)
-
     write(0,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
-
-    call ESMF_FieldPrint (Macrofauna_critical_bed_shearstress)
-
     write(0,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
-
     write(0,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= ',&
       &   Total_Bioturb%TauEffect, 'Both Biotic erodibility',Total_Bioturb%ErodibilityEffect
-
     write(0,*)
 #endif
 
@@ -825,10 +750,6 @@ contains
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
     !! 2. Deallocate all your model's internal allocated memory
-    deallocate (Effect_of_MPB_on_sediment_erodibility_at_bottom)
-    deallocate (Effect_of_MPB_on_critical_bed_shearstress)
-    deallocate (Effect_of_Mbalthica_on_sediment_erodibility_at_bottom)
-    deallocate (Effect_of_Mbalthica_on_critical_bed_shearstress)
 
     call ESMF_ClockDestroy(clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
