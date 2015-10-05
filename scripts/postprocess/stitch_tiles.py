@@ -29,8 +29,13 @@ else:
 
 pattern=prefix + u'.*.nc'
 files=glob.glob(pattern)
+
+if len(sys.argv) > 3:
+  outfile=sys.argv[3]
+else:
+  outfile=prefix + '_stitched.nc'
+
     
-outfile=prefix + '_stitched.nc'
 
 if len(files)<1:
   print "Did not find any files for pattern "+pattern
