@@ -19,7 +19,6 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "fabm_gotm_component.F90"
 
-
 module fabm_gotm_component
 
   use esmf
@@ -35,8 +34,6 @@ module fabm_gotm_component
 
   use gotm_mossco_fabm
   use mossco_variable_types
-  use mossco_state
-  use mossco_strings
 
   implicit none
 
@@ -58,7 +55,6 @@ module fabm_gotm_component
   character(len=80)         :: title,name
   integer                   :: nlev
   GOTM_REALTYPE             :: latitude,longitude,depth
-
 
   public :: SetServices
 
@@ -312,6 +308,8 @@ module fabm_gotm_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
+
+    use mossco_strings
 
     use meanflow, only : gotm_temperature => T
     use meanflow, only : gotm_salinity => S
@@ -577,6 +575,9 @@ module fabm_gotm_component
 #undef  ESMF_METHOD
 #define ESMF_METHOD "set_import_flags"
   subroutine set_import_flags(importState)
+
+    use mossco_state
+
     type(ESMF_State)           :: importState
     character(len=ESMF_MAXSTR) :: name,varname
     integer                    :: n
