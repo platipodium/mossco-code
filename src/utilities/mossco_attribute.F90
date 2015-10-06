@@ -54,11 +54,11 @@ contains
 
     attributeString=''
     do i=lbound(stringList,1), ubound(stringList,1)
-      if (len_trim(attributeString)>0) write(attributeString,'(A)') ','
-      write(attributeString,'(A)') trim(stringlist(i))
+      if (len_trim(attributeString)>0) write(attributeString,'(A)') trim(attributeString)//','
+      write(attributeString,'(A)') trim(attributeString)//trim(stringlist(i))
     enddo
 
-    call ESMF_AttributeSet(state, trim(attributeName), value=attributeString, rc=localrc)
+    call ESMF_AttributeSet(state, trim(attributeName), value=trim(attributeString), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -81,8 +81,8 @@ contains
 
     attributeString=''
     do i=lbound(stringList,1), ubound(stringList,1)
-      if (len_trim(attributeString)>0) write(attributeString,'(A)') ','
-      write(attributeString,'(A)') trim(stringlist(i,1))//'='//trim(stringlist(i,2))
+      if (len_trim(attributeString)>0) write(attributeString,'(A)') trim(attributeString)//','
+      write(attributeString,'(A)') trim(attributeString)//trim(stringlist(i,1))//'='//trim(stringlist(i,2))
     enddo
 
     call ESMF_AttributeSet(state, trim(attributeName), value=attributeString, rc=localrc)
