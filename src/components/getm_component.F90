@@ -258,7 +258,9 @@ module getm_component
     character(len=8)        :: datestr
     character(len=10)       :: timestr
     character(len=19)       :: TimeStrISOFrac,start_external,stop_external
+#ifdef GETM_PARALLEL
     character(len=MPI_MAX_ERROR_STRING) :: mpierrmsg
+#endif
     type(ESMF_FieldBundle)  :: fieldBundle
     integer(ESMF_KIND_I4) :: localrc
     character(ESMF_MAXSTR)  :: name
