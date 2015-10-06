@@ -1033,6 +1033,11 @@ module getm_component
    allocate(zc(E2DFIELD ,1:klen))
    allocate(zx(E2DXFIELD,0:klen))
 
+   allocate(cosconv(E2DFIELD))
+   allocate(sinconv(E2DFIELD))
+   cosconv = cos( deg2rad*convc )
+   sinconv = sin( deg2rad*convc )
+
 #ifdef FOREIGN_GRID
    allocate(U3D(I2DFIELD,0:klen))
    allocate(V3D(I2DFIELD,0:klen))
@@ -1099,10 +1104,6 @@ module getm_component
             windU => u10
             windV => v10
          end if
-         allocate(cosconv(E2DFIELD))
-         allocate(sinconv(E2DFIELD))
-         cosconv = cos( deg2rad*convc )
-         sinconv = sin( deg2rad*convc )
       end if
    end if
 
@@ -1885,9 +1886,11 @@ module getm_component
    use m2d            ,only: dtm
    use meteo          ,only: metforcing,met_method,METEO_CONST,METEO_FROMFILE
    use meteo          ,only: u10,v10,swr_=>swr
-   use waves          ,only: waveforcing_method,WAVES_FROMWIND,WAVES_FROMFILE
+   use waves          ,only: waveforcing_method,NO_WAVES,WAVES_FROMWIND,WAVES_FROMFILE
+   use waves          ,only: waves_method,WAVES_NOSTOKES
    use variables_waves,only: waveH_=>waveH,waveT_=>waveT,waveK_=>waveK
    use variables_waves,only: coswavedir,sinwavedir
+   use variables_waves,only: UStokesC,VStokesC,uuStokesC,vvStokesC
 
    IMPLICIT NONE
 !
@@ -2074,6 +2077,29 @@ module getm_component
 
    if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
       waveDir = atan2(sinwavedir,coswavedir)
+   end if
+   if (waveforcing_method .ne. NO_WAVES .and. waves_method.ne.WAVES_NOSTOKES) then
+!     provide Eulerian velocities
+      U2D = U2D - (  cosconv*UStokesC + sinconv*VStokesC )/Dvel
+      V2D = V2D - ( -sinconv*UStokesC + cosconv*VStokesC )/Dvel
+#ifndef NO_3D
+      if (klen .gt. 1) then
+         if (associated(U3D)) then
+            do k=1,kmax
+               U3D(:,:,k) = U3D(:,:,k) - (  cosconv*uuStokesC(:,:,k) + sinconv*vvStokesC(:,:,k) )/hvel(:,:,k)
+            end do
+         else
+            Ubot = Ubot - (  cosconv*uuStokesC(:,:,1) + sinconv*vvStokesC(:,:,1) )/hvel(:,:,1)
+         end if
+         if (associated(V3D)) then
+            do k=1,kmax
+               V3D(:,:,k) = V3D(:,:,k) - ( -sinconv*uuStokesC(:,:,k) + cosconv*vvStokesC(:,:,k) )/hvel(:,:,k)
+            end do
+         else
+            Vbot = Vbot - ( -sinconv*uuStokesC(:,:,1) + cosconv*vvStokesC(:,:,1) )/hvel(:,:,1)
+         end if
+      end if
+#endif
    end if
 
 
