@@ -258,7 +258,7 @@ if [[ ${NP} == NONE ]]; then
   if test -f par_setup.dat ; then
     NP=$(head -n 1 par_setup.dat)
   else
-    NP=1
+    NP=0
   fi
 fi
 
