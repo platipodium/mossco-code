@@ -342,23 +342,27 @@ EMAIL=${MOSSCO_USER_EMAIL:-$(who am i |cut -f1 -d" ")@$(hostname)}
 WALLTIME=$(predict_time $NP)
 
 case ${SYSTEM} in
-  SLURM) cat << EOT > slurm.sh
-#!/bin/bash -x
+  SLURM) 
+    echo '#!/bin/bash -x' > slurm.sh
+    if [ ! $(echo $(hostname) | grep -q mlogin) ]; then
+      echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
+      echo \#SBATCH --partition=compute
+    else
+      echo \#SBATCH --partition=batch >> slurm.sh
+      echo \#export OMP_NUM_THREADS=48 >> slurm.sh
+    fi
 
-###SBATCH --account=${USER}
+    cat << EOT >> slurm.sh
 #SBATCH --ntasks=${NP}
-#SBATCH --ntasks-per-core=1
+###SBATCH --ntasks-per-core=1
 #SBATCH --nodes=${NODES}
-#SBATCH --tasks-per-node=${PPN}
+###SBATCH --tasks-per-node=${PPN}
 #SBATCH --output=${TITLE}-%j.stdout
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=${WALLTIME}
-#SBATCH --partition=batch
 #SBATCH --mail-user=${EMAIL}
 #SBATCH --mail-type=ALL
 #SBATCH --job-name=${TITLE}
-
-#export OMP_NUM_THREADS=56
 
 ${MPI_PREFIX} ${EXE}
 EOT
