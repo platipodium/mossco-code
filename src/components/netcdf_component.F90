@@ -222,6 +222,7 @@ module netcdf_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' include patterns: '//trim(message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
