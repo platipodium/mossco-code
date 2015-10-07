@@ -17,6 +17,7 @@ OPTIND=1           # Reset in case getopts has been used previously in the shell
 GENERIC=1          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
+COMPILE_ONLY=0
 DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--restart  # Default example
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp/gotmrun.nml
 POSTPROCESS=NONE
@@ -91,13 +92,15 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bn:s:l:w:" opt; do
+while getopts ":rt:bcn:s:l:w:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
   g)  GENERIC=1
       ;;
   b)  BUILD_ONLY=1
+      ;;
+  c)  COMPILE_ONLY=1
       ;;
   p)  POSTPROCESS=${OPTARG}
       ;;
@@ -208,6 +211,10 @@ if ! test -x  ${EXE} ; then
   echo
   echo "ERROR: Could not create executable ${EXE}"
   exit 1
+fi
+
+if [[ ${COMPILE_ONLY} == 1 ]] ; then
+  exit 0
 fi
 
 # Automatically determine system
