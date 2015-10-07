@@ -454,6 +454,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     z0cur = sedd50/12._fp   ! initial z0 bed roughness height for currents = ks/30. (ks =2.5 * d50), Soulsby(1997)
     z0rou = z0cur          ! z0rou bed roughness height for wave: is calculated using a function in erosed, here initialized to z0cur
 
+    kmaxsd = 1             ! initialization of Kmaxsd-layer
+
     call init_mathconsts()
 !
     !
@@ -716,7 +718,7 @@ masking: if (mask(i,j) /=0) then
                    !in delft3d sig (1:kmax) starts from toplayer to the bottom kmax
                    ! and the following loop starts from kmax-1 to 1, with -1 steps
                    ! Wehereas in getm the layers start from bottom (1) to the toplayer (kmax)
-                   kmaxsd = 1
+
                    do k = lbound(sigma_midlayer,3)+1,ubound(sigma_midlayer,3)
                       !
                       ! Calculate level of the lower cell interface

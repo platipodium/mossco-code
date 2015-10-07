@@ -1104,7 +1104,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer,dimension(2)     :: totalLBound,totalUBound
     integer,dimension(2)     :: exclusiveLBound,exclusiveUBound
     integer(ESMF_KIND_I4)    :: ubnd(3), lbnd(3), tubnd(3), tlbnd(3)
-    integer                  :: kmaxsd !(kmax-layer index)
+    integer                  :: kmx, kmaxsd !(kmaxsd: kmax-layer index for sand)
 !#define DEBUG
     rc=ESMF_SUCCESS
 
@@ -1412,18 +1412,25 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
-       if (mask(i,j) /=0) then
 
-        size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,kmaxsd,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+        if (sedtyp == 2) then
+             kmx=1
+        else
+            kmx = kmaxsd
+
+        end if
+        if (mask(i,j) /=0) then
+
+          size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,kmx,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
 
 #ifdef DEBUG
  !       write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), &
  !       size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j),uorb (inum*(j -1)+i)
-        if (l==1)  write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, wavek(i,j) , waveH(i,j), waveT(i,j), uorb (nm), taub(nm), &
-        depth(i,j)
+         if (l==1)  write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, wavek(i,j) , waveH(i,j), waveT(i,j), uorb (nm), taub(nm), &
+         depth(i,j)
 #endif
 
-       end if
+        end if
      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
