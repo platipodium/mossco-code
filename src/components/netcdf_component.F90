@@ -127,7 +127,7 @@ module netcdf_component
     integer, intent(out) :: rc
 
     character(len=ESMF_MAXSTR) :: name, configFileName, fileName
-    character(len=1000)        :: message
+    character(len=4096)        :: message
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc, j, n
     logical                    :: isPresent, fileIsPresent, labelIsPresent, configIsPresent
