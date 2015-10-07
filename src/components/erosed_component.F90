@@ -1413,7 +1413,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
 
-        if (sedtyp == 2) then
+        if (sedtyp (l) == 2) then !cohesive sediment
              kmx=1
         else
             kmx = kmaxsd
