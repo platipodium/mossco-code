@@ -451,6 +451,11 @@ if [[ ${RETITLE} != 0 ]] ; then
 
   if test -f getm.inp ; then
     ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+    if [[ "x${MPI_PREFIX}" != "x" ]] ; then
+      ${SED} -i 's/parallel =.*/parallel = .true.,/' getm.inp
+    else
+      ${SED} -i 's/parallel =.*/parallel = .false.,/' getm.inp
+    fi
   fi
 
   if test -f gotmrun.nml ; then
