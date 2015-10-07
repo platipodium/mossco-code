@@ -105,7 +105,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
-    real(ESMF_KIND_R8)                               :: missingValue=-1.0E30
+    real(ESMF_KIND_R4)                               :: missingValue=-1.0E30
 
     integer, pointer                  :: gridmask3(:,:,:)=>null(), gridmask2(:,:)=> null()
     type(ESMF_Grid)                   :: grid
@@ -523,7 +523,7 @@ module mossco_netcdf
     integer                        :: ungriddedID, ungriddedLength,dimrank
     integer(ESMF_KIND_I4), allocatable, dimension(:) :: uubnd,ulbnd
     logical                        :: isPresent
-    real(ESMF_KIND_R8)             :: missingValue=-1D30
+    real(ESMF_KIND_R4)             :: missingValue=-1E30
     integer(ESMF_KIND_I4)          :: localrc
 
     integer :: petCount, localPet, vas, ssiId, peCount
@@ -623,7 +623,7 @@ module mossco_netcdf
       end if
 
       !! define variable
-      ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
+      ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_REAL,dimids,varid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
