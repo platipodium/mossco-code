@@ -77,7 +77,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=ESMF_MAXSTR), intent(out), allocatable :: stringList(:,:)
+    character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:,:)
     integer(ESMF_KIND_I4), intent(inout), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, j, n
