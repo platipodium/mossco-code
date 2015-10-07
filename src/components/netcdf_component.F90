@@ -126,7 +126,8 @@ module netcdf_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: name, configFileName, fileName, message
+    character(len=ESMF_MAXSTR) :: name, configFileName, fileName
+    character(len=1000)        :: message
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc, j, n
     logical                    :: isPresent, fileIsPresent, labelIsPresent, configIsPresent
