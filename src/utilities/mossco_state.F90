@@ -515,7 +515,8 @@ contains
     integer(ESMF_KIND_I4), optional :: rc
 
     integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits, count, fieldCount
-    character(len=ESMF_MAXSTR)      :: fieldName, name, message, string, gridName, attributeName
+    character(len=ESMF_MAXSTR)      :: fieldName, name, string, gridName, attributeName
+    character(len=4096)             :: message
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), fieldNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMF_Field), allocatable   :: fieldList(:)
@@ -531,7 +532,7 @@ contains
     real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
     integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
     integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
-    character(len=ESMF_MAXSTR), allocatable :: characterValueList(:)
+    character(len=4096)       , allocatable :: characterValueList(:)
 
     if (present(rc)) rc=ESMF_SUCCESS
 
