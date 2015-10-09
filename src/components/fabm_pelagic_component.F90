@@ -142,7 +142,9 @@ module fabm_pelagic_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
     type(ESMF_Field)     :: field
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4) :: localrc, i
+    character(ESMF_MAXSTR), dimension(10,2) :: stringList
+    character(ESMF_MAXSTR) :: convention, purpose
 
     character(ESMF_MAXSTR) :: name, message
 
@@ -169,6 +171,59 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      !> Write CIM attributes
+      convention = 'CIM 1.5'
+      purpose = 'ModelComp'
+      stringList(1,1)='ShortName';     stringList(1,2)='FABMpel'
+      stringList(2,1)='LongName';      stringList(2,2)='Framework for Adaptive Biogeochemical Models, pelagic'
+      stringList(3,1)='Description';   stringList(3,2)='The pelagic implementation of FABM'
+      stringList(4,1)='ReleaseDate';   stringList(4,2)='unknown'
+      stringList(5,1)='ModelType';     stringList(4,2)='ocean'
+
+      call ESMF_AttributeAdd(gridComp, convention=convention, purpose=purpose, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do i=1,5
+        call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
+          convention=convention, purpose=purpose, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
+
+      !> Write Responsible party ISO 19115 attributes
+      convention = 'ISO 19115'
+      purpose    = 'RespParty'
+      stringList(1,1)='Name';               stringList(1,2)='Richard Hofmeister'
+      stringList(2,1)='Abbreviation';       stringList(2,2)='rh'
+      stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
+      stringList(4,1)='EmailAddress';       stringList(4,2)='richard.hofmeister@hzg.de'
+      stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='http://www.hzg.de'
+      stringList(6,1)='URL';                stringList(6,2)='Contact'
+
+      do i=1,6
+        call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
+          convention=convention, purpose=purpose, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
+
+      !> Write Citation ISO 19115 attributes
+      convention = 'ISO 19115'
+      purpose    = 'Citation'
+      stringList(1,1)='ShortTitle';     stringList(1,2)='Hofmeister et al. (unpublished)'
+      stringList(2,1)='LongTitle';      stringList(2,2)='Hofmeister et al. (unpublished)'
+      stringList(3,1)='Date';           stringList(3,2)='unpublished'
+      stringList(4,1)='PresentationForm';   stringList(4,2)='source-code documented'
+      stringList(5,1)='DOI';            stringList(5,2)='not assigned'
+      stringList(6,1)='URL';            stringList(6,2)='not available'
+
+      do i=1,6
+        call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
+          convention=convention, purpose=purpose, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
 
     !! Initialize FABM
     pel = mossco_create_fabm_pelagic()
