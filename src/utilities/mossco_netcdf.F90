@@ -39,12 +39,14 @@ module mossco_netcdf
     integer               :: ncid
     integer               :: rank
     integer, allocatable  :: dimids(:)
+    character(len=11)     :: precision='NF90_DOUBLE'
   end type type_mossco_netcdf_variable
 
   type, public :: type_mossco_netcdf
     integer      :: ncid, nvars, natts
     integer      :: timeDimId, ndims
     integer, allocatable :: dimlens(:)
+    character(len=11)    :: precision='NF90_DOUBLE'
 
     character(len=ESMF_MAXSTR) :: name, timeUnit
     type(type_mossco_netcdf_variable), pointer, dimension(:) :: variables
@@ -81,13 +83,14 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_variable_put"
-  subroutine mossco_netcdf_variable_put(self, field, seconds, name)
+  subroutine mossco_netcdf_variable_put(self, field, seconds, name, precision)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
     type(ESMF_Field), intent(inout)              :: field
     real(ESMF_KIND_R8), intent(in),optional      :: seconds
     character(len=*),optional                    :: name
+    character(len=*),optional                    :: precision
 
     !>@todo make this an optional output var
     !integer(ESMF_KIND_I4),intent(out),optional  :: rc
@@ -106,6 +109,8 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
     real(ESMF_KIND_R4)                               :: missingValue=-1.0E30
+
+    character(len=11)                 :: precision_
 
     integer, pointer                  :: gridmask3(:,:,:)=>null(), gridmask2(:,:)=> null()
     type(ESMF_Grid)                   :: grid
@@ -146,9 +151,15 @@ module mossco_netcdf
        return
     endif
 
+    if (present(precision)) then
+      precision_=precision
+    else
+      precision_=self%precision
+    endif
+
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
-      call self%create_variable(field, trim(varname), rc=localrc)
+      call self%create_variable(field, trim(varname), precision=precision_, rc=localrc)
       call self%update_variables()
       call self%update()
     endif
@@ -261,7 +272,7 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_AttributeGet(field, 'missing_value', missingValue, rc=localrc)
+      call ESMF_AttributeGet(field, 'missing_value', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -497,11 +508,12 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_variable_create"
-  subroutine mossco_netcdf_variable_create(self, field, name, rc)
+  subroutine mossco_netcdf_variable_create(self, field, name, precision, rc)
 
     class(type_mossco_netcdf)        :: self
     type(ESMF_Field), intent(inout)  :: field
     character(len=*),optional        :: name
+    character(len=*),optional        :: precision
     integer, optional                :: rc
 
     type(ESMF_Grid)                :: grid
@@ -525,6 +537,7 @@ module mossco_netcdf
     logical                        :: isPresent
     real(ESMF_KIND_R4)             :: missingValue=-1E30
     integer(ESMF_KIND_I4)          :: localrc
+    character(len=11)              :: precision_
 
     integer :: petCount, localPet, vas, ssiId, peCount
     type(ESMF_Vm)                  :: vm
@@ -623,7 +636,18 @@ module mossco_netcdf
       end if
 
       !! define variable
-      ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_REAL,dimids,varid)
+      if (present(precision)) then
+        precision_=precision
+      else
+        precision=self%precision
+      endif
+
+      if (precision=='NF90_DOUBLE') then
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
+      else
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_REAL,dimids,varid)
+      endif
+
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2188,10 +2212,10 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ncubnd = ubnd ! initialize array size from local field bounds
-    
+
     !> First asssume to read part of a global field in the netcdf file
     !! adjust array size to match global field indexation:
-    ncubnd(1:gridRank)=maxIndexPDe(:,localPet+1) 
+    ncubnd(1:gridRank)=maxIndexPDe(:,localPet+1)
     start(1:gridRank)=minIndexPDe(:,localPet+1)
     where (start < 1)
       start=1
@@ -2200,7 +2224,7 @@ module mossco_netcdf
     !! set start indices for target field
     fstart(1:gridRank)=start(1:gridRank)-minIndexPDe(1:gridRank,localPet+1)+1
 
-    !! restrict length of field to read from netcdf to available size 
+    !! restrict length of field to read from netcdf to available size
     do i=1, fieldRank
       if (ncubnd(i)>self%dimlens(var%dimids(i))) ncubnd(i)=self%dimlens(var%dimids(i))
     enddo
