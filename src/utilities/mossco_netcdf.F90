@@ -109,6 +109,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
     real(ESMF_KIND_R4)                               :: missingValue=-1.0E30
+    real(ESMF_KIND_R8)                               :: representableValue
 
     character(len=11)                 :: precision_
 
@@ -151,14 +152,14 @@ module mossco_netcdf
        return
     endif
 
-    if (present(precision)) then
-      precision_=precision
-    else
-      precision_=self%precision
-    endif
 
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
+      if (present(precision)) then
+        precision_=precision
+      else
+        precision_=self%precision
+      endif
       call self%create_variable(field, trim(varname), precision=precision_, rc=localrc)
       call self%update_variables()
       call self%update()
@@ -166,6 +167,14 @@ module mossco_netcdf
     !> @todo what happens if variable exists but on different grid?
 
     var=>self%getvarvar(trim(varname))
+    precision_=var%precision
+
+    if (precision_=='NF90_DOUBLE') then
+      representableValue=huge(0.0_ESMF_KIND_R8)
+    else
+      representableValue=huge(0.0_ESMF_KIND_R4)
+    endif
+
     if (.not.associated(var)) then
       call ESMF_LogWrite('  could not find variable '//trim(varname))
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -329,6 +338,9 @@ module mossco_netcdf
           endif
         endif
       endif
+
+      where (farrayPtr4 > RepresentableValue) farrayPtr4=missingValue
+      where (farrayPtr4 < RepresentableValue) farrayPtr4=missingValue
 
       ! it is recommended to check of nans with x /= x, as this is true for NaN
       ! it is recommended to check for inf with abs(x) > huge(x)
