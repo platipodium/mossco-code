@@ -1215,6 +1215,17 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    ! write the Attribute info in CIM XML format for the Coupler, all Components,
+    ! and their Fields
+
+    do i=1,numGridComp
+      call ESMF_AttributeWrite(gridCompList(i), 'CIM 1.5', 'ModelComp', &
+        attwriteflag=ESMF_ATTWRITE_XML, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+        if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      endif
+    enddo
+
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2154,6 +2165,3 @@ extraclean:
 if os.getcwd() == make_path:
   fid.write('	@-rm -f ' + coupling_exe)
 fid.close()
-
-
-
