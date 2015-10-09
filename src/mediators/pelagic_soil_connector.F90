@@ -31,11 +31,17 @@ module pelagic_soil_connector
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: vDETC,DETC
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: depth=>null()
+  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: tke=>null()
 
   !> parameters
   real(ESMF_KIND_R8) :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
   real(ESMF_KIND_R8) :: NC_fdet=0.20d0
   real(ESMF_KIND_R8) :: NC_sdet=0.04d0
+  real(ESMF_KIND_R8) :: sinking_factor_min=0.02 !> minimum of 2% of Det sinks always into sediment
+  real(ESMF_KIND_R8) :: half_sedimentation_depth=0.1 !> [m] use 50% of prescribed sinking factor at this depth
+  real(ESMF_KIND_R8) :: critical_detritus=60.0 !> [mmolC/m3] use minimum sinking for det above critical_detritus
+
 
   public SetServices
 
@@ -132,7 +138,8 @@ module pelagic_soil_connector
     logical                     :: isPresent
     integer                     :: nmlunit=127
 
-    namelist /pelagic_soil_connector/ sinking_factor,NC_fdet,NC_sdet
+    namelist /pelagic_soil_connector/ sinking_factor,sinking_factor_min,NC_fdet,NC_sdet, &
+                                      half_sedimentation_depth,critical_detritus
 
     rc = ESMF_SUCCESS
 
@@ -177,6 +184,7 @@ module pelagic_soil_connector
     real(ESMF_KIND_R8),dimension(:,:),pointer :: CN_det=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_fdet=>null()
     real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_sdet=>null()
+    real(ESMF_KIND_R8),dimension(:,:),pointer :: fac_env=>null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3 => null()
     real(ESMF_KIND_R8),dimension(:,:,:), pointer :: ptr_f3_2nd => null()
     real(ESMF_KIND_R8),dimension(:,:),   pointer :: ptr_f2 => null()
@@ -287,6 +295,7 @@ module pelagic_soil_connector
       if (.not.associated(CN_det)) allocate(CN_det(1:inum,1:jnum))
       if (.not.associated(fac_fdet)) allocate(fac_fdet(1:inum,1:jnum))
       if (.not.associated(fac_sdet)) allocate(fac_sdet(1:inum,1:jnum))
+      if (.not.associated(fac_env)) allocate(fac_env(1:inum,1:jnum))
       !> search for Detritus-C, if present, use Detritus C-to-N ratio and apply flux
       call mossco_state_get(importState,(/'Detritus_Carbon_detC_in_water'/), &
         DETC,lbnd=Clbnd,ubnd=Cubnd, verbose=verbose, rc=localrc)
@@ -323,6 +332,22 @@ module pelagic_soil_connector
       fac_sdet = CN_det - fac_fdet
 !      fac_sdet = (1.0d0-NC_fdet*CN_det)/(NC_sdet-NC_fdet)
 
+      ! get depth from exportState, where the physical model has put its data
+      call mossco_state_get(exportState, &
+        (/'water_depth_at_soil_surface'/), depth, verbose=verbose, rc=localrc)
+
+      fac_env = 1.0d0
+      if (localrc == 0) then
+        ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
+        fac_env = fac_env * depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))/(depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) + half_sedimentation_depth)
+      end if
+      ! reduce sedimentation due to detritus-C (assuming higher DETN in shallow areas)
+      !fac_env = fac_env * 1.0d0/(1.0d0- &
+      !            exp(DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))-critical_detritus)/critical_detritus)**2
+      ! ensure minimum sedimentation
+      fac_env = fac_env + sinking_factor_min/sinking_factor
+      
+
       call mossco_state_get(exportState, &
         (/'fast_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)
       if (localrc==0) ptr_f2 = fac_fdet * DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
@@ -332,10 +357,10 @@ module pelagic_soil_connector
 
       call mossco_state_get(exportState,(/'fast_detritus_C_z_velocity_at_soil_surface'/), &
         ptr_f2, verbose=verbose, rc=localrc)
-      if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       call mossco_state_get(exportState,(/'slow_detritus_C_z_velocity_at_soil_surface'/), &
         ptr_f2, verbose=verbose, rc=localrc)
-      if (localrc==0) ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+      if (localrc==0) ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
 
       !> check for Detritus-P and calculate flux either N-based
       !> or as present through the Detritus-P pool
@@ -358,9 +383,9 @@ module pelagic_soil_connector
               'Detritus_Phosphorus_detP_z_velocity_in_water'/), &
               vDETP, verbose=verbose, rc=localrc)
       if (localrc==0) then
-        ptr_f2 = sinking_factor * vDETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),Plbnd(3))
+        ptr_f2 = sinking_factor * fac_env * vDETP(Plbnd(1):Pubnd(1),Plbnd(2):Pubnd(2),Plbnd(3))
       else
-        ptr_f2 = sinking_factor * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
+        ptr_f2 = sinking_factor * fac_env * vDETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))
       end if
 
       ! DIM concentrations:
