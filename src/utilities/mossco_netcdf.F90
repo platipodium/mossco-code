@@ -777,6 +777,10 @@ module mossco_netcdf
         ncStatus = nf90_put_att(self%ncid,varid,'pet_processing_element_count',peCount)
 
         ncStatus = nf90_enddef(self%ncid)
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        endif
 
         allocate(dimlen(ubound(dimids,1)-1))
         do i=1,ubound(dimids,1)-1
@@ -803,6 +807,10 @@ module mossco_netcdf
 
       else
         ncStatus = nf90_enddef(self%ncid)
+        if (ncStatus /= NF90_NOERR) then
+          call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+        endif
       endif
 
     end if
