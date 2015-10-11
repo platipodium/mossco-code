@@ -39,14 +39,14 @@ module mossco_netcdf
     integer               :: ncid
     integer               :: rank
     integer, allocatable  :: dimids(:)
-    character(len=11)     :: precision='NF90_DOUBLE'
+    character(len=11)     :: precision='NF90_REAL'
   end type type_mossco_netcdf_variable
 
   type, public :: type_mossco_netcdf
     integer      :: ncid, nvars, natts
     integer      :: timeDimId, ndims
     integer, allocatable :: dimlens(:)
-    character(len=11)    :: precision='NF90_DOUBLE'
+    character(len=11)    :: precision='NF90_REAL'
 
     character(len=ESMF_MAXSTR) :: name, timeUnit
     type(type_mossco_netcdf_variable), pointer, dimension(:) :: variables
