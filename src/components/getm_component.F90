@@ -73,6 +73,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: Ubot(:,:)  =>NULL(),Vbot(:,:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: Tbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: S3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: nybot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
@@ -379,6 +380,9 @@ module getm_component
     end if
     if (associated(T3D)) then
       call getmCmp_StateAddPtr("temperature_in_water",T3D,exportState,"degC",name)
+    end if
+    if (associated(S3D)) then
+      call getmCmp_StateAddPtr("salinity_in_water",S3D,exportState,"",name)
     end if
     if (associated(swr)) then
       call getmCmp_StateAddPtr("surface_downwelling_photosynthetic_radiative_flux",swr,exportState,"W m-2",name)
@@ -829,7 +833,7 @@ module getm_component
 #ifndef NO_3D
    use variables_3d   ,only: hn,num
 #ifndef NO_BAROCLINIC
-   use variables_3d   ,only: T
+   use variables_3d   ,only: T,S
 #endif
 #endif
    use meteo          ,only: metforcing,met_method,calc_met
@@ -910,8 +914,10 @@ module getm_component
             allocate(Tbot(I2DFIELD))
 #ifdef FOREIGN_GRID
             allocate(T3D(I3DFIELD))
+            allocate(S3D(I3DFIELD))
 #else
             allocate(T3D(imin:imax,jmin:jmax,1:kmax))
+            allocate(S3D(imin:imax,jmin:jmax,1:kmax))
 #endif
          end if
 #endif
@@ -981,8 +987,10 @@ module getm_component
 #endif
 #ifdef FOREIGN_GRID
             T3D => T
+            S3D => S
 #else
             T3D => T(imin:imax,jmin:jmax,1:kmax)
+            S3D => S(imin:imax,jmin:jmax,1:kmax)
 #endif
          end if
 #endif
@@ -1881,7 +1889,7 @@ module getm_component
 #ifndef NO_3D
    use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num
 #ifndef NO_BAROCLINIC
-   use variables_3d   ,only: T
+   use variables_3d   ,only: T,S
 #endif
 #endif
    use m2d            ,only: dtm
@@ -1928,8 +1936,10 @@ module getm_component
             Tbot = T(:,:,1)
 #ifdef FOREIGN_GRID
             T3D = T
+            S3D = T
 #else
             T3D = T(imin:imax,jmin:jmax,1:kmax)
+            S3D = S(imin:imax,jmin:jmax,1:kmax)
 #endif
          end if
 #endif
