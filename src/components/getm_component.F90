@@ -1936,7 +1936,7 @@ module getm_component
             Tbot = T(:,:,1)
 #ifdef FOREIGN_GRID
             T3D = T
-            S3D = T
+            S3D = S
 #else
             T3D = T(imin:imax,jmin:jmax,1:kmax)
             S3D = S(imin:imax,jmin:jmax,1:kmax)
