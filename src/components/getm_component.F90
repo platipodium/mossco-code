@@ -75,7 +75,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: T3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: S3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: nybot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: nybot(:,:)=>NULL(),tkebot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
 
@@ -389,6 +389,9 @@ module getm_component
     end if
     if (associated(nybot)) then
       call getmCmp_StateAddPtr("turbulent_diffusivity_of_momentum_at_soil_surface",nybot,exportState,"m2 s-1",name)
+    end if
+    if (associated(tkebot)) then
+      call getmCmp_StateAddPtr("turbulent_kinetic_energy_at_soil_surface",tkebot,exportState,"m2 s-2",name)
     end if
 
     select case (met_method)
@@ -831,7 +834,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
-   use variables_3d   ,only: hn,num
+   use variables_3d   ,only: hn,num,tke
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -910,6 +913,7 @@ module getm_component
 #ifndef NO_3D
          allocate(hbot(E2DFIELD))
          allocate(nybot(I2DFIELD))
+         allocate(tkebot(I2DFIELD))
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             allocate(Tbot(I2DFIELD))
@@ -979,9 +983,11 @@ module getm_component
          hbot(imin-HALO:,jmin-HALO:) => p2d
 #endif
 #if 0
-         nybot(imin-HALO:,jmin-HALO:) => num(:,:,1)
+         nybot (imin-HALO:,jmin-HALO:) => num(:,:,1)
+         tkebot(imin-HALO:,jmin-HALO:) => tke(:,:,1)
 #else
-         allocate(nybot(I2DFIELD))
+         allocate(nybot (I2DFIELD))
+         allocate(tkebot(I2DFIELD))
 #endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
@@ -1898,7 +1904,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
-   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num
+   use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num,tke
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -1941,8 +1947,9 @@ module getm_component
       depth = D
 #ifndef NO_3D
       if (runtype .gt. 1) then
-         hbot = hn(:,:,1)
-         nybot = num(:,:,1)
+         hbot   = hn (:,:,1)
+         nybot  = num(:,:,1)
+         tkebot = tke(:,:,1)
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             Tbot = T(:,:,1)
@@ -1974,7 +1981,8 @@ module getm_component
 #if 1
 #ifndef NO_3D
       if (runtype .gt. 1) then
-         nybot = num(:,:,1)
+         nybot  = num(:,:,1)
+         tkebot = tke(:,:,1)
       end if
 #endif
 #endif
