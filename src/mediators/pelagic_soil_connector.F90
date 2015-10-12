@@ -32,7 +32,7 @@ module pelagic_soil_connector
   real(ESMF_KIND_R8),dimension(:,:,:), pointer :: nit,amm
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: oxy=>null(),odu=>null()
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: depth=>null()
-  real(ESMF_KIND_R8),dimension(:,:,:), pointer :: tke=>null()
+  real(ESMF_KIND_R8),dimension(:,:),   pointer :: tke=>null()
 
   !> parameters
   real(ESMF_KIND_R8) :: sinking_factor=0.3d0 !> 30% of Det sinks into sediment
@@ -40,6 +40,7 @@ module pelagic_soil_connector
   real(ESMF_KIND_R8) :: NC_sdet=0.04d0
   real(ESMF_KIND_R8) :: sinking_factor_min=0.02 !> minimum of 2% of Det sinks always into sediment
   real(ESMF_KIND_R8) :: half_sedimentation_depth=0.1 !> [m] use 50% of prescribed sinking factor at this depth
+  real(ESMF_KIND_R8) :: half_sedimentation_tke=1.0d3 !> [m2/s2] use 50% of prescribed sinking factor for this tke
   real(ESMF_KIND_R8) :: critical_detritus=60.0 !> [mmolC/m3] use minimum sinking for det above critical_detritus
 
 
@@ -139,7 +140,8 @@ module pelagic_soil_connector
     integer                     :: nmlunit=127
 
     namelist /pelagic_soil_connector/ sinking_factor,sinking_factor_min,NC_fdet,NC_sdet, &
-                                      half_sedimentation_depth,critical_detritus
+                                      half_sedimentation_depth,critical_detritus, &
+                                      half_sedimentation_tke
 
     rc = ESMF_SUCCESS
 
@@ -345,6 +347,15 @@ module pelagic_soil_connector
       !fac_env = fac_env * 1.0d0/(1.0d0- &
       !            exp(DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))-critical_detritus)/critical_detritus)**2
       ! ensure minimum sedimentation
+
+      ! get TKE from exportState, where the physical model has put its data
+      call mossco_state_get(exportState, &
+        (/'turbulent_kinetic_energy_at_soil_surface'/), tke, verbose=verbose, rc=localrc)
+
+      if (localrc == 0) then
+        ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
+        fac_env = fac_env * half_sedimentation_tke/(tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) + half_sedimentation_tke)
+      end if
       fac_env = fac_env + sinking_factor_min/sinking_factor
       
 
