@@ -20,19 +20,15 @@ GITSTATS = $(which gitstats)
 endif
 
 
-.PHONY: all extraclean subdirs $(SUBDIRS)
+.PHONY: all gitstats plot extraclean subdirs $(SUBDIRS)
 
 all: subdirs gitstats
 
 gitstats:
-ifneq ($(GITSTATS),)
-	$(GITSTATS) $(MOSSCO_DIR) ./gitstats	
-endif
+	gitstats $(MOSSCO_DIR) ./gitstats	
 
 plot: gitstats
-ifneq ($(GITSTATS),)
 	$(MAKE) -C python all
-endif
 
 
 

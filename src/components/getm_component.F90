@@ -833,6 +833,7 @@ module getm_component
 #ifndef NO_3D
    use variables_3d   ,only: hn,num
 #ifndef NO_BAROCLINIC
+   use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
 #endif
 #endif
@@ -910,13 +911,18 @@ module getm_component
          allocate(hbot(E2DFIELD))
          allocate(nybot(I2DFIELD))
 #ifndef NO_BAROCLINIC
-         if (runtype .gt. 2) then
+         if (calc_temp) then
             allocate(Tbot(I2DFIELD))
 #ifdef FOREIGN_GRID
             allocate(T3D(I3DFIELD))
-            allocate(S3D(I3DFIELD))
 #else
             allocate(T3D(imin:imax,jmin:jmax,1:kmax))
+#endif
+         end if
+         if (calc_salt) then
+#ifdef FOREIGN_GRID
+            allocate(S3D(I3DFIELD))
+#else
             allocate(S3D(imin:imax,jmin:jmax,1:kmax))
 #endif
          end if
@@ -978,7 +984,7 @@ module getm_component
          allocate(nybot(I2DFIELD))
 #endif
 #ifndef NO_BAROCLINIC
-         if (runtype .gt. 2) then
+         if (calc_temp) then
 #if 0
             Tbot(imin-HALO:,jmin-HALO:) => T(:,:,1)
 #else
@@ -987,9 +993,14 @@ module getm_component
 #endif
 #ifdef FOREIGN_GRID
             T3D => T
-            S3D => S
 #else
             T3D => T(imin:imax,jmin:jmax,1:kmax)
+#endif
+         end if
+         if (calc_salt) then
+#ifdef FOREIGN_GRID
+            S3D => S
+#else
             S3D => S(imin:imax,jmin:jmax,1:kmax)
 #endif
          end if
@@ -1889,6 +1900,7 @@ module getm_component
 #ifndef NO_3D
    use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num
 #ifndef NO_BAROCLINIC
+   use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
 #endif
 #endif
@@ -1932,13 +1944,18 @@ module getm_component
          hbot = hn(:,:,1)
          nybot = num(:,:,1)
 #ifndef NO_BAROCLINIC
-         if (runtype .gt. 2) then
+         if (calc_temp) then
             Tbot = T(:,:,1)
 #ifdef FOREIGN_GRID
             T3D = T
-            S3D = S
 #else
             T3D = T(imin:imax,jmin:jmax,1:kmax)
+#endif
+         end if
+         if (calc_salt) then
+#ifdef FOREIGN_GRID
+            S3D = S
+#else
             S3D = S(imin:imax,jmin:jmax,1:kmax)
 #endif
          end if

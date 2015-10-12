@@ -18,7 +18,7 @@ authorinstitute={'Carsten Lemmen':'HZG','Richard Hofmeister':'HZG',
 authoralias={'Carsten Lemmen':'Carsten Lemmen', 'Richard Hofmeister':
   'Richard Hofmeister','Richard':'Richard Hofmeister','hofmeist':
   'Richard Hofmeister','Ulrich Koerner':'Ulrich Koerner','Ulrich Körner':
-  'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli',
+  'Ulrich Koerner','mhnaserm':'Hassan Nasermoaddeli','hnaserm':'Hassan Nasermoaddeli',
   'Mohammed Hassan Nasermoaddeli':'Hassan Nasermoaddeli','Hassan Nasermoaddeli':
   'Hassan Nasermoaddeli','Knut':'Knut Klingbeil','Kai Wirtz':'Kai Wirtz',
   'Onur Kerimoglu':'Onur Kerimoglu','Markus Kreus':'Markus Kreus','Onur':'Onur Kerimoglu',
