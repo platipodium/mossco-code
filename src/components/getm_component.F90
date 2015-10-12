@@ -1045,7 +1045,11 @@ module getm_component
    allocate(maskX3D(E2DFIELD,0:klen))
    allocate(areaW3D(E2DFIELD,0:klen))
 
-   where(az .gt. 0) areaC = _ONE_/arcd1
+   where(az .gt. 0)
+      areaC = _ONE_/arcd1
+   elsewhere
+      areaC = _ZERO_
+   end where
    do k=1,klen
       maskC3D(:,:,k) = az
       maskX3D(:,:,k) = ax
