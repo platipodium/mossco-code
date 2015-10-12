@@ -218,6 +218,7 @@ allocate(sed%intf_porosity(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%bioturbation_factor(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
+sed%par = 1.0d0
 allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
 sed%porosity_fac = porosity_fac
