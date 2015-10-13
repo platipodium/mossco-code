@@ -162,6 +162,14 @@ fi
 ARG=${ARG%%.yaml}
 
 if  [[ ${REMAKE} == 1 ]] ; then
+  # Clean up old executables
+  if test -x ./${EXE_BASE}; then
+    rm -f ./${EXE_BASE}
+  fi
+  if test -x ${MOSSCO_DIR}/examples/${ARG}/${EXE_BASE}; then
+    rm -f ${MOSSCO_DIR}/examples/${ARG}/${EXE_BASE}
+  fi
+
   if [[ ${GENERIC} == 1 ]] ; then
     DIR=${MOSSCO_DIR}/examples/generic
 
@@ -342,7 +350,7 @@ EMAIL=${MOSSCO_USER_EMAIL:-$(who am i |cut -f1 -d" ")@$(hostname)}
 WALLTIME=$(predict_time $NP)
 
 case ${SYSTEM} in
-  SLURM) 
+  SLURM)
     echo '#!/bin/bash -x' > slurm.sh
     if [ ! $(echo $(hostname) | grep -q mlogin) ]; then
       echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
