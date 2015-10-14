@@ -1379,7 +1379,7 @@ module fabm_pelagic_component
       if (any(pel%layer_height(RANGE2D,1) <= 0)) then
         write(message,'(A)') '  non-positive layer height detected'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize()
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       !where (pel%layer_height(RANGE2D,1) > 0)
@@ -1540,7 +1540,7 @@ module fabm_pelagic_component
         if (any(pel%layer_height(RANGE2D,k) <= 0)) then
           write(message,'(A)') '  non-positive layer height detected'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize()
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
         pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
           (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
@@ -1554,8 +1554,10 @@ module fabm_pelagic_component
               !> river dilution
               if (any(dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k) > 0.5d0)) then
                 write(message,'(A)') '  cfl for volume flux exceeded'
+                write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
+                write(0,*) k,' pel%cell_per_col_vol=',pel%cell_per_column_volume(RANGE2D,k)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-                call ESMF_Finalize()
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
               else
                 pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
                   (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
