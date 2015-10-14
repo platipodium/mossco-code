@@ -489,6 +489,7 @@ fid.write('''
     character(len=ESMF_MAXSTR), allocatable :: charValueList(:)
     type(ESMF_AttPack)     :: attPack
     character(len=ESMF_MAXSTR) :: convention, purpose
+    character(ESMF_MAXSTR), dimension(10,2) :: stringList
 
     rc = ESMF_SUCCESS
 
@@ -534,7 +535,7 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(gridComp, 'ModelType', 'climate', convention=convention, &
+    call ESMF_AttributeSet(gridComp, 'ModelType', 'framework', convention=convention, &
       purpose=purpose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1215,8 +1216,45 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    ! write the Attribute info in CIM XML format for the Coupler, all Components,
-    ! and their Fields
+    !> Write Responsible party ISO 19115 attributes
+    convention = 'ISO 19115'
+    purpose    = 'RespParty'
+    stringList(1,1)='Name';               stringList(1,2)='Carsten Lemmen'
+    stringList(2,1)='Abbreviation';       stringList(2,2)='cl'
+    stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
+    stringList(4,1)='EmailAddress';       stringList(4,2)='carsten.lemmen@hzg.de'
+    stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='Contact'
+    stringList(6,1)='URL';   stringList(6,2)='http://www.hzg.de'
+
+    do i=1,6
+      call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
+        convention=convention, purpose=purpose, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
+    !> Write Citation ISO 19115 attributes
+    convention = 'ISO 19115'
+    purpose    = 'Citation'
+    !stringList(1,1)='ShortTitle';     stringList(1,2)='Lemmen et al. (2013)'
+    !stringList(2,1)='LongTitle';      stringList(2,2)='  '
+    !stringList(3,1)='Date';           stringList(3,2)='2013'
+    !stringList(4,1)='PresentationForm';   stringList(4,2)='Workshop report'
+    !stringList(5,1)='DOI';            stringList(5,2)='not assigned'
+    !stringList(6,1)='URL';            stringList(6,2)='http://www.kfki.de/files/kfki-aktuell/0/13-2-DE.pdf'
+
+    do i=1,6
+      call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
+        convention=convention, purpose=purpose, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+    
+    call ESMF_AttributeWrite(gridComp, convention='CIM 1.5', purpose='ModelComp', &
+      attwriteflag=ESMF_ATTWRITE_XML, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+      if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    endif
 
     do i=1,numGridComp
       call ESMF_AttributeWrite(gridCompList(i), 'CIM 1.5', 'ModelComp', &
