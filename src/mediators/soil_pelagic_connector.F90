@@ -240,7 +240,8 @@ module soil_pelagic_connector
               'DIN_upward_flux_at_soil_surface                                  ', &
               'Dissolved_Inorganic_Nitrogen_DIN_nutN_upward_flux_at_soil_surface'/), &
               DINflux,ubnd=ubnd,lbnd=lbnd, verbose=verbose, rc=localrc)
-        if(localrc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         DINflux = val1_f2 + val2_f2
         ! add constant boundary flux of DIN (through groundwater, advection, rain
         DINflux = DINflux + dinflux_const/(86400.0*365.0)
@@ -251,28 +252,38 @@ module soil_pelagic_connector
               'DIP_upward_flux_at_soil_surface                                    ', &
               'phosphate_upward_flux_at_soil_surface                              ', &
               'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface'/), &
-              DIPflux, verbose=verbose, rc=rc)
+              DIPflux, verbose=verbose, rc=localrc)
+
     if (rc == 0)  then
         call mossco_state_get(importState,(/ &
               'mole_concentration_of_phosphate_upward_flux_at_soil_surface'/), &
-              val1_f2, verbose=verbose, rc=rc)
-         DIPflux = val1_f2 + dipflux_const/(86400.0*365.0)
+              val1_f2, verbose=verbose, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        DIPflux = val1_f2 + dipflux_const/(86400.0*365.0)
     end if
 
-      !   Det flux:
+    !   Det flux:
     call mossco_state_get(importState,(/'slow_detritus_C_upward_flux_at_soil_surface'/), &
-      SDETCflux, verbose=verbose, rc=rc)
+      SDETCflux, verbose=verbose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call mossco_state_get(importState,(/'fast_detritus_C_upward_flux_at_soil_surface'/), &
-      FDETCflux, verbose=verbose, rc=rc)
+      FDETCflux, verbose=verbose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call mossco_state_get(importState,(/'detritus-P_upward_flux_at_soil_surface'/), &
-      omexDETPflux, verbose=verbose, rc=rc)
+      omexDETPflux, verbose=verbose, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call mossco_state_get(exportState,(/ &
             'detritus_upward_flux_at_soil_surface              ', &
             'detN_upward_flux_at_soil_surface                  ', &
             'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'/), &
             DETNflux, verbose=verbose, rc=rc)
-      if(rc/=0) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       DETNflux = NC_fdet*FDETCflux + NC_sdet*SDETCflux
 
       !> search for Detritus-C
@@ -297,11 +308,20 @@ module soil_pelagic_connector
         'dissolved_oxygen_oxy_upward_flux_at_soil_surface '/),OXYflux, verbose=verbose, rc=oxyrc)
       call mossco_state_get(exportState,(/ &
         'dissolved_reduced_substances_odu_upward_flux_at_soil_surface'/),ODUflux, verbose=verbose, rc=odurc)
-      call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux_at_soil_surface'/), &
-        val1_f2, verbose=verbose, rc=rc)
-      call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux_at_soil_surface'/), &
-        val2_f2, verbose=verbose, rc=rc)
-      if (oxyrc == 0) OXYflux = val1_f2
+      if (oxyrc == 0) then
+        call mossco_state_get(importState,(/'dissolved_oxygen_upward_flux_at_soil_surface'/), &
+          val1_f2, verbose=verbose, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        OXYflux = val1_f2
+      endif
+      if ((oxyrc == 0) .or. (odurc == 0)) then
+        call mossco_state_get(importState,(/'dissolved_reduced_substances_upward_flux_at_soil_surface'/), &
+          val2_f2, verbose=verbose, rc=rc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       if ((oxyrc == 0) .and. (odurc /= 0)) OXYflux = OXYflux - val2_f2
       if (odurc == 0) ODUflux = val2_f2
 
