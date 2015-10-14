@@ -1,6 +1,6 @@
 !> @brief Implementation of an ESMF coupling between different grids
 !>
-!> This computer program is part of MOSSCO. 
+!> This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2014, Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
@@ -17,7 +17,7 @@
 #define ESMF_FILENAME "regrid_coupler.F90"
 
 module regrid_coupler
-    
+
   use esmf
 !  use mossco_state
 !  use mossco_field
@@ -46,20 +46,22 @@ module regrid_coupler
 
     type(ESMF_CplComp)   :: cplcomp
     integer, intent(out) :: rc
-    
+
     integer :: localrc
-    
+
     rc = ESMF_SUCCESS
 
-    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_INITIALIZE, Initialize  &
-                                      , rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_RUN,    Run   &
-                                      , rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_FINALIZE, Finalize &
-                                      , rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_INITIALIZE, Initialize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_RUN, Run, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_CplCompSetEntryPoint(cplcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
@@ -80,10 +82,10 @@ module regrid_coupler
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMf_StateItem_Flag)   :: itemType
     type(ESMF_RouteHandle)      :: routeHandle
-    class(type_mossco_fields_handle), pointer :: currHandle=>null() 
+    class(type_mossco_fields_handle), pointer :: currHandle=>null()
     type(ESMF_Field)            :: importField, exportField
     integer                     :: localrc
-   
+
     integer(ESMF_KIND_I4)       :: rank, localDeCount
     type(ESMF_FieldStatus_Flag) :: status
     type(ESMF_Mesh)             :: mesh
@@ -91,123 +93,141 @@ module regrid_coupler
     type(ESMF_GeomType_Flag)    :: geomType
     character(ESMF_MAXSTR)      :: geomName
     integer                     :: numOwnedNodes, dimCount
-    
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> Search for all fields that are present in both import and export state, 
+    !> Search for all fields that are present in both import and export state,
     !! for each combination of fields
     !! - if they are defined on different grids, create a route handle and
     !!   name it with the name of the two grids for identification (todo)
 
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_StateGet(importState, itemCount=itemCount, name=importName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount>0) then
       allocate(itemNameList(itemCount))
       allocate(itemTypeList(itemCount))
-      
+
       call ESMF_StateGet(importState, itemNameList=itemNameList, &
         itemTypeList=itemTypeList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       do i=1,itemCount
-        if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then 
+        if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
           write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
-     
-        call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)   
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
+        call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (itemType==ESMF_STATEITEM_NOTFOUND)   then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
             //' (not in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         elseif (itemType/=ESMF_STATEITEM_FIELD) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
             //' (not a field in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
-        
+
         call ESMF_StateGet(importState, itemNameList(i), importField, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (importField==exportField) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
             //' (already the same in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
-               
+
         write(message,'(A)') trim(name)//' considering '//trim(itemNameList(i))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
 		    call ESMF_FieldGet(importField, status=status, localDeCount=localDeCount, rank=rank, &
 		      geomType=geomType, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (geomType == ESMF_GEOMTYPE_GRID) then
           call ESMF_FieldGet(importField, grid=grid, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call ESMF_GridGet(grid, dimCount=dimCount, rank=rank, name=geomName, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A,I1,A,I1,A,I1)') trim(name)//' grid '//trim(geomName)//' rank ',rank,' dimensions ',dimCount
         elseif (geomType == ESMF_GEOMTYPE_MESH) then
-           call ESMF_FieldGet(importField, mesh=mesh, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-           call ESMF_MeshGet(mesh, numOwnedNodes=numOwnedNodes, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-           write(message,'(A,I5,A)') trim(name)//' mesh with ',numOwnedNodes,' nodes'
+          call ESMF_FieldGet(importField, mesh=mesh, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_MeshGet(mesh, numOwnedNodes=numOwnedNodes, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          write(message,'(A,I5,A)') trim(name)//' mesh with ',numOwnedNodes,' nodes'
         else
-           write(message,'(A)') trim(name)//' other geomtype'
-           !! ESMF_GEOMTYPE_XGRID ESMF_TYPEKIND_LOCSTREAM
+          write(message,'(A)') trim(name)//' other geomtype'
+          !! ESMF_GEOMTYPE_XGRID ESMF_TYPEKIND_LOCSTREAM
         endif
- 
+
 		    call ESMF_FieldGet(exportField, status=status, localDeCount=localDeCount, rank=rank, &
 		      geomType=geomType, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         if (geomType == ESMF_GEOMTYPE_GRID) then
           call ESMF_FieldGet(exportField, grid=grid, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           call ESMF_GridGet(grid, dimCount=dimCount, rank=rank, name=geomName, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A,I1,A,I1,A,I1)') trim(message)//' --> grid '//trim(geomName)//' rank ',rank,' dimensions ',dimCount
         elseif (geomType == ESMF_GEOMTYPE_MESH) then
            call ESMF_FieldGet(importField, mesh=mesh, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
            call ESMF_MeshGet(mesh, numOwnedNodes=numOwnedNodes, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
            write(message,'(A,I5,A)') trim(message)//' --> mesh with ',numOwnedNodes,' nodes.'
         else
            write(message,'(A)') trim(name)//' --> other geomtype.'
            !! ESMF_GEOMTYPE_XGRID ESMF_TYPEKIND_LOCSTREAM
         endif
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
-        
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
         call ESMF_FieldRegridStore(srcField=importField, dstField=exportField,&
           routeHandle=routehandle,regridmethod=ESMF_REGRIDMETHOD_CONSERVE,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument 
+        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
         !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
         if (.not.associated(currHandle)) then
           allocate(fieldsHandle)
           currHandle=>fieldsHandle
         endif
-        
-        do while(associated(currHandle%next)) 
+
+        do while(associated(currHandle%next))
           currHandle=>currHandle%next
         enddo
         allocate (currHandle%next)
@@ -220,17 +240,18 @@ module regrid_coupler
         currHandle%routeHandle=routeHandle
 
       enddo
-      
+
     else
       write(message,'(A)') trim(name)//' no couplable fields in '//trim(importName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
-    endif  
-            
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
+
     if (allocated(itemNameList)) deallocate(itemNameList)
     if (allocated(itemTypeList)) deallocate(itemTypeList)
-    
+
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Initialize
 
@@ -250,60 +271,67 @@ module regrid_coupler
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMf_StateItem_Flag)   :: itemType
-    class(type_mossco_fields_handle), pointer :: currHandle=>null() 
+    class(type_mossco_fields_handle), pointer :: currHandle=>null()
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_RouteHandle)      :: routeHandle
     integer :: localrc
-    
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(exportState, name=exportName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_StateGet(importState, itemCount=itemCount, name=importName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount>0) then
       allocate(itemNameList(itemCount))
       allocate(itemTypeList(itemCount))
-      
+
       call ESMF_StateGet(importState, itemNameList=itemNameList, &
         itemTypeList=itemTypeList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       do i=1,itemCount
-        if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then 
+        if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) then
           write(message,'(A)') trim(name)//' skipped non-field item '//trim(itemNameList(i))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
-     
-        call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)   
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
-        if (itemType==ESMF_STATEITEM_NOTFOUND) then 
+
+        call ESMF_StateGet(exportState, itemName=itemNameList(i), itemType=itemType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (itemType==ESMF_STATEITEM_NOTFOUND) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
             //' (not in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         elseif (itemType/=ESMF_STATEITEM_FIELD) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
             //' (not a field in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
-        
+
         call ESMF_StateGet(importState, itemNameList(i), importField, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (importField==exportField) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i)) &
             //' (already the same in '//trim(exportName)//')'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
 
@@ -314,48 +342,51 @@ module regrid_coupler
             currHandle=>currHandle%next
         enddo
         routeHandle=currHandle%routeHandle
-        
+
         call ESMF_FieldRegrid(srcField=importField, dstField=exportField,&
           routeHandle=routehandle, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument 
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !! ESMF_FieldRegrid.F90:2018 ESMF_FieldRegridGetIwts Invalid argument
         !! - - can't currently regrid a grid       that contains a DE of width less than 2
 
       enddo
-      
+
     else
       write(message,'(A)') trim(name)//' no couplable fields in '//trim(importName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)      
-    endif  
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
   subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_CplComp)   :: cplComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
     integer :: localrc
 
-    class(type_mossco_fields_handle), pointer :: currHandle=>null() 
+    class(type_mossco_fields_handle), pointer :: currHandle=>null()
 
     integer(ESMF_KIND_I4)   :: petCount, localPet
     character(ESMF_MAXSTR)  :: name, message, timeString
     logical                 :: clockIsPresent
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
-    
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(CplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (allocated(fieldsHandle)) then
       currHandle=>fieldsHandle
       do while (associated(currHandle%next))
@@ -365,13 +396,15 @@ module regrid_coupler
     endif
 
     if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
- 
+
 end module regrid_coupler
 
 #undef UNITTESTS
@@ -384,7 +417,7 @@ program test
   use regrid_coupler, only : SetServices
 
   implicit none
-  
+
   type(ESMF_State) :: states(2)
   type(ESMF_Field) :: fields(9)
   type(ESMF_Grid)  :: grid34,grid55,grid565
@@ -394,20 +427,20 @@ program test
   type(ESMF_TimeInterval) :: timeInterval
   type(ESMF_Time)         :: time
   integer :: localrc
-  
+
   call ESMF_Initialize(defaultLogFileName="test_regrid_coupler", &
     logkindflag=ESMF_LOGKIND_MULTI,defaultCalKind=ESMF_CALKIND_GREGORIAN)
-  
+
   !! Initialize
   do i=1,2
    states(i)=ESMF_StateCreate()
   enddo
-  
+
   call ESMF_TimeSet(time, yy=2014)
   call ESMF_TimeSyncToRealTime(time,rc=localrc)
   call ESMF_TimeIntervalSet(timeInterval, d=1)
   clock=ESMF_ClockCreate(timeInterval, time)
-  
+
   grid34=ESMF_GridCreate(maxIndex=(/3,4/))
   grid55=ESMF_GridCreate(maxIndex=(/5,5/))
   grid565=ESMF_GridCreate(maxIndex=(/5,6,5/))
@@ -424,20 +457,20 @@ program test
 
   !! Same name, different grid, same rank
   fields(7)=ESMF_FieldCreate(grid55, typekind=ESMF_TYPEKIND_R8, name="field2")
-  
+
   !! Same name, same grid, different type
   fields(8)=ESMF_FieldCreate(grid34, typekind=ESMF_TYPEKIND_I8, name="field3")
-  
+
   !! Same name, different rank
   fields(9)=ESMF_FieldCreate(grid565, typekind=ESMF_TYPEKIND_I8, name="field4")
-  
-  
+
+
   coupler=ESMF_CplCompCreate(name="coupler")
   call ESMF_CplCompSetServices(coupler, SetServices, rc=localrc)
 
   !! Run tests
 
-  call ESMF_StateAdd(states(1),fields(1:5)) 
+  call ESMF_StateAdd(states(1),fields(1:5))
   call ESMF_StateAdd(states(2),fields(6:9))
 
   call ESMF_StatePrint(states(1))
@@ -454,12 +487,12 @@ program test
   do i=1,ubound(states,1)
     call ESMF_StateDestroy(states(i))
   enddo
-  
+
   call ESMF_GridDestroy(grid34)
   call ESMF_GridDestroy(grid55)
   call ESMF_GridDestroy(grid565)
 
-  call ESMF_Finalize()  
+  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 end program test
 #endif
