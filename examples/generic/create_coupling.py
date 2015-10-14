@@ -1216,6 +1216,7 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+#if ESMF_VERSION_MAJOR > 6
     !> Write Responsible party ISO 19115 attributes
     convention = 'ISO 19115'
     purpose    = 'RespParty'
@@ -1249,7 +1250,7 @@ fid.write('''
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
-    
+
     call ESMF_AttributeWrite(gridComp, convention='CIM 1.5', purpose='ModelComp', &
       attwriteflag=ESMF_ATTWRITE_XML, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
@@ -1263,6 +1264,7 @@ fid.write('''
         if (rc .ne. ESMF_RC_LIB_NOT_PRESENT) call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
     enddo
+#endif
 
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
