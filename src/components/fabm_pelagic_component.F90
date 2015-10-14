@@ -198,8 +198,8 @@ module fabm_pelagic_component
       stringList(2,1)='Abbreviation';       stringList(2,2)='rh'
       stringList(3,1)='PhysicalAddress';    stringList(3,2)='Helmholtz-Zentrum Geesthacht'
       stringList(4,1)='EmailAddress';       stringList(4,2)='richard.hofmeister@hzg.de'
-      stringList(5,1)='ResponsiblePartyRole';   stringList(5,2)='http://www.hzg.de'
-      stringList(6,1)='URL';                stringList(6,2)='Contact'
+      stringList(5,1)='ResponsiblePartyRole';   stringList(6,2)='http://www.hzg.de'
+      stringList(6,1)='URL';                stringList(5,2)='Contact'
 
       do i=1,6
         call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
@@ -307,7 +307,6 @@ module fabm_pelagic_component
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_CoordSys_Flag) :: coordSys
     integer(ESMF_KIND_I4) :: localrc
-
 
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2=>null()
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
@@ -624,7 +623,8 @@ module fabm_pelagic_component
       attribute_r8 = pel%model%state_variables(n)%properties%get_real('density',default=-99.d0)
       if (attribute_r8 > 0.0d0) &
         call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
-     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> add fabm index in concentration array as "external_index" to be used by other components
       call ESMF_AttributeSet(concfield,'external_index',pel%export_states(n)%fabm_id)
@@ -1518,7 +1518,6 @@ module fabm_pelagic_component
 
   end subroutine Finalize
 
-
   subroutine integrate_flux_in_water(pel,importState)
     type(ESMF_State)               :: importState
     type(type_mossco_fabm_pelagic) :: pel
@@ -1529,24 +1528,30 @@ module fabm_pelagic_component
     character(len=ESMF_MAXSTR)     :: message, varname
     real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:)
 
-      ! calculate total water depth
-      if (.not.(associated(pel%cell_per_column_volume))) then
-        ubnd3 = ubound(pel%layer_height)
-        lbnd3 = lbound(pel%layer_height)
-        allocate(pel%cell_per_column_volume(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
-        pel%cell_per_column_volume = 0.0d0
-      end if
-      do k=1,pel%knum
-        if (any(pel%layer_height(RANGE2D,k) <= 0)) then
-          write(message,'(A)') '  non-positive layer height detected'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
-          (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
-      end do
+    ! calculate total water depth
+    if (.not.(associated(pel%cell_per_column_volume))) then
+      ubnd3 = ubound(pel%layer_height)
+      lbnd3 = lbound(pel%layer_height)
+      allocate(pel%cell_per_column_volume(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
+      pel%cell_per_column_volume = 0.0d0
+    end if
 
-      do n=1,pel%nvar
+    do k=1,pel%knum
+      if (any(pel%layer_height(RANGE2D,k) <= 0)) then
+        write(message,'(A)') '  non-positive layer height detected'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
+        (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
+      !where (pel%column_area .gt. 0.0d0)
+      !  pel%cell_per_column_volume(:,:,k) = 1.0d0 / &
+      !    (sum(pel%layer_height(:,:,k),dim=3)*pel%column_area)
+      !endwhere
+    enddo
+
+    do n=1,pel%nvar
         varname = trim(pel%export_states(n)%standard_name)
         if (associated(pel%volume_flux)) then
           if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
@@ -1585,7 +1590,7 @@ module fabm_pelagic_component
           ! no field found
           cycle
         end if
-      end do
+    end do
 
   end subroutine integrate_flux_in_water
 
