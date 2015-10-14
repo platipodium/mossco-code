@@ -258,6 +258,7 @@
       if (.not.associated(pf%layer_height)) then
         !write(0,*) 'allocate layer height'
         allocate(pf%layer_height(pf%inum,pf%jnum,pf%knum))
+        pf%layer_height=-1.0_rk
         call pf%update_grid()
       end if
     end if
@@ -268,12 +269,14 @@
     !> call fabm_do to fill diagnostic variables and pre-fetch data
     do i=1,pf%inum
       do j=1,pf%jnum
-        call fabm_do_surface(pf%model,i,j,pf%knum,rhs(:))
-        call fabm_do_bottom(pf%model,i,j,1,rhs(:),bottom_flux(:))
-        rhs=0.0_rk
-        do k=1,pf%knum
-          call fabm_do(pf%model,i,j,k,rhs(:))
-        end do
+        ! sigma coordinate masking
+        if (.not.pf%mask(i,j,pf%knum)) then
+          call fabm_do_surface(pf%model,i,j,pf%knum,rhs(:))
+          call fabm_do_bottom(pf%model,i,j,1,rhs(:),bottom_flux(:))
+          do k=1,pf%knum
+            call fabm_do(pf%model,i,j,k,rhs(:))
+          end do
+        end if
       end do
     end do
     !call pf%update_expressions()
@@ -286,8 +289,13 @@
 
     integer  :: i,j,k
 
-    do k=1,pf%knum
-      pf%layer_height(RANGE2D,k) = pf%zi(RANGE2D,k) - pf%zi(RANGE2D,k-1)
+    do i=1,pf%inum
+      do j=1,pf%jnum
+        do k=1,pf%knum
+          if (.not.pf%mask(i,j,k)) &
+            pf%layer_height(i,j,k) = pf%zi(i,j,k) - pf%zi(i,j,k-1)
+        end do
+      end do
     end do
 
   end subroutine
@@ -677,21 +685,24 @@
      do i=1,pf%inum
        do j=1,pf%jnum
          do k=pf%knum,2,-1
-           call fabm_get_light_extinction(pf%model,i,j,k,localext)
+           if (.not.pf%mask(i,j,k)) then
+             call fabm_get_light_extinction(pf%model,i,j,k,localext)
 
-           ! Add the extinction of the first half of the grid box.
-           bioext(i,j,k) = bioext(i,j,k) + &
-             (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+             ! Add the extinction of the first half of the grid box.
+             bioext(i,j,k) = bioext(i,j,k) + &
+               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
 
-           ! Add the extinction of the second half of the grid box.
-           bioext(i,j,k-1) = bioext(i,j,k) + &
-             (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+             ! Add the extinction of the second half of the grid box.
+             bioext(i,j,k-1) = bioext(i,j,k) + &
+               (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,k)
+           end if
          end do
-         ! Add te extinction of the upper, last layer
-         call fabm_get_light_extinction(pf%model,i,j,1,localext)
-         bioext(i,j,1) = bioext(i,j,1) + &
-           (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
-
+         ! Add the extinction of the upper half of the last layer
+         if (.not.pf%mask(i,j,1)) then
+           call fabm_get_light_extinction(pf%model,i,j,1,localext)
+           bioext(i,j,1) = bioext(i,j,1) + &
+             (localext+pf%background_extinction)*0.5_rk*pf%layer_height(i,j,1)
+         end if
          pf%par(i,j,:) = pf%I_0(i,j) * (1.0d0-pf%albedo(i,j)) * exp(-bioext(i,j,:))
        end do
      end do
