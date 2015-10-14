@@ -1237,19 +1237,19 @@ fid.write('''
     !> Write Citation ISO 19115 attributes
     convention = 'ISO 19115'
     purpose    = 'Citation'
-    !stringList(1,1)='ShortTitle';     stringList(1,2)='Lemmen et al. (2013)'
-    !stringList(2,1)='LongTitle';      stringList(2,2)='  '
-    !stringList(3,1)='Date';           stringList(3,2)='2013'
-    !stringList(4,1)='PresentationForm';   stringList(4,2)='Workshop report'
-    !stringList(5,1)='DOI';            stringList(5,2)='not assigned'
-    !stringList(6,1)='URL';            stringList(6,2)='http://www.kfki.de/files/kfki-aktuell/0/13-2-DE.pdf'
+    stringList(1,1)='ShortTitle';     stringList(1,2)='Lemmen et al. (2013)'
+    stringList(2,1)='LongTitle';      stringList(2,2)='  '
+    stringList(3,1)='Date';           stringList(3,2)='2013'
+    stringList(4,1)='PresentationForm';   stringList(4,2)='Workshop report'
+    stringList(5,1)='DOI';            stringList(5,2)='not assigned'
+    stringList(6,1)='URL';            stringList(6,2)='http://www.kfki.de/files/kfki-aktuell/0/13-2-DE.pdf'
 
-    do i=1,6
-      call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
-        convention=convention, purpose=purpose, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
+    !do i=1,6
+    !  call ESMF_AttributeSet(gridComp, trim(stringList(i,1)), trim(stringList(i,2)), &
+    !    convention=convention, purpose=purpose, rc=localrc)
+    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !enddo
 
     call ESMF_AttributeWrite(gridComp, convention='CIM 1.5', purpose='ModelComp', &
       attwriteflag=ESMF_ATTWRITE_XML, rc=localrc)
