@@ -1543,12 +1543,10 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      where (pel%column_area(RANGE2D) > 0)
       pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
         (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
-      !where (pel%column_area .gt. 0.0d0)
-      !  pel%cell_per_column_volume(:,:,k) = 1.0d0 / &
-      !    (sum(pel%layer_height(:,:,k),dim=3)*pel%column_area)
-      !endwhere
+      endwhere
     enddo
 
     do n=1,pel%nvar
