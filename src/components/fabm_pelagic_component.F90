@@ -1376,7 +1376,7 @@ module fabm_pelagic_component
       ! integrate bottom upward fluxes
       ! todo: this does not work with the link coupler, yet. the bfl(:)%p pointers
       !       have to be updated from importState here in Run
-      if (any(pel%layer_height(RANGE2D,1) <= 0)) then
+      if (any((pel%layer_height(RANGE2D,1) <= 0).and.(.not.pel%mask(RANGE2D,1)))) then
         write(message,'(A)') '  non-positive layer height detected'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1537,13 +1537,13 @@ module fabm_pelagic_component
     end if
 
     do k=1,pel%knum
-      if (any(pel%layer_height(RANGE2D,k) <= 0)) then
+      if (any((pel%layer_height(RANGE2D,k) <= 0).and.(.not.pel%mask(RANGE2D,k)))) then
         write(message,'(A)') '  non-positive layer height detected'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      where (pel%column_area(RANGE2D) > 0)
+      where (.not.pel%mask(RANGE2D,k))
       pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
         (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
       endwhere
