@@ -995,7 +995,9 @@ module fabm_sediment_component
 
     !call sed%update_export_states()
     !> check for valid grid and porosity
+#ifdef DEBUG
     write(0,*) 'fabm_sediment ReadRestart: check domain'
+#endif
     call sed%check_domain()
 
     call MOSSCO_CompExit(gridComp, localrc)

@@ -145,10 +145,12 @@ subroutine init_grid(self, rc)
 
   self%dzc = self%zc(:,:,2:self%knum) - self%zc(:,:,1:self%knum-1)
 
+#ifdef DEBUG
   write(0,*) 'zc=',self%zc(min(self%inum,50),min(self%jnum,10),:)
   write(0,*) 'zi=',self%zi(min(self%inum,50),min(self%jnum,10),:)
   write(0,*) 'dz=',self%dz(min(self%inum,50),min(self%jnum,10),:)
   write(0,*) 'dzc=',self%dzc(min(self%inum,50),min(self%jnum,10),:)
+#endif
 
 end subroutine init_grid
 
@@ -389,8 +391,10 @@ subroutine fabm_sed_check_domain(sed, rc)
 
   rc_=0
 
+#ifdef DEBUG
   write(0,*) 'Checking domain of size ',sed%inum,sed%jnum,sed%knum
   write(0,*) 'shape(cond)=',shape(sed%conc),' shape(mask)=', shape(sed%mask)
+#endif
 
   if (any(.not.sed%mask.and.sed%porosity<=0)) then
     write(0,*) 'FATAL sediment porosity <=0 '
