@@ -333,6 +333,9 @@ if (from_surface_eff) then
   end do
 end if
 
+! set porosity to 1.0 in the mask to avoid overflows in get_rhs
+where(sed%mask) sed%porosity = 1.0d0
+
 ! update interface porosity
 sed%intf_porosity(:,:,1) = sed%porosity(:,:,1)
 sed%intf_porosity(:,:,2:_KNUM_) = 0.5d0*(sed%porosity(:,:,1:_KNUM_-1) + sed%porosity(:,:,2:_KNUM_))
@@ -425,6 +428,9 @@ subroutine fabm_sed_check_domain(sed, rc)
       endif
     enddo; enddo; enddo
   end if
+
+  ! set porosity to 1.0 in the mask to avoid overflows in get_rhs
+  where(sed%mask) sed%porosity = 1.0d0
 
   if (present(rc)) rc=rc_
 
