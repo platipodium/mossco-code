@@ -179,6 +179,7 @@ module fabm_sediment_component
     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr_f2
     real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3
     real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: ptr_f4
+    real(ESMF_KIND_R8),dimension(:,:,:,:),pointer :: rhs
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
     integer(ESMF_KIND_I8) :: tidx
@@ -410,6 +411,12 @@ module fabm_sediment_component
           sed%conc(i,j,:,:) = sed1d%conc(1,1,:,:)
       end do
     end do
+
+    !> call the model equations in order to fill the diagnostic variables
+    allocate(rhs(sed%inum,sed%jnum,sed%knum,sed%nvar))
+    call sed%get_rhs(rhs)
+    deallocate(rhs)
+
     !> it is possible to use flux-boundary condition for dissolved variables
     !> as calculated in get_boundary_conditions after presimulation,
     !> Dirichlet boundary conditions are numerically more stable.
