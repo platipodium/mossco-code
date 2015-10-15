@@ -351,6 +351,12 @@ module mossco_netcdf
       else
         ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))
       endif
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
+        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        write(0,*) 'values = ',farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
     elseif (rank==3) then
 
@@ -408,6 +414,12 @@ module mossco_netcdf
       else
         ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))
       endif
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
+        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        write(0,*) 'values = ',farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
     elseif (rank==2) then
 
@@ -451,6 +463,12 @@ module mossco_netcdf
       else
         ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
       endif
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
+        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        write(0,*) 'values = ',farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
     elseif (rank==1) then
 
@@ -484,11 +502,13 @@ module mossco_netcdf
       else
         ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr1(lbnd(1):ubnd(1)))
       endif
+      if (ncStatus /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
+        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        write(0,*) 'values = ',farrayPtr1(lbnd(1):ubnd(1))
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
-    endif
-    if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     if (allocated(ubnd)) deallocate(ubnd)
