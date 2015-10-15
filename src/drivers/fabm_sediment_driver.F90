@@ -70,6 +70,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
 
    real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity,bioturbation_factor
    real(rk),dimension(:,:,:),pointer     :: par
+   real(rk),dimension(:,:),pointer       :: par_surface
    real(rk),dimension(:,:,:),allocatable :: zeros2dv,zeros3d,ones3d,diff
    real(rk),dimension(:,:,:),pointer     :: temp3d
    real(rk),dimension(:,:,:,:),allocatable :: transport,zeros3dv
@@ -219,6 +220,8 @@ allocate(sed%bioturbation_factor(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%temp(_INUM_,_JNUM_,_KNUM_))
 allocate(sed%par (_INUM_,_JNUM_,_KNUM_))
 sed%par = 0.0d0
+allocate(sed%par_surface(_INUM_,_JNUM_))
+sed%par_surface = 0.0d0
 allocate(sed%flux_cap(_INUM_,_JNUM_,_KNUM_))
 sed%bioturbation_factor=1.0d0
 sed%porosity_fac = porosity_fac
@@ -465,16 +468,17 @@ real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
 
 real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum)   :: conc_insitu,f_T
 real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum,1:rhs_driver%knum+1) :: intFLux
-real(rk) :: I_0
+real(rk),dimension(1:rhs_driver%inum,1:rhs_driver%jnum)                     :: cumdepth
 
 integer :: n,i,j,k,bcup=1,bcdown=3
 
-! get sediment surface light I_0 as boundary condition, here constant:
-I_0 = 1.0 ! W/m2
 do k=1,rhs_driver%knum
-   rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
-   rhs_driver%par(:,:,k) = &
-           I_0 * exp(-sum(rhs_driver%grid%dz(:,:,1:k))/rhs_driver%k_par)
+   cumdepth=sum(rhs_driver%grid%dz(:,:,1:k),dim=3)
+   where (.not.rhs_driver%mask(:,:,k))
+     rhs_driver%temp3d(:,:,k) = rhs_driver%bdys(:,:,1)
+     rhs_driver%par(:,:,k) = &
+           rhs_driver%par_surface * exp(-cumdepth/rhs_driver%k_par)
+   end where
 end do
 
 !   link state variables
