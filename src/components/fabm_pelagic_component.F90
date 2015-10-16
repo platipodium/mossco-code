@@ -1028,11 +1028,23 @@ module fabm_pelagic_component
 
     type(ESMF_StateItem_Flag) :: itemType
     type(ESMF_Field)          :: field
-    real(ESMF_KIND_R8), dimension(:,:), pointer :: ptr_f2=>null()
+    real(ESMF_KIND_R8), dimension(:,:), pointer   :: ptr_f2=>null()
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: ptr_f3=>null()
     integer                   :: localrc
     character(len=ESMF_MAXSTR):: varname
 
-    ! todo: add bulk dependencies
+    ! link bulk dependencies
+    if (associated(pel%bulk_dependencies)) then
+      do n=1,size(pel%bulk_dependencies)
+        !> check for existing field
+        call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', itemType,rc=localrc)
+        if (itemType == ESMF_STATEITEM_FIELD) then
+          call ESMF_StateGet(importState, trim(pel%bulk_dependencies(n)%name)//'_in_water', field=field, rc=localrc)
+          call ESMF_FieldGet(field, farrayPtr=ptr_f3, rc=localrc)
+          call pel%set_environment(pel%bulk_dependencies(n)%name,ptr_bulk=ptr_f3)
+        end if
+      end do
+    end if
 
     ! link horizontal dependencies
     if (associated(pel%horizontal_dependencies)) then
