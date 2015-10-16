@@ -344,9 +344,12 @@
   end subroutine get_rhs
 
   !> append external bulk dependency
-  subroutine add_bulk_dependency(deps, var)
+  subroutine add_bulk_dependency(deps, standard_variable, name, units)
     type(type_bulk_standard_variable),dimension(:), pointer :: deps
-    type(type_standard_variable),target                     :: var
+    type(type_standard_variable),target,optional            :: standard_variable
+    character(len=*), optional                              :: name
+    character(len=*), optional                              :: units
+
 
     type(type_bulk_standard_variable),dimension(:), pointer :: deps_tmp
     integer :: n_bulk
@@ -364,8 +367,18 @@
       allocate(deps(1))
     end if
 
-    deps(n_bulk+1)%units = var%units
-    deps(n_bulk+1)%name = var%name
+    if (present(standard_variable)) then
+      deps(n_bulk+1)%units = standard_variable%units
+      deps(n_bulk+1)%name = standard_variable%name
+    else
+      if (present(name) .and. present(units)) then
+        deps(n_bulk+1)%units = trim(units)
+        deps(n_bulk+1)%name = trim(name)
+      else
+        write(0,*) 'cannot register bulk dependency without name and unit'
+        stop
+      end if
+    end if
 
   end subroutine
 
@@ -416,9 +429,12 @@
         select case (link%target%domain)
           case (domain_bulk)
             if (.not.associated(pf%model%data(link%target%read_indices%pointers(1)%p)%p) &
-                .and..not.(link%target%presence==presence_internal) &
-                .and.associated(link%target%standard_variable)) then
-              call add_bulk_dependency(pf%bulk_dependencies,link%target%standard_variable)
+                .and..not.(link%target%presence==presence_internal)) then
+              if (associated(link%target%standard_variable)) then
+                call add_bulk_dependency(pf%bulk_dependencies,standard_variable=link%target%standard_variable)
+              else
+                call add_bulk_dependency(pf%bulk_dependencies,name=link%name,units=link%target%units)
+              end if
             end if
     case (domain_horizontal,domain_bottom,domain_surface)
             if (.not.associated(pf%model%data_hz(link%target%read_indices%pointers(1)%p)%p) &
