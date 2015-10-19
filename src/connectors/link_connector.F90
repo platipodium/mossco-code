@@ -314,14 +314,21 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                 if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
                   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-                if (importGrid /= exportGrid) cycle
+                !> @todo check for conforming grids (dimensions, rank, coordinate values)
+                if (importGrid /= exportGrid) then
+                  write(message,'(A)') '   warning: grids do not match for '
+                  call MOSSCO_messageAdd(message,trim(itemNameList(i)))
+                  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                  !cycle
+                end if
               endif
 
               call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
 #ifdef VERBOSE
               write(message,'(A)') '    replaced existing field'
               call MOSSCO_FieldString(exportField, message)
-              write(message,'(A)') trim(message)//'  with field'
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              write(message,'(A)') '    with field'
               call MOSSCO_FieldString(importField, message)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 #endif
