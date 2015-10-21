@@ -76,6 +76,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: S3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: swr(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: nybot(:,:)=>NULL(),tkebot(:,:)=>NULL(),epsbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
 
@@ -395,6 +396,9 @@ module getm_component
     end if
     if (associated(epsbot)) then
       call getmCmp_StateAddPtr("dissipation_of_tke_at_soil_surface",epsbot,exportState,"m2 s-3",name)
+    end if
+    if (associated(tke3D)) then
+      call getmCmp_StateAddPtr("turbulent_kinetic_energy_in_water",tke3D,exportState,"m2 s-2",name,StaggerLoc=ESMF_STAGGERLOC_CENTER_VFACE)
     end if
 
     select case (met_method)
@@ -918,6 +922,11 @@ module getm_component
          allocate(nybot(I2DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
+#ifdef FOREIGN_GRID
+         allocate(tke3D(I3DFIELD))
+#else
+         allocate(tke3D(imin:imax,jmin:jmax,1:kmax))
+#endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             allocate(Tbot(I2DFIELD))
@@ -991,6 +1000,11 @@ module getm_component
          allocate(nybot (I2DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
+#ifdef FOREIGN_GRID
+         allocate(tke3D (I3DFIELD))
+#else
+         allocate(tke3D (imin:imax,jmin:jmax,1:kmax))
+#endif
 #else
 #if 0
          nybot (imin-HALO:,jmin-HALO:) => num(:,:,1)
@@ -1003,6 +1017,11 @@ module getm_component
          tkebot(imin-HALO:,jmin-HALO:) => p2d
          p2d => eps(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => p2d
+#endif
+#ifdef FOREIGN_GRID
+         tke3d => tke
+#else
+         tke3D => tke(imin:imax,jmin:jmax,1:kmax)
 #endif
 #endif
 #ifndef NO_BAROCLINIC
@@ -1971,6 +1990,11 @@ module getm_component
          nybot  = num(:,:,1)
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
+#ifdef FOREIGN_GRID
+         tke3D = tke
+#else
+         tke3D = tke(imin:imax,jmin:jmax,1:kmax)
+#endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             Tbot = T(:,:,1)
@@ -2005,6 +2029,11 @@ module getm_component
          nybot  = num(:,:,1)
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
+#ifdef FOREIGN_GRID
+         tke3D = tke
+#else
+         tke3D = tke(imin:imax,jmin:jmax,1:kmax)
+#endif
       end if
 #endif
 !     Note (KK): update pointer because of pointer swap within GETM
@@ -2391,7 +2420,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_StateAddPtr3D"
-  subroutine getmCmp_StateAddPtr3D(name,p3d,state,units,componentName)
+  subroutine getmCmp_StateAddPtr3D(name,p3d,state,units,componentName,kwe,StaggerLoc)
 !
 ! !DESCRIPTION:
 !
@@ -2403,6 +2432,8 @@ module getm_component
 ! !INPUT PARAMETERS:
    character(len=*),intent(in)                            :: name,units,componentName
    real(ESMF_KIND_R8),dimension(:,:,:),pointer,intent(in) :: p3d
+   logical              , intent(in), optional            :: kwe !keyword-enforcer
+   type(ESMF_StaggerLoc), intent(in), optional            :: StaggerLoc
 !
 ! !INPUT/OUTPUT PARAMETERS:
    type(ESMF_State),intent(inout)                       :: state
@@ -2412,6 +2443,7 @@ module getm_component
 !
 ! !LOCAL VARIABLES
    type(ESMF_Field) :: field
+   type(ESMF_StaggerLoc) :: StaggerLoc_
    integer          :: klen,rc
     integer(ESMF_KIND_I4) :: localrc
 !
@@ -2430,6 +2462,13 @@ module getm_component
       klen = kmax
    end if
 
+   if (present(StaggerLoc)) then
+      StaggerLoc_ = StaggerLoc
+   else
+!     KK-TODO: ESMF_STAGGERLOC_CENTER_VCENTER ?
+      StaggerLoc_ = ESMF_STAGGERLOC_CENTER
+   end if
+
 !  in contrast to ESMF_ArrayCreate() no automatic determination of total[L|U]Width
 #if 1
 !  Note (KK): in former times ESMF_FieldCreateGridDataPtr<rank><type><kind>() failed
@@ -2441,7 +2480,7 @@ module getm_component
 #endif
                             totalLWidth=int((/1,1,1/)-lbound(p3d)),          &
                             totalUWidth=int(ubound(p3d)-(/imax,jmax,klen/)), &
-                            name=name,rc=localrc)
+                            name=name,StaggerLoc=StaggerLoc_,rc=localrc)
    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    call ESMF_AttributeSet(field,'units',trim(units))
 
