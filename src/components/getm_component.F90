@@ -986,6 +986,12 @@ module getm_component
          p2d => hn(:,:,1)
          hbot(imin-HALO:,jmin-HALO:) => p2d
 #endif
+#if 1
+!        turbulent quantities still without target attribute in getm
+         allocate(nybot (I2DFIELD))
+         allocate(tkebot(I2DFIELD))
+         allocate(epsbot(I2DFIELD))
+#else
 #if 0
          nybot (imin-HALO:,jmin-HALO:) => num(:,:,1)
          tkebot(imin-HALO:,jmin-HALO:) => tke(:,:,1)
@@ -997,6 +1003,7 @@ module getm_component
          tkebot(imin-HALO:,jmin-HALO:) => p2d
          p2d => eps(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => p2d
+#endif
 #endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
@@ -1992,6 +1999,14 @@ module getm_component
          waveK   = waveK_
       end if
    else
+#if 1
+!     turbulent quantities still without target attribute in getm
+      if (runtype .gt. 1) then
+         nybot  = num(:,:,1)
+         tkebot = tke(:,:,1)
+         epsbot = eps(:,:,1)
+      end if
+#endif
 !     Note (KK): update pointer because of pointer swap within GETM
       if (metforcing .and. met_method.eq.2) then
          swr => swr_
