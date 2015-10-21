@@ -991,9 +991,12 @@ module getm_component
          tkebot(imin-HALO:,jmin-HALO:) => tke(:,:,1)
          epsbot(imin-HALO:,jmin-HALO:) => eps(:,:,1)
 #else
-         allocate(nybot (I2DFIELD))
-         allocate(tkebot(I2DFIELD))
-         allocate(epsbot(I2DFIELD))
+         p2d => num(:,:,1)
+         nybot (imin-HALO:,jmin-HALO:) => p2d
+         p2d => tke(:,:,1)
+         tkebot(imin-HALO:,jmin-HALO:) => p2d
+         p2d => eps(:,:,1)
+         epsbot(imin-HALO:,jmin-HALO:) => p2d
 #endif
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
@@ -1989,15 +1992,6 @@ module getm_component
          waveK   = waveK_
       end if
    else
-#if 1
-#ifndef NO_3D
-      if (runtype .gt. 1) then
-         nybot  = num(:,:,1)
-         tkebot = tke(:,:,1)
-         epsbot = eps(:,:,1)
-      end if
-#endif
-#endif
 !     Note (KK): update pointer because of pointer swap within GETM
       if (metforcing .and. met_method.eq.2) then
          swr => swr_
