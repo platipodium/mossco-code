@@ -109,11 +109,12 @@ contains
 #define ESMF_METHOD "order_i8"
    function order_i8(i) result(order)
      integer(kind=8), intent(in)  :: i
-     integer(kind=4)              :: order
-     if (i<0) then
-       order=int(log10(-i*1.0))+1
+     integer(kind=4)              :: order,s
+     if ( i .eq. 0 ) then
+       order = 0
      else
-       order=int(log10(i*1.0))
+       s = sign(1,i)
+       order = int(0.5*(1-s)) + int(log10(1.0*s*i))
      endif
    end function order_i8
 
@@ -122,10 +123,11 @@ contains
    function order_i4(i) result(order)
      integer(kind=4), intent(in)  :: i
      integer(kind=4)              :: order
-     if (i<0) then
-       order=int(log10(-i*1.0))+1
+     
+     if ( i .eq. 0 ) then
+       order = 0
      else
-       order=int(log10(i*1.0))
+       order = int(0.5*(1-sign(1,i))) + int(log10(1.0*abs(i)))
      endif
    end function order_i4
 
