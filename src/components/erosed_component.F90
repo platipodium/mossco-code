@@ -1786,7 +1786,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
    implicit none
    real (ESMF_KIND_R8) :: CalcOrbitalVelocity, Hrms
    real (ESMF_KIND_R8) :: SigWaveHeight, WaveNumber, WavePeriod, WaterDepth
-   real (ESMF_KIND_R8), parameter :: pi = 3.14159265358979323846_fp, g = 9.86
+   real (ESMF_KIND_R8), parameter :: pi = 3.14159265358979323846_fp, g = 9.81
 !   logical             :: wave
    real (ESMF_KIND_R8) :: gammax  ! ratio of wave height to the water depth
    real (ESMF_KIND_R8) :: omega, k0, k0h
