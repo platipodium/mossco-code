@@ -18,8 +18,9 @@ def sequential_iterator(obj):
 try:
     import yaml
 except:
-    sys.path.append('/home/lemmen/opt/lib64/python2.6/site-packages/')
-    import yaml
+    print('Please install the python-yaml package or set your PYTHONPATH variable\n')
+    print('to the location of the python yaml package.')
+    sys.exit(1)
 
 if len(sys.argv) > 1:
     filename = sys.argv[1]
