@@ -1,7 +1,7 @@
 !> @brief Implementation of string utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -109,11 +109,14 @@ contains
 #define ESMF_METHOD "order_i8"
    function order_i8(i) result(order)
      integer(kind=8), intent(in)  :: i
-     integer(kind=4)              :: order,s
+     integer(kind=4)              :: order
+     integer(kind=8)              :: s
+     integer(kind=8), parameter   :: ONE=1
+
      if ( i .eq. 0 ) then
        order = 0
      else
-       s = sign(1,i)
+       s = sign(ONE,i)
        order = int(0.5*(1-s)) + int(log10(1.0*s*i))
      endif
    end function order_i8
@@ -123,7 +126,7 @@ contains
    function order_i4(i) result(order)
      integer(kind=4), intent(in)  :: i
      integer(kind=4)              :: order
-     
+
      if ( i .eq. 0 ) then
        order = 0
      else
