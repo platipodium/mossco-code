@@ -2648,66 +2648,198 @@ module mossco_netcdf
 #define ESMF_METHOD "MOSSCO_AttributeNetcdfWriteArray"
   subroutine MOSSCO_AttributeNetcdfWriteArray(array, ncid, kwe, varid, rc)
 
-      type(ESMF_Array), intent(in)     :: array
-      integer, intent(in)              :: ncid
-      logical, optional                :: kwe ! dummy keyword enforcer
-      integer, intent(in), optional    :: varid
-      integer, intent(out), optional   :: rc
+    type(ESMF_Array), intent(in)     :: array
+    integer, intent(in)              :: ncid
+    logical, optional                :: kwe ! dummy keyword enforcer
+    integer, intent(in), optional    :: varid
+    integer, intent(out), optional   :: rc
 
-      integer(ESMF_KIND_I4)            :: attributeCount, rc_, localrc, int4, ncStatus
-      integer(ESMF_KIND_I4)            :: varid_, i
-      integer(ESMF_KIND_I8)            :: int8
-      real(ESMF_KIND_R8)               :: real8
-      real(ESMF_KIND_R4)               :: real4
-      character(len=ESMF_MAXSTR)       :: attributeName, string
-      type(ESMF_Typekind_Flag)         :: typeKind
+    integer(ESMF_KIND_I4)            :: attributeCount, rc_, localrc, int4, ncStatus
+    integer(ESMF_KIND_I4)            :: varid_, i
+    integer(ESMF_KIND_I8)            :: int8
+    real(ESMF_KIND_R8)               :: real8
+    real(ESMF_KIND_R4)               :: real4
+    character(len=ESMF_MAXSTR)       :: attributeName, string
+    type(ESMF_Typekind_Flag)         :: typeKind
 
-      rc_=ESMF_SUCCESS
+    rc_=ESMF_SUCCESS
 
-      if (present(varid)) then
-        varid_=varid
+    if (present(varid)) then
+      varid_=varid
+    else
+      varid_=0 !> @todo get_globals here!
+    endif
+
+    call ESMF_AttributeGet(array, count=attributeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, attributeCount
+      call ESMF_AttributeGet(array, attributeIndex=i, name=attributeName, &
+        typekind=typekind, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (typekind==ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(array, attributeName, int4, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int4)
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(array, attributeName, int8, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int8)
+      elseif (typekind==ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(array, attributeName, real4, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(array, attributeName, real8, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
       else
-        varid_=0 !> @todo get_globals here!
+        call ESMF_AttributeGet(array, attributeName, string, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
       endif
+    enddo
 
-      call ESMF_AttributeGet(array, count=attributeCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      do i=1, attributeCount
-        call ESMF_AttributeGet(array, attributeIndex=i, name=attributeName, &
-          typekind=typekind, rc=rc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  could not write attribute '//trim(attributeName))
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
-        if (typekind==ESMF_TYPEKIND_I4) then
-          call ESMF_AttributeGet(array, attributeName, int4, rc=localrc)
-          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int4)
-        elseif (typekind==ESMF_TYPEKIND_I8) then
-          call ESMF_AttributeGet(array, attributeName, int8, rc=localrc)
-          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int8)
-        elseif (typekind==ESMF_TYPEKIND_R4) then
-          call ESMF_AttributeGet(array, attributeName, real4, rc=localrc)
-          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
-        elseif (typekind==ESMF_TYPEKIND_R8) then
-          call ESMF_AttributeGet(array, attributeName, real8, rc=localrc)
-          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
-        else
-          call ESMF_AttributeGet(array, attributeName, string, rc=localrc)
-          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
-        endif
-      enddo
-
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  could not write attribute '//trim(attributeName))
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
-      if (present(rc)) rc=rc_
+    if (present(rc)) rc=rc_
 
   end subroutine MOSSCO_AttributeNetcdfWriteArray
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_AttributeNetcdfWriteState"
+  subroutine MOSSCO_AttributeNetcdfWriteState(state, ncid, kwe, varid, rc)
+
+    type(ESMF_State), intent(in)     :: state
+    integer, intent(in)              :: ncid
+    logical, optional                :: kwe ! dummy keyword enforcer
+    integer, intent(in), optional    :: varid
+    integer, intent(out), optional   :: rc
+
+    integer(ESMF_KIND_I4)            :: attributeCount, rc_, localrc, int4, ncStatus
+    integer(ESMF_KIND_I4)            :: varid_, i
+    integer(ESMF_KIND_I8)            :: int8
+    real(ESMF_KIND_R8)               :: real8
+    real(ESMF_KIND_R4)               :: real4
+    character(len=ESMF_MAXSTR)       :: attributeName, string
+    type(ESMF_Typekind_Flag)         :: typeKind
+
+    rc_=ESMF_SUCCESS
+
+    if (present(varid)) then
+      varid_=varid
+    else
+      varid_=0 !> @todo get_globals here!
+    endif
+
+    call ESMF_AttributeGet(state, count=attributeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, attributeCount
+      call ESMF_AttributeGet(state, attributeIndex=i, name=attributeName, &
+        typekind=typekind, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (typekind==ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(state, attributeName, int4, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int4)
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(state, attributeName, int8, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int8)
+      elseif (typekind==ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(state, attributeName, real4, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(state, attributeName, real8, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
+      else
+        call ESMF_AttributeGet(state, attributeName, string, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
+      endif
+    enddo
+
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  could not write attribute '//trim(attributeName))
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_AttributeNetcdfWriteState
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_AttributeNetcdfWriteField"
+  subroutine MOSSCO_AttributeNetcdfWriteField(field, ncid, kwe, varid, rc)
+
+    type(ESMF_Field), intent(in)     :: field
+    integer, intent(in)              :: ncid
+    logical, optional                :: kwe ! dummy keyword enforcer
+    integer, intent(in), optional    :: varid
+    integer, intent(out), optional   :: rc
+
+    integer(ESMF_KIND_I4)            :: attributeCount, rc_, localrc, int4, ncStatus
+    integer(ESMF_KIND_I4)            :: varid_, i
+    integer(ESMF_KIND_I8)            :: int8
+    real(ESMF_KIND_R8)               :: real8
+    real(ESMF_KIND_R4)               :: real4
+    character(len=ESMF_MAXSTR)       :: attributeName, string
+    type(ESMF_Typekind_Flag)         :: typeKind
+
+    rc_=ESMF_SUCCESS
+
+    if (present(varid)) then
+      varid_=varid
+    else
+      varid_=0 !> @todo get_globals here!
+    endif
+
+    call ESMF_AttributeGet(field, count=attributeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, attributeCount
+      call ESMF_AttributeGet(field, attributeIndex=i, name=attributeName, &
+        typekind=typekind, rc=rc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (typekind==ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(field, attributeName, int4, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int4)
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(field, attributeName, int8, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int8)
+      elseif (typekind==ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(field, attributeName, real4, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, attributeName, real8, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
+      else
+        call ESMF_AttributeGet(field, attributeName, string, rc=localrc)
+        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
+      endif
+    enddo
+
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (ncStatus /= NF90_NOERR) then
+      call ESMF_LogWrite('  could not write attribute '//trim(attributeName))
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (present(rc)) rc=rc_
+
+  end subroutine MOSSCO_AttributeNetcdfWriteField
 
 end module
