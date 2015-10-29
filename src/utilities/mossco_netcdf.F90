@@ -140,7 +140,7 @@ module mossco_netcdf
     !write(message,fmt) 'localDeCount=', localDeCount,' bounds ',lbnd,' : ', &
     !  ubnd, ' exclusiveCount ', exclusiveCount
     !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !call ESMF_LogFlush( rc=rc)
+    !call ESMF_LogFlush( rc=localrc)
 
     if (any(exclusiveCount==0)) return
 
