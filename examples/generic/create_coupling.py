@@ -1267,6 +1267,30 @@ fid.write('''
     enddo
 #endif
 
+    call MOSSCO_StatePopulateAttributes(exportState, parentClock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+''')
+
+for coupling in couplingList:
+  jtem = coupling[-1]
+
+  if instanceDict.has_key(jtem):
+    if instanceDict[jtem] != 'netcdf': continue
+
+  ito = gridCompList.index(jtem)
+
+  fid.write('    do phase=1,gridCompPhaseCountList(' + str(ito+1) + ')\n')
+  fid.write('      call ESMF_GridCompRun(gridCompList(' + str(ito+1) + '), importState=exportState, &\n')
+  fid.write('        exportState=exportState, clock=controlClock, rc=localrc)')
+  fid.write('''
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+''')
+
+fid.write('''
+
     call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
