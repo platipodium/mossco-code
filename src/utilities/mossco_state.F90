@@ -39,6 +39,8 @@ interface MOSSCO_DestroyOwn
   module procedure MOSSCO_ArrayBundleDestroyOwn
 end interface
 
+#include "git-sha.h"
+
 contains
 
 #undef  ESMF_METHOD
@@ -1419,5 +1421,107 @@ contains
 
   end subroutine MOSSCO_StateItemNameCheck
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StatePopulateAttributes"
+    subroutine MOSSCO_StatePopulateAttributes(state, clock, kwe, rc)
+
+#ifndef NO_ISO_FORTRAN_ENV
+      use, intrinsic :: ISO_FORTRAN_ENV
+#endif
+
+      type(ESMF_State), intent(inout)              :: state
+      type(ESMF_Clock), intent(in)                 :: clock
+      logical, intent(in), optional                :: kwe !keyword-enforcer
+      integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+      integer(ESMF_KIND_I4)               :: rc_, localrc
+      logical                             :: isPresent
+      character(len=ESMF_MAXSTR)          :: string
+
+      rc_ = ESMF_SUCCESS
+
+      call ESMF_AttributeSet(state, 'mossco_sha_key',MOSSCO_GIT_SHA_KEY, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#ifndef NO_ISO_FORTRAN_ENV
+      call ESMF_AttributeSet(state, 'compile_compiler_version',compiler_version(), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'compile_compiler_options',compiler_options(), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
+
+      call get_command(string)
+      call ESMF_AttributeSet(state, 'run_command_line',trim(string), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call getcwd(string)
+      call ESMF_AttributeSet(state, 'run_working_directory',trim(string), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+#ifndef NO_ISO_FORTRAN_ENV
+      call ESMF_AttributeSet(state, 'run_process_id',getpid(), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
+
+      !> @todo check cross-platform compatibility of these gnu extensions
+      call getlog(string)
+#ifndef NO_ISO_FORTRAN_ENV
+      write(string,'(A,I5,A,I5,A)') trim(string)// '(id=',getuid(),', gid=',getgid(),')'
+#endif
+      call ESMF_AttributeSet(state, 'run_user',trim(string), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call hostnm(string)
+      call ESMF_AttributeSet(state, 'run_user',trim(string), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'title','MOSSCO coupled simulation', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'institution','MOSSCO partners (HZG, IOW, and BAW)', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'institution_hzg','Helmholtz-Zentrum Geesthacht', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(state, 'institution_iow','Institut für Ostseeforschung Warnemünde', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeSet(state, 'institution_baw','Bundesanstalt für Wasserbau', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'history','Created by MOSSCO', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'source ','model_mossco', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'references ','http://www.mossco.de/doc', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(state, 'comment ','', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (present(rc)) rc = rc_
+
+      return
+
+  end subroutine MOSSCO_StatePopulateAttributes
 
 end module mossco_state
