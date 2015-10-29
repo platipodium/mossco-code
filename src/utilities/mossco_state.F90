@@ -39,7 +39,7 @@ interface MOSSCO_DestroyOwn
   module procedure MOSSCO_ArrayBundleDestroyOwn
 end interface
 
-#include "git-sha.h"
+!#include "git-sha.h" !> @todo needs fix in Makefile for git_sha to avoid duplicate include
 
 contains
 
@@ -1440,9 +1440,9 @@ contains
 
       rc_ = ESMF_SUCCESS
 
-      call ESMF_AttributeSet(state, 'mossco_sha_key',MOSSCO_GIT_SHA_KEY, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call ESMF_AttributeSet(state, 'mossco_sha_key',MOSSCO_GIT_SHA_KEY, rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifndef NO_ISO_FORTRAN_ENV
       call ESMF_AttributeSet(state, 'compile_compiler_version',compiler_version(), rc=localrc)
