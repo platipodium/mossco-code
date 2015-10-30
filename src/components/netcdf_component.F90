@@ -362,9 +362,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (currTime == startTime) then
-        nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, rc=localrc)
+        nc = mossco_netcdfCreate(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       else
-        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, rc=localrc)
+        nc = mossco_netcdfOpen(fileName, timeUnit=timeUnit, state=importState, rc=localrc)
       end if
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
