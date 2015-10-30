@@ -77,6 +77,12 @@ module mossco_netcdf
   integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
   integer, parameter :: MOSSCO_NC_EXISTING=1
 
+  interface MOSSCO_AttributeNetcdfWrite
+    module procedure MOSSCO_AttributeNetcdfWriteField
+    module procedure MOSSCO_AttributeNetcdfWriteState
+    module procedure MOSSCO_AttributeNetcdfWriteArray
+  end interface MOSSCO_AttributeNetcdfWrite
+
 #include "git-sha.h"
 
   contains
