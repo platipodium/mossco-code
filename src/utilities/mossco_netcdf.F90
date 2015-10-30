@@ -688,20 +688,19 @@ module mossco_netcdf
 
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',fieldname)
-      ncStatus = nf90_put_att(self%ncid,varid,'long_name',fieldname)
-      ncStatus = nf90_put_att(self%ncid,varid,'coordinates',trim(coordinates))
-      ncStatus = nf90_put_att(self%ncid,varid,'missing_value',missingValue)
-      ncStatus = nf90_put_att(self%ncid,varid,'_FillValue',missingValue)
       call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) call ESMF_AttributeSet(field, 'standard_name', trim(fieldName), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not.isPresent) then
+        write(message,'(A)')  '  field '//trim(fieldName)//' has no standard_name attribute. Using its name instead.'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        call ESMF_AttributeSet(field, 'standard_name', trim(fieldName), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
       call ESMF_AttributeGet(field, 'long_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -727,41 +726,9 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_AttributeGet(field, count=attributeCount, rc=localrc)
+      call MOSSCO_AttributeNetcdfWrite(field, self%ncid, varid=varid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      do i=1, attributeCount
-         call ESMF_AttributeGet(field, attributeIndex=i, name=attributeName, &
-           typekind=typekind, rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         if (typekind==ESMF_TYPEKIND_I4) then
-           call ESMF_AttributeGet(field, attributeName, int4, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int4)
-         elseif (typekind==ESMF_TYPEKIND_I8) then
-           call ESMF_AttributeGet(field, attributeName, int8, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),int8)
-         elseif (typekind==ESMF_TYPEKIND_R4) then
-           call ESMF_AttributeGet(field, attributeName, real4, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real4)
-         elseif (typekind==ESMF_TYPEKIND_R8) then
-           call ESMF_AttributeGet(field, attributeName, real8, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real8)
-         else
-           call ESMF_AttributeGet(field, attributeName, string, rc=localrc)
-           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),trim(string))
-         endif
-      enddo
 
       !> @todo remove time from dimensions
       varname='pet_'//trim(geomName)
