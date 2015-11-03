@@ -254,7 +254,7 @@ module soil_pelagic_connector
               'Dissolved_Inorganic_Phosphorus_DIP_nutP_upward_flux_at_soil_surface'/), &
               DIPflux, verbose=verbose, rc=localrc)
 
-    if (rc == 0)  then
+    if (localrc == 0)  then
         call mossco_state_get(importState,(/ &
               'mole_concentration_of_phosphate_upward_flux_at_soil_surface'/), &
               val1_f2, verbose=verbose, rc=localrc)
@@ -281,7 +281,7 @@ module soil_pelagic_connector
             'detritus_upward_flux_at_soil_surface              ', &
             'detN_upward_flux_at_soil_surface                  ', &
             'Detritus_Nitrogen_detN_upward_flux_at_soil_surface'/), &
-            DETNflux, verbose=verbose, rc=rc)
+            DETNflux, verbose=verbose, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       DETNflux = NC_fdet*FDETCflux + NC_sdet*SDETCflux
