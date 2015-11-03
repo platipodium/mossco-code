@@ -518,11 +518,16 @@ module fabm_pelagic_component
                                  1-totalLWidth3(2):jnum+totalUWidth3(2), &
                                  1-totalLWidth3(3):numlayers+totalUWidth3(3)))
     pel%is_openboundary = .false.
+    if (.not.(associated(pel%is_openboundary_hz))) &
+      allocate(pel%is_openboundary_hz(1-totalLWidth3(1):inum+totalUWidth3(1), &
+                                      1-totalLWidth3(2):jnum+totalUWidth3(2)))
+    pel%is_openboundary_hz = .false.
 
     call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
       mask = ( gridmask == 0 ) !>@todo: mask where gridmask /= 1
       pel%is_openboundary = ( gridmask > 1 )
+      pel%is_openboundary_hz = pel%is_openboundary(:,:,1)
     end if
 
     !! add cell area to horizontal grid
@@ -1405,6 +1410,43 @@ module fabm_pelagic_component
         end do
       !endwhere
 
+
+      !> vertically homogeneous boundary conditions
+      !>@todo vertically resolved boundary conditions need regridding
+      if (associated(pel%is_openboundary_hz)) then
+      do n=1,pel%nvar
+        varname = trim(pel%export_states(n)%standard_name)
+        call ESMF_StateGet(importState, trim(varname)//'_boundary_value_hz', itemType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (itemType == ESMF_STATEITEM_FIELD) then
+          call ESMF_StateGet(importState, trim(varname)//'_boundary_value_hz', field, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_FieldGet(field, farrayPtr=ratePtr2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          ! overwrite concentrations at the boundary if present
+          !>@todo check bounds
+          do k=1,pel%knum
+            where (pel%is_openboundary_hz(RANGE2D))
+              pel%conc(RANGE2D,k,n) = ratePtr2(RANGE2D)
+            end where
+          end do
+        else
+          ! no field found
+          cycle
+          !do k=1,pel%knum
+          !where (pel%is_openboundary_hz(RANGE2D))
+          !  pel%conc(RANGE2D,k,n) = 1.234
+          !end where
+          !end do
+        end if
+      end do
+      end if
+
       call integrate_flux_in_water(pel, importState)
 
 
@@ -1566,6 +1608,8 @@ module fabm_pelagic_component
       endwhere
     enddo
 
+
+    !> vertically homogeneous flux in water (e.g. rivers)
     do n=1,pel%nvar
         varname = trim(pel%export_states(n)%standard_name)
         if (associated(pel%volume_flux)) then
