@@ -948,7 +948,7 @@ module mossco_netcdf
   function MOSSCO_NetcdfOpen(filename, kwe, timeUnit, state, mode, rc) result(nc)
 
     character(len=*), intent(in)               :: filename
-    logical, intent(in)                        :: kwe
+    logical, intent(in), optional              :: kwe
     character(len=*), optional, intent(inout)  :: timeUnit
     type(ESMF_State), optional, intent(inout)  :: state
     character(len=1), optional, intent(in)     :: mode
