@@ -273,8 +273,8 @@
       do j=1,pf%jnum
         ! sigma coordinate masking
         if (.not.pf%mask(i,j,pf%knum)) then
-          call fabm_do_surface(pf%model,i,j,pf%knum,rhs(:))
-          call fabm_do_bottom(pf%model,i,j,1,rhs(:),bottom_flux(:))
+          call fabm_do_surface(pf%model,i,j,rhs(:))
+          call fabm_do_bottom(pf%model,i,j,rhs(:),bottom_flux(:))
           do k=1,pf%knum
             call fabm_do(pf%model,i,j,k,rhs(:))
           end do
@@ -325,7 +325,7 @@
     do j=1,rhs_driver%jnum
       do i=1,rhs_driver%inum
         if (.not.rhs_driver%mask(i,j,rhs_driver%knum)) then
-          call fabm_do_surface(rhs_driver%model,i,j,rhs_driver%knum,rhs(i,j,rhs_driver%knum,:))
+          call fabm_do_surface(rhs_driver%model,i,j,rhs(i,j,rhs_driver%knum,:))
           rhs(i,j,rhs_driver%knum,:) = rhs(i,j,rhs_driver%knum,:)/rhs_driver%layer_height(i,j,rhs_driver%knum)
         end if
         !if (.not.rhs_driver%mask(i,j,1)) then
