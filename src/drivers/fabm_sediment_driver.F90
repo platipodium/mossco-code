@@ -272,6 +272,8 @@ sed%model => fabm_create_model_from_file(nml_unit,'fabm_sed.nml')
 
 ! set fabm domain
 call fabm_set_domain(sed%model,_INUM_,_JNUM_,_KNUM_)
+call sed%model%set_surface_index(1)
+call sed%model%set_bottom_index(_KNUM_)
 
 ! allocate state variables
 sed%nvar = size(sed%model%state_variables)

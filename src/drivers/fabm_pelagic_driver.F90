@@ -160,6 +160,8 @@
 
     ! Send information on spatial domain
     call fabm_set_domain(pf%model,inum,jnum,knum)
+    call pf%model%set_bottom_index(1)
+    call pf%model%set_surface_index(knum)
 
     ! set mask (valid data point: mask=.false.)
     ! fabm_set_mask is not used, since MOSSCO does not use a
