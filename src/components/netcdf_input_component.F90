@@ -868,8 +868,8 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR) :: message, name
     integer(ESMF_KIND_I4)      :: localrc, itime
     logical                    :: isPresent, isMatch
-    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterIncludeList(:), filterExcludeList(:)
-    character(len=4096)        :: aliasString, filterIncludeString, filterExcludeString
+    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
+    character(len=4096)        :: aliasString
     type(ESMF_Vm)              :: vm
 
     rc = ESMF_SUCCESS
@@ -938,14 +938,6 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_AttributeGetList(importState, 'filter_pattern_include', filterIncludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_AttributeGetList(importState, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call MOSSCO_AttributeGetList(importState, 'alias_definition', aliasList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -954,28 +946,6 @@ module netcdf_input_component
     do i=1, itemCount
 
       if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
-
-      !! Look for an exclusion pattern on this field name
-      if (allocated(filterExcludeList)) then
-        do j=1,ubound(filterExcludeList,1)
-          call MOSSCO_StringMatch(itemNameList(i), filterExcludeList(j), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (ismatch) exit
-        enddo
-        if (ismatch) cycle
-      endif
-
-      !! Look for an inclusion pattern on this field name
-      if (allocated(filterIncludeList)) then
-        do j=1,ubound(filterIncludeList,1)
-          call MOSSCO_StringMatch(itemNameList(i), filterIncludeList(j), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (ismatch) exit
-        enddo
-        if (.not.ismatch) cycle
-      endif
 
       call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1011,10 +981,7 @@ module netcdf_input_component
 
     enddo
 
-    if (allocated(filterIncludeList)) deallocate(filterIncludeList)
-    if (allocated(filterExcludeList)) deallocate(filterExcludeList)
     if (allocated(aliasList)) deallocate(aliasList)
-
     if (allocated(itemTypeList)) deallocate(itemTypeList)
     if (allocated(itemNameList)) deallocate(itemNameList)
 
