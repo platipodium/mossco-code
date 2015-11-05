@@ -355,6 +355,7 @@ ifeq ($(MOSSCO_GETM),true)
   endif
   export GETM_LIBRARY_PATH
   export GETM_CPPFLAGS += -I$(GETMDIR)/include -I$(GETMDIR)/modules/$(FORTRAN_COMPILER)
+  export GETM_CPPFLAGS += -I$(GOTM_PREFIX)/include
   export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
 endif
 export MOSSCO_GETM
