@@ -9,6 +9,16 @@ Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the ver
 
 ## Preparing your environment
 
+
+### PyYAML
+
+Download the latest PyYAML source package, then install it as a user
+
+	
+	python setup.py install --user </path/to/PyYAML/source/>
+	
+### Environment variables
+
     export PATH=$PATH:/home/lemmen/opt/bin # for cmake
     export ESMFMKFILE=/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_43/esmf.mk
     module load intel openmpi_ib  netcdf/3.6.2
