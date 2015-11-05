@@ -202,7 +202,7 @@
       end if
       if (longitude<-360._rk.or.longitude>360._rk) then
          FATAL 'run.nml: a valid value for "longitude" must be provided  &
-                in "environment" if "swr_method" is 0.'
+               & in "environment" if "swr_method" is 0.'
          stop 'init_run'
       end if
    end if
