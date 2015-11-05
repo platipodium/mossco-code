@@ -255,6 +255,8 @@
 
    ! Send information on spatial domain to FABM (this also allocates memory for diagnostics)
    call fabm_set_domain(zerod%model,1,1,1)
+   call zerod%model%set_bottom_index(1)
+   call zerod%model%set_surface_index(1)
 
    ! Set dimensions in rhs_driver class
    zerod%inum=1
@@ -392,11 +394,11 @@ rhs=0.0_rk
 
    ! Calculate temporal derivatives due to surface exchange.
    call update_depth(SURFACE)
-   call fabm_get_surface_exchange(rhs_driver%model,1,1,1,rhs(1,1,1,1:n))
+   call fabm_get_surface_exchange(rhs_driver%model,1,1,rhs(1,1,1,1:n))
 
    ! Calculate temporal derivatives due to benthic processes.
    call update_depth(BOTTOM)
-   call fabm_do_benthos(rhs_driver%model,1,1,1,rhs(1,1,1,1:n),rhs(1,1,1,n+1:))
+   call fabm_do_benthos(rhs_driver%model,1,1,rhs(1,1,1,1:n),rhs(1,1,1,n+1:))
 
    ! For pelagic variables: surface and bottom flux (rate per surface area) to concentration (rate per volume)
    rhs(1,1,1,1:n) = rhs(1,1,1,1:n)/column_depth
@@ -429,7 +431,7 @@ end subroutine get_rhs
       ! Calculate photosynthetically active radiation if it is not provided in the input file.
       if (swr_method==0) then
          ! Calculate photosynthetically active radiation from geographic location, time, cloud cover.
-         call fabm_get_albedo(zerod%model,1,1,1,bio_albedo)
+         call fabm_get_albedo(zerod%model,1,1,bio_albedo)
          par_sf = short_wave_radiation(julianday,secondsofday,longitude,latitude,cloud,bio_albedo)
       else
          if (.not.(par_from_file)) par_sf = zerod%par(1,1,1)
