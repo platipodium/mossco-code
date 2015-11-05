@@ -166,6 +166,8 @@ end type
 
       ! Initialize model tree (creates metadata and assigns variable identifiers)
       call fabm_set_domain(gotmfabm%model,1,1,nlev,dt)
+      call gotmfabm%model%set_bottom_index(1)
+      call gotmfabm%model%set_surface_index(gotmfabm%knum)
       gotmfabm%nvar_pel=size(gotmfabm%model%info%state_variables)
       gotmfabm%nvar_ben=size(gotmfabm%model%info%state_variables_ben)
       gotmfabm%nvar=gotmfabm%nvar_pel + gotmfabm%nvar_ben
@@ -344,8 +346,8 @@ end type
    curnuh = _ZERO_
 
    ! call fabm_do to fill diagnostic variables and pre-fetch data
-   call fabm_do_surface(gotmfabm%model,1,1,gotmfabm%knum,rhs(1,1,1,:))
-   call fabm_do_bottom(gotmfabm%model,1,1,1,rhs(1,1,1,:),bottom_flux(1,1,:))
+   call fabm_do_surface(gotmfabm%model,1,1,rhs(1,1,1,:))
+   call fabm_do_bottom(gotmfabm%model,1,1,rhs(1,1,1,:),bottom_flux(1,1,:))
    rhs=0.0_rk
    do k=1,gotmfabm%knum
      call fabm_do(gotmfabm%model,1,1,k,rhs(1,1,1,:))
@@ -498,7 +500,7 @@ end type
    end do
 
    ! Get updated air-sea fluxes for biological state variables.
-   call fabm_get_surface_exchange(gotmfabm%model,1,1,gotmfabm%knum,sfl(1,1,:))
+   call fabm_get_surface_exchange(gotmfabm%model,1,1,sfl(1,1,:))
 
    ! Calculate dilution due to surface freshwater flux (m/s)
    dilution = precip+evap
@@ -608,8 +610,8 @@ end type
       end do
    end do
 
-!   if (associated(bio_albedo))     call fabm_get_albedo(gotmfabm%model,gotmfabm%knum,bio_albedo)
-!   if (associated(bio_drag_scale)) call fabm_get_drag(gotmfabm%model,gotmfabm%knum,bio_drag_scale)
+!   if (associated(bio_albedo))     call fabm_get_albedo(gotmfabm%model,bio_albedo)
+!   if (associated(bio_drag_scale)) call fabm_get_drag(gotmfabm%model,bio_drag_scale)
 
    end subroutine do_gotm_mossco_fabm
 
@@ -636,7 +638,7 @@ end type
    end do
 
    rhs = _ZERO_
-   call fabm_do_benthos(rhs_driver%model,1,1,1,rhs(1,1,1,1:n),rhs(1,1,1,n+1:))
+   call fabm_do_benthos(rhs_driver%model,1,1,rhs(1,1,1,1:n),rhs(1,1,1,n+1:))
    rhs(1,1,1,1:n) = rhs(1,1,1,1:n)/rhs_driver%layer_height(1)
 
    ! Add pelagic sink and source terms for all depth levels.
@@ -712,8 +714,8 @@ end type
       do i=1,gotmfabm%knum
          call fabm_initialize_state(gotmfabm%model,1,1,i)
       end do
-      call fabm_initialize_surface_state(gotmfabm%model,1,1,gotmfabm%knum)
-      call fabm_initialize_bottom_state(gotmfabm%model,1,1,1)
+      call fabm_initialize_surface_state(gotmfabm%model,1,1)
+      call fabm_initialize_bottom_state(gotmfabm%model,1,1)
 
    end subroutine init_gotm_mossco_fabm_state
 
