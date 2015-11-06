@@ -1274,23 +1274,6 @@ fid.write('''
 
 ''')
 
-for jtem in gridCompList:
-
-  if instanceDict.has_key(jtem):
-    if instanceDict[jtem] != 'netcdf': continue
-
-  ito = gridCompList.index(jtem)
-
-  fid.write('    !! Write metadata to netcdf instance ' + jtem + '\n')
-  fid.write('    do phase=1,gridCompPhaseCountList(' + str(ito+1) + ')\n')
-  fid.write('      call ESMF_GridCompRun(gridCompList(' + str(ito+1) + '), importState=exportState, &\n')
-  fid.write('        exportState=exportState, clock=controlClock, rc=localrc)')
-  fid.write('''
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    enddo
-''')
-
 fid.write('''
 
     call ESMF_StateValidate(importState, rc=localrc)
