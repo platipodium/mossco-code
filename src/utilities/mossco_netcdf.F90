@@ -142,12 +142,6 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !write(fmt,'(A,I1,A,I1,A,I1,A)') '(A,I2.2,A,',rank, 'I2,A,', rank, 'I2,A,', rank, 'I2)'
-    !write(message,fmt) 'localDeCount=', localDeCount,' bounds ',lbnd,' : ', &
-    !  ubnd, ' exclusiveCount ', exclusiveCount
-    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    !call ESMF_LogFlush( rc=localrc)
-
     if (any(exclusiveCount==0)) return
 
     if (present(name)) varname=trim(name)
@@ -157,7 +151,6 @@ module mossco_netcdf
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
        return
     endif
-
 
     !> If the variable does not exist, create it
     if (.not.self%variable_present(varname)) then
@@ -1034,19 +1027,29 @@ module mossco_netcdf
     integer                       :: ncStatus
     character(len=255)            :: string
     integer                       :: rc_, localrc
+    logical                       :: isPresent
+
+    inquire(file=trim(filename), exist=isPresent)
 
     ncStatus = nf90_create(trim(filename), NF90_CLOBBER, nc%ncid)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot create file '//trim(filename), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
+    else
+      if (ispresent) then
+        call ESMF_LogWrite('  overwriting file '//trim(filename), ESMF_LOGMSG_WARNING)
+      else
+        call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_WARNING)
+      endif
     endif
 
     if (present(timeUnit)) then
       nc%timeUnit=trim(timeUnit)
       call nc%init_time(rc=rc_)
+      call ESMF_LogWrite('  file '//trim(filename)//' has time unit '//trim(timeUnit), ESMF_LOGMSG_INFO)
     else
       nc%timeUnit=''
-      call ESMF_LogWrite('  created file '//trim(filename)//' with no time unit', ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite('  file '//trim(filename)//' has no time unit', ESMF_LOGMSG_WARNING)
     endif
 
     ncStatus = nf90_redef(nc%ncid)
@@ -1056,7 +1059,7 @@ module mossco_netcdf
     endif
 
     if (present(state)) then
-      call MOSSCO_AttributeNetcdfWrite(state, nc%ncid, varid=NF90_GLOBAL, rc=localrc)
+      !call MOSSCO_AttributeNetcdfWrite(state, nc%ncid, varid=NF90_GLOBAL, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else

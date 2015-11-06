@@ -301,7 +301,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     call ESMF_GridCompGet(gridComp, petCount=petCount, localPet=localPet, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -314,7 +314,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     call ESMF_AttributeGet(importState, name='filename', value=fileName, &
       defaultValue=trim(name)//'.nc', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     j=index(fileName,'.nc',back=.true.)
     if (j < len_trim(fileName)-2) fileName=trim(fileName)//'.nc'
@@ -355,6 +355,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_TimeGet(refTime, timeStringISOFrac=timeString, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       write(timeUnit,'(A)') 'seconds since '//timeString(1:10)//' '//timestring(12:len_trim(timestring))
 
       call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=localrc)
@@ -403,7 +404,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
       call nc%update()
       call nc%update_variables()
+
     endif
+
 
     do i=1,itemCount
 
@@ -535,11 +538,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (stopTime>currTime) then
-      call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+    !if (stopTime>currTime) then
+    !  call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
+    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !endif
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
