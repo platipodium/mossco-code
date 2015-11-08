@@ -27,6 +27,7 @@ module netcdf_component
   use mossco_state
   use mossco_attribute
   use mossco_config
+  use mossco_time
 
   implicit none
   private
@@ -266,7 +267,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     character(len=19)       :: timestring
     type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime, startTime, stopTime, maxTime
-    type(ESMF_TimeInterval) :: timeInterval
+    type(ESMF_TimeInterval) :: timeInterval, timeStep
     integer(ESMF_KIND_I8)   :: i, j, n, advanceCount
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii, petCount
@@ -529,19 +530,21 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (allocated(filterIncludeList)) deallocate(filterIncludeList)
     if (allocated(filterExcludeList)) deallocate(filterExcludeList)
 
-    !! For this component, it does not make sense to advance its clock, as it may
-    !! be called multiple times for a single time step by other components, and as it
-    !! has no time-process (this might change with temporal averaging).  Only for
-    !! the sake of consistency, this is added here.
+    !! For this component, it does not make sense to advance its clock by a regular
+    !! timestep.  Thus, it is advanced to the next alarm time.
+
+    call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeStep, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !if (stopTime>currTime) then
-    !  call ESMF_ClockAdvance(clock, timeStep=stopTime-currTime, rc=localrc)
-    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !if (timeStep>0) then
+      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !endif
 
     call MOSSCO_CompExit(gridComp, localrc)
