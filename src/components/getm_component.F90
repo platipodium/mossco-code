@@ -83,6 +83,7 @@ module getm_component
   type :: ptrarray3D
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
      real(ESMF_KIND_R8)                          :: hackmax=-1.0
+     real(ESMF_KIND_R8)                          :: hackmaxmin=0.0
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 
@@ -581,9 +582,11 @@ module getm_component
                !> set maximum value for boundary condition
                if (trim(itemNameList(i))=='Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water') then
                  transport_conc(n)%hackmax=0.8
+                 transport_conc(n)%hackmaxmin=0.2
                  call ESMF_LogWrite('  use maximum boundary value of 0.8 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
                end if
                if (trim(itemNameList(i))=='Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water') then
+                 transport_conc(n)%hackmaxmin=2.0
                  transport_conc(n)%hackmax=8.0
                  call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
                end if
@@ -747,7 +750,7 @@ module getm_component
       end if
 
 !     Call transport routine every macro timestep
-      if (mod(n,M).eq.0) call getmCmp_transport()
+      if (mod(n,M).eq.0) call getmCmp_transport(currTime)
 
       call ESMF_ClockAdvance(myClock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2272,7 +2275,7 @@ module getm_component
 ! !INTERFACE:
 #undef  ESMF_METHOD
 #define ESMF_METHOD "getmCmp_transport"
-   subroutine getmCmp_transport()
+   subroutine getmCmp_transport(currTime)
 !
 ! !DESCRIPTION:
 !
@@ -2283,6 +2286,8 @@ module getm_component
 !
 ! !INPUT PARAMETERS:
 !
+  type(ESMF_Time), intent(in), optional :: currTime
+
 ! !INPUT/OUPUT PARAMETERS:
 !
 ! !REVISION HISTORY:
@@ -2292,6 +2297,10 @@ module getm_component
    REALTYPE,dimension(I3DFIELD),target  :: t_conc,t_ws
    REALTYPE,dimension(:,:,:)   ,pointer :: p_conc,p_ws
    integer                              :: n
+
+  integer(ESMF_KIND_I4)      :: doy, localrc, rc
+  real(ESMF_KIND_R8)         :: hackmax, y0, amplitude
+  real(ESMF_KIND_R8), parameter :: pi=3.1415926535897932384626433832795028841971693993751D0
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -2325,7 +2334,21 @@ module getm_component
       end if
 
       call do_transport_3d(p_conc,p_ws)
-      !call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)
+
+      ! Hack for Kai with seasonally varying maximum value for boundary concentrations
+      ! if you don't give currtime, then only an upper maximum is used.
+      if (present(currTime)) then
+        call ESMF_TimeGet(currTime, dayOfYear=doy, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        amplitude=transport_conc(n)%hackmax - transport_conc(n)%hackmaxmin
+        y0=transport_conc(n)%hackmaxmin
+        hackmax=y0 + amplitude * cos(2.0*pi*doy/365.25) ! reformulate according to need
+        call zero_gradient_3d_bdy(p_conc,hackmax)
+      else
+        call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)
+      endif
 
       if (noKindMatch) then
          transport_conc(n)%ptr = t_conc
