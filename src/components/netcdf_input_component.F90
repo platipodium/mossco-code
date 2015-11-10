@@ -135,7 +135,7 @@ module netcdf_input_component
     type(ESMF_Clock)           :: clock
 
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
-    logical                    :: isBundle
+    logical                    :: isBundle=.true.
     type(ESMF_Grid)            :: grid2, grid3, grid, varGrid
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName, gridName
