@@ -631,16 +631,6 @@ module mossco_netcdf
         return
       endif
 
-      call replace_character(geomName, ' ', '_')
-
-      if (ubound(dimids,1)>1) then
-        write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(ubound(dimids,1)-1))
-        do i=ubound(dimids,1)-2,1,-1
-          write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(i))
-        enddo
-      endif
-
-      ncStatus = nf90_redef(self%ncid)
       !! add ungridded dimension
       ! ask field for ungridded dimension
       dimrank=ubound(dimids,1)
@@ -665,6 +655,17 @@ module mossco_netcdf
         end do
         deallocate(tmpDimids)
       end if
+
+      call replace_character(geomName, ' ', '_')
+
+      if (ubound(dimids,1)>1) then
+        write(coordinates,'(A)') trim(geomName)//'_'//trim(coordnames(ubound(dimids,1)-1))
+        do i=ubound(dimids,1)-2,1,-1
+          write(coordinates,'(A)') trim(coordinates)//' '//trim(geomName)//'_'//trim(coordnames(i))
+        enddo
+      endif
+
+      ncStatus = nf90_redef(self%ncid)
 
       !! define variable
       if (present(precision)) then
