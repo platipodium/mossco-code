@@ -92,7 +92,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bcn:s:l:w:" opt; do
+while getopts ":rt:bcn:s:l:w:p:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -528,7 +528,7 @@ case ${SYSTEM} in
            JOBID=$(sbatch --parsable slurm.sh)
            echo "Job ${TITLE} with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
            if test -f ${POSTPROCESS}; then
-             JOBID=$(sbatch --parsable --dependency=after:${JOBID} ${POSTPROCESS})
+             JOBID=$(sbatch --parsable --dependency=afterok:${JOBID} ${POSTPROCESS})
              echo "Postprocess job with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
            fi
            squeue -j ${JOBID}
