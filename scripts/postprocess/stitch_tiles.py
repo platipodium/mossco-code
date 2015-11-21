@@ -19,8 +19,9 @@ import sys
 if len(sys.argv) > 1:
   prefix = sys.argv[1]
 else:
-  prefix = u"netcdf_out"
-  prefix = u"/Volumes/Kiwi/output/sn-m/mossco_gffrr"
+  prefix = u"mossco_gffrr"
+  prefix = u"/Users/lemmen/devel/mossco/setups/sns/netcdf"
+
 
 if len(sys.argv) > 2:
   excl_variables = sys.argv[2].split(',')
@@ -34,16 +35,14 @@ if len(sys.argv) > 3:
   outfile=sys.argv[3]
 else:
   outfile=prefix + '_stitched.nc'
-
-    
-
+  
 if len(files)<1:
   print "Did not find any files for pattern "+pattern
-  
+
 alat={}
 alon={}
 
-## Find coord variables  
+## Find coord variables
 nc=netcdf.Dataset(files[0],'r')
 for key, value in nc.variables.iteritems():
   dim=value.dimensions
@@ -69,11 +68,11 @@ if len(alat)<1:
 
 for f in files:
   nc=netcdf.Dataset(f,'r')
-  
+
   for item in alat.keys():
-    if nc.variables.has_key(item) and alat.has_key(item): 
+    if nc.variables.has_key(item) and alat.has_key(item):
       alat[item].extend(nc.variables[item][:])
-  for item in alon.keys(): 
+  for item in alon.keys():
     if nc.variables.has_key(item) and alon.has_key(item):
       alon[item].extend(nc.variables[item][:])
   nc.close()
@@ -81,20 +80,17 @@ for f in files:
 nc=netcdf.Dataset(files[0],'r')
 time=nc.variables['time'][:]
 
-for key,value in alon.iteritems(): alon[key]=np.sort(list(set(value)))
-for key,value in alat.iteritems(): alat[key]=np.sort(list(set(value)))
+for key,value in alon.iteritems(): alon[key]=np.sort(np.unique(value))
+for key,value in alat.iteritems(): alat[key]=np.sort(np.unique(value))
 
 temp={}
 for key,value in alon.iteritems():
-  if np.all(np.isfinite(value)):
-    temp[key]=value
-    
+  temp[key]=value[np.isfinite(value)]
 alon=temp
 
 temp={}
 for key,value in alat.iteritems():
-  if np.all(np.isfinite(value)):
-    temp[key]=value
+  temp[key]=value[np.isfinite(value)]
 alat=temp
 
 ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
@@ -146,7 +142,7 @@ nc.close()
 if ncout.variables.has_key('time'): ncout.variables['time'][:]=time
 
 for item in alat.keys():
-  if ncout.variables.has_key(item): 
+  if ncout.variables.has_key(item):
     print item, len(ncout.variables[item][:]), len(alat[item])
     ncout.variables[item][:]=alat[item]
   else:
@@ -163,9 +159,18 @@ for f in files[:]:
   meta={}
 
   for item in alat.keys():
-    if nc.variables.has_key(item): lat[item]=nc.variables[item][:]
+    if ncout.variables.has_key(item): 
+      temp=nc.variables[item][:]
+      if type(temp) is np.ndarray: lat[item] = temp[np.isfinite(temp)]
+      elif type(temp) is np.ma.core.MaskedArray: lat[item]=temp.compressed()
+      else: lat[item] = temp
   for item in alon.keys():
-    if ncout.variables.has_key(item): lon[item]=nc.variables[item][:]
+    if ncout.variables.has_key(item): 
+      temp=nc.variables[item][:]
+      if type(temp) is np.ndarray: lon[item] = temp[np.isfinite(temp)]
+      elif type(temp) is np.ma.core.MaskedArray: lon[item]=temp.compressed()
+      else: 
+        lon[item] = temp
 
   for item in lat.keys():
     if alat.has_key(item):
