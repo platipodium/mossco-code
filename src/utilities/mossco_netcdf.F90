@@ -1898,7 +1898,7 @@ module mossco_netcdf
 
       do j=1,coordDimCount(i)
 
-        write(varName,'(A)') trim(geomName)//'_'//trim(axisNameList(i))
+        write(varName,'(A)') trim(geomName)//'_'//trim(axisNameList(j))
 
         ncStatus = nf90_inq_varid(self%ncid, trim(varName), varid)
         if (ncStatus /= NF90_NOERR) then
