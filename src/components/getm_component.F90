@@ -1892,12 +1892,12 @@ module getm_component
    do k=0,klen
       do j=jmin-HALO,jmax+HALO
          do i=imin-HALO,imax+HALO-1
-            if (au(i,j) .ne. 0) then
+            if (au(i,j) .gt. 0) then
                zwu(i,j) = _HALF_ * ( zw(i,j,k) + zw(i+1,j,k) )
             else
-               if (az(i,j) .ne. 0) then
+               if (az(i,j) .gt. 0) then
                   zwu(i,j) = zw(i,j,k)
-               else if (az(i+1,j) .ne. 0) then
+               else if (az(i+1,j) .gt. 0) then
                   zwu(i,j) = zw(i+1,j,k)
                end if
             end if
@@ -1905,12 +1905,12 @@ module getm_component
       end do
       do j=jmin-HALO,jmax+HALO-1
          do i=imin-HALO,imax+HALO-1
-            if (av(i,j).ne.0 .or. av(i+1,j).ne.0) then
+            if (av(i,j).gt.0 .or. av(i+1,j).gt.0) then
                zx(i,j,k) = _HALF_ * ( zwu(i,j) + zwu(i,j+1) )
             else
-               if (az(i,j).ne.0 .or. az(i+1,j).ne.0) then
+               if (az(i,j).gt.0 .or. az(i+1,j).gt.0) then
                   zx(i,j,k) = zwu(i,j)
-               else if (az(i,j+1).ne.0 .or. az(i+1,j+1).ne.0) then
+               else if (az(i,j+1).gt.0 .or. az(i+1,j+1).gt.0) then
                   zx(i,j,k) = zwu(i,j+1)
                end if
             end if
