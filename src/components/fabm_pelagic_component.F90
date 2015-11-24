@@ -525,7 +525,7 @@ module fabm_pelagic_component
 
     call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
     if (localrc == ESMF_SUCCESS) then
-      mask = ( gridmask == 0 ) !>@todo: mask where gridmask /= 1
+      mask = ( gridmask.le.0 ) !>@todo: mask where gridmask /= 1
       pel%is_openboundary = ( gridmask > 1 )
       pel%is_openboundary_hz = pel%is_openboundary(:,:,1)
     end if

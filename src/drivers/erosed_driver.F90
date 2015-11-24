@@ -501,7 +501,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
  !  if (nm==103) write (*,*) ' initialization:', soursin3d_arguments%sour
         i=  1+ mod((nm-1),inum)
         j=  1+int ((nm-1)/inum)
-masking: if (mask(i,j) /=0) then
+masking: if ( mask(i,j) .gt. 0 ) then
          ! do not run erosed für missing values
 
           if (flufflyr>0) then

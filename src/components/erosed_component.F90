@@ -1258,7 +1258,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           do j=1,jnum
             do i= 1, inum
               ! filtering missing values (land)
-              if (mask(i,j)/=0) then
+              if ( mask(i,j) .gt. 0 ) then
                ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = ptr_f3(i,j,1)
                else
                ws(nfrac_by_external_idx(external_index),inum*(j -1)+i) = 0.0_fp
@@ -1298,7 +1298,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       if (localrc == 0) then
          do j=1,jnum
           do i= 1, inum
-           if (mask(i,j)/=0)then
+           if ( mask(i,j) .gt. 0 ) then
              h1(inum*(j -1)+i) = depth(i,j)
            endif   ! else use initial value in phase 1
           end do
@@ -1345,7 +1345,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         do j=1,jnum
           do i= 1, inum
            ! filtering missing values (land)
-           if (mask(i,j)/=0)then
+           if ( mask(i,j) .gt. 0 ) then
             umod  (inum*(j -1)+i) = sqrt( u2d(i,j)*u2d(i,j) + v2d(i,j)*v2d(i,j) )
 
             u_bot (inum*(j -1)+i) = ubot (i,j)
@@ -1419,7 +1419,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             kmx = kmaxsd
 
         end if
-        if (mask(i,j) /=0) then
+        if ( mask(i,j) .gt. 0 ) then
 
           size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,kmx,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
 

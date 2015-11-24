@@ -324,7 +324,7 @@ module fabm_sediment_component
         do i=1,sed%grid%inum
           do j=1,sed%grid%jnum
             do k=1,sed%grid%knum
-              sed%mask(i,j,k) = gridmask(i,j)==0
+              sed%mask(i,j,k) = (gridmask(i,j).le.0)
             end do
           end do
         end do
