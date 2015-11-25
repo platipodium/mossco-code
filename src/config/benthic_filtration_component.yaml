@@ -1,0 +1,36 @@
+author: Carsten Lemmen, HZG
+copyright: Copyright 2015, Helmholtz-Zentrum Geesthacht
+benthic_filtration:
+  name: Benthic filtration component
+  description: A component that implements benthic filtration with a Michaelis-Menten approach
+  phytoplankton_carbon_in_water:
+      units: mmol m**-3
+      short_name: C
+      internal_name: phyC
+      intent: in
+      standard_name: concentration_of_phytoplankton_as_carbon_in_water
+      other_names:
+        Phytplankton_Carbon_phyC_in_water
+  water_depth_at_soil_surface:
+      units: m
+      short_name: h
+      internal_name: depth
+      intent: in
+      standard_name: water_depth
+  mussel_abundance_at_soil_surface:
+      short_name: mussel_abundance
+      units: m**-2
+      min_value: 0.0
+      max_value: 50000.0
+      default_value: 0.0
+      other_names:
+        mussel_density
+      intent: in
+  phytoplankton_carbon_flux_at_soil_surface:
+      units: mmol m**-2 s**-1
+      short_name: deltaC
+      internal_name: deltaPhyC
+      intent: out
+      other_names:
+        Phytplankton_Carbon_phyC_flux_at_soil_surface
+      standard_name: filtration_rate_of_phytoplankton_as_carbon_at_soil_surface
