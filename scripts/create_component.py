@@ -383,6 +383,13 @@ fid.write('''
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
+    if (itemType == ESMF_STATEITEM_NOTFOUND) then
+      write(message,'(A)') trim(name)//' could not find item '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message,'(A)') trim(name)//' obtained item '//trim(foreignGridFieldName)//', which is not a field'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
