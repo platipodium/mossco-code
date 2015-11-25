@@ -339,55 +339,92 @@ fid.write('''
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR)  :: name, message, timeString, string
+    character(ESMF_MAXSTR)  :: foreignGridFieldName
     type(ESMF_Clock)        :: clock
     type(ESMF_Time)         :: currTime, time
     logical                 :: clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
 
-    type(ESMF_Grid)       :: grid2, grid3
-    type(ESMF_Mesh)       :: mesh
-    integer               :: nimport,nexport
-    type(ESMF_DistGrid)   :: distgrid
-    type(ESMF_ArraySpec)  :: arrayspec
-    type(ESMF_Field)      :: field
-    integer(ESMF_KIND_I4) :: localPet, petCount, localrc
-    type(ESMF_VM)         :: vm
+    type(ESMF_Grid), target   :: grid
+    type(ESMF_Grid), pointer  :: grid2, grid3
+    type(ESMF_Mesh)           :: mesh
+    type(ESMF_DistGrid)       :: distgrid
+    type(ESMF_ArraySpec)      :: arrayspec
+    type(ESMF_Field)          :: field
+    integer(ESMF_KIND_I4)     :: localrc, i,j,k, rank, gridRank
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+    type(ESMF_StateItem_Flag) :: itemType
 
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
-    integer                     :: i,j,k
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr2
-    real(ESMF_KIND_R8)    :: h_r8
 
     rc=ESMF_SUCCESS
 
-    !! Make sure that a local clock exists, and that the call to this procedure
-    !! is written to the log file
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
+      value=foreignGridFieldName, defaultValue='none',rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (trim(foreignGridFieldName) == 'none') then
+      !! Create grids on your own, for now this template code just exits with
+      !! an error message
+      write(message,'(A)') trim(name)//' needs a grid to operate. Specify this in your coupling configuration.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(importState, trim(foreignGridFieldName), itemType=itemType, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message,'(A)') trim(name)//' obtained item '//trim(foreignGridFieldName)//', which is not a field'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(importState, trim(foreignGridFieldName), field=field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+      write(message,'(A)') trim(name)//' cannot use empty field '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, grid=grid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (gridRank == 2) then
+      grid2 => grid
+    elseif (gridRank == 3) then
+      grid3 => grid
+    else
+      write(message,'(A)') trim(name)//' cannot deal with grid ranks <2 or >3 from field '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+
     !> Here comes your own time initialization code
-    !! In particular, this should contain
-    !! 1. Setting your internal timestep and adding it to your clock, this could
 
-    !> Create grids
-    !> This example grid is a 1 x 1 x 1 grid, you need to adjust this
-    grid3 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1,1/),maxIndex=(/1,1,1/), &
-      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    call ESMF_AttributeSet(grid3,'creator',trim(name), rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-
-    grid2 = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/),maxIndex=(/1,1/), &
-      coordSys=ESMF_COORDSYS_SPH_DEG,indexflag=ESMF_INDEX_DELOCAL, rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    call ESMF_AttributeSet(grid3,'creator',trim(name), rc=localrc)
-    if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 ''')
 
-# Find foreign grid and set this as default grid
 # Go through export state and add grids
 
 fid.write('''
