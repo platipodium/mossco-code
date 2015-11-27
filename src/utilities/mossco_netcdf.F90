@@ -2604,7 +2604,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, ntime, varid
     real(ESMF_KIND_R8), allocatable              :: farray(:)
     integer(ESMF_KIND_I8)                        :: ticks
-    character(ESMF_MAXSTR)                       :: timeUnit
+    character(ESMF_MAXSTR)                       :: timeUnit, message
 
     rc_ = ESMF_SUCCESS
 
@@ -2647,11 +2647,20 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      if (.not.allocated(farray)) allocate(farray(ntime))
+      if (.not.allocated(farray)) then
+        allocate(farray(ntime), stat=localrc)
+        if (localrc /= 0) then
+          write(message,'(A)') '    could not allocate memory for farray'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      endif
 
       localrc = nf90_get_var(self%ncid, varid, farray)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      if (localrc /= NF90_NOERR) then
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       !! Search for the largest index i with farray(i) <= ticks*1.0D0
       do i = 1, ntime
