@@ -292,6 +292,10 @@ for i in range(0,nimport):
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    write(message, '(A)') trim(name)//' created empty field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     call ESMF_StateAddReplace(importState, (/field/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -313,6 +317,10 @@ if nexport > 0:
     call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message, '(A)') trim(name)//' created empty field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_StateAddReplace(exportState, (/field/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -354,6 +362,9 @@ fid.write('''
     integer(ESMF_KIND_I4)     :: localrc, i,j,k, rank, gridRank
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag) :: itemType
+    type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    integer(ESMF_KIND_I4)                   :: itemCount
 
     integer                     :: lbnd(3), ubnd(3),farray_shape(3)
     real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3
@@ -382,7 +393,6 @@ fid.write('''
     call ESMF_StateGet(importState, trim(foreignGridFieldName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 
     if (itemType == ESMF_STATEITEM_NOTFOUND) then
       write(message,'(A)') trim(name)//' could not find item '//trim(foreignGridFieldName)
@@ -427,12 +437,37 @@ fid.write('''
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
+    call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount>0) then
+      allocate(itemTypeList(itemCount))
+      allocate(itemNameList(itemCount))
+    endif
+
+    do i=1, itemCount
+
+      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
+
+      call ESMF_StateGet(exportState, itemNameList(i), field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+        call ESMF_FieldEmptySet(field, grid, &
+          staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      endif
+
+    enddo
 
     !> Here comes your own time initialization code
 
 ''')
-
-# Go through export state and add grids
 
 fid.write('''
     call MOSSCO_CompExit(gridComp, localrc)
@@ -480,61 +515,32 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR):: name, message, timeString
+    character(ESMF_MAXSTR):: name, message
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime, stopTime
     logical               :: clockIsPresent
     type(ESMF_TimeInterval) :: timeInterval
 
-    integer(ESMF_KIND_I4) :: petCount, localPet, rank, localrc
+    integer(ESMF_KIND_I4) :: petCount, localPet, rank
     integer(ESMF_KIND_I8) :: advanceCount
     real(ESMF_KIND_R8)    :: h_r8
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: ptr_f2
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: ptr_f3
     type(ESMF_Field)        :: field
+    integer(ESMF_KIND_I4)   :: localrc
 
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet, &
-      name=name, clockIsPresent=clockIsPresent, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    if (.not.clockIsPresent) then
-      call ESMF_LogWrite('Required clock not found in '//trim(name), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    endif
+    rc=ESMF_SUCCESS
 
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-
-    call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
-      timeStep=timeInterval, stopTime=stopTime, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,I8)') trim(timestring)//' '//trim(name)//' run ',advanceCount
-    call ESMF_TimeGet(stopTime,timeStringISOFrac=timestring)
-    write(message,'(A,I8)') trim(message)//' to '//trim(timeString)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState,  exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Here comes your code for reading the import states
 
     do while (.not.ESMF_ClockIsStopTime(clock))
 
-      call ESMF_ClockGet(clock,currTime=currTime, advanceCount=advanceCount, &
-        rc=localrc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-      call ESMF_ClockGet(clock,startTime=currTime, rc=localrc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-
-      call ESMF_ClockGet(clock,stopTime=currTime, rc=localrc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       !> @todo
@@ -545,13 +551,9 @@ fid.write('''
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end do
 
-    call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=localrc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finished running.'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE, rc=localrc)
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Run
 
@@ -563,15 +565,26 @@ fid.write('''
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR):: name, message, timeString
+    character(ESMF_MAXSTR):: name, message
     type(ESMF_Clock)      :: clock
     type(ESMF_Time)       :: currTime
-    logical               :: clockIsPresent
+    integer(ESMF_KIND_I4) :: localrc
+
+    rc=ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState,  exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     !> @todo
     ! Insert here your finalization code
     !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
 ''')
