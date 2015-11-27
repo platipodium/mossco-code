@@ -436,7 +436,7 @@ module benthic_filtration_component
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: farrayPtr3
     type(ESMF_Field)        :: field
     integer(ESMF_KIND_I4)   :: localrc, i
-    real(ESMF_KIND_R8)      :: maximum_rate=2.0, half_saturation=10.0
+    real(ESMF_KIND_R8)      :: maximumFiltrationRate=2.0, halfSaturationAbundance=10.0
     integer(ESMF_KIND_I4)   :: ubnd(3), lbnd(3)
 
     character(len=ESMF_MAXSTR)  :: phyCName, fluxName
@@ -450,10 +450,16 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !call ESMF_AttributeGet(importState, name='half_saturation', value=half_saturation, &
+    call ESMF_AttributeGet(importState, name='maximumFiltrationRate', value=maximumFiltrationRate, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !call ESMF_AttributeGet(importState, name='maximumFiltrationRate', value=half_saturation, &
     !  defaultValue=10.0, rc=localrc)
     !call ESMF_AttributeGet(importState, name='maximum_rate', value=maximum_rate, &
     !  defaultValue=2.0, rc=localrc)
+    call ESMF_AttributeGet(importState, name='halfSaturationAbundance', value=halfSaturationAbundance, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     phyCName='phytoplankton_as_carbon_in_water'
     call ESMF_StateGet(importState, trim(phyCName), itemType=itemType, rc=localrc)
@@ -561,7 +567,7 @@ module benthic_filtration_component
     ! formulation depending on phytoplanktion carbon concentration and mussel_
     ! abundance.
     ! dPhyC [mmol/m**2/s] = 1 * mmol/s * 1/m**2
-    farrayPtr2  = phyC / (phyC + half_saturation) * maximum_rate * abundance
+    farrayPtr2  = phyC / (phyC + halfSaturationAbundance) * maximumFiltrationRate * abundance
 
     call ESMF_ClockAdvance(clock,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
