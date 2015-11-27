@@ -1643,7 +1643,7 @@ contains
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, i, j, itemCount, k
     character(ESMF_MAXSTR)                  :: message, name, suffix, itemName
-    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), fieldNameList(:)
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMF_StateItem_Flag)               :: itemType
     type(ESMF_Field)                        :: field, newfield
@@ -1658,8 +1658,21 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount > 0) then
-      allocate(itemTypeList(itemCount))
-      allocate(itemNameList(itemCount))
+      if (allocated(itemTypeList)) deallocate(itemTypeList)
+      if (allocated(itemNameList)) deallocate(itemNameList)
+      allocate(itemTypeList(itemCount), stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') '    could not allocate memory for itemTypeList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      allocate(itemNameList(itemCount), stat=localrc)
+      if (localrc /= 0) then
+        write(message,'(A)') '    could not allocate memory for itemTypeList'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, &
           rc=localRc)
@@ -1668,28 +1681,30 @@ contains
     endif
 
     do i=1,itemCount
-
       j=index(itemNameList(i),'_',back=.true.)
       if (j<1) cycle
 
       itemName=itemNameList(i)
       suffix=itemName(j+1:len_trim(itemName))
+      write(0,*) 'itemCount=', itemCount, 'i=', i, ' suffix=',trim(suffix), ' j=', j
 
       ! Make sure the suffix is all numeric
       do k=1,len_trim(suffix)
         if (suffix(k:k) <'0' .or. suffix(k:k) > '9') then
           suffix(1:1)='!'  ! This is a stop marker
-          exit
         endif
       enddo
+      write(0,*) 'itemCount=', itemCount, 'i=', i, ' suffix=',trim(suffix), ' j=', j
       if (suffix(1:1)=='!') cycle
 
+      write(0,*) 'itemCount for numeric item'
       if (itemtypeList(i) == ESMF_STATEITEM_FIELD) then
 
         call ESMF_StateGet(state, itemName(1:j-1), itemType=itemType, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        write(0,*) 'itemCount=', itemCount, 'i=', i, 'name=',trim(itemNameList(i))
         if (itemType == ESMF_STATEITEM_NOTFOUND) then
 
           fieldBundle = ESMF_FieldBundleCreate(name=itemName(1:j-1), rc=localrc)
