@@ -655,21 +655,19 @@ module netcdf_input_component
     if (allocated(ungriddedLbnd)) deallocate(ungriddedLbnd)
     if (allocated(fieldList)) deallocate(fieldList)
 
-
-    if (isBundle) then
-      call MOSSCO_StateLinkFieldsToBundle(exportState, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
     call nc%close(rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isBundle) then
-      call MOSSCO_StateLinkFieldsToBundle(exportState, rc=localrc)
+      write(message, '(A)') trim(name)//' will bundle fields with same name'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call MOSSCO_StateMoveFieldsToBundle(exportState, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      write(message, '(A)') trim(name)//' will not bundle fields'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     call MOSSCO_CompExit(gridComp)
