@@ -501,14 +501,15 @@ end do
 !   link environment forcing
 call fabm_link_bulk_data(rhs_driver%model,standard_variables%temperature,rhs_driver%temp3d)
 call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosynthetic_radiative_flux,rhs_driver%par)
+!call fabm_link_bulk_data(rhs_driver%model,standard_variables%porosity,rhs_driver%porosity)
 
 ! calculate diffusivities (temperature)
 f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
 do n=1,size(rhs_driver%model%state_variables)
+   rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
+              (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
    if (rhs_driver%model%state_variables(n)%properties%get_logical('particulate',default=.false.)) then
       bcup = rhs_driver%bcup_particulate_variables
-      rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
-              (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
       !write(0,*) rhs_driver%diff(1,1,:),'fac',rhs_driver%bioturbation_factor(1,1,:)
       !stop
       conc_insitu = rhs_driver%conc(:,:,:,n)*rhs_driver%porosity!/ &
@@ -523,8 +524,9 @@ do n=1,size(rhs_driver%model%state_variables)
               (rhs_driver%ones3d - rhs_driver%porosity)/rhs_driver%porosity
    else
       bcup = rhs_driver%bcup_dissolved_variables
-      rhs_driver%diff = (rhs_driver%diffusivity + rhs_driver%temp3d * 0.035d0) &
+      rhs_driver%diff = rhs_driver%diff+(rhs_driver%diffusivity + rhs_driver%temp3d * 0.035d0) &
              * rhs_driver%intf_porosity / 86400.0_rk / 10000_rk
+
       conc_insitu = rhs_driver%conc(:,:,:,n)
       call diff3d(rhs_driver%grid,conc_insitu,rhs_driver%bdys(:,:,n+1), &
               rhs_driver%zeros2d, rhs_driver%fluxes(:,:,n), rhs_driver%zeros2d, &
