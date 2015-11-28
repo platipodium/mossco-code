@@ -63,7 +63,7 @@ contains
     type(ESMF_StateItem_Flag)     :: itemType
     type(ESMF_Field), allocatable :: fieldList(:)
     logical                       :: isPresent, verbose_
-    character(len=ESMF_MAXSTR)    :: message, name
+    character(len=ESMF_MAXPATHLEN)    :: message, name
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
 
     verbose_=.false.
@@ -168,7 +168,7 @@ contains
     type(ESMF_StateItem_Flag)     :: itemType
     type(ESMF_Field), allocatable :: fieldList(:)
     logical                       :: isPresent, verbose_
-    character(len=ESMF_MAXSTR)    :: message, name
+    character(len=ESMF_MAXPATHLEN)    :: message, name
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
 
     verbose_=.false.
@@ -273,7 +273,7 @@ contains
     type(ESMF_StateItem_Flag)     :: itemType
     type(ESMF_Field), allocatable :: fieldList(:)
     logical                       :: isPresent, verbose_
-    character(len=ESMF_MAXSTR)    :: message, name
+    character(len=ESMF_MAXPATHLEN)    :: message, name
     type(ESMF_FieldStatus_Flag)   :: fieldStatus
 
     verbose_=.false.
@@ -363,12 +363,15 @@ contains
   !! an item's name in the importState
 #undef  ESMF_METHOD
 #define ESMF_METHOD "set_item_flags"
-  subroutine set_item_flags(state,name,requiredFlag,optionalFlag,requiredRank)
+  subroutine set_item_flags(state, name, requiredFlag, optionalFlag, requiredRank)
+
     type(ESMF_State)           :: state
-    character(len=ESMF_MAXSTR) :: name,attname
-    integer,optional           :: requiredRank
-    logical,optional           :: requiredFlag,optionalFlag
+    character(len=*)           :: name
+    integer, optional          :: requiredRank
+    logical, optional          :: requiredFlag,optionalFlag
+
     integer                    :: localrc, rc
+    character(len=ESMF_MAXSTR) :: attname
 
     if (present(requiredFlag)) then
       attname=trim(name)//':required'
@@ -399,7 +402,7 @@ contains
   type(ESMF_StateItem_Flag)         :: itemFlag
   integer                           :: n,rc,idx,attCount
   logical                           :: required
-  character(ESMF_MAXSTR)            :: attName,fieldName
+  character(len=ESMF_MAXPATHLEN)            :: attName,fieldName
   integer                           :: localrc
 
   !> get Attribute list
@@ -456,7 +459,7 @@ contains
   type(ESMF_StateItem_Flag)         :: itemFlag
   integer                           :: n,rc,idx,attCount
   logical                           :: optional
-  character(ESMF_MAXSTR)            :: attName,potentialFieldName
+  character(len=ESMF_MAXPATHLEN)            :: attName,potentialFieldName
   integer                           :: localrc
 
   !> get Attribute list
@@ -517,8 +520,8 @@ contains
     integer(ESMF_KIND_I4), optional :: rc
 
     integer(ESMF_KIND_I4)           :: localRc, itemCount, i, rank, j, maxDigits, count, fieldCount
-    character(len=ESMF_MAXSTR)      :: fieldName, name, string, gridName, attributeName
-    character(len=4096)             :: message
+    character(len=ESMF_MAXPATHLEN)  :: string, message
+    character(len=ESMF_MAXSTR)      :: fieldName, name, gridName, attributeName
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), fieldNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMF_Field), allocatable   :: fieldList(:)
@@ -730,7 +733,7 @@ contains
 !    implicit none
 !
 !    type(ESMF_State), intent(in)                    :: state
-!    character(len=ESMF_MAXSTR), intent(inout)      :: message
+!    character(len=ESMF_MAXPATHLEN), intent(inout)      :: message
 !    integer(ESMF_KIND_I4), intent(inout), optional :: length
 !    integer(ESMF_KIND_I4), intent(out), optional   :: rc
 !
@@ -740,10 +743,10 @@ contains
 !    real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
 !    integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
 !    integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
-!    character(len=ESMF_MAXSTR), allocatable :: characterValueList(:)
+!    character(len=ESMF_MAXPATHLEN), allocatable :: characterValueList(:)
 !
 !    integer(ESMF_KIND_I4)   :: rank, localrc, count, i, j, itemCount
-!    character(ESMF_MAXSTR)  :: attributeName
+!    character(len=ESMF_MAXPATHLEN)  :: attributeName
 !
 !    call ESMF_AttributeGet(state, count=count, rc=localrc)
 !    if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -902,7 +905,7 @@ contains
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(ESMF_MAXSTR)              :: name, message, attributeName, attributeValue
+    character(len=ESMF_MAXPATHLEN)              :: name, message, attributeName, attributeValue
     logical                             :: isPresent
     type(ESMF_Field)                    :: field
     type(ESMF_FieldStatus_Flag)         :: fieldStatus
@@ -963,14 +966,14 @@ contains
   recursive subroutine MOSSCO_StateDestroyOwn(importState, owner, rc)
 
     type(ESMF_State), intent(inout)              :: importState
-    character(ESMF_MAXSTR),  intent(in)          :: owner
+    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, itemCount, i
-    character(ESMF_MAXSTR)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)              :: message, creator
     logical                             :: isPresent
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
-    character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXPATHLEN), allocatable :: itemNameList(:)
 
     type(ESMF_State)    :: state
     type(ESMF_Field)    :: field
@@ -1070,13 +1073,13 @@ contains
   subroutine MOSSCO_FieldBundleDestroyOwn(fieldBundle, owner, rc)
 
     type(ESMF_FieldBundle), intent(inout)        :: fieldBundle
-    character(ESMF_MAXSTR),  intent(in)          :: owner
+    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, itemCount, i
-    character(ESMF_MAXSTR)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)              :: message, creator
     logical                             :: isPresent
-    character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXPATHLEN), allocatable :: itemNameList(:)
     type(ESMF_Field), allocatable       :: fieldList(:)
 
     rc_ = ESMF_SUCCESS
@@ -1138,13 +1141,13 @@ contains
   subroutine MOSSCO_ArrayBundleDestroyOwn(arrayBundle, owner, rc)
 
     type(ESMF_ArrayBundle), intent(inout)        :: arrayBundle
-    character(ESMF_MAXSTR),  intent(in)          :: owner
+    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, itemCount, i
-    character(ESMF_MAXSTR)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)              :: message, creator
     logical                             :: isPresent
-    character(ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXPATHLEN), allocatable :: itemNameList(:)
     type(ESMF_Array), allocatable       :: arrayList(:)
 
     rc_ = ESMF_SUCCESS
@@ -1207,11 +1210,11 @@ contains
   subroutine MOSSCO_ArrayDestroyOwn(array, owner, rc)
 
     type(ESMF_Array), intent(inout)              :: array
-    character(ESMF_MAXSTR),  intent(in)          :: owner
+    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(ESMF_MAXSTR)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)              :: message, creator
     logical                             :: isPresent
 
     rc_ = ESMF_SUCCESS
@@ -1243,11 +1246,11 @@ contains
   subroutine MOSSCO_FieldDestroyOwn(field, owner, rc)
 
     type(ESMF_Field), intent(inout)              :: field
-    character(ESMF_MAXSTR),  intent(in)          :: owner
+    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(ESMF_MAXSTR)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)              :: message, creator
     logical                             :: isPresent
 
     rc_ = ESMF_SUCCESS
@@ -1279,11 +1282,11 @@ contains
   subroutine MOSSCO_RouteHandleDestroyOwn(routeHandle, owner, rc)
 
     type(ESMF_RouteHandle), intent(inout)        :: routeHandle
-    character(ESMF_MAXSTR),  intent(in)          :: owner
+    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(ESMF_MAXSTR)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)              :: message, creator
     logical                             :: isPresent
 
     rc_ = ESMF_SUCCESS
@@ -1320,7 +1323,7 @@ contains
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(ESMF_MAXSTR)              :: message, name
+    character(len=ESMF_MAXPATHLEN)              :: message, name
     logical                             :: isPresent
     type(ESMF_StateItem_Flag)           :: itemType
     type(ESMF_FieldStatus_Flag)         :: fieldStatus
@@ -1386,7 +1389,7 @@ contains
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, i, itemCount
-    character(ESMF_MAXSTR)              :: name
+    character(len=ESMF_MAXSTR)              :: name
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
 
@@ -1436,7 +1439,7 @@ contains
 
       integer(ESMF_KIND_I4)               :: rc_, localrc
       logical                             :: isPresent
-      character(len=ESMF_MAXSTR)          :: string
+      character(len=ESMF_MAXPATHLEN)          :: string
 
       rc_ = ESMF_SUCCESS
 
@@ -1533,7 +1536,8 @@ contains
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, i, j, itemCount, k
-    character(ESMF_MAXSTR)                  :: message, name, suffix, itemName
+    character(len=ESMF_MAXSTR)                  :: message, suffix
+    character(len=ESMF_MAXPATHLEN)              :: name, itemName
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), fieldNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMF_StateItem_Flag)               :: itemType
@@ -1642,7 +1646,8 @@ contains
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, i, j, itemCount, k
-    character(ESMF_MAXSTR)                  :: message, name, suffix, itemName
+    character(len=ESMF_MAXSTR)              :: name, itemName
+    character(len=ESMF_MAXPATHLEN)          :: message, suffix
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     type(ESMF_StateItem_Flag)               :: itemType
@@ -1686,7 +1691,6 @@ contains
 
       itemName=itemNameList(i)
       suffix=itemName(j+1:len_trim(itemName))
-      write(0,*) 'itemCount=', itemCount, 'i=', i, ' suffix=',trim(suffix), ' j=', j
 
       ! Make sure the suffix is all numeric
       do k=1,len_trim(suffix)
@@ -1694,7 +1698,6 @@ contains
           suffix(1:1)='!'  ! This is a stop marker
         endif
       enddo
-      write(0,*) 'itemCount=', itemCount, 'i=', i, ' suffix=',trim(suffix), ' j=', j
       if (suffix(1:1)=='!') cycle
 
       write(0,*) 'itemCount for numeric item'
@@ -1711,7 +1714,7 @@ contains
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          write(message,'(A)')  '  created field bundle ',itemName(1:j-1)
+          write(message,'(A)')  '  created field bundle '//itemName(1:j-1)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_StateAddReplace(state, (/fieldBundle/), rc=localrc)
@@ -1725,7 +1728,7 @@ contains
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (itemType /= ESMF_STATEITEM_FIELDBUNDLE) then
-          write(message,'(A)')  '  expected fieldBundle ',itemName(1:j-1)
+          write(message,'(A)')  '  expected fieldBundle '//itemName(1:j-1)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
@@ -1754,7 +1757,8 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_FieldBundleAdd(fieldBundle, (/newfield/), rc=localrc)
+        call ESMF_FieldBundleAdd(fieldBundle, (/field/), rc=localrc)
+        !call ESMF_FieldBundleAdd(fieldBundle, (/newfield/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1762,8 +1766,11 @@ contains
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         write(message,'(A)')  '  to '
+        !call MOSSCO_FieldString(newfield, message)
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        call ESMF_StateRemove(state, (/itemName/), rc=localrc)
 
       elseif (itemtypeList(i) == ESMF_STATEITEM_ARRAY) then
 
