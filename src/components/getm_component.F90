@@ -954,8 +954,11 @@ module getm_component
       end if
       if (waveforcing_method .ne. NO_WAVES) then
          allocate(waveH  (E2DFIELD))
+         waveH = 0.0d0
          allocate(waveT  (E2DFIELD))
+         waveT = 0.0d0
          allocate(waveK  (E2DFIELD))
+         waveK = 0.0d0
       end if
    else
       select case (grid_type)
