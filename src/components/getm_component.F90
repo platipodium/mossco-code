@@ -1177,6 +1177,7 @@ module getm_component
 
    if (waveforcing_method .ne. NO_WAVES) then
       allocate(waveDir(E2DFIELD))
+      waveDir = 0.0d0
    end if
 
 
