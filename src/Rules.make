@@ -88,13 +88,20 @@ else
     ifeq ($(ESMF_FC),)
       ESMF_FC:=$(ESMF_F90COMPILER)
     endif
-    ESMF_FORTRAN_COMPILER = $(shell echo $(notdir $(ESMF_FC)) | tr a-z A-Z | cut -d"-" -f1)
+    ESMF_FORTRAN_COMPILER := $(shell echo $(notdir $(ESMF_FC)) | tr a-z A-Z | cut -d"-" -f1)
+    ifeq ($(ESMF_FORTRAN_COMPILER),FTN)
+      ifndef FORTRAN_COMPILER
+        $(error FORTRAN_COMPILER needs to be defined for ftn wrapper)
+      endif
+      $(warning Using FORTRAN_COMPILER=$(FORTRAN_COMPILER) for ftn wrapper)
+      ESMF_FORTRAN_COMPILER := $(FORTRAN_COMPILER)
+    endif
     ifdef FORTRAN_COMPILER
       ifneq ("$(ESMF_FORTRAN_COMPILER)","$(FORTRAN_COMPILER)")
         $(warning Overwriting FORTRAN_COMPILER=$(FORTRAN_COMPILER) with $(ESMF_FORTRAN_COMPILER))
       endif
     endif
-    export FORTRAN_COMPILER = $(ESMF_FORTRAN_COMPILER)
+    export FORTRAN_COMPILER := $(ESMF_FORTRAN_COMPILER)
     ifeq ($(FORTRAN_COMPILER), XLF)
       MOSSCO_F03VERSION=$(shell $(F90) -qversion | head -1)
     else
