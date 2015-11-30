@@ -201,7 +201,8 @@ module benthic_filtration_component
 
     endif
 
-    field = ESMF_FieldEmptyCreate(name='phytoplankton_as_carbon_in_water', rc=localrc)
+    field = ESMF_FieldEmptyCreate(name='Phytplankton_Carbon_phyC_in_water', rc=localrc)
+    !field = ESMF_FieldEmptyCreate(name='phytoplankton_as_carbon_in_water', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -462,6 +463,7 @@ module benthic_filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     phyCName='phytoplankton_as_carbon_in_water'
+    phyCName='Phytplankton_Carbon_phyC_in_water'
     call ESMF_StateGet(importState, trim(phyCName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
