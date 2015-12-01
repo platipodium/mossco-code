@@ -496,6 +496,10 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeGet(importState, name='maximumFiltrationRate', value=maximumFiltrationRate, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -615,15 +619,10 @@ module benthic_filtration_component
     ! abundance.
     ! dPhyC [mmol/m**2/s] = 1 * mmol/s * 1/m**2
 
-    call ESMF_LogWrite('bla', ESMF_LOGMSG_WARNING)
-    write(0,*) 'shape(phyC)=', shape(phyC)
-    write(0,*) 'shape(abundance)=', shape(abundance)
-    write(0,*) 'shape(farrayPtr2)=', shape(farrayPtr2)
-    write(0,*) 'ubnd2=', ubnd2
-    write(0,*) 'lbnd2=', lbnd2
-
-    where (phyc > 0)
-      farrayPtr2  = phyC / (phyC + halfSaturationConcentration) * maximumFiltrationRate * abundance
+    where (phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0)
+      farrayPtr2  = phyC(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) &
+        / (phyC(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) + halfSaturationConcentration) &
+        * maximumFiltrationRate * abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
     endwhere
 
     call ESMF_ClockAdvance(clock,rc=localrc)
