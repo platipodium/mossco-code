@@ -22,7 +22,7 @@ dependencies:
       grid: temperature_at_soil_surface
   - mussel:
     - component: getm
-      grid: temperature_in_water
+      grid: temperature_at_soil_surface
 
 instances:
   - mossco_gffrpr: netcdf
