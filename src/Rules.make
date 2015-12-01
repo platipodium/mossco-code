@@ -888,7 +888,13 @@ sha:
 	@-git log | head -1 | awk '{print "character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = \""$$2"\"" }' \
 	> $(MOSSCO_DIR)/src/include/git-sha.h
 
- help:
-
 help:
 	@if [ -f README ] ; then cat README ; fi
+
+
+# Dummy rules to avoid searching for these (increases speed of make)
+GNUmakefile:
+	@echo ;
+
+makefile:
+	@echo ;
