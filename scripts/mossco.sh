@@ -466,7 +466,6 @@ if [[ ${RETITLE} != 0 ]] ; then
 
   if test -f getm.inp ; then
     ${SED} -i "s/runid *=.*/runid = '${TITLE}',/" getm.inp
-    export runid="${TITLE}"
     if [[ "x${MPI_PREFIX}" != "x" ]] ; then
       ${SED} -i 's/parallel *=.*/parallel = .true.,/' getm.inp
       export parallel=True
@@ -478,15 +477,22 @@ if [[ ${RETITLE} != 0 ]] ; then
 
   if test -f gotmrun.nml ; then
     ${SED} -i "s/title *=.*/title = '${TITLE}',/" gotmrun.nml
-    export title="${TITLE}"
     ${SED} -i "s/out_fn *=.*/out_fn = '${TITLE}_gotm',/" gotmrun.nml
-    export out_fn="${TITLE}_gotm"
   fi
 
   if test -f mossco_run.nml ; then
     ${SED} -i "s/title *=.*/title = '${TITLE}',/" mossco_run.nml
-    export title="${TITLE}"
   fi
+
+  export runid="${TITLE}"
+  export title="${TITLE}"
+  export out_fn="${TITLE}_gotm"
+  if [[ "x${MPI_PREFIX}" != "x" ]] ; then
+    export parallel=True
+  else
+    export parallel=False
+  fi
+
 fi
 
 if test -f ./par_setup.dat ; then
