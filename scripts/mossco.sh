@@ -465,7 +465,7 @@ if [[ ${RETITLE} != 0 ]] ; then
   fi
 
   if test -f getm.inp ; then
-    ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+    ${SED} -i "s/runid =.*/runid = '${TITLE}',/" getm.inp
     export runid="${TITLE}"
     if [[ "x${MPI_PREFIX}" != "x" ]] ; then
       ${SED} -i 's/parallel =.*/parallel = .true.,/' getm.inp
@@ -477,14 +477,14 @@ if [[ ${RETITLE} != 0 ]] ; then
   fi
 
   if test -f gotmrun.nml ; then
-    ${SED} -i 's/title =.*/title = "'${TITLE}'",/' gotmrun.nml
+    ${SED} -i "s/title =.*/title = '${TITLE}',/" gotmrun.nml
     export title="${TITLE}"
-    ${SED} -i 's/out_fn =.*/out_fn = "'${TITLE}'_gotm",/' gotmrun.nml
+    ${SED} -i "s/out_fn =.*/out_fn = '${TITLE}_gotm',/" gotmrun.nml
     export out_fn="${TITLE}_gotm"
   fi
 
   if test -f mossco_run.nml ; then
-    ${SED} -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
+    ${SED} -i "s/title =.*/title = '${TITLE}',/" mossco_run.nml
     export title="${TITLE}"
   fi
 fi
