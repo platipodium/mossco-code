@@ -240,7 +240,7 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(field, 'units', 'm**-2', rc=localrc)
+    call ESMF_AttributeSet(field, 'units', 'mol m**-2 s**-1', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -251,7 +251,6 @@ module benthic_filtration_component
     call ESMF_StateAddReplace(exportState, (/field/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
 
     field = ESMF_FieldEmptyCreate(name='mussel_abundance_at_soil_surface', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -493,13 +492,13 @@ module benthic_filtration_component
 
     character(ESMF_MAXSTR):: name, message
     type(ESMF_Clock)      :: clock
-    type(ESMF_Time)       :: currTime
+    type(ESMF_Time)       :: currTime, myTime
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: farrayPtr2, phyC, abundance
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: farrayPtr3
     type(ESMF_Field)        :: field
     integer(ESMF_KIND_I4)   :: localrc, i
-    real(ESMF_KIND_R8)      :: maximumFiltrationRate=2.0, halfSaturationConcentration=10.0
+    real(ESMF_KIND_R8)      :: maximumFiltrationRate=2.0, halfSaturationConcentration=1E-3
     integer(ESMF_KIND_I4)   :: ubnd3(3), lbnd3(3), ubnd2(2), lbnd2(2)
 
     character(len=ESMF_MAXSTR)  :: phyCName, fluxName
@@ -632,18 +631,35 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     ! This is the core of the filtration model, which is a Michaelis-Menten
-    ! formulation depending on phytoplanktion carbon concentration and mussel_
+    ! formulation depending on phytoplankton carbon concentration and mussel_
     ! abundance.
     ! dPhyC [mmol/m**2/s] = 1 * mmol/s * 1/m**2
 
     where (phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0 &
       .and. abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) > 0)
-      farrayPtr2  = phyC(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) &
+      farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))  &
+        =  - phyC(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) &
         / (phyC(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) + halfSaturationConcentration) &
         * maximumFiltrationRate * abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
     endwhere
 
-    call ESMF_ClockAdvance(clock,rc=localrc)
+    !if (all(farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) .le. 0)) then
+    !  write(message,'(A)') trim(name)//' calculated zero filtration, check your input/parameters!'
+    !  call MOSSCO_FieldString(field, message)
+    !  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    !endif
+
+    !call ESMF_ClockGet(clock, currTime=myTime, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !if (currTime>myTime) then
+    !  call ESMF_ClockAdvance(clock, timeStep=(currTime - myTime), rc=localrc)
+    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !endif
+
+    call ESMF_ClockAdvance(clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
