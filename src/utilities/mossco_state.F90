@@ -694,7 +694,7 @@ contains
           if (present(log)) then
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
           else
-            call ESMF_LogWrite(trim(message))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
         enddo
         deallocate(fieldList,fieldNameList)

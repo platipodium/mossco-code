@@ -175,13 +175,13 @@ module mossco_netcdf
     endif
 
     if (.not.associated(var)) then
-      call ESMF_LogWrite('  could not find variable '//trim(varname))
+      call ESMF_LogWrite('  could not find variable '//trim(varname), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     ncStatus=nf90_inq_varid(self%ncid, var%name, varid)
     if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  could not find variable '//trim(varname))
+      call ESMF_LogWrite('  could not find variable '//trim(varname), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -2873,7 +2873,7 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  could not write attribute '//trim(attributeName))
+      call ESMF_LogWrite('  could not write attribute '//trim(attributeName), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -2939,7 +2939,7 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  could not write attribute '//trim(attributeName))
+      call ESMF_LogWrite('  could not write attribute '//trim(attributeName), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -3005,7 +3005,7 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (ncStatus /= NF90_NOERR) then
-      call ESMF_LogWrite('  could not write attribute '//trim(attributeName))
+      call ESMF_LogWrite('  could not write attribute '//trim(attributeName), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
