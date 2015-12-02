@@ -324,11 +324,11 @@ fi
 RETITLE=1
 if [[ ${TITLE} == 0 ]] ; then
   RETITLE=0
-  TITTLE=${SETUP}
+  TITLE=${SETUP}
 fi
 
 if [[ "x${TITLE}" == "x" ]] ; then
-  TITTLE=${SETUP}
+  TITLE=${SETUP}
 fi
 
 
