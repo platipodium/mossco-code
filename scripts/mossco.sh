@@ -362,7 +362,7 @@ case ${SYSTEM} in
 #SBATCH --job-name=${TITLE}
 EOT
 
-    if [ ! $(echo $(hostname) | grep -q mlogin) ]; then
+    if [  $(echo $(hostname) | grep -q mlogin) ]; then
       # These are instructions for mistral
       echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
       echo \#SBATCH --partition=compute  >> slurm.sh
