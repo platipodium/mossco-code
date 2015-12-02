@@ -352,27 +352,29 @@ WALLTIME=$(predict_time $NP)
 case ${SYSTEM} in
   SLURM)
     echo '#!/bin/bash -x' > slurm.sh
-    if [ ! $(echo $(hostname) | grep -q mlogin) ]; then
-      echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
-      echo \#SBATCH --partition=compute
-    else
-      echo \#SBATCH --partition=batch >> slurm.sh
-      echo \#export OMP_NUM_THREADS=48 >> slurm.sh
-    fi
-
     cat << EOT >> slurm.sh
 #SBATCH --ntasks=${NP}
-###SBATCH --ntasks-per-core=1
-#SBATCH --nodes=${NODES}
-###SBATCH --tasks-per-node=${PPN}
 #SBATCH --output=${TITLE}-%j.stdout
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=${WALLTIME}
 #SBATCH --mail-user=${EMAIL}
 #SBATCH --mail-type=ALL
 #SBATCH --job-name=${TITLE}
+EOT
 
-${MPI_PREFIX} ${EXE}
+    if [ ! $(echo $(hostname) | grep -q mlogin) ]; then
+      # These are instructions for mistral
+      echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
+      echo \#SBATCH --partition=compute  >> slurm.sh
+      echo \#SBATCH --nodes=${NODES}  >> slurm.sh
+    else
+      # This is tested on jureca
+      echo \#SBATCH --partition=batch >> slurm.sh
+      echo \#export OMP_NUM_THREADS=48 >> slurm.sh
+    fi
+
+    echo "" >> slurm.sh
+    echo  ${MPI_PREFIX} ${EXE} >> slurm.sh
 EOT
 ;;
   MOAB) cat << EOT > moab.sh
