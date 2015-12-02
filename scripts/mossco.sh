@@ -375,7 +375,7 @@ EOT
 
     echo "" >> slurm.sh
     echo  ${MPI_PREFIX} ${EXE} >> slurm.sh
-EOT
+
 ;;
   MOAB) cat << EOT > moab.sh
 #!/bin/bash -x
