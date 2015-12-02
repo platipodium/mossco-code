@@ -515,8 +515,10 @@ done
 
 if ! test -f mossco_run.nml ; then
   echo
-  echo "ERROR: Need file mossco_run.nml to run"
-  exit 1
+  #echo "ERROR: Need file mossco_run.nml to run"
+  #exit 1
+  echo "Creating missing mossco_run.nml"
+  make namelist_mossco
 fi
 
 if [[ ${BUILD_ONLY} == 1 ]] ; then
