@@ -451,6 +451,7 @@ SED=${SED:-$(which sed 2> /dev/null )}
 if test -f mossco_run.nml ; then
   if [[ "${LOGLEVEL}" != "undefined" ]] ; then
     ${SED} -i 's/loglevel =.*/loglevel = "'${LOGLEVEL}'",/' mossco_run.nml
+    export loglevel="${LOGLEVEL}"
   fi
 fi
 
@@ -465,20 +466,26 @@ if [[ ${RETITLE} != 0 ]] ; then
 
   if test -f getm.inp ; then
     ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+    export runid="${TITLE}"
     if [[ "x${MPI_PREFIX}" != "x" ]] ; then
       ${SED} -i 's/parallel =.*/parallel = .true.,/' getm.inp
+      export parallel=True
     else
       ${SED} -i 's/parallel =.*/parallel = .false.,/' getm.inp
+      export parallel=False
     fi
   fi
 
   if test -f gotmrun.nml ; then
     ${SED} -i 's/title =.*/title = "'${TITLE}'",/' gotmrun.nml
+    export title="${TITLE}"
     ${SED} -i 's/out_fn =.*/out_fn = "'${TITLE}'_gotm",/' gotmrun.nml
+    export out_fn="${TITLE}_gotm"
   fi
 
   if test -f mossco_run.nml ; then
     ${SED} -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
+    export title="${TITLE}"
   fi
 fi
 
