@@ -35,6 +35,7 @@ function usage {
 	echo
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
+	echo "    [-c] :  compile-only.  Does not prepare and execute the example"
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp/gotmrun.nml"
 	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
