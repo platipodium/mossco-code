@@ -101,9 +101,9 @@ module mossco_netcdf
     !>@todo make this an optional output var
     !integer(ESMF_KIND_I4),intent(out),optional  :: rc
 
-    integer                     :: ncStatus, varid, rc_, esmfrc, rank, localrc, rc
-    integer                     :: nDims, nAtts, udimid, dimlen
-    character(len=ESMF_MAXSTR)  :: varname, message, fmt
+    integer                     :: ncStatus, varid, rc_, rank=0, localrc, rc
+    integer                     :: nDims=0, nAtts, udimid, dimlen
+    character(len=ESMF_MAXSTR)  :: varname, message
     type(type_mossco_netcdf_variable),pointer :: var=> null()
 
     integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, exclusiveCount
@@ -1930,7 +1930,6 @@ module mossco_netcdf
             where(farrayPtr1(lbnd(1):ubnd(1)) == missingValue)
               intPtr1(:)=-1
             endwhere
-            ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           endif
         endif
 
@@ -1939,12 +1938,10 @@ module mossco_netcdf
             do k=lbnd(1),ubnd(1)
               if (all(farrayPtr2(k,lbnd(2):ubnd(2)) == missingValue)) intptr1(k)=-1
             enddo
-            if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           else
             do k=lbnd(2),ubnd(2)
               if (all(farrayPtr2(lbnd(1):ubnd(1),k) == missingValue)) intptr1(k)=-1
             enddo
-            if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           endif
         endif
 
@@ -1953,18 +1950,20 @@ module mossco_netcdf
             do k=lbnd(1),ubnd(1)
               if (all(farrayPtr3(k,lbnd(2):ubnd(2),lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
-            if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           elseif (j == 2) then
             do k=lbnd(2),ubnd(2)
               if (all(farrayPtr3(lbnd(1):ubnd(1),k,lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
-            if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           else
             do k=lbnd(3),ubnd(3)
               if (all(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) == missingValue)) intptr1(k)=-1
             enddo
-            if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           endif
+        endif
+
+        if (any(intptr1 < 1)) then
+          write(0,*) 'Coordinate ',i,' with missing values: ',intPtr1(:)
+          ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
         endif
 
         if (ncStatus /= NF90_NOERR) then
@@ -2125,7 +2124,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                        :: localrc, i, udimid, varid
-    integer(ESMF_KIND_I4)                        :: j, k, localDeCount, itemCount
+    integer(ESMF_KIND_I4)                        :: j, k=1, localDeCount, itemCount
     integer(ESMF_KIND_I4), allocatable           :: dimids(:), ubnd(:), lbnd(:)
     character(len=ESMF_MAXSTR)                   :: coordinates, units, message
     character(len=ESMF_MAXSTR), allocatable      :: coordNameList(:)
