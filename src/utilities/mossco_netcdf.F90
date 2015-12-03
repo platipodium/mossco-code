@@ -1639,6 +1639,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)                            :: dimCount, attributeCount, i, j ,k
     type(ESMF_Array)                                 :: array
     logical                                          :: isPresent
+    real(ESMF_KIND_R8)                               :: missingValue
 
     type(ESMF_TypeKind_Flag)         :: typekind
     real(ESMF_KIND_R8)               :: real8
@@ -1893,6 +1894,20 @@ module mossco_netcdf
         cycle
       endif
 
+      call ESMF_GridGetCoord(grid, coordDim=i, staggerloc=ESMF_STAGGERLOC_CENTER, array=array, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeGet(array, 'missing_value', missingValue, isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (.not.isPresent) then
+        missingValue=-999.0
+        write(message,'(A,I1,A)')  '  did not receive missing_value attribute for coordinate ',i,', used default -999.0'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
       ! Detect missing values in 'all' dimensions (entire rows) of coordinates, if so, then mark this as missing (-1)
       ! in the respective auxiliary coordinate
 
@@ -1911,8 +1926,8 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (coordDimCount(i)==1) then
-          if (any(farrayPtr1(lbnd(1):ubnd(1)) == -999.0)) then
-            where(farrayPtr1(lbnd(1):ubnd(1)) == -999.0)
+          if (any(farrayPtr1(lbnd(1):ubnd(1)) == missingValue)) then
+            where(farrayPtr1(lbnd(1):ubnd(1)) == missingValue)
               intPtr1(:)=-1
             endwhere
             ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
@@ -1922,12 +1937,12 @@ module mossco_netcdf
         if (coordDimCount(i)==2) then
           if (j == 1) then
             do k=lbnd(1),ubnd(1)
-              if (all(farrayPtr2(k,lbnd(2):ubnd(2)) == -999.0)) intptr1(k)=-1
+              if (all(farrayPtr2(k,lbnd(2):ubnd(2)) == missingValue)) intptr1(k)=-1
             enddo
             if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           else
             do k=lbnd(2),ubnd(2)
-              if (all(farrayPtr2(lbnd(1):ubnd(1),k) == -999.0)) intptr1(k)=-1
+              if (all(farrayPtr2(lbnd(1):ubnd(1),k) == missingValue)) intptr1(k)=-1
             enddo
             if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           endif
@@ -1936,17 +1951,17 @@ module mossco_netcdf
         if (coordDimCount(i)==3) then
           if (j == 1) then
             do k=lbnd(1),ubnd(1)
-              if (all(farrayPtr3(k,lbnd(2):ubnd(2),lbnd(3):ubnd(3)) == -999.0)) intptr1(k)=-1
+              if (all(farrayPtr3(k,lbnd(2):ubnd(2),lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
             if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           elseif (j == 2) then
             do k=lbnd(2),ubnd(2)
-              if (all(farrayPtr3(lbnd(1):ubnd(1),k,lbnd(3):ubnd(3)) == -999.0)) intptr1(k)=-1
+              if (all(farrayPtr3(lbnd(1):ubnd(1),k,lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
             if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           else
             do k=lbnd(3),ubnd(3)
-              if (all(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) == -999.0)) intptr1(k)=-1
+              if (all(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) == missingValue)) intptr1(k)=-1
             enddo
             if (any(intptr1 < 1)) ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
           endif
@@ -2834,6 +2849,7 @@ module mossco_netcdf
     type(ESMF_Typekind_Flag)         :: typeKind
 
     rc_=ESMF_SUCCESS
+    ncStatus=NF90_NOERR
 
     if (present(varid)) then
       varid_=varid
@@ -2900,6 +2916,7 @@ module mossco_netcdf
     type(ESMF_Typekind_Flag)         :: typeKind
 
     rc_=ESMF_SUCCESS
+    ncStatus=NF90_NOERR
 
     if (present(varid)) then
       varid_=varid
@@ -2966,6 +2983,7 @@ module mossco_netcdf
     type(ESMF_Typekind_Flag)         :: typeKind
 
     rc_=ESMF_SUCCESS
+    ncStatus=NF90_NOERR
 
     if (present(varid)) then
       varid_=varid
