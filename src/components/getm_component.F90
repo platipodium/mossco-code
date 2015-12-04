@@ -848,7 +848,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
-   use variables_3d   ,only: hn,num,tke,eps,taubmax_3d
+   use variables_3d   ,only: hn,num,tke,eps
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -934,7 +934,6 @@ module getm_component
 #else
          allocate(tke3D(imin:imax,jmin:jmax,1:kmax))
 #endif
-         allocate(taubmax(I2DFIELD))
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             allocate(Tbot(I2DFIELD))
@@ -1035,7 +1034,6 @@ module getm_component
          tke3D => tke(imin:imax,jmin:jmax,1:kmax)
 #endif
 #endif
-         taubmax => taubmax_3d
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
 #if 0
@@ -1171,6 +1169,8 @@ module getm_component
          allocate(Vbot(E2DFIELD))
       end if
    end if
+
+   allocate(taubmax(I2DFIELD))
 
    if (metforcing) then
       if (calc_met .or. met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
@@ -1949,6 +1949,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
+   use parameters     ,only: rho_0
    use domain         ,only: imin,imax,jmin,jmax,kmax
    use domain         ,only: az
    use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv
@@ -2009,7 +2010,6 @@ module getm_component
 #else
          tke3D = tke(imin:imax,jmin:jmax,1:kmax)
 #endif
-         taubmax = taubmax_3d
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             Tbot = T(:,:,1)
@@ -2163,6 +2163,8 @@ module getm_component
          end if
       end if
    end if
+
+   taubmax = rho_0 * taubmax_3d
 #endif
 
    if (met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
