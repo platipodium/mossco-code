@@ -79,6 +79,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: taubmax(:,:)=>NULL()
 
   type :: ptrarray3D
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
@@ -447,6 +448,9 @@ module getm_component
           call getmCmp_StateAddPtr("wave_direction",waveDir,importState,"rad",name)
         end if
     end select
+    if (associated(taubmax)) then
+      call getmCmp_StateAddPtr("maximum_bottom_stress",taubmax,exportState,"Pa",name)
+    end if
 
     fieldBundle = ESMF_FieldBundleCreate(name='concentrations_in_water',multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -844,7 +848,7 @@ module getm_component
    use initialise     ,only: runtype
    use variables_2d   ,only: D
 #ifndef NO_3D
-   use variables_3d   ,only: hn,num,tke,eps
+   use variables_3d   ,only: hn,num,tke,eps,taubmax_3d
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -930,6 +934,7 @@ module getm_component
 #else
          allocate(tke3D(imin:imax,jmin:jmax,1:kmax))
 #endif
+         allocate(taubmax(I2DFIELD))
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             allocate(Tbot(I2DFIELD))
@@ -1030,6 +1035,7 @@ module getm_component
          tke3D => tke(imin:imax,jmin:jmax,1:kmax)
 #endif
 #endif
+         taubmax => taubmax_3d
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
 #if 0
@@ -1951,6 +1957,7 @@ module getm_component
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
    use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num,tke,eps
+   use variables_3d   ,only: taubmax_3d
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -2002,6 +2009,7 @@ module getm_component
 #else
          tke3D = tke(imin:imax,jmin:jmax,1:kmax)
 #endif
+         taubmax = taubmax_3d
 #ifndef NO_BAROCLINIC
          if (calc_temp) then
             Tbot = T(:,:,1)
