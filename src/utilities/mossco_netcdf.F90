@@ -1961,7 +1961,7 @@ module mossco_netcdf
           endif
         endif
 
-        if (any(intptr1 < 1)) then
+        if (any(intptr1(:) < 1)) then
           write(0,*) 'Coordinate ',i,' with missing values: ',intPtr1(:)
           ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
         endif
