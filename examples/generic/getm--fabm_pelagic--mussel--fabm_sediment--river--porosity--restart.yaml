@@ -17,12 +17,16 @@ dependencies:
   - porosity_input:
     - component: getm
       grid: temperature_at_soil_surface
+  - mussel_input:
+    - component: getm
+      grid: temperature_at_soil_surface
   - mussel:
     - component: getm
-      grid: temperature_in_water
+      grid: temperature_at_soil_surface
 
 instances:
-  - mossco_gffrpr: netcdf
+  - mossco_gfmfrpr: netcdf
+  - mussel_input: netcdf_input
   - river_input: netcdf_input
   - restart_soil: netcdf_input
   - restart_water: netcdf_input
@@ -30,6 +34,18 @@ instances:
   - mussel: benthic_filtration
 
 coupling:
+  - components:
+     - mussel_input
+     - mussel
+    interval: none
+  - components:
+     - mussel_input
+     - mossco_gfmfrpr
+    interval: 20 m
+  - components:
+     - mussel
+     - mossco_gfmfrpr
+    interval: 20 m
   - components:
      - porosity_input
      - fabm_sediment
@@ -53,11 +69,11 @@ coupling:
   - components:
      - getm
      - fabm_sediment
-    interval: 30 m
+    interval: 10 m
   - components:
      - getm
      - fabm_pelagic
-    interval: 30 m
+    interval: 10 m
   - components:
      - fabm_pelagic
      - transport_connector
@@ -67,29 +83,29 @@ coupling:
      - fabm_pelagic
      - pelagic_soil_connector
      - fabm_sediment
-    interval:  30 m
+    interval:  10 m
   - components:
      - fabm_pelagic
      - mussel
-    interval:  30 m
+    interval:  10 m
   - components:
      - mussel
      - fabm_pelagic
-    interval:  30 m
+    interval:  10 m
   - components:
      - fabm_sediment
      - soil_pelagic_connector
      - fabm_pelagic
-    interval: 30 m
+    interval: 10 m
   - components:
      - getm
-     - mossco_gffrpr
-    interval: 60 h
+     - mossco_gfmfrpr
+    interval: 20 m
   - components:
      - fabm_pelagic
-     - mossco_gffrpr
-    interval: 60 h
+     - mossco_gfmfrpr
+    interval: 20 m
   - components:
      - fabm_sediment
-     - mossco_gffrpr
-    interval: 60 h
+     - mossco_gfmfrpr
+    interval: 20 m

@@ -35,6 +35,7 @@ function usage {
 	echo
 	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-b] :  build-only.  Does not execute the example"
+	echo "    [-c] :  compile-only.  Does not prepare and execute the example"
 	echo "    [-t] :  give a title in mossco_run.nml and getm.inp/gotmrun.nml"
 	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
@@ -324,11 +325,11 @@ fi
 RETITLE=1
 if [[ ${TITLE} == 0 ]] ; then
   RETITLE=0
-  TITTLE=${SETUP}
+  TITLE=${SETUP}
 fi
 
 if [[ "x${TITLE}" == "x" ]] ; then
-  TITTLE=${SETUP}
+  TITLE=${SETUP}
 fi
 
 
@@ -352,28 +353,30 @@ WALLTIME=$(predict_time $NP)
 case ${SYSTEM} in
   SLURM)
     echo '#!/bin/bash -x' > slurm.sh
-    if [ ! $(echo $(hostname) | grep -q mlogin) ]; then
-      echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
-      echo \#SBATCH --partition=compute
-    else
-      echo \#SBATCH --partition=batch >> slurm.sh
-      echo \#export OMP_NUM_THREADS=48 >> slurm.sh
-    fi
-
     cat << EOT >> slurm.sh
 #SBATCH --ntasks=${NP}
-###SBATCH --ntasks-per-core=1
-#SBATCH --nodes=${NODES}
-###SBATCH --tasks-per-node=${PPN}
 #SBATCH --output=${TITLE}-%j.stdout
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=${WALLTIME}
 #SBATCH --mail-user=${EMAIL}
 #SBATCH --mail-type=ALL
 #SBATCH --job-name=${TITLE}
-
-${MPI_PREFIX} ${EXE}
 EOT
+
+    if [  $(echo $(hostname) | grep -q mlogin) ]; then
+      # These are instructions for mistral
+      echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
+      echo \#SBATCH --partition=compute  >> slurm.sh
+      echo \#SBATCH --nodes=${NODES}  >> slurm.sh
+    else
+      # This is tested on jureca
+      echo \#SBATCH --partition=batch >> slurm.sh
+      echo \#export OMP_NUM_THREADS=48 >> slurm.sh
+    fi
+
+    echo "" >> slurm.sh
+    echo  ${MPI_PREFIX} ${EXE} >> slurm.sh
+
 ;;
   MOAB) cat << EOT > moab.sh
 #!/bin/bash -x
@@ -449,6 +452,7 @@ SED=${SED:-$(which sed 2> /dev/null )}
 if test -f mossco_run.nml ; then
   if [[ "${LOGLEVEL}" != "undefined" ]] ; then
     ${SED} -i 's/loglevel =.*/loglevel = "'${LOGLEVEL}'",/' mossco_run.nml
+    export loglevel="${LOGLEVEL}"
   fi
 fi
 
@@ -462,22 +466,34 @@ if [[ ${RETITLE} != 0 ]] ; then
   fi
 
   if test -f getm.inp ; then
-    ${SED} -i 's/runid =.*/runid = "'${TITLE}'",/' getm.inp
+    ${SED} -i "s/runid *=.*/runid = '${TITLE}',/" getm.inp
     if [[ "x${MPI_PREFIX}" != "x" ]] ; then
-      ${SED} -i 's/parallel =.*/parallel = .true.,/' getm.inp
+      ${SED} -i 's/parallel *=.*/parallel = .true.,/' getm.inp
+      export parallel=True
     else
-      ${SED} -i 's/parallel =.*/parallel = .false.,/' getm.inp
+      ${SED} -i 's/parallel *=.*/parallel = .false.,/' getm.inp
+      export parallel=False
     fi
   fi
 
   if test -f gotmrun.nml ; then
-    ${SED} -i 's/title =.*/title = "'${TITLE}'",/' gotmrun.nml
-    ${SED} -i 's/out_fn =.*/out_fn = "'${TITLE}'_gotm",/' gotmrun.nml
+    ${SED} -i "s/title *=.*/title = '${TITLE}',/" gotmrun.nml
+    ${SED} -i "s/out_fn *=.*/out_fn = '${TITLE}_gotm',/" gotmrun.nml
   fi
 
   if test -f mossco_run.nml ; then
-    ${SED} -i 's/title =.*/title = "'${TITLE}'",/' mossco_run.nml
+    ${SED} -i "s/title *=.*/title = '${TITLE}',/" mossco_run.nml
   fi
+
+  export runid="${TITLE}"
+  export title="${TITLE}"
+  export out_fn="${TITLE}_gotm"
+  if [[ "x${MPI_PREFIX}" != "x" ]] ; then
+    export parallel=True
+  else
+    export parallel=False
+  fi
+
 fi
 
 if test -f ./par_setup.dat ; then
@@ -500,8 +516,10 @@ done
 
 if ! test -f mossco_run.nml ; then
   echo
-  echo "ERROR: Need file mossco_run.nml to run"
-  exit 1
+  #echo "ERROR: Need file mossco_run.nml to run"
+  #exit 1
+  echo "Creating missing mossco_run.nml"
+  make namelist_mossco
 fi
 
 if [[ ${BUILD_ONLY} == 1 ]] ; then

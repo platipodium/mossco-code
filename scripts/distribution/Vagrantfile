@@ -1,0 +1,158 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+$profile_creator = <<SCRIPT
+echo "Creating new .profile"
+mkdir -p ${HOME}/bin
+echo "PATH=\"\$HOME/bin:\$PATH\"" >> .profile
+echo "MOSSCO_DIR=${HOME}/mossco/code" >> .profile
+echo "MOSSCO_SETUPDIR=${HOME}/mossco/setups" >> .profile
+echo "ESMF_DIR=${HOME}/esmf/esmf-6.3.0rp1" >> .profile
+echo "ESMFMKFILE=${ESMF_DIR}/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk" >> .profile
+echo "export FORTRAN_COMPILER=GFORTRAN >> .profile
+SCRIPT
+
+$ubuntu_updater = <<SCRIPT
+echo "Updating/installing Ubuntu packages"
+sudo apt-get update
+sudo apt-get install -y gcc gfortran g++ libnetcdf-dev netcdf-bin
+sudo apt-get install -y gcc libmpich2-dev mpich2 python-yaml cmake
+sudo apt-get install -y libstdc++6-4.9-dbg libgfortran3-dbg libxerces-c-dev nco ncview
+sudo apt-get install -y cvs subversion git wget tar
+SCRIPT
+
+$mossco_downloader = <<SCRIPT
+echo "Downloading/updating MOSSCO code"
+export MOSSCO_DIR=$HOME/mossco/code
+mkdir -p ${HOME}/mossco ${HOME}/bin
+if [ -d ${MOSSCO_DIR}/.git ] ; then
+  cd ${MOSSCO_DIR} ; git pull --rebase ; cd
+else
+  rm -rf ${MOSSCO_DIR}
+  echo "git cloning into ${MOSSCO_DIR}, please wait ..."
+  git clone git://git.code.sf.net/p/mossco/code ${MOSSCO_DIR}
+fi
+ln -sf ${MOSSCO_DIR}/scripts/mossco.sh ${HOME}/bin/mossco
+ln -sf ${MOSSCO_DIR}/scripts/postprocess/stitch_tiles.py ${HOME}/bin/stitch
+SCRIPT
+
+$mossco_builder = <<SCRIPT
+echo "Updating external models/compiling MOSSCO"
+export MOSSCO_DIR=$HOME/mossco/code
+export ESMF_DIR=$HOME/esmf/esmf-6.3.0rp1
+export FORTRAN_COMPILER=GFORTRAN
+make -C ${MOSSCO_DIR} external
+make -C ${MOSSCO_DIR} all
+SCRIPT
+
+$esmf_installer = <<SCRIPT
+echo "Installing ESMF"
+export ESMF_DIR=$HOME/esmf/esmf-6.3.0rp1
+export ESMF_BOPT=g
+export ESMF_ABI=64
+export ESMF_MOAB=OFF
+export ESMF_OPTLEVEL=2
+export ESMF_INSTALL_PREFIX=${ESMF_DIR}/lib
+export ESMF_LAPACK=internal
+export ESMF_NETCDF=split
+export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
+unset ESMF_PIO
+export ESMF_COMPILER=gfortran
+export ESMF_COMM=mpich2
+export ESMF_XERCES=standard
+
+export ESMFMKFILE=${ESMF_DIR}/lib/libg/Linux.gfortran.64.mpich2.default/esmf.mk
+
+if [ -f {ESMFMKFILE} ]; then
+  cd ${ESMF_DIR}
+  make install
+fi
+SCRIPT
+
+$esmf_downloader = <<SCRIPT
+echo "Downloading ESMF"
+export ESMF_DIR=$HOME/esmf/esmf-6.3.0rp1
+mkdir -p ${HOME}/esmf
+cd ${HOME}/esmf
+if [ ! -f esmf_6_3_0rp1_src.tar.gz ] ; then
+  wget http://sourceforge.net/projects/esmf/files/ESMF_6_3_0r/ESMF_6_3_0rp1/esmf_6_3_0rp1_src.tar.gz
+fi
+if [ ! -d ${ESMF_DIR} ] ; then
+  tar xzf esmf_6_3_0rp1_src.tar.gz
+  mv esmf ${ESMF_DIR}
+fi
+SCRIPT
+
+# All Vagrant configuration is done below. The "2" in Vagrant.configure
+# configures the configuration version (we support older styles for
+# backwards compatibility). Please don't change it unless you know what
+# you're doing.
+Vagrant.configure(2) do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://atlas.hashicorp.com/search.
+  config.vm.box = "ubuntu/vivid64"
+
+  # Disable automatic box update checking. If you disable this, then
+  # boxes will only be checked for updates when the user runs
+  # `vagrant box outdated`. This is not recommended.
+  # config.vm.box_check_update = false
+
+  # Create a forwarded port mapping which allows access to a specific port
+  # within the machine from a port on the host machine. In the example below,
+  # accessing "localhost:8080" will access port 80 on the guest machine.
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+
+  # Create a private network, which allows host-only access to the machine
+  # using a specific IP.
+  # config.vm.network "private_network", ip: "192.168.33.10"
+
+  # Create a public network, which generally matched to bridged network.
+  # Bridged networks make the machine appear as another physical device on
+  # your network.
+  # config.vm.network "public_network"
+
+  # Share an additional folder to the guest VM. The first argument is
+  # the path on the host to the actual folder. The second argument is
+  # the path on the guest to mount the folder. And the optional third
+  # argument is a set of non-required options.
+  # config.vm.synced_folder "../data", "/vagrant_data"
+
+  # Provider-specific configuration so you can fine-tune various
+  # backing providers for Vagrant. These expose provider-specific options.
+  # Example for VirtualBox:
+  #
+  config.vm.provider "virtualbox" do |vb|
+  #   # Display the VirtualBox GUI when booting the machine
+  #   vb.gui = true
+  #
+  #   # Customize the amount of memory on the VM:
+  #   vb.memory = "1024"
+    vb.customize [ "modifyvm", :id, "--hwvirtex", "off" ]
+    vb.customize [ "modifyvm", :id, "--cpus", 2 ]
+    vb.customize [ "modifyvm", :id, "--memory", 2048 ]
+  end
+  #
+  # View the documentation for the provider you are using for more
+  # information on available options.
+
+  # Define a Vagrant Push strategy for pushing to Atlas. Other push strategies
+  # such as FTP and Heroku are also available. See the documentation at
+  # https://docs.vagrantup.com/v2/push/atlas.html for more information.
+  # config.push.define "atlas" do |push|
+  #   push.app = "YOUR_ATLAS_USERNAME/YOUR_APPLICATION_NAME"
+  # end
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+
+  #config.vm.provision "shell", inline: $ubuntu_updater
+  config.vm.provision "shell", inline: $mossco_downloader
+  config.vm.provision "shell", inline: $esmf_downloader
+  config.vm.provision "shell", inline: $esmf_installer
+  config.vm.provision "shell", inline: $mossco_builder
+end

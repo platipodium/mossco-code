@@ -1,7 +1,9 @@
 bin/
 lib/
 modules/
+*/CVS
 *.pyc
+*.dSYM/
 *.pickle
 *.swo
 *.aux

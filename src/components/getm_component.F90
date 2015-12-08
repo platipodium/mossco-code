@@ -79,6 +79,7 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: tke3D(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: windU(:,:)=>NULL(),windV(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: waveH(:,:)=>NULL(),waveT(:,:)=>NULL(),waveK(:,:)=>NULL(),waveDir(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: taubmax(:,:)=>NULL()
 
   type :: ptrarray3D
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
@@ -447,6 +448,9 @@ module getm_component
           call getmCmp_StateAddPtr("wave_direction",waveDir,importState,"rad",name)
         end if
     end select
+    if (associated(taubmax)) then
+      call getmCmp_StateAddPtr("maximum_bottom_stress",taubmax,exportState,"Pa",name)
+    end if
 
     fieldBundle = ESMF_FieldBundleCreate(name='concentrations_in_water',multiflag=.true.,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -954,8 +958,11 @@ module getm_component
       end if
       if (waveforcing_method .ne. NO_WAVES) then
          allocate(waveH  (E2DFIELD))
+         waveH = 0.0d0
          allocate(waveT  (E2DFIELD))
+         waveT = 0.0d0
          allocate(waveK  (E2DFIELD))
+         waveK = 0.0d0
       end if
    else
       select case (grid_type)
@@ -1163,6 +1170,8 @@ module getm_component
       end if
    end if
 
+   allocate(taubmax(I2DFIELD))
+
    if (metforcing) then
       if (calc_met .or. met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
          if (noKindMatch .or. grid_type.ne.2) then
@@ -1177,6 +1186,7 @@ module getm_component
 
    if (waveforcing_method .ne. NO_WAVES) then
       allocate(waveDir(E2DFIELD))
+      waveDir = 0.0d0
    end if
 
 
@@ -1939,6 +1949,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
+   use parameters     ,only: rho_0
    use domain         ,only: imin,imax,jmin,jmax,kmax
    use domain         ,only: az
    use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv
@@ -1947,6 +1958,7 @@ module getm_component
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
 #ifndef NO_3D
    use variables_3d   ,only: dt,ho,hn,hvel,uu,hun,vv,hvn,ww,num,tke,eps
+   use variables_3d   ,only: taubmax_3d
 #ifndef NO_BAROCLINIC
    use m3d            ,only: calc_temp,calc_salt
    use variables_3d   ,only: T,S
@@ -2151,6 +2163,8 @@ module getm_component
          end if
       end if
    end if
+
+   taubmax = rho_0 * taubmax_3d
 #endif
 
    if (met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then

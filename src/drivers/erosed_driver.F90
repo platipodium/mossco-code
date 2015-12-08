@@ -406,7 +406,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     real(fp)                                    :: sigmol   ! (molecular) Prandtl-number (Prandtl-Schmidt Number for diffusion of dissolved matter: 700 for salinity, 6.7 for temprature , ?? for sediment)
     real(fp)                                    :: thick0
     real(fp)                                    :: thick1
-
+    real(fp) , parameter                        :: pi=3.14159265358979323846_fp
 !
 !! executable statements ------------------lbound(relative_thickness_of_layers,2):ubound(relative_thickness_of_layers,2)
 !
@@ -526,8 +526,9 @@ masking: if ( mask(i,j) .gt. 0 ) then
 !write (*,*) 'timestep =', timestep
                 !   Compute source and sink fluxes for cohesive sediment (mud)
 !print*, 'cohesive','i,j', i,j, 'u2d(i,j), v2d (i,j) ', u2d(i,j), v2d (i,j), 'h(nm)', h(nm)
-                 call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
-                                              & 2.0_fp* uorb(nm)/sqrt (3.14159265358979323846_fp), tper  (nm), teta(nm), kssilt,       &
+!                 call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
+                  call compbsskin_arguments%set (u_bottom(nm), v_bottom(nm) , h(nm)   , wave  ,       &
+                                              & 2.0_fp* uorb(nm)/sqrt (pi), tper  (nm), teta(nm)/pi*180._fp, kssilt,       &
                                               & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
 
                  call compbsskin_arguments%run ()

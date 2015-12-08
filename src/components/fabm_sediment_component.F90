@@ -393,9 +393,9 @@ module fabm_sediment_component
       if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=0.15
       if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=250.
       if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0
-      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
-      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=5.0_rk/86400.0_rk
-      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=0.08_rk/86400.0_rk
+      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=4.0_rk/86400.0_rk
+      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=4.0_rk/86400.0_rk
+      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=0.15_rk/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
     end do
 
@@ -1365,8 +1365,15 @@ module fabm_sediment_component
             bdys(:,:,i+1) = ptr_f2(:,:)
           end if
           if (sed%bcup_dissolved_variables .eq. 1) then
+
+!            call ESMF_StateGet(exportState, trim(varname), field=exportfield, rc=localrc)
+
+!            call mossco_state_get(exportState, &
+!        (/'turbulent_kinetic_energy_at_soil_surface'/), tke, verbose=verbose, rc=localrc)
+!tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+
             fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))/ &
-              sed%grid%dz(:,:,1)*(sed%diffusivity+bdys(:,:,1) * &
+              sed%grid%dz(:,:,1)*(sed%bioturbation + 2.*sed%diffusivity+bdys(:,:,1) * &
               0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
           else
             !> reset fluxes to zero

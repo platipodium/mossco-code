@@ -25,6 +25,7 @@ module erosed_component
   use mossco_component
   use mossco_state
   use mossco_field
+  use mossco_grid
   use mossco_variable_types
 
   use erosed_driver !, only : initerosed, erosed, getfrac_dummy
@@ -214,8 +215,8 @@ contains
     type(ESMF_Clock)       :: parentClock
     integer, intent(out)   :: rc
 
-    integer                :: localrc
-    type(ESMF_Grid)        :: grid, foreign_grid
+    integer                :: localrc, knum
+    type(ESMF_Grid)        :: grid, foreign_grid, grid3
     type(ESMF_Field)       :: field
     type(ESMF_FieldBundle)                      :: fieldBundle
     character(len=ESMF_MAXSTR)                  :: foreignGridFieldName
@@ -281,6 +282,7 @@ contains
     if (.not.isPresent) then
       inum=1
       jnum = 1
+      knum = 30
       grid = ESMF_GridCreateNoPeriDim(minIndex=(/1,1/), &
                    maxIndex=(/inum,jnum/), &
                    regDecomp=(/1,1/), &
@@ -331,14 +333,16 @@ contains
 
         inum=ubnd2(1)-lbnd2(1)+1
         jnum=ubnd2(2)-lbnd2(2)+1
+        knum=30 ! default value
       endif
 
       if (rank==3) then
-        write(message,*) 'foreign grid of rank 3 not yet implemented'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
 
-        call ESMF_FieldGet(field, grid=foreign_grid, rc=localrc)
+        write(message,*) trim(name)//' uses foreign grid from field'
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+        call ESMF_FieldGet(field, grid=grid3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd3, exclusiveUBound=ubnd3, rc=localrc)
@@ -346,17 +350,9 @@ contains
 
         inum=ubnd3(1)-lbnd3(1)+1
         jnum=ubnd3(2)-lbnd3(2)+1
+        knum=ubnd3(3)-lbnd3(3)+1
 
-        grid = ESMF_GridCreateNoPeriDim(minIndex=lbnd3(1:2), &
-                   maxIndex=ubnd3(1:2), &
-                   regDecomp=(/1,1/), &
-                   coordSys=ESMF_COORDSYS_SPH_DEG, &
-                   indexflag=ESMF_INDEX_GLOBAL,  &
-                   name="erosed", &
-                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_GridAddCoord(grid, rc=localrc)   !> ToDO we need to copy the coordiane from foreign Grid.
+        grid = MOSSCO_GridCreateFromOtherGrid(grid3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       endif
@@ -396,7 +392,7 @@ contains
     if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
     if (.not.associated(BioEffects%TauEffect))         allocate (BioEffects%TauEffect(inum,jnum))
 !   TODO: Replace static allocation to 30 layers !!!!!
-    if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,30,nfrac))
+    if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,knum,nfrac))
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
     allocate (sedd50    (nfrac))
@@ -577,9 +573,9 @@ contains
 
     !! Prepare import state for fields needed in run
     if (wave) then
-      allocate(importList(15))
+      allocate(importList(16))
     else
-      allocate(importList(11))
+      allocate(importList(12))
     end if
 
     importList( 1)%name  = 'water_depth_at_soil_surface'
@@ -596,28 +592,31 @@ contains
     importList( 6)%units = 'm s**-1'
     importList( 7)%name  = 'turbulent_diffusivity_of_momentum_at_soil_surface'
     importList( 7)%units = 'm**2 s**-1'
-    importList( 8)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
-    importList( 8)%units = '-'
+    importList( 8)%name  = 'maximum_bottom_stress'
+    importList( 8)%units = 'Pa'
     importList( 8)%optional = .true.
-    importList( 9)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
+    importList( 9)%name  = 'Effect_of_MPB_on_critical_bed_shearstress_at_soil_surface'
     importList( 9)%units = '-'
     importList( 9)%optional = .true.
-    importList(10)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
+    importList(10)%name  = 'Effect_of_MPB_on_sediment_erodibility_at_soil_surface'
     importList(10)%units = '-'
     importList(10)%optional = .true.
-    importList(11)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
+    importList(11)%name  = 'Effect_of_Mbalthica_on_critical_bed_shearstress_at_soil_surface'
     importList(11)%units = '-'
     importList(11)%optional = .true.
+    importList(12)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
+    importList(12)%units = '-'
+    importList(12)%optional = .true.
 
     if (wave) then
-       importList(12)%name  = 'wave_height'
-       importList(12)%units = 'm'
-       importList(13)%name  = 'wave_period'
-       importList(13)%units = 's'
-       importList(14)%name  = 'wave_number'
-       importList(14)%units = 'm**-1'
-       importList(15)%name  = 'wave_direction'
-       importList(15)%units = 'rad'
+       importList(13)%name  = 'wave_height'
+       importList(13)%units = 'm'
+       importList(14)%name  = 'wave_period'
+       importList(14)%units = 's'
+       importList(15)%name  = 'wave_number'
+       importList(15)%units = 'm**-1'
+       importList(16)%name  = 'wave_direction'
+       importList(16)%units = 'rad'
     end if
 
     do i=1,size(importList)
@@ -1077,6 +1076,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null(),nybot=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: taubmax=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveH=>null(),waveT=>null(),waveK=>null(),waveDir=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: microEro=>null(),microTau=>null(),macroEro=>null(),macroTau=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null()
@@ -1282,17 +1282,18 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       ubot     => importList( 5)%data
       vbot     => importList( 6)%data
       nybot    => importList( 7)%data
+      taubmax  => importList( 8)%data
 
-      microTau => importList( 8)%data
-      microEro => importList( 9)%data
-      macroTau => importList(10)%data
-      macroEro => importList(11)%data
+      microTau => importList( 9)%data
+      microEro => importList(10)%data
+      macroTau => importList(11)%data
+      macroEro => importList(12)%data
 
       if (wave) then
-        waveH   => importList(12)%data
-        waveT   => importList(13)%data
-        waveK   => importList(14)%data
-        waveDir => importList(15)%data
+        waveH   => importList(13)%data
+        waveT   => importList(14)%data
+        waveK   => importList(15)%data
+        waveDir => importList(16)%data
       end if
 
       if (localrc == 0) then
