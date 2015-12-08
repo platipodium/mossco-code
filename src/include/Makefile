@@ -74,12 +74,18 @@ endif
 
 .PHONY: sha
 
-all: $(TARGETS)
+all: $(TARGETS) end-of-file
 
 clean: extraclean
 
 git-sha.h:
-	@-touch git-sha.h
+	@-echo '#ifndef GIT_SHA_INCLUDED' > $(SHA_FILE)
+	@-echo '#define GIT_SHA_INCLUDED' >> $(SHA_FILE)
+
+end-of-file: $(TARGETS)
+	@-if [[ $(shell tail -n 1 $(SHA_FILE) | grep -c '#endif') -eq 0 ]] ; then \
+	  echo '#endif' >> $(SHA_FILE); \
+	fi
 
 mossco-sha: git-sha.h
 	@-if [  $(shell grep -c $(MOSSCO_SHA) $(SHA_FILE))  -eq 0 ] ; then \
