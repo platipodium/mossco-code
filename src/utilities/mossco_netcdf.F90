@@ -1898,14 +1898,18 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_AttributeGet(array, 'missing_value', missingValue, isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(array, 'missing_value', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) then
+
+      if (isPresent) then
+        call ESMF_AttributeGet(array, 'missing_value', value=missingValue, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
         missingValue=-999.0
         write(message,'(A,I1,A)')  '  did not receive missing_value attribute for coordinate ',i,', used default -999.0'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        cycle
       endif
 
       ! Detect missing values in 'all' dimensions (entire rows) of coordinates, if so, then mark this as missing (-1)
