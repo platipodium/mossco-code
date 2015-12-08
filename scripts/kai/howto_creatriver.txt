@@ -1,0 +1,6 @@
+
+$  python $MOSSCO_SETUPDIR/scripts/create_river_grid.py $MOSSCO_SETUPDIR/sns $DROPBOX/mossco/RiverForcing_1950_2014
+
+wobei im setup dir natürlich river.nc und riverinfo.dat liegen müssen
+Die von mir erzeugt datei liegt auf
+

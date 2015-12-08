@@ -1,0 +1,66 @@
+#!/bin/bash
+# scenario variation by kai wirtz HZG 2015
+#  takes as optional argument the full path/name of mossco-executable
+Prog=$1
+shift
+
+model=
+export hd=${PWD#*/}
+
+for (( scen=0; $scen <= 8; scen++ )) do
+  cd /$hd/gotl_$scen
+#  echo $scen
+  case $scen in
+    0 )   # ''
+     replace2 $model\_pars.nml  phi_agg  2E-4	
+     cat $model\_pars.nml | grep phi_agg
+    ;;
+    1 )   # ''
+     replace2 $model\_env.nml N_depo  0.8	
+     cat $model\_env.nml | grep N_depo
+    ;;
+    2 )   # ''
+     replace2 $model\_env.nml N_depo  2.4	
+     cat $model\_env.nml | grep N_depo
+    ;;
+    3 )   # ''
+     replace2 $model\_env.nml P_depo  0.12	
+     cat $model\_env.nml | grep P_depo
+    ;;
+    4 )   # ''
+     replace2 $model\_pars.nml vS_det 10.0	
+     cat $model\_pars.nml | grep vS_det
+    ;;
+    5 )   # ''
+     replace2 $model\_pars.nml  vS_det 1.0	
+     cat $model\_pars.nml | grep vS_det
+    ;;
+    6 )   # ''
+     replace2 $model\_pars.nml hydrol 0.02	
+     replace2 $model\_pars.nml remin 0.02	
+     cat $model\_pars.nml | grep remin
+    ;;
+    7 )   # ''
+     replace2 $model\_graz.nml mort_zoo 0.02	
+     cat $model\_graz.nml | grep mort_zoo
+    ;;
+    8 )   # ''
+     replace2 $model\_env.nml ex_airsea  2e-4	
+     cat $model\_env.nml | grep ex_airsea
+    ;;
+
+  esac 
+
+done # scen
+
+
+
+
+
+
+nohup ./batch_par.var 0 2 &
+nohup ./batch_par.var 1 2 &
+nohup ./batch_par.var 2 2 &
+nohup ./batch_par.var 0 1 &
+nohup ./batch_par.var 1 1 &
+nohup ./batch_par.var 2 1 &
