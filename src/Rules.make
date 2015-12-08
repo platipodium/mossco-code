@@ -885,8 +885,7 @@ mossco_clean: distclean gotm_clean fabm_clean
 # endif
 
 sha:
-	@-git log | head -1 | awk '{print "character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = \""$$2"\"" }' \
-	> $(MOSSCO_DIR)/src/include/git-sha.h
+	make -C $(MOSSCO_DIR)/src/include
 
 help:
 	@if [ -f README ] ; then cat README ; fi

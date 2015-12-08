@@ -39,7 +39,7 @@ interface MOSSCO_DestroyOwn
   module procedure MOSSCO_ArrayBundleDestroyOwn
 end interface
 
-!#include "git-sha.h" !> @todo needs fix in Makefile for git_sha to avoid duplicate include
+!#include "git-sha.h" !>@todo
 
 contains
 

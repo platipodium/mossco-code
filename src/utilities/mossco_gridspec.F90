@@ -29,7 +29,7 @@ module mossco_gridspec
 
   integer, parameter :: MOSSCO_NC_NOERR=ESMF_SUCCESS
 
-#include "git-sha.h"
+!#include "git-sha.h" !>@todo
 
   contains
 
@@ -149,11 +149,11 @@ module mossco_gridspec
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
-    localrc = nf90_put_att(ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
-    if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute mossco_sha_key', ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    endif
+!    localrc = nf90_put_att(ncid,NF90_GLOBAL,'mossco_sha_key',MOSSCO_GIT_SHA_KEY)
+!    if (localrc /= NF90_NOERR) then
+!      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot write attribute mossco_sha_key', ESMF_LOGMSG_ERROR)
+!      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+!    endif
 
 #ifndef NO_ISO_FORTRAN_ENV
     !> @todo check cross-platform compatibility of the iso_fortran_env calls
