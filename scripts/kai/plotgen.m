@@ -10,19 +10,19 @@ clear all;close all;
 setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
 ncol = 1; nrow = 3; 	% number of columns in fig
-ncol = 3; nrow = 2; 	% number of columns in fig
+ncol = 4; nrow = 2; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow+0.05);
 compn ={'water';'soil'};
 fs = 14; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
 linw=[2 1*ones(1,14)]; lins=['- '; repmat('- ',14,1);];
 %spath  ='/home/wirtz/cut_074';%spath  ='/data/wirtz/sns_0/cut_29';
 %ncfile = fullfile(spath,['cut_29_' tag '.nc']);
-spath  ='/home/wirtz/mossco/mossco-setups';%/helgoland
+spath  ='/local//home/wirtz/mossco/mossco-setups';%/helgoland
 %spath  ='/home/wirtz';
 
-%tags={'PAds05';'R';}; 
 %tags={'102';'104';'132';'134';'82';'84';}; %tags={'102';'132';'82';}; 
-tags={'ef';'_0';};
+%tags={'_4';'_1';'_2';};%
+tags={'ef';'_5';'_6';};
 ntags=length(tags);
 %% check for tag file
 tagfile = fullfile(spath,['tag.lst']);
@@ -42,14 +42,14 @@ ncfile = fullfile(spath,['hr' tag '/mossco_1d.nc']);
 read_nc_time_layers
 t0=time(1); t1=time(end);
 t0 = datenum('2001-03-01','yyyy-mm-dd')-1;
-t1 = datenum('2001-12-01','yyyy-mm-dd')-1;
+t1 = datenum('2003-10-01','yyyy-mm-dd')-1;
 
 ind=find(time>= t0 & time<=t1);
 year=year(ind);time=time(ind); years= unique(year);
 it=1:round(length(time)/10):length(time); % discrete index for plotting symbols
 
 %% open all figures
-for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1350 750],'Visible','on'); end
+for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1440 750],'Visible','on'); end
 
 %% loop over all variables to show
 for i=1:nvar

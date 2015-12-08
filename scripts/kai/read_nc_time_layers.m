@@ -10,7 +10,7 @@ time_units = netcdf.getAtt(ncid,varid,'units');
 
 t_offset = datenum(time_units(15:end),'yyyy-mm-dd HH:MM:SS');
 time= (ncread(ncfile,'time')/86400)+t_offset;
-year= round(time/365.25);
+year= floor(time/365.25);
 
 if IsSoil
   soil_dz   = squeeze(ncread(ncfile,'layer_height_in_soil'));

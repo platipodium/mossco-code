@@ -7,12 +7,12 @@ model=maecs
 export hd=${PWD}
 rm -f tag.lst
 
-declare -a pnam=("PAdsODU" "mort_zoo" "fT_exp_mort" "g_max"  "rSlow" "NCrFdet")
-declare -a pval=(  20         0.05           1.       0.5     0.006     0.18)
+declare -a pnam=("kwFzmaxMeth" "N_depo" "mort_ODU" "hydrol" "fT_exp_mort" "rnit" "kinO2denit"  )
+declare -a pval=(      3         0.12       1.      0.012       2.5          2      50   )
 
 cd helgoland
 echo "creating dirs ..." ${#pnam[@]}
-~/mossco/scripts/create_hr_dirs.sh ${#pnam[@]}
+~/kai/create_hr_dirs.sh ${#pnam[@]}
 ls ..
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
   echo "go to ..." $hd/hr_$i
@@ -30,5 +30,5 @@ for (( i=0; $i < ${#pnam[@]}; i++ )) do
 done # i
 wait
 cd $hd
-for a in hr_*; do ~/mossco/scripts/add_denit.sh $a/mossco_1d.nc; done
+for a in hr_*; do ~/kai/add_denit.sh $a/mossco_1d.nc; done
 

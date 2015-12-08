@@ -1,0 +1,13 @@
+#!/bin/bash
+# script to find a parameter and replace param-value (e.g., in nml file)
+# by kai wirtz HZG 2015
+
+file=$1
+token=$2
+val=$3
+
+ss='s/'$token'( )*=( )*[0-9.]*/ '$token' = '$val'/g'
+#echo $ss
+sed -r 's/'$token'( )*=( )*[0-9.-]*/ '$token' = '$val'/g' $file > tmp.txt
+mv tmp.txt $file
+
