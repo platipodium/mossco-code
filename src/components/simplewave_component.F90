@@ -478,7 +478,7 @@ module simplewave_component
 
     do j=totalLBound(2),totalUBound(2)
       do i=totalLBound(1),totalUBound(1)
-        if (mask(i,j) .ne. 0) then
+        if ( mask(i,j) .gt. 0 ) then
         wind = sqrt( windx(i,j)*windx(i,j) + windy(i,j)*windy(i,j) )
         if (wind .gt. 0.0d0) then
           wdepth = min( depth(i,j) , max_depth_windwaves )

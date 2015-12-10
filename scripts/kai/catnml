@@ -1,0 +1,13 @@
+#!/bin/bash
+# script to store current nml files
+#  by kai wirtz HZG 2015
+ds=`date +"%H-%M_%d-%m-%y"`
+echo $ds
+
+if [ $# -lt 1 ]; then
+  outfile="all_nml_$ds"    # Where to put the nml info
+else
+  outfile=$1
+fi
+
+cat maecs_*.nml fabm.nml fabm_pelagic.nml fabm_sed.nml run_sed.nml soil_pelagic_connector.nml mossco_run.nml > $outfile

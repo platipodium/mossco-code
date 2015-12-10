@@ -2053,6 +2053,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'erosed'     : ['mossco_erosed'],
+        'benthic_filtration'     : ['mossco_benthic_filtration'],
         'hamsom'     : ['mossco_hamsom'],
         'tracer'     : ['mossco_tracer'],
         'netcdf'     : ['mossco_netcdf'],
@@ -2114,6 +2115,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'rename_connector' : ['libmossco_connector'],
         'flux_connector' : ['libmossco_connector'],
         'transport_connector' : ['libmossco_connector'],
+        'benthic_filtration' : ['libmossco_benthic_filtration'],
         'copy_coupler' : ['libcopycoupler'],
         'regrid_coupler' : ['libregridcoupler'],
         'remtc_atmosphere' : ['libremtc'],
@@ -2184,7 +2186,7 @@ libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 libsediment libconstant libconstant_grid libmossco_clm libmossco_erosed \
-libmossco_fabm0d libmossco_fabmpelagic:
+libmossco_fabm0d libmossco_fabmpelagic libmossco_benthic_filtration:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:

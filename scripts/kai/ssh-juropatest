@@ -1,0 +1,2 @@
+
+ssh -X -lpaj15100 juropatest1.fz-juelich.de

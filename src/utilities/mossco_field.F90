@@ -497,5 +497,94 @@ end subroutine MOSSCO_FieldCopy
 
   end subroutine MOSSCO_FieldNameCheck
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldInitialize"
+  subroutine MOSSCO_FieldInitialize(field, kwe, rc)
+
+    type(ESMF_Field), intent(inout)                :: field
+    logical, intent(in), optional                  :: kwe ! Keyword enforcer
+    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+    character(len=ESMF_MAXSTR)               :: message
+    integer(ESMF_KIND_I4)                    :: rc_, rank, localrc
+    integer(ESMF_KIND_I4), allocatable       :: ubnd(:), lbnd(:)
+    type(ESMF_TypeKind_Flag)                 :: typeKind
+
+    real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:)
+    real(ESMF_KIND_R8), pointer  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
+    real(ESMF_KIND_R8), pointer  :: farrayPtr5(:,:,:,:,:), farrayPtr6(:,:,:,:,:,:)
+    real(ESMF_KIND_R8), pointer  :: farrayPtr7(:,:,:,:,:,:,:)
+
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_FieldGet(field, status=fieldStatus, rank=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message,'(A)') 'Cannot initialize incomplete '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+    allocate(ubnd(rank), stat=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    allocate(lbnd(rank), stat=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGetbounds(field, localDe=0,  exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @todo: handle different typekinds
+
+    if (rank == 1) then
+      call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr1, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      farrayPtr1(lbnd(1):ubnd(1)) = 0.0
+    elseif (rank == 2) then
+      call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) = 0.0
+    elseif (rank == 3) then
+      call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = 0.0
+    elseif (rank == 4) then
+      call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr4, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) = 0.0
+    else
+      write(message,'(A)') 'Not yet implemented, initialize rank>7 '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
+
+    if (present(rc)) rc = rc_
+
+  end subroutine MOSSCO_FieldInitialize
 
 end module mossco_field

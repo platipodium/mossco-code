@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<scenario version="mossco-0.1" >
+	<mossco_run>
+		<mossco_run>
+			<title>
+				Untitled
+			</title>
+			<start>
+				2000-01-01 00:00:00
+			</start>
+			<stop>
+				2000-01-05 00:00:00
+			</stop>
+			<logkind>
+				multi
+			</logkind>
+			<loglevel>
+				all
+			</loglevel>
+			<logflush>
+				True
+			</logflush>
+		</mossco_run>
+	</mossco_run>
+</scenario>
+
