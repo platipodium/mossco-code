@@ -255,6 +255,15 @@ ifdef GETMDIR
     # We have full control over GETM compilation
     ifeq ($(MOSSCO_MPI),true)
       export GETM_PARALLEL?=true
+      ifeq ($(ESMF_COMM),openmpi)
+        export MPI=OPENMPI
+      else
+        ifeq ($(ESMF_COMM),mpi)
+          export MPI=MPICH
+        else
+          export MPI=MPICH2
+        endif
+      endif
     else
       export GETM_PARALLEL=false
     endif
