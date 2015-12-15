@@ -2,7 +2,7 @@
 
 TAGS=""
 
-TAGS=ESMF_7_0_0_beta_snapshot_61
+TAGS=ESMF_7_0_0_beta_snapshot_64
 #TAGS=ESMF_6_3_0rp2_beta_snapshot_02
 #TAGS=ESMF_6_3_0rp1
 #TAGS="ESMF_5_3_1_beta_snapshot_18
@@ -10,8 +10,8 @@ TAGS=ESMF_7_0_0_beta_snapshot_61
 #TAGS=ESMF_3_1_0rp5
 export TAGS
 
-COMPS="gfortranclang" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
-COMMS="mpich2" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
+COMPS="intel" # gfortranclang" # gfortran intel pgi gfortranclang pgigcc intelgcc
+COMMS="openmpi" # openmpi" #"openmpi" #  mpiuni mpich2 intelmpi
 
 test -n ${ESMF_DIR} || export ESMF_DIR = ${HOME}/devel/ESMF/esmf-code
 cd $ESMF_DIR && git pull origin master
@@ -41,11 +41,13 @@ for C in $COMMS ; do
     echo "Iterating for Compiler $G ============================================="
     ESMF_COMPILER=$G
 
+    ESMF_NETCDF=split
     ESMF_NETCDF_INCLUDE=$(nc-config --includedir)
     ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_INCLUDE%%include}lib
 
     if [ $(hostname) = ocean-fe.fzg.local ]; then
       ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/${G}/include
+      ESMF_NETCDF=standard
 
     elif [ $G = intel ]; then
       source /opt/intel/bin/ifortvars.sh intel64
@@ -93,7 +95,7 @@ export ESMF_MOAB=OFF
 export ESMF_OPTLEVEL=2
 export ESMF_INSTALL_PREFIX=${ESMF_INSTALL_PREFIX}
 export ESMF_LAPACK=internal
-export ESMF_NETCDF=split
+export ESMF_NETCDF=${ESMF_NETCDF}
 export ESMF_NETCDF_INCLUDE=${ESMF_NETCDF_INCLUDE}
 export ESMF_NETCDF_LIBPATH=${ESMF_NETCDF_LIBPATH}
 export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
@@ -104,7 +106,7 @@ export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
 EOT
 
-       if [ $(hostname) = ocean-fe.fzg.local] ; then
+       if [ $(hostname) = "ocean-fe.fzg.local" ] ; then
           echo "unset ESMF_XERCES" >> $HOME/.esmf_${ESMF_STRING}
        else
           echo "export ESMF_XERCES=standard" >> $HOME/.esmf_${ESMF_STRING}
