@@ -988,9 +988,9 @@ fid.write('    !! End of ReadRestart \n\n')
 
 fid.write('''
     do i=1, numGridComp
-      call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(state=gridImportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
+      !call ESMF_StateReconcile(state=gridExportStateList(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
  ''')

@@ -488,7 +488,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     !! Somehow this did not help, so we ask again for the items
     if (allocated(itemNameList)) deallocate(itemNameList)
-    call ESMF_StateReconcile(importState, rc=localrc)
+   ! call ESMF_StateReconcile(importState, rc=localrc) ! not working on ocean
+   ! 7.0.0 b64
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
