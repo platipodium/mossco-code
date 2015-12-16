@@ -22,22 +22,35 @@ else:
   prefix = u"mossco_gffrr"
   prefix = u"/Users/lemmen/devel/mossco/setups/sns/netcdf"
 
-
-if len(sys.argv) > 2:
+if len(sys.argv) > 3:
   excl_variables = sys.argv[2].split(',')
 else:
   excl_variables = []
 
-pattern=prefix + u'.*.nc'
+if prefix.endswith('.nc'):
+  pattern=prefix
+  print pattern
+  prefix=pattern.split('*')[0]
+  if prefix.endswith('_'):
+    prefix=prefix[0:-1]
+else:
+  pattern=prefix + u'.*.nc'
+
+
+print prefix
+print pattern
+
 files=glob.glob(pattern)
 
-if len(sys.argv) > 3:
-  outfile=sys.argv[3]
+if len(sys.argv) > 2:
+  outfile=sys.argv[-1]
 else:
   outfile=prefix + '_stitched.nc'
   
 if len(files)<1:
   print "Did not find any files for pattern "+pattern
+else:
+  print "Using input files " + pattern + " for output file " + outfile
 
 alat={}
 alon={}
@@ -97,7 +110,6 @@ temp={}
 for key,value in alat.iteritems():
   temp[key]=value[np.isfinite(value)]
 alat=temp
-
 
 try:
   ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
