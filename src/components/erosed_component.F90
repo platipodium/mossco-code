@@ -1403,7 +1403,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
                 & tper   , teta   , spm_concentration , BioEffects     , nybot    , sigma_midlayer, &
                 & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
-                & relative_thickness_of_layers, kmaxsd )
+                & relative_thickness_of_layers, kmaxsd, taubmax )
 
   n =0
     do l = 1, nfrac

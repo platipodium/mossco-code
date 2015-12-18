@@ -9,7 +9,7 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
 # edit  cut_avg.sh (e.g. variable, names, vertical sclicing,..)
-SCRDIR=~/devel/MOSSCO/scripts
+SCRDIR=~/devel/MOSSCO/code/scripts/kai
 
 if [ $# -lt 1 ]; then
   outdir=${PWD##*/}    # simulation set-up folder
@@ -43,14 +43,11 @@ fname='cut2_*.nc'
 rm $fname
 
 # stitch the pieces
-python  $SCRDIR/stitch_tiles.py cut
+python  $SCRDIR/stitch_tiles.py cut_\*.nc $outdir'.nc'
 #python  $SCRDIR/stitch_tiles.py cutz  # surface sums
-python  $SCRDIR/stitch_tiles.py cutm  #monthly maximum
+#python  $SCRDIR/stitch_tiles.py cutm_\*.nc $outdir'_m.nc'  #monthly maximum
 
 # view results
-mv cut_stitched.nc $outdir'.nc'
-mv cutm_stitched.nc $outdir'_m.nc'
-#mv cutz_stitched.nc $outdir'_z.nc'
 ncview $outdir'.nc' &
 # ncview $outdir'_m.nc' &
 

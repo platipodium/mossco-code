@@ -46,10 +46,11 @@ function usage {
 	echo "      [-n 0]:   MPI is not used at all."
   echo "      [-n XxY]: The layout X cpu-per-node times Y nodes is used"
   echo
-	echo "    [-s M|S|J|F|B]: exeute batch queue for a specific system, which is"
+	echo "    [-s M|S|J|F|B|P]: exeute batch queue for a specific system, which is"
   echo "            autodetected by default"
 	echo
-	echo "      [-s M]: MOAB system, writes moab.sh"
+  echo "      [-s P]: PBS system, writes pbs.sh"
+  echo "      [-s M]: MOAB system, writes moab.sh"
 	echo "      [-s S]: SGE system, e.g. ocean.hzg.de, writes sge.sh"
 	echo "      [-s J]: Slurm system, e.g. Jureca, Mistral, writes slurm.sh"
 	echo "      [-s F]: Command line interactive, running in foreground"
@@ -227,7 +228,8 @@ if [[ ${COMPILE_ONLY} == 1 ]] ; then
 fi
 
 # Automatically determine system
-if [[ $(which qstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SGE
+if [[ $(hostname) == service0 ]] ; then AUTOSYSTEM=PBS
+elif [[ $(which qstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SGE
 elif [[ $(which sstat 2> /dev/null) != "" ]] ; then AUTOSYSTEM=SLURM
 elif [[ $(which msub 2> /dev/null) != "" ]] ; then AUTOSYSTEM=MOAB
 fi
@@ -237,6 +239,8 @@ case ${SYSTEM} in
   moab|MOAB|M)  SYSTEM=MOAB
                 ;;
   sge|SGE|S)    SYSTEM=SGE
+                ;;
+  pbs|PBS|P)    SYSTEM=PBS
                 ;;
   J|SLURM|slurm)  SYSTEM=SLURM
                 ;;
@@ -255,19 +259,17 @@ if [[ ${SYSTEM} = "" ]] ; then SYSTEM=BACKGROUND; fi
 
 # Adapt to different MPI implementations
 case ${SYSTEM} in
+  PBS)  MPI_PREFIX=""
+                ;;
   MOAB)  MPI_PREFIX="mpiexec"
-                SYSTEM=MOAB
                 ;;
   SGE)    MPI_PREFIX="mpirun"
-                SYSTEM=SGE
                 ;;
   SLURM)  MPI_PREFIX="srun"
-                  SYSTEM=SLURM
                 ;;
   *)  MPI_PREFIX="mpirun"
                 ;;
 esac
-
 
 # Figure out default NP (1), or special settings if found in par_setup.dat
 if [[ ${NP} == NONE ]]; then
@@ -289,6 +291,10 @@ PPN=$(echo ${NP} | cut -d'x' -f1)
 
 if [[ "${PPN}" ==  "${NP}" ]]; then
   case ${SYSTEM} in
+    PBS)   NODES=$(expr \( $NP - 1 \) / 8 + 1 )
+           PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
+           NP=$(expr $NODES \* $PPN )
+           ;;
     MOAB)  NODES=$(expr \( $NP - 1 \) / 8 + 1 )
            PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
            NP=$(expr $NODES \* $PPN )
@@ -338,6 +344,8 @@ STDOUT=${TITLE}.stdout
 
 if [[ "x${MPI_PREFIX}" != "x" ]] ; then
   case ${SYSTEM} in
+    PBS)  MPI_PREFIX=${MPI_PREFIX}
+        ;;
     SGE)  MPI_PREFIX=${MPI_PREFIX}
         ;;
     SLURM)  MPI_PREFIX=${MPI_PREFIX}
@@ -351,6 +359,27 @@ EMAIL=${MOSSCO_USER_EMAIL:-$(who am i |cut -f1 -d" ")@$(hostname)}
 WALLTIME=$(predict_time $NP)
 
 case ${SYSTEM} in
+  PBS)
+    echo '#!/usr/bin/zsh' > pbs.sh
+    cat << EOT >> pbs.sh
+#PBS -N ${TITLE}
+#PBS -S /usr/bin/zsh
+#PBS -q mpi_64
+#PBS -l select=${NODES}:ncpus=${NP}:mpiprocs=${NP}
+#PBS -l place=scatter:excl
+#PBS -j oe
+#PBS -r n
+#PBS -e ${TITLE}.stderr
+#PBS -o ${TITLE}.stderr
+#PBS -W umask=000
+#PBS -m e
+#PBS -M ${EMAIL}
+EOT
+
+    echo "" >> pbs.sh
+    echo  ${EXE} >> slurm.sh
+
+;;
   SLURM)
     echo '#!/bin/bash -x' > slurm.sh
     cat << EOT >> slurm.sh
@@ -527,6 +556,11 @@ if [[ ${BUILD_ONLY} == 1 ]] ; then
 fi
 
 case ${SYSTEM} in
+  PBS)  if test $(which qsub 2> /dev/null)  ; then
+           qsub pbs.sh
+           echo "Job ${TITLE} submitted for system ${SYSTEM}"
+         else cat pbs.sh ; fi
+         ;;
   MOAB)  if test $(which msub 2> /dev/null)  ; then
            msub moab.sh
            echo "Job ${TITLE} submitted for system ${SYSTEM}"

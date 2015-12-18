@@ -19,27 +19,49 @@ import sys
 if len(sys.argv) > 1:
   prefix = sys.argv[1]
 else:
-  prefix = u"netcdf_out"
-  prefix = u"/Volumes/Kiwi/output/sn-m/mossco_gffrn"
+  prefix = u"mossco_gffrr"
+  prefix = u"/Users/lemmen/devel/mossco/setups/sns/netcdf"
 
-if len(sys.argv) > 2:
+if len(sys.argv) > 3:
   excl_variables = sys.argv[2].split(',')
 else:
   excl_variables = []
 
-pattern=prefix + u'_*.nc'
-files=glob.glob(pattern)
-    
-outfile=prefix + '_stitched.nc'
+if prefix.endswith('.nc'):
+  pattern=prefix
+  print pattern
+  prefix=pattern.split('*')[0]
+  if prefix.endswith('_'):
+    prefix=prefix[0:-1]
+else:
+  pattern=prefix + u'.*.nc'
 
+
+print prefix
+print pattern
+
+files=glob.glob(pattern)
+
+if len(sys.argv) > 2:
+  outfile=sys.argv[-1]
+else:
+  outfile=prefix + '_stitched.nc'
+  
 if len(files)<1:
   print "Did not find any files for pattern "+pattern
-  
+else:
+  print "Using input files " + pattern + " for output file " + outfile
+
 alat={}
 alon={}
 
-## Find coord variables  
-nc=netcdf.Dataset(files[0],'r')
+## Find coord variables
+
+try:
+  nc=netcdf.Dataset(files[0],'r')
+except:
+  print 'Dataset already open'
+
 for key, value in nc.variables.iteritems():
   dim=value.dimensions
   #print key, dim
@@ -64,11 +86,11 @@ if len(alat)<1:
 
 for f in files:
   nc=netcdf.Dataset(f,'r')
-  
+
   for item in alat.keys():
-    if nc.variables.has_key(item) and alat.has_key(item): 
+    if nc.variables.has_key(item) and alat.has_key(item):
       alat[item].extend(nc.variables[item][:])
-  for item in alon.keys(): 
+  for item in alon.keys():
     if nc.variables.has_key(item) and alon.has_key(item):
       alon[item].extend(nc.variables[item][:])
   nc.close()
@@ -76,24 +98,25 @@ for f in files:
 nc=netcdf.Dataset(files[0],'r')
 time=nc.variables['time'][:]
 
-for key,value in alon.iteritems(): alon[key]=np.sort(list(set(value)))
-for key,value in alat.iteritems(): alat[key]=np.sort(list(set(value)))
+for key,value in alon.iteritems(): alon[key]=np.sort(np.unique(value))
+for key,value in alat.iteritems(): alat[key]=np.sort(np.unique(value))
 
 temp={}
 for key,value in alon.iteritems():
-  if np.all(np.isfinite(value)):
-    temp[key]=value
-    
+  temp[key]=value[np.isfinite(value)]
 alon=temp
 
 temp={}
 for key,value in alat.iteritems():
-  if np.all(np.isfinite(value)):
-    temp[key]=value
+  temp[key]=value[np.isfinite(value)]
 alat=temp
 
-ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
-
+try:
+  ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
+except:
+  ncout.close()
+  ncout = netcdf.Dataset(outfile, 'w', format='NETCDF4_CLASSIC')
+  
 
 for key,value in alon.iteritems():
   dim=nc.variables[key].dimensions[0]
@@ -141,7 +164,7 @@ nc.close()
 if ncout.variables.has_key('time'): ncout.variables['time'][:]=time
 
 for item in alat.keys():
-  if ncout.variables.has_key(item): 
+  if ncout.variables.has_key(item):
     print item, len(ncout.variables[item][:]), len(alat[item])
     ncout.variables[item][:]=alat[item]
   else:
@@ -152,15 +175,29 @@ for item in alon.keys():
     print 'Could not find item ' , item, ' in ncout'
 
 for f in files[:]:
-  nc=netcdf.Dataset(f,'r')
+    
+  try:    
+    nc=netcdf.Dataset(f,'r')
+  except:
+    print 'Dataset is already open'
+    
   lat={}
   lon={}
   meta={}
 
   for item in alat.keys():
-    if nc.variables.has_key(item): lat[item]=nc.variables[item][:]
+    if ncout.variables.has_key(item): 
+      temp=nc.variables[item][:]
+      if type(temp) is np.ndarray: lat[item] = temp[np.isfinite(temp)]
+      elif type(temp) is np.ma.core.MaskedArray: lat[item]=temp.compressed()
+      else: lat[item] = temp
   for item in alon.keys():
-    if ncout.variables.has_key(item): lon[item]=nc.variables[item][:]
+    if ncout.variables.has_key(item): 
+      temp=nc.variables[item][:]
+      if type(temp) is np.ndarray: lon[item] = temp[np.isfinite(temp)]
+      elif type(temp) is np.ma.core.MaskedArray: lon[item]=temp.compressed()
+      else: 
+        lon[item] = temp
 
   for item in lat.keys():
     if alat.has_key(item):
@@ -198,36 +235,53 @@ for f in files[:]:
     n=len(dims)
     lbnd=[]
     ubnd=[]
+    inlbnd=[]
+    inubnd=[]
     for i in range(0,n):
+      # set default values for bounds
       lbnd.append(0)
-      ubnd.append(len(ncout.dimensions[dims[i]]))
+      ubnd.append(len(nc.dimensions[dims[i]]))
+      inlbnd.append(0)
+      inubnd.append(len(nc.dimensions[dims[i]]))
+      
+      # find coordinate variable with axis attribute and same dimension     
       for item in coords:
         if ncout.variables[item].dimensions[0]==dims[i]:
           if alon.has_key(item):
             lbnd[i]=meta[item]['x'][0]
             ubnd[i]=meta[item]['x'][1]+1
+            
           else:
             lbnd[i]=meta[item]['y'][0]
             ubnd[i]=meta[item]['y'][1]+1
-      #if lnbd[i]==0: lbnd
+            
+          try:
+            inlbnd[i]= np.min(np.where((nc.variables[item][:]).mask == False))            
+            inubnd[i]= np.max(np.where((nc.variables[item][:]).mask == False))+1        
 
-    #print lbnd, ubnd, value.shape
+          except:
+            inlbnd[i]=0
+            inubnd[i]=len(nc.dimensions[dims[i]])
+  
+    if np.any(np.array(inubnd)-np.array(inlbnd) != np.array(ubnd) - np.array(lbnd)) :
+      print 'skipped ' + key, lbnd, ubnd, inubnd, inlbnd
+      continue
+       
+         
+    try: 
+      if n==1:
+        var[lbnd[0]:ubnd[0]]=value[inlbnd[0]:inubnd[0]]
+      elif n==2:
+        var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]=value[inlbnd[0]:inubnd[0],inlbnd[1]:inubnd[1]]
+      elif n==3:
+        var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]] \
+          =value[inlbnd[0]:inubnd[0],inlbnd[1]:inubnd[1],inlbnd[2]:inubnd[2]]
+      else:
+        var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]] \
+        =value[inlbnd[0]:inubnd[0],inlbnd[1]:inubnd[1],inlbnd[2]:inubnd[2],inlbnd[3]:inubnd[3]]
+    except: 
+      print 'skipped ' + key, lbnd, ubnd, value.shape
 
-    success=True
-    
-    if n==1 and (var[lbnd[0]:ubnd[0]]).shape == value.shape:  
-      var[lbnd[0]:ubnd[0]]=value[:]
-    elif n==2 and  (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]).shape == value.shape:
-      var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1]]=value[:,:]
-    elif n==3 and (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]]).shape == value.shape:
-      var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2]]=value[:,:,:]
-    elif n==4 and (var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]]).shape == value.shape:
-      var[lbnd[0]:ubnd[0],lbnd[1]:ubnd[1],lbnd[2]:ubnd[2],lbnd[3]:ubnd[3]]=value[:,:,:,:]
-    else:
-      success=False
-
-    if not success:
-      print 'skipped ' + key
       continue
 
     ncout.sync()

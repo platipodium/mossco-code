@@ -388,14 +388,14 @@ module fabm_sediment_component
     bdys(:,:,1) = 5.0 !degC
     do i=1,size(sed%model%state_variables)
       varname = trim(only_var_name(sed%model%state_variables(i)%long_name))
-      if (trim(varname) == 'dissolved_nitrate') bdys(:,:,i+1)=2.5
-      if (trim(varname) == 'dissolved_ammonium') bdys(:,:,i+1)=2.5
-      if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=0.15
+      if (trim(varname) == 'dissolved_nitrate') bdys(:,:,i+1)=5.
+      if (trim(varname) == 'dissolved_ammonium') bdys(:,:,i+1)=5.
+      if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=0.5
       if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=250.
       if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0
-      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=4.0_rk/86400.0_rk
-      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=4.0_rk/86400.0_rk
-      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=0.15_rk/86400.0_rk
+      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=10.0_rk/86400.0_rk
+      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=10.0_rk/86400.0_rk
+      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=0.2_rk/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
     end do
 
