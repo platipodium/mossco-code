@@ -39,6 +39,8 @@ module soil_pelagic_connector
   real(ESMF_KIND_R8),dimension(:,:),   pointer :: SDETCflux=>null(),fDETCflux=>null()
   real(ESMF_KIND_R8) :: dinflux_const=0.0
   real(ESMF_KIND_R8) :: dipflux_const=-1.
+  real(ESMF_KIND_R8) :: NC_fdet=0.20d0
+  real(ESMF_KIND_R8) :: NC_sdet=0.04d0
   public SetServices
 
   contains
@@ -134,7 +136,7 @@ module soil_pelagic_connector
     logical               :: isPresent
     integer               :: nmlunit=127, localrc
 
-    namelist /soil_pelagic_connector/ dinflux_const,dipflux_const
+    namelist /soil_pelagic_connector/ dinflux_const,dipflux_const,NC_fdet,NC_sdet
 
     rc=ESMF_SUCCESS
 
@@ -196,8 +198,6 @@ module soil_pelagic_connector
     type(ESMF_Field)            :: field
     integer(ESMF_KIND_R8)       :: advanceCount
     !> @todo read NC_fdet dynamically from fabm model info?  This would not comply with our aim to separate fabm/esmf
-    real(ESMF_KIND_R8),parameter    :: NC_fdet=0.20d0
-    real(ESMF_KIND_R8),parameter    :: NC_sdet=0.04d0
     integer(ESMF_KIND_I4)       :: rank, ubnd(2), lbnd(2), itemCount
     logical                     :: verbose=.true.
 
