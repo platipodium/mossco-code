@@ -219,11 +219,12 @@ module constant_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+
       inquire(file=trim(fileName), exist=fileIsPresent)
       if (fileIsPresent .and. trim(foreignGridFieldName) == 'none') then
 
         mesh = ESMF_MeshCreate(meshname=trim(meshName),filename=trim(fileName), &
-          filetypeflag=ESMF_FILEFORMAT_UGRID, rc=localrc)
+          fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
