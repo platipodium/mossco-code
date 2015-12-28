@@ -1748,6 +1748,8 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write data for variable'//trim(varname),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      write(0,*) 'Write axis '//axisNameList(i), intptr1(:)
     enddo
 
     do i=1,dimCount
@@ -1887,9 +1889,9 @@ module mossco_netcdf
 
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         write(message,'(A)')  '  this error will be fixed in the future, disregard for now'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         write(message,'(A)')  '  did not write coordinate variable '//trim(varname)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         cycle
       endif
@@ -1912,8 +1914,10 @@ module mossco_netcdf
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
 
-      ! Detect missing values in 'all' dimensions (entire rows) of coordinates, if so, then mark this as missing (-1)
+      ! Detect missing values in any dimension of coordinates, if so,
+      ! then mark this as missing (-1)
       ! in the respective auxiliary coordinate
+      write(0,*) 'Missing value in axis ',i,': ',missingValue
 
       do j=1,coordDimCount(i)
 
@@ -1940,11 +1944,11 @@ module mossco_netcdf
         if (coordDimCount(i)==2) then
           if (j == 1) then
             do k=lbnd(1),ubnd(1)
-              if (all(farrayPtr2(k,lbnd(2):ubnd(2)) == missingValue)) intptr1(k)=-1
+              if (any(farrayPtr2(k,lbnd(2):ubnd(2)) == missingValue)) intptr1(k)=-1
             enddo
           else
             do k=lbnd(2),ubnd(2)
-              if (all(farrayPtr2(lbnd(1):ubnd(1),k) == missingValue)) intptr1(k)=-1
+              if (any(farrayPtr2(lbnd(1):ubnd(1),k) == missingValue)) intptr1(k)=-1
             enddo
           endif
         endif
@@ -1952,21 +1956,21 @@ module mossco_netcdf
         if (coordDimCount(i)==3) then
           if (j == 1) then
             do k=lbnd(1),ubnd(1)
-              if (all(farrayPtr3(k,lbnd(2):ubnd(2),lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
+              if (any(farrayPtr3(k,lbnd(2):ubnd(2),lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
           elseif (j == 2) then
             do k=lbnd(2),ubnd(2)
-              if (all(farrayPtr3(lbnd(1):ubnd(1),k,lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
+              if (any(farrayPtr3(lbnd(1):ubnd(1),k,lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
           else
             do k=lbnd(3),ubnd(3)
-              if (all(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) == missingValue)) intptr1(k)=-1
+              if (any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) == missingValue)) intptr1(k)=-1
             enddo
           endif
         endif
 
         if (any(intptr1(:) < 1)) then
-          write(0,*) 'Coordinate ',i,' with missing values: ',intPtr1(:)
+          write(0,*) 'Coordinate axis ',i,' with missing values: ',intPtr1(:)
           ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
         endif
 
