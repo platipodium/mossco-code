@@ -492,4 +492,92 @@ subroutine MOSSCO_GridString(grid, message, length, rc)
 
 end subroutine MOSSCO_GridString
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridPrintBlockList"
+subroutine MOSSCO_GridPrintBlockList(grid, rc)
+
+  type(ESMF_Grid), intent(in)                    :: grid
+  integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+  integer(ESMF_KIND_I4)          :: localrc
+  type(ESMF_DistGrid)            :: distGrid
+
+  call ESMF_GridGet(grid, distGrid=distGrid, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call MOSSCO_DistGridPrintBlockList(distGrid, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (present(rc)) rc=localrc
+
+end subroutine MOSSCO_GridPrintBlockList
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_DistGridPrintBlockList"
+subroutine MOSSCO_DistGridPrintBlockList(distGrid, rc)
+
+  type(ESMF_DistGrid), intent(in)                    :: distGrid
+  integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+  integer(ESMF_KIND_I4)          :: localrc
+  type(ESMF_DeLayout)            :: deLayout
+
+  call ESMF_DistGridGet(distGrid, deLayout=deLayout, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call MOSSCO_DeLayoutPrintBlockList(deLayout, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (present(rc)) rc=localrc
+
+end subroutine MOSSCO_DistGridPrintBlockList
+
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_DeLayoutPrintBlockList"
+subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
+
+  type(ESMF_DeLayout), intent(in)                    :: deLayout
+  integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+  integer(ESMF_KIND_I4)              :: localrc, deCount, rank, localDeCount
+  integer(ESMF_KIND_I4), allocatable :: deBlockList(:,:,:)
+  character(len=ESMF_MAXSTR)         :: message
+
+  call ESMF_DeLayoutGet(deLayout, deCount=deCount, localDeCount=localDeCount, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (localDeCount /= 1 ) then
+    write(message, '(A,I3)') '  cannot handle localDeCount /= 1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    call ESMF_Finalize()
+  endif
+
+  if (allocated(deBlockList)) deallocate(deBlockList)
+  if (deCount<=0) then
+    write(message, '(A,I3)') '  cannot handle deCount less than 1 (',deCount,')'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    call ESMF_Finalize()
+  endif
+
+  allocate(deBlockList(rank,2,deCount))
+  !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call ESMF_DeLayoutPrint(deLayout, rc=localrc)
+
+  if (allocated(deBlockList)) deallocate(deBlockList)
+  if (present(rc)) rc=localrc
+
+end subroutine MOSSCO_DeLayoutPrintBlockList
+
 end module mossco_grid
