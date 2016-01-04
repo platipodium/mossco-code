@@ -293,11 +293,11 @@ module nudge_connector
     real(ESMF_KIND_R8), pointer            :: importPtr2(:,:), exportPtr2(:,:)
     logical                                :: isMatch
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
-    real(ESMF_KIND_R8)                     :: weight
+    real(ESMF_KIND_R8)                     :: weight, exportMissingValue, importMissingValue
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
 
-    call ESMF_AttributeGet(importState, 'weight', weight, rc=localrc)
+    call ESMF_AttributeGet(importState, name='weight', value=weight, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -423,6 +423,17 @@ module nudge_connector
         call ESMF_Finalize()
       endif
 
+      importMissingValue=-1E30
+      call ESMF_AttributeGet(importField, 'missingValue', &
+        importMissingValue,  rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      exportMissingValue=-1E30
+      call ESMF_AttributeGet(exportField, name='missingValue', value=exportMissingValue, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       select case (rank)
         case(2)
           call ESMF_FieldGet(importField, farrayPtr=importPtr2, rc=localrc)
@@ -431,7 +442,9 @@ module nudge_connector
           call ESMF_FieldGet(exportField, farrayPtr=exportPtr2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          exportPtr2 = (1.0 - weight) * exportPtr2 + weight * importPtr2
+          where ((exportPtr2 /= exportMissingValue) .and. (importPtr2 /= importMissingValue))
+            exportPtr2 = (1.0 - weight) * exportPtr2 + weight * importPtr2
+          endwhere
         case(3)
           call ESMF_FieldGet(importField, farrayPtr=importPtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -439,7 +452,9 @@ module nudge_connector
           call ESMF_FieldGet(exportField, farrayPtr=exportPtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          exportPtr3 = (1.0 - weight) * exportPtr3 + weight * importPtr3
+          where ((exportPtr3 /= exportMissingValue) .and. (importPtr3 /= importMissingValue))
+            exportPtr3 = (1.0 - weight) * exportPtr3 + weight * importPtr3
+          endwhere
         case default
           if (present(rc)) rc=ESMF_RC_NOT_IMPL
           return
@@ -448,6 +463,12 @@ module nudge_connector
       write(message,'(A,F5.3)') '  nudged with weight ', weight
       call MOSSCO_FieldString(exportField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      if (allocated(exportUbnd)) deallocate(exportUbnd)
+      if (allocated(exportLbnd)) deallocate(exportLbnd)
+      if (allocated(lbnd)) deallocate(lbnd)
+      if (allocated(ubnd)) deallocate(ubnd)
+
     enddo
 
     if (allocated(itemNameList))    deallocate(itemNameList)
