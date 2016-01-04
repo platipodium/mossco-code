@@ -226,7 +226,7 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_AddImportFluxToExportState(importState, exportState, timeStep)
+    call MOSSCO_WeightImportIntoExportState(importState, exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -253,13 +253,12 @@ module nudge_connector
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-    call ESMF_cplCompGet(cplComp, clock=clock, rc=rc)
+    call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
     call ESMF_ClockDestroy(clock, rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(cplComp, rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
@@ -267,10 +266,9 @@ module nudge_connector
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine MOSSCO_AddImportFluxToExportState(importState, exportState, timeStep, rc)
+  subroutine MOSSCO_WeightImportIntoExportState(importState, exportState, rc)
 
     type(ESMF_State)                       :: importState, exportState
-    type(ESMF_TimeInterval)                :: timeStep
     integer(ESMF_KIND_I4), optional        :: rc
 
     type(ESMF_Field)                       :: exportField
@@ -290,6 +288,15 @@ module nudge_connector
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
 
+    call ESMF_AttributeGet(importState, 'weight', weight, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (weight <= 0.0) then
+      if (present(rc)) rc=ESMF_SUCCESS
+      return
+    endif
+
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -306,17 +313,51 @@ module nudge_connector
 
     do i=1, itemCount
 
-      j=index(itemNameList(i),'_flux_in_water')
-      if (j<1) cycle
+      ! Look for an exclusion pattern on this field name
+      if (allocated(filterExcludeList)) then
+        do j=1,ubound(filterExcludeList,1)
+          call MOSSCO_StringMatch(itemName, filterExcludeList(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (ismatch) then
+          write(message,'(A)')  trim(name)//' excluded item'
+          call MOSSCO_MessageAdd(message, trim(itemName))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
+      endif
 
-      itemName=itemNameList(i)
-      call ESMF_StateGet(exportState, itemName(1:j)//'in_water', itemType=itemType, rc=localrc)
+      !! Look for an inclusion pattern on this field name
+      if (allocated(filterIncludeList)) then
+        do j=1,ubound(filterIncludeList,1)
+          call MOSSCO_StringMatch(itemName, filterIncludeList(j), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (.not.ismatch) then
+          write(message,'(A)')  trim(name)//' did not include'
+          call MOSSCO_MessageAdd(message, ' '//trim(itemName))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
+      endif
+
+      call ESMF_StateGet(exportState, itemNameList(i), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+      !> Make sure that import state's item type (in list) and export state's agree. Also,
+      !> now only fields are implemented
+      if (itemType /= itemTypeList(i)) cycle
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        if (present(rc)) rc=ESMF_RC_NOT_IMPL
+        return
+      endif
 
-      call ESMF_StateGet(exportState, itemName(1:j)//'in_water', exportField, rc=localrc)
+      call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -326,63 +367,78 @@ module nudge_connector
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
-      call ESMF_AttributeGet(exportField, 'external_index', isPresent=isPresent, rc=localrc)
+      call ESMF_FieldGet(exportField, rank=exportRank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (.not.isPresent) then
-        externalIndex = -1
-      else
-        call ESMF_AttributeGet(exportField, 'external_index', externalIndex, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
-      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
-
-      call ESMF_StateGet(importState, trim(itemName), rateField, rc=localrc)
+      call ESMF_StateGet(importState, trim(itemName), importField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGet(rateField, status=fieldStatus, rc=localrc)
+      call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
 
-      call ESMF_FieldGet(exportField, farrayPtr=farrayPtr3, rc=localrc)
+      call ESMF_FieldGet(importField, rank=rank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGet(rateField, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (rank==2) then
-        call ESMF_FieldGetBounds(rateField, exclusiveUBound=ubnd2, exclusiveLBound=lbnd2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_FieldGet(rateField, farrayPtr=ratePtr2, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        do k=1,ubound(farrayPtr3, 3)
-          do j=lbnd2(2),ubnd2(2)
-            do l=lbnd2(1), ubnd2(1)
-              if (ratePtr2(l,j)>0) farrayPtr3(l,j,k) = farrayPtr3(l,j,k)  + ratePtr2(l,j) * dt
-            enddo
-          enddo
-        enddo
-      elseif (rank==3) then
-        call ESMF_FieldGet(rateField, farrayPtr=ratePtr3, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        where(ratePtr3(:,:,:)>-1)
-          farrayPtr3(:,:,:) = farrayPtr3(:,:,:)  + ratePtr3(:,:,:) * dt
-        endwhere
+      if (rank /= exportRank) then
+        write(message,'(A)')  trim(name)//' rank mismatch in '
+        call MOSSCO_FieldString(message, exportField)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize()
       endif
+
+      if (rank > 0) then
+        if (allocated(exportUbnd)) deallocate(exportUbnd)
+        allocate(exportUbnd(rank), stat=localrc)
+        if (allocated(exportLbnd)) deallocate(exportLbnd)
+        allocate(exportLbnd(rank), stat=localrc)
+        if (allocated(lbnd)) deallocate(lbnd)
+        allocate(lbnd(rank), stat=localrc)
+        if (allocated(ubnd)) deallocate(ubnd)
+        allocate(ubnd(rank), stat=localrc)
+      endif
+
+      call ESMF_FieldGetBounds(importField, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGetBounds(exportField, exclusiveUBound=exportUbnd, exclusiveLBound=exportLbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (any(exportLbnd - lbnd > 0)) .or. any(exportUbnd - ubnd > 0)))  then
+        write(message,'(A)')  trim(name)//' exclusive bounds mismatch in '
+        call MOSSCO_FieldString(message, exportField)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize()
+      endif
+
+      select case (rank)
+        case(2)
+          call ESMF_FieldGet(importField, farrayPtr=importPtr2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_FieldGet(exportField, farrayPtr=exportPtr2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          exportPtr2 = (1.0 - weight) * exportPtr2 + weight * importPtr2
+        case(3)
+          call ESMF_FieldGet(importField, farrayPtr=importPtr3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call ESMF_FieldGet(exportField, farrayPtr=exportPtr3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          exportPtr2 = (1.0 - weight) * exportPtr3 + weight * importPtr3
+        case default
+          if (present(rc)) rc=ESMF_RC_NOT_IMPL
+          return
+      endselect
 
       write(message,'(A)') '  added '
       call MOSSCO_FieldString(exportField, message)
@@ -398,7 +454,6 @@ module nudge_connector
 
     return
 
-  end subroutine MOSSCO_AddImportFluxToExportState
+  end subroutine MOSSCO_WeightImportIntoExportState
 
-
-end module flux_connector
+end module nudge_connector
