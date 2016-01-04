@@ -73,7 +73,7 @@ module nudge_connector
     integer, intent(out)  :: rc
 
     character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
 
@@ -103,15 +103,22 @@ module nudge_connector
 #define ESMF_METHOD "InitializeP1"
   subroutine InitializeP1(cplComp, importState, exportState, parentClock, rc)
 
-    type(ESMF_cplComp)   :: cplComp
+    type(ESMF_cplComp)    :: cplComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    character(ESMF_MAXSTR):: name
-    type(ESMF_Time)       :: currTime
-    integer(ESMF_KIND_I4) :: localrc
+    character(len=ESMF_MAXSTR)      :: name, message, configFileName
+    type(ESMF_Time)                 :: currTime
+    integer(ESMF_KIND_I4)           :: localrc
+
+    type(ESMF_Config)               :: config
+    real(ESMF_KIND_R8)              :: weight
+    logical                         :: labelIsPresent, isPresent, fileIsPresent
+    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+
+    rc=ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -134,17 +141,19 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigFindLabel(config, label='weight:', isPresent=labelIsPresent, rc = localrc)
+      call ESMF_ConfigFindLabel(config, label='weight:', isPresent=labelIsPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, weight, rc=localrc, default=0.0)
+        call ESMF_ConfigGetAttribute(config, weight, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A,F5.3)')  trim(name)//' found in file '//trim(configFileName)//' weight: ',weight
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      else
+        weight = 0.0
       endif
 
       call ESMF_AttributeGet(importState, 'weight', isPresent=isPresent, rc=localrc)
@@ -194,7 +203,7 @@ module nudge_connector
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
+      call ESMF_cplCompSet(cplComp, config=config, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -215,10 +224,9 @@ module nudge_connector
     integer, intent(out)    :: rc
 
     character(ESMF_MAXSTR)  :: name
-    type(ESMF_Time)         :: currTime, stopTime
+    type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)   :: localrc
-    type(ESMF_TimeInterval) :: timeStep
 
     rc=ESMF_SUCCESS
 
@@ -271,20 +279,21 @@ module nudge_connector
     type(ESMF_State)                       :: importState, exportState
     integer(ESMF_KIND_I4), optional        :: rc
 
-    type(ESMF_Field)                       :: exportField
-    type(ESMF_Field)                       :: rateField
+    type(ESMF_Field)                       :: exportField, importField
     character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
     character(ESMF_MAXSTR)                 :: itemName, message
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
     type(ESMF_StateItem_Flag)              :: itemType
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
-    integer(ESMF_KIND_I4)                  :: i, j, k, l, nmatch, itemCount, rank, externalIndex
-    integer(ESMF_KIND_I4)                  :: ubnd2(2), lbnd2(2)
+    integer(ESMF_KIND_I4)                  :: i, j, itemCount, rank, exportRank
+    integer(ESMF_KIND_I4), allocatable     :: ubnd(:), lbnd(:)
+    integer(ESMF_KIND_I4), allocatable     :: exportUbnd(:), exportLbnd(:)
 
-    real(ESMF_KIND_R8)                     :: dt
-    real(ESMF_KIND_R8), pointer            :: farrayPtr3(:,:,:), ratePtr3(:,:,:)
-    real(ESMF_KIND_R8), pointer            :: farrayPtr2(:,:), ratePtr2(:,:)
-    logical                                :: isPresent
+    real(ESMF_KIND_R8), pointer            :: importPtr3(:,:,:), exportPtr3(:,:,:)
+    real(ESMF_KIND_R8), pointer            :: importPtr2(:,:), exportPtr2(:,:)
+    logical                                :: isMatch
+    character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    real(ESMF_KIND_R8)                     :: weight
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
 
@@ -307,10 +316,6 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeIntervalGet(timeStep, s_r8=dt, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     do i=1, itemCount
 
       ! Look for an exclusion pattern on this field name
@@ -322,7 +327,7 @@ module nudge_connector
           if (ismatch) exit
         enddo
         if (ismatch) then
-          write(message,'(A)')  trim(name)//' excluded item'
+          write(message,'(A)')  '  excluded item'
           call MOSSCO_MessageAdd(message, trim(itemName))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -338,7 +343,7 @@ module nudge_connector
           if (ismatch) exit
         enddo
         if (.not.ismatch) then
-          write(message,'(A)')  trim(name)//' did not include'
+          write(message,'(A)')  '  did not include'
           call MOSSCO_MessageAdd(message, ' '//trim(itemName))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -386,8 +391,8 @@ module nudge_connector
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (rank /= exportRank) then
-        write(message,'(A)')  trim(name)//' rank mismatch in '
-        call MOSSCO_FieldString(message, exportField)
+        write(message,'(A)')  '  rank mismatch in '
+        call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize()
       endif
@@ -411,9 +416,9 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (any(exportLbnd - lbnd > 0)) .or. any(exportUbnd - ubnd > 0)))  then
-        write(message,'(A)')  trim(name)//' exclusive bounds mismatch in '
-        call MOSSCO_FieldString(message, exportField)
+      if (any(exportLbnd - lbnd > 0) .or. any(exportUbnd - ubnd > 0))  then
+        write(message,'(A)')  '  exclusive bounds mismatch in '
+        call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize()
       endif
@@ -434,16 +439,14 @@ module nudge_connector
           call ESMF_FieldGet(exportField, farrayPtr=exportPtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          exportPtr2 = (1.0 - weight) * exportPtr3 + weight * importPtr3
+          exportPtr3 = (1.0 - weight) * exportPtr3 + weight * importPtr3
         case default
           if (present(rc)) rc=ESMF_RC_NOT_IMPL
           return
       endselect
 
-      write(message,'(A)') '  added '
+      write(message,'(A,F5.3)') '  nudged with weight ', weight
       call MOSSCO_FieldString(exportField, message)
-      write(message,'(A)') trim(message)//' to '
-      call MOSSCO_FieldString(rateField, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
