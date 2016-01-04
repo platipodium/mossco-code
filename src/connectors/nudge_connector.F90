@@ -22,6 +22,8 @@ module nudge_connector
   use mossco_field
   use mossco_state
   use mossco_component
+  use mossco_config
+  use mossco_attribute
 
   implicit none
 
