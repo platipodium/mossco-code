@@ -3,11 +3,12 @@
 After a crash of the filesystems on ocean, it may be necessary to Reinstall
 everything from scratch (if you're a group administrator)
 
- - libyaml, PyYaml, ESMF
+ - libyaml, PyYaml, cmake, ESMF
 
 If you can rely on your adminstrator to recover the above, you only have to
 delete and reinstall MOSSCO from the repository; then add the updated `PYTHONPATH` and
-`ESMFMKFILE` variables to your system.
+`ESMFMKFILE` variables to your system, and expand your `PATH`
+
 
 ## Reinstall mossco
 
@@ -45,3 +46,12 @@ and include paths.
     rm -rf $ESMF_DIR
     git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
     $MOSSCO_DIR/scripts/installation/install_esmf_versions.sh
+
+## Reinstall cmake
+
+    mkdir -p ${HOME}/temp; cd temp
+    wget --no-check-certificate https://cmake.org/files/v3.4/cmake-3.4.1.tar.gz
+    tar xzf cmake-3.4.1.tar.gz ; cd cmake-3.4.1
+    ./bootstrap ; ./configure --prefix=$HOME/opt
+
+    export PATH=${HOME}/opt/bin:${PATH}

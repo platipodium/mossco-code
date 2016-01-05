@@ -1,7 +1,7 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2015 Helmholtz-Zentrum Geesthacht
-# @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
 # terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -28,7 +28,8 @@ SUBDIRS=
 
 all: subdirs $(TARGETS)
 
-libmossco_connector: libtransport_connector liblink_connector librename_connector libflux_connector
+libmossco_connector: libtransport_connector liblink_connector \
+  librename_connector libflux_connector libnudge_connector
 
 libtransport_connector: libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(transport_connector.o)
@@ -38,6 +39,8 @@ librename_connector: libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(rename_connector.o)
 libflux_connector: libmossco_util \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(flux_connector.o)
+libnudge_connector: libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_connector.a(nudge_connector.o)
 
 libmossco_util:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@

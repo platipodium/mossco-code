@@ -2,7 +2,7 @@
 # This script is is part of MOSSCO. It creates from YAML descriptions of
 # couplings a toplevel_component.F90 source file
 #
-# @copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -2072,6 +2072,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'pelagic_benthic_coupler' : ['pelagicbenthiccoupler'],
         'benthic_pelagic_coupler' : ['pelagicbenthiccoupler'],
         'xgrid_coupler' : ['xgridcoupler'],
+        'nudge_connector' : ['mossco_connector'],
         'link_connector' : ['mossco_connector'],
         'flux_connector' : ['mossco_connector'],
         'rename_connector' : ['mossco_connector'],
@@ -2112,6 +2113,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'benthic_pelagic_coupler' : ['libpelagicbenthiccoupler'],
         'xgrid_coupler' : ['libxgridcoupler'],
         'link_connector' : ['libmossco_connector'],
+        'nudge_connector' : ['libmossco_connector'],
         'rename_connector' : ['libmossco_connector'],
         'flux_connector' : ['libmossco_connector'],
         'transport_connector' : ['libmossco_connector'],

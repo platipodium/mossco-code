@@ -283,7 +283,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
                  & sink     , sinkf   , sour     , sourf   , anymud  , wave      , &
                  & uorb     , tper    , teta     , spm_concentration , Bioeffects, &
                  & turb_difz, sigma_midlayer     , u_bottom, v_bottom, u2d       , &
-                 & v2d      , h0      , mask     , timestep, taubn   , eq_conc, relative_thickness_of_layers,kmaxsd   )
+                 & v2d      , h0      , mask     , timestep, taubn   , eq_conc, relative_thickness_of_layers,kmaxsd,taubmax  )
 
 
 !
@@ -307,6 +307,7 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     real(fp)    , dimension(:,:,:)          , pointer      :: sigma_midlayer !Sigma [-1,0] levels of layer centers (in sigma model)
     real(fp)    , dimension(:,:,:)          , pointer      :: relative_thickness_of_layers ! thickness of the vertcial layers
     real(fp)    , dimension(:,:)            , pointer      :: turb_difz
+    real(fp)    , dimension(:,:)            , pointer      :: taubmax       !shear stress from external component [getm]
     real(fp)    , dimension(:,:)            , pointer      :: mfluff        ! composition of fluff layer: mass of mud fractions [kg/m2]
     real(fp)    , dimension(:,:)            , pointer      :: u2d, v2d      ! Depth-averaged velocity in u and v or x and y directions
     integer                                 , intent(in)   :: flufflyr      ! switch for fluff layer concept
@@ -427,9 +428,9 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
     eq_conc     = 0.0_fp
     rhowat      = 1000.0_fp
     vicmol      = 1.307e-6_fp
-    thcmud      = 0.02_fp ! @ToDO: Total thickness of mud layer [m] should be read from data file
+    thcmud      = 0.002_fp ! @ToDO: Total thickness of mud layer [m] should be read from data file
                         ! if thcmud > 0.01 m then the average d50 of silt will be used to calculated
-                        ! z0 roughness for taub in compbsskin. Taub is the combined wave current shear
+                        ! z0 roughness for taub in compbsskin, otherwise that of sand. Taub is the combined wave current shear
                         ! stress for cohesive soil
 
     mfltot = 0.0_fp
@@ -493,6 +494,8 @@ subroutine erosed( nmlb     , nmub    , flufflyr , mfluff  , frac    , mudfrac  
        kssand     = kssand /(j *1.0_fp)
        i          = 0
        j          = 0
+       if (kssand< eps) kssand = kssilt    ! @ToDo: in case only mud is available, then set kssand, since kssand is used in compbsskin
+                                           !
 
        ubed = sqrt (u_bottom*u_bottom +v_bottom * v_bottom)
 
@@ -536,6 +539,7 @@ masking: if ( mask(i,j) .gt. 0 ) then
 !write (0,*) 'taub', taub(nm), 'nm', nm, 'i,j ', i, j
 !end if
 !end if
+                 taub (nm) = taubmax(i,j)
                  fracf   = 0.0_fp
                  if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
 
