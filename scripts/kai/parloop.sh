@@ -7,8 +7,9 @@ model=maecs
 export hd=${PWD}
 rm -f tag.lst
 
-declare -a pnam=("phi_agg" "syn_nut" "PAds" "rSlow")
-declare -a pval=(   7E-4      -3.0     0.1     1E-5  )
+#declare -a pnam=("phi_agg" "syn_nut" "PAds""rFast"  "rSlow" "NCrFdet" )
+declare -a pnam=("PAds" "mort_zatt")
+declare -a pval=( 0.4     0.05  )
 
 cd helgoland
 echo "creating dirs ..." ${#pnam[@]}
