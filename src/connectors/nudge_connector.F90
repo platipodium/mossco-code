@@ -158,12 +158,12 @@ module nudge_connector
         weight = 0.0
       endif
 
-      call ESMF_AttributeGet(importState, 'weight', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(cplComp, 'weight', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
-        call ESMF_AttributeGet(importState, 'weight', value=weight, rc=localrc)
+        call ESMF_AttributeGet(cplComp, 'weight', value=weight, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -181,7 +181,7 @@ module nudge_connector
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
 
-      call ESMF_AttributeSet(importState, 'weight', weight, rc=localrc)
+      call ESMF_AttributeSet(cplComp, 'weight', weight, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -190,7 +190,7 @@ module nudge_connector
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(filterExcludeList)) then
-        call MOSSCO_AttributeSetList(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        call MOSSCO_AttributeSetList(cplComp, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -200,7 +200,7 @@ module nudge_connector
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(filterIncludeList)) then
-        call MOSSCO_AttributeSetList(importState, 'filter_pattern_include', filterIncludeList, localrc)
+        call MOSSCO_AttributeSetList(cplComp, 'filter_pattern_include', filterIncludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -236,7 +236,7 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_WeightImportIntoExportState(importState, exportState, rc=localrc)
+    call MOSSCO_WeightImportIntoExportState(cplComp, importState, exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -276,8 +276,9 @@ module nudge_connector
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine MOSSCO_WeightImportIntoExportState(importState, exportState, rc)
+  subroutine MOSSCO_WeightImportIntoExportState(cplComp, importState, exportState, rc)
 
+    type(ESMF_CplComp), intent(in)         :: cplComp
     type(ESMF_State)                       :: importState, exportState
     integer(ESMF_KIND_I4), optional        :: rc
 
@@ -293,15 +294,23 @@ module nudge_connector
 
     real(ESMF_KIND_R8), pointer            :: importPtr3(:,:,:), exportPtr3(:,:,:)
     real(ESMF_KIND_R8), pointer            :: importPtr2(:,:), exportPtr2(:,:)
-    logical                                :: isMatch
+    logical                                :: isMatch, isPresent
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
     real(ESMF_KIND_R8)                     :: weight, exportMissingValue, importMissingValue
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
 
-    call ESMF_AttributeGet(importState, name='weight', value=weight, rc=localrc)
+    call ESMF_AttributeGet(cplComp, name='weight', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(cplComp, name='weight', value=weight, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      weight = 0.0
+    endif
 
     if (weight <= 0.0) then
       if (present(rc)) rc=ESMF_SUCCESS
@@ -316,6 +325,14 @@ module nudge_connector
     allocate(itemTypeList(itemCount))
     call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_AttributeGetList(cplComp, 'filter_pattern_include', filterIncludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_AttributeGetList(cplComp, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, itemCount
