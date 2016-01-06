@@ -45,15 +45,11 @@ coupling:
   - components:
      - mussel_input
      - mossco_gfbmfrpr
-    interval: 20 m
-  - components:
-     - mussel
-     - fabm_pelagic
-    interval: 20 m
+    interval: 30 h
   - components:
      - mussel
      - mossco_gfbmfrpr
-    interval: 20 m
+    interval: 30 h
   - components:
      - boundary
      - nudge_connector
@@ -82,11 +78,11 @@ coupling:
   - components:
      - getm
      - fabm_sediment
-    interval: 10 m
+    interval: 20 m
   - components:
      - getm
      - fabm_pelagic
-    interval: 10 m
+    interval: 20 m
   - components:
      - fabm_pelagic
      - transport_connector
@@ -96,15 +92,15 @@ coupling:
      - fabm_pelagic
      - pelagic_soil_connector
      - fabm_sediment
-    interval:  10 m
+    interval:  20 m
   - components:
      - fabm_pelagic
      - mussel
-    interval:  10 m
+    interval:  30 m
   - components:
      - mussel
      - fabm_pelagic
-    interval:  10 m
+    interval:  30 m
   - components:
      - fabm_sediment
      - soil_pelagic_connector
@@ -113,12 +109,12 @@ coupling:
   - components:
      - getm
      - mossco_gfbmfrpr
-    interval: 20 m
+    interval: 30 h
   - components:
      - fabm_pelagic
      - mossco_gfbmfrpr
-    interval: 20 m
+    interval: 30 h
   - components:
      - fabm_sediment
      - mossco_gfbmfrpr
-    interval: 20 m
+    interval: 30 h
