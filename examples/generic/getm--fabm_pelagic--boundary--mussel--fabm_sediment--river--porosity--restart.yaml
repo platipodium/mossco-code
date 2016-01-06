@@ -48,6 +48,10 @@ coupling:
     interval: 20 m
   - components:
      - mussel
+     - fabm_pelagic
+    interval: 20 m
+  - components:
+     - mussel
      - mossco_gfbmfrpr
     interval: 20 m
   - components:
