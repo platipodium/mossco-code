@@ -36,7 +36,8 @@ Be careful if you have not saved your setups!
     cd PyYAML-3.11
 
 Manipulate `setup.cfg`  and set the `STATIC` option as well as the Library
-and include paths.
+and include paths, e.g.,  `include_dirs=${HOME}/opt/include` and
+`library_dirs=${HOME}/opt/lib`
 
     python setup.py  --with-libyaml install --prefix=$HOME/opt
     export PYTHONPATH=$HOME/opt/lib64/python2.6/site-packages  # adjust to your system
