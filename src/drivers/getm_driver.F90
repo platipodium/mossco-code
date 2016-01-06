@@ -27,7 +27,7 @@
          integer,intent(in)            :: AH_method
          REALTYPE,intent(in)           :: AH_const,AH_Prt,AH_stirr_const
          REALTYPE,intent(inout)        :: f(I3DFIELD)
-         REALTYPE,intent(out),optional :: phymix(I3DFIELD)
+         REALTYPE,dimension(:,:,:),pointer,intent(out),optional :: phymix
       end subroutine tracer_diffusion
    end interface
 
