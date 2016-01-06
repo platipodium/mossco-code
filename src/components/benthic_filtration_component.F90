@@ -492,7 +492,8 @@ module benthic_filtration_component
 
     character(ESMF_MAXSTR):: name, message
     type(ESMF_Clock)      :: clock
-    type(ESMF_Time)       :: currTime, myTime
+    type(ESMF_Time)       :: currTime, myTime, stopTime
+    type(ESMF_TimeInterval) :: timeStep
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: farrayPtr2, phyC, abundance
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: farrayPtr3
@@ -643,25 +644,38 @@ module benthic_filtration_component
         * maximumFiltrationRate * abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
     endwhere
 
-    !if (all(farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) .le. 0)) then
-    !  write(message,'(A)') trim(name)//' calculated zero filtration, check your input/parameters!'
-    !  call MOSSCO_FieldString(field, message)
-    !  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    !endif
 
-    !call ESMF_ClockGet(clock, currTime=myTime, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message,'(A,ES10.3,A)') trim(name)//' is covering up to ', &
+      maxval(abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)),mask=(phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0)), &
+      ' ind/m**2'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    !if (currTime>myTime) then
-    !  call ESMF_ClockAdvance(clock, timeStep=(currTime - myTime), rc=localrc)
-    !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !endif
+    write(message,'(A,ES10.3,A)') trim(name)//' concentration is  up to ', &
+      maxval(phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)),mask=(phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0)), &
+      ' mmol C/m**3'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_ClockAdvance(clock, rc=localrc)
+    write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
+      maxval(-farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)),mask=(farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) > -1E30)), &
+      ' mmol C/m**2/s'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    !! This component has no do loop over an internal timestep, it is advanced with the
+    !! timestep written into its local clock from a parent component
+    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(clock, currTime=currTime, stopTime=stopTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    timeStep=stopTime-currTime
+    if (stopTime>currTime) then
+      call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
