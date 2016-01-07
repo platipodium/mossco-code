@@ -284,7 +284,7 @@ module nudge_connector
 
     type(ESMF_Field)                       :: exportField, importField
     character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
-    character(ESMF_MAXSTR)                 :: itemName, message
+    character(ESMF_MAXSTR)                 :: message, itemName
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
     type(ESMF_StateItem_Flag)              :: itemType
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
@@ -299,6 +299,8 @@ module nudge_connector
     real(ESMF_KIND_R8)                     :: weight, exportMissingValue, importMissingValue
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
+
+    rc_=ESMF_SUCCESS
 
     call ESMF_AttributeGet(cplComp, name='weight', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -337,6 +339,8 @@ module nudge_connector
 
     do i=1, itemCount
 
+      itemName=trim(itemNameList(i))
+
       ! Look for an exclusion pattern on this field name
       if (allocated(filterExcludeList)) then
         do j=1,ubound(filterExcludeList,1)
@@ -369,7 +373,7 @@ module nudge_connector
         endif
       endif
 
-      call ESMF_StateGet(exportState, itemNameList(i), itemType=itemType, rc=localrc)
+      call ESMF_StateGet(exportState, trim(itemName), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -381,7 +385,7 @@ module nudge_connector
         return
       endif
 
-      call ESMF_StateGet(exportState, itemNameList(i), exportField, rc=localrc)
+      call ESMF_StateGet(exportState, trim(itemName), exportField, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -442,16 +446,30 @@ module nudge_connector
         call ESMF_Finalize()
       endif
 
-      importMissingValue=-1E30
       call ESMF_AttributeGet(importField, 'missingValue', &
-        importMissingValue,  rc=localrc)
+        isPresent=isPresent,  rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (isPresent) then
+        call ESMF_AttributeGet(importField, 'missingValue', &
+          importMissingValue,  rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        importMissingValue=-1E30
+      endif
+
+      call ESMF_AttributeGet(exportField, name='missingValue', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      exportMissingValue=-1E30
-      call ESMF_AttributeGet(exportField, name='missingValue', value=exportMissingValue, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (isPresent) then
+        call ESMF_AttributeGet(exportField, name='missingValue', value=exportMissingValue, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        exportMissingValue=-1E30
+      endif
 
       select case (rank)
         case(2)
