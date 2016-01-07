@@ -1,9 +1,9 @@
 !> @brief Implementation ESMF/NetCDF utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister
-!> @author Carsten Lemmen
+!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -1203,13 +1203,13 @@ module mossco_netcdf
     integer                        :: varid, rc_, localrc, dimId
     type(type_mossco_netcdf_variable), pointer :: var
 
-    rc_=MOSSCO_NC_NOERR
+    rc_ = ESMF_SUCCESS
 
     localrc = nf90_redef(self%ncid)
 
     localrc = nf90_def_dim(self%ncid, 'time', NF90_UNLIMITED, self%timeDimId)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define dimension time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1218,7 +1218,7 @@ module mossco_netcdf
     ! Define a dimension for holding data/time information as 19 character YYYY-MM-DDThh:mm:ss array
     localrc = nf90_def_dim(self%ncid, 'date_len', 19, dimId)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define dimension date_len in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1226,7 +1226,7 @@ module mossco_netcdf
 
     localrc = nf90_def_var(self%ncid, 'time', NF90_DOUBLE, self%timeDimId, varid)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1237,7 +1237,7 @@ module mossco_netcdf
 
     localrc = nf90_def_var(self%ncid, 'doy', NF90_INT, self%timeDimId, varid)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable doy in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1248,7 +1248,7 @@ module mossco_netcdf
 
     localrc = nf90_def_var(self%ncid, 'date_string', NF90_CHAR, (/dimId, self%timeDimId/), varid)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable date_string in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1386,7 +1386,8 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)    :: message
     integer(ESMF_KIND_I4)         :: parametricDim, spatialDim, numOwnedElements
 
-    rc_ = MOSSCO_NC_NOERR
+    rc_ = ESMF_SUCCESS
+
     dimcheck=0
     call ESMF_FieldGet(field,mesh=mesh,dimCount=dimCount,rank=rank,rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1429,11 +1430,11 @@ module mossco_netcdf
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
           totalubound(i)-totallbound(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
-          rc_=MOSSCO_NC_EXISTING
+          rc_ = MOSSCO_NC_EXISTING
         elseif  (ncStatus==NF90_NOERR) then
-          rc_=MOSSCO_NC_NOERR
+          rc_ = ESMF_SUCCESS
         else
-          rc_=MOSSCO_NC_ERROR
+          rc_ = ESMF_SUCCESS
         end if
       enddo
       ncStatus = nf90_enddef(self%ncid)
@@ -1465,7 +1466,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)         :: dimCount, dimid, rank, i, localrc
     character(len=ESMF_MAXSTR)    :: message
 
-    rc_ = MOSSCO_NC_NOERR
+    rc_ = ESMF_SUCCESS
 
     dimcheck=0
     call ESMF_GridGet(grid, name=geomName, rank=rank, rc=localrc)
@@ -1503,11 +1504,11 @@ module mossco_netcdf
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
           ubounds(i)-lbounds(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
-          rc_=MOSSCO_NC_EXISTING
+          rc_ = MOSSCO_NC_EXISTING
         elseif  (ncStatus==NF90_NOERR) then
-          rc_=MOSSCO_NC_NOERR
+          rc_ = ESMF_SUCCESS
         else
-          rc_=MOSSCO_NC_ERROR
+          rc_ = ESMF_SUCCESS
         end if
       enddo
 
@@ -2278,7 +2279,7 @@ module mossco_netcdf
     type(ESMF_DELayout)                          :: delayout
     type(ESMF_Vm)                                :: Vm
 
-    rc_=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
 
     nullify(intPtr1)
 
@@ -2361,9 +2362,9 @@ module mossco_netcdf
     rc_ = ESMF_SUCCESS
 
     if (present(itime)) then
-      itime_=itime
+      itime_ = itime
     else
-      itime_=1
+      itime_ = 1
     endif
 
     ! Test for field completeness and terminate if not complete
@@ -2382,14 +2383,17 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (localDeCount==0) return
+    if (localDeCount == 0) then
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
 
     if (fieldRank > 4) then
       write(message, '(A)')  'Rank > 4 not implemented for reading field '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      rc = ESMF_RC_NOT_IMPL
+      if (present(rc)) rc = ESMF_RC_NOT_IMPL
+      return
     endif
 
     call ESMF_FieldGet(field, grid=grid, rc=localrc)
@@ -2408,8 +2412,9 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(minIndexPDe(gridRank, deCount))
-    allocate(maxIndexPDe(gridRank, deCount))
+    !> @todo check error state
+    allocate(minIndexPDe(gridRank, deCount), stat=localrc)
+    allocate(maxIndexPDe(gridRank, deCount), stat=localrc)
 
     call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
                                     maxIndexPDe=maxIndexPDe, rc=localrc)
@@ -2424,6 +2429,7 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> @todo check error state
     allocate(start(fieldRank)); start(1:fieldRank) = 1
     allocate(count(fieldRank)); count(1:fieldRank)=1
     allocate(ubnd(fieldRank))
@@ -2465,8 +2471,14 @@ module mossco_netcdf
     enddo
 
     if (any(count <= 0)) then
-      write(0,*) 'count<0 for variable ',trim(var%name)
-      if (present(rc)) rc=ESMF_RC_CANNOT_GET
+      write(0,*) '  fstart = ', fstart
+      write(0,*) '  start = ', start
+      write(0,*) '  count = ', count
+      write(0,*) '  ncubnd = ', ncubnd
+      write(message,'(A)') '  count<0 for '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (present(rc)) rc = ESMF_RC_CANNOT_GET
       return
     end if
 
@@ -2480,7 +2492,7 @@ module mossco_netcdf
       elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr1, (/start(1),itime_/), (/count(1),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2501,7 +2513,7 @@ module mossco_netcdf
       elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr2, (/start(1),start(2),itime/), (/count(1),count(2),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2526,7 +2538,7 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
           (/start(1),start(2),start(3),itime_/), (/count(1),count(2), count(3),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc=ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2551,7 +2563,7 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr4, &
           (/start(1),start(2),start(3),start(4),itime_/), (/count(1),count(2),count(3),count(4),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc=ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2665,6 +2677,7 @@ module mossco_netcdf
       itime_ = 1
       ntime = self%dimlens(self%timeDimId)
       if (ntime < 1) then
+        !> @todo: this can actually be possible (if time is unlimited and no time-dependent data)
         call ESMF_LogWrite('  time dimension has length zero', ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -2855,7 +2868,7 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)       :: attributeName, string
     type(ESMF_Typekind_Flag)         :: typeKind
 
-    rc_=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
     ncStatus=NF90_NOERR
 
     if (present(varid)) then
@@ -2922,7 +2935,7 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)       :: attributeName, string
     type(ESMF_Typekind_Flag)         :: typeKind
 
-    rc_=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
     ncStatus=NF90_NOERR
 
     if (present(varid)) then
@@ -2989,8 +3002,8 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)       :: attributeName, string
     type(ESMF_Typekind_Flag)         :: typeKind
 
-    rc_=ESMF_SUCCESS
-    ncStatus=NF90_NOERR
+    rc_ = ESMF_SUCCESS
+    ncStatus = NF90_NOERR
 
     if (present(varid)) then
       varid_=varid
