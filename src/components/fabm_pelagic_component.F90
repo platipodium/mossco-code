@@ -236,7 +236,7 @@ module fabm_pelagic_component
     do n=1,size(pel%export_states)
     end do
 
-    !> this will not work, is state_grid contains halo zones
+    !> this will not work, if state_grid contains halo zones
     do n=1,size(pel%model%diagnostic_variables)
       if (pel%model%diagnostic_variables(n)%output /= output_none) then
         field = ESMF_FieldEmptyCreate( &
@@ -630,6 +630,19 @@ module fabm_pelagic_component
         call ESMF_AttributeSet(concfield,attribute_name, attribute_r8)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> set maximum value for zero-gradient boundary condition limiter
+      if (trim(varname)=='Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 0.8d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.2d0)
+        call ESMF_LogWrite('  use maximum boundary value of 0.8 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      
+      if (trim(varname)=='Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 8.0d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 2.0d0)
+        call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
 
       !> add fabm index in concentration array as "external_index" to be used by other components
       call ESMF_AttributeSet(concfield,'external_index',pel%export_states(n)%fabm_id)
