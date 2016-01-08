@@ -587,4 +587,143 @@ end subroutine MOSSCO_FieldCopy
 
   end subroutine MOSSCO_FieldInitialize
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldMatchFieldsFromState"
+  !> @brief finds for a field the matching fields in a atate
+  !> @return fieldList: a list of fields from the state
+  !> @param field: field to match to
+  !> @param state: state to search for matching fields
+  !> @param rc: [optional] return code
+  subroutine MOSSCO_FieldMatchFieldsFromState(field, state, fieldList, kwe, rc)
+
+    type(ESMF_Field), intent(in)                 :: field
+    type(ESMF_State), intent(in)                 :: state
+    type(ESMF_Field),  allocatable               :: fieldList(:)
+    logical, intent(in), optional                :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                   :: rc_, localrc, i, itemCount, fieldCount
+    character(len=ESMF_MAXSTR)              :: name
+    character(len=ESMF_MAXPATHLEN)          :: message
+    type(ESMF_StateItem_Flag)               :: itemType
+    type(ESMF_FieldBundle)                  :: fieldBundle
+
+    rc_ = ESMF_SUCCESS
+
+    if (allocated(fieldList)) deallocate(fieldList)
+
+    call ESMF_FieldGet(field, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(state, itemSearch=trim(name), itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount == 0) then
+      rc_ = ESMF_RC_NOT_FOUND
+    elseif (itemCount > 1) then
+      rc_ = ESMF_RC_NOT_IMPL
+    else
+      call ESMF_StateGet(state, itemName=trim(name), itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType == ESMF_STATEITEM_FIELD) then
+        allocate(fieldList(1), stat=localrc)
+
+        call ESMF_StateGet(state, trim(name), fieldList(1), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+
+        call ESMF_StateGet(state, trim(name), fieldBundle, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(name), &
+          fieldCount=fieldCount, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (fieldCount==0) then
+          rc_ = ESMF_RC_NOT_FOUND
+        else
+          allocate(fieldList(fieldcount), stat=localrc)
+          call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(name), &
+            fieldList=fieldList, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      endif
+    endif
+
+    if (present(rc)) rc = rc_
+    return
+
+  end subroutine MOSSCO_FieldMatchFieldsFromState
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldListReallocate"
+  subroutine MOSSCO_FieldListReallocate(fieldList, fieldCount, kwe, keep, rc)
+
+    type(ESMF_Field), intent(inout), allocatable :: fieldList(:)
+    integer(ESMF_KIND_I4), intent(in)            :: fieldCount
+    logical, intent(in), optional                :: kwe
+    logical, intent(in), optional                :: keep
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                   :: rc_, localrc, listSize
+    logical                                 :: keep_
+    character(len=ESMF_MAXPATHLEN)          :: message
+    type(ESMF_Field),  allocatable          :: tempList(:)
+
+    rc_ = ESMF_SUCCESS
+    keep_ = .true.
+    if (present(keep)) keep_ = keep
+    if (present(rc)) rc = rc_
+
+    ! Save deallocation with fieldCount < 1
+    if (fieldCount < 1) then
+      if (allocated(fieldList)) deallocate(fieldList)
+      return
+    endif
+
+    ! Deallocate if not keep
+    if (.not.keep) then
+      if (allocated(fieldList)) deallocate(fieldList)
+    endif
+
+    if (allocated(fieldList)) then
+      ! Don't do anything if requested size is equal
+      listSize = size(fieldList)
+      if (listSize == fieldCount) return
+      if (allocated(tempList)) deallocate(tempList)
+      allocate(tempList(listSize), stat=localrc)
+      tempList(:) = fieldList(:)
+      deallocate(fieldList)
+      allocate(fieldList(fieldCount), stat=localrc)
+      if (fieldCount < listSize) then
+        fieldList(1:fieldCount) = tempList(1:fieldCount)
+      else
+        fieldList(1:listSize) = tempList(1:listSize)
+      endif
+    else
+      allocate(fieldList(fieldCount), stat=localrc)
+    endif
+
+    if (allocated(tempList)) deallocate(tempList)
+
+    if (localrc /= 0) then
+      write(message,'(A,I5)') '  failed to allocate memory for fieldList size ',fieldCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (present(rc)) rc=rc_
+    return
+
+  end subroutine MOSSCO_FieldListReallocate
+
 end module mossco_field
