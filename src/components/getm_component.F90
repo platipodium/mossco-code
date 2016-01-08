@@ -85,6 +85,7 @@ module getm_component
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
      real(ESMF_KIND_R8)                          :: hackmax=-1.0
      real(ESMF_KIND_R8)                          :: hackmaxmin=0.0
+     logical                                     :: has_boundary_data=.false.
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 
@@ -583,17 +584,15 @@ module getm_component
                   call ESMF_Finalize(endflag=ESMF_END_ABORT)
                end if
 
-               !> set maximum value for boundary condition
-               if (trim(itemNameList(i))=='Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water') then
-                 transport_conc(n)%hackmax=0.8
-                 transport_conc(n)%hackmaxmin=0.2
-                 call ESMF_LogWrite('  use maximum boundary value of 0.8 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
-               end if
-               if (trim(itemNameList(i))=='Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water') then
-                 transport_conc(n)%hackmaxmin=2.0
-                 transport_conc(n)%hackmax=8.0
-                 call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
-               end if
+               !> get information about boundary condition
+               call ESMF_AttributeGet(concFieldList(i), 'has_boundary_data', value=transport_conc(n)%has_boundary_data, defaultValue=.false., rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)               
+
+               call ESMF_AttributeGet(concFieldList(i), 'hackmax', value=transport_conc(n)%hackmax, defaultValue=-1.d0, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)               
+
+               call ESMF_AttributeGet(concFieldList(i), 'hackmaxmin', value=transport_conc(n)%hackmaxmin, defaultValue=-1.d0, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !              search for corresponding z_velocity
                itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//ws_suffix
@@ -2347,22 +2346,25 @@ module getm_component
          end if
       end if
 
+      if (.not.(transport_conc(n)%has_boundary_data)) then
+
+        ! Hack for Kai with seasonally varying maximum value for boundary concentrations
+        ! if you don't give currtime, then only an upper maximum is used.
+        if (present(currTime)) then
+          call ESMF_TimeGet(currTime, dayOfYear=doy, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          amplitude=transport_conc(n)%hackmax - transport_conc(n)%hackmaxmin
+          y0=transport_conc(n)%hackmaxmin
+          hackmax=y0 + amplitude * cos(2.0*pi*doy/365.25) ! reformulate according to need
+          call zero_gradient_3d_bdy(p_conc,hackmax)
+        else
+          call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)
+        endif
+      end if
+
       call do_transport_3d(p_conc,p_ws)
-
-      ! Hack for Kai with seasonally varying maximum value for boundary concentrations
-      ! if you don't give currtime, then only an upper maximum is used.
-      if (present(currTime)) then
-        call ESMF_TimeGet(currTime, dayOfYear=doy, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        amplitude=transport_conc(n)%hackmax - transport_conc(n)%hackmaxmin
-        y0=transport_conc(n)%hackmaxmin
-        hackmax=y0 + amplitude * cos(2.0*pi*doy/365.25) ! reformulate according to need
-        call zero_gradient_3d_bdy(p_conc,hackmax)
-      else
-        call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)
-      endif
 
       if (noKindMatch) then
          transport_conc(n)%ptr = t_conc
