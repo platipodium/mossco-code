@@ -490,7 +490,6 @@ fid.write('''
     character(len=ESMF_MAXSTR), allocatable :: charValueList(:)
     type(ESMF_AttPack)     :: attPack
     character(len=ESMF_MAXSTR) :: convention, purpose
-    character(ESMF_MAXSTR), dimension(10,2) :: stringList
 
     rc = ESMF_SUCCESS
 
