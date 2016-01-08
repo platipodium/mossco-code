@@ -1619,6 +1619,8 @@ module mossco_netcdf
 #define ESMF_METHOD "mossco_netcdf_coordinate_create"
   subroutine mossco_netcdf_coordinate_create(self, grid)
 
+    use mossco_grid
+
     implicit none
     class(type_mossco_netcdf)               :: self
     type(ESMF_Grid), intent(in)             :: grid

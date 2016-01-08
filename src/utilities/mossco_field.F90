@@ -1,7 +1,7 @@
 !> @brief Implementation of additional ESMF Field utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen
 !> @author Richard Hofmeister
 !
