@@ -312,7 +312,7 @@ module nudge_connector
 
     type(ESMF_Field)                       :: exportField, importField
     character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
-    character(ESMF_MAXSTR)                 :: message, itemName, importCreator
+    character(ESMF_MAXSTR)                 :: message, itemName, importCreator, name
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
     type(ESMF_StateItem_Flag)              :: itemType
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
@@ -330,6 +330,8 @@ module nudge_connector
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
     type(ESMF_Clock)                       :: clock
+    type(ESMF_Time)                        :: startTime, currTime
+    type(ESMF_TimeInterval)                :: timeStep
 
     rc_ = ESMF_SUCCESS
     if (present(tagOnly)) then
@@ -337,6 +339,10 @@ module nudge_connector
     else
       tagOnly_ = .false.
     endif
+
+    call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(cplComp, name='weight', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -351,12 +357,31 @@ module nudge_connector
     endif
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! It is better to compare startTime with currTime in a connecter, as it could be
+    ! called multiple times for a single timeStep
+    call ESMF_ClockGet(clock, startTime=startTime, currTime=currTime, &
+      timeStep=timeStep, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (currTime > startTime) then
+      if (advanceCount < 1) advanceCount = nint((currTime - startTime) / timeStep)
+      if (advanceCount < 1) advanceCount = 1
+    else
+      advanceCount = 0
+    endif
+
 
     if (.not. tagOnly_) then
       if (weight <= 0.0) then
-        if (advanceCount == 0 .and. weight == 0.0) then
-          write(message,'(A,F7.5)')  '  nudging enabled but weight is ', weight
+        if (advanceCount < 1) then
+          write(message,'(A,F7.5,I5)')  trim(name)//' enabled but weight is ', weight
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
         if (present(rc)) rc=ESMF_SUCCESS
@@ -394,8 +419,8 @@ module nudge_connector
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (ismatch) exit
         enddo
-        if (ismatch) then
-          write(message,'(A)')  '  excluded item'
+        if (ismatch .and. advanceCount < 1) then
+          write(message,'(A)')  trim(name)//' excluded item'
           call MOSSCO_MessageAdd(message, trim(itemName))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -410,8 +435,8 @@ module nudge_connector
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (ismatch) exit
         enddo
-        if (.not.ismatch) then
-          write(message,'(A)')  '  did not include'
+        if (.not.ismatch .and. advanceCount < 1) then
+          write(message,'(A)')  trim(name)//' did not include'
           call MOSSCO_MessageAdd(message, ' '//trim(itemName))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
@@ -459,7 +484,7 @@ module nudge_connector
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (rank /= exportRank) then
-        write(message,'(A)')  '  rank mismatch in '
+        write(message,'(A)')  trim(name)//' rank mismatch in '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize()
@@ -485,7 +510,7 @@ module nudge_connector
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (any(exportLbnd - lbnd > 0) .or. any(exportUbnd - ubnd > 0))  then
-        write(message,'(A)')  '  exclusive bounds mismatch in '
+        write(message,'(A)')  trim(name)//' exclusive bounds mismatch in '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize()
@@ -592,7 +617,7 @@ module nudge_connector
         endselect
 
         if (numChanged>0) then
-          write(message,'(A,F6.4,A,I5.5,A)') '  nudged weight ', weight, ' ', numChanged, ' cells '
+          write(message,'(A,F6.4,A,I5.5,A)') trim(name)//' weight ', weight, ' ', numChanged, ' cells '
           call MOSSCO_FieldString(exportField, message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
