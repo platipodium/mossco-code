@@ -220,11 +220,8 @@ module nudge_connector
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_StateReconcile(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateReconcile(exportState, rc=localrc)
+    call MOSSCO_WeightImportIntoExportState(cplComp, importState, &
+      exportState, tagOnly=.true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -320,7 +317,7 @@ module nudge_connector
     type(ESMF_StateItem_Flag)              :: itemType
     type(ESMF_FieldStatus_Flag)            :: fieldStatus
     integer(ESMF_KIND_I4)                  :: i, j, itemCount, rank, exportRank
-    integer(ESMF_KIND_I8)                  :: numChanged
+    integer(ESMF_KIND_I8)                  :: numChanged, advanceCount
     integer(ESMF_KIND_I4), allocatable     :: ubnd(:), lbnd(:)
     integer(ESMF_KIND_I4), allocatable     :: exportUbnd(:), exportLbnd(:)
 
@@ -332,6 +329,7 @@ module nudge_connector
     real(ESMF_KIND_R8)                     :: weight, exportMissingValue, importMissingValue
 
     integer(ESMF_KIND_I4)                  :: localrc, rc_
+    type(ESMF_Clock)                       :: clock
 
     rc_ = ESMF_SUCCESS
     if (present(tagOnly)) then
@@ -352,9 +350,18 @@ module nudge_connector
       weight = 0.0
     endif
 
-    if (weight <= 0.0 .and. .not. tagOnly_) then
-      if (present(rc)) rc=ESMF_SUCCESS
-      return
+    call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+    call ESMF_ClockGet(clock, advanceCount=advanceCount, rc=localrc)
+
+    if (.not. tagOnly_) then
+      if (weight <= 0.0) then
+        if (advanceCount == 0 .and. weight == 0.0) then
+          write(message,'(A,F7.5)')  '  nudging enabled but weight is ', weight
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        endif
+        if (present(rc)) rc=ESMF_SUCCESS
+        return
+      endif
     endif
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
@@ -531,7 +538,7 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (.not. tagOnly) then
+      if (.not. tagOnly_) then
         numChanged = 0
         select case (rank)
           case(2)
