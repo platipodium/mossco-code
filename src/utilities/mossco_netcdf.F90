@@ -3003,11 +3003,11 @@ module mossco_netcdf
     integer, intent(out), optional   :: rc
 
     integer(ESMF_KIND_I4)            :: attributeCount, rc_, localrc, int4, ncStatus
-    integer(ESMF_KIND_I4)            :: varid_, i
+    integer(ESMF_KIND_I4)            :: varid_, i, precision
     integer(ESMF_KIND_I8)            :: int8
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
-    character(len=ESMF_MAXSTR)       :: attributeName, string
+    character(len=ESMF_MAXSTR)       :: attributeName, string, message
     type(ESMF_Typekind_Flag)         :: typeKind
 
     rc_ = ESMF_SUCCESS
@@ -3017,6 +3017,13 @@ module mossco_netcdf
       varid_=varid
     else
       varid_=0 !> @todo get_globals here!
+    endif
+
+    ncStatus = nf90_inquire_variable(ncid, varid_, xtype = precision)
+    if (ncStatus /= NF90_NOERR) then
+      write(message, '(A)') '  '//trim(nf90_strerror(ncStatus)//', could not get precision')
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_AttributeGet(field, count=attributeCount, rc=localrc)
@@ -3040,10 +3047,22 @@ module mossco_netcdf
         ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int8)
       elseif (typekind==ESMF_TYPEKIND_R4) then
         call ESMF_AttributeGet(field, attributeName, real4, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
+        if ((  trim(attributeName) == 'missing_value' &
+          .or. trim(attributeName) == '_FillValue')    &
+          .and. precision == NF90_DOUBLE) then
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),dble(real4))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
+        endif
       elseif (typekind==ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(field, attributeName, real8, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
+        if ((  trim(attributeName) == 'missing_value' &
+          .or. trim(attributeName) == '_FillValue')    &
+          .and. precision == NF90_REAL) then
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real(real8))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
+        endif
       else
         call ESMF_AttributeGet(field, attributeName, string, rc=localrc)
         ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
