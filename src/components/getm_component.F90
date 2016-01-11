@@ -695,7 +695,6 @@ module getm_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeGet(field,'has_boundary_data',value=transport_conc(i)%has_boundary_data,defaultValue=.false.,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      write(0,*) 'transport_conc',i,transport_conc(i)%has_boundary_data
       if (transport_conc(i)%has_boundary_data) then
         call ESMF_LogWrite('  use boundary conditions for '//trim(transport_conc(i)%fieldname),ESMF_LOGMSG_TRACE)
       end if 
