@@ -114,8 +114,12 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
     real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
     real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
-    real(ESMF_KIND_R4)                               :: missingValue=-1.0E30
+    real(ESMF_KIND_R4)                               :: missingValueR4=-1.0E30
+    real(ESMF_KIND_R8)                               :: missingValueR8=-1.0D30, missingValue=-1.0D30
+    real(ESMF_KIND_I4)                               :: missingValueI4=-9999
+    real(ESMF_KIND_I8)                               :: missingValueI8=-9999
     real(ESMF_KIND_R8)                               :: representableValue
+    type(ESMF_TypeKind_Flag)                         :: mvTypeKind
 
     character(len=11)                 :: precision_
 
@@ -280,7 +284,27 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_AttributeGet(field, 'missing_value', missingValue, rc=localrc)
+      call ESMF_AttributeGet(field, 'missing_value', typeKind=mvTypeKind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (mvTypeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueR8, rc=localrc)
+        missingValue = missingValueR8
+      elseif (mvTypeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueR4, rc=localrc)
+        missingValue = dble(missingValueR4)
+      elseif (mvTypeKind == ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueI8, rc=localrc)
+        missingValue = dble(missingValueI8)
+      elseif (mvTypeKind == ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueI4, rc=localrc)
+        missingValue = dble(missingValueI4)
+      else
+        write(message,'(A)')  '  missing value non-implemented type '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -408,10 +432,10 @@ module mossco_netcdf
       endif
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, real(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))), &
         start=(/1,1,1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))
+        ncStatus = nf90_put_var(self%ncid, var%varid, real(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
