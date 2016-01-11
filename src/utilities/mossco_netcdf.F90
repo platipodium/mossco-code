@@ -315,6 +315,9 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      !> @todo We should *not* write into any parts of the pointer, rather make a copy
+      
+
       if (associated(gridmask3)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
