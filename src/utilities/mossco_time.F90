@@ -1,7 +1,7 @@
 !> @brief Implementation of time utilities
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -29,7 +29,6 @@ end interface MOSSCO_ClockGetTimeStepToNextAlarm
 
 character(len=1), parameter :: MOSSCO_CPL_SEPARATOR = ':'
 
-
 contains
 
 #undef  ESMF_METHOD
@@ -48,7 +47,6 @@ subroutine MOSSCO_ClockSetTimeStepByAlarms(clock, rc)
 
   return
 end subroutine MOSSCO_ClockSetTimeStepByAlarms
-
 
 !> This subroutine searches all of a clock's alarms and returns the time
 !! interval to the next ringing alarm
@@ -138,7 +136,6 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
 
 end subroutine  MOSSCO_ClockGetTimeStepToNextAlarm_componentname
 
-
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_TimeSet"
 subroutine MOSSCO_TimeSet(time, timestring, rc)
@@ -168,6 +165,63 @@ subroutine MOSSCO_TimeSet(time, timestring, rc)
 
 end subroutine MOSSCO_TimeSet
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_TimeIntervalSet"
+subroutine MOSSCO_TimeIntervalSet(timeInterval, timeString, kwe, rc)
+
+  type(ESMF_TimeInterval), intent(inout)       :: timeInterval
+  character(len=*), intent(inout)              :: timeString
+  logical, intent(in), optional                :: kwe
+  integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+  integer(ESMF_KIND_I4)        :: localrc, rc_
+  integer                      :: yy=0,mm=0,d=0,h=0,m=0,s=0, i
+  character(len=ESMF_MAXSTR)   :: unit, message
+
+  rc_=ESMF_SUCCESS
+
+  i = index(timeString,' ')
+  if (i > 1) then
+    if (i < len_trim(timeString) .and. i > 2) then
+      read(unit,*) timeString(i+1:len_trim(timeString))
+    else
+      unit='d'
+    endif
+
+    unit=adjustl(unit)
+
+    select case(unit(1:len_trim(unit)))
+    case ('yy')
+      read(yy,*) timeString(i+1:len_trim(timeString))
+    case ('mm')
+      read(mm,*) timeString(i+1:len_trim(timeString))
+    case ('d')
+      read(d,*) timeString(i+1:len_trim(timeString))
+    case ('h')
+      read(h,*) timeString(i+1:len_trim(timeString))
+    case ('m')
+      read(m,*) timeString(i+1:len_trim(timeString))
+    case ('s')
+      read(s,*) timeString(i+1:len_trim(timeString))
+    case default
+      write(message,'(A)') '  obtained unknown unit '//trim(unit)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endselect
+  else
+    d = 1
+    write(message,'(A)') '  used default time interval of 1 day'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+  endif
+
+  call ESMF_TimeIntervalSet(timeInterval,yy=yy,mm=mm,d=d,h=h,m=m,s=s, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (present(rc)) rc=rc_
+  return
+
+end subroutine MOSSCO_TimeIntervalSet
 
 !> Actually, this should be an extension of ESMF_TimeSet
 #undef  ESMF_METHOD
