@@ -1500,6 +1500,10 @@ fid.write('''
 
           !call ESMF_GridCompGet(gridCompList(k), importState=expState, rc=localrc)
           expState=gridImportStateList(k)
+          !> @todo the following is a hack and makes the nudge_connector special by
+          !> receiving two export States (the latter to manipulate)
+          if (trim(cplCompNameList(l)) == 'nudge_connector') expState=gridExportStateList(k)
+
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
