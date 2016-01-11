@@ -86,6 +86,7 @@ module getm_component
      real(ESMF_KIND_R8)                          :: hackmax=-1.0
      real(ESMF_KIND_R8)                          :: hackmaxmin=0.0
      logical                                     :: has_boundary_data=.false.
+     character(len=ESMF_MAXSTR)                  :: fieldname
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 
@@ -555,6 +556,9 @@ module getm_component
 
                if (concFlags(i) .eq. 0) cycle
 
+!              assign fieldname (to easy re-access the field later)
+               transport_conc(n)%fieldname = trim(itemNameList(i))
+
                call ESMF_FieldGet(concFieldList(i),status=status, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -672,6 +676,35 @@ module getm_component
 
    end subroutine InitializeP2
 
+   subroutine update_use_boundary_data(importState,rc)
+
+    type(ESMF_State)              :: importState
+    type(ESMF_FieldBundle)        :: fieldBundle
+    type(ESMF_Field)              :: field
+    character(len=ESMF_MAXSTR)    :: fieldName,message
+    integer                       :: localrc,i,rc_
+    integer, optional             :: rc
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_StateGet(importState,"concentrations_in_water",fieldBundle, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1,size(transport_conc)
+      call ESMF_FieldBundleGet(fieldBundle, trim(transport_conc(i)%fieldname), field=field,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeGet(field,'has_boundary_data',value=transport_conc(i)%has_boundary_data,defaultValue=.false.,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      write(0,*) 'transport_conc',i,transport_conc(i)%has_boundary_data
+      if (transport_conc(i)%has_boundary_data) then
+        call ESMF_LogWrite('  use boundary conditions for '//trim(transport_conc(i)%fieldname),ESMF_LOGMSG_TRACE)
+      end if 
+    end do
+
+   if (present(rc)) rc = rc_
+
+   end subroutine update_use_boundary_data
+
 !-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
@@ -745,6 +778,9 @@ module getm_component
                             line=__LINE__,file=__FILE__,method='Run()')
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
+
+!     Update information about boundary conditions
+      call update_use_boundary_data(importState)
 
 !     This is where the model specific computation goes.
       if (.not.dryrun) then
