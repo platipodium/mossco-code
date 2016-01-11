@@ -316,7 +316,7 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> @todo We should *not* write into any parts of the pointer, rather make a copy
-      
+
 
       if (associated(gridmask3)) then
         do i=lbnd(1),ubnd(1)
@@ -2375,7 +2375,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(in), optional  :: itime
 
     integer(ESMF_KIND_I4)                        :: localrc, udimid, localDeCount, rc_
-    integer(ESMF_KIND_I4)                        :: fieldRank, gridRank, itime_, j, i
+    integer(ESMF_KIND_I4)                        :: fieldRank, gridRank, itime_, j, i, k
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
     integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:), lbnd(:)
     integer(ESMF_KIND_I4), allocatable           :: ncubnd(:),fstart(:)
@@ -2385,7 +2385,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer                  :: netcdfPtr3(:,:,:)=>null()
     real(ESMF_KIND_R8), pointer                  :: netcdfPtr4(:,:,:,:)=>null()
     real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:)=>null(), farrayPtr4(:,:,:,:)=>null()
-    character(len=ESMF_MAXSTR)                   :: message
+    character(len=ESMF_MAXSTR)                   :: message, name
 
     integer(ESMF_KIND_I4)                        :: deCount,localPet
     integer(ESMF_KIND_I4),allocatable            :: minIndexPDe(:,:), maxIndexPDe(:,:)
@@ -2403,7 +2403,7 @@ module mossco_netcdf
     endif
 
     ! Test for field completeness and terminate if not complete
-    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    call ESMF_FieldGet(field, status=fieldStatus, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2585,6 +2585,17 @@ module mossco_netcdf
                  fstart(2):fstart(2)+count(2)-1, &
                  fstart(3):fstart(3)+count(3)-1) &
         = netcdfPtr3
+
+      ! If the variable is an _in_water quality and the input is a collapsed 3rd dimension, then
+      ! fill the entire water column with this collapsed 3rd dimensions
+      if (index(name, '_in_water') > 1 .and. count(3) == 1 .and. (ubnd(3)-lbnd(3)+1 > 1)) then
+        do k = 0, ubnd(3) - lbnd(3)
+          farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                     fstart(2):fstart(2)+count(2)-1, &
+                     fstart(3)+k:fstart(3)+k) &
+            = netcdfPtr3
+        enddo
+      endif
 
       if (associated(netcdfPtr3)) deallocate(netcdfPtr3)
     elseif (fieldRank == 4) then
