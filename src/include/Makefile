@@ -62,7 +62,7 @@ ifneq ($(GIT),)
 endif
   FABM_SHA?=none
   TARGETS += fabm-sha
-  $(info fabm-sha settings)
+#  $(info fabm-sha settings)
 endif
 ifeq ($(MOSSCO_EROSED),true)
 ifneq ($(SVN),)
@@ -74,7 +74,7 @@ endif
 
 .PHONY: sha
 
-all: $(TARGETS) end-of-file
+all: create-file $(TARGETS)
 
 clean: extraclean
 
@@ -82,10 +82,8 @@ git-sha.h:
 	#@-echo '#ifndef GIT_SHA_INCLUDED' > $(SHA_FILE)
 	#@-echo '#define GIT_SHA_INCLUDED' >> $(SHA_FILE)
 
-end-of-file: $(TARGETS)
-	#@-if [[ $(shell tail -n 1 $(SHA_FILE) | grep -c '#endif') -eq 0 ]] ; then \
-	#  echo '#endif' >> $(SHA_FILE); \
-	#fi
+create-file:
+	@-if [ ! -f $(SHA_FILE) ] ; then touch $(SHA_FILE); fi
 
 mossco-sha: git-sha.h
 	@-if [  $(shell grep -c $(MOSSCO_SHA) $(SHA_FILE))  -eq 0 ] ; then \
