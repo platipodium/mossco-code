@@ -1980,11 +1980,11 @@ module mossco_netcdf
         if (coordDimCount(i)==2) then
           if (j == 1) then
             do k=lbnd(1),ubnd(1)
-              if (any(farrayPtr2(k,lbnd(2):ubnd(2)) == missingValue)) intptr1(k)=-1
+              if (all(farrayPtr2(k,lbnd(2):ubnd(2)) == missingValue)) intptr1(k)=-1
             enddo
           else
             do k=lbnd(2),ubnd(2)
-              if (any(farrayPtr2(lbnd(1):ubnd(1),k) == missingValue)) intptr1(k)=-1
+              if (all(farrayPtr2(lbnd(1):ubnd(1),k) == missingValue)) intptr1(k)=-1
             enddo
           endif
         endif
@@ -1992,15 +1992,15 @@ module mossco_netcdf
         if (coordDimCount(i)==3) then
           if (j == 1) then
             do k=lbnd(1),ubnd(1)
-              if (any(farrayPtr3(k,lbnd(2):ubnd(2),lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
+              if (all(farrayPtr3(k,lbnd(2):ubnd(2),lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
           elseif (j == 2) then
             do k=lbnd(2),ubnd(2)
-              if (any(farrayPtr3(lbnd(1):ubnd(1),k,lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
+              if (all(farrayPtr3(lbnd(1):ubnd(1),k,lbnd(3):ubnd(3)) == missingValue)) intptr1(k)=-1
             enddo
           else
             do k=lbnd(3),ubnd(3)
-              if (any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) == missingValue)) intptr1(k)=-1
+              if (all(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) == missingValue)) intptr1(k)=-1
             enddo
           endif
         endif
