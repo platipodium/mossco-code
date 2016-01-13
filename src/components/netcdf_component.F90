@@ -266,7 +266,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime, startTime, stopTime, maxTime
+    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime
+    type(ESMF_Time)         :: startTime, stopTime, maxTime, minTime
     type(ESMF_TimeInterval) :: timeInterval, timeStep
     integer(ESMF_KIND_I8)   :: i, j, n, advanceCount
     real(ESMF_KIND_R8)      :: seconds
@@ -377,8 +378,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! Check for monotonic time, if not, then set itemCount=0 to skip writing of
       !! variables.  Continue an error message
 
-      maxTime=currTime
-      !call nc%maxTime(maxTime, rc=localrc)
+      call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
