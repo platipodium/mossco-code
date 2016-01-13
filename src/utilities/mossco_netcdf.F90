@@ -70,6 +70,7 @@ module mossco_netcdf
     procedure :: getAxis => grid_get_coordinate_axis
     procedure :: refTime => mossco_netcdf_reftime
     procedure :: timeIndex => mossco_netcdf_find_time_index
+    procedure :: timeGet => MOSSCO_NcGetTime
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
