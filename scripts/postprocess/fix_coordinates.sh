@@ -15,17 +15,19 @@
 if (( "$#" < 1));then
   echo "You must specify the input directory and prefix"
   exit 1
+else
+  fnamein=$1
 fi
 
 if (( "$#" < 2));then
  fnameout=$(pwd)/mossco_gffrr
 else
- fnameroot=$2
+ fnameout=$2
 fi
 
 latloncurv='getmGrid3D_getm_X,getmGrid3D_getm_Y,getmGrid2D_getm_X,getmGrid2D_getm_Y'
 
 for F in ${fnamein}.*.nc; do
-  echo ncks -O -v ${latloncurv} ${F} ${fnameout}${F#${fnamein}}
-  ncks -O -v ${latloncurv} ${F} ${fnameout}${F#${fnamein}}
+  echo ncks -A -v ${latloncurv} ${F} ${fnameout}${F#${fnamein}}
+  ncks -A -v ${latloncurv} ${F} ${fnameout}${F#${fnamein}}
 done
