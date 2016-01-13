@@ -69,7 +69,6 @@ module mossco_netcdf
     procedure :: getvar => mossco_netcdf_var_get
     procedure :: getAxis => grid_get_coordinate_axis
     procedure :: refTime => mossco_netcdf_reftime
-    procedure :: maxTime => mossco_netcdf_maxtime
     procedure :: timeIndex => mossco_netcdf_find_time_index
   end type type_mossco_netcdf
 
@@ -2802,24 +2801,41 @@ module mossco_netcdf
   end subroutine mossco_netcdf_reftime
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_netcdf_maxtime"
-  subroutine mossco_netcdf_maxtime(self, maxTime, rc)
+#define ESMF_METHOD "MOSSCO_NcGetTime"
+!> @brief the method MOSSCO_NcGetTime returns for a netcdf object
+!> the ESMF Time for a requested index
+!> @param[currTime] :: required, out
+!> @param[searchIndex] :: optional, in, the index in the time array, default is 1
+!> @param[stopTime] :: the maximum time (last index) in the time array
+!> @param[startTime] :: the minimum time (first index) in the time array
+!> @param[refTime] :: the reference time  in the time variable
+  subroutine MOSSCO_NcGetTime(self, currTime, searchIndex, kwe, stopTime, startTime, refTime, rc)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
+    type(ESMF_Time), intent(out)                 :: currTime
+    integer(ESMF_KIND_I4), intent(in), optional  :: searchIndex
+    logical, optional                            :: kwe
+    type(ESMF_Time), intent(out), optional       :: startTime, refTime, stopTime
     integer(ESMF_KIND_I4), intent(out), optional :: rc
-    type(ESMF_Time), intent(out)                 :: maxTime
 
-    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid, ntime
+    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid, ntime, index_
     character(ESMF_MAXSTR)                       :: timeUnit, message
     type(ESMF_TimeInterval)                      :: timeInterval
     real(ESMF_KIND_R8), allocatable              :: farray(:)
+    type(ESMF_Time)                              :: refTime_
 
     rc_ = ESMF_SUCCESS
+    if (present(searchIndex)) then
+      index_ = searchIndex
+    else
+      index_ = 1
+    endif
 
-    call self%refTime(maxTime, rc=localrc)
+    call self%refTime(refTime_, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (present(refTime)) refTime=refTime_
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
@@ -2833,7 +2849,7 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    i=index(timeunit,'since ')
+    i=index(timeUnit,'since ')
     if (i<1) then
       call ESMF_LogWrite('  unknown time unit "'//trim(timeUnit)//'"', ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2842,35 +2858,73 @@ module mossco_netcdf
     timeUnit=timeUnit(1:i-2)
 
     ntime = self%dimlens(self%timeDimId)
-    allocate(farray(ntime))
+    if (allocated(farray)) deallocate(farray)
+    allocate(farray(ntime), stat=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (index_ < 1) index_ = 1
+    if (index_ > ntime) index_ = ntime
 
     localrc = nf90_get_var(self%ncid, varid, farray)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    select case(trim(timeUnit))
-      case ('seconds')
-        call ESMF_TimeIntervalSet(timeInterval, s_r8=farray(ntime), rc=localrc)
-      case ('hours')
-        call ESMF_TimeIntervalSet(timeInterval, h_r8=farray(ntime), rc=localrc)
-      case ('days')
-        call ESMF_TimeIntervalSet(timeInterval, d_r8=farray(ntime), rc=localrc)
-      case ('years')
-        call ESMF_TimeIntervalSet(timeInterval, yy=int(farray(ntime)), rc=localrc)
-      case default
-        call ESMF_LogWrite('  time unit "'//trim(timeUnit)//'" not implemented', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    end select
+    call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(index_), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    currTime = refTime_ + timeInterval
+
+    if (present(startTime)) then
+      call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      startTime = refTime_ + timeInterval
+    endif
+
+    if (present(stopTime)) then
+      call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      stopTime = refTime_ + timeInterval
+    endif
+
     if (allocated(farray)) deallocate(farray)
-
-    maxTime=maxTime + timeInterval
-
     if (present(rc)) rc=rc_
 
-  end subroutine mossco_netcdf_maxtime
+  end subroutine MOSSCO_NcGetTime
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_TimeIntervalFromTimeValue"
+  subroutine MOSSCO_TimeIntervalFromTimeValue(timeInterval, unit, value, rc)
+
+    type(ESMF_TimeInterval), intent(out) :: timeInterval
+    character(len=*), intent(in)         :: unit
+    real(ESMF_KIND_R8)                   :: value
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc
+
+    select case(trim(unit))
+    case ('seconds')
+      call ESMF_TimeIntervalSet(timeInterval, s_r8=value, rc=localrc)
+    case ('hours')
+      call ESMF_TimeIntervalSet(timeInterval, h_r8=value, rc=localrc)
+    case ('days')
+      call ESMF_TimeIntervalSet(timeInterval, d_r8=value, rc=localrc)
+    case ('years')
+      call ESMF_TimeIntervalSet(timeInterval, yy=int(value), rc=localrc)
+    case default
+      call ESMF_LogWrite('  time unit "'//trim(unit)//'" not implemented', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end select
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    return
+  end subroutine MOSSCO_TimeIntervalFromTimeValue
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GetFreeLun"
