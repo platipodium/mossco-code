@@ -126,9 +126,9 @@ module netcdf_input_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timestring, message, name, fileName
+    character(len=ESMF_MAXSTR) :: timeString, message, name, fileName
     character(len=ESMF_MAXSTR) :: foreignGridFieldName, form
-    type(ESMF_Time)            :: currTime
+    type(ESMF_Time)            :: currTime, ncTime
     type(ESMF_TimeInterval)    :: timeInterval, timeStep, climatologyTimeStep
     integer(ESMF_KIND_I4)      :: petCount, localPet, localRc
     integer(ESMF_KIND_I8)      :: advanceCount
@@ -501,10 +501,6 @@ module netcdf_input_component
         seconds=0.0
       endif
 
-      ! todo find time index (default is one)
-      ! allocate(time(nc%variables(timid)%dimlens(1)))
-      ! localrc=nf90_var_get(nc%ncid, timeid, time)
-
       call ESMF_AttributeGet(gridComp, 'climatology', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -513,11 +509,20 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_TimeIntervalSet(climatologyTimeStep, timeString, rc=localrc)
+        call nc%timeGet(ncTime, searchIndex=1, rc=localrc)
         climatologyTime = currTime
-        do while (climatologyTime - refTime > climatologyTimeStep)
+        do while (climatologyTime - ncTime > climatologyTimeStep)
           climatologyTime = climatologyTime - climatologyTimeStep
         enddo
-        call nc%timeIndex(currTime, itime, localrc)
+        write(message,'(A)') trim(name)//' uses climatology with period '//trim(timeString)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        call ESMF_TimeGet(ncTime, timeString=timeString, rc=localrc)
+        write(message,'(A)') trim(name)//' climatology '//trim(timeString)
+        call nc%timeIndex(ncTime + climatologyTimeStep, itime, localrc)
+        call nc%timeGet(ncTime, searchIndex=itime, rc=localrc)
+        call ESMF_TimeGet(ncTime, timeString=timeString, rc=localrc)
+        write(message,'(A)') trim(message)//' to '//trim(timeString)
+        call nc%timeIndex(climatologyTime, itime, localrc)
       else
         call nc%timeIndex(currTime, itime, localrc)
       endif
