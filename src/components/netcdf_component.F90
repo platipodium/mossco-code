@@ -379,10 +379,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! variables.  Continue an error message
 
       call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (currTime < maxTime) then
+      if (localrc == ESMF_RC_NOT_FOUND .or. maxTime >= currTime) then
+        call nc%add_timestep(seconds, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
         call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -395,14 +398,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
 
         itemCount=0
-
-      else
-
-        call nc%add_timestep(seconds, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-
+      
       call nc%update()
       call nc%update_variables()
 

@@ -1071,15 +1071,20 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call nc%timeGet(climatologyTime, searchIndex=itime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (localrc == ESMF_RC_NOT_FOUND) then
+        write(message,'(A)') trim(name)//' uses constant value'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      else
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)') trim(name)//' uses neareast past value from '//trim(timeString)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        write(message,'(A)') trim(name)//' uses neareast past value from '//trim(timeString)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
     endif
 
     call MOSSCO_AttributeGetList(importState, 'alias_definition', aliasList, rc=localrc)
