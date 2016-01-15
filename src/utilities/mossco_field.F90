@@ -26,6 +26,7 @@ module mossco_field
   interface MOSSCO_Reallocate
     module procedure MOSSCO_FieldListReallocate
     module procedure MOSSCO_ItemTypeListReallocate
+    module procedure MOSSCO_StringListReallocate
   end interface MOSSCO_Reallocate
 
 contains
@@ -792,5 +793,67 @@ end subroutine MOSSCO_FieldCopy
     return
 
   end subroutine MOSSCO_ItemTypeListReallocate
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringListReallocate"
+  subroutine MOSSCO_StringListReallocate(stringList, itemCount, kwe, keep, rc)
+
+    character(len=*), intent(inout), allocatable :: stringList(:)
+    integer(ESMF_KIND_I4), intent(in)            :: itemCount
+    logical, intent(in), optional                :: kwe
+    logical, intent(in), optional                :: keep
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                   :: rc_, localrc, listSize
+    logical                                 :: keep_
+    character(len=ESMF_MAXPATHLEN)          :: message
+    character(len=ESMF_MAXPATHLEN),  allocatable :: tempList(:)
+
+    rc_ = ESMF_SUCCESS
+    keep_ = .true.
+    if (present(keep)) keep_ = keep
+    if (present(rc)) rc = rc_
+
+    ! Safe deallocation with itemCount < 1
+    if (itemCount < 1) then
+      if (allocated(stringList)) deallocate(stringList)
+      return
+    endif
+
+    ! Deallocate if not keep
+    if (.not.keep) then
+      if (allocated(stringList)) deallocate(stringList)
+    endif
+
+    if (allocated(stringList)) then
+      ! Don't do anything if requested size is equal
+      listSize = size(stringList)
+      if (listSize == itemCount) return
+      if (allocated(tempList)) deallocate(tempList)
+      allocate(tempList(listSize), stat=localrc)
+      tempList(:) = stringList(:)
+      deallocate(stringList)
+      allocate(stringList(itemCount), stat=localrc)
+      if (itemCount < listSize) then
+        stringList(1:itemCount) = tempList(1:itemCount)
+      else
+        stringList(1:listSize) = tempList(1:listSize)
+      endif
+    else
+      allocate(stringList(itemCount), stat=localrc)
+    endif
+
+    if (allocated(tempList)) deallocate(tempList)
+
+    if (localrc /= 0) then
+      write(message,'(A,I5)') '  failed to allocate memory for stringList size ',itemCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (present(rc)) rc=rc_
+    return
+
+  end subroutine MOSSCO_StringListReallocate
 
 end module mossco_field
