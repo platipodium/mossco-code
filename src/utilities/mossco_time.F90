@@ -169,49 +169,52 @@ end subroutine MOSSCO_TimeSet
 #define ESMF_METHOD "MOSSCO_TimeIntervalSet"
 subroutine MOSSCO_TimeIntervalSet(timeInterval, timeString, kwe, rc)
 
-  type(ESMF_TimeInterval), intent(inout)       :: timeInterval
-  character(len=*), intent(inout)              :: timeString
+  type(ESMF_TimeInterval), intent(out)         :: timeInterval
+  character(len=*), intent(in)                 :: timeString
   logical, intent(in), optional                :: kwe
   integer(ESMF_KIND_I4), intent(out), optional :: rc
 
   integer(ESMF_KIND_I4)        :: localrc, rc_
-  integer                      :: yy=0,mm=0,d=0,h=0,m=0,s=0, i
-  character(len=ESMF_MAXSTR)   :: unit, message
+  integer(ESMF_KIND_I4)        :: yy=0,mm=0,d=0,h=0,m=0,s=0, i, n
+  character(len=ESMF_MAXSTR)   :: unit, message, string
 
   rc_=ESMF_SUCCESS
 
-  i = index(timeString,' ')
-  if (i > 1) then
-    if (i < len_trim(timeString) .and. i > 2) then
-      read(unit,*) timeString(i+1:len_trim(timeString))
-    else
-      unit='d'
-    endif
+  string = adjustl(timeString)
+  n = len_trim(string)
+  i = index(trim(string), ' ', back=.true.)
 
-    unit=adjustl(unit)
+  if (i > 1 .and. i < n) then
+    write(unit, '(A)') string(i+1:n)
+  else
+    write(unit,'(A)') 'd'
+  endif
+  unit=adjustl(unit)
 
-    select case(unit(1:len_trim(unit)))
+  if (i < 2) then
+    d = 1
+    write(message,'(A)') '  used default time interval of 1 day'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+  else
+
+    select case(trim(unit))
     case ('yy')
-      read(yy,*) timeString(i+1:len_trim(timeString))
+      read(string(1:i-1),*) yy
     case ('mm')
-      read(mm,*) timeString(i+1:len_trim(timeString))
+      read(string(1:i-1),*) mm
     case ('d')
-      read(d,*) timeString(i+1:len_trim(timeString))
+      read(string(1:i-1),*) d
     case ('h')
-      read(h,*) timeString(i+1:len_trim(timeString))
+      read(string(1:i-1),*) h
     case ('m')
-      read(m,*) timeString(i+1:len_trim(timeString))
+      read(string(1:i-1),*) m
     case ('s')
-      read(s,*) timeString(i+1:len_trim(timeString))
+      read(string(1:i-1),*) s
     case default
       write(message,'(A)') '  obtained unknown unit '//trim(unit)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endselect
-  else
-    d = 1
-    write(message,'(A)') '  used default time interval of 1 day'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
   endif
 
   call ESMF_TimeIntervalSet(timeInterval,yy=yy,mm=mm,d=d,h=h,m=m,s=s, rc=localrc)
@@ -246,7 +249,5 @@ subroutine timeString2ESMF_Time(timestring,time)
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 end subroutine timeString2ESMF_Time
-
-
 
 end module mossco_time

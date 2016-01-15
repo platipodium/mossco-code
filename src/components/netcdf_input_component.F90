@@ -149,6 +149,7 @@ module netcdf_input_component
     type(ESMF_Field), allocatable :: fieldList(:)
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), allocatable :: climatologyList(:)
     character(len=4096)        :: aliasString
     type(ESMF_Vm)              :: vm
     logical                    :: isMatch
@@ -243,14 +244,15 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call ESMF_ConfigFindLabel(config, label='climatology:', isPresent=labelIsPresent, rc = localrc)
+
+      call MOSSCO_ConfigGetList(config, 'climatology:', climatologyList, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, timeString, rc=localrc, default='none')
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (allocated(climatologyList)) then
+
+        write(timeString, '(A)') trim(climatologyList(1))
+        if (size(climatologyList) > 1) write(timeString, '(A)') trim(timeString)//' '//trim(climatologyList(2))
 
         write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' climatology: '//trim(timeString)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -259,8 +261,11 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      endif
+        call MOSSCO_Reallocate(climatologyList, 0, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      endif
 
       call MOSSCO_ConfigGetList(config, 'exclude:', filterExcludeList, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -504,12 +509,13 @@ module netcdf_input_component
       call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       if (isPresent) then
         call ESMF_AttributeGet(gridComp, 'climatology_period', timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_TimeIntervalSet(climatologyTimeStep, timeString, rc=localrc)
+        call MOSSCO_TimeIntervalSet(climatologyTimeStep, trim(timeString), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1035,7 +1041,7 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_TimeIntervalSet(climatologyTimeStep, timeString, rc=localrc)
+      call MOSSCO_TimeIntervalSet(climatologyTimeStep, trim(timeString), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
