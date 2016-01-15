@@ -2,8 +2,8 @@
 !
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
-!> @author Carsten Lemmen
-!> @author Richard Hofmeister
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -22,6 +22,11 @@ module mossco_field
   use esmf
 
   implicit none
+
+  interface MOSSCO_Reallocate
+    module procedure MOSSCO_FieldListReallocate
+    module procedure MOSSCO_ItemTypeListReallocate
+  end interface MOSSCO_Reallocate
 
 contains
 
@@ -725,5 +730,67 @@ end subroutine MOSSCO_FieldCopy
     return
 
   end subroutine MOSSCO_FieldListReallocate
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_ItemTypeListReallocate"
+  subroutine MOSSCO_ItemTypeListReallocate(itemTypeList, itemCount, kwe, keep, rc)
+
+    type(ESMF_StateItem_Flag), intent(inout), allocatable :: itemTypeList(:)
+    integer(ESMF_KIND_I4), intent(in)            :: itemCount
+    logical, intent(in), optional                :: kwe
+    logical, intent(in), optional                :: keep
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                   :: rc_, localrc, listSize
+    logical                                 :: keep_
+    character(len=ESMF_MAXPATHLEN)          :: message
+    type(ESMF_StateItem_Flag),  allocatable :: tempList(:)
+
+    rc_ = ESMF_SUCCESS
+    keep_ = .true.
+    if (present(keep)) keep_ = keep
+    if (present(rc)) rc = rc_
+
+    ! Save deallocation with fieldCount < 1
+    if (itemCount < 1) then
+      if (allocated(itemTypeList)) deallocate(itemTypeList)
+      return
+    endif
+
+    ! Deallocate if not keep
+    if (.not.keep) then
+      if (allocated(itemTypeList)) deallocate(itemTypeList)
+    endif
+
+    if (allocated(itemTypeList)) then
+      ! Don't do anything if requested size is equal
+      listSize = size(itemTypeList)
+      if (listSize == itemCount) return
+      if (allocated(tempList)) deallocate(tempList)
+      allocate(tempList(listSize), stat=localrc)
+      tempList(:) = itemTypeList(:)
+      deallocate(itemTypeList)
+      allocate(itemTypeList(itemCount), stat=localrc)
+      if (itemCount < listSize) then
+        itemTypeList(1:itemCount) = tempList(1:itemCount)
+      else
+        itemTypeList(1:listSize) = tempList(1:listSize)
+      endif
+    else
+      allocate(itemTypeList(itemCount), stat=localrc)
+    endif
+
+    if (allocated(tempList)) deallocate(tempList)
+
+    if (localrc /= 0) then
+      write(message,'(A,I5)') '  failed to allocate memory for itemTypeList size ',itemCount
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (present(rc)) rc=rc_
+    return
+
+  end subroutine MOSSCO_ItemTypeListReallocate
 
 end module mossco_field
