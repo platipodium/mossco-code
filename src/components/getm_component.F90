@@ -1,9 +1,10 @@
 !> @brief Implementation of a GETM ocean component
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
-!> @author Knut Klingbeil, IOW
-!> @author Carsten Lemmen, HZG
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @author Knut Klingbeil <klingbeil@io-warnemuende.de>
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -590,10 +591,10 @@ module getm_component
 
                !> get information about boundary condition
                call ESMF_AttributeGet(concFieldList(i), 'has_boundary_data', value=transport_conc(n)%has_boundary_data, defaultValue=.false., rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)               
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                call ESMF_AttributeGet(concFieldList(i), 'hackmax', value=transport_conc(n)%hackmax, defaultValue=-1.d0, rc=localrc)
-               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)               
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                call ESMF_AttributeGet(concFieldList(i), 'hackmaxmin', value=transport_conc(n)%hackmaxmin, defaultValue=-1.d0, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -676,28 +677,40 @@ module getm_component
 
    end subroutine InitializeP2
 
-   subroutine update_use_boundary_data(importState,rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "update_use_boundary_data"
+   subroutine update_use_boundary_data(importState, advanceCount, rc)
 
-    type(ESMF_State)              :: importState
+    type(ESMF_State), intent(in)                  :: importState
+    integer(ESMF_KIND_I8), intent(in), optional   :: advanceCount
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+
     type(ESMF_FieldBundle)        :: fieldBundle
     type(ESMF_Field)              :: field
-    character(len=ESMF_MAXSTR)    :: fieldName,message
-    integer                       :: localrc,i,rc_
-    integer, optional             :: rc
+    character(len=ESMF_MAXSTR)    :: fieldName, message
+    integer                       :: localrc, i, rc_
 
     rc_ = ESMF_SUCCESS
 
-    call ESMF_StateGet(importState,"concentrations_in_water",fieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_StateGet(importState, "concentrations_in_water", fieldBundle, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1,size(transport_conc)
-      call ESMF_FieldBundleGet(fieldBundle, trim(transport_conc(i)%fieldname), field=field,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeGet(field,'has_boundary_data',value=transport_conc(i)%has_boundary_data,defaultValue=.false.,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldBundleGet(fieldBundle, trim(transport_conc(i)%fieldname), &
+        field=field,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_AttributeGet(field,'has_boundary_data', &
+        value=transport_conc(i)%has_boundary_data, defaultValue=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (transport_conc(i)%has_boundary_data) then
-        call ESMF_LogWrite('  use boundary conditions for '//trim(transport_conc(i)%fieldname),ESMF_LOGMSG_TRACE)
-      end if 
+        if ((present(advanceCount) .and. advanceCount == 0) &
+          .or. (.not.present(advanceCount))) then
+          call ESMF_LogWrite('  use boundary conditions for '//trim(transport_conc(i)%fieldname), ESMF_LOGMSG_INFO)
+        endif
+      end if
     end do
 
    if (present(rc)) rc = rc_
@@ -738,13 +751,13 @@ module getm_component
     type(ESMF_Clock)    :: clock        ! may be uninitialized
     integer,intent(out) :: rc
 
-    type(ESMF_Clock)      :: myClock
-    type(ESMF_Time)       :: currTime, stopTime
+    type(ESMF_Clock)        :: myClock
+    type(ESMF_Time)         :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8) :: advanceCount
+    integer(ESMF_KIND_I8)   :: advanceCount
     type(ESMF_Time)         :: nextTime
     integer                 :: n
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4)   :: localrc
 
     rc=ESMF_SUCCESS
 
@@ -753,12 +766,13 @@ module getm_component
     call getmCmp_update_importState()
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(myClock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeInterval, stopTime=stopTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !  use clock to do determine time of calling routine
     call ESMF_ClockGetNextTime(clock,nextTime,rc=localrc)
@@ -766,9 +780,9 @@ module getm_component
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
       call ESMF_ClockGet(myClock,stopTime=NextTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end if
-
 
     do while (currTime + 0.5d0*timeInterval <= nextTime)
 
@@ -779,7 +793,9 @@ module getm_component
       end if
 
 !     Update information about boundary conditions
-      call update_use_boundary_data(importState)
+      call update_use_boundary_data(importState, advanceCount=advanceCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !     This is where the model specific computation goes.
       if (.not.dryrun) then
@@ -791,9 +807,11 @@ module getm_component
       if (mod(n,M).eq.0) call getmCmp_transport(currTime)
 
       call ESMF_ClockAdvance(myClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_ClockGet(myClock,currtime=currTime,advanceCount=advanceCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
     call getmCmp_update_grid(gridComp)
