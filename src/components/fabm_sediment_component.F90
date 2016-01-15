@@ -316,7 +316,8 @@ module fabm_sediment_component
     sed1d%grid%dzmin=dzmin
 
     !! Write log entries
-    write(message,*) trim(name)//' initialise grid with [inum x jnum x knum]',_INUM_,' x ',_JNUM_,' x ',_KNUM_
+    write(message,'(A,I5,A,I5,A,I5)') trim(name)//' initialize grid [inum x jnum x knum]', &
+      _INUM_,' x ',_JNUM_,' x ',_KNUM_
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     !! get grid mask
@@ -337,7 +338,6 @@ module fabm_sediment_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
       end if
     end if
-
 
     call sed%grid%init_grid()
     call sed%initialize()
