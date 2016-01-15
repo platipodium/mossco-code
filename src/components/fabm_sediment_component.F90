@@ -868,23 +868,24 @@ module fabm_sediment_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> browse through list of state variables and
     !! copy data from importState fields with same name
-    do n=1,size(sed%export_states)
+    do n = 1, size(sed%export_states)
 
       varname=trim(sed%export_states(n)%standard_name)//'_in_soil'
       call ESMF_StateGet(importState, trim(varname), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemType /= ESMF_STATEITEM_FIELD) then
+      if (itemType == ESMF_STATEITEM_NOTFOUND) cycle
 
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        write(message,'(A)') trim(name)//' skipped hotstart for non-field '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         call MOSSCO_StateLog(importState, rc=localrc)
         cycle
@@ -899,15 +900,10 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
-
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' incomplete field '
-        call mossco_fieldString(field, message)
+        write(message,'(A)') trim(name)//' skipped hotstart for incomplete '
+        call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
-
       endif
 
       call ESMF_FieldGet(field, rank=rank, rc=localrc)
@@ -915,15 +911,10 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (rank /= 3) then
-
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' expected rank 3 but got field '
-        call mossco_fieldString(field, message)
+        write(message,'(A)') trim(name)//' skipped hotstart for not rank 3 '
+        call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
-
       endif
 
       call ESMF_FieldGet(field, farrayPtr=ptr_f3, &
@@ -945,17 +936,11 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (any (exportUbnd /= ubnd) .or. any(exportLbnd /= lbnd)) then
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' array bounds do not match '
-        call mossco_fieldString(field, message)
+        write(message,'(A)') trim(name)//' skipped hotstart for no-match array bounds '
+        call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
-
       endif
-
-
 
       ! ownshape = shape(sed%export_states(n)%data)
       !
@@ -990,10 +975,10 @@ module fabm_sediment_component
         ! end if
       !end if
 
-      sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), exportLBnd(3):exportUBnd(3)) &
-        = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
-      write(message,'(A)') trim(name)//' hotstarted field'
-      call mossco_fieldString(field, message)
+      sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), &
+        exportLBnd(3):exportUBnd(3)) = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+      write(message,'(A)') trim(name)//' hotstarted '
+      call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end do
 
@@ -1009,9 +994,6 @@ module fabm_sediment_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
-
-
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
