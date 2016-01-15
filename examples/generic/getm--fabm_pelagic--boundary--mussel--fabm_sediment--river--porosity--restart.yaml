@@ -35,7 +35,7 @@ instances:
   - restart_water: netcdf_input
   - porosity_input: netcdf_input
   - mussel: benthic_filtration
-  - boundary: netcdf_input
+  - boundary_input: netcdf_input
 
 coupling:
   - components:
@@ -51,7 +51,7 @@ coupling:
      - mossco_gfbmfrpr
     interval: 30 h
   - components:
-     - boundary
+     - boundary_input
      - nudge_connector
      - fabm_pelagic
     interval: 20 m

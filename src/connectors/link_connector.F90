@@ -268,18 +268,15 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Allocate/reallocate list do hold item information
     if (itemCount > 0) then
 
-      if (.not.allocated(itemTypeList)) then
-        allocate(itemTypeList(itemCount), stat=localrc)
-        if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount), stat=localrc)
-      elseif (ubound(itemTypeList,1)<itemCount) then
-        deallocate(itemTypeList)
-        allocate(itemTypeList(itemCount), stat=localrc)
-        deallocate(itemNameList)
-        allocate(itemNameList(itemCount), stat=localrc)
-      endif
+      call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(importState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=localrc)
@@ -496,18 +493,15 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Allocate/reallocate list to hold item information
     if (itemCount > 0) then
 
-      if (.not.allocated(itemTypeList)) then
-        allocate(itemTypeList(itemCount))
-        if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
-      elseif (ubound(itemTypeList,1)<itemCount) then
-        deallocate(itemTypeList)
-        allocate(itemTypeList(itemCount))
-        deallocate(itemNameList)
-        allocate(itemNameList(itemCount))
-      endif
+      call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=localrc)
@@ -644,23 +638,46 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         if (fieldCount==0) then
           call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           call ESMF_FieldBundleDestroy(exportFieldBundle, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           write(message,'(A)') trim(name)//' replaced empty fieldBundle '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
         endif
 
-        allocate(fieldList(fieldCount), fieldNameList(fieldCount))
+        call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         call ESMF_FieldBundleGet(exportFieldBundle, fieldList=fieldList, fieldNameList=fieldNameList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         do j=1, fieldCount
           call ESMF_FieldGet(fieldList(j), status=fieldStatus, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           if (fieldStatus /= ESMF_FIELDSTATUS_EMPTY) cycle
 
           call ESMF_FieldBundleGet(importFieldBundle, fieldNameList(j), isPresent=isPresent, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           if (isPresent) then
             call ESMF_FieldBundleGet(importFieldBundle, fieldNameList(j), field=importfield, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
             call ESMF_FieldBundleAddReplace(exportFieldBundle, (/importField/), rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
             write(message,'(A)') trim(name)//' replaced empty field '//trim(fieldNameList(j))//' in fieldBundle '//trim(itemNameList(i))//' by field from fieldBundle'
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             cycle
@@ -669,12 +686,26 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_StateGet(importState, fieldNameList(j), itemType=itemType, rc=localrc)
           if (itemType == ESMF_STATEITEM_FIELD) then
             call ESMF_StateGet(importState, trim(fieldNameList(j)), importField, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
             call ESMF_FieldBundleAddReplace(exportFieldBundle, (/importField/), rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
             write(message,'(A)') trim(name)//' replaced empty field '//trim(fieldNameList(j))//' in fieldBundle '//trim(itemNameList(i))//' by field from state'
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
         enddo
-        deallocate(fieldList, fieldNameList)
+
+        call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_Reallocate(fieldNameList, 0, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       endif
     enddo
 
@@ -917,8 +948,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    if (.not.allocated(ubnd)) allocate(ubnd(rank))
-    if (.not.allocated(lbnd)) allocate(lbnd(rank))
+    if (.not.allocated(ubnd)) allocate(ubnd(rank), stat=localrc)
+    if (.not.allocated(lbnd)) allocate(lbnd(rank), stat=localrc)
 
     call ESMF_FieldGetBounds(field, totalLBound=lbnd, totalUBound=ubnd, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -987,8 +1018,14 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount > 0) then
-      allocate(itemTypeList(itemCount))
-      allocate(itemNameList(itemCount))
+
+      call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(exportState, itemTypeList=itemTypeList, &
         itemNameList=itemNameList, rc=localrc)
@@ -1040,8 +1077,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       endif
     enddo
 
-    if (allocated(itemTypeList)) deallocate(itemTypeList)
-    if (allocated(itemNameList)) deallocate(itemNameList)
+    call MOSSCO_Reallocate(itemTypeList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(rc)) rc=rc_
 
@@ -1069,8 +1111,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (fieldCount > 0) then
-      allocate(fieldList(fieldCount))
-      allocate(fieldNameList(fieldCount))
+      call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(fieldNameList, fieldCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_FieldBundleGet(exportFieldBundle, fieldList=fieldList, &
         fieldNameList=fieldNameList, rc=localrc)
@@ -1091,7 +1138,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemCount==0) cycle
-      allocate(itemList(itemCount))
+
+      call MOSSCO_Reallocate(itemList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_FieldBundleGet(importFieldBundle, fieldName=trim(fieldNameList(i)), fieldList=itemlist, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1103,12 +1153,18 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
 
-      deallocate(itemList)
+      call MOSSCO_Reallocate(itemList, 0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (allocated(fieldList)) deallocate(fieldList)
-    if (allocated(fieldNameList)) deallocate(fieldNameList)
+    call MOSSCO_Reallocate(fieldNameList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(rc)) rc=rc_
 
