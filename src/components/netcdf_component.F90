@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -379,13 +379,13 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! variables.  Continue an error message
 
       call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
-      if (localrc == ESMF_RC_NOT_FOUND .or. maxTime >= currTime) then
+      if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
         call nc%add_timestep(seconds, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
+      elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (maxTime > currTime) then
         call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -399,7 +399,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         itemCount=0
       endif
-      
+
       call nc%update()
       call nc%update_variables()
 
