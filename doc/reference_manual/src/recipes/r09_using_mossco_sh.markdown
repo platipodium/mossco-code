@@ -1,4 +1,4 @@
-# Recipe #9: Using mossco.sh startup script
+# Recipe #09: Using mossco.sh startup script
 
 We have created a convencience/wrapper script `mossco.sh` to make it easier for you to run mossco setups and examples.
 

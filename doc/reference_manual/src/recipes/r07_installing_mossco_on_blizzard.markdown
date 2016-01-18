@@ -1,4 +1,4 @@
-# Recipe 7: Installing MOSSCO on blizzard
+# Recipe #07: Installing MOSSCO on blizzard
 
 Blizzard is the high performance computing system at the DKRZ.
 

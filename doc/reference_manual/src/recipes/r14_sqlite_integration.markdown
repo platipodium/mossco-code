@@ -1,4 +1,4 @@
-# Recipe 14: integration of SQLITE databases
+# Recipe #14: integration of SQLITE databases
 
 For physical quantity and chemical stoichiometry matching, MOSSCO integrates
 a database of typical quantities and their relations.  This feature is used

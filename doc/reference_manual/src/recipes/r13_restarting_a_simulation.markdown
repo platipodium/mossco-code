@@ -1,4 +1,4 @@
-# Recipe 13: Restarting a simulation {#recipe-restarting}
+# Recipe #13: Restarting a simulation {#recipe-restarting}
 
 Restarting a simulation with MOSSCO is a combination of two facilities
 

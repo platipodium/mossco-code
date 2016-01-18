@@ -1,4 +1,4 @@
-# Recipe 15: working with GitHub
+# Recipe #15: working with GitHub
 
 We use GitHub (https://github.com) for hosting an alternate copy of the `mossco/code` repository.  Development on GitHub differs from SourceForge's approach
 

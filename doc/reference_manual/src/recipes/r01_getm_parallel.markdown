@@ -1,4 +1,4 @@
-# Recipe #1: GETM parallel in MOSSCO
+# Recipe #01: GETM parallel in MOSSCO
 
 This recipe describes how to get a GETM test case running in parallel within MOSSCO. 
 

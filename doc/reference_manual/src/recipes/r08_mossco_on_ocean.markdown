@@ -1,4 +1,4 @@
-# Recipe #8: MOSSCO on ocean
+# Recipe #08: MOSSCO on ocean
 
 Ocean is the local cluster at HZG. It offers recent Intel and PGI compilers and parallelism via openmpi/ib (Infiniband).  ESMF is preinstalled with some of these compilers in subdirectories of
 

@@ -1,4 +1,4 @@
-# Recipe 3: install your own software prerequisites
+# Recipe #03: install your own software prerequisites
 
 This document describes how to install all the prerequisites for running ESMF and MOSSCO not
 with a package manager, but by a *manual install* of all required software packages.
