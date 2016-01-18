@@ -1,4 +1,4 @@
-# Recipe #10: MOSSCO on blizzard
+# Recipe #05: MOSSCO on blizzard
 
 Blizzard is the high performance computer at DKRZ.
 

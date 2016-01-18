@@ -1,4 +1,4 @@
-# Recipe #15: Recover on ocean
+# Recipe #16: Recover on ocean
 
 After a crash of the filesystems on ocean, it may be necessary to Reinstall
 everything from scratch (if you're a group administrator)

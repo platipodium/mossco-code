@@ -1,4 +1,4 @@
-# Recipe: how to transfer a grid
+# Recipe #02: how to transfer a grid
 
 This recipe builds on a test example from ESMF, see `$ESMF_DIR/src/system_tests/ESMF_TransferGrid` of your local ESMF installation. 
 

@@ -1,4 +1,4 @@
-# Recipe #15: MOSSCO on ifksrv
+# Recipe #06: MOSSCO on ifksrv
 
 Ifksrv is a new local compute node at HZG. It offers recent Intel,  PGI, and GNU compilers and parallelism via openmpi.  ESMF is preinstalled with some of these compilers in subdirectories of
 

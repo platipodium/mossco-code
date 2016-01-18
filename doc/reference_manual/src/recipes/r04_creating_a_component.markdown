@@ -1,4 +1,4 @@
-# Recipe #5: Creating a component
+# Recipe #04: Creating a component
 
 To create a component, you have to obey some rules.  All those rules are implemented in the examples provided with MOSSCO.
 

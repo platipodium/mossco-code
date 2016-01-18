@@ -1,4 +1,4 @@
-# Recipe #14: MOSSCO on mistral
+# Recipe #17: MOSSCO on mistral
 
 Mistral is the supercomputer at the German Climate Computing Centre (DKRZ) from July 2015.  It succeeds the blizzard system.
 
