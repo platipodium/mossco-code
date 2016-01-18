@@ -1815,6 +1815,7 @@ contains
     rc_ = ESMF_SUCCESS
 
     if (allocated(fieldList)) deallocate(fieldList)
+    fieldCount_ = 0
 
     call ESMF_StateGet(state, itemSearch=trim(itemSearch), itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
