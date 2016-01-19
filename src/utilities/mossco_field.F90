@@ -29,6 +29,10 @@ module mossco_field
     module procedure MOSSCO_StringListReallocate
   end interface MOSSCO_Reallocate
 
+  interface MOSSCO_FieldGetMissingValue
+    module procedure MOSSCO_FieldGetMissingValueR8
+  end interface MOSSCO_FieldGetMissingValue
+
 contains
 
 #undef  ESMF_METHOD
@@ -855,5 +859,60 @@ end subroutine MOSSCO_FieldCopy
     return
 
   end subroutine MOSSCO_StringListReallocate
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldGetMissingValueR8"
+  subroutine MOSSCO_FieldGetMissingValueR8(field, missing_value, kwe, rc)
+
+    type(ESMF_Field), intent(in)                 :: field
+    real(ESMF_KIND_R8), intent(out)              :: missing_value
+    logical, intent(in), optional                :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                        :: localrc, rc_, missingValueI4
+    integer(ESMF_KIND_I4)                        :: missingValueI8
+    real(ESMF_KIND_R4)                           :: missingValueR4
+    logical                                      :: isPresent
+    character(len=ESMF_MAXSTR)                   :: message
+    type(ESMF_TypeKind_Flag)                     :: typeKind
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+
+    call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_AttributeGet(field, 'missing_value', typeKind=typeKind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (TypeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, 'missing_value', missing_value, rc=localrc)
+      elseif (TypeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueR4, rc=localrc)
+        missing_value = dble(missingValueR4)
+      elseif (TypeKind == ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueI8, rc=localrc)
+        missing_value = dble(missingValueI8)
+      elseif (TypeKind == ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueI4, rc=localrc)
+        missing_value = dble(missingValueI4)
+      else
+        write(message,'(A)')  '  missing value non-implemented type '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      missing_value = -1.0D30
+    endif
+
+    if (present(rc))  rc = rc_
+    return
+
+  end subroutine MOSSCO_FieldGetMissingValueR8
 
 end module mossco_field
