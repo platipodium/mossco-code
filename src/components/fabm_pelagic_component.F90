@@ -1490,7 +1490,6 @@ module fabm_pelagic_component
 
       call integrate_flux_in_water(pel, importState)
 
-
       do i=1, nmatch
         write(message,'(A)') trim(name)//' add flux field '
         call MOSSCO_FieldString(importFieldList(i), message)
@@ -1624,9 +1623,9 @@ module fabm_pelagic_component
     type(ESMF_Field)               :: field
     type(ESMF_StateItem_FLAG)      :: itemtype
     integer                        :: n,i,j,k, localrc, rc
-    integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3)
+    integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3), rank
     character(len=ESMF_MAXSTR)     :: message, varname
-    real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:)
+    real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:), ratePtr3(:,:,:)
 
     ! calculate total water depth
     if (.not.(associated(pel%cell_per_column_volume))) then
@@ -1650,10 +1649,9 @@ module fabm_pelagic_component
     enddo
 
 
-    !> vertically homogeneous flux in water (e.g. rivers)
     do n=1,pel%nvar
-        varname = trim(pel%export_states(n)%standard_name)
-        if (associated(pel%volume_flux)) then
+      varname = trim(pel%export_states(n)%standard_name)
+      if (associated(pel%volume_flux)) then
           if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
             do k=1,pel%knum
               !> river dilution
@@ -1669,27 +1667,48 @@ module fabm_pelagic_component
               endif
             enddo
           endif
-        endif
-        call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', itemType, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (itemType == ESMF_STATEITEM_FIELD) then
-          call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', field, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) cycle
+
+        call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', field, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldGet(field, rank=rank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> vertically homogeneous flux in water (e.g. rivers)
+      if (rank == 2) then
           call ESMF_FieldGet(field, farrayPtr=ratePtr2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           do k=1,pel%knum
             !> addition of mass
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k)
           end do
-        else
-          ! no field found
-          cycle
-        end if
+      elseif (rank == 3) then
+          call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          !call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd3, exclusiveLBound=lbnd3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) &
+                + dt * ratePtr3(RANGE3D) * pel%cell_per_column_volume(RANGE3D)
+      end if
     end do
 
   end subroutine integrate_flux_in_water
