@@ -267,7 +267,7 @@ module benthic_filtration_component
     call MOSSCO_FieldString(field, message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_StateAddReplace(exportState, (/field/),rc=localrc)
+    call ESMF_StateAddReplace(importState, (/field/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -494,9 +494,11 @@ module benthic_filtration_component
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: farrayPtr2, phyC, abundance
     real(ESMF_KIND_R8),pointer,dimension(:,:,:):: farrayPtr3
+    logical, allocatable, dimension(:,:)       :: mask
     type(ESMF_Field)        :: field
     integer(ESMF_KIND_I4)   :: localrc, i
     real(ESMF_KIND_R8)      :: maximumFiltrationRate=2.0, halfSaturationConcentration=1E-3
+    real(ESMF_KIND_R8)      :: missingValue
     integer(ESMF_KIND_I4)   :: ubnd3(3), lbnd3(3), ubnd2(2), lbnd2(2)
 
     character(len=ESMF_MAXSTR)  :: phyCName, fluxName
@@ -519,11 +521,11 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (maximumFiltrationRate <= 0.0) then
-        write(message,'(A)') trim(name)//' found filtration rate less or equal zero. Nothing is done.'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        return
-      endif
+    if (maximumFiltrationRate <= 0.0) then
+      write(message,'(A)') trim(name)//' found filtration rate less or equal zero. Nothing is done.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     call ESMF_AttributeGet(importState, name='halfSaturationConcentration', value=halfSaturationConcentration, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -602,6 +604,22 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call MOSSCO_FieldGetMissingValue(field, missingValue, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (allocated(mask)) deallocate(mask)
+    allocate(mask(ubnd2(1)-lbnd2(1)+1, ubnd2(2)-lbnd2(2)+1))
+    mask(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) = (abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) &
+      /= missingValue .and. abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) > 0)
+
+    if (.not.any(mask)) then
+      write(message,'(A)') trim(name)//' found no abundance'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      if (allocated(mask)) deallocate(mask)
+      return
+    endif
+
     i=index(phyCName,'_in_water')
     if (i<1) then
       write(message,'(A)') 'Could not find _in_water postfix for phytoplankton carbon'
@@ -643,29 +661,39 @@ module benthic_filtration_component
     ! abundance.
     ! dPhyC [mmol/m**2/s] = 1 * mmol/s * 1/m**2
 
-    where (phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0 &
-      .and. abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) > 0)
+    mask(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) = (phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0 &
+      .and. mask(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)))
+
+    if (.not.any(mask)) then
+      write(message,'(A)') trim(name)//' found no matching food sites'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      if (allocated(mask)) deallocate(mask)
+      return
+    endif
+
+    where (mask)
       farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))  &
         =  - phyC(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) &
         / (phyC(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) + halfSaturationConcentration) &
         * maximumFiltrationRate * abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
     endwhere
 
-
     write(message,'(A,ES10.3,A)') trim(name)//' is covering up to ', &
-      maxval(abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)),mask=(phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0)), &
+      maxval(abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)),mask=mask), &
       ' ind/m**2'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     write(message,'(A,ES10.3,A)') trim(name)//' concentration is  up to ', &
-      maxval(phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)),mask=(phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) > 0)), &
+      maxval(phyc(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)),mask=mask), &
       ' mmol C/m**3'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
-      maxval(-farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)),mask=(farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)) > -1E30)), &
+      maxval(-farrayPtr2(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2)),mask=mask), &
       ' mmol C/m**2/s'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (allocated(mask)) deallocate(mask)
 
     !! This component has no do loop over an internal timestep, it is advanced with the
     !! timestep written into its local clock from a parent component
