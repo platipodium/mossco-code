@@ -87,7 +87,7 @@ module benthic_filtration_component
     integer, intent(out)  :: rc
 
     character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer(ESMF_KIND_I4)       :: localrc
 
@@ -126,9 +126,8 @@ module benthic_filtration_component
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR)  :: name, message, configfilename
-    type(ESMF_Clock)        :: clock
     type(ESMF_Time)         :: currTime
-    integer                 :: nimport, nexport, i, localrc
+    integer(ESMF_KIND_I4)   :: localrc
     type(ESMF_Field)        :: field
     type(ESMF_Config)       :: config
     logical                 :: configIsPresent, fileIsPresent, labelIsPresent
@@ -289,14 +288,12 @@ module benthic_filtration_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name, message, timeString, string
+    character(ESMF_MAXSTR)  :: name, message
     character(ESMF_MAXSTR)  :: foreignGridFieldName
-    type(ESMF_Time)         :: currTime, time
-    type(ESMF_TimeInterval) :: timeInterval
+    type(ESMF_Time)         :: currTime
 
     type(ESMF_Grid), target   :: grid
     type(ESMF_Grid), pointer  :: grid2, grid3
-    type(ESMF_Mesh)           :: mesh
     type(ESMF_Field)          :: field
     integer(ESMF_KIND_I4)     :: localrc, i, rank, gridRank
     type(ESMF_FieldStatus_Flag) :: fieldStatus
@@ -492,7 +489,7 @@ module benthic_filtration_component
 
     character(ESMF_MAXSTR):: name, message
     type(ESMF_Clock)      :: clock
-    type(ESMF_Time)       :: currTime, myTime, stopTime
+    type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: farrayPtr2, phyC, abundance
