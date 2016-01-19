@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF/MOSSCO component for benthic_filtration
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2015, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, HZG
 
 !
@@ -462,7 +462,7 @@ module benthic_filtration_component
     type(ESMF_Time)            :: currTime
     character(len=ESMF_MAXSTR) :: name
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -503,7 +503,7 @@ module benthic_filtration_component
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -514,16 +514,26 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    ! get parameters from the importState, we can safely assume that they are present
     call ESMF_AttributeGet(importState, name='maximumFiltrationRate', value=maximumFiltrationRate, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !call ESMF_AttributeGet(importState, name='maximumFiltrationRate', value=half_saturation, &
-    !  defaultValue=10.0, rc=localrc)
-    !call ESMF_AttributeGet(importState, name='maximum_rate', value=maximum_rate, &
-    !  defaultValue=2.0, rc=localrc)
+
+      if (maximumFiltrationRate <= 0.0) then
+        write(message,'(A)') trim(name)//' found filtration rate less or equal zero. Nothing is done.'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        return
+      endif
+
     call ESMF_AttributeGet(importState, name='halfSaturationConcentration', value=halfSaturationConcentration, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (halfSaturationConcentration <= 0.0) then
+      write(message,'(A)') trim(name)//' found half saturation concentration less or equal zero. Nothing is done.'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
 
     phyCName='phytoplankton_as_carbon_in_water'
     phyCName='Phytplankton_Carbon_phyC_in_water'
