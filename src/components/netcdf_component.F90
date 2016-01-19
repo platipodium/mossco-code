@@ -588,11 +588,11 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_fieldbundle_write"
-  subroutine nc_state_fieldbundle_write(state, bundleName, keywordEnforcer, rc)
+  subroutine nc_state_fieldbundle_write(state, bundleName, kwe, rc)
 
     type(ESMF_State), intent(in)           :: state
     character(len=*), intent(in)           :: bundleName
-    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
+    type(ESMF_KeywordEnforcer), optional   :: kwe
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_FieldBundle)              :: fieldBundle
@@ -601,7 +601,9 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     character(ESMF_MAXSTR)              :: numberString
     type(ESMF_StateItem_Flag)           :: itemType
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc))  rc = rc_
 
     call ESMF_StateGet(state, trim(bundleName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -645,18 +647,20 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_field_write"
-  subroutine nc_state_field_write(state, fieldName, keywordEnforcer, rc)
+  subroutine nc_state_field_write(state, fieldName, kwe, rc)
 
     type(ESMF_State), intent(in)           :: state
     character(len=*), intent(in)           :: fieldName
-    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
+    type(ESMF_KeywordEnforcer), optional   :: kwe
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_Field)           :: field
     type(ESMF_StateItem_Flag)  :: itemType
     integer(ESMF_KIND_I4)      :: localrc, rc_
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc))  rc = rc_
 
     call ESMF_StateGet(state, trim(fieldName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -681,17 +685,19 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_field_write"
-  subroutine nc_field_write(field, keywordEnforcer, postFix, rc)
+  subroutine nc_field_write(field, kwe, postFix, rc)
 
     type(ESMF_Field), intent(inout)        :: field
-    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
+    type(ESMF_KeywordEnforcer), optional   :: kwe
     character(len=*), intent(in), optional :: postFix
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     integer(ESMF_KIND_I4)               :: localDeCount, localrc, rc_
     character(ESMF_MAXSTR)              :: fieldName
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc))  rc = rc_
 
     call ESMF_FieldGet(field, name=fieldName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
