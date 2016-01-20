@@ -1,7 +1,7 @@
 !> @brief Implementation of ESMF Component utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !
@@ -858,18 +858,18 @@ contains
        allocate(real4ValueList(itemCount))
        call ESMF_AttributeGet(comp, name=attributeName, valueList=real4ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       write(message,'(A,G8.2)') trim(message)//' ',real4ValueList(1)
+       write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
        do j=2, itemCount-1
-         write(message,'(A,G8.2)') trim(message)//', ',real4ValueList(j)
+         write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
        enddo
        deallocate(real4ValueList)
     elseif (typekind==ESMF_TYPEKIND_R8) then
        allocate(real8ValueList(itemCount))
        call ESMF_AttributeGet(comp, name=attributeName, valueList=real8ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       write(message,'(A,G8.2)') trim(message)//' ',real8ValueList(1)
+       write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
        do j=2, itemCount-1
-         write(message,'(A,G8.2)') trim(message)//', ',real8ValueList(j)
+         write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
        enddo
        deallocate(real8ValueList)
     endif

@@ -619,9 +619,9 @@ contains
         call ESMF_AttributeGet(state, name=attributeName, valueList=real4ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,G8.2)') trim(message)//' ',real4ValueList(1)
+        write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,G8.2)') trim(message)//', ',real4ValueList(j)
+          write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
         enddo
         deallocate(real4ValueList)
       elseif (typekind==ESMF_TYPEKIND_R8) then
@@ -629,9 +629,9 @@ contains
         call ESMF_AttributeGet(state, name=attributeName, valueList=real8ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,G8.2)') trim(message)//' ',real8ValueList(1)
+        write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,G8.2)') trim(message)//', ',real8ValueList(j)
+          write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
         enddo
         deallocate(real8ValueList)
       endif
@@ -802,18 +802,18 @@ contains
 !        allocate(real4ValueList(itemCount))
 !        call ESMF_AttributeGet(state, name=attributeName, valueList=real4ValueList, rc=localrc)
 !        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!        write(message,'(A,G8.2)') trim(message)//' ',real4ValueList(1)
+!        write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
 !        do j=2, itemCount-1
-!          write(message,'(A,G8.2)') trim(message)//', ',real4ValueList(j)
+!          write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
 !        enddo
 !        deallocate(real4ValueList)
 !      elseif (typekind==ESMF_TYPEKIND_R8) then
 !        allocate(real8ValueList(itemCount))
 !        call ESMF_AttributeGet(state, name=attributeName, valueList=real8ValueList, rc=localrc)
 !        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-!        write(message,'(A,G8.2)') trim(message)//' ',real8ValueList(1)
+!        write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
 !        do j=2, itemCount-1
-!          write(message,'(A,G8.2)') trim(message)//', ',real8ValueList(j)
+!          write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
 !        enddo
 !        deallocate(real8ValueList)
 !      endif
@@ -1813,9 +1813,11 @@ contains
     type(ESMF_Field), allocatable           :: tempList(:)
 
     rc_ = ESMF_SUCCESS
-
-    if (allocated(fieldList)) deallocate(fieldList)
     fieldCount_ = 0
+
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(state, itemSearch=trim(itemSearch), itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1842,7 +1844,7 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemType == ESMF_STATEITEM_FIELD) then
-      call MOSSCO_FieldListReallocate(fieldList, 1, rc=localrc)
+      call MOSSCO_Reallocate(fieldList, 1, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1885,7 +1887,10 @@ contains
     endif
 
     if (present(fieldStatus) .and. fieldCount_ > 0) then
-      call MOSSCO_FieldListReallocate(tempList, fieldCount_, keep=.false., rc=localrc)
+      call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       n = 0
       do i = 1, fieldCount_
         call ESMF_FieldGet(fieldList(i), status=fieldStatus_, rc=localrc)
@@ -1894,18 +1899,28 @@ contains
         tempList(n) = fieldList(i)
       enddo
       if (n == 0) then
-        call MOSSCO_FieldListReallocate(fieldList, 0, rc=localrc)
+        call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (present(fieldCount)) then
           fieldCount = 0
         else
           rc_ = ESMF_RC_NOT_FOUND
         endif
       else
-        call MOSSCO_FieldListReallocate(fieldList, n, keep=.false., rc=localrc)
+        call MOSSCO_Reallocate(fieldList, n, keep=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         fieldList(1:n) = tempList(1:n)
         if (present(fieldCount)) fieldCount = n
       endif
+
       call MOSSCO_FieldListReallocate(tempList, 0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     endif
 
     if (present(rc)) rc = rc_
