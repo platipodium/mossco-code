@@ -24,6 +24,8 @@ module benthic_filtration_component
   use mossco_strings
   use mossco_component
   use mossco_grid
+  use mossco_attribute
+  use mossco_config
 
   implicit none
 
@@ -128,14 +130,14 @@ module benthic_filtration_component
 
     character(ESMF_MAXSTR)  :: name, message, configfilename
     type(ESMF_Time)         :: currTime
-    integer(ESMF_KIND_I4)   :: localrc, rank
+    integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i
     type(ESMF_Field)        :: field
     type(ESMF_Config)       :: config
     logical                 :: configIsPresent, fileIsPresent, labelIsPresent
     real(ESMF_KIND_R8)      :: halfSaturationConcentration, maximumFiltrationRate
 
     character(ESMF_MAXSTR)  :: filterSpecies
-    character(ESMF_MAXSTR), allocatable  :: otherFilterSpecies(:)
+    character(ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
 
     rc = ESMF_SUCCESS
 
@@ -240,6 +242,19 @@ module benthic_filtration_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
+      call MOSSCO_ConfigGetList(config, 'other:', filterSpeciesList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (allocated(filterSpeciesList)) then
+        call MOSSCO_AttributeSetList(gridComp, 'filter_other_species', filterSpeciesList, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        otherCount = size(filterSpeciesList)
+      else
+        otherCount = 0
+      endif
+
     endif
 
     call ESMF_AttributeSet(gridComp, 'filter_flux_rank', rank, rc=localrc)
@@ -258,6 +273,7 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    ! Create import state for main filtration field
     field = ESMF_FieldEmptyCreate(name=trim(filterSpecies)//'_in_water', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -277,6 +293,25 @@ module benthic_filtration_component
     call ESMF_StateAddReplace(importState, (/field/),rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i = 1, othercount
+      ! Create import state for co-filtration fields
+      field = ESMF_FieldEmptyCreate(name=trim(filterSpeciesList(i))//'_in_water', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' created empty field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(importState, (/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
 
     !> Create export states
     if (rank == 3) then
@@ -305,6 +340,31 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    do i = 1, otherCount
+      !> Create export states for all other species to co-filter
+      if (rank == 3) then
+        field = ESMF_FieldEmptyCreate(name=trim(filterSpeciesList(i))//'_flux_in_water', rc=localrc)
+      elseif (rank == 2) then
+        field = ESMF_FieldEmptyCreate(name=trim(filterSpeciesList(i))//'_flux_at_soil_surface', rc=localrc)
+      endif
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' created empty field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call ESMF_StateAddReplace(exportState, (/field/),rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    enddo
+
+    ! Create import states
     field = ESMF_FieldEmptyCreate(name='mussel_abundance_at_soil_surface', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -602,16 +662,17 @@ module benthic_filtration_component
     type(ESMF_TimeInterval) :: timeStep
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)  :: abundance, flux2
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:):: flux3, concentration
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:):: flux3, concentration, farrayPtr3
     logical, allocatable, dimension(:,:)       :: mask
     type(ESMF_Field)        :: field
-    integer(ESMF_KIND_I4)   :: localrc, i, rank
+    integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount
     real(ESMF_KIND_R8)      :: maximumFiltrationRate, halfSaturationConcentration
     real(ESMF_KIND_R8)      :: missingValue
     integer(ESMF_KIND_I4)   :: ubnd3(3), lbnd3(3), ubnd2(2), lbnd2(2)
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
 
     character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName
+    character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
 
@@ -829,6 +890,112 @@ module benthic_filtration_component
         maxval(-flux3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(1)),mask=mask),' mmol m**-3 s-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
+
+    call MOSSCO_AttributeGetList(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (allocated(filterSpeciesList)) then
+      otherCount = size(filterSpeciesList)
+    else
+      otherCount = 0
+    endif
+
+    do i = 1, otherCount
+      if (rank == 3) then
+        write(fluxName,'(A)') trim(filterSpeciesList(i))//'_flux_in_water'
+      else
+        write(fluxName,'(A)') trim(filterSpeciesList(i))//'_flux_at_soil_surface'
+      endif
+
+      call ESMF_StateGet(exportState, trim(fluxName), itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        write(message,'(A)') trim(name)//' did not find field with name '//trim(fluxname)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      call ESMF_StateGet(exportState, trim(fluxName), field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+        write(message,'(A)') trim(name)//' received incomplete field'
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      if (rank == 2) then
+        call ESMF_FieldGet(field, farrayPtr=flux2,  rc=localrc)
+      else
+        call ESMF_FieldGet(field, farrayPtr=flux3,  rc=localrc)
+      endif
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> Get concentrations from import state
+      call ESMF_StateGet(importState, trim(filterSpeciesList(i))//'_in_water', &
+        itemType=itemType, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        write(message,'(A)') trim(name)//' did not find field '//trim(filterSpeciesList(i))//'_in_water'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      call ESMF_StateGet(importState, trim(filterSpeciesList(i))//'_in_water', field=field, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+        write(message,'(A)') trim(name)//' received incomplete field'
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      ! This is the core of the filtration model, which is a Michaelis-Menten
+      ! formulation depending on filterSpecies concentration and mussel_
+      ! abundance, then scaled with the ratio
+      ! dX [mmol/m**3/s] = ( C / C + K) * X / C * 1 mmol/s * 1/m**3
+
+      call ESMF_FieldGet(field, farrayPtr=farrayPtr3,  rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank == 2) then
+        where (mask)
+          flux2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))  &
+            =  - farrayPtr3(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3)) &
+            / (concentration(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3)) + halfSaturationConcentration) &
+            * maximumFiltrationRate * abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
+        endwhere
+      else
+        where (mask)
+          flux3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))  &
+            =  - farrayPtr3(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3)) &
+            / (concentration(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3)) + halfSaturationConcentration) &
+            * maximumFiltrationRate * abundance(lbnd2(1):ubnd2(1),lbnd2(2):ubnd2(2))
+        endwhere
+      endif
+    enddo
+
+    call MOSSCO_Reallocate(filterSpeciesList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (allocated(mask)) deallocate(mask)
     if (allocated(lbnd)) deallocate(lbnd)
