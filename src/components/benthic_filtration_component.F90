@@ -242,15 +242,19 @@ module benthic_filtration_component
 
     endif
 
-    call ESMF_AttributeSet(importState, 'filter_species', trim(filterSpecies), rc=localrc)
+    call ESMF_AttributeSet(gridComp, 'filter_flux_rank', rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(importState, 'half_saturation_concentration', halfSaturationConcentration, rc=localrc)
+    call ESMF_AttributeSet(gridComp, 'filter_species', trim(filterSpecies), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(importState, 'maximum_filtration_rate', maximumFiltrationRate, rc=localrc)
+    call ESMF_AttributeSet(gridComp, 'half_saturation_concentration', halfSaturationConcentration, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'maximum_filtration_rate', maximumFiltrationRate, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -515,7 +519,7 @@ module benthic_filtration_component
     !> Here comes your own time initialization code
 
     ! get parameters from the importState, we can safely assume that they are present
-    call ESMF_AttributeGet(importState, name='maximum_filtration_rate', &
+    call ESMF_AttributeGet(gridComp, name='maximum_filtration_rate', &
       value=maximumFiltrationRate, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -523,7 +527,7 @@ module benthic_filtration_component
     write(message,'(A,ES9.3)') trim(name)//' filtration rate is ', maximumFiltrationRate
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_AttributeGet(importState, name='half_saturation_concentration', &
+    call ESMF_AttributeGet(gridComp, name='half_saturation_concentration', &
       value=halfSaturationConcentration, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -531,12 +535,20 @@ module benthic_filtration_component
     write(message,'(A,ES9.3)') trim(name)//' half saturation concentration is ', halfSaturationConcentration
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_AttributeGet(importState, name='filter_species', &
+    call ESMF_AttributeGet(gridComp, name='filter_species', &
       value=filterSpecies, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     write(message,'(A)') trim(name)//' species to filtrate is '//trim(filterSpecies)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeGet(gridComp, name='filter_flux_rank', &
+      value=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(A,I1)') trim(name)//' rank of filter flux is ', rank
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call MOSSCO_CompExit(gridComp, localrc)
@@ -615,7 +627,7 @@ module benthic_filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! get parameters from the importState, we can safely assume that they are present
-    call ESMF_AttributeGet(importState, name='maximum_filtration_rate', &
+    call ESMF_AttributeGet(gridComp, name='maximum_filtration_rate', &
       value=maximumFiltrationRate, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -626,7 +638,7 @@ module benthic_filtration_component
       return
     endif
 
-    call ESMF_AttributeGet(importState, name='half_saturation_concentration', &
+    call ESMF_AttributeGet(gridComp, name='half_saturation_concentration', &
       value=halfSaturationConcentration, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -637,7 +649,7 @@ module benthic_filtration_component
       return
     endif
 
-    call ESMF_AttributeGet(exportState, name='filter_flux_rank', &
+    call ESMF_AttributeGet(gridComp, name='filter_flux_rank', &
       value=rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -648,7 +660,7 @@ module benthic_filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_AttributeGet(importState, name='filter_species', &
+    call ESMF_AttributeGet(gridComp, name='filter_species', &
       value=filterSpecies, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -664,7 +676,7 @@ module benthic_filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_StateGet(importState, trim(filterSpecies), field=field, rc=localrc)
+    call ESMF_StateGet(importState, trim(filterSpecies)//'_in_water', field=field, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

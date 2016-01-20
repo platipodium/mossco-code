@@ -133,40 +133,47 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
 
-    allocate(ubnd(rank))
-    allocate(lbnd(rank))
-
-    call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (rank>0 .and. (len_trim(message) + 5 <=len(message))) then
-      write(form,'(A)') '(A,'//intformat(ubnd(1)-lbnd(1)+1)//')'
-      write(message,form) trim(message)//' (', ubnd(1)-lbnd(1)+1
-    endif
-
-    do i=2,gridRank
-      if (ubnd(i)<lbnd(i)) then
-        write(message,'(A)') '  bounds problem, please check your foreign_grid specification'
+    if (rank > 0) then
+      allocate(ubnd(rank), stat=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      allocate(lbnd(rank), stat=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGetBounds(field, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (len_trim(message) + 5 <=len(message)) then
+        write(form,'(A)') '(A,'//intformat(ubnd(1)-lbnd(1)+1)//')'
+        write(message,form) trim(message)//' (', ubnd(1)-lbnd(1)+1
       endif
 
-      width=order(ubnd(i)-lbnd(i)+1)+1
-      write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
-      if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
-    enddo
+      do i=2,gridRank
+        if (ubnd(i)<lbnd(i)) then
+          write(message,'(A)') '  bounds problem, please check your foreign_grid specification'
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
 
-    do i=gridRank+1, rank
-      width=order(ubnd(i)-lbnd(i)+1)+1
-      write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//',A)'
-      !write(0,*) i, gridRank, ubnd(i)-lbnd(i)+1, width, intformat(ubnd(i)-lbnd(i)+1)
-      if (len_trim(message) + 2 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1,'u'
-    enddo
+        width=order(ubnd(i)-lbnd(i)+1)+1
+        write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
+        if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
+     enddo
 
-    if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
+      do i=gridRank+1, rank
+        width=order(ubnd(i)-lbnd(i)+1)+1
+        write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//',A)'
+        !write(0,*) i, gridRank, ubnd(i)-lbnd(i)+1, width, intformat(ubnd(i)-lbnd(i)+1)
+        if (len_trim(message) + 2 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1,'u'
+      enddo
 
+      if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
+    endif
   endif
 
   if (allocated(ubnd)) deallocate(ubnd)
