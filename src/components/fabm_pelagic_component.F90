@@ -1518,13 +1518,18 @@ module fabm_pelagic_component
           !> If it is a vertically integrated (2D-) flux (expected unit mmol s**-1)
           !! it is handled by integrate_fluxes_in_water
 
-          !> It is a surface (2D-) flux (expected unit mmol m**-2), that needs
+          !> It is a surface (2D-) flux (expected unit mmol m**-2 d**-1), that needs
           !> to be converted to volume concentration by division with layer_height
           if (index(itemName,'_flux_at_surface')>0 .or. &
                   index(itemName,'_flux_at_water_surface')>0) then
             farrayPtr3(RANGE2D,pel%knum) = farrayPtr3(RANGE2D,pel%knum) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,pel%knum)
           elseif (index(itemName,'_flux_at_soil_surface')>0) then
-            farrayPtr3(RANGE2D,1) = farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)
+            !> @todo Skip if  .not.pel%mask(RANGE2D,k)
+            ! if (all(ratePtr2(RANGE2D) == 0.0 .or. pel%mask(RANGE2D,1)) cycle
+            ! Avoid overshoot of negative fluxes within a timestep
+            ! where (farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1) > 0)
+              farrayPtr3(RANGE2D,1) = farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)
+            !endwhere
           else
             write (message,'(A)') trim(name)//' could not locate/add flux field'
             call MOSSCO_FieldString(importFieldList(i),message)

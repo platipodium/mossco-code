@@ -134,6 +134,9 @@ module benthic_filtration_component
     logical                 :: configIsPresent, fileIsPresent, labelIsPresent
     real(ESMF_KIND_R8)      :: halfSaturationConcentration, maximumFiltrationRate
 
+    character(ESMF_MAXSTR)  :: filterSpecies
+    character(ESMF_MAXSTR), allocatable  :: otherFilterSpecies(:)
+
     rc = ESMF_SUCCESS
 
     ! Provide default values for all parameters that could be set in the
@@ -141,6 +144,7 @@ module benthic_filtration_component
     rank = 2 ! Default provide flux_at_soil_surface
     halfSaturationConcentration = 200.0 ! mmol C / m**2 / individual mussel
     maximumFiltrationRate       = 2E-2  ! mmol C / s
+    filterSpecies = 'Phytplankton_Carbon_phyC' ! Main variable to filter
 
     !! Make sure that a local clock exists, and that the call to this procedure
     !! is written to the log file
@@ -190,7 +194,7 @@ module benthic_filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' found half_saturation_concentration:'
-        write(message,'(A,G5.3)') trim(message), halfSaturationConcentration
+        write(message,'(A,ES10.3)') trim(message), halfSaturationConcentration
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -204,7 +208,7 @@ module benthic_filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' found maximum_filtration_rate:'
-        write(message,'(A,G5.3)') trim(message), halfSaturationConcentration
+        write(message,'(A,ES10.3)') trim(message), halfSaturationConcentration
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -218,11 +222,29 @@ module benthic_filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' found rank:'
-        write(message,'(A,I1)') trim(message), rank
+        write(message,'(A,I2)') trim(message), rank
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call ESMF_ConfigFindLabel(config, label='filter:', isPresent=labelIsPresent, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (labelIsPresent) then
+        call ESMF_ConfigGetAttribute(config, filterSpecies, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' found filter:'
+        write(message,'(A)') trim(message)//' '//trim(filterSpecies)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
     endif
+
+    call ESMF_AttributeSet(importState, 'filter_species', trim(filterSpecies), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(importState, 'half_saturation_concentration', halfSaturationConcentration, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -232,8 +254,7 @@ module benthic_filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    field = ESMF_FieldEmptyCreate(name='Phytplankton_Carbon_phyC_in_water', rc=localrc)
-    !field = ESMF_FieldEmptyCreate(name='phytoplankton_as_carbon_in_water', rc=localrc)
+    field = ESMF_FieldEmptyCreate(name=trim(filterSpecies)//'_in_water', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -255,9 +276,9 @@ module benthic_filtration_component
 
     !> Create export states
     if (rank == 3) then
-      field = ESMF_FieldEmptyCreate(name='Phytplankton_Carbon_phyC_flux_in_water', rc=localrc)
+      field = ESMF_FieldEmptyCreate(name=trim(filterSpecies)//'_flux_in_water', rc=localrc)
     elseif (rank == 2) then
-      field = ESMF_FieldEmptyCreate(name='Phytplankton_Carbon_phyC_flux_at_soil_surface', rc=localrc)
+      field = ESMF_FieldEmptyCreate(name=trim(filterSpecies)//'_flux_at_soil_surface', rc=localrc)
     endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -317,7 +338,7 @@ module benthic_filtration_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name, message
+    character(ESMF_MAXSTR)  :: name, message, filterSpecies
     character(ESMF_MAXSTR)  :: foreignGridFieldName
     type(ESMF_Time)         :: currTime
 
@@ -510,6 +531,13 @@ module benthic_filtration_component
     write(message,'(A,ES9.3)') trim(name)//' half saturation concentration is ', halfSaturationConcentration
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+    call ESMF_AttributeGet(importState, name='filter_species', &
+      value=filterSpecies, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') trim(name)//' species to filtrate is '//trim(filterSpecies)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -571,12 +599,11 @@ module benthic_filtration_component
     integer(ESMF_KIND_I4)   :: ubnd3(3), lbnd3(3), ubnd2(2), lbnd2(2)
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
 
-    character(len=ESMF_MAXSTR)  :: phyCName, fluxName
+    character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
 
     rc = ESMF_SUCCESS
-    rank = 2
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -610,20 +637,34 @@ module benthic_filtration_component
       return
     endif
 
-    phyCName='phytoplankton_as_carbon_in_water'
-    phyCName='Phytplankton_Carbon_phyC_in_water'
-    call ESMF_StateGet(importState, trim(phyCName), itemType=itemType, rc=localrc)
+    call ESMF_AttributeGet(exportState, name='filter_flux_rank', &
+      value=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rank < 2 .or. rank > 3) then
+      write(message,'(A)') trim(name)//' found rank other than 2 or 3'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_AttributeGet(importState, name='filter_species', &
+      value=filterSpecies, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(importState, trim(filterSpecies)//'_in_water', itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
-      write(message,'(A)') trim(name)//' did not find field with name '//trim(phycName)
+      write(message,'(A)') trim(name)//' did not find field with name '//trim(filterSpecies)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call MOSSCO_StateLog(importState)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_StateGet(importState, trim(phyCName), field=field, rc=localrc)
+    call ESMF_StateGet(importState, trim(filterSpecies), field=field, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -699,16 +740,10 @@ module benthic_filtration_component
       return
     endif
 
-    i=index(phyCName,'_in_water')
-    if (i<1) then
-      write(message,'(A)') 'Could not find _in_water postfix for phytoplankton carbon'
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
     if (rank == 3) then
-      fluxName=phyCName(1:i)//'flux_in_water'
+      write(fluxName,'(A)') trim(filterSpecies)//'_flux_in_water'
     else
-      fluxName=phyCName(1:i)//'flux_at_soil_surface'
+      write(fluxName,'(A)') trim(filterSpecies)//'_flux_at_soil_surface'
     endif
 
     call ESMF_StateGet(exportState, trim(fluxName), itemType=itemType, rc=localrc)
@@ -764,7 +799,7 @@ module benthic_filtration_component
       endwhere
 
       write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
-        maxval(-flux2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)),mask=mask),' mmol C m**-2 s-1'
+        maxval(-flux2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)),mask=mask),' mmol m**-2 s-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       call ESMF_FieldGet(field, farrayPtr=flux3,  rc=localrc)
@@ -779,7 +814,7 @@ module benthic_filtration_component
       endwhere
 
       write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
-        maxval(-flux3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(1)),mask=mask),' mmol C m**-3 s-1'
+        maxval(-flux3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(1)),mask=mask),' mmol m**-3 s-1'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
