@@ -1319,27 +1319,41 @@ module fabm_pelagic_component
     ! calculate PAR
     call pel%light()
 
-    ! Create a list of fields that have matching fluxes
-    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    ! Create a list of fields  in the export state that have matching fluxes
+    ! in the import state
+    call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(itemNameList(itemCount))
-    allocate(itemTypeList(itemCount))
-
-    call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
+    call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! Build a list of fields that have the _in_water suffix and that
+    call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(exportState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Build a list of fields in the exportState that have the _in_water suffix and that
     ! have one or more associated fluxes (with allowed suffixex specified in
-    ! suffixList), preallocate this exportFieldList with
+    ! suffixList) in the importState, preallocate this exportFieldList with
     ! itemCount
-    call MOSSCO_FieldListReallocate(exportFieldList, itemCount, keep=.false., rc=localrc)
-    call MOSSCO_FieldListReallocate(importFieldList, itemCount, keep=.false., rc=localrc)
+    call MOSSCO_Reallocate(exportFieldList, itemCount, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(importFieldList, itemCount, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     nmatch = 0
     do i = 1, itemCount
+
+      !write(message,'(A)') trim(name)//' searches match for item '//trim(itemNameList(i))
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       ! Skip everything that is not field or fieldBundle
       if (itemTypeList(i) /= ESMF_STATEITEM_FIELD &
@@ -1353,17 +1367,49 @@ module fabm_pelagic_component
       prefix = itemName(1:j-1)
 
       if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+
+        !write(message,'(A)') trim(name)//' searches match for field '//trim(itemNameList(i))
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
         do k = 1, size(suffixList)
+
+          write(message,'(A)') trim(name)//' tries to match '//trim(prefix)//trim(suffixList(k))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           call MOSSCO_StateGetFieldList(importState, trim(prefix)//trim(suffixList(k)), &
             fieldList, fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          write(message,'(A,I1)') trim(name)//' match count ', fieldCount
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           if (fieldCount == 0) cycle
+
+          write(message,'(A)') trim(name)//' matched '//trim(prefix)//trim(suffixList(k))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           nmatch = nmatch + fieldCount
           if (ubound(exportFieldList, 1) < nmatch) then
-            call MOSSCO_FieldListReallocate(exportFieldList, nmatch * 2, rc=localrc)
-            call MOSSCO_FieldListReallocate(importFieldList, nmatch * 2, rc=localrc)
+
+            call MOSSCO_Reallocate(exportFieldList, nmatch * 2, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            call MOSSCO_Reallocate(importFieldList, nmatch * 2, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           endif
+
           call ESMF_StateGet(exportState, trim(itemName), field, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          write(message,'(A)') trim(name)//' found match for  '
+          call MOSSCO_FieldString(exportFieldList(i), message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           exportFieldList(nmatch-fieldCount+1:nmatch) = field
           importFieldList(nmatch-fieldCount+1:nmatch) = fieldList(:)
 
@@ -1374,6 +1420,7 @@ module fabm_pelagic_component
         call ESMF_StateGet(exportState, trim(itemName), exportFieldBundle, rc=localrc)
         call ESMF_FieldBundleGet(exportFieldBundle, fieldName=trim(itemName), &
           fieldCount=exportFieldCount, rc=localrc)
+
         if (exportFieldCount == 0) cycle
 
         do k = 1, size(suffixList)
@@ -1383,12 +1430,12 @@ module fabm_pelagic_component
 
           nmatch = nmatch + fieldCount
           if (ubound(exportFieldList,1) < nmatch) then
-            call MOSSCO_FieldListReallocate(exportFieldList, nmatch * 2, rc=localrc)
-            call MOSSCO_FieldListReallocate(importFieldList, nmatch * 2, rc=localrc)
+            call MOSSCO_Reallocate(exportFieldList, nmatch * 2, rc=localrc)
+            call MOSSCO_Reallocate(importFieldList, nmatch * 2, rc=localrc)
           endif
 
           importFieldList(nmatch-fieldCount+1:nmatch) = fieldList
-          call MOSSCO_FieldListReallocate(fieldList, exportFieldCount, keep=.false., rc=localrc)
+          call MOSSCO_Reallocate(fieldList, exportFieldCount, keep=.false., rc=localrc)
           call ESMF_FieldBundleGet(exportFieldBundle, fieldName=trim(itemName), &
             fieldList = fieldList, rc=localrc)
           exportFieldList(nmatch-fieldCount+1:nmatch) = fieldList
@@ -1518,7 +1565,7 @@ module fabm_pelagic_component
           !> If it is a vertically integrated (2D-) flux (expected unit mmol s**-1)
           !! it is handled by integrate_fluxes_in_water
 
-          !> It is a surface (2D-) flux (expected unit mmol m**-2 d**-1), that needs
+          !> If is a surface (2D-) flux (expected unit mmol m**-2 d**-1), it needs
           !> to be converted to volume concentration by division with layer_height
           if (index(itemName,'_flux_at_surface')>0 .or. &
                   index(itemName,'_flux_at_water_surface')>0) then
@@ -1530,6 +1577,9 @@ module fabm_pelagic_component
             ! where (farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1) > 0)
               farrayPtr3(RANGE2D,1) = farrayPtr3(RANGE2D,1) + ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)
             !endwhere
+            write (message,'(A,ES10.3,A)') trim(name)//' added ',maxval(ratePtr2(RANGE2D) * dt / pel%layer_height(RANGE2D,1)),' from '
+            call MOSSCO_FieldString(importFieldList(i),message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           else
             write (message,'(A)') trim(name)//' could not locate/add flux field'
             call MOSSCO_FieldString(importFieldList(i),message)
