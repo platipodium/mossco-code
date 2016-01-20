@@ -939,14 +939,22 @@ contains
     if (itemType /= ESMF_STATEITEM_FIELD) then
       write(message, '(A)')  'Requested item '//trim(attributeName)//' ist not a field.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+
       call MOSSCO_StateLog(state, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
     call ESMF_StateGet(state, trim(attributeValue), field, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
       write(message, '(A)')  'Requested field '//trim(attributeName)//' is empty.'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
@@ -955,7 +963,8 @@ contains
     endif
 
     call ESMF_FieldGet(field, grid=grid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(rc)) rc=rc_
     return
@@ -1892,13 +1901,17 @@ contains
     endif
 
     if (present(fieldStatus) .and. fieldCount_ > 0) then
-      call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.false., rc=localrc)
+      call MOSSCO_Reallocate(tempList, fieldCount_, keep=.false., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       n = 0
       do i = 1, fieldCount_
+
         call ESMF_FieldGet(fieldList(i), status=fieldStatus_, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (fieldStatus /= fieldStatus_) cycle
         n = n + 1
         tempList(n) = fieldList(i)
@@ -1922,7 +1935,7 @@ contains
         if (present(fieldCount)) fieldCount = n
       endif
 
-      call MOSSCO_FieldListReallocate(tempList, 0, rc=localrc)
+      call MOSSCO_Reallocate(tempList, 0, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
