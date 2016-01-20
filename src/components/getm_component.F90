@@ -692,6 +692,11 @@ module getm_component
 
     rc_ = ESMF_SUCCESS
 
+    if (.not.allocated(transport_conc)) then
+      if (present(rc)) rc = rc_
+      return
+    endif
+
     call ESMF_StateGet(importState, "concentrations_in_water", fieldBundle, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
