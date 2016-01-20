@@ -1368,35 +1368,23 @@ module fabm_pelagic_component
 
       if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
 
-        !write(message,'(A)') trim(name)//' searches match for field '//trim(itemNameList(i))
-        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
         do k = 1, size(suffixList)
-
-          write(message,'(A)') trim(name)//' tries to match '//trim(prefix)//trim(suffixList(k))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call MOSSCO_StateGetFieldList(importState, trim(prefix)//trim(suffixList(k)), &
             fieldList, fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          write(message,'(A,I1)') trim(name)//' match count ', fieldCount
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
           if (fieldCount == 0) cycle
-
-          write(message,'(A)') trim(name)//' matched '//trim(prefix)//trim(suffixList(k))
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           nmatch = nmatch + fieldCount
           if (ubound(exportFieldList, 1) < nmatch) then
 
-            call MOSSCO_Reallocate(exportFieldList, nmatch * 2, rc=localrc)
+            call MOSSCO_Reallocate(exportFieldList, nmatch * 2, keep=.true., rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            call MOSSCO_Reallocate(importFieldList, nmatch * 2, rc=localrc)
+            call MOSSCO_Reallocate(importFieldList, nmatch * 2, keep=.true., rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1406,12 +1394,8 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          write(message,'(A)') trim(name)//' found match for  '
-          call MOSSCO_FieldString(exportFieldList(i), message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
           exportFieldList(nmatch-fieldCount+1:nmatch) = field
-          importFieldList(nmatch-fieldCount+1:nmatch) = fieldList(:)
+          importFieldList(nmatch-fieldCount+1:nmatch) = fieldList(1:fieldCount)
 
         enddo
 
