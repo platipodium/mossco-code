@@ -1805,7 +1805,6 @@ contains
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, i, itemCount
     integer(ESMF_KIND_I4)                   :: n, fieldCount_
-    character(len=ESMF_MAXSTR)              :: name
     character(len=ESMF_MAXPATHLEN)          :: message
     type(ESMF_StateItem_Flag)               :: itemType
     type(ESMF_FieldBundle)                  :: fieldBundle
@@ -1839,28 +1838,31 @@ contains
       return
     endif
 
-    call ESMF_StateGet(state, itemName=trim(name), itemType=itemType, rc=localrc)
+    !write(message,'(A)') '  found match for 1 item '//trim(itemSearch)
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_StateGet(state, itemName=trim(itemSearch), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemType == ESMF_STATEITEM_FIELD) then
-      call MOSSCO_Reallocate(fieldList, 1, rc=localrc)
+      fieldCount_ = 1
+
+      call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.false., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_StateGet(state, trim(name), fieldList(1), rc=localrc)
+      call ESMF_StateGet(state, trim(itemSearch), fieldList(fieldCount_), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (present(fieldCount)) fieldCount=1
 
     elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
 
-      call ESMF_StateGet(state, trim(name), fieldBundle, rc=localrc)
+      call ESMF_StateGet(state, trim(itemSearch), fieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(name), &
+      call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(itemSearch), &
         fieldCount=fieldCount_, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1872,13 +1874,16 @@ contains
           rc_ = ESMF_RC_NOT_FOUND
         endif
       else
-        allocate(fieldList(fieldCount_), stat=localrc)
-        call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(name), &
+        call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(itemSearch), &
           fieldList=fieldList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-    else
+    else ! Neither field nor fieldBundle
       if (present(fieldCount)) then
         fieldCount = 0
       else
@@ -1923,6 +1928,7 @@ contains
 
     endif
 
+    if (present(fieldCount)) fieldCount = fieldCount_
     if (present(rc)) rc = rc_
     return
 
