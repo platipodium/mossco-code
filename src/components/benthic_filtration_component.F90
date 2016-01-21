@@ -136,8 +136,8 @@ module benthic_filtration_component
     logical                 :: configIsPresent, fileIsPresent, labelIsPresent
     real(ESMF_KIND_R8)      :: halfSaturationConcentration, maximumFiltrationRate
 
-    character(ESMF_MAXSTR)  :: filterSpecies
-    character(ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
+    character(len=ESMF_MAXSTR)  :: filterSpecies
+    character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
 
     rc = ESMF_SUCCESS
 
@@ -250,7 +250,14 @@ module benthic_filtration_component
         call MOSSCO_AttributeSetList(gridComp, 'filter_other_species', filterSpeciesList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         otherCount = size(filterSpeciesList)
+
+        write(message,'(A)') trim(name)//' found other:'
+        call MOSSCO_MessageAdd(message, filterSpeciesList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
         otherCount = 0
       endif
@@ -403,6 +410,7 @@ module benthic_filtration_component
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR)  :: name, message, filterSpecies
+    character(ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
     character(ESMF_MAXSTR)  :: foreignGridFieldName
     type(ESMF_Time)         :: currTime
 
@@ -610,6 +618,17 @@ module benthic_filtration_component
 
     write(message,'(A,I1)') trim(name)//' rank of filter flux is ', rank
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call MOSSCO_AttributeGetList(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (allocated(filterSpeciesList)) then
+      do i = lbound(filterSpeciesList,1), ubound(filterSpeciesList,1)
+        write(message,'(A)') trim(name)//' filter also '//trim(filterSpeciesList(i))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      enddo
+    endif
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -913,7 +932,7 @@ module benthic_filtration_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemType /= ESMF_STATEITEM_FIELD) then
-        write(message,'(A)') trim(name)//' did not find field with name '//trim(fluxname)
+        write(message,'(A)') trim(name)//' did not find field with name '//trim(fluxname)//' for '//trim(filterSpeciesList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
