@@ -402,7 +402,8 @@ contains
     logical                              :: isPresent
     character(len=4096)                  :: attributeString
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
 
     call ESMF_AttributeGet(gridComp, name=trim(attributeName), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -419,7 +420,9 @@ contains
       if (attributeString(i:i)==',') n=n+1
     enddo
 
-    if (n>0) allocate(stringList(n))
+    if (allocated(stringList)) deallocate(stringList)
+    if (n>0) allocate(stringList(n), stat=localrc)
+
     do i=1,n
       j=index(attributeString,',')
       if (j>0) then
@@ -463,7 +466,8 @@ contains
       if (attributeString(i:i)==',') n=n+1
     enddo
 
-    if (n>0) allocate(stringList(n,2))
+    if (allocated(stringList)) deallocate(stringList)
+    if (n>0) allocate(stringList(n,2), stat=localrc)
     do i=1,n
       j=index(attributeString,',')
       if (j>0) then
