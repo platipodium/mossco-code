@@ -37,6 +37,10 @@ implicit none
     module procedure intformat_i8
   end interface
 
+  interface MOSSCO_MessageAdd
+    module procedure MOSSCO_MessageAddString
+    module procedure MOSSCO_MessageAddList
+  end interface
 contains
 
 #undef  ESMF_METHOD
@@ -187,13 +191,17 @@ contains
   end function intformat_i4
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_MessageAdd"
-  subroutine MOSSCO_MessageAdd(message, string)
+#define ESMF_METHOD "MOSSCO_MessageAddString"
+  subroutine MOSSCO_MessageAddString(message, string, rc)
 
     character(ESMF_MAXSTR), intent(inout)  :: message
-    character(len=*), intent(in)     :: string
+    character(len=*), intent(in)           :: string
+    integer(ESMF_KIND_I4), optional        :: rc
 
-    integer(ESMF_KIND_I4)                  :: len1, len2, len0
+    integer(ESMF_KIND_I4)                  :: len1, len2, len0, rc_
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
 
     len0=len(message)
     len1=len_trim(message)
@@ -209,8 +217,10 @@ contains
 
     return
 
-  end subroutine MOSSCO_MessageAdd
+  end subroutine MOSSCO_MessageAddString
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StringMatch"
   subroutine MOSSCO_StringMatch(item, pattern, isMatch, rc)
 
     character(len=*), intent(in)        :: item
@@ -244,6 +254,8 @@ contains
 
   end subroutine MOSSCO_StringMatch
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CleanPattern"
   subroutine MOSSCO_CleanPattern(pattern, rc)
 
     character(len=*), intent(inout)     :: pattern
@@ -257,5 +269,34 @@ contains
 
   end subroutine MOSSCO_CleanPattern
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_MessageAddList"
+  subroutine MOSSCO_MessageAddList(message, stringList, rc)
+
+    character(ESMF_MAXSTR), intent(inout)  :: message
+    character(len=*),  intent(in),  allocatable :: stringList(:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                  :: i, rc_, localrc
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    if (.not.allocated(stringList)) return
+
+    call MOSSCO_MessageAdd(message, stringList(lbound(stringList,1)), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i = lbound(stringList,1) + 1, ubound(stringList,1)
+
+      call MOSSCO_MessageAdd(message, ', '//stringList(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    enddo
+    return
+
+  end subroutine MOSSCO_MessageAddList
 
 end module mossco_strings
