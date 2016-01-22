@@ -31,7 +31,7 @@ program main
   type(ESMF_Time)            :: time1, time2, startTime, stopTime
   type(ESMF_TimeInterval)    :: runDuration, timeStep
   integer                    :: localrc, rc,nmlunit=2013
-  double precision           :: seconds
+  double precision           :: seconds, runseconds
   character(len=40)          :: timestring, logKind='multi', name='main'
   character(len=40)          :: start='2000-01-01 00:00:00'
   character(len=40)          :: stop='2000-01-05 00:00:00'
@@ -393,11 +393,23 @@ program main
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  write(message,'(A,ES10.4,A)') trim(title)//' needed ',seconds,' seconds to run'
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) &
-    call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
+  write(message,'(A,ES10.3,A)') trim(title)//' needed ',seconds,' seconds to run'
+  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
+  call ESMF_TimeIntervalGet(runduration, s_r8=runseconds, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (seconds > 0) then
+    write(message,'(A,ES10.3,A)') trim(title)//' total speedup is ',runseconds/seconds
+    if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    write(message,'(A,ES10.3,A)') trim(title)//' speedup per CPU is ',runseconds/seconds/petCount
+    if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+  endif
+
+  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) &
+    call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
 
   call ESMF_StateDestroy(topState,rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
