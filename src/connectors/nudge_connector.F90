@@ -275,7 +275,7 @@ module nudge_connector
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)   :: localrc
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, rc)
+    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
