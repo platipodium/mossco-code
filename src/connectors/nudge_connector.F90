@@ -162,7 +162,7 @@ module nudge_connector
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,F5.3)')  trim(name)//' found in file '//trim(configFileName)//' weight: ',weight
+        write(message,'(A,ES9.2)')  trim(name)//' found in file '//trim(configFileName)//' weight: ',weight
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
         weight = 0.0
@@ -177,17 +177,17 @@ module nudge_connector
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A,F5.3)')  trim(name)//' found attribute weight: ',weight
+        write(message,'(A,ES9.2)')  trim(name)//' found attribute weight: ',weight
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
       if (weight < 0.0) then
         weight = 0.0
-        write(message,'(A,F5.3)')  trim(name)//' found invalid weight < 0, reset to ',weight
+        write(message,'(A,ES9.2)')  trim(name)//' found invalid weight < 0, reset to ',weight
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       elseif (weight > 1.0) then
         weight = 1.0
-        write(message,'(A,F5.3)')  trim(name)//' found invalid weight > 1, reset to ',weight
+        write(message,'(A,ES9.2)')  trim(name)//' found invalid weight > 1, reset to ',weight
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
 
@@ -374,11 +374,10 @@ module nudge_connector
       advanceCount = 0
     endif
 
-
     if (.not. tagOnly_) then
       if (weight <= 0.0) then
         if (advanceCount < 1) then
-          write(message,'(A,F7.5,I5)')  trim(name)//' enabled but weight is ', weight
+          write(message,'(A,ES9.2)')  trim(name)//' enabled but weight is ', weight
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
         if (present(rc)) rc=ESMF_SUCCESS
@@ -655,7 +654,7 @@ module nudge_connector
         endselect
 
         if (numChanged>0) then
-          write(message,'(A,F6.4,A,I5.5,A)') trim(name)//' weight ', weight, ' ', numChanged, ' cells '
+          write(message,'(A,ES9.2,A,I5.5,A)') trim(name)//' weight ', weight, ' ', numChanged, ' cells '
           call MOSSCO_FieldString(exportField, message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
