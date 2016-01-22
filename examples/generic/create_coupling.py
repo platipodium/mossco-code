@@ -955,11 +955,25 @@ fid.write('''
       call ESMF_LogWrite('====== Status at end of child initialization ======', ESMF_LOGMSG_INFO, log=stateLog)
 
       do i=1,numGridComp
-        call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
+        call ESMF_LogWrite('====== '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
+
+        call MOSSCO_CompLog(gridCompList(i), log=stateLog, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         call MOSSCO_StateLog(gridImportStateList(i), log=stateLog, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         call MOSSCO_StateLog(gridExportStateList(i), log=stateLog, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      enddo
+
+      do i=1,numCplComp
+        call ESMF_LogWrite('====== '//trim(cplCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
+
+        call MOSSCO_CompLog(cplCompList(i), log=stateLog, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
