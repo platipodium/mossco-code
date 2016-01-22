@@ -279,14 +279,6 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateReconcile(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateReconcile(exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -337,6 +329,8 @@ module nudge_connector
     type(ESMF_TimeInterval)                :: timeStep
 
     rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(kwe)) rc = rc_
     if (present(tagOnly)) then
       tagOnly_ = tagOnly
     else
@@ -500,8 +494,10 @@ module nudge_connector
         allocate(exportLbnd(rank), stat=localrc)
         if (allocated(lbnd)) deallocate(lbnd)
         allocate(lbnd(rank), stat=localrc)
+        lbnd(:) = 1
         if (allocated(ubnd)) deallocate(ubnd)
         allocate(ubnd(rank), stat=localrc)
+        ubnd(:) = 0
       endif
 
       call ESMF_FieldGetBounds(importField, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
