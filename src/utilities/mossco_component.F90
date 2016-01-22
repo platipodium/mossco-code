@@ -33,7 +33,8 @@ interface MOSSCO_CompExit
 end interface
 
 interface MOSSCO_CompLog
-    module procedure MOSSCO_GridCompLog
+  module procedure MOSSCO_GridCompLog
+  module procedure MOSSCO_CplCompLog
 end interface
 
 interface MOSSCO_CompEntry
@@ -608,179 +609,6 @@ contains
   end subroutine MOSSCO_GridCompFieldsTable
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_GridCompLog"
-  subroutine MOSSCO_GridCompLog(comp, rc)
-    type(ESMF_GridComp)             :: comp
-    integer(ESMF_KIND_I4), optional :: rc
-
-    integer(ESMF_KIND_I4)           :: localRc, itemCount, i, j, rank
-    integer(ESMF_KIND_I4)           :: attCount, packCount, linkedCount
-    character(len=ESMF_MAXSTR)      :: name, message, attributeName
-    type(ESMF_Grid)                 :: grid
-    logical, allocatable            :: logicalValueList(:)
-    real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
-    real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
-    integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
-    integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
-    character(len=ESMF_MAXSTR), allocatable :: characterValueList(:)
-    type(ESMF_Context_Flag)         :: contextFlag
-    type(ESMF_Method_Flag)          :: methodFlag
-    integer(ESMF_KIND_I4)           :: phase
-    logical                         :: isPresent
-    type(ESMF_Clock)                :: clock
-    type(ESMF_Config)               :: config
-    type(ESMF_Vm)                   :: vm
-    type(ESMF_State)                :: state
-    type(ESMF_TypeKind_Flag)        :: typeKind
-    type(ESMF_AttPack)              :: attPack
-
-    if (present(rc)) rc=ESMF_SUCCESS
-
-    call ESMF_GridCompGet(comp, name=name, contextFlag=contextFlag, currentMethod=methodFlag, &
-      currentPhase=phase, vmIsPresent=isPresent, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (methodFlag == ESMF_METHOD_INITIALIZE) then
-      write(message,'(A,I1)') trim(name)//' in method INITIALIZE phase ',phase
-    elseif (methodFlag == ESMF_METHOD_READRESTART) then
-      write(message,'(A,I1)') trim(name)//' in method READRESTART phase ',phase
-    elseif (methodFlag == ESMF_METHOD_RUN) then
-      write(message,'(A,I1)') trim(name)//' in method RUN phase ',phase
-    elseif (methodFlag == ESMF_METHOD_FINALIZE) then
-      write(message,'(A,I1)') trim(name)//' in FINALIZE phase ',phase
-    else
-      write(message,'(A,I1)') trim(name)//' in unknown method ',phase
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    if (isPresent) then
-      call ESMF_GridCompGet(comp, vm=vm, rc=localRc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !!@ todo utilize VM info
-      !! call MOSSCO_VmLog(vm)
-    endif
-
-    !!@ todo utilize context/method/phase/name
-
-    call ESMF_GridCompGet(comp, configFileIsPresent=isPresent, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (isPresent) then
-      call ESMF_GridCompGet(comp, config=config, rc=localRc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !!@ todo utilize Config info
-      !! call MOSSCO_ConfigLog(config)
-    endif
-
-    call ESMF_GridCompGet(comp, importStateIsPresent=isPresent, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (isPresent) then
-      call ESMF_GridCompGet(comp, importState=state, rc=localRc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !! call MOSSCO_StateLog(state, rc=localrc)
-    endif
-
-    call ESMF_GridCompGet(comp, exportStateIsPresent=isPresent, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (isPresent) then
-      call ESMF_GridCompGet(comp, exportState=state, rc=localRc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !! call MOSSCO_StateLog(state, rc=localrc)
-    endif
-
-    call ESMF_GridCompGet(comp, gridIsPresent=isPresent, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (isPresent) then
-      call ESMF_GridCompGet(comp, grid=grid, rc=localRc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !! call MOSSCO_GridLog(grid)
-    endif
-
-    call ESMF_GridCompGet(comp, clockIsPresent=isPresent, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (isPresent) then
-      call ESMF_GridCompGet(comp, clock=clock, rc=localRc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !! call MOSSCO_ClockLog(clock)
-    endif
-
-    call ESMF_AttributeGet(comp, count=linkedCount, attCountFlag=ESMF_ATTGETCOUNT_ATTLINK, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message, '(A,I2,A)') trim(name)//' contains ', linkedCount, ' linked, '
-
-    call ESMF_AttributeGet(comp, count=packCount, attCountFlag=ESMF_ATTGETCOUNT_ATTPACK, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message, '(A,I2,A)') trim(message), packCount, ' packed, and '
-
-    call ESMF_AttributeGet(comp, count=attCount, attCountFlag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message, '(A,I2,A)') trim(message), attCount, ' single attributes'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    do i=1, attCount
-      message=''
-      call MOSSCO_CompIndexedAttributeString(comp, i, message, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      write(message,'(A)')  trim(name)//' single attribute '//trim(message)
-
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-    enddo
-
-!     call ESMF_AttGetAttPack(comp, convention='CIM 1.5' , purpose='ModelComp', isPresent=isPresent, &
-!       rc=localrc)
-!     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!
-!     if (isPresent) then
-!       call ESMF_AttGetAttPack(comp, convention='CIM 1.5' , purpose='ModelComp', attPack=attPack, &
-!         rc=localrc)
-!       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!     endif
-
-!     do i=1, attCount
-!     message=''
-!         call MOSSCO_CompIndexedAttributeString(comp, i, message, localrc)
-!         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!
-!         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-!           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!
-!         write(message,'(A)')  trim(name)//' pack attribute '//trim(message)
-!
-!         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-!     enddo
-
-  end subroutine MOSSCO_GridCompLog
-
-#undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_CompIndexedAttributeString"
   subroutine MOSSCO_CompIndexedAttributeString(comp, index, message , rc)
 
@@ -875,5 +703,542 @@ contains
     endif
 
    end subroutine MOSSCO_CompIndexedAttributeString
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompLog"
+  subroutine MOSSCO_GridCompLog(gridComp, kwe, log, rc)
+
+    type(ESMF_GridComp)             :: gridComp
+    logical,intent(in ),optional    :: kwe !keyword-enforcer
+    type(ESMF_Log), optional        :: log
+     integer(ESMF_KIND_I4), optional :: rc
+
+     integer(ESMF_KIND_I4)           :: localrc, itemCount, i, j, rc_
+     character(len=ESMF_MAXPATHLEN)  :: string, message
+     character(len=ESMF_MAXSTR)      :: name, attributeName
+     logical                         :: isPresent
+     type(ESMF_TypeKind_Flag)        :: typeKind
+     logical, allocatable            :: logicalValueList(:)
+     real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
+     real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
+     integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
+     integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
+     character(len=4096)       , allocatable :: characterValueList(:)
+
+     type(ESMF_State)                :: state
+     type(ESMF_Grid)                 :: grid
+     type(ESMF_Config)               :: config
+     type(ESMF_Vm)                   :: vm
+     type(ESMF_Clock)                :: clock
+
+    integer(ESMF_KIND_I4)           :: petCount, count
+    type(ESMF_Context_Flag)         :: contextFlag
+    type(ESMF_Method_Flag)          :: methodFlag
+    integer(ESMF_KIND_I4)           :: phase
+    type(ESMF_AttPack)              :: attPack
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(kwe)) rc = rc_
+
+    call ESMF_GridCompGet(gridComp, name=name, contextFlag=contextFlag, &
+      currentMethod=methodFlag, currentPhase=phase, vmIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (methodFlag == ESMF_METHOD_INITIALIZE) then
+      write(message,'(A,I1)') trim(name)//' in method INITIALIZE phase ',phase
+    elseif (methodFlag == ESMF_METHOD_READRESTART) then
+      write(message,'(A,I1)') trim(name)//' in method READRESTART phase ',phase
+    elseif (methodFlag == ESMF_METHOD_RUN) then
+      write(message,'(A,I1)') trim(name)//' in method RUN phase ',phase
+    elseif (methodFlag == ESMF_METHOD_FINALIZE) then
+      write(message,'(A,I1)') trim(name)//' in FINALIZE phase ',phase
+    else
+      write(message,'(A,I1)') trim(name)//' in unknown method phase ',phase
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !!@ todo utilize VM info
+      !call ESMF_GridCompGet(gridComp, localPet, petCount, contextflag, &
+      !comptype)
+    endif
+
+    call ESMF_GridCompGet(gridComp, gridIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_GridGet(grid, name=string, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has grid '//trim(string)
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, importState=state, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(state, name=string, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has importState '//trim(string)
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, exportState=state, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_StateGet(state, name=string, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has exportState '//trim(string)
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has config'
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    call ESMF_GridCompGet(gridComp, configFileIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, configFile=string, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has config file '//trim(string)
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    call ESMF_GridCompGet(gridComp, clockIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ClockGet(clock, name=string, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has clock '//trim(string)
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(gridComp, count=count , attCountFlag=ESMF_ATTGETCOUNT_ATTLINK, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(name)//' contains ', count, ' linked, '
+
+    call ESMF_AttributeGet(gridComp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTPACK, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(message), count, ' packed, and '
+
+    call ESMF_AttributeGet(gridComp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(message), count, ' single attributes'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeGet(gridComp, count=count, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, count
+       call ESMF_AttributeGet(gridComp, attributeIndex=i , name=attributeName, rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+       write(message,'(A)')  trim(name)//' attribute'
+       call MOSSCO_MessageAdd(message,' '//trim(attributeName)//'=')
+
+       call ESMF_AttributeGet(gridComp, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+       if (typekind==ESMF_TYPEKIND_Logical) then
+         allocate(logicalValueList(itemCount))
+         call ESMF_AttributeGet(gridComp, name=attributeName, valueList=logicalValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+         enddo
+         deallocate(logicalValueList)
+       elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+         if (allocated(characterValueList)) deallocate(characterValueList)
+         allocate(characterValueList(itemCount))
+         call ESMF_AttributeGet(gridComp, name=attributeName, valueList=characterValueList, rc=localrc)
+         if (localrc /= ESMF_SUCCESS) then
+           !(ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+           !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           !>@ todo: how to deal with very long attributes that don't fit into valueList?
+           rc=ESMF_SUCCESS
+         endif
+
+         if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
+           write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
+           do j=2, itemCount-1
+             write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
+           enddo
+         endif
+         if (allocated(characterValueList)) deallocate(characterValueList)
+       elseif (typekind==ESMF_TYPEKIND_I4) then
+         allocate(integer4ValueList(itemCount))
+         call ESMF_AttributeGet(gridComp, name=attributeName, valueList=integer4ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+         enddo
+         deallocate(integer4ValueList)
+       elseif (typekind==ESMF_TYPEKIND_I8) then
+         allocate(integer8ValueList(itemCount))
+         call ESMF_AttributeGet(gridComp, name=attributeName, valueList=integer8ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+         enddo
+         deallocate(integer8ValueList)
+       elseif (typekind==ESMF_TYPEKIND_R4) then
+         allocate(real4ValueList(itemCount))
+         call ESMF_AttributeGet(gridComp, name=attributeName, valueList=real4ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+         enddo
+         deallocate(real4ValueList)
+       elseif (typekind==ESMF_TYPEKIND_R8) then
+         allocate(real8ValueList(itemCount))
+         call ESMF_AttributeGet(gridComp, name=attributeName, valueList=real8ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+         enddo
+         deallocate(real8ValueList)
+       endif
+       if (present(log)) then
+         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+       else
+         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+       endif
+     enddo
+
+   end subroutine MOSSCO_GridCompLog
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CplCompLog"
+  subroutine MOSSCO_CplCompLog(cplComp, kwe, log, rc)
+
+    type(ESMF_CplComp)             :: cplComp
+    logical,intent(in ),optional    :: kwe !keyword-enforcer
+    type(ESMF_Log), optional        :: log
+     integer(ESMF_KIND_I4), optional :: rc
+
+     integer(ESMF_KIND_I4)           :: localrc, itemCount, i, j, rc_
+     character(len=ESMF_MAXPATHLEN)  :: string, message
+     character(len=ESMF_MAXSTR)      :: name, attributeName
+     logical                         :: isPresent
+     type(ESMF_TypeKind_Flag)        :: typeKind
+     logical, allocatable            :: logicalValueList(:)
+     real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
+     real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
+     integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
+     integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
+     character(len=4096)       , allocatable :: characterValueList(:)
+
+     type(ESMF_Config)               :: config
+     type(ESMF_Vm)                   :: vm
+     type(ESMF_Clock)                :: clock
+
+    integer(ESMF_KIND_I4)           :: petCount, count
+    type(ESMF_Context_Flag)         :: contextFlag
+    type(ESMF_Method_Flag)          :: methodFlag
+    integer(ESMF_KIND_I4)           :: phase
+    type(ESMF_AttPack)              :: attPack
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(kwe)) rc = rc_
+
+    call ESMF_CplCompGet(cplComp, name=name, contextFlag=contextFlag, &
+      currentMethod=methodFlag, currentPhase=phase, vmIsPresent=isPresent, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (methodFlag == ESMF_METHOD_INITIALIZE) then
+      write(message,'(A,I1)') trim(name)//' in method INITIALIZE phase ',phase
+    elseif (methodFlag == ESMF_METHOD_READRESTART) then
+      write(message,'(A,I1)') trim(name)//' in method READRESTART phase ',phase
+    elseif (methodFlag == ESMF_METHOD_RUN) then
+      write(message,'(A,I1)') trim(name)//' in method RUN phase ',phase
+    elseif (methodFlag == ESMF_METHOD_FINALIZE) then
+      write(message,'(A,I1)') trim(name)//' in FINALIZE phase ',phase
+    else
+      write(message,'(A,I1)') trim(name)//' in unknown method phase ',phase
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (isPresent) then
+      call ESMF_CplCompGet(cplComp, vm=vm, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !!@ todo utilize VM info
+      !call ESMF_CplCompGet(cplComp, localPet, petCount, contextflag, &
+      !comptype)
+    endif
+
+    call ESMF_CplCompGet(cplComp, configIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_CplCompGet(cplComp, config=config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has config'
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    call ESMF_CplCompGet(cplComp, configFileIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_CplCompGet(cplComp, configFile=string, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has config file '//trim(string)
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    call ESMF_CplCompGet(cplComp, clockIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ClockGet(clock, name=string, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') trim(name)//' has clock '//trim(string)
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(cplComp, count=count , attCountFlag=ESMF_ATTGETCOUNT_ATTLINK, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(name)//' contains ', count, ' linked, '
+
+    call ESMF_AttributeGet(cplComp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTPACK, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(message), count, ' packed, and '
+
+    call ESMF_AttributeGet(cplComp, count=count, attCountFlag=ESMF_ATTGETCOUNT_ATTRIBUTE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    write(message, '(A,I2,A)') trim(message), count, ' single attributes'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeGet(cplComp, count=count, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, count
+       call ESMF_AttributeGet(cplComp, attributeIndex=i , name=attributeName, rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+       write(message,'(A)')  trim(name)//' attribute'
+       call MOSSCO_MessageAdd(message,' '//trim(attributeName)//'=')
+
+       call ESMF_AttributeGet(cplComp, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+       if (typekind==ESMF_TYPEKIND_Logical) then
+         allocate(logicalValueList(itemCount))
+         call ESMF_AttributeGet(cplComp, name=attributeName, valueList=logicalValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+         enddo
+         deallocate(logicalValueList)
+       elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+         if (allocated(characterValueList)) deallocate(characterValueList)
+         allocate(characterValueList(itemCount))
+         call ESMF_AttributeGet(cplComp, name=attributeName, valueList=characterValueList, rc=localrc)
+         if (localrc /= ESMF_SUCCESS) then
+           !(ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+           !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+           !>@ todo: how to deal with very long attributes that don't fit into valueList?
+           rc=ESMF_SUCCESS
+         endif
+
+         if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
+           write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
+           do j=2, itemCount-1
+             write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
+           enddo
+         endif
+         if (allocated(characterValueList)) deallocate(characterValueList)
+       elseif (typekind==ESMF_TYPEKIND_I4) then
+         allocate(integer4ValueList(itemCount))
+         call ESMF_AttributeGet(cplComp, name=attributeName, valueList=integer4ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+         enddo
+         deallocate(integer4ValueList)
+       elseif (typekind==ESMF_TYPEKIND_I8) then
+         allocate(integer8ValueList(itemCount))
+         call ESMF_AttributeGet(cplComp, name=attributeName, valueList=integer8ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+         enddo
+         deallocate(integer8ValueList)
+       elseif (typekind==ESMF_TYPEKIND_R4) then
+         allocate(real4ValueList(itemCount))
+         call ESMF_AttributeGet(cplComp, name=attributeName, valueList=real4ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+         enddo
+         deallocate(real4ValueList)
+       elseif (typekind==ESMF_TYPEKIND_R8) then
+         allocate(real8ValueList(itemCount))
+         call ESMF_AttributeGet(cplComp, name=attributeName, valueList=real8ValueList, rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+         write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
+         do j=2, itemCount-1
+           write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+         enddo
+         deallocate(real8ValueList)
+       endif
+       if (present(log)) then
+         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+       else
+         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+       endif
+     enddo
+
+   end subroutine MOSSCO_CplCompLog
 
 end module mossco_component
