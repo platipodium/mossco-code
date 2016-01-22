@@ -597,11 +597,16 @@ module fabm_pelagic_component
 
       !> continue with statefield
       call ESMF_AttributeSet(concfield,'units',trim(pel%export_states(n)%units))
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Find all attributes in this state variable and add them to MOSSCO
       itemCount =  pel%model%state_variables(n)%properties%size()
-      if (itemCount>0) allocate(itemNameList(itemCount))
+
+      call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       call pel%model%state_variables(n)%properties%keys(itemNameList)
       do i=1, itemCount
         !>@todo
@@ -612,7 +617,9 @@ module fabm_pelagic_component
         !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
 
-      if (allocated(itemNameList)) deallocate(itemNameList)
+      call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> add attributes relevant for MOSSCO
       !! mean_particle_diameter and particle density given only,
@@ -1595,10 +1602,21 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
-    if (allocated(exportFieldList)) deallocate(exportFieldList)
-    if (allocated(importFieldList)) deallocate(importFieldList)
-    if (allocated(itemNameList))    deallocate(itemNameList)
-    if (allocated(itemTypeList))    deallocate(itemTypeList)
+    call MOSSCO_Reallocate(exportFieldList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(importFieldList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemTypeList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> prepare component's export
     call pel%update_export_states()
