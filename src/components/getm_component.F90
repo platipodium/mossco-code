@@ -686,9 +686,9 @@ module getm_component
     integer(ESMF_KIND_I4), intent(out), optional  :: rc
 
     type(ESMF_FieldBundle)        :: fieldBundle
-    type(ESMF_Field)              :: field
+    type(ESMF_Field), allocatable :: fieldList(:)
     character(len=ESMF_MAXSTR)    :: fieldName, message
-    integer                       :: localrc, i, rc_
+    integer                       :: localrc, i, j, rc_, fieldCount
 
     rc_ = ESMF_SUCCESS
 
@@ -703,19 +703,35 @@ module getm_component
 
     do i=1,size(transport_conc)
       call ESMF_FieldBundleGet(fieldBundle, trim(transport_conc(i)%fieldname), &
-        field=field,rc=localrc)
+        fieldCount=fieldCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeGet(field,'has_boundary_data', &
-        value=transport_conc(i)%has_boundary_data, defaultValue=.false., rc=localrc)
+
+      if (fieldCount < 1 ) cycle
+
+      if (.not.allocated(fieldList)) allocate(fieldList(fieldCount), stat=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (transport_conc(i)%has_boundary_data) then
-        if ((present(advanceCount) .and. advanceCount == 0) &
-          .or. (.not.present(advanceCount))) then
-          call ESMF_LogWrite('  use boundary conditions for '//trim(transport_conc(i)%fieldname), ESMF_LOGMSG_INFO)
-        endif
-      end if
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(fieldBundle, trim(transport_conc(i)%fieldname), &
+        fieldList=fieldList,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do j = 1, fieldCount
+        call ESMF_AttributeGet(fieldList(j), 'has_boundary_data', &
+          value=transport_conc(i)%has_boundary_data, defaultValue=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (transport_conc(i)%has_boundary_data) then
+          if ((present(advanceCount) .and. advanceCount == 0) &
+            .or. (.not.present(advanceCount))) then
+            call ESMF_LogWrite('  use boundary conditions for '//trim(transport_conc(i)%fieldname), ESMF_LOGMSG_INFO)
+          endif
+        end if
+      enddo
+
+      if (allocated(fieldList)) deallocate(fieldList)
     end do
 
    if (present(rc)) rc = rc_
