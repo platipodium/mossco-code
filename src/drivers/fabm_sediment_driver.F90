@@ -66,6 +66,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    logical                      :: do_output=.true.
    real(rk)                     :: porosity_fac=1.0_rk
    real(rk)                     :: pom_flux_max=1.0_rk
+   real(rk)                     :: missing_value=1.e20_rk
    type(export_state_type),dimension(:),allocatable :: export_states
 
    real(rk),dimension(:,:,:),pointer     :: porosity,temp,intf_porosity,bioturbation_factor
@@ -371,7 +372,7 @@ if(associated(sed%mask)) then
     do j=1,sed%jnum
       do i=1,sed%inum
         !> @todo: check adaptive solver for -1.d20 or other negative missing values
-        if (sed%mask(i,j,k)) sed%conc(i,j,k,:)=1.d20
+        if (sed%mask(i,j,k)) sed%conc(i,j,k,:)=sed%missing_value
       end do
     end do
   end do
