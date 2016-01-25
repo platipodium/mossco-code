@@ -1,3 +1,13 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 3D coupling
+# between getm, pelagic and sediment ecosystem, filtration and forcing by
+# porosity, rivers, and lateral boundaries
+#
+# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
 dependencies:
   - boundary_input:
     - component: getm
@@ -28,7 +38,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - mossco_gfbmfrpr: netcdf
+  - mossco_gfbmfrp: netcdf
   - mussel_input: netcdf_input
   - river_input: netcdf_input
   - restart_soil: netcdf_input
@@ -44,11 +54,11 @@ coupling:
     interval: none
   - components:
      - mussel_input
-     - mossco_gfbmfrpr
+     - mossco_gfbmfrp
     interval: 30 h
   - components:
      - mussel
-     - mossco_gfbmfrpr
+     - mossco_gfbmfrp
     interval: 30 h
   - components:
      - boundary_input
@@ -108,13 +118,13 @@ coupling:
     interval: 10 m
   - components:
      - getm
-     - mossco_gfbmfrpr
+     - mossco_gfbmfrp
     interval: 30 h
   - components:
      - fabm_pelagic
-     - mossco_gfbmfrpr
+     - mossco_gfbmfrp
     interval: 30 h
   - components:
      - fabm_sediment
-     - mossco_gfbmfrpr
+     - mossco_gfbmfrp
     interval: 30 h
