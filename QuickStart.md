@@ -14,14 +14,14 @@ installed from the package manager). You will find some help at
 
 Package    | Ubuntu        | Suse | MacPorts      | Fink
 -----------|:--------------|:-----|:--------------|:---------------
-compilers  | gcc, gfortran, g++ | gcc-4_8-branch revision 202388  | gcc48         | gcc48-compiler
+compilers  | gcc, gfortran, g++ | gcc-4_8-branch revision 202388  | gcc5         | gcc48-compiler
 NetCDF     | libnetcdf-dev, netcdf-bin | libnetcdf-dev    |               | netcdf-c7, netcdf-fortran4, netcdf-cxx4
-MPI        | libmpich2-dev, mpich2     | openmpi-dev      | mpich-gcc48 *or* openmpi-gcc48   | openmpi
+MPI        | libmpich2-dev, mpich2     | openmpi-dev      | mpich-gcc5 *or* openmpi-gcc5  | openmpi
 YAML       | python-yaml               | Python-yaml | py27-yaml  | yaml-py27
 cmake      | cmake                     | cmake       | cmake      | cmake
 
 The ESMF installation finally provides a file `esmf.mk`, this location must be
-provided to MOSSCO, e.g.:
+provided to MOSSCO.  On my Linux system with gfortran and mpich, the path is, e.g.:
 
 		export ESMFMKFILE=<path_to_esmf_install>/lib/lib0/Linux.gfortran.64.mpich2.default/esmf.mk
 
