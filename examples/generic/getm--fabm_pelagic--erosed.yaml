@@ -1,6 +1,12 @@
-# This example tests the interaction of erosed with fabm_pelagic
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 3D coupling
+# between getm, pelagic ecosystem and erosion
+
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
-# configuration dependencies:
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
 
 dependencies:
   - fabm_pelagic:
@@ -13,9 +19,14 @@ dependencies:
   - erosed: fabm_pelagic
 
 instances:
-  - mossco_gfen: netcdf
+  - mossco_gfe: netcdf
+  - restart: netcdf_input
 
 coupling:
+  - components:
+     - restart
+     - fabm_pelagic
+    interval: none
   - components:
      - getm
      - fabm_pelagic
@@ -27,7 +38,7 @@ coupling:
     interval: none
   - components:
      - fabm_pelagic
-     - mossco_gfen
+     - mossco_gfe
     interval: 60 h
   - components:
      - fabm_pelagic
@@ -40,9 +51,9 @@ coupling:
      - fabm_pelagic
   - components:
      - getm
-     - mossco_gfen
+     - mossco_gfe
     interval: 60 h
   - components:
      - erosed
-     - mossco_gfen
+     - mossco_gfe
     interval: 60 h
