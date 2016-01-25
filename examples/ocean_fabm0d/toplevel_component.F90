@@ -2,9 +2,9 @@
 !
 !> This module implements a 2-way coupled system between ocean and 0d biogeochemistry
 !
-!  This computer program is part of MOSSCO. 
-!> @copyright Copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht 
-!> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
 ! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
@@ -22,8 +22,10 @@ module toplevel_component
 #endif
   use fabm0d_component, only: fabm0d_SetServices => SetServices
 
-  implicit none
+  use mossco_component
   
+  implicit none
+
   private
 
   public SetServices
@@ -50,7 +52,7 @@ module toplevel_component
   end subroutine SetServices
 
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -58,10 +60,10 @@ module toplevel_component
     integer, intent(out)  :: rc
 
     integer               :: petCount, localPet
-    
+
     call ESMF_LogWrite("Toplevel component initializing ... ",ESMF_LOGMSG_INFO)
-    
-    fabm0dComp     = ESMF_GridCompCreate(name="ESMF/FABM 0d component", &          
+
+    fabm0dComp     = ESMF_GridCompCreate(name="ESMF/FABM 0d component", &
                          contextflag=ESMF_CONTEXT_PARENT_VM,rc=rc)
     call ESMF_GridCompSetServices(fabm0dComp, fabm0d_SetServices, rc=rc)
     fabm0dImportState = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabm0d Import")
@@ -81,12 +83,12 @@ module toplevel_component
     !call ESMF_CplCompInitialize(oscplComp,importState=sedimentExportState,exportState=oceanImportState,&
     !  clock=parentClock,rc=rc)
 
-    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
+    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -108,10 +110,10 @@ module toplevel_component
       call ESMF_LogWrite(message, ESMF_LOGMSG_INFO)
 #endif
 
-    !  call ESMF_CplComprun(oscplComp,importState=sedimentExportState,& 
+    !  call ESMF_CplComprun(oscplComp,importState=sedimentExportState,&
     !    exportState=oceanImportState,clock=parentclock,rc=rc)
     !  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-      
+
       call ESMF_GridCompRun(oceanComp,importState=oceanImportState,&
         exportState=oceanExportState,clock=parentclock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
@@ -126,31 +128,31 @@ module toplevel_component
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-   enddo 
+   enddo
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
- 
+
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
     call ESMF_LogWrite("Toplevel component finalizing",ESMF_LOGMSG_INFO)
-    
+
     call ESMF_GridCompFinalize(oceanComp,importState=oceanImportState,exportState=oceanExportState, &
                             clock=parentclock, rc=rc)
     call ESMF_GridCompDestroy(oceanComp,rc=rc)
-  
+
     call ESMF_GridCompFinalize(fabm0dComp,importState=fabm0dImportState,exportState=fabm0dExportState, &
                             clock=parentclock, rc=rc)
     call ESMF_GridCompDestroy(fabm0dComp,rc=rc)
-  
+
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
-   
+
     rc=ESMF_SUCCESS
 
   end subroutine Finalize
