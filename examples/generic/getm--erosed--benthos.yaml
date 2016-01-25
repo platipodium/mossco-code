@@ -1,0 +1,44 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 3D coupling
+# between constant, getm, erosed, benthos and netcdf
+#
+# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+
+dependencies:
+  - benthos:
+    - component: getm
+      grid: water_depth_at_soil_surface
+  - erosed:
+    - component: getm
+      grid: water_depth_at_soil_surface
+
+instances:
+  - mossco_geb: netcdf
+
+coupling:
+  - components:
+     - constant
+     - erosed
+    interval: none
+  - components:
+     - constant
+     - getm
+  - components:
+     - benthos
+     - erosed
+  - components:
+     - getm
+     - erosed
+  - components:
+     - getm
+     - mossco_geb
+  - components:
+     - benthos
+     - mossco_geb
+  - components:
+     - erosed
+     - mossco_geb
