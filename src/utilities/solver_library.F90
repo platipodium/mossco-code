@@ -37,6 +37,9 @@ type, public :: type_rhs_driver !< base driver class
    real(selected_real_kind(13)) :: relative_change_min=-0.9d0 ! minimum relative change
    real(selected_real_kind(13)),dimension(:,:,:,:),pointer :: conc=>null()
    logical, dimension(:,:,:), pointer :: mask=>null()
+   real(selected_real_kind(13)) :: last_min_dt=1.e20
+   integer                      :: last_min_dt_grid_cell(4)=(/-99,-99,-99,-99/)
+   logical                      :: adaptive_solver_diagnostics=.false.
 contains
    procedure :: get_rhs => base_get_rhs
 end type
@@ -120,6 +123,13 @@ case(ADAPTIVE_EULER)
               .and. (dt_red> rhs_driver%dt_min)) then
          dt_red = dt_red*0.25_rk
       else
+         if (rhs_driver%adaptive_solver_diagnostics) then
+           if (dt_red < rhs_driver%last_min_dt) then
+             rhs_driver%last_min_dt = dt_red
+             rhs_driver%last_min_dt_grid_cell = &
+               minloc((c1-c_pointer(_SHAPE3D_,:))/c_pointer(_SHAPE3D_,:))
+           end if
+         end if
          rhs_driver%conc(_SHAPE3D_,:) = c1
          dt_int = dt_int + dt_red
       end if
