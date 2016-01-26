@@ -2,7 +2,7 @@
 !> @file main.F90
 !!
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
@@ -50,6 +50,9 @@ program main
   character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg'
   character(len=ESMF_MAXSTR) :: logLevel='all'
   logical                    :: logFlush=.false.
+
+  integer(ESMF_KIND_I8)      :: system_clock_start, system_clock_stop, system_clock_max
+  integer(ESMF_KIND_I8)      :: system_clock_rate, system_clock_duration
 
 !> Read the namelist `mossco_run.nml`and evaluate five parameters:
 !> 1. `start`: the start date of the simulation in YYYY-MM-DD hh:mm:ss format
@@ -231,7 +234,12 @@ program main
   write(message,formatstring) 'Creating multiple logs, this is processor ',localPet,' of ', petCount
   if (logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
- ! Get the wall clock starting time
+  ! Initialize the system clock (which measures CPU time)
+  call system_clock(count_rate=system_clock_rate)
+  call system_clock(count_max=system_clock_max)
+  call system_clock(system_clock_start)
+
+  ! Get the wall clock starting time
   call ESMF_TimeSet(time1, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -375,6 +383,8 @@ program main
 
   call ESMF_LogWrite("All ESMF components destroyed", ESMF_LOGMSG_INFO)
 
+  call system_clock(system_clock_stop)
+
   call ESMF_TimeSet(time2, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -407,6 +417,10 @@ program main
     write(message,'(A,ES10.3,A)') trim(title)//' speedup per CPU is ',runseconds/seconds/petCount
     if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
   endif
+
+  system_clock_duration = system_clock_stop - system_clock_start / system_clock_rate
+  write(message,'(A,ES10.3,A)') trim(title)//' CPU time ',dble(system_clock_duration),' seconds'
+  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
   if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) &
     call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
