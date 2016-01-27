@@ -249,7 +249,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer, intent(out), optional  :: rc
 
     integer                     :: localrc, rc_
-    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount
+    integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, importItemCount
     character (len=ESMF_MAXSTR) :: message, creatorName
     type(ESMF_Time)             :: currTime
     character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList
@@ -287,7 +287,19 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     !! Loop over items
     do i=1, itemCount
 
-      if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
+      if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+
+        call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
+          itemCount=importItemCount, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (importItemCount /= 1) then
+          write(message,'(A)') '  strangely skipped item '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          cycle
+        endif
+
         call ESMF_StateGet(importState, trim(itemNameList(i)), importField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
