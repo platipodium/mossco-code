@@ -761,6 +761,14 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      call ESMF_AttributeSet(fieldList(i), 'netcdf_filename', trim(nc%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(fieldList(i), 'netcdf_varname', trim(nc%variables(i)%name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       write(message, '(A)') trim(name)//' created field'
       call MOSSCO_FieldString(fieldList(i), message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -1048,9 +1056,11 @@ module netcdf_input_component
 
       !! Convert aliases in file to proper item names
       if (allocated(aliasList)) then
-!RH: this loop is useless
-        do j=1,ubound(aliasList,1)
-          if (trim(itemNameList(i)) == trim(aliasList(j,2))) itemNameList(i)=trim(aliasList(j,2))
+        do j = lbound(aliasList,1), ubound(aliasList,1)
+          if (trim(itemNameList(i)) == trim(aliasList(j,1))) then
+            itemNameList(i)=trim(aliasList(j,2))
+            exit
+          endif
         enddo
       endif
 
