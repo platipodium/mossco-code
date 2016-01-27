@@ -363,16 +363,27 @@ program main
     endif
   end if
 
-
   !> @todo create simulation attribute package for CIM and write this to XML if XERCES is set, otherwise write
   !> tab-delimited info
+
+  call ESMF_VmBarrier(vm, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call ESMF_GridCompRun(topComp, importState=topState, exportState=topState, clock=mainClock, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  call ESMF_VmBarrier(vm, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   ! Destroy toplevel component and clean up
   call ESMF_GridCompFinalize(topComp, importState=topState, exportState=topState, clock=mainClock, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call ESMF_VmBarrier(vm, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
