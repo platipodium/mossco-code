@@ -148,8 +148,8 @@ contains
 
     call ESMF_TimeGet(currTime_,timeStringISOFrac=timestring)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message,'(A)') name_(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
 
+    write(message,'(A)') name_(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
     if (method == ESMF_METHOD_RUN) then
       write(message,'(A)') trim(message)//' running'
       write(phaseString, '(A,I1)') 'run_p', phase
@@ -444,10 +444,6 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message,'(A,I1,A,I1,A,ES9.2,A,ES9.2,A)') trim(message)//' phase ',phase,' of ', &
-      phaseCount,' in ',cpuTimeDuration,'/',systemClockDuration,' cpu/wall seconds'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
-
     if (method == ESMF_METHOD_FINALIZE) then
       do i = lbound(methodsToEvaluate,1), ubound(methodsToEvaluate,1)
         write(phaseString,'(A,I1)') trim(methodsToEvaluate(i))//'_p', phase
@@ -478,6 +474,23 @@ contains
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       enddo
     endif
+
+    write(message,'(A)') name(:MOSSCO_MAXLEN_COMPNAME)//' '//trim(timestring)
+    if (method == ESMF_METHOD_RUN) then
+      write(message,'(A)') trim(message)//' ran'
+    elseif (method == ESMF_METHOD_INITIALIZE) then
+      write(message,'(A)') trim(message)//' initialized'
+    elseif (method == ESMF_METHOD_FINALIZE) then
+      write(message,'(A)') trim(message)//' finalized'
+    elseif (method == ESMF_METHOD_READRESTART) then
+      write(message,'(A)') trim(message)//' readrestarted'
+    else
+      write(message,'(A)') trim(message)//' did'
+    endif
+
+    write(message,'(A,I1,A,I1,A,ES9.2,A,ES9.2,A)') trim(message)//' phase ',phase,' of ', &
+      phaseCount,' in ',cpuTimeDuration,'/',systemClockDuration,' cpu/wall seconds'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
     if (present(rc)) rc=rc_
     return
@@ -725,7 +738,6 @@ contains
     if (cMethod == ESMF_METHOD_FINALIZE) then
       do i = lbound(methodsToEvaluate,1), ubound(methodsToEvaluate,1)
         write(phaseString,'(A,I1)') trim(methodsToEvaluate(i))//'_p', cPhase
-        call ESMF_LogWrite(trim(myName//trim(phaseString)), ESMF_LOGMSG_INFO)
         call ESMF_AttributeGet(gridComp, 'system_clock_duration_'//trim(phaseString), &
           isPresent=isPresent, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
