@@ -1048,6 +1048,7 @@ module netcdf_input_component
 
       !! Convert aliases in file to proper item names
       if (allocated(aliasList)) then
+!RH: this loop is useless
         do j=1,ubound(aliasList,1)
           if (trim(itemNameList(i)) == trim(aliasList(j,2))) itemNameList(i)=trim(aliasList(j,2))
         enddo
