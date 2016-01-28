@@ -15,6 +15,7 @@ use solver_library
 implicit none
 
 real(rk)       :: dt,dzmin,dt_min, relative_change_min
+real(rk)       :: bcup_dissolved_variables
 integer        :: tnum,t,funit,output,k,n,numyears,numlayers
 integer        :: ode_method
 integer        :: presimulation_years=-1
@@ -24,7 +25,7 @@ real(rk),dimension(:,:,:), allocatable,target  :: bdys,fluxes
 real(rk),dimension(:,:,:),pointer              :: diag
 
 namelist/run_nml/ numyears,dt,output,numlayers,dzmin, &
-                  ode_method,presimulation_years, &
+                  ode_method,presimulation_years, bcup_dissolved_variables, &
                   dt_min, relative_change_min
 
 ! initialise
@@ -36,6 +37,7 @@ dzmin=0.005
 ode_method=_RK4_
 dt_min=1.0_rk
 relative_change_min=-0.9_rk
+bcup_dissolved_variables=2
 
 open(33,file='run.nml',action='read',status='old')
 read(33,nml=run_nml)
@@ -46,6 +48,8 @@ sed%grid%knum=numlayers
 sed%grid%dzmin=dzmin
 sed%dt_min=dt_min
 sed%relative_change_min=relative_change_min
+sed%bcup_dissolved_variables=bcup_dissolved_variables
+sed%adaptive_solver_diagnostics=.true.
 
 funit=2
 
@@ -106,6 +110,16 @@ do t=1,tnum
 
    if (mod(t,output) .eq. 0) then
        write(0,*) ' elapsed ',t*dt/86400,' days'
+
+       ! write adaptive timestep diagnostics
+       if (ode_method .eq. 2) then
+         write(0,FMT='(A,F6.2,A,I3,A,A)') '   last minimum timestep: ', &
+           sed%last_min_dt,'s, layer ',sed%last_min_dt_grid_cell(3),', variable ', &
+           trim(sed%model%state_variables(sed%last_min_dt_grid_cell(4))%name)
+         ! reset last minimum timestep
+         sed%last_min_dt = dt
+       end if
+
        write(funit,*) t*dt,'fluxes',fluxes(1,1,:)
        do k=1,_KNUM_
           write(funit,FMT='(E15.3,A,E15.4E3,A,E15.4E3,A,E15.4E3)',advance='no') t*dt,' ',sed%grid%zc(1,1,k),' ',sed%grid%dz(1,1,k),' ',sed%porosity(1,1,k)

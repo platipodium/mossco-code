@@ -6,6 +6,7 @@
 ! output - number of timesteps (#)
 ! numlayers - number of sediment layers (#)
 ! ode_method - 1: Runge-Kutta 4th order, 2: Adaptive Euler-Forward
+! bcup_dissolved_variables - 1: fluxes, 2: concentrations
 !--------------
 &run_nml
   numyears=10
@@ -16,6 +17,7 @@
   ode_method=2
   relative_change_min=-0.9
   dt_min=1.
+  bcup_dissolved_variables=2
 /
 
 &sed_nml
