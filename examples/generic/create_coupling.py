@@ -64,12 +64,12 @@ if not type(config) is dict:
 if config.has_key('author'):
     author = config.pop('author')
 else:
-    author = 'Carsten Lemmen, <carsten.lemmen@hzg.de>'
+    author = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
 
 if config.has_key('copyright'):
     copyright = config.pop('copyright')
 else:
-    copyright = 'Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht'
+    copyright = 'Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht'
 
 if config.has_key('dependencies'):
   dependencies = config.pop('dependencies')
@@ -993,6 +993,7 @@ for item in gridCompList:
     ifrom=gridCompList.index(jtem)
     if not instanceDict.has_key(jtem): continue
     if not instanceDict[jtem] == 'netcdf_input' : continue
+    if coupling[1] == 'nudge_connector' : continue
     fid.write('    !! ReadRestarting ' + item + ' with data from ' + jtem + '\n')
     fid.write('    call ESMF_GridCompReadRestart(gridCompList(' + str(ito+1) + '), importState=gridExportStateList(' + str(ifrom+1) + '), &\n')
     fid.write('      exportState=gridExportStateList(' + str(ito+1) + '), clock=clock, phase=1, rc=localrc)\n')
