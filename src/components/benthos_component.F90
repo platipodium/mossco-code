@@ -308,9 +308,9 @@ contains
     !> (for example read by netcdf-input component)
     allocate (importList(2))
     importList(1)%name  = 'tellina_fabula_mean_abundance'
-    importList(1)%units = ''
+    importList(1)%units = 'ind.m**-2'
     importList(2)%name  = 'microphytobenthos_at_soil_surface'
-    importList(2)%units = ''
+    importList(2)%units = 'mgg'
 
      do i=1,size(importList)
 
@@ -448,6 +448,9 @@ contains
       mask = 0
       mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
    end if
+  ! Initialize microphytobenthos and macrofauna effects on the erodibility and the critical bed shear stress 
+    call Micro%initialize(inum, jnum)
+    call Macrofauna_init(Total_Bioturb,inum, jnum)
 
 !   Complete Import Fields
     do i=1,size(importList)
@@ -461,6 +464,11 @@ contains
                                      totalLWidth=exclusiveLBound-totalLBound, &
                                      totalUWidth=totalUBound-exclusiveUBound)
         importList(i)%data = 0.0d0
+         if (trim (importList(i)%name )== 'tellina_fabula_mean_abundance') then
+           call Macrofauna_set( )
+         elseif  (trim (importList(i)%name )== 'microphytobenthos_at_soil_surface') then
+           call micro%set()
+         endif
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
@@ -511,7 +519,7 @@ contains
                                      ESMF_INDEX_DELOCAL,                      &
                                      totalLWidth=exclusiveLBound-totalLBound, &
                                      totalUWidth=totalUBound-exclusiveUBound)
-        exportList(i)%data = 0.0d0
+        exportList(i)%data = 1.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
@@ -528,8 +536,7 @@ contains
       end if
     end do
 
-    call Micro%initialize(inum, jnum)
-    call Macrofauna_init(Total_Bioturb,inum, jnum)
+  
 
     deallocate(Micro%ErodibilityEffect)
     deallocate(Micro%TauEffect)
@@ -541,8 +548,7 @@ contains
     Total_Bioturb%ErodibilityEffect => exportList(3)%data
     Total_Bioturb%TauEffect         => exportList(4)%data
 
-    call Micro%set()
-    call Macrofauna_set()
+ 
 
 !#define DEBUG
 #ifdef DEBUG
