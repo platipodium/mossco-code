@@ -41,8 +41,11 @@ interface MOSSCO_AttributeGetList
   module procedure MOSSCO_GridCompAttributeGetList2
 end interface MOSSCO_AttributeGetList
 
-contains
+interface MOSSCO_AttributeGetForeignGrid
+  module procedure MOSSCO_StateAttributeGetForeignGrid
+end interface MOSSCO_AttributeGetForeignGrid
 
+contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateAttributeSetList1"
@@ -485,5 +488,58 @@ contains
     enddo
 
   end subroutine MOSSCO_GridCompAttributeGetList2
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompAttributeGetForeignGrid"
+  subroutine MOSSCO_StateAttributeGetForeignGrid(state, grid, kwe, name, rc)
+
+    type(ESMF_State), intent(inout)           :: state
+    type(ESMF_Grid), intent(inout)            :: grid
+    logical, intent(in), optional             :: kwe
+    character(len=*), intent(in), optional    :: name
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
+
+    integer(ESMF_KIND_I4)              :: localrc, rc_
+    character(len=ESMF_MAXSTR)         :: name_='foreign_grid_field_name'
+    character(len=ESMF_MAXSTR)         :: fieldName, message
+    type(ESMF_Field)                   :: field
+    logical                            :: isPresent
+
+    rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(kwe)) rc = rc_
+    if (present(name)) name_ = name
+
+    call ESMF_AttributeGet(state, name=trim(name_), &
+      isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    call ESMF_AttributeGet(state, name=trim(name_), value=fieldName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (trim(fieldName) == 'none') return
+
+    call ESMF_StateGet(state,  trim(fieldName), field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message, '(A)') '  obtains grid from field'
+    call MOSSCO_FieldString(field, message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_FieldGet(field, grid=grid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    return
+
+  end subroutine MOSSCO_StateAttributeGetForeignGrid
 
 end module mossco_attribute
