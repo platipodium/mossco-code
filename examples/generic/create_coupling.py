@@ -853,6 +853,7 @@ if (True):
         fid.write('      !! linking ' + item + ' and ' + jtem + '\n')
         fid.write('      if (gridCompPhaseCountList( ' + str(i+1) + ')>= phase .or. gridCompPhaseCountList( ' + str(j+1) + ')>= phase) then\n')
         for c in couplingList:
+          if c[1]=='nudge_connector': continue
           if c[0]==item and c[-1]==jtem:
             fid.write('        !! linking ' + item + 'Export to ' + jtem + 'Import\n')
             fid.write('        write(message,"(A)") trim(myName)//" linking "//trim(gridCompNameList(' + str(i+1) +'))//"Export to "//trim(gridCompNameList(' + str(j+1)+'))//"Import"\n')
@@ -880,9 +881,10 @@ if (True):
         fid.write('      endif\n\n')
 
   for i,item in enumerate(cplCompList):
-#   dirty hack for now: skip link_connector and rename_connector
+# @todo  dirty hack for now: skip link_connector and rename_connector
     if item=='link_connector': continue
     if item=='rename_connector': continue
+    if item=='nudge_connector': continue
 
     for jtem in couplingList:
       if jtem[1] == item:
