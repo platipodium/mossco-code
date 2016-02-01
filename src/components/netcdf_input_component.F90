@@ -227,16 +227,16 @@ module netcdf_input_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call ESMF_AttributeGet(importState, 'grid_file_name', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeGet(gridComp, 'grid_file_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
-        call ESMF_AttributeGet(importState, 'grid_file_name', value=gridFileName, rc=localrc)
+        call ESMF_AttributeGet(gridComp, 'grid_file_name', value=gridFileName, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (labelIsPresent) then
-        call ESMF_AttributeSet(importState, 'grid_file_name', trim(gridFileName), rc=localrc)
+        call ESMF_AttributeSet(gridComp, 'grid_file_name', trim(gridFileName), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -393,13 +393,13 @@ module netcdf_input_component
     write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_AttributeGet(importState, name='grid_file_name', &
+    call ESMF_AttributeGet(gridComp, name='grid_file_name', &
       isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_AttributeGet(importState, name='grid_file_name', &
+      call ESMF_AttributeGet(gridComp, name='grid_file_name', &
         value=gridFileName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -411,13 +411,14 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_GridAddCoord(grid, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
         write(message, '(A)') trim(name)//' obtains grid from file '//trim(gridFileName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+        call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+
+        fieldRank = 2
         hasGrid=.true.
       endif
     endif
@@ -441,7 +442,7 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (isPresent) then
+    if (.not.hasGrid .and. isPresent) then
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
         value=foreignGridFieldName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -475,8 +476,8 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Check for ungridded dimensions
-    if (fieldRank>gridRank) then
+    !! Check for ungridded dimensions in the case of foreignGrid
+    if (isPresent .and. fieldRank>gridRank) then
       allocate(ungriddedUbnd(fieldRank-gridRank))
       allocate(ungriddedLbnd(fieldRank-gridRank))
       call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd, ungriddedUbound=ungriddedUbnd, rc=localrc)
