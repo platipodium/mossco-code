@@ -49,6 +49,7 @@ program main
   type(ESMF_Config)          :: config
   character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg'
   character(len=ESMF_MAXSTR) :: logLevel='all'
+  character(len=ESMF_MAXSTR) :: logLevelZero='all'
   logical                    :: logFlush=.false.
 
   integer(ESMF_KIND_I8)      :: system_clock_start, system_clock_stop, system_clock_max
@@ -59,13 +60,14 @@ program main
 !> 2. `stop` : the stop date of the simulation in the same format
 !> 3. `title`: the title of the simulation.
 !> 4. `logkind`: an ESMF LOGKIND, multi | single | none, default is multi
-!> 5. `loglevel`: an ESMF LOGMSGFLAG, none | error | warning | all, default is all
+!> 5. `loglevel`: an ESMF LOGMSGFLAG, none | error | warning | all | one  default is all
 !> 6. `logflush`: a logical, .false. | .true. , default is .true.
+!> 5. `loglevelzero`: an ESMF LOGMSGFLAG for the first PET
 !>
 !> If this file is not present, then the default simulation with title "Untitled"
 !> will be executed for the time 2000-01-01 00:00:00 to 2000-01-05 00:00:00
 
-  namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush
+  namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush,loglevelzero
 
   configfilename='mossco.cfg'
   inquire(file=trim(configfilename), exist=fileIsPresent)
@@ -190,8 +192,27 @@ program main
       write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' loglevel: '//trim(loglevel)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
+
+    call ESMF_ConfigFindLabel(config, label='loglevelzero:', isPresent=labelIsPresent, rc = localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (labelIsPresent) then
+      call ESMF_ConfigGetAttribute(config, loglevelzero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' loglevelzero: '//trim(loglevelzero)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
   endif
 
+
+  call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (localPet == 0) logLevel = trim(logLevelzero)
   !> Find out what level of log to write, the default is all, overwrite previous decision
 
   if (logLevel == 'none') then
@@ -222,10 +243,6 @@ program main
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   if (allocated(logMsgList)) deallocate(logMsgList)
-
-  call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
   if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
