@@ -530,8 +530,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message, '(A)') '  obtains grid from field'
-    call MOSSCO_FieldString(field, message)
+    write(message, '(A)') '  obtains grid from field with name '//trim(fieldName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_FieldGet(field, grid=grid, rc=localrc)
