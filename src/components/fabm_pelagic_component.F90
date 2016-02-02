@@ -1326,6 +1326,9 @@ module fabm_pelagic_component
     ! calculate PAR
     call pel%light()
 
+    ! update internal pointers of fabm_pelagic_driver
+    call pel%update_pointers()
+
     ! Create a list of fields  in the export state that have matching fluxes
     ! in the import state
     call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
