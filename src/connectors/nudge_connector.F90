@@ -445,10 +445,15 @@ module nudge_connector
 
       !> Make sure that import state's item type (in list) and export state's agree. Also,
       !> now only fields are implemented
-      if (itemType /= itemTypeList(i)) cycle
+      if (itemType /= itemTypeList(i)) then
+        write(message,*) 'itemType not matching for item ',trim(itemName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      end if
       if (itemType /= ESMF_STATEITEM_FIELD) then
-        if (present(rc)) rc=ESMF_RC_NOT_IMPL
-        return
+        write(message,*) 'fieldBundle not implemented, skip item ',trim(itemName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
       endif
 
       call ESMF_StateGet(exportState, trim(itemName), exportField, rc=localrc)
