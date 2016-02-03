@@ -138,7 +138,7 @@ module netcdf_input_component
     type(ESMF_Grid)            :: grid2, grid3, grid
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, timeUnit, itemName, petFileName, gridName
-    character(len=ESMF_MAXSTR) :: gridFileName
+    character(len=ESMF_MAXSTR) :: gridFileName, interpolationMethod
     type(ESMF_Config)          :: config
 
     integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid
@@ -214,6 +214,36 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      call ESMF_ConfigFindLabel(config, label='interpolation:', isPresent=labelIsPresent, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (labelIsPresent) then
+        call ESMF_ConfigGetAttribute(config, interpolationMethod, rc=localrc, default=trim(name))
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)')  trim(name)//' found in file'
+        call MOSSCO_MessageAdd(message,' '//trim(configFileName)//' interpolation: '//trim(interpolationMethod))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      else
+        interpolationMethod='recent'
+      endif
+
+      call ESMF_AttributeGet(importState, 'interpolation_method', isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (isPresent) then
+        call ESMF_AttributeGet(importState, 'interpolation_method', value=interpolationMethod, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (labelIsPresent) then
+        call ESMF_AttributeSet(importState, 'interpolation_method', trim(interpolationMethod), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       call ESMF_ConfigFindLabel(config, label='grid:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -240,6 +270,7 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
 
       call MOSSCO_ConfigGetList(config, 'climatology:', climatologyList, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -523,7 +554,7 @@ module netcdf_input_component
       endif
     enddo
 
-    if (timeid>0) then
+    if (timeid > 0) then
       call ESMF_ClockGet(clock, currTime=currTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -577,7 +608,7 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' climatology from '//trim(timeString)
-        call nc%timeIndex(ncTime + climatologyTimeStep, itime, localrc)
+        call nc%timeIndex(ncTime + climatologyTimeStep, itime, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -598,9 +629,9 @@ module netcdf_input_component
         do while (climatologyTime - ncTime > climatologyTimeStep)
           climatologyTime = climatologyTime - climatologyTimeStep
         enddo
-        call nc%timeIndex(climatologyTime, itime, localrc)
+        call nc%timeIndex(climatologyTime, itime, rc=localrc)
       else
-        call nc%timeIndex(currTime, itime, localrc)
+        call nc%timeIndex(currTime, itime, rc=localrc)
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -887,8 +918,8 @@ module netcdf_input_component
     type(ESMF_Time)         :: climatologyStartTime, climatologyTime
     type(ESMF_TimeInterval) :: timeStep, climatologyTimeStep
     integer(ESMF_KIND_I8)   :: i, j, advanceCount
-    integer(ESMF_KIND_I4)   :: itemCount
-    integer(ESMF_KIND_I4)   :: localDeCount
+    integer(ESMF_KIND_I4)   :: itemCount, localDeCount
+    real(ESMF_KIND_R8)      :: weight
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
@@ -897,8 +928,8 @@ module netcdf_input_component
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(type_mossco_netcdf_variable), pointer    :: var => null()
 
-    character(len=ESMF_MAXSTR) :: message, name
-    integer(ESMF_KIND_I4)      :: localrc, itime
+    character(len=ESMF_MAXSTR) :: message, name, interpolationMethod
+    integer(ESMF_KIND_I4)      :: localrc, itime, jtime
     logical                    :: isPresent
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
 
@@ -969,6 +1000,11 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
+    call ESMF_AttributeGet(importState, 'interpolation_method', value=interpolationMethod, &
+      defaultValue='recent', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -994,11 +1030,19 @@ module netcdf_input_component
       do while (climatologyTime - climatologyStartTime > climatologyTimeStep)
         climatologyTime = climatologyTime - climatologyTimeStep
       enddo
-      call nc%timeIndex(climatologyTime, itime, localrc)
+      call nc%timeIndex(climatologyTime, itime, jtime=jtime, weight=weight, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call nc%timeGet(climatologyTime, searchIndex=itime, rc=localrc)
+      if (trim(interpolationMethod) == 'recent') then
+        call nc%timeGet(climatologyTime, searchIndex=itime, rc=localrc)
+      elseif (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5) then
+        call nc%timeGet(climatologyTime, searchIndex=itime, rc=localrc)
+      elseif (trim(interpolationMethod) == 'nearest' .and. weight > 0.5) then
+        call nc%timeGet(climatologyTime, searchIndex=jtime, rc=localrc)
+      elseif (trim(interpolationMethod) == 'next') then
+        call nc%timeGet(climatologyTime, searchIndex=jtime, rc=localrc)
+      endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1009,11 +1053,21 @@ module netcdf_input_component
       write(message,'(A)') trim(name)//' uses climatological value from '//trim(timeString)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
-      call nc%timeIndex(currTime, itime, localrc)
+      call nc%timeIndex(currTime, itime, jtime=jtime, weight=weight, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call nc%timeGet(climatologyTime, searchIndex=itime, rc=localrc)
+      climatologyTime = currTime
+      if (trim(interpolationMethod) == 'recent') then
+        call nc%timeGet(climatologyTime, searchIndex=itime, rc=localrc)
+      elseif (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5) then
+        call nc%timeGet(climatologyTime, searchIndex=itime, rc=localrc)
+      elseif (trim(interpolationMethod) == 'nearest' .and. weight > 0.5) then
+        call nc%timeGet(climatologyTime, searchIndex=jtime, rc=localrc)
+      elseif (trim(interpolationMethod) == 'next') then
+        call nc%timeGet(climatologyTime, searchIndex=jtime, rc=localrc)
+      endif
+
       if (localrc == ESMF_RC_NOT_FOUND) then
         write(message,'(A)') trim(name)//' uses constant value'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -1025,7 +1079,11 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)') trim(name)//' uses neareast past value from '//trim(timeString)
+        if (trim(interpolationMethod) /= 'linear') then
+          write(message,'(A)') trim(name)//' uses '//trim(interpolationMethod)//' value from '//trim(timeString)
+        else
+          write(message,'(A)') trim(name)//' uses interpolated value from '//trim(timeString)
+        endif
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
     endif
@@ -1066,11 +1124,27 @@ module netcdf_input_component
       endif
 
       var => nc%getvarvar(trim(itemNameList(i)))
+      !> @todo this needs an error message?
       if (.not.associated(var)) cycle
 
       !! @todo check shape of variable agains shape of field
 
-      call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+      if (trim(interpolationMethod) == 'linear') then
+      !   newField = ESMF_FieldCreate(field, rc=localrc)
+      !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !   call nc%getvar(field, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+      !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      !   !call MOSSCO_FieldNudge(field, newField, weight=weight, rc=localrc)
+      ! elseif ((trim(interpolationMethod) == 'recent') &
+      !   .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
+      !   call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+      ! else
+      !   call nc%getvar(field, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+      endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
