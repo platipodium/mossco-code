@@ -7,7 +7,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - mossco_gfr: netcdf
+  - mossco_gs: netcdf
   - restart_soil: netcdf_input
 
 coupling:
@@ -25,9 +25,9 @@ coupling:
     interval: 30 m
   - components:
      - getm
-     - mossco_gfr
+     - mossco_gs
     interval: 12 h
   - components:
      - fabm_sediment
-     - mossco_gfr
+     - mossco_gs
     interval: 12 h

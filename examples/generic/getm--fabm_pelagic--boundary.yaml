@@ -19,7 +19,7 @@ dependencies:
       grid: temperature_in_water
 
 instances:
-  - mossco_gfb: netcdf
+  - mossco_gfn: netcdf
   - restart_water: netcdf_input
   - boundary: netcdf_input
 
@@ -44,9 +44,9 @@ coupling:
     interval: none
   - components:
      - getm
-     - mossco_gfb
+     - mossco_gfn
     interval: 12 h
   - components:
      - fabm_pelagic
-     - mossco_gfb
+     - mossco_gfn
     interval: 12 h

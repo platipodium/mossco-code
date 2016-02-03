@@ -10,7 +10,7 @@ dependencies:
       grid: water_depth_at_soil_surface
 
 instances:
-  - mossco_gfsen: netcdf
+  - mossco_gfwe: netcdf
 
 coupling:
   - components:
@@ -48,17 +48,17 @@ coupling:
     interval: 12 m
   - components: 
      - getm
-     - mossco_gfsen
+     - mossco_gfwe
     interval: 30 m
   - components: 
      - simplewave
-     - mossco_gfsen
+     - mossco_gfwe
     interval: 30 m
   - components:
      - fabm_pelagic
-     - mossco_gfsen
+     - mossco_gfwe
     interval: 30 m
   - components:
      - erosed
-     - mossco_gfsen
+     - mossco_gfwe
     interval: 30 m

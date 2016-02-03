@@ -23,7 +23,7 @@ dependencies:
       grid: temperature_in_water
 
 instances:
-  - mossco_gffr: netcdf
+  - mossco_gfs: netcdf
   - restart_soil: netcdf_input
   - restart_water: netcdf_input
 
@@ -61,9 +61,9 @@ coupling:
     interval: 30 m
   - components:
      - getm
-     - mossco_gffr
+     - mossco_gfs
     interval: 12 h
   - components:
      - fabm_sediment
-     - mossco_gffr
+     - mossco_gfs
     interval: 12 h

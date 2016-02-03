@@ -27,7 +27,7 @@ dependencies:
       grid: temperature_in_soil
 
 instances:
-  - mossco_gffe : netcdf
+  - mossco_gfse : netcdf
   - restart_soil: netcdf_input
   - restart_water: netcdf_input
 
@@ -69,15 +69,15 @@ coupling:
     interval: 30 m
   - components:
      - getm
-     - mossco_gffe
+     - mossco_gfse
     interval: 60 h
   - components:
      - fabm_pelagic
-     - mossco_gffe
+     - mossco_gfse
     interval: 60 h
   - components:
      - fabm_sediment
-     - mossco_gffe
+     - mossco_gfse
     interval: 60 h
   - components:
      - getm
@@ -89,5 +89,5 @@ coupling:
     interval: 60 m
   - components:
      - erosed
-     - mossco_gffe
+     - mossco_gfse
     interval: 60 h

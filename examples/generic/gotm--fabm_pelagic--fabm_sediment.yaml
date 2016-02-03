@@ -7,7 +7,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - mossco_1d : netcdf
+  - mossco_jfs : netcdf
   
 coupling:
   - components:
@@ -35,13 +35,13 @@ coupling:
     interval: 1 yy
   - components:
      - fabm_sediment
-     - mossco_1d
+     - mossco_jfs
     interval: 1 d
   - components:
      - gotm
-     - mossco_1d
+     - mossco_jfs
     interval: 1 d
   - components:
      - fabm_pelagic
-     - mossco_1d
+     - mossco_jfs
     interval: 1 d

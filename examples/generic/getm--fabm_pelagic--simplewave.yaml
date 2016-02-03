@@ -7,7 +7,7 @@ dependencies:
       grid: water_depth_at_soil_surface
 
 instances:
-  - mossco_gfsn: netcdf
+  - mossco_gfw: netcdf
 
 coupling:
   - components: 
@@ -29,9 +29,9 @@ coupling:
     interval: 30 m
   - components: 
      - getm
-     - mossco_gfsn
+     - mossco_gfw
     interval: 60 h
   - components: 
      - simplewave
-     - mossco_gfsn
+     - mossco_gfw
     interval: 60 h
