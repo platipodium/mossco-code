@@ -1749,7 +1749,11 @@ contains
         call ESMF_FieldGet(field, grid=grid, typeKind=typeKind, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+        
+        call ESMF_StateRemove(state, (/itemName/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#if ESMF_VERSION_MAJOR<7
         newfield = ESMF_FieldCreate(name=itemName(1:j-1), grid=grid, typeKind=typeKind, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1768,6 +1772,12 @@ contains
 
         call ESMF_FieldBundleAdd(fieldBundle, (/field/), rc=localrc)
         !call ESMF_FieldBundleAdd(fieldBundle, (/newfield/), rc=localrc)
+#else
+        call ESMF_FieldSet(field,name=trim(itemName(1:j-1)),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldBundleAdd(fieldBundle, (/field/), multiflag=.true., rc=localrc)
+#endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1779,7 +1789,6 @@ contains
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        call ESMF_StateRemove(state, (/itemName/), rc=localrc)
 
       elseif (itemtypeList(i) == ESMF_STATEITEM_ARRAY) then
 
