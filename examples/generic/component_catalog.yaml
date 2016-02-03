@@ -1,0 +1,20 @@
+# Regular abbreviations by first letter
+benthos: b
+constant: c
+deposition: d
+erosed: e
+fabm_pelagic: f
+getm: g
+hamsom: h
+mussel: m
+porosity: p
+river: r
+tracer: t
+
+# Irregular abbreviations
+boundary: n # for 'nudge'
+fabm_gotm: q
+fabm_sediment: s
+gotm: o
+remtc_atmosphere: v
+remtc_ocean: w
