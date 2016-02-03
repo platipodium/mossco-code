@@ -15,6 +15,7 @@ tracer: t
 boundary: n # for 'nudge'
 fabm_gotm: q
 fabm_sediment: s
-gotm: o
-remtc_atmosphere: v
-remtc_ocean: w
+gotm: j
+remtc_atmosphere: a
+remtc_ocean: o
+simplewave: w
