@@ -2692,27 +2692,37 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_find_time_index"
-  subroutine mossco_netcdf_find_time_index(self, currTime, itime, rc)
+  subroutine mossco_netcdf_find_time_index(self, currTime, itime, kwe, jtime, weight, rc)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
-    integer(ESMF_KIND_I4), intent(out), optional :: rc, itime
     type(ESMF_Time), intent(in)                  :: currTime
+    integer(ESMF_KIND_I4), intent(out)           :: itime
+    logical, intent(in), optional                :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: jtime
+    real(ESMF_KIND_R8), intent(out), optional    :: weight
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_Time)                              :: refTime
-    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, ntime, varid
+    integer(ESMF_KIND_I4)                        :: i, rc_, jtime_
+    integer(ESMF_KIND_I4)                        :: localrc, ntime, varid
     real(ESMF_KIND_R8), allocatable              :: farray(:)
+    real(ESMF_KIND_R8)                           :: weight_
     integer(ESMF_KIND_I8)                        :: ticks
     character(ESMF_MAXSTR)                       :: timeUnit, message
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = rc_
+    if (present(rc)) rc = rc_
+
+    itime = 1
+    jtime_ = 1
+    weight_ = 0.0
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  no time variable found, choosing default time index 1', ESMF_LOGMSG_INFO)
-      itime_ = 1
     else
-
       call self%reftime(refTime, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2739,7 +2749,6 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      itime_ = 1
       ntime = self%dimlens(self%timeDimId)
       if (ntime < 1) then
         !> @todo: this can actually be possible (if time is unlimited and no time-dependent data)
@@ -2765,18 +2774,25 @@ module mossco_netcdf
       !! Search for the largest index i with farray(i) <= ticks*1.0D0
       do i = 1, ntime
         if (farray(i) <= ticks*1.0D0) then
-          itime_=i
+          itime=i
         else
           exit
         endif
       enddo
-      if (farray(ntime) <= ticks*1.0D0) itime_ = ntime
+      if (farray(ntime) <= ticks*1.0D0) itime = ntime
+      jtime_ = itime + 1
+      if (jtime_ > ntime) then
+        jtime_ = ntime
+      else
+        weight_ = (ticks*1.0D0 - farray(itime)) / (farray(jtime_) - farray(itime))
+      endif
 
       if (allocated(farray)) deallocate(farray)
     endif
 
+    if (present(weight)) weight=weight_
+    if (present(jtime)) jtime=jtime_
     if (present(rc)) rc=rc_
-    if (present(itime)) itime=itime_
 
   end subroutine mossco_netcdf_find_time_index
 
