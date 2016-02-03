@@ -25,7 +25,7 @@ dependencies:
       grid: temperature_at_soil_surface
 
 instances:
-  - mossco_gfmfrpr: netcdf
+  - mossco_gfmfrp: netcdf
   - mussel_input: netcdf_input
   - river_input: netcdf_input
   - restart_soil: netcdf_input
@@ -40,11 +40,11 @@ coupling:
     interval: none
   - components:
      - mussel_input
-     - mossco_gfmfrpr
+     - mossco_gfmfrp
     interval: 20 m
   - components:
      - mussel
-     - mossco_gfmfrpr
+     - mossco_gfmfrp
     interval: 20 m
   - components:
      - porosity_input
@@ -99,13 +99,13 @@ coupling:
     interval: 10 m
   - components:
      - getm
-     - mossco_gfmfrpr
+     - mossco_gfmfrp
     interval: 20 m
   - components:
      - fabm_pelagic
-     - mossco_gfmfrpr
+     - mossco_gfmfrp
     interval: 20 m
   - components:
      - fabm_sediment
-     - mossco_gfmfrpr
+     - mossco_gfmfrp
     interval: 20 m
