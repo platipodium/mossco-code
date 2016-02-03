@@ -350,7 +350,7 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-      weight = 0.0
+      weight = 1.0
     endif
 
     call ESMF_CplCompGet(cplComp, clock=clock, rc=localrc)
