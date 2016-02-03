@@ -1,5 +1,0 @@
-coupling:
-  - components:
-    - river
-    - netcdf
-    interval: 6 h
