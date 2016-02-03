@@ -1323,11 +1323,11 @@ module fabm_pelagic_component
     ! update pointers from import
     call update_import_pointers(importState)
 
-    ! calculate PAR
-    call pel%light()
-
     ! update internal pointers of fabm_pelagic_driver
     call pel%update_pointers()
+
+    ! calculate PAR
+    call pel%light()
 
     ! Create a list of fields  in the export state that have matching fluxes
     ! in the import state
