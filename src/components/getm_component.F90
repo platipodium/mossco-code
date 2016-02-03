@@ -1157,6 +1157,13 @@ module getm_component
       allocate(maskC(E2DFIELD)) ; maskC = az
       allocate(maskX(E2DFIELD)) ; maskX = ax
    end if
+#ifdef GETM_SLICE_MODEL
+   maskC => null(); maskX => null()
+   allocate(maskC(E2DFIELD)) ; maskC = az
+   allocate(maskX(E2DFIELD)) ; maskX = ax
+   maskC(:,3) = 0
+   maskX(:,3) = 0
+#endif
 
    allocate(areaC(E2DFIELD))
    allocate(maskC3D(E2DFIELD,0:klen))
@@ -1176,6 +1183,10 @@ module getm_component
    maskC3D(:,:,0) = 0
    maskX3D(:,:,0) = 0
    areaW3D(:,:,0) = areaC
+#ifdef GETM_SLICE_MODEL
+   maskC3D(:,3,:) = 0
+   maskX3D(:,3,:) = 0
+#endif
 
    allocate(zw(E2DFIELD ,0:klen))
    allocate(zc(E2DFIELD ,1:klen))

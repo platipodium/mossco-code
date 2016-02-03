@@ -800,6 +800,9 @@
    Ncall = Ncall+1
    write(debug,*) 'do_transport_3d() # ',Ncall
 #endif
+#ifdef GETM_SLICE_MODEL
+   j = jmax/2
+#endif
 
 !  see comments in do_transport()
    call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
@@ -817,7 +820,9 @@
    Taur = 1.d15
    ws1d(0   ) = _ZERO_
    ws1d(kmax) = _ZERO_
+#ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
+#endif
       do i=imin,imax
          if (az(i,j) .eq. 1) then
 !           Do advection step due to settling or rising
@@ -829,7 +834,11 @@
                              f(i,j,:),f(i,j,:))
          end if
       end do
+#ifndef GETM_SLICE_MODEL
    end do
+#else
+   f(:,j+1,:) = f(:,j,:)
+#endif
 
 #ifdef DEBUG
    write(debug,*) 'Leaving do_transport_3d()'
@@ -852,6 +861,9 @@
    logical :: clip=.false.
    ! hackmax: if negative, do not change boundary state, otherwise clip
    integer :: i,j
+#ifdef GETM_SLICE_MODEL
+   j = jmax/2
+#endif
 
    clip = hackmax > 0.0
    hackmaxvec(:) = hackmax
@@ -861,7 +873,9 @@
    call wait_halo(H_TAG)
 
    ! set zero-gradient in x-direction
+#ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
+#endif
      do i=imin,imax
        ! western boundary
        if ((au(i,j) .eq. 2) .and. (au(i-1,j) .eq. 0)) then
@@ -880,10 +894,14 @@
          end if
        end if
      end do
+#ifndef GETM_SLICE_MODEL
    end do
+#endif
 
    ! set zero-gradient in y-direction
+#ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
+#endif
      do i=imin,imax
        ! southern boundary
        if ((av(i,j) .eq. 2) .and. (av(i,j-1) .eq. 0)) then
@@ -902,7 +920,9 @@
          end if
        end if
      end do
+#ifndef GETM_SLICE_MODEL
    end do
+#endif
 
    end subroutine zero_gradient_3d_bdy
 

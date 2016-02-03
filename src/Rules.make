@@ -364,6 +364,11 @@ ifeq ($(MOSSCO_GETM),true)
   export GETM_CPPFLAGS += -I$(GETMDIR)/include -I$(GETMDIR)/modules/$(FORTRAN_COMPILER)
   export GETM_CPPFLAGS += -I$(GOTM_PREFIX)/include
   export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
+
+  ifeq ($(GETM_SLICE_MODEL),true)
+    DEFINES += -DGETM_SLICE_MODEL
+  endif
+
 endif
 export MOSSCO_GETM
 
