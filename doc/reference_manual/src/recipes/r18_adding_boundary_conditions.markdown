@@ -12,7 +12,8 @@ Create a netcdf file suitable for the `netcdf_input_component`, which contains i
 
 Create the configuration file for your `netcdf_input_component`, i.e. a file containing at least the  `filename:` key to point to your boundary netcdf file.
 
-> Optionally, you can use the `include:` and `exclude:` lists to limit the names of variables read, and you can rename variables with the `alias:` key, and you can choose the temporal interpolation: method
+> Optionally, you can use the `include:` and `exclude:` lists to limit the names of variables read, and you can rename variables with the `alias:` key, and you can choose the temporal interpolation: method.  See the description of the
+NetCDF input component for all options.
 
 ## Creating/appending to the coupling specification
 
