@@ -370,11 +370,27 @@ module mossco_netcdf
         endif
       endif
 
-      where (ncarray4 > RepresentableValue) ncarray4=missingValue
-      where (ncarray4 < RepresentableValue) ncarray4=missingValue
-
       ! it is recommended to check of nans with x /= x, as this is true for NaN
       ! it is recommended to check for inf with abs(x) > huge(x)
+      if (any(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= &
+              ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))) then
+        call self%close()
+        write(message,'(A)')  '  NaN detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      if (any(abs(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > huge(missingValue))) then
+        call self%close()
+        write(message,'(A)')  '  Inf detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      where (ncarray4 > RepresentableValue) ncarray4=missingValue
+      where (ncarray4 < RepresentableValue) ncarray4=missingValue
 
       if (any(var%dimids==self%timeDimId)) then
         ncStatus = nf90_put_var(self%ncid, var%varid, ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)), &
@@ -445,6 +461,23 @@ module mossco_netcdf
         endif
       endif
 
+      if (any(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) /= &
+              ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))) then
+        call self%close()
+        write(message,'(A)')  '  NaN detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      if (any(abs(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))) > huge(missingValue))) then
+        call self%close()
+        write(message,'(A)')  '  Inf detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       if (any(var%dimids==self%timeDimId)) then
         ncStatus = nf90_put_var(self%ncid, var%varid, real(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))), &
         start=(/1,1,1,dimlen/))
@@ -499,6 +532,22 @@ module mossco_netcdf
         endif
       endif
 
+      if (any(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) /= &
+              ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))) then
+        call self%close()
+        write(message,'(A)')  '  NaN detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      if (any(abs(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))) > huge(missingValue))) then
+        call self%close()
+        write(message,'(A)')  '  Inf detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       if (any(var%dimids==self%timeDimId)) then
         ncStatus = nf90_put_var(self%ncid, var%varid, ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
