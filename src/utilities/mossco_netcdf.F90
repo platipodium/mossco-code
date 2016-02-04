@@ -1751,6 +1751,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)            :: int8
     integer(ESMF_KIND_I4)            :: int4
     character(len=ESMF_MAXSTR)       :: string
+    logical                          :: logvalue
     type(ESMF_Field)                 :: field
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
@@ -1921,10 +1922,20 @@ module mossco_netcdf
          elseif (typekind==ESMF_TYPEKIND_R8) then
            call ESMF_AttributeGet(array, attributeName, real8, rc=rc)
            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real8)
-         else
+         elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
            call ESMF_AttributeGet(array, attributeName, string, rc=rc)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),trim(string))
-         endif
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName), trim(string))
+         elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+           call ESMF_AttributeGet(array, attributeName, logvalue, rc=rc)
+           if (logValue) then
+             ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.true.')
+          else
+              ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.false.')
+          endif
+        else
+          write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        endif
       enddo
 
       if (allocated(coordDimids)) deallocate(coordDimids)
@@ -3066,8 +3077,9 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)            :: int8
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
-    character(len=ESMF_MAXSTR)       :: attributeName, string
+    character(len=ESMF_MAXSTR)       :: attributeName, string, message
     type(ESMF_Typekind_Flag)         :: typeKind
+    logical                          :: logValue
 
     rc_ = ESMF_SUCCESS
     ncStatus=NF90_NOERR
@@ -3100,10 +3112,20 @@ module mossco_netcdf
       elseif (typekind==ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(array, attributeName, real8, rc=localrc)
         ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
-      else
-        call ESMF_AttributeGet(array, attributeName, string, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
-      endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(array, attributeName, string, rc=rc)
+        ncStatus = nf90_put_att(ncid,varid,trim(attributeName), trim(string))
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_AttributeGet(array, attributeName, logvalue, rc=rc)
+        if (logValue) then
+          ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.true.')
+       else
+           ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.false.')
+       endif
+     else
+       write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+     endif
     enddo
 
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -3133,8 +3155,9 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)            :: int8
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
-    character(len=ESMF_MAXSTR)       :: attributeName, string
+    character(len=ESMF_MAXSTR)       :: attributeName, string, message
     type(ESMF_Typekind_Flag)         :: typeKind
+    logical                          :: logValue
 
     rc_ = ESMF_SUCCESS
     ncStatus=NF90_NOERR
@@ -3167,10 +3190,20 @@ module mossco_netcdf
       elseif (typekind==ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(state, attributeName, real8, rc=localrc)
         ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
-      else
-        call ESMF_AttributeGet(state, attributeName, string, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
-      endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(state, attributeName, string, rc=rc)
+        ncStatus = nf90_put_att(ncid,varid,trim(attributeName), trim(string))
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_AttributeGet(state, attributeName, logvalue, rc=rc)
+        if (logValue) then
+          ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.true.')
+       else
+           ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.false.')
+       endif
+     else
+       write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+     endif
     enddo
 
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -3202,6 +3235,7 @@ module mossco_netcdf
     real(ESMF_KIND_R4)               :: real4
     character(len=ESMF_MAXSTR)       :: attributeName, string, message
     type(ESMF_Typekind_Flag)         :: typeKind
+    logical                          :: logValue
 
     rc_ = ESMF_SUCCESS
     ncStatus = NF90_NOERR
@@ -3256,10 +3290,20 @@ module mossco_netcdf
         else
           ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
         endif
-      else
-        call ESMF_AttributeGet(field, attributeName, string, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
-      endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(field, attributeName, string, rc=rc)
+        ncStatus = nf90_put_att(ncid,varid,trim(attributeName), trim(string))
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_AttributeGet(field, attributeName, logvalue, rc=rc)
+        if (logValue) then
+          ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.true.')
+       else
+           ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.false.')
+       endif
+     else
+       write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+     endif
     enddo
 
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
