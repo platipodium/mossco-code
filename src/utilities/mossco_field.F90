@@ -709,7 +709,7 @@ end subroutine MOSSCO_FieldCopy
     endif
 
     ! Deallocate if not keep
-    if (.not.keep) then
+    if (.not.keep_) then
       if (allocated(fieldList)) deallocate(fieldList)
     endif
 
@@ -771,7 +771,7 @@ end subroutine MOSSCO_FieldCopy
     endif
 
     ! Deallocate if not keep
-    if (.not.keep) then
+    if (.not.keep_) then
       if (allocated(itemTypeList)) deallocate(itemTypeList)
     endif
 
@@ -833,7 +833,7 @@ end subroutine MOSSCO_FieldCopy
     endif
 
     ! Deallocate if not keep
-    if (.not.keep) then
+    if (.not.keep_) then
       if (allocated(stringList)) deallocate(stringList)
     endif
 
@@ -895,7 +895,7 @@ end subroutine MOSSCO_FieldCopy
     endif
 
     ! Deallocate if not keep
-    if (.not.keep) then
+    if (.not.keep_) then
       if (allocated(stringList)) deallocate(stringList)
     endif
 
