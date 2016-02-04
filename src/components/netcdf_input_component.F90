@@ -626,7 +626,7 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         climatologyTime = currTime
-        do while (climatologyTime - ncTime > climatologyTimeStep)
+        do while (climatologyTime > (ncTime + climatologyTimeStep))
           climatologyTime = climatologyTime - climatologyTimeStep
         enddo
         call nc%timeIndex(climatologyTime, itime, rc=localrc)
@@ -1027,9 +1027,10 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       climatologyTime = currTime
-      do while (climatologyTime - climatologyStartTime > climatologyTimeStep)
+      do while (climatologyTime > (climatologyStartTime + climatologyTimeStep))
         climatologyTime = climatologyTime - climatologyTimeStep
       enddo
+
       call nc%timeIndex(climatologyTime, itime, jtime=jtime, weight=weight, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

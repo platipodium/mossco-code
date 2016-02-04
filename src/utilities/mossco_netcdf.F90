@@ -259,7 +259,7 @@ module mossco_netcdf
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask2)
-          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite('Disregard five errors above', ESMF_LOGMSG_ERROR)
         else
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid2Lbnd, &
             exclusiveUBound=grid2Ubnd, rc=localrc)
@@ -270,7 +270,7 @@ module mossco_netcdf
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask3)
-          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite('Disregard five errors above', ESMF_LOGMSG_ERROR)
         else
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid3Lbnd, &
             exclusiveUBound=grid3Ubnd, rc=localrc)
