@@ -1,0 +1,86 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 1D coupling
+# between gotm, pelagic and sediment ecosystem,  and forcing by
+# data points
+#
+# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+dependencies:
+  - boundary_input:
+    - component: gotm
+      grid: temperature_in_water
+  - restart_water:
+    - component: gotm
+      grid: temperature_in_water
+  - restart_soil:
+    - component: fabm_sediment
+      grid: temperature_in_soil
+  - fabm_pelagic:
+    - component: gotm
+      grid: temperature_in_water
+  - fabm_sediment:
+    - component: gotm
+      grid: temperature_at_soil_surface
+
+instances:
+  - mossco_jfns: netcdf
+  - restart_soil: netcdf_input
+  - restart_water: netcdf_input
+  - boundary_input: netcdf_input
+
+coupling:
+  - components:
+     - boundary_input
+     - nudge_connector
+     - fabm_pelagic
+    interval: 20 m
+  - components:
+     - restart_water
+     - fabm_pelagic
+    interval: none
+  - components:
+     - restart_soil
+     - fabm_sediment
+    interval: none
+  - components:
+     - constant
+     - fabm_sediment
+    interval: none
+  - components:
+     - gotm
+     - fabm_sediment
+    interval: 20 m
+  - components:
+     - gotm
+     - fabm_pelagic
+    interval: 20 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - gotm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval:  20 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
+    interval: 10 m
+  - components:
+     - gotm
+     - mossco_jfns
+    interval: 30 h
+  - components:
+     - fabm_pelagic
+     - mossco_jfns
+    interval: 30 h
+  - components:
+     - fabm_sediment
+     - mossco_jfns
+    interval: 30 h
