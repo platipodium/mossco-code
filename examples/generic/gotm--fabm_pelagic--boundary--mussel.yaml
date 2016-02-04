@@ -1,0 +1,77 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 1D coupling
+# between gotm, pelagic ecosystem, filtration and forcing by
+# in situ or climatological data
+#
+# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+dependencies:
+  - boundary_input:
+    - component: gotm
+      grid: temperature_in_water
+  - restart:
+    - component: gotm
+      grid: temperature_in_water
+  - fabm_pelagic:
+    - component: gotm
+      grid: temperature_in_water
+  - mussel_input:
+    - component: gotm
+      grid: temperature_at_soil_surface
+  - mussel:
+    - component: gotm
+      grid: temperature_at_soil_surface
+
+instances:
+  - mossco_jfnm: netcdf
+  - mussel_input: netcdf_input
+  - restart: netcdf_input
+  - mussel: benthic_filtration
+  - boundary_input: netcdf_input
+
+coupling:
+  - components:
+     - mussel_input
+     - mussel
+    interval: none
+  - components:
+     - mussel_input
+     - mossco_jfnm
+    interval: 30 h
+  - components:
+     - boundary_input
+     - nudge_connector
+     - fabm_pelagic
+    interval: 20 m
+  - components:
+     - restart
+     - fabm_pelagic
+    interval: none
+  - components:
+     - gotm
+     - fabm_pelagic
+    interval: 20 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - gotm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - mussel
+    interval:  30 m
+  - components:
+     - mussel
+     - fabm_pelagic
+    interval:  30 m
+  - components:
+     - gotm
+     - mossco_jfnm
+    interval: 30 h
+  - components:
+     - fabm_pelagic
+     - mossco_jfnm
+    interval: 30 h
