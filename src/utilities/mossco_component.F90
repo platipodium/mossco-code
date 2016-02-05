@@ -924,7 +924,7 @@ contains
     character(len=ESMF_MAXSTR), allocatable :: characterValueList(:)
 
     integer(ESMF_KIND_I4)   :: rank, localrc, count, i, j, itemCount, rc_
-    character(ESMF_MAXSTR)  :: attributeName
+    character(ESMF_MAXSTR)  :: attributeName, string
 
     if (present(rc)) rc=ESMF_SUCCESS
 
@@ -943,56 +943,75 @@ contains
       allocate(logicalValueList(itemCount))
       call ESMF_AttributeGet(comp, name=attributeName, valueList=logicalValueList, rc=localrc)
       if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+
+      write(string, '(L)') logicalValueList(1)
+      call MOSSCO_MessageAdd(message,' '//trim(string))
       do j=2, itemCount-1
-        write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+        write(string, '(L)') logicalValueList(j)
+        call MOSSCO_MessageAdd(message,', '//trim(string))
       enddo
       deallocate(logicalValueList)
+
     elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
        allocate(characterValueList(itemCount))
        call ESMF_AttributeGet(comp, name=attributeName, valueList=characterValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
-         write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
-         do j=2, itemCount-1
-           write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
-         enddo
-         deallocate(characterValueList)
-       endif
+
+       call MOSSCO_MessageAdd(message,' '//trim(characterValueList(1)))
+        do j=2, itemCount-1
+           call MOSSCO_MessageAdd(message,', '//trim(characterValueList(j)))
+        enddo
+        deallocate(characterValueList)
+
     elseif (typekind==ESMF_TYPEKIND_I4) then
        allocate(integer4ValueList(itemCount))
        call ESMF_AttributeGet(comp, name=attributeName, valueList=integer4ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+
+       write(string, '(I3.3)') integer4ValueList(1)
+       call MOSSCO_MessageAdd(message,' '//trim(string))
        do j=2, itemCount-1
-         write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+         write(string, '(I3.3)') integer4ValueList(j)
+         call MOSSCO_MessageAdd(message,', '//trim(string))
        enddo
        deallocate(integer4ValueList)
+
     elseif (typekind==ESMF_TYPEKIND_I8) then
        allocate(integer8ValueList(itemCount))
        call ESMF_AttributeGet(comp, name=attributeName, valueList=integer8ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+
+       write(string, '(I3.3)') integer8ValueList(1)
+       call MOSSCO_MessageAdd(message,' '//trim(string))
        do j=2, itemCount-1
-         write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+         write(string, '(I3.3)') integer8ValueList(j)
+         call MOSSCO_MessageAdd(message,', '//trim(string))
        enddo
        deallocate(integer8ValueList)
+
     elseif (typekind==ESMF_TYPEKIND_R4) then
        allocate(real4ValueList(itemCount))
        call ESMF_AttributeGet(comp, name=attributeName, valueList=real4ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
+
+       write(string, '(ES9.2)') real4ValueList(1)
+       call MOSSCO_MessageAdd(message,' '//trim(string))
        do j=2, itemCount-1
-         write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+         write(string, '(ES9.2)') real4ValueList(j)
+         call MOSSCO_MessageAdd(message,', '//trim(string))
        enddo
        deallocate(real4ValueList)
+
     elseif (typekind==ESMF_TYPEKIND_R8) then
        allocate(real8ValueList(itemCount))
        call ESMF_AttributeGet(comp, name=attributeName, valueList=real8ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-       write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
+
+       write(string, '(ES9.2)') real8ValueList(1)
+       call MOSSCO_MessageAdd(message,' '//trim(string))
        do j=2, itemCount-1
-         write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+         write(string, '(ES9.2)') real8ValueList(j)
+         call MOSSCO_MessageAdd(message,', '//trim(string))
        enddo
        deallocate(real8ValueList)
     endif
@@ -1223,11 +1242,14 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+         write(string, '(L)') logicalValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+           write(string, '(L)') logicalValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(logicalValueList)
+
        elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
          if (allocated(characterValueList)) deallocate(characterValueList)
          allocate(characterValueList(itemCount))
@@ -1239,22 +1261,23 @@ contains
            rc=ESMF_SUCCESS
          endif
 
-         if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
-           write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
-           do j=2, itemCount-1
-             write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
-           enddo
-         endif
+         call MOSSCO_MessageAdd(message,' '//trim(characterValueList(1)))
+         do j=2, itemCount-1
+            call MOSSCO_MessageAdd(message,', '//trim(characterValueList(j)))
+         enddo
          if (allocated(characterValueList)) deallocate(characterValueList)
+
        elseif (typekind==ESMF_TYPEKIND_I4) then
          allocate(integer4ValueList(itemCount))
          call ESMF_AttributeGet(gridComp, name=attributeName, valueList=integer4ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+         write(string, '(I3.3)') integer4ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+           write(string, '(I3.3)') integer4ValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(integer4ValueList)
        elseif (typekind==ESMF_TYPEKIND_I8) then
@@ -1263,9 +1286,11 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+         write(string, '(I3.3)') integer8ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+             write(string, '(I3.3)') integer8ValueList(j)
+             call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(integer8ValueList)
        elseif (typekind==ESMF_TYPEKIND_R4) then
@@ -1274,9 +1299,11 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
+         write(string, '(ES9.2)') real4ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+           write(string, '(ES9.2)') real4ValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(real4ValueList)
        elseif (typekind==ESMF_TYPEKIND_R8) then
@@ -1285,9 +1312,11 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
+         write(string, '(ES9.2)') real8ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+           write(string, '(ES9.2)') real8ValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(real8ValueList)
        endif
@@ -1459,11 +1488,14 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+         write(string, '(L)') logicalValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+           write(string, '(L)') logicalValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(logicalValueList)
+
        elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
          if (allocated(characterValueList)) deallocate(characterValueList)
          allocate(characterValueList(itemCount))
@@ -1475,57 +1507,68 @@ contains
            rc=ESMF_SUCCESS
          endif
 
-         if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
-           write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
-           do j=2, itemCount-1
-             write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
-           enddo
-         endif
+         call MOSSCO_MessageAdd(message, ' '//trim(characterValueList(1)))
+         do j=2, itemCount-1
+           call MOSSCO_MessageAdd(message, ', '//trim(characterValueList(j)))
+          enddo
          if (allocated(characterValueList)) deallocate(characterValueList)
+
        elseif (typekind==ESMF_TYPEKIND_I4) then
          allocate(integer4ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=integer4ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+         write(string, '(I3.3)') integer4ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+           write(string, '(I3.3)') integer4ValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
-         deallocate(integer4ValueList)
+         if (allocated(integer4ValueList)) deallocate(integer4ValueList)
+
        elseif (typekind==ESMF_TYPEKIND_I8) then
          allocate(integer8ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=integer8ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+         write(string, '(I3.3)') integer8ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+           write(string, '(I3.3)') integer8ValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(integer8ValueList)
+
        elseif (typekind==ESMF_TYPEKIND_R4) then
          allocate(real4ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=real4ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
+         write(string, '(ES9.2)') real4ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+           write(string, '(ES9.2)') real4ValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(real4ValueList)
+
        elseif (typekind==ESMF_TYPEKIND_R8) then
          allocate(real8ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=real8ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
+         write(string, '(ES9.2)') real8ValueList(1)
+         call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+           write(string, '(ES9.2)') real8ValueList(j)
+           call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(real8ValueList)
+
        endif
        if (present(log)) then
          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
