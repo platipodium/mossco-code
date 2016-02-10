@@ -1,7 +1,7 @@
 !> @brief Implementation of grid utilities
 !!
 !! This computer program is part of MOSSCO.
-!! @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
+!! @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !! @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !! @author Hartmut Kapitza <hartmut.kapitza@hzg.de>
 !
@@ -32,16 +32,16 @@ contains
 function MOSSCO_GridCreateRegional3D(name, rc) result(grid)
 
   character(ESMF_MAXSTR), intent(in) :: name
-  integer,  intent(out)              :: rc
+  integer,  intent(out), optional    :: rc
   type(ESMF_Grid)                    :: grid
 
   integer(ESMF_KIND_I4)      :: minIndex(3), maxIndex(3), regDecomp(3)
   type(ESMF_Index_Flag)      :: indexFlag
   type(ESMF_CoordSys_Flag)   :: coordSys
-  integer                    :: localrc, i, lbnd(3), ubnd(3)
+  integer(ESMF_KIND_I4)      :: localrc, i, lbnd(3), ubnd(3), rc_
   real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
 
-  rc = ESMF_SUCCESS
+  rc_ = ESMF_SUCCESS
 
   minIndex=(/1,1,1/)
   maxIndex=(/40,50,10/)
@@ -53,28 +53,32 @@ function MOSSCO_GridCreateRegional3D(name, rc) result(grid)
     regDecomp=regDecomp, coordSys=coordSys, indexFlag=indexFlag,  &
     name=trim(name)//' grid', coordTypeKind=ESMF_TYPEKIND_R8, coordDep1=(/1/), &
     coorddep2=(/2/), rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   !> This example grid is a 40 x 50 grid at 0.1 degree resolution from 0..4 deg East
   !> to 50 .. 55 deg North
   call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
     computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   do i=lbnd(1),ubnd(1)
     coordX(i) = 0 + 0.1 * i + 0.05
   enddo
   call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
     computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   do i=lbnd(1),ubnd(1)
     coordY(i) = 50 + 0.1 * i + 0.05
   enddo
-  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  return
+
+  if (present(rc)) rc = rc_
 
 end function MOSSCO_GridCreateRegional3D
 
@@ -83,16 +87,16 @@ end function MOSSCO_GridCreateRegional3D
 function MOSSCO_GridCreateRegional2D(name, rc) result(grid)
 
   character(ESMF_MAXSTR), intent(in) :: name
-  integer,  intent(out)              :: rc
+  integer,  intent(out), optional    :: rc
   type(ESMF_Grid)                    :: grid
 
   integer(ESMF_KIND_I4)      :: minIndex(2), maxIndex(2), regDecomp(2)
   type(ESMF_Index_Flag)      :: indexFlag
   type(ESMF_CoordSys_Flag)   :: coordSys
-  integer                    :: localrc, i, lbnd(2), ubnd(2)
+  integer(ESMF_KIND_I4)      :: localrc, i, lbnd(2), ubnd(2), rc_
   real(ESMF_KIND_R8),dimension(:),pointer :: coordX, coordY
 
-  rc = ESMF_SUCCESS
+  rc_ = ESMF_SUCCESS
 
   minIndex=(/1,1/)
   maxIndex=(/40,50/)
@@ -104,35 +108,39 @@ function MOSSCO_GridCreateRegional2D(name, rc) result(grid)
     regDecomp=regDecomp, coordSys=coordSys, indexFlag=indexFlag,  &
     name=trim(name)//' grid', coordTypeKind=ESMF_TYPEKIND_R8, coordDep1=(/1/), &
     coorddep2=(/2/), rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call ESMF_GridAddCoord(grid,staggerloc=ESMF_STAGGERLOC_CENTER,rc=rc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   !> This example grid is a 40 x 50 grid at 0.1 degree resolution from 0..4 deg East
   !> to 50 .. 55 deg North
   call ESMF_GridGetCoord(grid,coordDim=1,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
     computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordX, rc=rc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   do i=lbnd(1),ubnd(1)
     coordX(i) = 0 + 0.1 * i + 0.05
   enddo
   call ESMF_GridGetCoord(grid,coordDim=2,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
     computationalLBound=lbnd, computationalUBound=ubnd, farrayPtr=coordY, rc=rc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   do i=lbnd(1),ubnd(1)
     coordY(i) = 50 + 0.1 * i + 0.05
   enddo
-  if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-  return
+
+  if (present(rc)) rc = rc_
 
 end function MOSSCO_GridCreateRegional2D
 
-
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCopyFromForeignField"
-  subroutine MOSSCO_GridCopyFromForeignField(gridComp, state, gridfieldName, grida, gridb, rc)
+  subroutine MOSSCO_GridCopyFromForeignField(gridComp, state, gridfieldName, &
+    kwe, nlayer, grida, gridb, rc)
 
     use mossco_strings
 
@@ -141,12 +149,14 @@ end function MOSSCO_GridCreateRegional2D
     type(ESMF_GridComp), intent(in)           :: gridComp
     type(ESMF_State), intent(in)              :: state
     character(len=*), intent(in)              :: gridFieldName
+    logical, intent(in), optional             :: kwe
+    integer(ESMF_KIND_I4), optional, intent(in) :: nlayer
     type(ESMF_Grid), intent(out), optional    :: grida
     type(ESMF_Grid), intent(out), optional    :: gridb
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_Grid)                           :: grida_, gridb_
-    integer(ESMF_KIND_I4)                     :: rc_, localrc
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, nlayer_
 
     character(len=ESMF_MAXSTR)                :: message, name
     integer(ESMF_KIND_I4)                     :: ubnd3(3), lbnd3(3), ubnd2(2), lbnd2(2)
@@ -158,10 +168,12 @@ end function MOSSCO_GridCreateRegional2D
     rc_=ESMF_SUCCESS
 
     call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(state, trim(gridFieldName), itemType=itemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemType /= ESMF_STATEITEM_FIELD) then
       call MOSSCO_MessageAdd(message, trim(name)//' cannot use non-field '//trim(gridFieldName)//' as grid')
@@ -170,10 +182,12 @@ end function MOSSCO_GridCreateRegional2D
     endif
 
     call ESMF_StateGet(state, trim(gridFieldName), field=field, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldGet(field, status=status, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (status == ESMF_FIELDSTATUS_EMPTY) then
       call MOSSCO_MessageAdd(message, trim(name)//' cannot use empty field '//trim(gridFieldName)//' as grid')
@@ -186,9 +200,10 @@ end function MOSSCO_GridCreateRegional2D
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (rank<2 .or. rank>3) then
+    if (rank < 2 .or. rank > 3) then
       call MOSSCO_MessageAdd(message, trim(name)//' cannot use field '//trim(gridFieldName)//' with rank /= 2 or 3')
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
@@ -200,9 +215,16 @@ end function MOSSCO_GridCreateRegional2D
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_FieldGet(field, grid=grida_, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    gridb_ =  MOSSCO_GridCreateFromOtherGrid(grida_, rc=localrc)
+    if (present(nlayer)) then
+      gridb_ =  MOSSCO_GridCreateFromOtherGrid(grida_, nlayer=nlayer, rc=localrc)
+    else
+      gridb_ =  MOSSCO_GridCreateFromOtherGrid(grida_, nlayer=nlayer, rc=localrc)
+    endif
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(grida)) grida=grida_
     if (present(gridb)) gridb=gridb_
@@ -212,15 +234,17 @@ end function MOSSCO_GridCreateRegional2D
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridCreateFromOtherGrid"
-  function MOSSCO_GridCreateFromOtherGrid(grida, rc) result(gridb)
+  function MOSSCO_GridCreateFromOtherGrid(grida, kwe, nlayer, rc) result(gridb)
 
     implicit none
 
     type(ESMF_Grid), intent(in)                  :: gridA
-    type(ESMF_Grid)                              :: gridB
+    logical, intent(in), optional                :: kwe
+    integer(ESMF_KIND_I4), intent(in), optional  :: nlayer
     integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_Grid)                              :: gridB
 
-    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank, deCount
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank, deCount, nlayer_
     type(ESMF_DistGrid)                       :: distGrid, distGridB
     type(ESMF_CoordSys_Flag)                  :: coordSys
     integer(ESMF_KIND_I4), allocatable        :: coordDimCount(:), coordDimMap(:,:)
@@ -230,12 +254,23 @@ end function MOSSCO_GridCreateRegional2D
     integer(ESMF_KIND_I4)                     :: distGridToArrrayMap(2)
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
+    character(len=ESMF_MAXSTR)                :: message
 
     rc_ = ESMF_SUCCESS
+    nlayer_ = 1
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(nlayer)) nlayer_ = nlayer
 
     call ESMF_GridGet(grida, rank=rank, distGrid=distGrid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if ((rank) == 3 .and. present(nlayer)) then
+      write(message,'(A)') '  not allowed to provide nlayer argument with 3D grid'
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
 
     if (rank>0) then
       allocate(coordDimCount(rank))
@@ -246,15 +281,15 @@ end function MOSSCO_GridCreateRegional2D
 
     call ESMF_GridGet(grida, coordSys=coordSys, coordDimCount=coordDimCount, &
       coordDimMap=coordDimMap, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_DistGridGet(distGrid, deLayout=deLayout, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_DeLayoutGet(deLayout, deCount=deCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(minIndexPDe(rank,deCount))
@@ -263,7 +298,7 @@ end function MOSSCO_GridCreateRegional2D
 
     call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
                           maxIndexPDe=maxIndexPDe, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     deBlockList(:,1,:) = minIndexPDe
     deBlockList(:,2,:) = maxIndexPDe
@@ -272,13 +307,13 @@ end function MOSSCO_GridCreateRegional2D
 
       distGridB = ESMF_DistGridCreate(minval(deBlockList(1:2,1,:),2), maxval(deBlockList(1:2,2,:),2), &
         int(deBlockList(1:2,:,:)), delayout=delayout, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       gridb = ESMF_GridCreate(distGridB, name="horizontal grid", gridAlign=(/1,1/), &
         coordSys=coordSys, coordDimCount=int(coordDimCount(1:2)),      &
         coordDimMap=int(coordDimMap(1:2,1:2)), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     else
@@ -288,28 +323,29 @@ end function MOSSCO_GridCreateRegional2D
 
       call ESMF_GridGetFieldBounds(grida, totalUBound=ubnd2, &
         totalLBound=lbnd2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      gridb = ESMF_GridCreateNoPeriDim(minIndex=(/lbnd2(1),lbnd2(2),1/), &
+      gridb = ESMF_GridCreateNoPeriDim(minIndex=(/lbnd2(1),lbnd2(2),nlayer_/), &
                    maxIndex=(/ubnd2(1),ubnd2(2),1/), &
                    regDecomp=(/1,1,1/), &
                    coordSys=ESMF_COORDSYS_SPH_DEG, &
                    indexflag=ESMF_INDEX_GLOBAL,  &
                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
                    coorddep2=(/2/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
     call ESMF_GridAddCoord(gridb, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> @todo: implement multidimensional grid coordinates in MOSSCO_GridCopyCoords
     !call MOSSCO_GridCopyCoords(grida, gridb, coordDims=(/1,2/), rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
-    if (present(rc)) rc=rc_
-    return
+    if (present(rc)) rc = rc_
 
   end function MOSSCO_GridCreateFromOtherGrid
 
@@ -321,8 +357,8 @@ end function MOSSCO_GridCreateRegional2D
 
     type(ESMF_Grid), intent(in)                  :: grida
     type(ESMF_Grid), intent(inout)               :: gridb
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4), dimension(:)          :: coordDims
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                     :: rc_, localrc, localDeCount
     integer(ESMF_KIND_I4)                     :: ubndA(3), lbndA(3), ubndB(3), lbndB(3)
@@ -334,10 +370,10 @@ end function MOSSCO_GridCreateRegional2D
 
     rc_ = ESMF_SUCCESS
     call ESMF_GridGet(grida, rank=ranka, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_GridGet(gridb, rank=rankb, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Make a link if both grids are of the same rank, otherwise create new grid
@@ -361,12 +397,12 @@ end function MOSSCO_GridCreateRegional2D
     endif
 
     call ESMF_GridGet(grida, localDeCount=localDeCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (localDeCount<1) return
     call ESMF_GridGet(gridb, localDeCount=localDeCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (localDeCount<1) return
@@ -430,16 +466,16 @@ end function MOSSCO_GridCreateRegional2D
     deallocate(coordDimCountB)
 
     if (present(rc)) rc=rc_
-    return
 
   end subroutine MOSSCO_GridCopyCoords
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GridString"
-subroutine MOSSCO_GridString(grid, message, length, rc)
+subroutine MOSSCO_GridString(grid, message, kwe, length, rc)
 
   type(ESMF_Grid), intent(in)                    :: grid
   character(len=ESMF_MAXSTR), intent(inout)      :: message
+  logical, intent(in), optional                  :: kwe
   integer(ESMF_KIND_I4), intent(inout), optional :: length
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
@@ -450,10 +486,12 @@ subroutine MOSSCO_GridString(grid, message, length, rc)
   integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
 
   rc_ = ESMF_SUCCESS
+  if (present(kwe)) rc_ = ESMF_SUCCESS
 
   call ESMF_AttributeGet(grid, name='creator', isPresent=isPresent, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   if (isPresent) then
     call ESMF_AttributeGet(grid, name='creator', value=stringValue, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -499,18 +537,18 @@ subroutine MOSSCO_GridPrintBlockList(grid, rc)
   type(ESMF_Grid), intent(in)                    :: grid
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)          :: localrc
+  integer(ESMF_KIND_I4)          :: localrc, rc_
   type(ESMF_DistGrid)            :: distGrid
 
   call ESMF_GridGet(grid, distGrid=distGrid, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call MOSSCO_DistGridPrintBlockList(distGrid, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  if (present(rc)) rc=localrc
+  if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_GridPrintBlockList
 
@@ -521,18 +559,18 @@ subroutine MOSSCO_DistGridPrintBlockList(distGrid, rc)
   type(ESMF_DistGrid), intent(in)                    :: distGrid
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)          :: localrc
+  integer(ESMF_KIND_I4)          :: localrc, rc_
   type(ESMF_DeLayout)            :: deLayout
 
   call ESMF_DistGridGet(distGrid, deLayout=deLayout, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call MOSSCO_DeLayoutPrintBlockList(deLayout, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  if (present(rc)) rc=localrc
+  if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_DistGridPrintBlockList
 
@@ -544,12 +582,12 @@ subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
   type(ESMF_DeLayout), intent(in)                    :: deLayout
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)              :: localrc, deCount, rank, localDeCount
+  integer(ESMF_KIND_I4)              :: localrc, deCount, rank, localDeCount, rc_
   integer(ESMF_KIND_I4), allocatable :: deBlockList(:,:,:)
   character(len=ESMF_MAXSTR)         :: message
 
   call ESMF_DeLayoutGet(deLayout, deCount=deCount, localDeCount=localDeCount, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   if (localDeCount /= 1 ) then
@@ -567,16 +605,16 @@ subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
 
   allocate(deBlockList(rank,2,deCount))
   !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   !call MOSSCO_MatrixFilePrint(deBlocklist(:,1,:), filename, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call ESMF_DeLayoutPrint(deLayout, rc=localrc)
 
   if (allocated(deBlockList)) deallocate(deBlockList)
-  if (present(rc)) rc=localrc
+  if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_DeLayoutPrintBlockList
 
