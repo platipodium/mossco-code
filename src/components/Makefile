@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 # @author Richard Hofmeister <richard.hofmeister@hzg.de>
 # @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
@@ -21,7 +21,8 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_inout libmossco_simplewave libmossco_info # libconstant_grid
+TARGETS=libempty libconstant libmossco_grid libmossco_inout
+TARGETS+=libmossco_simplewave libmossco_info libmossco_benthic_filtration # libconstant_grid
 
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS += libmossco_netcdf libmossco_clm #libmossco_river

@@ -2080,6 +2080,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'constant_grid'   : ['constant_grid'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
+        'grid'       : ['mossco_grid'],
         'erosed'     : ['mossco_erosed'],
         'benthic_filtration'     : ['mossco_benthic_filtration'],
         'hamsom'     : ['mossco_hamsom'],
@@ -2151,6 +2152,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'remtc_atmosphere' : ['libremtc'],
         'remtc_ocean' : ['libremtc'],
         'getm' : ['libmossco_getm'],
+        'grid' : ['libmossco_grid'],
 }
 
 #fid.write('\nNC_LIBS += $(shell nf-config --flibs)\n\n')
@@ -2216,7 +2218,7 @@ libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 libsediment libconstant libconstant_grid libmossco_clm libmossco_erosed \
-libmossco_fabm0d libmossco_fabmpelagic libmossco_benthic_filtration:
+libmossco_fabm0d libmossco_fabmpelagic libmossco_benthic_filtration libmossco_grid:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:
