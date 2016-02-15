@@ -71,6 +71,7 @@ module mossco_netcdf
     procedure :: refTime => mossco_netcdf_reftime
     procedure :: timeIndex => mossco_netcdf_find_time_index
     procedure :: timeGet => MOSSCO_NcGetTime
+    procedure :: getatt => mossco_netcdf_var_get_att
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -2354,7 +2355,7 @@ module mossco_netcdf
 
     implicit none
     class(type_mossco_netcdf)                    :: self
-    type(ESMF_Field), intent(inout)               :: field
+    type(ESMF_Field), intent(inout)              :: field
     type(type_mossco_netcdf_variable)            :: var
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4), intent(in), optional  :: itime
@@ -2618,7 +2619,9 @@ module mossco_netcdf
     if (allocated(start)) deallocate(start)
     if (allocated(fstart)) deallocate(fstart)
 
-    if (present(rc)) rc=rc_
+    call self%getatt(field, var, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     return
 
@@ -3223,5 +3226,101 @@ module mossco_netcdf
     if (present(rc)) rc=rc_
 
   end subroutine MOSSCO_AttributeNetcdfWriteField
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_var_get_att"
+  subroutine mossco_netcdf_var_get_att(self, field, var, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    type(ESMF_Field), intent(inout)              :: field
+    type(type_mossco_netcdf_variable)            :: var
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                        :: localrc, rc_, attributeCount
+    integer(ESMF_KIND_I4)                        :: i
+
+    integer(ESMF_KIND_I4)                        :: int4, attributeType, attributeLength
+    integer(ESMF_KIND_I8)                        :: int8
+    real(ESMF_KIND_R8)                           :: real8
+    real(ESMF_KIND_R4)                           :: real4
+    character(len=ESMF_MAXSTR)                   :: attributeName, string
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_inquire_variable(self%ncid, var%varid, nAtts=attributeCount)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    do i=1, attributeCount
+
+      localrc = nf90_inq_attname(self%ncid, var%varid, i, attributeName)
+      if (localrc /= NF90_NOERR) then
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      localrc = nf90_inquire_attribute(self%ncid, var%varid, attributeName, &
+        xtype=attributeType, len=attributeLength)
+      if (localrc /= NF90_NOERR) then
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      ! Defined values for attributeType are:
+      ! NF90_BYTE, NF90_CHAR, NF90_SHORT, NF90_INT, NF90_FLOAT, and NF90_DOUBLE.
+
+      if (attributeType == NF90_CHAR) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  string)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), trim(string), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        cycle
+      endif
+
+      if (attributeLength>1) then
+        localrc = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = localrc
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) return
+      endif
+
+      if (attributeType == NF90_DOUBLE) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  real8)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), real8, rc=localrc)
+      elseif (attributeType == NF90_FLOAT) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  real4)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), real4, rc=localrc)
+      elseif (attributeType == NF90_INT) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName, int8)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName),int8, rc=localrc)
+      elseif (attributeType == NF90_SHORT) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  int4)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), int4, rc=localrc)
+      else
+        localrc = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = localrc
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) return
+      endif
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
+    if (present(rc)) rc = rc_
+
+  end subroutine mossco_netcdf_var_get_att
 
 end module
