@@ -142,8 +142,10 @@ module grid_component
     integer(ESMF_KIND_I4)      :: fieldRank, gridRank
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     integer(ESMF_KIND_I4), allocatable    :: decompositionList(:)
+    type(ESMF_Vm)              :: vm
 
     rc = ESMF_SUCCESS
+    hasGrid = .false.
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -185,7 +187,7 @@ module grid_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)')  trim(name)//' found in file'
-        call MOSSCO_MessageAdd(message,' '//trim(configFileName)//' grid: '//trim(fileName))
+        call MOSSCO_MessageAdd(message,' '//trim(configFileName)//' grid: '//trim(gridName))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -194,19 +196,19 @@ module grid_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (isPresent) then
-        call ESMF_AttributeGet(importState, 'grid', value=gridName, rc=localrc)
+        call ESMF_AttributeGet(gridComp, 'grid', value=gridName, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       elseif (labelIsPresent) then
-        call ESMF_AttributeSet(importState, 'grid', trim(gridName), rc=localrc)
+        call ESMF_AttributeSet(gridComp, 'grid', trim(gridName), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       !> @todo implement this
-      call MOSSCO_ConfigGetList(config, 'decomposition:', decompositionList, localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call MOSSCO_ConfigGetList(config, 'decomposition:', decompositionList, localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(decompositionList)) then
         !> @todo check validity of decomposition.
@@ -216,6 +218,14 @@ module grid_component
         allocate(decompositionList(2), stat=localrc)
         decompositionList(:) = (/1,1/)
       endif
+
+      call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_VmGetRectangleDecomposition(vm, decompositionList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ConfigFindLabel(config, label='layers:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -236,29 +246,33 @@ module grid_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-
     ! Read the from a file if this file exists
-
-    call ESMF_AttributeGet(gridComp, 'grid', value=gridName, rc=localrc)
+    call ESMF_AttributeGet(gridComp, 'grid', value=gridName, &
+      defaultValue=trim(name)//'.nc', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    inquire(file=trim(fileName), exist=isPresent)
+    write(message, '(A)') trim(name)//' attempts to read from file '//trim(gridName)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    inquire(file=trim(gridName), exist=isPresent)
     if (isPresent) then
-      write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
+      write(message,'(A)')  trim(name)//' reading file '//trim(gridName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      grid = ESMF_GridCreate(filename=trim(fileName),fileFormat=ESMF_FILEFORMAT_SCRIP, &
+      grid = ESMF_GridCreate(filename=trim(gridName),fileFormat=ESMF_FILEFORMAT_SCRIP, &
         regDecomp=decompositionList, isSphere=.false., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message, '(A)') trim(name)//' obtains grid from SCRIP file '//trim(fileName)
+      write(message, '(A)') trim(name)//' obtains grid from SCRIP file '//trim(gridName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+
+      hasGrid=.true.
 
     else ! Read from the foreign_grid_field_name attribute
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
@@ -284,8 +298,18 @@ module grid_component
           call ESMF_FieldGet(field, grid=grid, rank=fieldRank, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          hasGrid = .true.
         endif
       endif
+    endif
+
+    if (.not.hasGrid) then
+      write(message,'(A)') trim(name)//' cannot run without a grid'
+      rc = ESMF_RC_NOT_SET
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      !return
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_GridGet(grid, rank=gridRank, name=gridName, rc=localrc)
