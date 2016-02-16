@@ -6,8 +6,8 @@ Restarting a simulation with MOSSCO is a combination of two facilities
 2. Using the MOSSCO NetCDF input component
 
 > Restarting a simulation with models that do not implement the ESMF `ReadRestart` facility, but that
-have their own restarting mechanism depends on that implementation.  We provide a script to handle
-this for the GETM model (`run_parallel.py`, described elsewhere).
+> have their own restarting mechanism depends on that implementation.  We provide a script to handle
+> this for the GETM model (`run_parallel.py`, described elsewhere).
 
 Currently, MOSSCO supports `ReadRestart` for the benthic and pelagic ecosystem frameworks `fabm_pelagic` and `fabm_sediment`
 
