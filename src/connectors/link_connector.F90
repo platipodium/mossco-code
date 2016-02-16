@@ -322,6 +322,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+            if (MOSSCO_FieldAttributesIdentical(importField, exportField, rc=localrc) > 0) then
+              write(message,'(A)') 'Field attributes are not identical for item '//trim(itemNameList(i))
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            endif
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
             if (exportField /= importField) then
               call ESMF_FieldGet(importField, status=fieldstatus, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -568,6 +575,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             cycle
           endif
+
+          if (MOSSCO_FieldAttributesIdentical(importField, exportField, rc=localrc) > 0) then
+            write(message,'(A)') 'Field attributes are not identical for item '//trim(itemNameList(i))
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          endif
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (exportFieldStatus .eq. ESMF_FIELDSTATUS_GRIDSET) then
             call ESMF_FieldGet(exportField,grid=exportGrid,rc=localrc)
