@@ -304,26 +304,17 @@ module nudge_connector
 
     type(ESMF_Field)                       :: exportField, importField
     character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
-    character(ESMF_MAXSTR)                 :: message, itemName, importCreator, name
+    character(ESMF_MAXSTR)                 :: message, itemName, name
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
     type(ESMF_StateItem_Flag)              :: itemType
-    type(ESMF_FieldStatus_Flag)            :: fieldStatus
-    integer(ESMF_KIND_I4)                  :: i, j, itemCount, rank, exportRank, int4
-    integer(ESMF_KIND_I8)                  :: numChanged, advanceCount, int8
-    integer(ESMF_KIND_I4), allocatable     :: ubnd(:), lbnd(:)
-    integer(ESMF_KIND_I4), allocatable     :: exportUbnd(:), exportLbnd(:)
+    integer(ESMF_KIND_I4)                  :: i, j, itemCount
 
-    real(ESMF_KIND_R8), pointer            :: importPtr3(:,:,:), exportPtr3(:,:,:)
-    real(ESMF_KIND_R8), pointer            :: importPtr2(:,:), exportPtr2(:,:)
-    logical, allocatable                   :: mask2(:,:), mask3(:,:,:)
     logical                                :: isMatch, isPresent, tagOnly_
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
-    real(ESMF_KIND_R8)                     :: exportMissingValue, importMissingValue
-    real(ESMF_KIND_R8)                     :: weight, real8
-    real(ESMF_KIND_R4)                     :: real4
-    type(ESMF_TypeKind_Flag)               :: typeKind
 
+    real(ESMF_KIND_R8)                     :: weight
     integer(ESMF_KIND_I4)                  :: localrc, rc_
+    integer(ESMF_KIND_I8)                  :: advanceCount
     type(ESMF_Clock)                       :: clock
     type(ESMF_Time)                        :: startTime, currTime
     type(ESMF_TimeInterval)                :: timeStep
@@ -361,7 +352,7 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! It is better to compare startTime with currTime in a connecter, as it could be
+    ! It is better to compare startTime with currTime in a connector, as it could be
     ! called multiple times for a single timeStep
     call ESMF_ClockGet(clock, startTime=startTime, currTime=currTime, &
       timeStep=timeStep, rc=localrc)
@@ -470,213 +461,9 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGet(exportField, status=fieldStatus, rc=localrc)
+      call MOSSCO_FieldWeightField(exportField, importField, weight, tagOnly=tagOnly_, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
-
-      call ESMF_FieldGet(exportField, rank=exportRank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_StateGet(importState, trim(itemName), importField, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
-
-      call ESMF_FieldGet(importField, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (rank /= exportRank) then
-        write(message,'(A)')  trim(name)//' rank mismatch in '
-        call MOSSCO_FieldString(exportField, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize()
-      endif
-
-      if (rank > 0) then
-        if (allocated(exportUbnd)) deallocate(exportUbnd)
-        allocate(exportUbnd(rank), stat=localrc)
-        if (allocated(exportLbnd)) deallocate(exportLbnd)
-        allocate(exportLbnd(rank), stat=localrc)
-        if (allocated(lbnd)) deallocate(lbnd)
-        allocate(lbnd(rank), stat=localrc)
-        lbnd(:) = 1
-        if (allocated(ubnd)) deallocate(ubnd)
-        allocate(ubnd(rank), stat=localrc)
-        ubnd(:) = 0
-      endif
-
-      call ESMF_FieldGetBounds(importField, exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGetBounds(exportField, exclusiveUBound=exportUbnd, exclusiveLBound=exportLbnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (any(exportLbnd - lbnd > 0) .or. any(exportUbnd - ubnd > 0))  then
-        write(message,'(A)')  trim(name)//' exclusive bounds mismatch in '
-        call MOSSCO_FieldString(exportField, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize()
-      endif
-
-      if (allocated(exportUbnd)) deallocate(exportUbnd)
-      if (allocated(exportLbnd)) deallocate(exportLbnd)
-
-      call ESMF_AttributeGet(importField, 'missing_value', &
-        isPresent=isPresent,  rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (isPresent) then
-        call ESMF_AttributeGet(importField, 'missing_value', typeKind=typeKind, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (typeKind == ESMF_TYPEKIND_R8) then
-          call ESMF_AttributeGet(importField, 'missing_value', real8, rc=localrc)
-          importMissingValue = real8
-        elseif (typeKind == ESMF_TYPEKIND_R4) then
-          call ESMF_AttributeGet(importField, 'missing_value', real4, rc=localrc)
-          importMissingValue = dble(real4)
-        elseif (typeKind == ESMF_TYPEKIND_I8) then
-          call ESMF_AttributeGet(importField, 'missing_value', int8, rc=localrc)
-          importMissingValue = dble(int8)
-        elseif (typeKind == ESMF_TYPEKIND_I4) then
-          call ESMF_AttributeGet(importField, 'missing_value', int4, rc=localrc)
-          importMissingValue = dble(int4)
-        else
-          write(message,'(A)')  '  missing value non-implemented type '
-          call MOSSCO_FieldString(importField, message)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
-        importMissingValue=-1.0E30
-      endif
-
-      call ESMF_AttributeGet(exportField, name='missing_value', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (isPresent) then
-        call ESMF_AttributeGet(exportField, 'missing_value', typeKind=typeKind, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (typeKind == ESMF_TYPEKIND_R8) then
-          call ESMF_AttributeGet(exportField, 'missing_value', real8, rc=localrc)
-          exportMissingValue = real8
-        elseif (typeKind == ESMF_TYPEKIND_R4) then
-          call ESMF_AttributeGet(exportField, 'missing_value', real4, rc=localrc)
-          exportMissingValue = dble(real4)
-        elseif (typeKind == ESMF_TYPEKIND_I8) then
-          call ESMF_AttributeGet(exportField, 'missing_value', int8, rc=localrc)
-          exportMissingValue = dble(int8)
-        elseif (typeKind == ESMF_TYPEKIND_I4) then
-          call ESMF_AttributeGet(exportField, 'missing_value', int4, rc=localrc)
-          exportMissingValue = dble(int4)
-        else
-          write(message,'(A)')  '  missing value non-implemented type '
-          call MOSSCO_FieldString(exportField, message)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        endif
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
-        exportMissingValue=-1.0E30
-      endif
-
-      call ESMF_AttributeSet(exportField, 'nudging_weight', weight, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_AttributeGet(importField, 'creator', importCreator, defaultValue='unknown', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_AttributeSet(exportField, 'nudging_component', trim(importCreator), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      !> @todo The has_boundary_data attribute is set to .true. by default here,
-      !> this should be changed by a configuration attribute and the attribute name MOSSCO_AttributeGetList
-      !> be synchronized with the transporting component (e.g. getm_component)
-      call ESMF_AttributeSet(exportField, 'has_boundary_data', .true., rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (.not. tagOnly_) then
-        numChanged = 0
-        select case (rank)
-          case(2)
-            call ESMF_FieldGet(importField, farrayPtr=importPtr2, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_FieldGet(exportField, farrayPtr=exportPtr2, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-            if (allocated(mask2)) deallocate(mask2)
-            allocate(mask2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), stat=localrc)
-            !> @todo add a mask (also for 3d) working on the missingValue
-            !mask2 = (abs(exportPtr2 - exportMissingValue) > tiny(1.0))
-            !mask2 = ((abs(importPtr2 - importMissingValue) >  tiny(1.0)) .and. mask2)
-            mask2 = (exportPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) .ge. 0.0 &
-              .and. (importPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) .ge. 0.0 ))
-            numChanged = count(mask2)
-            if (numChanged>0) then
-              where (mask2)
-                exportPtr2 = (1.0 - weight) * exportPtr2 + weight * importPtr2
-              endwhere
-            endif
-            if (allocated(mask2)) deallocate(mask2)
-          case(3)
-            call ESMF_FieldGet(importField, farrayPtr=importPtr3, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            call ESMF_FieldGet(exportField, farrayPtr=exportPtr3, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            if (allocated(mask3)) deallocate(mask3)
-            allocate(mask3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), stat=localrc)
-            mask3 = (exportPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) .ge. 0.0 &
-              .and. (importPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) .ge. 0.0 ))
-
-            numChanged = count(mask3)
-            if (numChanged>0) then
-              where (mask3)
-                exportPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = (1.0 - weight) &
-                  * exportPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) &
-                  + weight * importPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
-              endwhere
-            endif
-            if (allocated(mask3)) deallocate(mask3)
-          case default
-            if (allocated(lbnd)) deallocate(lbnd)
-            if (allocated(ubnd)) deallocate(ubnd)
-            if (present(rc)) rc=ESMF_RC_NOT_IMPL
-            return
-        endselect
-
-        if (numChanged>0) then
-          write(message,'(A,ES9.2,A,I5.5,A)') trim(name)//' weight ', weight, ' ', numChanged, ' cells '
-          call MOSSCO_FieldString(exportField, message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        endif
-      endif
-
-      if (allocated(lbnd)) deallocate(lbnd)
-      if (allocated(ubnd)) deallocate(ubnd)
 
     enddo
 
@@ -701,6 +488,5 @@ module nudge_connector
     return
 
   end subroutine MOSSCO_WeightImportIntoExportState
-
 
 end module nudge_connector
