@@ -65,10 +65,6 @@ endif
 #  $(info fabm-sha settings)
 endif
 ifeq ($(MOSSCO_EROSED),true)
-ifneq ($(SVN),)
-  EROSED_REV=$(shell (cd $(EROSED_DIR) ; svn log) | head -2 | tail -1 | awk '{print $$1}')
-endif
-  EROSED_REV?=none
   TARGETS += erosed-rev
 endif
 
@@ -125,14 +121,19 @@ getm-sha:
 	  echo 'character(len=40), parameter :: GETM_GIT_SHA_KEY = "'$(GETM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
 
-erosed-rev:  git-sha.h
-	@-if [  $(shell grep -c $(EROSED_REV) $(SHA_FILE)) -eq 0 ] ; then \
-	  if [ $(shell grep -c EROSED_SVN_REVISION $(SHA_FILE)) -gt 0 ] ; then \
-	    cat $(SHA_FILE) | sed  '/EROSED_SVN_REVISION/d'  > $(SHA_FILE) ; \
-	  fi ; \
-	  echo 'character(len=40), parameter :: EROSED_SVN_REVISION = "'$(EROSED_REV)'"'	 >> $(SHA_FILE) ; \
-	fi
+ifeq ($(MOSSCO_EROSED),true)
+.PHONY: erosed-rev
+erosed-rev: erosed.rev git-sha.h
+	@-if [ $(shell grep -c EROSED_SVN_REVISION $(SHA_FILE)) -gt 0 ] ; then \
+	  sed  -i '/EROSED_SVN_REVISION/d' $(SHA_FILE) ; \
+	fi ; \
+	echo 'character(len=40), parameter :: EROSED_SVN_REVISION = "'`cat erosed.rev 2> /dev/null || echo none`'"'	 >> $(SHA_FILE) ; \
+
+erosed.rev: $(EROSED_DIR)/source/erosed.f90
+	@svn log $(EROSED_DIR)/source/erosed.f90 2> /dev/null | head -2 | tail -1 | awk '{print $$1}' > erosed.rev
+	@if [ ! -s erosed.rev ] ; then rm erosed.rev ; fi
+endif
 
 extraclean:
 	@- for dir in $(SUBDIRS); do $(MAKE) -C $$dir clean; done
-	@- rm -f $(SHA_FILE) *.swp
+	@- rm -f $(SHA_FILE) erosed.rev *.swp
