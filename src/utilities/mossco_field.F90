@@ -985,4 +985,102 @@ end subroutine MOSSCO_FieldCopy
 
   end subroutine MOSSCO_FieldGetMissingValueR8
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldAttributesIdentical"
+  function MOSSCO_FieldAttributesIdentical(importField, exportField, kwe, &
+    exclude, rc) result(differCount)
+
+    type(ESMF_Field), intent(in)                 :: importField, exportField
+    logical, intent(in), optional                :: kwe
+    character(len=*), dimension(*), optional     :: exclude(:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4)                        :: differCount
+
+    real(ESMF_KIND_R4)                           :: importReal4, exportReal4
+    real(ESMF_KIND_R8)                           :: importReal8, exportReal8
+    integer(ESMF_KIND_I8)                        :: importInt8, exportInt8
+    integer(ESMF_KIND_I4)                        :: localrc, rc_, importInt4, exportInt4
+    integer(ESMF_KIND_I4)                        :: importCount, exportcount, i, j
+    logical                                      :: isPresent
+    character(len=ESMF_MAXSTR)                   :: message, attributeName
+    character(len=ESMF_MAXSTR)                   :: importString, exportString
+    type(ESMF_TypeKind_Flag)                     :: importTypeKind, exportTypeKind
+    character(len=ESMF_MAXSTR), allocatable      :: excludeList(:)
+
+
+    rc_ = ESMF_SUCCESS
+    differCount = 0
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    if (present(exclude)) then
+      call MOSSCO_Reallocate(excludeList, ubound(exclude,1)-lbound(exclude,1)+1, rc=localrc)
+      excludeList(:) = exclude(:)
+    else
+      call MOSSCO_Reallocate(excludeList, 1, rc=localrc)
+      excludeList(1) = 'creator'
+    endif
+
+    call ESMF_AttributeGet(importField, count=importCount, rc=localrc)
+    if (importCount == 0) return
+
+    call ESMF_AttributeGet(exportField, count=exportCount, rc=localrc)
+    if (exportCount == 0) return
+
+    do i = 1, importCount
+
+      call ESMF_AttributeGet(importfield, attributeIndex=i , name=attributeName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      ! If this attribute's name is in the exclude list, then cycle to next attribute
+      isPresent = .false.
+      do j = lbound(excludeList,1), ubound(excludeList,1)
+        if ( trim(excludeList(j)) /= trim(attributeName) ) cycle
+        isPresent = .true.
+        exit
+      enddo
+      if (isPresent) cycle
+
+      call ESMF_AttributeGet(exportfield, name=attributeName, isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (.not.isPresent) cycle
+
+      call ESMF_AttributeGet(importfield, name=attributeName, typeKind=importTypeKind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeGet(exportfield, name=attributeName, typeKind=exportTypeKind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (importTypeKind /= exportTypeKind) then
+        differCount = differCount + 1
+        cycle
+      endif
+
+      if (importTypeKind == ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(importField, name=attributeName, value=importString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_AttributeGet(exportField, name=attributeName, value=exportString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (trim(exportString) /= trim(importString)) then
+          differCount = differCount + 1
+          cycle
+        endif
+      endif
+    enddo
+
+    call MOSSCO_Reallocate(excludeList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end function MOSSCO_FieldAttributesIdentical
+
 end module mossco_field
