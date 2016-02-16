@@ -103,7 +103,6 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-
     call MOSSCO_CompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -303,11 +302,13 @@ module nudge_connector
     integer(ESMF_KIND_I4), optional        :: rc
 
     type(ESMF_Field)                       :: exportField, importField
+    type(ESMF_FieldBundle)                 :: importFieldBundle, exportFieldBundle
+    type(ESMF_Field), allocatable          :: importfieldList(:), exportFieldList(:)
     character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
     character(ESMF_MAXSTR)                 :: message, itemName, name
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
     type(ESMF_StateItem_Flag)              :: itemType
-    integer(ESMF_KIND_I4)                  :: i, j, itemCount
+    integer(ESMF_KIND_I4)                  :: i, j, itemCount, fieldCount, exportFieldCount
 
     logical                                :: isMatch, isPresent, tagOnly_
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
@@ -408,7 +409,7 @@ module nudge_connector
 
       itemName=trim(itemNameList(i))
 
-      ! Look for an exclusion pattern on this field name
+      ! Look for an exclusion pattern on this field/bundle name
       if (allocated(filterExcludeList)) then
         do j=1,ubound(filterExcludeList,1)
           call MOSSCO_StringMatch(itemName, filterExcludeList(j), isMatch, localrc)
@@ -424,7 +425,7 @@ module nudge_connector
         endif
       endif
 
-      !! Look for an inclusion pattern on this field name
+      !! Look for an inclusion pattern on this field/bundle name
       if (allocated(filterIncludeList)) then
         do j=1,ubound(filterIncludeList,1)
           call MOSSCO_StringMatch(itemName, filterIncludeList(j), isMatch, localrc)
@@ -451,17 +452,84 @@ module nudge_connector
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       end if
-      if (itemType /= ESMF_STATEITEM_FIELD) then
-        write(message,*) 'fieldBundle not implemented, skip item ',trim(itemName)
+
+      if (itemType == ESMF_STATEITEM_FIELD) then
+
+        call ESMF_StateGet(importState, trim(itemName), importField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_StateGet(exportState, trim(itemName), exportField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_FieldWeightField(exportField, importField, weight, tagOnly=tagOnly_, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        cycle
+      endif
+
+      if (itemType /= ESMF_STATEITEM_FIELDBUNDLE) then
+        write(message, '(A)') trim(name)//' only implements field(Bundles), skip item ',trim(itemName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
 
-      call ESMF_StateGet(exportState, trim(itemName), exportField, rc=localrc)
+      call ESMF_StateGet(importState, trim(itemName), importFieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_FieldWeightField(exportField, importField, weight, tagOnly=tagOnly_, rc=localrc)
+      call ESMF_StateGet(exportState, trim(itemName), exportFieldBundle, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(exportFieldBundle, fieldCount=exportFieldCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(importFieldBundle, fieldCount=fieldCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (exportFieldCount /= fieldCount) then
+        write(message, '(A)') trim(name)//' fieldBundles '//trim(itemName)//' have non-matching size'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        cycle
+      endif
+
+      if (exportFieldCount == 0) cycle
+
+      call MOSSCO_Reallocate(importFieldList, fieldCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(exportFieldList, fieldCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(importFieldBundle, fieldList=importFieldList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(exportFieldBundle, fieldList=exportFieldList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do j = 1, fieldCount
+
+        call MOSSCO_FieldWeightField(exportFieldList(i), importFieldList(i), weight, &
+          tagOnly=tagOnly_, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      enddo
+
+      call MOSSCO_Reallocate(importFieldList, 0,  rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(exportFieldList, 0,  rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
