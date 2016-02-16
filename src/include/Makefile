@@ -36,7 +36,7 @@ TARGETS = mossco-sha
 ifdef MOSSCO_SETUPDIR
 ifneq ($(wildcard $(MOSSCO_SETUPDIR)),)
 ifneq ($(GIT),)
-  MOSSCO_SETUP_SHA=$(shell (cd $(MOSSCO_SETUPDIR) ; git log) | head -1 | awk '{print $$2}')
+  MOSSCO_SETUP_SHA=$(shell (cd $(MOSSCO_SETUPDIR) ; git log -n1) | head -1 | awk '{print $$2}')
 endif
   MOSSCO_SETUP_SHA?=none
   TARGETS += mossco-setup-sha
@@ -44,21 +44,21 @@ endif
 endif
 ifeq ($(MOSSCO_GOTM),true)
 ifneq ($(GIT),)
-  GOTM_SHA=$(shell (cd $(GOTMDIR) ; git log) | head -1 | awk '{print $$2}')
+  GOTM_SHA=$(shell (cd $(GOTMDIR) ; git log -n1) | head -1 | awk '{print $$2}')
 endif
   GOTM_SHA?=none
   TARGETS += gotm-sha
 endif
 ifeq ($(MOSSCO_GETM),true)
 ifneq ($(GIT),)
-  GETM_SHA=$(shell (cd $(GETMDIR) ; git log) | head -1 | awk '{print $$2}')
+  GETM_SHA=$(shell (cd $(GETMDIR) ; git log -n1) | head -1 | awk '{print $$2}')
 endif
   GETM_SHA?=none
   TARGETS += getm-sha
 endif
 ifeq ($(MOSSCO_FABM),true)
 ifneq ($(GIT),)
-  FABM_SHA=$(shell (cd $(FABMDIR) ; git log) | head -1 | awk '{print $$2}')
+  FABM_SHA=$(shell (cd $(FABMDIR) ; git log -n1) | head -1 | awk '{print $$2}')
 endif
   FABM_SHA?=none
   TARGETS += fabm-sha
