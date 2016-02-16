@@ -618,4 +618,63 @@ subroutine MOSSCO_DeLayoutPrintBlockList(deLayout, rc)
 
 end subroutine MOSSCO_DeLayoutPrintBlockList
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_VmGetRectangleDecomposition"
+subroutine MOSSCO_VmGetRectangleDecomposition(vm, decomposition, rc)
+
+  type(ESMF_Vm), intent(in)           :: vm
+  integer(ESMF_KIND_I4), intent(inout), allocatable :: decomposition(:)
+  integer,  intent(out), optional     :: rc
+
+  integer(ESMF_KIND_I4)          :: rc_, localrc, petCount, i, j
+  character(len=ESMF_MAXSTR)     :: message
+
+  rc_ = ESMF_SUCCESS
+  if (allocated(decomposition)) then
+    if (size(decomposition) /= 2) then
+      write(message, '(A)') '  invalid decomposition supplied'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+  else
+    allocate(decomposition(2), stat=localrc)
+  endif
+
+  call ESMF_VmGet(vm, petCount=petCount, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  i = int(sqrt(petCount*1.0)) + 1
+  j = petCount / i + 1
+  decomposition(1) = i
+  decomposition(2) = j
+  write(message, '(A,I3,A,I2, A,I2,A,I2, A,I2)') '  decomposition for ', petCount,': ', &
+    decomposition(1), ' x ',decomposition(1), ' ', i, ' x ', j
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+  do while (i > 1)
+    i = i - 1
+    j = (petCount / i) + 1
+    do while (i * (j - 1) >= petCount)
+      j = j - 1
+    enddo
+
+    if (i * j < decomposition(1) * decomposition(2) ) then
+      decomposition(1) = i
+      decomposition(2) = j
+      write(message, '(A,I3,A,I2, A,I2,A,I2, A,I2)') '  decomposition for ', petCount,': ', &
+        decomposition(1), ' x ',decomposition(1), ' ', i, ' x ', j
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    if (decomposition(1) * decomposition(2) == petCount) exit
+  enddo
+
+  write(message, '(A,I3,A,I2, A,I2,A,I2, A,I2)') '  decomposition for ', petCount,': ', &
+    decomposition(1), ' x ',decomposition(1), ' ', i, ' x ', j
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+  if (present(rc)) rc = rc_
+
+end subroutine MOSSCO_VmGetRectangleDecomposition
 end module mossco_grid
