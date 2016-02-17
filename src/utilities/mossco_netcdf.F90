@@ -2749,7 +2749,13 @@ module mossco_netcdf
         endif
       enddo
       if (farray(ntime) <= ticks*1.0D0) itime = ntime
-      jtime_ = itime + 1
+
+      if (farray(itime) == ticks*1.0D0) then
+        jtime_ = itime
+      else
+        jtime_ = itime + 1
+      endif
+
       if (jtime_ > ntime) then
         jtime_ = ntime
       else
