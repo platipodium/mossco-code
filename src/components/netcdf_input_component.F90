@@ -921,7 +921,7 @@ module netcdf_input_component
     integer(ESMF_KIND_I4)   :: itemCount, localDeCount
     real(ESMF_KIND_R8)      :: weight
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
-    type(ESMF_Field)        :: field
+    type(ESMF_Field)        :: field, nextField
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     character(len=ESMF_MAXSTR) :: fileName
     type(ESMF_Clock)        :: clock
@@ -932,6 +932,8 @@ module netcdf_input_component
     integer(ESMF_KIND_I4)      :: localrc, itime, jtime
     logical                    :: isPresent
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
+    type(ESMF_TypeKind_Flag)   :: typeKind
+    type(ESMF_Grid)            :: grid
 
     rc = ESMF_SUCCESS
 
@@ -1131,15 +1133,27 @@ module netcdf_input_component
       !! @todo check shape of variable agains shape of field
 
       if (trim(interpolationMethod) == 'linear') then
-      !   newField = ESMF_FieldCreate(field, rc=localrc)
-      !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !
-      !   call nc%getvar(field, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
-      !   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !
-      !   !call MOSSCO_FieldNudge(field, newField, weight=weight, rc=localrc)
+
+        call ESMF_FieldGet(field, typeKind=typeKind, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        nextField = ESMF_FieldCreate(grid=grid, typeKind=typeKind, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call nc%getvar(nextField, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_FieldWeightField(field, nextField, weight, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldDestroy(nextField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       elseif ((trim(interpolationMethod) == 'recent') &
         .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
         call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
