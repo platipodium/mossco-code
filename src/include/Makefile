@@ -124,10 +124,8 @@ getm-sha:
 ifeq ($(MOSSCO_EROSED),true)
 .PHONY: erosed-rev
 erosed-rev: erosed.rev git-sha.h
-	@-if [ $(shell grep -c EROSED_SVN_REVISION $(SHA_FILE)) -gt 0 ] ; then \
-	  sed  -i '/EROSED_SVN_REVISION/d' $(SHA_FILE) ; \
-	fi ; \
-	echo 'character(len=40), parameter :: EROSED_SVN_REVISION = "'`cat erosed.rev 2> /dev/null || echo none`'"'	 >> $(SHA_FILE) ; \
+	@sed  -i '/EROSED_SVN_REVISION/d' $(SHA_FILE)
+	@echo 'character(len=40), parameter :: EROSED_SVN_REVISION = "'`cat erosed.rev 2> /dev/null || echo none`'"'	 >> $(SHA_FILE)
 
 erosed.rev: $(EROSED_DIR)/source/erosed.f90
 	@svn log $(EROSED_DIR)/source/erosed.f90 2> /dev/null | head -2 | tail -1 | awk '{print $$1}' > erosed.rev
