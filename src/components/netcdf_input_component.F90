@@ -1140,11 +1140,11 @@ module netcdf_input_component
       !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !
       !   !call MOSSCO_FieldNudge(field, newField, weight=weight, rc=localrc)
-      ! elseif ((trim(interpolationMethod) == 'recent') &
-      !   .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
-      !   call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
-      ! else
-      !   call nc%getvar(field, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
+      elseif ((trim(interpolationMethod) == 'recent') &
+        .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
+        call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+      else
+        call nc%getvar(field, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
