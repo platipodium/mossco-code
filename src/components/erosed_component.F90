@@ -415,7 +415,10 @@ contains
     allocate (eq_conc     (nmlb:nmub))
     allocate (ws        (nfrac,nmlb:nmub))
     !
-    if (bedmodel) allocate (mass (nfrac,nmlb:nmub))
+    if (bedmodel) then
+      allocate (mass (nfrac,nmlb:nmub))
+      mass = 0.0d0
+    end if
     
 !    allocate (massfluff (nfrac,nmlb:nmub))
     allocate (sink      (nfrac,nmlb:nmub))
@@ -445,7 +448,6 @@ contains
     sour = 0.0_fp
     sinkf=0.0_fp
     sourf=0.0_fp
-    mass =0.0_fp
 !    massfluff=0.0_fp
     mudfrac = 0.0_fp
     mfluff =0.0_fp
@@ -527,7 +529,7 @@ contains
         ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
      
-      call init_mass(nfrac, frac,nmub, init_thick, porosity, rhosol,mass)    
+      if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity, rhosol,mass)    
 
 !      do i = 1, inum
 !        do j = 1, jnum
@@ -1442,7 +1444,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         end if
         if ( mask(i,j) .gt. 0 ) then
-        call update_sediment_mass (mass(l,nm), dt, sink(l,nm) * spm_concentration(i,j,kmx,l)/1000._fp, sour(l,nm), area(i,j))
+          if (bedmodel) &
+            call update_sediment_mass (mass(l,nm), dt, &
+              sink(l,nm) * spm_concentration(i,j,kmx,l)/1000._fp, &
+              sour(l,nm), area(i,j))
           
           size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,kmx,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
 
