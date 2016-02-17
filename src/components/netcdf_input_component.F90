@@ -1082,11 +1082,39 @@ module netcdf_input_component
 
       endif
 
-      call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+      call ESMF_TimeGet(currTime, timeString=timeString, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)') trim(name)//' uses climatological value from '//trim(timeString)
+      write(message,'(A)') trim(name)//' '//trim(timestring)//' uses climatological value from '
+
+      if (trim(interpolationMethod) /= 'linear') then
+        call ESMF_TimeGet(currTime, timeString=timeString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_MessageAdd(message, ' '//trim(interpolationMethod)//' time '//trim(timeString))
+      elseif (jtime == itime) then
+        call ESMF_TimeGet(currTime, timeString=timeString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_MessageAdd(message, ' linear interpolation at '//trim(timeString))
+
+      else
+        call ESMF_TimeGet(recentTime, timeString=timeString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_MessageAdd(message, ' linear interpolation '//trim(timeString))
+
+        call ESMF_TimeGet(nextTime, timeString=timeString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_MessageAdd(message, ' to '//trim(timeString))
+
+        write(message,'(A,F4.2)') trim(message)//', w=',weight
+      endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       call nc%timeIndex(currTime, itime, jtime=jtime, weight=weight, rc=localrc)
@@ -1111,14 +1139,38 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+        call ESMF_TimeGet(currTime, timeString=timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        write(message,'(A)') trim(name)//' '//trim(timeString)//' uses'
+
         if (trim(interpolationMethod) /= 'linear') then
-          write(message,'(A)') trim(name)//' uses '//trim(interpolationMethod)//' value from '//trim(timeString)
+          call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          call MOSSCO_MessageAdd(message, ' '//trim(interpolationMethod)//' from '//trim(timeString))
+        elseif (jtime == itime) then
+            call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            call MOSSCO_MessageAdd(message, ' linear interpolated value at '//trim(timeString))
         else
-          write(message,'(A)') trim(name)//' uses interpolated value from '//trim(timeString)
+            call ESMF_TimeGet(recentTime, timeString=timeString, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            call MOSSCO_MessageAdd(message, ' linear interpolated value from '//trim(timeString))
+
+            call ESMF_TimeGet(nextTime, timeString=timeString, rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+            call MOSSCO_MessageAdd(message, ' and '//trim(timeString))
+
+            write(message,'(A,F4.2)') trim(message)//', w=',weight
         endif
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
@@ -1165,7 +1217,11 @@ module netcdf_input_component
 
       !! @todo check shape of variable agains shape of field
 
-      if (trim(interpolationMethod) == 'linear') then
+      call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (trim(interpolationMethod) == 'linear' .and. (jtime /= itime)) then
 
         call ESMF_FieldGet(field, typeKind=typeKind, grid=grid, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1186,12 +1242,9 @@ module netcdf_input_component
         call ESMF_FieldDestroy(nextField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      elseif ((trim(interpolationMethod) == 'recent') &
-        .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
+      elseif ((trim(interpolationMethod) == 'next') &
+        .or. (trim(interpolationMethod) == 'nearest' .and. weight > 0.5)) then
         call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
-      else
-        call nc%getvar(field, var, itime=int(jtime, kind=ESMF_KIND_I4), rc=localrc)
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
