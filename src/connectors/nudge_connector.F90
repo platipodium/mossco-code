@@ -312,6 +312,7 @@ module nudge_connector
 
     logical                                :: isMatch, isPresent, tagOnly_
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    character(len=ESMF_MAXSTR), allocatable :: checkExcludeList(:)
 
     real(ESMF_KIND_R8)                     :: weight
     integer(ESMF_KIND_I4)                  :: localrc, rc_
@@ -405,6 +406,14 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call MOSSCO_Reallocate(checkExcludeList, 3, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    checkExcludeList(1)='creator'
+    checkExcludeList(2)='long_name'
+    checkExcludeList(3)='coordinates'
+
     do i=1, itemCount
 
       itemName=trim(itemNameList(i))
@@ -463,7 +472,7 @@ module nudge_connector
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (MOSSCO_FieldAttributesIdentical(importField, exportField, rc=localrc) > 0) then
+        if (MOSSCO_FieldAttributesIdentical(importField, exportField, exclude=checkExcludeList, rc=localrc) > 0) then
           write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i))//' with non-identical attributes'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
@@ -532,6 +541,10 @@ module nudge_connector
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       enddo
+
+      call MOSSCO_Reallocate(checkExcludeList, 0,  rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call MOSSCO_Reallocate(importFieldList, 0,  rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
