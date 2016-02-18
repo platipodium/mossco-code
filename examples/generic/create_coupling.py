@@ -1715,7 +1715,7 @@ fid.write('''
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timestring)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
           !! This might be problematic for components that need to run multiple times from multiple alarms
           !! For a process model the currTime+ringInterval should be taken if it advances it's own clock
@@ -1743,7 +1743,7 @@ fid.write('''
         if (timeInterval>ringTime-currTime) then
           !call ESMF_ClockSet(childClock, timeStep=ringTime-currTime, rc=localrc)
           !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call ESMF_LogWrite(trim(myName)//" adaptive timestep must be implemented in "//trim(compName),ESMF_LOGMSG_WARNING)
+          !call ESMF_LogWrite(trim(myName)//"  must be implemented in "//trim(compName),ESMF_LOGMSG_WARNING)
         endif
 
         !! Change the controlClock with updated currTime and timeStep (if not zero)

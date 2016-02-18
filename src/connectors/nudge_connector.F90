@@ -574,8 +574,6 @@ module nudge_connector
 
     if (present(rc)) rc=rc_
 
-    return
-
   end subroutine MOSSCO_WeightImportIntoExportState
 
 end module nudge_connector

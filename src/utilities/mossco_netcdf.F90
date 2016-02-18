@@ -699,7 +699,7 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (.not.isPresent) then
         write(message,'(A)')  '  field '//trim(fieldName)//' has no standard_name attribute. Using its name instead.'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         call ESMF_AttributeSet(field, 'standard_name', trim(fieldName), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1298,7 +1298,7 @@ module mossco_netcdf
       var%varid = i
       localrc = nf90_inquire_variable(self%ncid, i, ndims=var%rank, natts=nvaratts, name=var%name)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire varialbe in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire variable in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
 
@@ -1307,9 +1307,9 @@ module mossco_netcdf
 
       localrc = nf90_get_att(self%ncid,var%varid, 'units', var%units)
       if (localrc /= NF90_NOERR) then
-        write(message,'(A)') '  '//trim(var%name)
-        call MOSSCO_MESSAGEAdd(message,' did not specify units in '//trim(self%name))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        !write(message,'(A)') '  '//trim(var%name)
+        !call MOSSCO_MESSAGEAdd(message,' did not specify units in '//trim(self%name))
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         var%units=''
       endif
 
@@ -1926,14 +1926,15 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      ! CF forbids missing_value attributes in coordinates
       if (isPresent) then
         call ESMF_AttributeGet(array, 'missing_value', value=missingValue, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
-        missingValue=-999.0
-        write(message,'(A,I1,A)')  '  did not receive missing_value attribute for coordinate ',i,', used default -999.0'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        missingValue=-999.0D0
+        !write(message,'(A,I1,A)')  '  did not receive missing_value attribute for coordinate ',i,', used default -999.0'
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
 
       ! Detect missing values in any dimension of coordinates, if so,
