@@ -473,9 +473,9 @@ module nudge_connector
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (MOSSCO_FieldAttributesIdentical(importField, exportField, exclude=checkExcludeList, rc=localrc) > 0) then
-          write(message,'(A)') trim(name)//' skipped field '//trim(itemNameList(i))//' with non-identical attributes'
+          write(message,'(A)') trim(name)//' detected field '//trim(itemNameList(i))//' with non-identical attributes'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          cycle
+          !cycle
         endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
