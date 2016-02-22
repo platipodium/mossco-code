@@ -475,8 +475,7 @@ contains
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
         if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
                    .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
-          write(message,'(A)')  'invalid field bounds '//trim(importList(i)%name)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
         forcing_from_coupler = .true.
