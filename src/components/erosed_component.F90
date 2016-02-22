@@ -789,9 +789,8 @@ contains
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    else
-      allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-      mask = 0
-      mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
+      allocate(mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+      mask = 1
    end if
 
 !   Complete Import Fields
@@ -801,18 +800,17 @@ contains
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         if ( importList(i)%optional ) cycle
         call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
-        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
+        allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+        call ESMF_FieldEmptyComplete(field,importList(i)%data,ESMF_INDEX_DELOCAL)
         importList(i)%data = 0.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
-                   .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
+        if (.not. (    (      all(lbound(importList(i)%data) .eq. totalLBound    )           &
+                        .and. all(ubound(importList(i)%data) .eq. totalUBound    ) )         &
+                   .or.(      all(lbound(importList(i)%data) .eq. exclusiveLBound)           &
+                        .and. all(ubound(importList(i)%data) .eq. exclusiveUBound) ) ) ) then
           call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
@@ -921,10 +919,6 @@ contains
                      .and. all(ubound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. (/inum,jnum/) ) ) ) then
             call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          end if
-          if (.not. (      all(lbound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. totalLBound) &
-                     .and. all(ubound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. totalUBound) ) ) then
-            call ESMF_LogWrite(' field bounds do not match total domain',ESMF_LOGMSG_WARNING,ESMF_CONTEXT)
           end if
         else
           call ESMF_LogWrite('incomplete field',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
@@ -1513,13 +1507,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    end if
-
-    if (.not. (      all(lbound(rms_orbital_velocity%ptr) .eq. totalLBound) &
-      .and. all(ubound(rms_orbital_velocity%ptr) .eq. totalUBound) ) ) then
-      write(message, '(A)') trim(name)//' bounds do not match total domain in field'
-      call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
     end if
 
     do j=1,jnum
