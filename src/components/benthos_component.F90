@@ -444,7 +444,7 @@ contains
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    else
-      allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
+      allocate(mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
       mask = 0
       mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
    end if
@@ -458,11 +458,8 @@ contains
       call ESMF_FieldGet(field,status=status)
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
-        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
+        allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+        call ESMF_FieldEmptyComplete(field,importList(i)%data,ESMF_INDEX_DELOCAL)
         importList(i)%data = 0.0d0
          if (trim (importList(i)%name )== 'tellina_fabula_mean_abundance') then
            call Macrofauna_set( )
@@ -473,8 +470,8 @@ contains
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
-                   .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
+        if (.not. (      all(lbound(importList(i)%data) .eq. exclusiveLBound) &
+                   .and. all(ubound(importList(i)%data) .eq. exclusiveUBound) ) ) then
           call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
@@ -514,18 +511,15 @@ contains
       call ESMF_FieldGet(field,status=status)
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         call ESMF_LogWrite(' export to internal field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
-        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,exportList(i)%data,                &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
+        allocate(exportList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+        call ESMF_FieldEmptyComplete(field,exportList(i)%data,ESMF_INDEX_DELOCAL)
         exportList(i)%data = 1.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        if (.not. (      all(lbound(exportList(i)%data) .eq. totalLBound) &
-                   .and. all(ubound(exportList(i)%data) .eq. totalUBound) ) ) then
+        if (.not. (      all(lbound(exportList(i)%data) .eq. exclusiveLBound) &
+                   .and. all(ubound(exportList(i)%data) .eq. exclusiveUBound) ) ) then
           call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
