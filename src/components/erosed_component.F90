@@ -1027,23 +1027,35 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-#ifdef DEBUG
+!#ifdef DEBUG
    allocate (sediment_mass(inum, jnum,nfrac))
 
-    sediment_mass(:,:,:)= 0.0_fp
+     field = ESMF_FieldCreate(grid, &
+                         typekind=ESMF_TYPEKIND_R8, &
+                         name='sediment_mass_in_bed',&
+                         staggerloc=ESMF_STAGGERLOC_CENTER, &
+                         ungriddedLBound=(/1/),ungriddedUBound=(/nfrac/), &
+                         gridToFieldMap=(/1,2/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'units',trim('Kg'),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!        call ESMF_AttributeSet(field,'missing_value',sed%missing_value,rc=localrc)
+!        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+!          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(field=field, farrayPtr=sediment_mass,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        sediment_mass(:,:,:)= 0.0_fp
+       
+        call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    field = ESMF_FieldCreate(grid, farrayPtr=sediment_mass, name='sediment_mass_in_bed',rc=localrc)
-    call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message)
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-
-    call ESMF_StateAdd(exportState,(/field/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-#endif
 
 
     call MOSSCO_CompExit(gridComp, localrc)
@@ -1659,7 +1671,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       end do
     end do
 
-#ifdef DEBUG
+!#ifdef DEBUG
 
     call ESMF_StateGet(exportState,'sediment_mass_in_bed', itemType=itemType,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
@@ -1699,7 +1711,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
       end do
     end do
-#endif
+!#endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
