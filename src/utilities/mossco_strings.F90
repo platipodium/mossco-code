@@ -255,19 +255,44 @@ contains
   end subroutine MOSSCO_StringMatch
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_CleanPattern"
-  subroutine MOSSCO_CleanPattern(pattern, rc)
+#define ESMF_METHOD "MOSSCO_StringClean"
+  function MOSSCO_StringClean(string, exclude, kwe, char, rc) result string_
 
-    character(len=*), intent(inout)     :: pattern
-    integer(ESMF_KIND_I4), intent(out)  :: rc
+    character(len=*), intent(inout)          :: string
+    character(len=*), intent(in), optional   :: exclude
+    logical, intent(in), optional            :: kwe
+    character(len=1), intent(in), optional   :: char
+    integer(ESMF_KIND_I4), optional, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)               :: localrc, i, n
+    integer(ESMF_KIND_I4)                    :: localrc, i, n
+    character(len=ESMF_MAXSTR)               :: exclude_, string_
+    character(len=1)                         :: char_
 
-    rc=ESMF_SUCCESS
+    string_ = trim(string(1:len(string_)))
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(char)) then
+      char_ = char
+    else
+      char_ = '_'
+    endif
+    if (present(exclude)) then
+      exclude_ = trim(exclude(1:len(exclude_)))
+    else
+      exclude = '[]()*/+^' !@todo check the disallowed characters from test_FieldName
+      ! and ESMF documentation (request sent)
+    endif
+    if (len(exclude) < 1) return
 
-    !> @todo immplement cleaning of a pattern string
+    do i = 1, len_trim(string_)
+      do j = 1, len_trim(exclude_)
+        if (string_(i) == exclude_(i)) string_(i) = char_
+      enddo
+      if (iachar(string_(i)) < 32) string_(i) = char_
+      if (iachar(string_(i)) > 127) string_(i) = char_
+    enddo
 
-  end subroutine MOSSCO_CleanPattern
+  end function MOSSCO_StringClean
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_MessageAddList"
