@@ -244,17 +244,19 @@ end function MOSSCO_GridCreateRegional2D
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     type(ESMF_Grid)                              :: gridB
 
-    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank, deCount, nlayer_
-    type(ESMF_DistGrid)                       :: distGrid, distGridB
+    integer(ESMF_KIND_I4)                     :: rc_, localrc, rank, deCount, nlayer_, i
+    type(ESMF_DistGrid)                       :: distGridA, distGridB
     type(ESMF_CoordSys_Flag)                  :: coordSys
-    integer(ESMF_KIND_I4), allocatable        :: coordDimCount(:), coordDimMap(:,:)
+    integer(ESMF_KIND_I4)                     :: coordDimCount2(2), coordDimMap2(2,2)
+    integer(ESMF_KIND_I4)                     :: coordDimCount3(3), coordDimMap3(3,3)
     integer(ESMF_KIND_I4), allocatable        :: ubnd(:), lbnd(:)
     type(ESMF_DeLayout)                       :: deLayout
     integer(ESMF_KIND_I4)                     :: ubnd2(2), lbnd2(2), ubnd3(3), lbnd3(3)
-    integer(ESMF_KIND_I4)                     :: distGridToArrrayMap(2)
+    !integer(ESMF_KIND_I4)                     :: distGridToArrayMap(2)
     integer,dimension(:,:)  ,allocatable,target :: minIndexPDe,maxIndexPDe
     integer,dimension(:,:,:),allocatable,target :: deBlockList
-    character(len=ESMF_MAXSTR)                :: message
+    character(len=ESMF_MAXSTR)                :: message, nameA, nameB
+
 
     rc_ = ESMF_SUCCESS
     nlayer_ = 1
@@ -262,7 +264,7 @@ end function MOSSCO_GridCreateRegional2D
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(nlayer)) nlayer_ = nlayer
 
-    call ESMF_GridGet(grida, rank=rank, distGrid=distGrid, rc=localrc)
+    call ESMF_GridGet(grida, rank=rank, distGrid=distGridA, name=nameA, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -273,18 +275,11 @@ end function MOSSCO_GridCreateRegional2D
     endif
 
     if (rank>0) then
-      allocate(coordDimCount(rank))
-      allocate(coordDimMap(rank,3))
       allocate(ubnd(rank))
       allocate(lbnd(rank))
     endif
 
-    call ESMF_GridGet(grida, coordSys=coordSys, coordDimCount=coordDimCount, &
-      coordDimMap=coordDimMap, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_DistGridGet(distGrid, deLayout=deLayout, rc=localrc)
+    call ESMF_DistGridGet(distGridA, deLayout=deLayout, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -292,48 +287,110 @@ end function MOSSCO_GridCreateRegional2D
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(minIndexPDe(rank,deCount))
-    allocate(maxIndexPDe(rank,deCount))
-    allocate(deBlockList(rank,2,deCount))
-
-    call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
-                          maxIndexPDe=maxIndexPDe, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    deBlockList(:,1,:) = minIndexPDe
-    deBlockList(:,2,:) = maxIndexPDe
-
     if (rank == 3) then
+
+      call ESMF_GridGet(grida, coordSys=coordSys, coordDimCount=coordDimCount3, &
+        coordDimMap=coordDimMap3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      allocate(minIndexPDe(3,deCount))
+      allocate(maxIndexPDe(3,deCount))
+      allocate(deBlockList(3,2,deCount))
+
+      call ESMF_DistGridGet(distGridA, minIndexPDe=minIndexPDe, &
+                            maxIndexPDe=maxIndexPDe, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      deBlockList(:,1,:) = minIndexPDe
+      deBlockList(:,2,:) = maxIndexPDe
 
       distGridB = ESMF_DistGridCreate(minval(deBlockList(1:2,1,:),2), maxval(deBlockList(1:2,2,:),2), &
         int(deBlockList(1:2,:,:)), delayout=delayout, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      gridb = ESMF_GridCreate(distGridB, name="horizontal grid", gridAlign=(/1,1/), &
-        coordSys=coordSys, coordDimCount=int(coordDimCount(1:2)),      &
-        coordDimMap=int(coordDimMap(1:2,1:2)), rc=localrc)
+      nameB = trim(nameA)
+      do i = 1, len_trim(nameB)-1
+        if (nameB(i:i+1) == '3D') then
+          nameB(i:i+1) = '2D'
+          exit
+        endif
+        if (nameB(i:i+1) == '3d') then
+          nameB(i:i+1) = '2d'
+          exit
+        endif
+      enddo
+
+      if (trim(nameB) == trim(nameA)) nameB = trim(nameA)//'_2d'
+
+      gridb = ESMF_GridCreate(distGridB, name=trim(nameB), gridAlign=(/1,1/), &
+        coordSys=coordSys, coordDimCount=int(coordDimCount3(1:2)),      &
+        coordDimMap=int(coordDimMap3(1:2,1:2)), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     else
 
-    !>l@ todo : adjust code below to use distgrid information, this is impolemented
-    ! in fabm_pelagic_component.F90 and should be completley moved to here.
-
-      call ESMF_GridGetFieldBounds(grida, totalUBound=ubnd2, &
-        totalLBound=lbnd2, rc=localrc)
+      call ESMF_GridGet(grida, coordSys=coordSys, coordDimCount=coordDimCount2, &
+        coordDimMap=coordDimMap2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      gridb = ESMF_GridCreateNoPeriDim(minIndex=(/lbnd2(1),lbnd2(2),nlayer_/), &
-                   maxIndex=(/ubnd2(1),ubnd2(2),1/), &
-                   regDecomp=(/1,1,1/), &
-                   coordSys=ESMF_COORDSYS_SPH_DEG, &
-                   indexflag=ESMF_INDEX_GLOBAL,  &
-                   coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                   coorddep2=(/2/),rc=localrc)
+      allocate(minIndexPDe(2,deCount))
+      allocate(maxIndexPDe(2,deCount))
+      allocate(deBlockList(3,2,deCount))
+
+      call ESMF_DistGridGet(distGridA, minIndexPDe=minIndexPDe, &
+                            maxIndexPDe=maxIndexPDe, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      deBlockList(1:rank,1,:) = minIndexPDe
+      deBlockList(1:rank,2,:) = maxIndexPDe
+
+      deBlockList(rank+1,1,:) = 1
+      deBlockList(rank+1,2,:) = nlayer_
+
+      ! From getm
+      !coordDimCount = (/ 1 , 1 , 3 /)     ! rectilinear horizontal coordinates
+      !coordDimMap = reshape( (/1,2,1,0,0,2,0,0,3/) , (/3,3/) )
+      !
+      !coordDimCount = (/ 2 , 2 , 3 /)
+      !coordDimMap = reshape( (/1,1,1,2,2,2,0,0,3/) , (/3,3/) ) ! (default)
+      coordDimCount3 = (/coordDimCount2(1), coordDimCount2(2), 3/)
+      coordDimMap3(1:2,1:2) = coordDimMap2(:,:)
+      coordDimMap3(3,:) = (/1,2,3/)
+      coordDimMap3(:,3) = 3
+
+      distGridB = ESMF_DistGridCreate(minval(deBlockList(:,1,:),2), &
+        maxval(deBlockList(:,2,:),2), deBlockList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !gridb = ESMF_GridCreate(distGridB, name=trim(nameB), gridAlign=(/1,1,1/), &
+      !  coordSys=coordSys, coordDimCount=coordDimCount3, &
+      !  coordDimMap=int(coordDimMap3(:,:)), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !>l@ todo : delete code below and use abovedistgrid information, this is impolemented
+    ! in fabm_pelagic_component.F90 and should be completley moved to here.
+
+      call ESMF_GridGetFieldBounds(grida, totalUBound=ubnd2, &
+         totalLBound=lbnd2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !
+      gridb = ESMF_GridCreateNoPeriDim(minIndex=(/lbnd2(1),lbnd2(2),nlayer_/), &
+                    maxIndex=(/ubnd2(1),ubnd2(2),1/), &
+                    regDecomp=(/1,1,1/), &
+                    coordSys=ESMF_COORDSYS_SPH_DEG, &
+                    indexflag=ESMF_INDEX_GLOBAL,  &
+                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
+                    coorddep2=(/2/),rc=localrc)
+       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
