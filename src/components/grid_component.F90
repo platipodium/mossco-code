@@ -210,33 +210,45 @@ module grid_component
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_VmGet(vm, petCount=petCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       if (allocated(decompositionList)) then
         !> @todo check validity of decomposition.
         write(0,*) decompositionList, shape(decompositionList)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
         allocate(decompositionList(2), stat=localrc)
-        decompositionList(:) = (/1,1/)
+        decompositionList(:) = (/petCount,1/)
       endif
 
-      call ESMF_GridCompGet(gridComp, vm=vm, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call MOSSCO_VmGetRectangleDecomposition(vm, decompositionList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !call MOSSCO_VmGetRectangleDecomposition(vm, decompositionList, rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_ConfigFindLabel(config, label='layers:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, nlayer, default=1, rc=localrc)
+        call ESMF_ConfigGetAttribute(config, nlayer, default=0, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      !> @todo deal with nlayer > 0
+      if (nlayer>0) then
+        write(message, '(A)')  trim(name)//' has no implementation for nlayer > 0'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (ESMF_LogFoundError(ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      endif
       call ESMF_AttributeSet(gridComp, 'number_of_vertical_layers', nlayer, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -260,12 +272,14 @@ module grid_component
       write(message,'(A)')  trim(name)//' reading file '//trim(gridName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      grid = ESMF_GridCreate(filename=trim(gridName),fileFormat=ESMF_FILEFORMAT_SCRIP, &
-        regDecomp=decompositionList, isSphere=.false., rc=localrc)
+      grid = ESMF_GridCreate(filename=trim(gridName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
+      regDecomp=decompositionList, isSphere=.false., rc=localrc)
+      !> @todo add corner stagger
+      !regDecomp=decompositionList, isSphere=.false., addCornerStagger=.true., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message, '(A)') trim(name)//' obtains grid from SCRIP file '//trim(gridName)
+      write(message, '(A)') trim(name)//' created grid from SCRIP file '//trim(gridName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
@@ -316,18 +330,10 @@ module grid_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Check for ungridded dimensions in the case of foreignGrid
-    if (isPresent .and. fieldRank>gridRank) then
-      allocate(ungriddedUbnd(fieldRank-gridRank))
-      allocate(ungriddedLbnd(fieldRank-gridRank))
-      call ESMF_FieldGet(field, ungriddedLBound=ungriddedLbnd, ungriddedUbound=ungriddedUbnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
     if (gridRank == 2) then
       grid2 = grid
-      grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, nlayer=nlayer, rc=localrc)
+      !> @todo implement this correctly
+      !grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, nlayer=nlayer, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     elseif (gridRank == 3) then
@@ -343,11 +349,13 @@ module grid_component
 
     do i = 1, 2
 
+      if (i == 2 .and. nlayer == 0) exit
+
       if (i == 1) then
-        field = ESMF_FieldCreate(name=trim(name)//'_zeros_2d', grid=grid2, &
+        field = ESMF_FieldCreate(name=trim(name)//'_2d', grid=grid2, &
           typeKind=ESMF_TYPEKIND_I4, rc=localrc)
       else
-        field = ESMF_FieldCreate(name=trim(name)//'_zeros_3d', grid=grid3, &
+        field = ESMF_FieldCreate(name=trim(name)//'_3d', grid=grid3, &
         typeKind=ESMF_TYPEKIND_I4, rc=localrc)
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -357,9 +365,11 @@ module grid_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_AttributeSet(field, 'decomposition', decompositionList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (allocated(decompositionList)) then
+        call ESMF_AttributeSet(field, 'decomposition', decompositionList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       write(message, '(A)') trim(name)//' created field'
       call MOSSCO_FieldString(field, message)
