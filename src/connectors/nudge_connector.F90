@@ -406,13 +406,20 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_Reallocate(checkExcludeList, 3, rc=localrc)
+    call MOSSCO_Reallocate(checkExcludeList, 8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> @todo reconsider this list, especially the 'units' attribute should *not* be
+    !> blacklisted
     checkExcludeList(1)='creator'
     checkExcludeList(2)='long_name'
     checkExcludeList(3)='coordinates'
+    checkExcludeList(4)='units'
+    checkExcludeList(5)='axis'
+    checkExcludeList(6)='longname'
+    checkExcludeList(7)='missing_value'
+    checkExcludeList(8)='_FillValue'
 
     do i=1, itemCount
 
