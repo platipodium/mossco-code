@@ -540,8 +540,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
       if (itemTypeList(i)==ESMF_STATEITEM_FIELD) then
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) Themen
+          write(message, '(A)') '  hint: check your item name '//trim(itemNameList(i))//' for invalid characters.'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          cycle
+        endif
 
         call ESMF_FieldGet(exportField, status=exportFieldStatus, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
