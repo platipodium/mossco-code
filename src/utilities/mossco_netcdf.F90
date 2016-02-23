@@ -123,7 +123,7 @@ module mossco_netcdf
     real(ESMF_KIND_I4)                               :: missingValueI4=-9999
     real(ESMF_KIND_I8)                               :: missingValueI8=-9999
     real(ESMF_KIND_R8)                               :: representableValue
-    type(ESMF_TypeKind_Flag)                         :: mvTypeKind
+    type(ESMF_TypeKind_Flag)                         :: mvTypeKind, typeKind
 
     character(len=11)                 :: precision_
 
@@ -136,11 +136,12 @@ module mossco_netcdf
     rc_ = ESMF_SUCCESS
 
     call ESMF_FieldGet(field, name=varname, rank=rank, &
-      localDeCount=localDeCount, rc=localrc)
+      localDeCount=localDeCount, typeKind=typeKind, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (localDeCount==0) return
+    if (typeKind /= ESMF_TYPEKIND_R8) return
 
     allocate(lbnd(rank))
     allocate(ubnd(rank))
