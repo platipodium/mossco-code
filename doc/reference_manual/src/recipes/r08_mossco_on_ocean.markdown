@@ -4,19 +4,16 @@ Ocean is the local cluster at HZG. It offers recent Intel and PGI compilers and 
 
     /home/lemmen/opt
 
-Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the version `/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_43/esmf.mk`
-
+Choose a version that has both an `esmf.mk` and a `esmf.mod` file, e.g., the version `/home/lemmen/opt/lib/libg/Linux.intel.64.openmpi.ESMF_7_0_0_beta_snapshot_65/esmf-o.mk`
 
 ## Preparing your environment
-
 
 ### PyYAML
 
 Download the latest PyYAML source package, then install it as a user
 
-	
 	python setup.py install --user </path/to/PyYAML/source/>
-	
+
 ### Environment variables
 
     export PATH=$PATH:/home/lemmen/opt/bin # for cmake
@@ -34,7 +31,7 @@ This example also assumes that you have downloaded or `git clone`d MOSSCO into a
 
 	export MOSSCO_DIR=/my/path/to/mossco/code
 	export MOSSCO_SETUPDIR=/my/path/to/mossco/code
-	
+
 It is advisable to have `$MOSSCO_DIR` somewhere in your `/home` and `$MOSSCO_SETUPDIR` in your `/data` directory on ocean because of space restrictions (but not backup).
 
 ## Downloading MOSSCO and obtaining external sources
@@ -42,7 +39,7 @@ It is advisable to have `$MOSSCO_DIR` somewhere in your `/home` and `$MOSSCO_SET
 	mkdir -p $MOSSCO_DIR
 	git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
     make -C $MOSSCO_DIR external # to obtain getm/gotm/fabm
-	
+
 .. and the same for the setups
 
 	mkdir -p $MOSSCO_SETUPDIR
@@ -75,7 +72,6 @@ It is already done (usually), but in case you want to do this again:
 		export ESMF_COMPILER=intel
 		export ESMF_COMM=openmpi
 		unset ESMF_XERCES
-		
+
 		cd $ESMF_DIR
 		make lib
-
