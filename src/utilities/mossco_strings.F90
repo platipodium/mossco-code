@@ -256,7 +256,7 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StringClean"
-  function MOSSCO_StringClean(string, exclude, kwe, char, rc) result string_
+  function MOSSCO_StringClean(string, exclude, kwe, char, rc) result (string_)
 
     character(len=*), intent(inout)          :: string
     character(len=*), intent(in), optional   :: exclude
@@ -264,13 +264,13 @@ contains
     character(len=1), intent(in), optional   :: char
     integer(ESMF_KIND_I4), optional, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)                    :: localrc, i, n
+    integer(ESMF_KIND_I4)                    :: localrc, i, n, j
     character(len=ESMF_MAXSTR)               :: exclude_, string_
     character(len=1)                         :: char_
 
     string_ = trim(string(1:len(string_)))
-    rc_ = ESMF_SUCCESS
-    if (present(kwe)) rc_ = ESMF_SUCCESS
+    rc = ESMF_SUCCESS
+    if (present(kwe)) rc = ESMF_SUCCESS
     if (present(char)) then
       char_ = char
     else
@@ -279,17 +279,17 @@ contains
     if (present(exclude)) then
       exclude_ = trim(exclude(1:len(exclude_)))
     else
-      exclude = '[]()*/+^' !@todo check the disallowed characters from test_FieldName
+      exclude_ = '[]()*/+^' !@todo check the disallowed characters from test_FieldName
       ! and ESMF documentation (request sent)
     endif
-    if (len(exclude) < 1) return
+    if (len(exclude_) < 1) return
 
     do i = 1, len_trim(string_)
       do j = 1, len_trim(exclude_)
-        if (string_(i) == exclude_(i)) string_(i) = char_
+        if (string_(i:i) == exclude_(i:i)) string_(i:i) = char_
       enddo
-      if (iachar(string_(i)) < 32) string_(i) = char_
-      if (iachar(string_(i)) > 127) string_(i) = char_
+      if (iachar(string_(i:i)) < 32) string_(i:i) = char_
+      if (iachar(string_(i:i)) > 127) string_(i:i) = char_
     enddo
 
   end function MOSSCO_StringClean
