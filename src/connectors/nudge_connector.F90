@@ -549,10 +549,6 @@ module nudge_connector
 
       enddo
 
-      call MOSSCO_Reallocate(checkExcludeList, 0,  rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
       call MOSSCO_Reallocate(importFieldList, 0,  rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -562,6 +558,10 @@ module nudge_connector
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     enddo
+
+    call MOSSCO_Reallocate(checkExcludeList, 0,  rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
