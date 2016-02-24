@@ -1057,6 +1057,7 @@ end subroutine MOSSCO_FieldCopy
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (importTypeKind /= exportTypeKind) then
+write(0,*) 'type kind differs for attribute '//trim(attributeName)//': ',importTypeKind, exportTypeKind
         differCount = differCount + 1
         cycle
       endif
@@ -1071,6 +1072,7 @@ end subroutine MOSSCO_FieldCopy
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (trim(exportString) /= trim(importString)) then
+write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(exportString)//' vs. '//trim(importString)
           differCount = differCount + 1
           cycle
         endif
