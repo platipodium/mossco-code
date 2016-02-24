@@ -1151,6 +1151,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldStatus_Flag) :: status
     integer,dimension(2)     :: totalLBound,totalUBound
     integer,dimension(2)     :: exclusiveLBound,exclusiveUBound
+    integer,dimension(3)     :: exclusiveLBound3,exclusiveUBound3,totalLBound3,totalUBound3
     integer(ESMF_KIND_I4)    :: ubnd(3), lbnd(3), tubnd(3), tlbnd(3)
     integer                  :: kmx, kmaxsd !(kmaxsd: kmax-layer index for sand)
 !#define DEBUG
@@ -1673,6 +1674,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
 !#ifdef DEBUG
 
+    if (bedmodel) then
     call ESMF_StateGet(exportState,'sediment_mass_in_bed', itemType=itemType,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1699,9 +1701,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    !call ESMF_FieldGet(field, farrayPtr=sediment_mass,exclusiveLBound=exclusiveLBound, &
-    !  exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
-    call ESMF_FieldGet(field, farrayPtr=sediment_mass, rc=localrc)
+    call ESMF_FieldGet(field, farrayPtr=sediment_mass,exclusiveLBound=exclusiveLBound3, &
+      exclusiveUBound=exclusiveUBound3, totalLBound=totalLBound3, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1712,6 +1713,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
       end do
     end do
+    end if
 !#endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
