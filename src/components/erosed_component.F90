@@ -1699,8 +1699,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_FieldGet(field, farrayPtr=sediment_mass,exclusiveLBound=exclusiveLBound, &
-      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    !call ESMF_FieldGet(field, farrayPtr=sediment_mass,exclusiveLBound=exclusiveLBound, &
+    !  exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    call ESMF_FieldGet(field, farrayPtr=sediment_mass, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
