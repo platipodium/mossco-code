@@ -923,6 +923,7 @@ module netcdf_input_component
     type(ESMF_Field)        :: field, nextField
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     character(len=ESMF_MAXSTR) :: fileName
+    character(len=ESMF_MAXSTR) :: addString
     type(ESMF_Clock)        :: clock
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(type_mossco_netcdf_variable), pointer    :: var => null()
@@ -1113,7 +1114,8 @@ module netcdf_input_component
 
         call MOSSCO_MessageAdd(message, ' to '//trim(timeString))
 
-        write(message,'(A,F4.2)') trim(message)//', w=',weight
+        write(addString,'(A,F4.2)') ', w=',weight
+        call MOSSCO_MessageAdd(message, trim(addString))
       endif
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
