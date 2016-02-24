@@ -308,9 +308,9 @@ module nudge_connector
     character(ESMF_MAXSTR)                 :: message, itemName, name
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
     type(ESMF_StateItem_Flag)              :: itemType
-    integer(ESMF_KIND_I4)                  :: i, j, itemCount, fieldCount, exportFieldCount
+    integer(ESMF_KIND_I4)                  :: i, j, jj, itemCount, fieldCount, exportFieldCount
 
-    logical                                :: isMatch, isPresent, tagOnly_
+    logical                                :: isMatch, isPresent, tagOnly_, foundItem
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
     character(len=ESMF_MAXSTR), allocatable :: checkExcludeList(:)
 
@@ -540,9 +540,24 @@ module nudge_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      do j = 1, fieldCount
+      do jj = 1, exportFieldCount
+        foundItem=.false.
+!call ESMF_FieldPrint(exportFieldList(jj))
+        importloop: do j = 1, fieldCount
 
-        call MOSSCO_FieldWeightField(exportFieldList(i), importFieldList(i), weight, &
+          if (MOSSCO_FieldAttributesIdentical(importFieldList(j), exportFieldList(jj), exclude=checkExcludeList, rc=localrc) == 0) then
+            foundItem=.true.
+            exit importloop
+!          else
+!call ESMF_FieldPrint(importFieldList(j))
+          end if
+        end do importloop
+        if (.not.foundItem) then
+          write(message,'(A)') trim(name)//' detected fieldBundle '//trim(itemName)//' with non-identical item attributes'
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        end if
+        call MOSSCO_FieldWeightField(exportFieldList(jj), importFieldList(j), weight, &
           tagOnly=tagOnly_, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
