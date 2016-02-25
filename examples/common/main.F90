@@ -247,7 +247,7 @@ program main
   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
   if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-  write(formatstring,'(A)') '(A,'//intformat(localPet)//',A,'//intformat(petCount)//')'
+  write(formatstring,'(A)') '(A,'//intformat(petCount)//',A,'//intformat(petCount)//')'
   write(message,formatstring) 'Creating multiple logs, this is processor ',localPet,' of ', petCount
   if (logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
