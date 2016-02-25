@@ -968,10 +968,10 @@ contains
        call ESMF_AttributeGet(comp, name=attributeName, valueList=integer4ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-       write(string, '(I3.3)') integer4ValueList(1)
+       write(string, '(I6.6)') integer4ValueList(1)
        call MOSSCO_MessageAdd(message,' '//trim(string))
        do j=2, itemCount-1
-         write(string, '(I3.3)') integer4ValueList(j)
+         write(string, '(I6.6)') integer4ValueList(j)
          call MOSSCO_MessageAdd(message,', '//trim(string))
        enddo
        deallocate(integer4ValueList)
@@ -981,10 +981,10 @@ contains
        call ESMF_AttributeGet(comp, name=attributeName, valueList=integer8ValueList, rc=localrc)
        if(localRc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-       write(string, '(I3.3)') integer8ValueList(1)
+       write(string, *) integer8ValueList(1)
        call MOSSCO_MessageAdd(message,' '//trim(string))
        do j=2, itemCount-1
-         write(string, '(I3.3)') integer8ValueList(j)
+         write(string, *) integer8ValueList(j)
          call MOSSCO_MessageAdd(message,', '//trim(string))
        enddo
        deallocate(integer8ValueList)
@@ -1273,10 +1273,10 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(string, '(I3.3)') integer4ValueList(1)
+         write(string, '(I6.6)') integer4ValueList(1)
          call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(string, '(I3.3)') integer4ValueList(j)
+           write(string, '(I6.6)') integer4ValueList(j)
            call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(integer4ValueList)
@@ -1286,10 +1286,10 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(string, '(I3.3)') integer8ValueList(1)
+         write(string, *) integer8ValueList(1)
          call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-             write(string, '(I3.3)') integer8ValueList(j)
+             write(string, *) integer8ValueList(j)
              call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(integer8ValueList)
@@ -1519,10 +1519,10 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(string, '(I3.3)') integer4ValueList(1)
+         write(string, '(I6.6)') integer4ValueList(1)
          call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(string, '(I3.3)') integer4ValueList(j)
+           write(string, '(I6.6)') integer4ValueList(j)
            call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          if (allocated(integer4ValueList)) deallocate(integer4ValueList)
@@ -1533,10 +1533,10 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         write(string, '(I3.3)') integer8ValueList(1)
+         write(string, *) integer8ValueList(1)
          call MOSSCO_MessageAdd(message,' '//trim(string))
          do j=2, itemCount-1
-           write(string, '(I3.3)') integer8ValueList(j)
+           write(string, *) integer8ValueList(j)
            call MOSSCO_MessageAdd(message,', '//trim(string))
          enddo
          deallocate(integer8ValueList)
