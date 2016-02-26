@@ -1103,7 +1103,7 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_AttributeGet(importfield, name=attributeName, value=importReal8, rc=localrc)
     elseif (importTypeKind == ESMF_TYPEKIND_CHARACTER) then
       call ESMF_AttributeGet(importfield, name=attributeName, value=importString, rc=localrc)
-      read(importString,*) importReal8
+      !read(importString,*) importReal8
     else
       return ! not implemented: logical
     endif
@@ -1121,7 +1121,7 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_AttributeGet(exportField, name=attributeName, value=exportReal8, rc=localrc)
     elseif (importTypeKind == ESMF_TYPEKIND_CHARACTER) then
       call ESMF_AttributeGet(exportField, name=attributeName, value=exportString, rc=localrc)
-      read(exportString,*) exportReal8
+      !read(exportString,*) exportReal8
     else
       return ! not implemented: logical
     endif
