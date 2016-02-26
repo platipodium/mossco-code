@@ -406,7 +406,7 @@ module nudge_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_Reallocate(checkExcludeList, 8, rc=localrc)
+    call MOSSCO_Reallocate(checkExcludeList, 11, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -420,6 +420,10 @@ module nudge_connector
     checkExcludeList(6)='longname'
     checkExcludeList(7)='missing_value'
     checkExcludeList(8)='_FillValue'
+    ! some MOSSCO-specific, internal attributes
+    checkExcludeList(9)='nudging_weight'
+    checkExcludeList(10)='nudging_component'
+    checkExcludeList(11)='has_boundary_data'
 
     do i=1, itemCount
 
@@ -481,8 +485,8 @@ module nudge_connector
 
         if (MOSSCO_FieldAttributesIdentical(importField, exportField, exclude=checkExcludeList, rc=localrc) > 0) then
           write(message,'(A)') trim(name)//' detected field '//trim(itemNameList(i))//' with non-identical attributes'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-          !cycle
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)

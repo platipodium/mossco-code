@@ -1050,6 +1050,11 @@ end subroutine MOSSCO_FieldCopy
 
       if (MOSSCO_FieldAttributeIsSameValue(importField, exportField, attributeName, rc=localrc)) cycle
 
+#ifdef DEBUG
+      call ESMF_FieldGet(importField, name=message)
+      write(0,*) 'non-matching attribute ',trim(attributeName),' in field ',trim(message)
+#endif
+
       differCount = differCount + 1
 
     enddo
