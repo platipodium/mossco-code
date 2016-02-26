@@ -54,7 +54,7 @@ end subroutine Macrofauna_init
 !*********************************************************************************
 subroutine Macrofauna_set(spatialvar,Biounit)
 real (fp), dimension (:,:), pointer, optional  :: spatialvar
-character (len = 10), optional  :: Biounit
+character (len = 255), optional  :: Biounit
 ! The set method of new species should be called here, to read and set data
 
 call M_Balthica%set(spatialvar,Biounit)
@@ -84,8 +84,8 @@ call M_Balthica%run()
 Total_Bioturbation%ErodibilityEffect(1:inum,1:jnum) = M_Balthica%Bioturbation%ErodibilityEffect
 Total_Bioturbation%TauEffect        (1:inum,1:jnum) = M_Balthica%Bioturbation%TauEffect
 #ifdef DEBUG
-Write (*,*) ' The macrofauna effect on the sediment erodibility is the factor:'     , Total_Bioturbation%ErodibilityEffect
-Write (*,*) ' The macrofauna effect on the critical bed shear stress is the factor:',Total_Bioturbation%TauEffect
+Write (0,*) ' The macrofauna effect on the sediment erodibility is the factor:'     , Total_Bioturbation%ErodibilityEffect
+Write (0,*) ' The macrofauna effect on the critical bed shear stress is the factor:',Total_Bioturbation%TauEffect
 #endif
 end subroutine Macrofauna_run
 !*********************************************************************************

@@ -308,9 +308,9 @@ contains
     !> (for example read by netcdf-input component)
     allocate (importList(2))
     importList(1)%name  = 'tellina_fabula_mean_abundance'
-    importList(1)%units = 'ind.m**-2'
+    importList(1)%units = 'm**-2'
     importList(2)%name  = 'microphytobenthos_at_soil_surface'
-    importList(2)%units = 'mgg'
+    importList(2)%units = 'mgg**-1'
 
      do i=1,size(importList)
 
@@ -462,8 +462,10 @@ contains
         importList(i)%data = 0.0d0
          if (trim (importList(i)%name )== 'tellina_fabula_mean_abundance') then
            call Macrofauna_set( )
+       !   write (0,*)'tellina_fabula_mean_abundance internal',importList(i)%data
          elseif  (trim (importList(i)%name )== 'microphytobenthos_at_soil_surface') then
            call micro%set()
+       !  write (0,*)'microphytobenthos internal',importList(i)%data
          endif
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
@@ -488,13 +490,17 @@ contains
            call MOSSCO_FieldString(field, message)
            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
            importList(i)%units=''
-           write (*,*) 'unit of macrofauna or microphytoobenthos is not present, therefore set to '')'
+           write (0,*) 'unit of macrofauna or microphytoobenthos is not present, therefore set to '')'
          endif
 
          if (trim (importList(i)%name )== 'tellina_fabula_mean_abundance') then
            call Macrofauna_set(importList(i)%data,importList(i)%units )
+      !   write (0,*)'tellina_fabula_mean_abundance data,external', importList(i)%data
+      !   write (0,*)'tellina_fabula_mean_abundance data,external',importList(i)%units
          elseif  (trim (importList(i)%name )== 'microphytobenthos_at_soil_surface') then
            call micro%set(importList(i)%data,importList(i)%units)
+      !   write (0,*)'microphytobenthos_at_soil_surface, external', importList(i)%data
+      !   write (0,*)'microphytobenthos_at_soil_surface, external', importList(i)%units
          endif
 
       else
@@ -685,13 +691,12 @@ contains
 
 
 #ifdef DEBUG
+    write(0,*) '==== in Benthos ======'
     write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
     write(0,*) 'Mircrophy. Tau effect', Micro%TauEffect
     write(0,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
     write(0,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
-    write(0,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= ',&
-      &   Total_Bioturb%TauEffect, 'Both Biotic erodibility',Total_Bioturb%ErodibilityEffect
-    write(0,*)
+    write(0,*)'======================'
 #endif
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)

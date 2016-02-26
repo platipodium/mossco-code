@@ -36,7 +36,7 @@ integer                            :: i,j
  do j = 1, jnum
   do i = 1, inum
 
-     if (trim(Chl%units) == 'mgg' ) then
+     if (trim(Chl%units) == 'mgg**-1' ) then
 
        fcr_microphyto (i,j) = 1. + 0.08 * Chl%amount(i,j) ! Knaapen et al (2003)
 
@@ -63,7 +63,6 @@ implicit none
 type (Mc_statevariable)          :: Mbalthica
 integer                          :: inum, jnum
 real(fp), dimension (inum, jnum) :: fcr_macrofauna
-
 integer                          :: i,j
 !Units    ! Unit of Bioamount (mgg: microgram/ g dry sediment weight)
           ! or     (mgm-2 :: microgram/ m**2 area)
@@ -72,32 +71,33 @@ integer                          :: i,j
  do j = 1, jnum
   do i = 1, inum
 
-    if (trim(Mbalthica%units) == 'ind.m**-2' )  then       ! according to Borsje et al. (2008)
-        if (Mbalthica%intensity(i,j) == 0.0_fp ) then
+    if (trim(Mbalthica%units) == 'm**-2' )  then       ! according to Borsje et al. (2008)
+         if (Mbalthica%intensity(i,j) <= 1.0_fp ) then
 
-         fcr_macrofauna = 1.0
-         exit
+           fcr_macrofauna (i,j)= 1.0
+        
+           cycle
         else
 
-         fcr_macrofauna (i,j)= 0.0016 * log (Mbalthica%intensity(i,j) * Mbalthica%intensity(i,j)) &
-                            & -0.085  * log (Mbalthica%intensity(i,j)) +1.0    ! Knaapen et al (2003)
-!write (*,*) ' in shearfunction mbalthica%intesnity = ',Mbalthica%intensity(i,j)
+           fcr_macrofauna (i,j)= 0.0016 * log (Mbalthica%intensity(i,j) * Mbalthica%intensity(i,j)) &
+                              & -0.085  * log (Mbalthica%intensity(i,j)) +1.0    ! Knaapen et al (2003)
         endif
 
-    elseif (trim(Mbalthica%units) == 'gCm-2' ) then
-         if (Mbalthica%amount(i,j) == 0.0_fp ) then
+    elseif (trim(Mbalthica%units) == 'gCm**-2' ) then
+         
+         if (Mbalthica%amount(i,j) <= 1.0_fp ) then
 
-          fcr_macrofauna = 1.0
-          exit
+            fcr_macrofauna (i,j) = 1.0
+          cycle
          else                                      ! Borsje et al (2008), digitalized graphics
 
-          fcr_macrofauna (i,j) = -0.15 * log (Mbalthica%amount(i,j)) + 0.978
- !write (*,*) ' in shearfunction mbalthica%amount = ',Mbalthica%amount(i,j)
+            fcr_macrofauna (i,j) = -0.15 * log (Mbalthica%amount(i,j)) + 0.978
+         
          endif
 
     else if (trim(Mbalthica%units) == '' ) then
 
-      fcr_macrofauna = 1.0
+            fcr_macrofauna = 1.0
 
       write (*,*) ' WARNING!! Missing unit. The Macoma balthica effect on critical bed shear stress can at the'// &
                   ' moment be calculated base on intensity (refer to Knaapen et al. (2003)),'// &
@@ -106,7 +106,6 @@ integer                          :: i,j
     end if
   end do
 end do
-
 return
 end function Mbalthica_crit_shear_func
 
