@@ -1441,8 +1441,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          end do
      end do
 #ifdef DEBUG
-       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
-       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%TauEffect=', BioEffects%TauEffect
+     do j = 1, jnum
+         do i = 1, inum
+            if (mask(i,j)== 0) then
+       write (0,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect(i,j)
+       write (0,*) 'in erosed component run:MPB and Mbalthica BioEffects%TauEffect=', BioEffects%TauEffect(i,j)
+            end if
+         end do
+     end do
+
 #endif
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
