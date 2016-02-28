@@ -36,4 +36,23 @@ end
 %for i=nv(1)+1:nv(2)  vinfo = ncinfo(ncfile,[ms var2{i}]);
 %  if length(vinfo.Size) < 4, Is2D(i)=1; end
 %end
+i_loc=[1 1];
+if length(loc) >0
+ % reading geo-coordinates
+ varid=netcdf.inqVarID(ncid,'getmGrid3D_getm_lon');
+% [id loni]=netcdf.inqDim(ncid,varid);
+ lon=netcdf.getVar(ncid,varid);
 
+ varid=netcdf.inqVarID(ncid,'getmGrid3D_getm_lat');
+% [id lati]=netcdf.inqDim(ncid,varid);
+ lat=netcdf.getVar(ncid,varid);
+
+%% positioning (Helgoland)
+
+% dr=0.03; [ix_hr iy_hr]=find(abs(lat-54.15)<dr & abs(lon-7.8)<dr);
+  for li=1:size(loc,1)
+    [m1 i]=min(abs(lat-loc(li,1))+abs(lon-loc(li,2)),[],1);
+    [m j]=min(m1);
+    i_loc(li,1:2)=[i(j) j];
+  end
+end
