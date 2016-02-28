@@ -25,7 +25,7 @@ spath  ='/home/wirtz';%spath  ='/data/wirtz/sns_0/cut_29';
 %spath  ='/home/wirtz';
 %tags={'_00';'_22';}; 
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
-tags={'ref';'exu';'Ndep';'Zmort'};%;};%'_0';'_1';
+tags={'ref';'Zmort'};%;};%'_0';'_1';'exu';'Ndep';
 ntags=length(tags);
 %% check for tag file
 tagfile = fullfile(spath,['tag.lst']);
@@ -226,6 +226,10 @@ for ns=1:ntags
  end % tagn
 end %ns scneario tags
 
+%% create directory (name) for utput
+figdir = fullfile(spath,'plots');
+if ~exist(figdir),  mkdir(figdir); end;
+
 %% plot each figure as EPS & PNG
 for np=1:nfig
   figure(np);  
@@ -236,10 +240,10 @@ for np=1:nfig
   set(gcf,'PaperPositionMode','auto');
 %% create base file name
   fnam0=sprintf('%s_%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
-  fnam=fullfile(spath,[fnam0 '.eps']);
-  fprintf('save EPS in %s ...\n',fnam);
-  print(gcf,'-depsc',fnam);
-  fnam=fullfile(spath,[fnam0 '.png']);
+%  fnam=fullfile(figdir,[fnam0 '.eps']);
+%  fprintf('save EPS in %s ...\n',fnam);
+%  print(gcf,'-depsc',fnam);
+  fnam=fullfile(figdir,[fnam0 '.png']);
   fprintf('save PNG in %s ...\n',fnam);
   print(gcf,'-dpng',fnam);
 end
