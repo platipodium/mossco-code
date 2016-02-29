@@ -1116,13 +1116,18 @@ module fabm_pelagic_component
 
     character(len=ESMF_MAXSTR)  :: name,message,varname
     type(ESMF_Time)             :: currTime
-    integer                     :: localrc, n, rank
+    integer                     :: localrc, n, rank, k
 
     integer(ESMF_KIND_I4)          :: ubnd(3), lbnd(3), exportUbnd(3), exportLBnd(3)
     real(ESMF_KIND_R8), pointer    :: ptr_f3(:,:,:), exportPtr(:,:,:)
     type(ESMF_FieldStatus_Flag)    :: fieldstatus
     type(ESMF_StateItem_Flag)      :: itemtype
     type(ESMF_Field)               :: field, exportField
+    type(ESMF_FieldBundle)         :: fieldBundle
+    integer                        :: fieldCount
+    integer(kind=8)                :: external_index
+    type(ESMF_Field),dimension(:),allocatable :: fieldList
+    logical                        :: foundItem=.false.
 
     rc=ESMF_SUCCESS
 
@@ -1141,11 +1146,43 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
+        foundItem=.false.
+        call ESMF_StateGet(importState, trim(varname), fieldBundle, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(varname), &
+          fieldCount=fieldCount, rc=localrc)
 
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        cycle
+        if (fieldCount == 0) then
+          write(message,'(A)') trim(name)//' empty fieldBundle, skipped hotstart for variable '//trim(varname)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+          cycle
+        end if
+        call MOSSCO_Reallocate(fieldList, fieldCount, rc=localrc)
+        call ESMF_FieldBundleGet(fieldBundle, &
+            fieldName=trim(varname), fieldList = fieldList, rc=localrc)
+
+        do k=1,fieldCount
+          call ESMF_AttributeGet(fieldList(k), name='external_index', &
+                 value=external_index, &
+                 defaultValue=int(-1,kind=8),rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          ! only use field, if external_index matches own index
+          if (external_index == pel%export_states(n)%fabm_id) then
+            field = fieldList(k)
+            foundItem=.true.
+            exit
+          end if
+        end do
+
+        if (foundItem) then
+          call RestartConcFromField(n,field)
+        else
+          write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+          cycle
+        end if
 
       else if (itemType == ESMF_STATEITEM_FIELD) then
 
