@@ -49,7 +49,7 @@ program main
   type(ESMF_Config)          :: config
   character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg'
   character(len=ESMF_MAXSTR) :: logLevel='all'
-  character(len=ESMF_MAXSTR) :: logLevelZero='all'
+  character(len=ESMF_MAXSTR) :: logLevelZero='not_given'
   logical                    :: logFlush=.false.
 
   integer(ESMF_KIND_I8)      :: system_clock_start, system_clock_stop, system_clock_max
@@ -212,6 +212,7 @@ program main
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  if (trim(logLevelZero) == 'not_given') logLevelZero = logLevel
   if (localPet == 0) logLevel = trim(logLevelzero)
   !> Find out what level of log to write, the default is all, overwrite previous decision
 
