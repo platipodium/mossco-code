@@ -695,16 +695,16 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) then
-        write(message,'(A)')  '  field '//trim(fieldName)//' has no standard_name attribute. Using its name instead.'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call ESMF_AttributeSet(field, 'standard_name', trim(fieldName), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      !call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !if (.not.isPresent) then
+      !  write(message,'(A)')  '  field '//trim(fieldName)//' has no standard_name attribute. Using its name instead.'
+      !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      !  call ESMF_AttributeSet(field, 'standard_name', trim(fieldName), rc=localrc)
+      !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !endif
       call ESMF_AttributeGet(field, 'long_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -748,8 +748,8 @@ module mossco_netcdf
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        ncStatus = nf90_put_att(self%ncid,varid,'standard_name','persistent_execution_thread')
-        ncStatus = nf90_put_att(self%ncid,varid,'long_name','persistent_execution_thread')
+        ncStatus = nf90_put_att(self%ncid,varid,'mossco_name','persistent_execution_thread')
+        ncStatus = nf90_put_att(self%ncid,varid,'long_name','persistent execution thread')
         ncStatus = nf90_put_att(self%ncid,varid,'coordinates',trim(coordinates))
         ncStatus = nf90_put_att(self%ncid,varid,'units','1')
         ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-1)
@@ -1253,7 +1253,7 @@ module mossco_netcdf
     endif
 
     localrc = nf90_put_att(self%ncid, varid, 'units', 'days')
-    localrc = nf90_put_att(self%ncid, varid, 'standard_name', 'day_of_year')
+    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'day_of_year')
 
     localrc = nf90_def_var(self%ncid, 'date_string', NF90_CHAR, (/dimId, self%timeDimId/), varid)
     if (localrc==NF90_ENAMEINUSE) then
@@ -1264,7 +1264,7 @@ module mossco_netcdf
     endif
 
     localrc = nf90_put_att(self%ncid, varid, 'units', '')
-    localrc = nf90_put_att(self%ncid, varid, 'standard_name', 'date_string')
+    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'date_string')
 
     localrc = nf90_enddef(self%ncid)
 
@@ -1304,7 +1304,7 @@ module mossco_netcdf
       endif
 
       localrc = nf90_get_att(self%ncid,var%varid, 'standard_name', var%standard_name)
-      if (localrc /= NF90_NOERR) var%standard_name=var%name
+      if (localrc /= NF90_NOERR) var%standard_name=''
 
       localrc = nf90_get_att(self%ncid,var%varid, 'units', var%units)
       if (localrc /= NF90_NOERR) then
@@ -1597,7 +1597,7 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
+      !ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
       ncStatus = nf90_enddef(self%ncid)
 
@@ -1673,15 +1673,15 @@ module mossco_netcdf
     if (coordSys == ESMF_COORDSYS_SPH_DEG) then
       coordnames=(/'lon  ','lat  ','layer'/)
       coordunits=(/'degree','degree','1     '/)
-      standardNameList=(/'longitude','latitude ','layer    '/)
+      standardNameList=(/'longitude         ','latitude          ','model_level_number'/)
     elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
       coordnames=(/'lon  ','lat  ','layer'/)
       coordunits=(/'rad','rad','1  '/)
-      standardNameList=(/'longitude','latitude ','layer    '/)
+      standardNameList=(/'longitude         ','latitude          ','model_level_number'/)
     else
       coordnames=(/'x','y','z'/)
-      coordunits=(/'1','1','1'/)
-      standardNameList=(/'x','y','z'/)
+      coordunits=(/'m','m','1'/)
+      standardNameList=(/'projection_y_coordinate','projection_y_coordinate','model_level_number     '/)
     endif
 
     axisNameList=(/'X','Y','Z'/)
@@ -1727,10 +1727,10 @@ module mossco_netcdf
 
       !! Write default attributes into netCDF
       !!ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(varName))
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute standard_name='//trim(varname),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      !if (ncStatus /= NF90_NOERR) then
+      !  call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute standard_name='//trim(varname),ESMF_LOGMSG_ERROR)
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !endif
 
       ncStatus = nf90_put_att(self%ncid,varid,'units','1')
       if (ncStatus /= NF90_NOERR) then
@@ -1802,7 +1802,7 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(varName))
       ncStatus = nf90_put_att(self%ncid,varid,'units',trim(coordUnits(i)))
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-990._ESMF_KIND_R8)
-      ncStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
+      !ncStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
       ncStatus = nf90_put_att(self%ncid,varid,'horizontal_stagger_location','center')
       !! axis attribute added only for 1-D coordinate variables
       if (coordDimCount(i)==1) then
