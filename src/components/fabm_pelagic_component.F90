@@ -1765,7 +1765,7 @@ module fabm_pelagic_component
             fieldList = fieldList, rc=localrc)
 
         do k=1,fieldCount
-          call ESMF_AttributeGet(field, name='external_index', &
+          call ESMF_AttributeGet(fieldList(k), name='external_index', &
                  value=external_index, &
                  defaultValue=-1,rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
