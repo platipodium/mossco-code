@@ -1140,104 +1140,22 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemType /= ESMF_STATEITEM_FIELD) then
+      if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
 
         write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         call MOSSCO_StateLog(importState, rc=localrc)
         cycle
 
-      endif
+      else if (itemType == ESMF_STATEITEM_FIELD) then
 
-      call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   
+        call RestartConcFromField(n,field)
+      end if
 
-      call ESMF_FieldGet(field, status=fieldstatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
-
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' incomplete field '
-        call mossco_fieldString(field, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        cycle
-
-      endif
-
-      call ESMF_FieldGet(field, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (rank /= 3) then
-
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' expected rank 3 but got field '
-        call mossco_fieldString(field, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        cycle
-
-      endif
-
-      call ESMF_FieldGet(field, farrayPtr=ptr_f3, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      !! Need to get shape from exportState field of same name to constrain the indices of the conc field
-      call ESMF_StateGet(exportState, trim(varname), itemType=itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_StateGet(exportState, trim(varname), field=exportfield, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGetBounds(exportField, exclusiveUbound=exportUbnd, exclusiveLbound=exportLbnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (any (exportUbnd /= ubnd) .or. any(exportLbnd /= lbnd)) then
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' array bounds do not match '
-        call mossco_fieldString(field, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        cycle
-
-      endif
-
-
-
-!       myShape = shape(pel%export_states(n)%conc)
-!
-!       write(0,*) 'myBounds = ', lbound(pel%export_states(n)%conc), ubound(pel%export_states(n)%conc)
-!
-!       if ((ubnd(1)-lbnd(1)+1.ne.myShape(1)).or. &
-!           (ubnd(2)-lbnd(2)+1.ne.myShape(2)).or. &
-!           (ubnd(3)-lbnd(3)+1.ne.myShape(3))) then
-!
-!         write(message,'(A)') trim(name)//' incompatible shape of field '
-!         call MOSSCO_FieldString(field, message)
-!         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-!         write(message,'(A,3I3,A,3I3)') trim(name)//' own shape ', myShape, ', other shape ', &
-!               ubnd(:)-lbnd(:)+ (/1,1,1/)
-!         !write(message,'(A,3I3,3I3)') lbound(pel%export_states(n)%conc),ubound(pel%export_states(n)%conc)
-!         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-!         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-!       end if
-
-      pel%export_states(n)%conc(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), exportLBnd(3):exportUBnd(3)) &
-        = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
-      write(message,'(A)') trim(name)//' hotstarted field'
-      call mossco_fieldString(field, message)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end do
 
     !> update sinking after restart
@@ -1247,6 +1165,66 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
+
+  subroutine RestartConcFromField(n,field)
+    implicit none
+    integer, intent(in)            :: n
+    type(ESMF_Field), intent(in)   :: field
+    integer                        :: rc
+    integer                        :: rank, localrc
+    character(len=ESMF_MAXSTR)     :: message, name, varname
+    integer(ESMF_KIND_I4)          :: ubnd(3), lbnd(3), exportUbnd(3)
+    real(ESMF_KIND_R8), pointer    :: ptr_f3(:,:,:)
+    type(ESMF_FieldStatus_Flag)    :: fieldstatus
+
+    name="fabm_pelagic"
+    rc = ESMF_SUCCESS
+
+    call ESMF_FieldGet(field, status=fieldstatus, name=varname, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
+
+      write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' incomplete field '
+      call mossco_fieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      return
+
+    endif
+
+    call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rank /= 3) then
+
+      write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' expected rank 3 but got field '
+      call mossco_fieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      return
+
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=ptr_f3, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! Need to get shape from exportState field of same name to constrain the indices of the conc field
+    !! so far, use convention of fabm_pelagic, that exclusive bounds start at
+    !! index 1
+
+    pel%export_states(n)%conc(1:(ubnd(1)-lbnd(1)+1),1:(ubnd(2)-lbnd(2)+1),1:(ubnd(3)-lbnd(3)+1)) &
+        = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+    write(message,'(A)') trim(name)//' hotstarted field'
+    call mossco_fieldString(field, message)
+    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+  end subroutine RestartConcFromField
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
