@@ -21,6 +21,13 @@ SUBDIRS=
 GIT?=$(shell which git)
 CVS?=$(shell which cvs)
 SVN?=$(shell which svn)
+SED?=$(shell which gsed)
+SED?=$(shell which sed)
+
+ifeq ($(SED),)
+  $(error "could not find `sed´ executable, cannot proceed")
+endif
+
 
 ifeq ($(GIT),)
   $(warning "could not find `git´ executable, thus versions will be incorrect.")
@@ -84,7 +91,7 @@ create-file:
 mossco-sha: git-sha.h
 	@-if [  $(shell grep -c $(MOSSCO_SHA) $(SHA_FILE))  -eq 0 ] ; then \
 	  if [ $(shell grep -c MOSSCO_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
-	    cat $(SHA_FILE) | sed  '/MOSSCO_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
+	    cat $(SHA_FILE) | $(SED)  '/MOSSCO_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: MOSSCO_GIT_SHA_KEY = "'$(MOSSCO_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
@@ -92,7 +99,7 @@ mossco-sha: git-sha.h
 mossco-setup-sha: git-sha.h
 	@-if [  $(shell grep -c $(MOSSCO_SETUP_SHA) $(SHA_FILE))  -eq 0 ] ; then \
 	  if [ $(shell grep -c MOSSCO_SETUP_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
-	    cat $(SHA_FILE) | sed  '/MOSSCO_SETUP_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
+	    cat $(SHA_FILE) | $(SED)  '/MOSSCO_SETUP_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: MOSSCO_SETUP_GIT_SHA_KEY = "'$(MOSSCO_SETUP_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
@@ -100,7 +107,7 @@ mossco-setup-sha: git-sha.h
 fabm-sha:  git-sha.h
 	@-if [  $(shell grep -c $(FABM_SHA) $(SHA_FILE)) -eq 0 ] ; then \
 	  if [ $(shell grep -c FABM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
-	    cat $(SHA_FILE) | sed  '/FABM_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
+	    cat $(SHA_FILE) | $(SED)  '/FABM_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: FABM_GIT_SHA_KEY = "'$(FABM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
@@ -108,7 +115,7 @@ fabm-sha:  git-sha.h
 gotm-sha:  git-sha.h
 	@-if [  $(shell grep -c $(GOTM_SHA) $(SHA_FILE)) -eq 0 ] ; then \
 	  if [ $(shell grep -c GOTM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
-	    cat $(SHA_FILE) | sed  '/GOTM_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
+	    cat $(SHA_FILE) | $(SED)  '/GOTM_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: GOTM_GIT_SHA_KEY = "'$(GOTM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
@@ -116,7 +123,7 @@ gotm-sha:  git-sha.h
 getm-sha:
 	@-if [  $(shell grep -c $(GETM_SHA) $(SHA_FILE)) -eq 0 ] ; then \
 	  if [ $(shell grep -c GETM_GIT_SHA_KEY $(SHA_FILE)) -gt 0 ] ; then \
-	    cat $(SHA_FILE) | sed  '/GETM_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
+	    cat $(SHA_FILE) | $(SED)  '/GETM_GIT_SHA_KEY/d'  > $(SHA_FILE) ; \
 	  fi ; \
 	  echo 'character(len=40), parameter :: GETM_GIT_SHA_KEY = "'$(GETM_SHA)'"'	 >> $(SHA_FILE) ; \
 	fi
@@ -124,12 +131,12 @@ getm-sha:
 ifeq ($(MOSSCO_EROSED),true)
 .PHONY: erosed-rev
 erosed-rev: erosed.rev git-sha.h
-	@sed  -i '/EROSED_SVN_REVISION/d' $(SHA_FILE)
+	@$(SED)  -i '/EROSED_SVN_REVISION/d' $(SHA_FILE)
 	@echo 'character(len=40), parameter :: EROSED_SVN_REVISION = "'`cat erosed.rev 2> /dev/null || echo none`'"'	 >> $(SHA_FILE)
 
 erosed.rev: $(EROSED_DIR)/source/erosed.f90
 	@svn log $(EROSED_DIR)/source/erosed.f90 2> /dev/null | head -2 | tail -1 | awk '{print $$1}' > erosed.rev
-	@if [ ! -s erosed.rev ] ; then rm erosed.rev ; fi
+	@if [ ! -s erosed.rev ] ; then rm -f erosed.rev ; fi
 endif
 
 extraclean:
