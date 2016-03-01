@@ -29,7 +29,7 @@ instances:
   - mossco_jfnm: netcdf
   - mussel_input: netcdf_input
   - restart: netcdf_input
-  - mussel: benthic_filtration
+  - mussel: filtration
   - boundary_input: netcdf_input
 
 coupling:

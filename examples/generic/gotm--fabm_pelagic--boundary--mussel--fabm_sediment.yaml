@@ -36,7 +36,7 @@ instances:
   - mussel_input: netcdf_input
   - restart_soil: netcdf_input
   - restart_water: netcdf_input
-  - mussel: benthic_filtration
+  - mussel: filtration
   - boundary_input: netcdf_input
 
 coupling:

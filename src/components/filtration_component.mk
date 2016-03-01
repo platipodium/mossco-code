@@ -13,8 +13,8 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 #
-TARGETS += libmossco_benthic_filtration
-LIBS_TO_CLEAN += libmossco_benthic_filtration.a
+TARGETS += libmossco_filtration
+LIBS_TO_CLEAN += libmossco_filtration.a
 
-libmossco_benthic_filtration: libmossco_benthic_filtration_component
-libmossco_benthic_filtration_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_benthic_filtration.a(benthic_filtration_component.o)
+libmossco_filtration: libmossco_filtration_component
+libmossco_filtration_component: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_filtration.a(filtration_component.o)

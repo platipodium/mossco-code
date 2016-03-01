@@ -1,4 +1,4 @@
-!> @brief Implementation of an ESMF/MOSSCO component for benthic_filtration
+!> @brief Implementation of an ESMF/MOSSCO component for filtration
 !>
 !> This computer program is part of MOSSCO.
 !> @copyright Copyright 2015, 2016 Helmholtz-Zentrum Geesthacht
@@ -14,9 +14,9 @@
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
-#define ESMF_FILENAME "benthic_filtration_component.F90"
+#define ESMF_FILENAME "filtration_component.F90"
 
-module benthic_filtration_component
+module filtration_component
 
   use esmf
   use mossco_variable_types
@@ -1072,4 +1072,4 @@ module benthic_filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
-end module benthic_filtration_component
+end module filtration_component
