@@ -52,9 +52,6 @@ test_ClockDestroy: libmossco_empty
 test_Dictionary test_mossco_netcdf: libmossco_util
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lmossco_util $(LIBS)
 
-test_units: test_units.F90
-	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(LIBS)
-
 test_Dictionary test_netcdf:
 	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) $(LIBS)
 
