@@ -13,8 +13,10 @@
 
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
-#undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_state.F90"
+
+#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
 
 module mossco_state
 
@@ -88,7 +90,8 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(fieldNameList(i)), isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
+         call ESMF_FieldBundleGet(fieldBundle,fieldName=trim(fieldNameList(i)), &
+           isPresent=isPresent, fieldCount=fieldCount, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1749,7 +1752,7 @@ contains
         call ESMF_FieldGet(field, grid=grid, typeKind=typeKind, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
         call ESMF_StateRemove(state, (/itemName/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1955,5 +1958,50 @@ contains
     return
 
   end subroutine MOSSCO_StateGetFieldList
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateGetVelocity"
+  !> @param rc: [optional] return code
+  subroutine MOSSCO_StateGetVelocity(state, velocity,  kwe, direction, rc)
+
+    type(ESMF_State), intent(in)                 :: state
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(out)  :: velocity
+    logical, intent(in), optional                :: kwe
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(out), optional  :: direction
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)              :: rc_, rank, localrc
+    integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: xVelocity, yVelocity
+    type(ESMF_Field)                   :: field
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+    nullify(velocity)
+    if (present(direction)) nullify(direction)
+
+    call ESMF_StateGet(state, 'x_velocity_in_water', field, rc=localrc)
+    call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    allocate(ubnd(rank), stat=localrc)
+    allocate(lbnd(rank), stat=localrc)
+    call ESMF_FieldGetBounds(field, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
+    call ESMF_FieldGet(field, farrayPtr=xVelocity, rc=localrc)
+
+    call ESMF_StateGet(state, 'x_velocity_in_water', field, rc=localrc)
+    call ESMF_FieldGet(field, farrayPtr=yVelocity, rc=localrc)
+
+    allocate(velocity(RANGE3D), stat=localrc)
+    velocity(RANGE3D) = sqrt(yVelocity(RANGE3D) * yVelocity(RANGE3D) &
+                      + xVelocity(RANGE3D) * xVelocity(RANGE3D))
+
+    if (present(direction)) then
+      allocate(direction(RANGE3D), stat=localrc)
+      velocity(RANGE3D) = datan2(yVelocity(RANGE3D)/velocity(RANGE3D), &
+         xVelocity(RANGE3D)/velocity(RANGE3D)) * 180.0D0 / 3.14159265358979323846D0
+    endif
+
+  end subroutine MOSSCO_StateGetVelocity
+
 
 end module mossco_state
