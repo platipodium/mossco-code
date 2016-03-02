@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -15,6 +15,7 @@ endif
 include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
+SHELL=bash
 
 SUBDIRS=
 
@@ -24,7 +25,13 @@ SVN?=$(shell which svn)
 SED?=$(shell which gsed)
 SED?=$(shell which sed)
 
+# Fix for ksez
 ifeq ($(SED),)
+  SED=sed
+endif
+
+ifeq ($(SED),)
+  $(warning GIT=$(GIT) CVS=$(CVS) SVN=$(SVN) SED=$(SED))
   $(error "could not find `sed´ executable, cannot proceed")
 endif
 
