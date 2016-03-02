@@ -1962,44 +1962,101 @@ contains
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateGetVelocity"
   !> @param rc: [optional] return code
-  subroutine MOSSCO_StateGetVelocity(state, velocity,  kwe, direction, rc)
+  subroutine MOSSCO_StateGetVelocity(state, velocity,  kwe, direction, &
+      sweep, transport, rc)
 
     type(ESMF_State), intent(in)                 :: state
     real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(out)  :: velocity
     logical, intent(in), optional                :: kwe
     real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(out), optional  :: direction
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(out), optional  :: sweep
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:), intent(out), optional  :: transport
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)              :: rc_, rank, localrc
+    integer(ESMF_KIND_I4)              :: rc_, rank, localrc, i
     integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: xVelocity, yVelocity
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: xVelocity, yVelocity, layer_height
+    real(ESMF_KIND_R8),pointer,dimension(:,:)  :: area
     type(ESMF_Field)                   :: field
+    type(ESMF_Grid)                    :: grid
+    logical                            :: isPresent
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc = ESMF_SUCCESS
     if (present(rc)) rc = rc_
     nullify(velocity)
-    if (present(direction)) nullify(direction)
 
     call ESMF_StateGet(state, 'x_velocity_in_water', field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_FieldGet(field, rank=rank, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     allocate(ubnd(rank), stat=localrc)
     allocate(lbnd(rank), stat=localrc)
+
     call ESMF_FieldGetBounds(field, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_FieldGet(field, farrayPtr=xVelocity, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_StateGet(state, 'x_velocity_in_water', field, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_FieldGet(field, farrayPtr=yVelocity, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     allocate(velocity(RANGE3D), stat=localrc)
     velocity(RANGE3D) = sqrt(yVelocity(RANGE3D) * yVelocity(RANGE3D) &
                       + xVelocity(RANGE3D) * xVelocity(RANGE3D))
 
     if (present(direction)) then
+      nullify(direction)
       allocate(direction(RANGE3D), stat=localrc)
       velocity(RANGE3D) = datan2(yVelocity(RANGE3D)/velocity(RANGE3D), &
          xVelocity(RANGE3D)/velocity(RANGE3D)) * 180.0D0 / 3.14159265358979323846D0
     endif
+
+    if (present(sweep) .or. present(transport)) then
+      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA, isPresent=isPresent, rc=localrc)
+      ! @todo this only works if the grid item AREA has been set in the grid.
+      if (isPresent) then
+        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA, farrayPtr=area, rc=localrc)
+      else
+        allocate(area(RANGE2D), stat=localrc)
+        area = 1000 * 1000 ! assume 1 sqkm
+      endif
+    endif
+
+    if (present(sweep)) then
+      nullify(sweep)
+      allocate(sweep(RANGE3D), stat=localrc)
+      do i = lbnd(3), ubnd(3)
+        sweep(RANGE2D,i) = velocity(RANGE2D,i) * sqrt(area(RANGE2D))
+      enddo
+    endif
+
+    if (present(transport)) then
+      ! call MOSSCO_GridGetLayerHeight(grid, layer_height, rc=localrc)
+      nullify(transport)
+      allocate(transport(RANGE3D), stat=localrc)
+      do i = lbnd(3), ubnd(3)
+        transport(RANGE2D,i) = velocity(RANGE2D,i) * sqrt(area(RANGE2D))
+      enddo
+      transport(RANGE3D) = transport(RANGE3D) * layer_height(RANGE3D)
+    endif
+
+    if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(lbnd)) deallocate(lbnd)
 
   end subroutine MOSSCO_StateGetVelocity
 
