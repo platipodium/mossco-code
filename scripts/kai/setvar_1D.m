@@ -6,7 +6,7 @@
 %
 
 %plot types:  DC:depth contours SL: surface value as line  LM: depth average as line  
-%             N : not shown but stored
+%             N : not shown but stored		P : profiles   	C : Depth-time countours
 %	long name				short name  min max fac	fig row col type
 %	1					2	    3   4   5	6   7	8   9
 var={{'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;40; 1.0;	1; 1;1;'L2'};
