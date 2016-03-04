@@ -2027,14 +2027,14 @@ contains
     if (present(sweep) .or. present(transport)) then
       call ESMF_FieldGet(field, grid=grid, rc=localrc)
 
-      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA, isPresent=isPresent, rc=localrc)
+      !call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA, isPresent=isPresent, rc=localrc)
       ! @todo this only works if the grid item AREA has been set in the grid.
-      if (isPresent) then
-        call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA, farrayPtr=area, rc=localrc)
-      else
-        allocate(area(RANGE2D), stat=localrc)
-        area = 1000 * 1000 ! assume 1 sqkm
-      endif
+      !if (isPresent) then
+      !  call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA, farrayPtr=area, rc=localrc)
+      !else
+      !  allocate(area(RANGE2D), stat=localrc)
+      !  area = 1000 * 1000 ! assume 1 sqkm
+      !endif
     endif
 
     if (present(sweep)) then
