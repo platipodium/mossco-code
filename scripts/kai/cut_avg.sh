@@ -20,7 +20,7 @@ tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,de
 model=''   # FABM model name, e.g. hzg_maecs
 n1=0       # starting domain-no of loop
 dn=1       # increment in domain-no of loop
-Nstart=0  # initial time-step; skips trailer 
+Nstart=1  # initial time-step; skips trailer 
 soil=0
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
@@ -92,7 +92,7 @@ for p in $(seq -f "%03g" $n1 $dn $nproc); do
      ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
      ncap2 -O -s 'N2flux=N2r.total($ungridded00020)'  $outname $outnamez
   fi
-  ncks -O -v $tg,$ts\
+  ncks -F -O -v $tg,$ts \
 	-d getmGrid2D_getm_1,1,,${dlon} \
 	-d getmGrid2D_getm_2,1,,${dlat} \
 	-d getmGrid3D_getm_1,1,,${dlon} \
@@ -117,12 +117,12 @@ for p in $(seq -f "%03g" $n1 $dn $nproc); do
       outname1m=$na'-'$p'tmp_max.nc'
       if [[ $soil == 1 ]]; then
         outname1z=$na'-'$p'tmp_z.nc'
-        ncra -O -d time,$[$nn-$dt+1],$nn  '../'$outnamez $outname1z
+        ncra -F -O -d time,$[$nn-$dt+1],$nn  '../'$outnamez $outname1z
       fi
       echo $p $[$nn-$dt+1] $nn $outname1
     # calculate mean and macimum in time slice  -v $tg,$ts
-      ncra -O -d time,$[$nn-$dt+1],$nn  '../'$outname2 $outname1
-      ncra -O -y max -d time,$[$nn-$dt+1],$nn '../'$outname2 $outname1m
+      ncra -F -O -d time,$[$nn-$dt+1],$nn  '../'$outname2 $outname1
+      ncra -F -O -y max -d time,$[$nn-$dt+1],$nn '../'$outname2 $outname1m
    done
    fn='*-'$p'tmp.nc'
    fn2='cut_'$p'.nc'
