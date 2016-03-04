@@ -105,7 +105,8 @@ for p in $(seq -f "%02g" $n1 $dn $nproc); do
 #    ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
    ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
    ncap2 -O -s 'N2flux=N2r.total($ungridded00020)'  $outname $outname2
-
+   ncks -C -O -x -v layer_height_in_soil $outname2 $outname
+   ncks -C -O -x -v N2r $outname $outname2
 #    ncap -O -s "N2flux=dissolved_oxygen_upward_flux_at_soil_surface"  $outname2 $outname
    ncap -O -s "PC=Phytplankton_Phosphorus_phyP_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname2 $outname
    ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
