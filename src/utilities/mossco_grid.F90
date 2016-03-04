@@ -12,8 +12,10 @@
 !
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
-#undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_grid.F90"
+
+#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
+#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
 
 module mossco_grid
 
@@ -734,4 +736,56 @@ subroutine MOSSCO_VmGetRectangleDecomposition(vm, decomposition, rc)
   if (present(rc)) rc = rc_
 
 end subroutine MOSSCO_VmGetRectangleDecomposition
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridGetDepth"
+subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
+
+  type(ESMF_Grid), intent(in)           :: grid
+  logical, intent(in), optional         :: kwe
+  real(ESMF_KIND_R8), intent(inout), optional, pointer    :: depth(:,:,:)
+  real(ESMF_KIND_R8), intent(inout), optional, pointer    :: height(:,:,:)
+  real(ESMF_KIND_R8), intent(out), optional, pointer      :: interface(:,:,:)
+  integer(ESMF_KIND_I4),  intent(out), optional  :: rc
+
+  integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
+  integer(ESMF_KIND_I4)          :: rc_, localrc, i
+  character(len=ESMF_MAXSTR)     :: message
+  real(ESMF_KIND_R8), pointer    :: interface_(:,:,:)
+
+  rc_ = ESMF_SUCCESS
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc))  rc = rc_
+
+  allocate(ubnd(3), stat=localrc)
+  allocate(lbnd(3), stat=localrc)
+
+  call ESMF_GridGetCoordBounds(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+    exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+    farrayPtr=interface_, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (present(height)) then
+    if (.not.associated(height)) allocate(height(RANGE3D))
+    do i = lbnd(3)+1, ubnd(3)
+      height(RANGE2D,i) = interface_(RANGE2D, i) - interface_(RANGE2D, i-1)
+    enddo
+  endif
+
+  if (present(depth)) then
+    if (.not.associated(depth)) allocate(depth(RANGE3D))
+    do i = lbnd(3)+1, ubnd(3)
+      depth(RANGE2D,i) = (interface_(RANGE2D, i) + interface_(RANGE2D, i-1)) * 0.5
+    enddo
+  endif
+
+  if (present(interface)) interface = interface_
+
+end subroutine MOSSCO_GridGetDepth
+
 end module mossco_grid

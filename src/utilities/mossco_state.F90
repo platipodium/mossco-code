@@ -2046,6 +2046,7 @@ contains
     endif
 
     if (present(transport)) then
+      !> @todo
       ! call MOSSCO_GridGetLayerHeight(grid, layer_height, rc=localrc)
       nullify(transport)
       allocate(transport(RANGE3D), stat=localrc)
