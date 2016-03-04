@@ -22,7 +22,7 @@ EXTRA_DIST=README
 SUBDIRS=gotm remtc
 
 TARGETS=libempty libconstant libmossco_grid libmossco_inout
-TARGETS+=libmossco_simplewave libmossco_info libmossco_benthic_filtration # libconstant_grid
+TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration # libconstant_grid
 
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS += libmossco_netcdf libmossco_clm #libmossco_river

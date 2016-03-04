@@ -137,7 +137,7 @@ module filtration_component
     type(ESMF_Field)        :: field
     type(ESMF_Config)       :: config
     logical                 :: configIsPresent, fileIsPresent, labelIsPresent
-    real(ESMF_KIND_R8)      :: halfSaturationConcentration, maximumClearanceRate
+    real(ESMF_KIND_R8)      :: mussel_mass, maximumClearanceRate, minimumFoodConcentration
 
     character(len=ESMF_MAXSTR)  :: filterSpecies, xVelocity, yVelocity
     character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:), itemNameList(:)
@@ -147,11 +147,12 @@ module filtration_component
     ! Provide default values for all parameters that could be set in the
     ! component's configuration file
     rank = 3 ! Default provide flux_in_water
-    halfSaturationConcentration = 200.0 ! mmol C / m**2 / individual mussel
-    maximumClearanceRate       = 2E-2  ! mmol C / s
+    maximumClearanceRate       = 200E-2  ! mmol C s-1
     filterSpecies = 'phytoplankton' ! Main variable to filter
     xVelocity = 'x_velocity'
     yVelocity = 'y_velocity'
+    mussel_mass = 0.6 ! g DW / individual
+    minimumFoodConcentration = 0.001 ! mmol C m-3
 
     !! Make sure that a local clock exists, and that the call to this procedure
     !! is written to the log file
@@ -191,17 +192,16 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigFindLabel(config, label='half_saturation_concentration:', isPresent=labelIsPresent, rc = localrc)
+      call ESMF_ConfigFindLabel(config, label='mass:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, halfSaturationConcentration, rc=localrc)
+        call ESMF_ConfigGetAttribute(config, mussel_mass, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)') trim(name)//' found half_saturation_concentration:'
-        write(message,'(A,ES10.3)') trim(message), halfSaturationConcentration
+        write(message,'(A,ES10.3)') trim(name)//' found mass:', mussel_mass
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -215,7 +215,21 @@ module filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' found maximum_clearance_rate:'
-        write(message,'(A,ES10.3)') trim(message), halfSaturationConcentration
+        write(message,'(A,ES10.3)') trim(message), maximumClearanceRate
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call ESMF_ConfigFindLabel(config, label='minimum_food_concentration:', isPresent=labelIsPresent, rc = localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (labelIsPresent) then
+        call ESMF_ConfigGetAttribute(config, minimumFoodConcentration, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' found minimum_food_concentration:'
+        write(message,'(A,ES10.3)') trim(message), minimumFoodConcentration
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
@@ -259,11 +273,15 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !call ESMF_AttributeSet(gridComp, 'half_saturation_concentration', halfSaturationConcentration, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeSet(gridComp, 'mussel_mass', mussel_mass, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(gridComp, 'maximum_clearance_rate', maximumClearanceRate, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(gridComp, 'minimum_food_concentration', minimumFoodConcentration, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -369,7 +387,8 @@ module filtration_component
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
     integer(ESMF_KIND_I4)                   :: itemCount
-    real(ESMF_KIND_R8)                      :: maximumClearanceRate, halfSaturationConcentration
+    real(ESMF_KIND_R8)                      :: maximumClearanceRate, mussel_mass
+    real(ESMF_KIND_R8)                      :: minimumFoodConcentration
 
     rc = ESMF_SUCCESS
     rank = 3
@@ -514,7 +533,7 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! get parameters from the importState, we can safely assume that they are present
+    ! get parameters from the gridComp, we can safely assume that they are present
     call ESMF_AttributeGet(gridComp, name='maximum_clearance_rate', &
       value=maximumClearanceRate, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -523,13 +542,21 @@ module filtration_component
     write(message,'(A,ES9.3)') trim(name)//' filtration rate is ', maximumClearanceRate
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    !call ESMF_AttributeGet(gridComp, name='half_saturation_concentration', &
-    !  value=halfSaturationConcentration, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeGet(gridComp, name='minimum_food_concentration', &
+      value=minimumFoodConcentration, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !write(message,'(A,ES9.3)') trim(name)//' half saturation concentration is ', halfSaturationConcentration
-    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    write(message,'(A,ES9.3)') trim(name)//' minimum food concentration is ', minimumFoodConcentration
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call ESMF_AttributeGet(gridComp, name='mussel_mass', &
+      value=mussel_mass, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(A,ES9.3)') trim(name)//' mussel mass is ', mussel_mass
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(gridComp, name='filter_species', &
       value=filterSpecies, rc=localrc)
@@ -600,13 +627,14 @@ module filtration_component
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
 
+    real(ESMF_KIND_R8),allocatable               :: clearanceRate(:,:,:)
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, flux
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration, farrayPtr3, transport
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration, velocity
     !real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: layer_height, water_depth_at_interface
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
     integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount
-    real(ESMF_KIND_R8)      :: maximumClearanceRate, halfSaturationConcentration
+    real(ESMF_KIND_R8)      :: maximumClearanceRate, minimumFoodConcentration, mussel_mass
     real(ESMF_KIND_R8)      :: missingValue
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
 
@@ -614,7 +642,6 @@ module filtration_component
     character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
-    type(ESMF_Grid)             :: grid
 
     rc = ESMF_SUCCESS
 
@@ -639,16 +666,15 @@ module filtration_component
       return
     endif
 
-    !call ESMF_AttributeGet(gridComp, name='half_saturation_concentration', &
-    !  value=halfSaturationConcentration, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_AttributeGet(gridComp, name='minimum_food_concentration', &
+      value=minimumFoodConcentration, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !if (halfSaturationConcentration <= 0.0) then
-    !  write(message,'(A)') trim(name)//' found half saturation concentration less or equal zero. Nothing is done.'
-    !  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-    !  return
-    !endif
+    call ESMF_AttributeGet(gridComp, name='mussel_mass', &
+      value=mussel_mass, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(gridComp, name='filter_species', &
       value=filterSpecies, rc=localrc)
@@ -783,6 +809,7 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    allocate(clearanceRate(RANGE3D), stat=localrc)
     ! This is the core of the mussel model, using a linear approach based on food
     ! supply rate (transport*concentration) mussel mass concentration (abundance*mass)
     ! and parameters
@@ -791,20 +818,25 @@ module filtration_component
       flux(RANGE3D) &
       ! We multiply mussel abundance (m-3) bei mass (g)
       = abundance(RANGE3D) &        ! m-3         (m-3))
-      * mussel_mass                 ! g           (g m-3)
+      * mussel_mass        &         ! g           (g m-3)
       ! Then multipy the mass-specific maximum clearance rate
       * maximumClearanceRate        ! m3 s-1 g-1  (s-1)
       ! This value is compared to the exchanged water that comes from
       ! the velocity and dimension of the grid cell
-      clearanceRate(RANGE3D) = velocity(RANGE3D) &        ! s-1
-      where (clearanceRate(RANGE3D) < velocity(RANGE3D))
-        clearanceRate(RANGE3D) = flux(RANGE3D)            ! s-1
-      endwhere
-      ! Add a lower threshold on concentration, below which the mussel closes linearly
-      ! towards zero
-      where (concentration(RANGE3D) < minimumFoodConcentration)
-        clearanceRate(RANGE3D) = clearanceRate(RANGE3D)  * concentration(RANGE3D) / minimumFoodConcentration
-      endwhere
+      clearanceRate(RANGE3D) = velocity(RANGE3D)         ! s-1
+    endwhere
+
+    where (clearanceRate(RANGE3D) < velocity(RANGE3D) .and. mask(RANGE3D))
+      clearanceRate(RANGE3D) = flux(RANGE3D)           ! s-1
+    endwhere
+
+    ! Add a lower threshold on concentration, below which the mussel closes linearly
+    ! towards zero
+    where (concentration(RANGE3D) < minimumFoodConcentration .and. mask(RANGE3D))
+      clearanceRate(RANGE3D) = clearanceRate(RANGE3D)  * concentration(RANGE3D) / minimumFoodConcentration
+    endwhere
+
+    where(mask(RANGE3D))
       ! Multiply clearance rate by food concentration, this may be
       ! modified later to include clogging as upper threshold
       flux(RANGE3D) = clearanceRate(RANGE3D) * concentration(RANGE3D) ! mmol s-1 m-3
@@ -903,6 +935,7 @@ module filtration_component
     if (allocated(mask)) deallocate(mask)
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(ubnd)) deallocate(ubnd)
+    if (allocated(clearanceRate)) deallocate(clearanceRate)
 
     !! This component has no do loop over an internal timestep, it is advanced with the
     !! timestep written into its local clock from a parent component
