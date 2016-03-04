@@ -21,7 +21,7 @@ tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,de
 model=''   # FABM model name, e.g. hzg_maecs
 n1=0       # starting domain-no of loop
 dn=1       # increment in domain-no of loop
-Nstart=0  # initial time-step; skips trailer 
+Nstart=1  # initial time-step; skips trailer 
 soil=0
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
@@ -91,7 +91,7 @@ for p in $(seq -f "%02g" $n1 $dn $nproc); do
   if [[ $soil == 1 ]]; then
      ncks -O -v $tg,$tb -d time,$Nstart,$N $fname $outname2 
      ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
-     ncap2 -O -s 'N2flux=N2r.total($ungridded00020)'  $outname $outnamez
+     ncap2 -O -s 'N2flux=N2r.total($ungridded00015)'  $outname $outnamez
   fi
   ncks -F -O -v $tg,$ts \
 	-d getmGrid2D_getm_1,1,,${dlon} \
@@ -104,7 +104,7 @@ for p in $(seq -f "%02g" $n1 $dn $nproc); do
 #    ncap -O -s "O2flux=dissolved_oxygen_upward_flux_at_soil_surface"  $outname2 $outname
 #    ncap -O -s "NC=Phytplankton_Nitrogen_phyN_in_water/(Phytplankton_Carbon_phyC_in_water+0.001)"  $outname $outname2
    ncap2 -O -s 'N2r=denitrification_rate_in_soil*layer_height_in_soil'  $outname2 $outname
-   ncap2 -O -s 'N2flux=N2r.total($ungridded00020)'  $outname $outname2
+   ncap2 -O -s 'N2flux=N2r.total($ungridded00015)'  $outname $outname2
    ncks -C -O -x -v layer_height_in_soil $outname2 $outname
    ncks -C -O -x -v N2r $outname $outname2
 #    ncap -O -s "N2flux=dissolved_oxygen_upward_flux_at_soil_surface"  $outname2 $outname
