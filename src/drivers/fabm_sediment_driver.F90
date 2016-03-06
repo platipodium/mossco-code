@@ -248,7 +248,7 @@ do k=1,_KNUM_
    select case (bioturbation_profile)
    case (1) ! linear decrease
      sed%bioturbation_factor(:,:,k) = &
-       max(bioturbation_min, &
+       max(bioturbation_min/bioturbation, &
        max(bioturbation_depth-100.0d0*sed%grid%zi(:,:,k),0.0d0)/bioturbation_depth)
    case (2) ! exponential decrease
      sed%bioturbation_factor(:,:,k) = &
