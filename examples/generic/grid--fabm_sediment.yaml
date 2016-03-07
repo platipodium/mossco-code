@@ -1,0 +1,21 @@
+dependencies:
+  - fabm_sediment:
+    - component: grid
+      grid: grid_2d
+
+instances:
+  - mossco_grid: netcdf
+
+coupling:
+  - components:
+     - constant
+     - fabm_sediment
+    interval: none
+  - components:
+     - grid
+     - fabm_sediment
+    interval: none
+  - components:
+     - fabm_sediment
+     - mossco_grid
+    interval: 12 h
