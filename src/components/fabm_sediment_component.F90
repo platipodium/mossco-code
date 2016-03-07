@@ -1371,7 +1371,7 @@ module fabm_sediment_component
 !tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
 
             fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))/ &
-              sed%grid%dz(:,:,1)*(sed%bioturbation + 2.*sed%diffusivity+bdys(:,:,1) * &
+              sed%grid%dz(:,:,1)*(sed%bioturbation + sed%diffusivity+bdys(:,:,1) * &
               0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
           else
             !> reset fluxes to zero
