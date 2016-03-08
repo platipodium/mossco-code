@@ -1745,18 +1745,22 @@ subroutine update_sediment_mass (mass, dt, deposition_rate, erosion_rate, area)
     !      mass (i,j) = mass (i,j) + (deposition_rate(i,j)-erosion_rate (i,j))/1000. * dt * area (j)
      !   end do
      ! end do
-
+!             write (0,*)  'erosion_rate start of updtae in driver', erosion_rate,'deposition_rate',deposition_rate,'area', area, 'dt', dt 
+       
          ! First check if the current mass of the sediment fraction is below the
          ! minimum (i.e. resulting from extensive erosion in previous time step)
          if (mass <= min_mass) then 
              mass = min_mass
              erosion_rate = 0.0_fp
          else
+ !            write (0,*) 'mass in driver', mass
              mass  = mass + (deposition_rate - erosion_rate) * dt *area
-             if (mass<= min_mass)then
+!             write (0,*) 'mass ', mass, 'deposition', deposition_rate*dt *area
+
+           if (mass<= min_mass)then
               mass = min_mass
               erosion_rate = deposition_rate - mass /(dt *area)
-             endif
+           endif
          endif
              
      end subroutine  update_sediment_mass

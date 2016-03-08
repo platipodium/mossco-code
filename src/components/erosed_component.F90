@@ -1050,8 +1050,13 @@ contains
         call ESMF_FieldGet(field=field, farrayPtr=sediment_mass,rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        sediment_mass(:,:,:)= 0.0_fp
-       
+    !    sediment_mass(:,:,:)= 0.0_fp
+        do j=1,jnum
+         do i= 1, inum
+          sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
+         end do
+        end do
+     
         call ESMF_StateAdd(exportState,(/field/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1154,6 +1159,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer,dimension(3)     :: exclusiveLBound3,exclusiveUBound3,totalLBound3,totalUBound3
     integer(ESMF_KIND_I4)    :: ubnd(3), lbnd(3), tubnd(3), tlbnd(3)
     integer                  :: kmx, kmaxsd !(kmaxsd: kmax-layer index for sand)
+    real (kind=fp) :: deposition_rate, entrainment_rate
 !#define DEBUG
     rc=ESMF_SUCCESS
 
@@ -1461,7 +1467,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
                 & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
                 & relative_thickness_of_layers, kmaxsd, taubmax )
-
+!write (0,*) ' ESMF_Kind_R8 precision', digits(1._ESMF_KIND_R8), 'erosed fp precision', digits(1._fp)
   n =0
     do l = 1, nfrac
       do nm = nmlb, nmub
@@ -1478,12 +1484,17 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         end if
         if ( mask(i,j) .gt. 0 ) then
+           deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
+           entrainment_rate = sour(l,nm)
           if (bedmodel) &
+ !           write (0,*) 'entrainment_rate before call update', entrainment_rate
             call update_sediment_mass (mass(l,nm), dt, &
-              sink(l,nm) * spm_concentration(i,j,kmx,l)/1000._fp, &
-              sour(l,nm), area(i,j))
-          
-          size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,kmx,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+              deposition_rate, &
+              entrainment_rate, area(i,j))
+  !          write (0,*) 'mass in l, nm', l,nm, mass(l,nm) , 'diff spm und real fp spm', real(spm_concentration(i,j,kmx,l),fp)/1000._fp &
+  !                       -     spm_concentration(i,j,kmx,l)/1000._fp
+   !         write (0,*) 'entrainment_rate after update', entrainment_rate, 'deposition_rate in componnet', deposition_rate
+          size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = entrainment_rate *1000.0_fp - deposition_rate *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
 
         end if
      enddo
@@ -1718,6 +1729,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     do j=1,jnum
       do i= 1, inum
         sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
+    !    write (0,*) ' sediment_mass(i,j,:)',i,j,sediment_mass(i,j,:)
       end do
     end do
     end if
