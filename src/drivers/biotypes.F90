@@ -20,8 +20,8 @@ module BioTypes
 !Bundesanstalt Fuer Wasserbau
 !Hamburg 19.11.2013
 
-!use precision
-integer , parameter          :: fp= selected_real_kind (8)
+use precision, only : fp
+!integer , parameter          :: fp= selected_real_kind (8)
 
 ! data type use for defining state varaible of microphytobenthos
 type statevariable
