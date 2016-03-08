@@ -301,6 +301,27 @@ program main
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite("Simulation ends at "//timestring, ESMF_LOGMSG_INFO)
 
+  write(message,'(A, I2)') 'ESMF double precision (KIND_R8) is'
+  if (precision(1.0_ESMF_KIND_R8) < 10) then
+    write(message,'(A,I1,A)')  trim(message)//' ',precision(1.0_ESMF_KIND_R8),' significant digits.'
+  elseif (precision(1.0_ESMF_KIND_R8) < 100) then
+    write(message,'(A,I2,A)')  trim(message)//' ',precision(1.0_ESMF_KIND_R8),' significant digits.'
+  else
+    write(message,'(A,I3,A)')  trim(message)//' ',precision(1.0_ESMF_KIND_R8),' significant digits.'
+  endif
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+  write(message,'(A, I2)') 'ESMF single precision (KIND_R4) is'
+  if (precision(1.0_ESMF_KIND_R4) < 10) then
+    write(message,'(A,I1,A)')  trim(message)//' ',precision(1.0_ESMF_KIND_R4),' significant digits.'
+  elseif (precision(1.0_ESMF_KIND_R4) < 100) then
+    write(message,'(A,I2,A)')  trim(message)//' ',precision(1.0_ESMF_KIND_R4),' significant digits.'
+  else
+    write(message,'(A,I3,A)')  trim(message)//' ',precision(1.0_ESMF_KIND_R4),' significant digits.'
+  endif
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+
 ! Create toplevel component and call its setservices routines, if namelist was successfully read, then copy the
 ! main clock to the toplevel (child) clock.  If no time information from namelist, then let the toplevel component
 ! read the time and pass it back to main clock
