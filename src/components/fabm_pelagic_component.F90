@@ -509,6 +509,13 @@ module fabm_pelagic_component
     end do
 
     !! Initialize FABM
+    inquire(file=trim(fabm_nml), exist=isPresent)
+    if (.not.isPresent) then
+      write(message,'(A)') trim(name)//' could not find required namelist file '//trim(fabm_nml)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
     pel = mossco_create_fabm_pelagic(fabm_nml)
 
     ! set background extinction

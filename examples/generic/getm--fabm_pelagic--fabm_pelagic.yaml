@@ -5,7 +5,7 @@ dependencies:
   - restart_water:
     - component: getm
       grid: temperature_in_water
-  - pelagic_npzd:
+  - pelagic_maecs:
     - component: getm
       grid: temperature_in_water
   - pelagic_npzd:
@@ -36,11 +36,11 @@ coupling:
      - getm
      - pelagic_maecs
     interval: 30 m
-  - components:
-     - pelagic_npzd
-     - transport_connector
-     - getm
-    interval: none
+  # - components:
+  #    - pelagic_npzd
+  #    - transport_connector
+  #    - getm
+  #   interval: none
   - components:
      - pelagic_maecs
      - transport_connector
