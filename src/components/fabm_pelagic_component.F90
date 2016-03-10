@@ -340,10 +340,10 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
-
+    character(len=ESMF_MAXSTR)  :: fabm_nml='fabm.nml'
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min, &
-                            background_extinction, albedo_const
+                            background_extinction, albedo_const,fabm_nml
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -509,7 +509,7 @@ module fabm_pelagic_component
     end do
 
     !! Initialize FABM
-    pel = mossco_create_fabm_pelagic()
+    pel = mossco_create_fabm_pelagic(fabm_nml)
 
     ! set background extinction
     pel%background_extinction=background_extinction
