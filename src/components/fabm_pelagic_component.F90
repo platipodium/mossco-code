@@ -327,7 +327,7 @@ module fabm_pelagic_component
     type(ESMF_Time)            :: currTime, startTime, stopTime
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
-    logical                    :: clockIsPresent
+    logical                    :: clockIsPresent, isPresent
     integer                    :: deCount,numElements,numNodes
     integer,dimension(2)       :: distgridToArrayMap
     integer,dimension(3)       :: coordDimCount
@@ -340,6 +340,7 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min, &
                             background_extinction, albedo_const
@@ -358,7 +359,18 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! read namelist input for control of timestepping
-    open(33,file='fabm_pelagic.nml',action='read',status='old')
+    inquire(file=trim(name)//'.nml', exist = isPresent)
+    if (isPresent) then
+      open(33,file=trim(name)//'.nml', action='read', status='old')
+    else
+      inquire(file='fabm_pelagic.nml', exist = isPresent)
+      if (.not.isPresent) then
+        write(message,'(A)') trim(name)//' could not find required namelist file fabm_pelagic.nml'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      open(33,file='fabm_pelagic.nml', action='read', status='old')
+    endif
     read(33,nml=fabm_pelagic)
     close(33)
 
@@ -1189,7 +1201,7 @@ module fabm_pelagic_component
         call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
         call RestartConcFromField(n,field)
       end if
 
@@ -1773,7 +1785,7 @@ module fabm_pelagic_component
           ! only use field, if external_index matches own index
           if (external_index == pel%export_states(n)%fabm_id) field = fieldList(k)
         end do
-      
+
       else if (itemType == ESMF_STATEITEM_FIELD) then
 
         call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', field, rc=localrc)

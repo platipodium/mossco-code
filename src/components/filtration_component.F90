@@ -147,6 +147,7 @@ module filtration_component
     ! Provide default values for all parameters that could be set in the
     ! component's configuration file
     rank = 3 ! Default provide flux_in_water
+    ! Taken from Rijsgaard 2001
     minimumFoodFlux  = 0.6166697552  ! mmol C s-1 m-3, equiv to 20 mg C
     filterSpecies = 'phytoplankton' ! Main variable to filter
     xVelocity = 'x_velocity'
