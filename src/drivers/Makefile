@@ -140,7 +140,6 @@ EROSED_OBJS= \
   $(EROSED_DIR)/source/soursin_3d.o
 
 libmossco_erosed_dependencies: prefix              \
-  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision_basics.o)  \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision.o)    \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/mathconsts.o)\
@@ -151,10 +150,11 @@ libmossco_erosed_dependencies: prefix              \
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/sand_mud.o)\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/compbsskin.o)\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/bedbc1993.o)\
-  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/soursin_3d.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/source/soursin_3d.o)	\
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o)
 
 
-libmossco_erosed: prefix biotypes.o libmossco_erosed_dependencies       \
+libmossco_erosed: prefix libmossco_erosed_dependencies	\
   $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a(erosed_driver.o)
 
 # TRACER section
