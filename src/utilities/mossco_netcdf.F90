@@ -2585,6 +2585,23 @@ module mossco_netcdf
         enddo
       endif
 
+      ! If the variable is an _in_water quality and the input is a 2-dimensional dimension, then
+      ! fill the upper and the lower layer only
+      !> @todo this should be configurable
+      if (index(name, '_in_water') > 1 .and. count(3) == 2 .and. (ubnd(3)-lbnd(3)+1 > 1)) then
+        farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                   fstart(2):fstart(2)+count(2)-1, &
+                   fstart(3)+ 0) = netcdfPtr3(:,:,1)
+        farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                   fstart(2):fstart(2)+count(2)-1, &
+                   fstart(3)+ ubnd(3) - lbnd(3)) = netcdfPtr3(:,:,2)
+        do k = 1, ubnd(3) - lbnd(3) - 1
+          farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                     fstart(2):fstart(2)+count(2)-1, &
+                     fstart(3)+k:fstart(3)+k) = 0.0D0
+        enddo
+      endif
+
       if (associated(netcdfPtr3)) deallocate(netcdfPtr3)
     elseif (fieldRank == 4) then
       call ESMF_FieldGet(field, farrayPtr=farrayPtr4, rc=localrc)

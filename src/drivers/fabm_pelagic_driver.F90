@@ -2,7 +2,7 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 
 !
@@ -100,12 +100,13 @@
   contains
 
   !> creates instance of pelagic fabm class
-  function mossco_create_fabm_pelagic() result(pf)
+  function mossco_create_fabm_pelagic(fabm_nml) result(pf)
 
+    character(len=*), optional, intent(in)  :: fabm_nml
     type(type_mossco_fabm_pelagic), allocatable :: pf
 
     integer  :: n
-    integer  :: namlst=123
+    integer  :: namlst_unit=123
     real(rk) :: dt
 
     allocate(pf)
@@ -113,7 +114,11 @@
     pf%conc => null()
     pf%par => null()
     ! Build FABM model tree.
-    pf%model => fabm_create_model_from_file(namlst)
+    if (present(fabm_nml)) then
+      pf%model => fabm_create_model_from_file(namlst_unit,trim(fabm_nml))
+    else
+      pf%model => fabm_create_model_from_file(namlst_unit,'fabm.nml')
+    endif
 
     pf%nvar = size(pf%model%state_variables)
     pf%ndiag = size(pf%model%diagnostic_variables)
@@ -420,7 +425,7 @@
         stop
       end if
     end if
-      
+
   end subroutine
 
 
@@ -843,4 +848,3 @@
    end subroutine clip_below_minimum
 
   end module mossco_fabm_pelagic
-

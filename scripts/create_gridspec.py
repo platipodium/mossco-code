@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-# This script is is part of MOSSCO. It creates from basic grid parameters 
+# This script is is part of MOSSCO. It creates from basic grid parameters
 # a GRIDSPEC compliant NetCDF file.
 #
-# @copyright (C) 2014 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -32,7 +32,7 @@ if (2==2): ## spherical box / deep lake test case
   ur_lon=1.25
   ll_lat=45.0
   ur_lat=45.25
-    
+
 if __name__ == '__main__':
 
   nlat=abs(ur_lat-ll_lat)/abs(delta_lat)
@@ -42,7 +42,7 @@ if __name__ == '__main__':
   if (nlat != round(nlat)):
       delta_lat=abs(ur_lat-ll_lat)/round(nlat)
   nlat=int(round(nlat))
-   
+
   if (nlon != round(nlon)):
       delta_lon=abs(ur_lon-ll_lon)/round(nlon)
   nlon=int(round(nlon))
@@ -57,7 +57,7 @@ if __name__ == '__main__':
   nc.createDimension('bound',2)
   nc.createDimension('lon',nlon)
   nc.createDimension('lat',nlat)
- 
+
   lon = nc.createVariable('lon','f8',('lon'))
   lon.bounds='lon_bnds'
   lon.units='degree_east'
@@ -71,9 +71,9 @@ if __name__ == '__main__':
   lat.units='degree_north'
   lat.long_name='latitude'
   lat.standard_name='latitude'
-  
+
   lat_bnds = nc.createVariable('lat_bnds','f8',('lat','bound'))
-  
+
 # Meta data
   nc.history = 'Created ' + time.ctime(time.time()) + ' by ' + sys.argv[0]
   nc.creator = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
@@ -90,9 +90,7 @@ if __name__ == '__main__':
   lon_bnds[:,1]=lon[:]+0.5*delta_lon
   lat_bnds[:,0]=lat[:]-0.5*delta_lat
   lat_bnds[:,1]=lat[:]+0.5*delta_lat
-  
+
   print lon_bnds[0,:], lat_bnds[-1,:]
-  
+
   nc.close()
-
-

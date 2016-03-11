@@ -34,6 +34,7 @@ module fabm_pelagic_component
   use mossco_state
   use mossco_field
   use mossco_component
+  use mossco_grid
 
   implicit none
 
@@ -316,9 +317,8 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8)    :: albedo_const=0.78
     integer(ESMF_KIND_I4) :: fieldcount
     integer(ESMF_KIND_I4) :: lbnd2(2),ubnd2(2),lbnd3(3),ubnd3(3)
-    integer(ESMF_KIND_I4) :: totallwidth3(3), totaluwidth3(3)
-    integer(ESMF_KIND_I4) :: totallwidth2(2), totaluwidth2(2)
-    integer(ESMF_KIND_I4) :: totallwidth(3,1), totaluwidth(3,1)
+    integer(ESMF_KIND_I4) :: totallwidth3(3,1), totaluwidth3(3,1)
+    integer(ESMF_KIND_I4) :: totallwidth2(2,1), totaluwidth2(2,1)
     integer(ESMF_KIND_I8) :: tidx
 
     character(len=ESMF_MAXSTR) :: timestring, name, message, units, esmf_name
@@ -327,7 +327,7 @@ module fabm_pelagic_component
     type(ESMF_Time)            :: currTime, startTime, stopTime
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
-    logical                    :: clockIsPresent
+    logical                    :: clockIsPresent, isPresent
     integer                    :: deCount,numElements,numNodes
     integer,dimension(2)       :: distgridToArrayMap
     integer,dimension(3)       :: coordDimCount
@@ -340,9 +340,10 @@ module fabm_pelagic_component
     real(ESMF_KIND_R8), dimension(:)  , pointer :: coord1d=>null()
     real(ESMF_KIND_R8), dimension(:,:), pointer :: coord2d=>null()
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXSTR)  :: fabm_nml='fabm.nml'
 
     namelist /fabm_pelagic/ dt,ode_method,dt_min,relative_change_min, &
-                            background_extinction, albedo_const
+                            background_extinction, albedo_const,fabm_nml
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -358,7 +359,18 @@ module fabm_pelagic_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! read namelist input for control of timestepping
-    open(33,file='fabm_pelagic.nml',action='read',status='old')
+    inquire(file=trim(name)//'.nml', exist = isPresent)
+    if (isPresent) then
+      open(33,file=trim(name)//'.nml', action='read', status='old')
+    else
+      inquire(file='fabm_pelagic.nml', exist = isPresent)
+      if (.not.isPresent) then
+        write(message,'(A)') trim(name)//' could not find required namelist file fabm_pelagic.nml'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      open(33,file='fabm_pelagic.nml', action='read', status='old')
+    endif
     read(33,nml=fabm_pelagic)
     close(33)
 
@@ -390,36 +402,49 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_GridAddCoord(state_grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      totalLWidth3(:)=0
-      totalUWidth3(:)=0
-      totalLWidth2(:)=0
-      totalUWidth2(:)=0
+      totalLWidth3(:,1)=0
+      totalUWidth3(:,1)=0
+      totalLWidth2(:,1)=0
+      totalUWidth2(:,1)=0
     else
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field, grid=state_grid, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      allocate(maxIndex(rank))
+      call ESMF_GridGet(state_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
+             exclusiveCount=maxIndex,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank == 3) call ESMF_FieldGet(field, totalLWidth=totalLWidth3, totalUWidth=totalUWidth3, rc=localrc)
+      if (rank == 2) call ESMF_FieldGet(field, totalLWidth=totalLWidth2, totalUWidth=totalUWidth2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      inum=maxIndex(1)
+      jnum=maxIndex(2)
+
       if (rank == 3) then
-        allocate(maxIndex(rank))
-        call ESMF_GridGet(state_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
-               exclusiveCount=maxIndex,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_FieldGet(field, totalLWidth=totalLWidth, totalUWidth=totalUWidth, rc=localrc)
+        numlayers=maxIndex(3)
+        totalLWidth2(:,1)=totalLWidth3(1:2,1)
+        totalUWidth2(:,1)=totalUWidth3(1:2,1)
+      elseif (rank == 2) then
+        numlayers=1
+        totalLWidth3(3,1)=1
+        totalUWidth3(3,1)=1
+        horizontal_grid=state_grid
+        state_grid = MOSSCO_GridCreateFromOtherGrid(horizontal_grid, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        inum=maxIndex(1)
-        jnum=maxIndex(2)
-        numlayers=maxIndex(3)
-        deallocate(maxIndex)
-        totalLWidth3(:)=totalLWidth(:,1)
-        totalUWidth3(:)=totalUWidth(:,1)
-        totalLWidth2(:)=totalLWidth(1:2,1)
-        totalUWidth2(:)=totalUWidth(1:2,1)
+        write(message,'(A)') trim(name)//' uses experimental feature with rank 2 foreign grid.  Expect trouble.'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
       else
-        write(message,'(A)') 'foreign grid must be of rank = 3'
+        write(message,'(A)') 'foreign grid must be of rank 2 or 3'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       end if
+      deallocate(maxIndex)
     end if
 
     call ESMF_GridGet(state_Grid,distgrid=distGrid_3D,        &
@@ -427,6 +452,7 @@ module fabm_pelagic_component
                                  coordDimCount=coordDimCount, &
                                  coordDimMap=coordDimMap)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_DistGridGet(distGrid_3D,delayout=delayout)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call ESMF_DELayoutGet(delayout,deCount=deCount)
@@ -497,7 +523,14 @@ module fabm_pelagic_component
     end do
 
     !! Initialize FABM
-    pel = mossco_create_fabm_pelagic()
+    inquire(file=trim(fabm_nml), exist=isPresent)
+    if (.not.isPresent) then
+      write(message,'(A)') trim(name)//' could not find required namelist file '//trim(fabm_nml)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    pel = mossco_create_fabm_pelagic(fabm_nml)
 
     ! set background extinction
     pel%background_extinction=background_extinction
@@ -505,22 +538,22 @@ module fabm_pelagic_component
     !! re-allocate state variables
     call ESMF_GridGetFieldBounds(state_grid,totalubound=ubnd3,totallbound=lbnd3,rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    allocate(pel%conc(1-totalLWidth3(1):inum+totalUWidth3(1), &
-                      1-totalLWidth3(2):jnum+totalUWidth3(2), &
-                      1-totalLWidth3(3):numlayers+totalUWidth3(3), &
+    allocate(pel%conc(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
+                      1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
+                      1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1), &
                       1:pel%nvar))
     !! get mask
-    allocate(mask(1-totalLWidth3(1):inum+totalUWidth3(1), &
-                  1-totalLWidth3(2):jnum+totalUWidth3(2), &
-                  1-totalLWidth3(3):numlayers+totalUWidth3(3)))
+    allocate(mask(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
+                  1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
+                  1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1)))
     mask = .false.
-    allocate(pel%is_openboundary(1-totalLWidth3(1):inum+totalUWidth3(1), &
-                                 1-totalLWidth3(2):jnum+totalUWidth3(2), &
-                                 1-totalLWidth3(3):numlayers+totalUWidth3(3)))
+    allocate(pel%is_openboundary(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
+                                 1-totalLWidth3(2,1):jnum+totalUWidth3(2,1), &
+                                 1-totalLWidth3(3,1):numlayers+totalUWidth3(3,1)))
     pel%is_openboundary = .false.
     if (.not.(associated(pel%is_openboundary_hz))) &
-      allocate(pel%is_openboundary_hz(1-totalLWidth3(1):inum+totalUWidth3(1), &
-                                      1-totalLWidth3(2):jnum+totalUWidth3(2)))
+      allocate(pel%is_openboundary_hz(1-totalLWidth3(1,1):inum+totalUWidth3(1,1), &
+                                      1-totalLWidth3(2,1):jnum+totalUWidth3(2,1)))
     pel%is_openboundary_hz = .false.
 
     call ESMF_GridGetItem(state_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
@@ -575,7 +608,7 @@ module fabm_pelagic_component
 
       concfield = ESMF_FieldCreate(state_grid,farrayPtr=pel%export_states(n)%conc, &
                        name=trim(varname), &
-                       totalLWidth=totalLWidth3,totalUWidth=totalUWidth3, &
+                       totalLWidth=totalLWidth3(:,1),totalUWidth=totalUWidth3(:,1), &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(concfield,'creator', trim(name), rc=localrc)
@@ -657,7 +690,7 @@ module fabm_pelagic_component
 
       wsfield = ESMF_FieldCreate(state_grid,typekind=ESMF_TYPEKIND_R8, &
                        name=trim(wsname), &
-                       totalLWidth=totalLWidth3,totalUWidth=totalUWidth3, &
+                       totalLWidth=totalLWidth3(:,1),totalUWidth=totalUWidth3(:,1), &
                        staggerloc=ESMF_STAGGERLOC_CENTER,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(wsfield,'creator', trim(name), rc=localrc)
@@ -1189,7 +1222,7 @@ module fabm_pelagic_component
         call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
         call RestartConcFromField(n,field)
       end if
 
@@ -1773,7 +1806,7 @@ module fabm_pelagic_component
           ! only use field, if external_index matches own index
           if (external_index == pel%export_states(n)%fabm_id) field = fieldList(k)
         end do
-      
+
       else if (itemType == ESMF_STATEITEM_FIELD) then
 
         call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', field, rc=localrc)
