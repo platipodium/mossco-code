@@ -740,7 +740,6 @@ contains
     integer(ESMF_KIND_I4)                       :: fieldCount
 
     real(ESMF_KIND_R8),dimension(:,:)  ,pointer   :: ptr_f2=>null()
-    real(ESMF_KIND_R8),dimension(:,:,:),pointer   :: ptr_f3=>null()
 
     integer :: n
     integer,dimension(:),allocatable :: spm_flux_id
@@ -800,14 +799,8 @@ contains
    if (isPresent) then
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
                             staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
-                            farrayPtr=ptr_f3, rc=localrc)
+                            farrayPtr=area, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-#if 0
-      area(exclusiveLBound(1):,exclusiveLBound(2):) => ptr_f3(exclusiveLBound(1):,exclusiveLBound(2):,0)
-#else
-      ptr_f2 => ptr_f3(exclusiveLBound(1):,exclusiveLBound(2):,0)
-      area(exclusiveLBound(1):,exclusiveLBound(2):) => ptr_f2
-#endif
    else
       allocate(area(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
       area = 1.0
