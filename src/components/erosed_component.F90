@@ -1041,7 +1041,7 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !#ifdef DEBUG
-   allocate (sediment_mass(inum, jnum,nfrac))
+    if (bedmodel) then
 
      field = ESMF_FieldCreate(grid, &
                          typekind=ESMF_TYPEKIND_R8, &
@@ -1073,6 +1073,8 @@ contains
         call ESMF_StateAdd(exportState,(/field/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
 
 
 
