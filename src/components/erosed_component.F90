@@ -62,6 +62,7 @@ module erosed_component
   real   (kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer  :: spm_concentration=>null() ! Dimensions (x,y,depth layer, fraction index)
   
   integer(kind=ESMF_KIND_I4),dimension(:,:)    ,pointer  :: mask=>NULL()
+  real   (kind=ESMF_KIND_R8),dimension(:,:)    ,pointer  :: area=>NULL()
   integer                   ,dimension(:),allocatable    :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                                :: ubnd(4),lbnd(4)
   
@@ -626,18 +627,16 @@ contains
     importList(12)%name  = 'Effect_of_Mbalthica_on_sediment_erodibility_at_soil_surface'
     importList(12)%units = '-'
     importList(12)%optional = .true.
-    importList(13)%name  = 'water_column_area'
-    importList(13)%units = 'm2'
 
     if (wave) then
-       importList(14)%name  = 'wave_height'
-       importList(14)%units = 'm'
-       importList(15)%name  = 'wave_period'
-       importList(15)%units = 's'
-       importList(16)%name  = 'wave_number'
-       importList(16)%units = 'm**-1'
-       importList(17)%name  = 'wave_direction'
-       importList(17)%units = 'rad'
+       importList(13)%name  = 'wave_height'
+       importList(13)%units = 'm'
+       importList(14)%name  = 'wave_period'
+       importList(14)%units = 's'
+       importList(15)%name  = 'wave_number'
+       importList(15)%units = 'm**-1'
+       importList(16)%name  = 'wave_direction'
+       importList(16)%units = 'rad'
     end if
 
     do i=1,size(importList)
@@ -740,7 +739,8 @@ contains
     type(ESMF_FieldBundle)                      :: fieldBundle
     integer(ESMF_KIND_I4)                       :: fieldCount
 
-    real(ESMF_KIND_R8),dimension(:,:),pointer   :: ptr_f2=>null()
+    real(ESMF_KIND_R8),dimension(:,:)  ,pointer   :: ptr_f2=>null()
+    real(ESMF_KIND_R8),dimension(:,:,:),pointer   :: ptr_f3=>null()
 
     integer :: n
     integer,dimension(:),allocatable :: spm_flux_id
@@ -791,6 +791,26 @@ contains
    else
       allocate(mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
       mask = 1
+   end if
+
+   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
+                         staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
+                         isPresent=isPresent, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   if (isPresent) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
+                            staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
+                            farrayPtr=ptr_f3, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#if 0
+      area(exclusiveLBound(1):,exclusiveLBound(2):) => ptr_f3(exclusiveLBound(1):,exclusiveLBound(2):,0)
+#else
+      ptr_f2 => ptr_f3(exclusiveLBound(1):,exclusiveLBound(2):,0)
+      area(exclusiveLBound(1):,exclusiveLBound(2):) => ptr_f2
+#endif
+   else
+      allocate(area(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+      area = 1.0
    end if
 
 !   Complete Import Fields
@@ -1130,7 +1150,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(ESMF_KIND_R8)       :: runtimestepcount,dt
 
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: depth=>null(),hbot=>null(),u2d=>null(),v2d=>null(),ubot=>null(),vbot=>null(),nybot=>null()
-    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer ::taubmax=>null(),area=>null()
+    real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: taubmax=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: waveH=>null(),waveT=>null(),waveK=>null(),waveDir=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: microEro=>null(),microTau=>null(),macroEro=>null(),macroTau=>null()
     real(kind=ESMF_KIND_R8),dimension(:,:)  ,pointer :: ptr_f2=>null()
@@ -1343,13 +1363,12 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       microEro => importList(10)%data
       macroTau => importList(11)%data
       macroEro => importList(12)%data
-      area     => importList(13)%data
 
       if (wave) then
-        waveH   => importList(14)%data
-        waveT   => importList(15)%data
-        waveK   => importList(16)%data
-        waveDir => importList(17)%data
+        waveH   => importList(13)%data
+        waveT   => importList(14)%data
+        waveK   => importList(15)%data
+        waveDir => importList(16)%data
       end if
 
       if (localrc == 0) then
