@@ -104,22 +104,16 @@ getm_driver.o: getm_driver.F90
 
 # Benthos section
 libmossco_benthos: prefix \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
-	$(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o)
-
-microphytobenthos_class.o: criticalsheareffect.o benthoseffect_class.o biotypes.o erodibilityeffect.o
-mbalthica_class.o: biotypes.o macrofauna_class.o criticalsheareffect.o erodibilityeffect.o
-macrofauna_class.o: benthoseffect_class.o biotypes.o
-benthoseffect_class.o: biotypes.o
-macrofauna_interface.o: mbalthica_class.o biotypes.o
-criticalsheareffect.o: macrofauna_class.o biotypes.o
-erodibilityeffect.o: macrofauna_class.o biotypes.o
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision_basics.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_erosed.a($(EROSED_DIR)/modules/precision.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(biotypes.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(benthoseffect_class.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_class.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(erodibilityeffect.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(criticalsheareffect.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(microphytobenthos_class.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(mbalthica_class.o) \
+  $(MOSSCO_LIBRARY_PATH)/libmossco_benthos.a(macrofauna_interface.o)
 
 # utilities
 libmossco_util libsolver:
