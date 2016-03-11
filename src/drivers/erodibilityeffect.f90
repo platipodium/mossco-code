@@ -84,8 +84,8 @@ real (fp)    :: b2     = 5.08e-8
         cycle
 
       else
-
-        g_erod_Macrofauna (i,j)=    b2 * gammaa /II/(b2 + gammaa * b1** Mbalthica%intensity(i,j)) ! Paarlberg et al (2005)
+         g_erod_Macrofauna (i,j)= 1.0   ! due to large uncertainity on validity of the following equation it is left
+!        g_erod_Macrofauna (i,j)=    b2 * gammaa /II/(b2 + gammaa * b1** Mbalthica%intensity(i,j)) ! Paarlberg et al (2005)
       end if
 
     else if(trim(Mbalthica%units) == 'gCm**-2' ) then   ! according to Borsje et al. (2008)
