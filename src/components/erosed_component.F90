@@ -593,9 +593,9 @@ contains
 
     !! Prepare import state for fields needed in run
     if (wave) then
-      allocate(importList(17))
+      allocate(importList(16))
     else
-      allocate(importList(13))
+      allocate(importList(12))
     end if
 
     importList( 1)%name  = 'water_depth_at_soil_surface'
