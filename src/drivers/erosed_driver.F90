@@ -1701,7 +1701,7 @@ function calcZ0cur (vonkar, sedd50, waterdepth,g)
 end function calcZ0cur
 
 
-  subroutine init_mass(nfrac, fractions,nm, init_thickness, porosity, rhos,sediment_mass, area)
+subroutine init_mass(nfrac, fractions,nm, init_thickness, porosity, rhos,sediment_mass, area)
 
       implicit none
 
@@ -1709,43 +1709,40 @@ end function calcZ0cur
       real(fp)   , intent(in)                                :: init_thickness,porosity
       real(fp)   , dimension (:,:)     , pointer             :: fractions
       real(fp)   , dimension (nfrac)   , intent(in)          :: rhos
-      real(fp)   , dimension (nm)      , intent(in), optional:: area
+      real(fp)   , dimension (:,:)     , pointer, optional   :: area
       real(fp)   , dimension (nfrac, nm), intent(out)        :: sediment_mass
 
-      integer                                  :: i,j
+      integer                                                :: i,j,l, inum, jnum
+! Note that this subroutine may not work properly, when area includes halo zones
+! (This holds most of the time, better to say 99%). @ToDO, it is better to pass
+! exclusive bounds of area array as arguments. This subroutine is not used at the
+! moment hence. It has been simply moved to erosed_component.
+     sediment_mass=0.0_fp
 
-
-      do i = 1,nfrac
-        do j = 1, nm
+      do l = 1,nfrac
+       do  j = 1, jnum
+        do  i = 1, inum
           if (present (area)) then
-           sediment_mass (i,j) = init_thickness * area (j) * (1.0- porosity) * rhos (i) * fractions (i,nm)
+           sediment_mass (l,inum*(j -1)+i) = init_thickness * area (i,j) * (1.0- porosity) * rhos (l) * fractions (l,inum*(j -1)+i)
           else   ! sediment mass per unit area
-           sediment_mass (i,j) = init_thickness * (1.0 - porosity) * rhos (i) *fractions (i,nm)
+           sediment_mass (l,inum*(j -1)+i) = init_thickness * (1.0 - porosity) * rhos (l) *fractions (l,inum*(j -1)+i)
           end if
         end do
+       enddo
       end do
 
-      end subroutine  init_mass
+end subroutine  init_mass
 
 
 subroutine update_sediment_mass (mass, dt, deposition_rate, erosion_rate, area)
 
      implicit none
 
-!       integer                                      :: nm, nfrac
        real(fp)   , intent(inout)    :: mass, erosion_rate
        real(fp)   , intent(in)       :: dt
-       real(fp)   , intent(in)       :: area
+       real(fp)   , intent(in), target       :: area
        real(fp)   , intent(in)       :: deposition_rate
        real(fp)   , parameter        :: min_mass = 1.0e-6  ! Minimum allowable mass of the sediment fraction in the bed element          
-!       integer                       :: i,j
-
-    !  do i = 1,nfrac
-    !    do j = 1, nm
-    !      mass (i,j) = mass (i,j) + (deposition_rate(i,j)-erosion_rate (i,j))/1000. * dt * area (j)
-     !   end do
-     ! end do
-!             write (0,*)  'erosion_rate start of updtae in driver', erosion_rate,'deposition_rate',deposition_rate,'area', area, 'dt', dt 
        
          ! First check if the current mass of the sediment fraction is below the
          ! minimum (i.e. resulting from extensive erosion in previous time step)
@@ -1753,9 +1750,7 @@ subroutine update_sediment_mass (mass, dt, deposition_rate, erosion_rate, area)
              mass = min_mass
              erosion_rate = 0.0_fp
          else
- !            write (0,*) 'mass in driver', mass
              mass  = mass + (deposition_rate - erosion_rate) * dt *area
-!             write (0,*) 'mass ', mass, 'deposition', deposition_rate*dt *area
 
            if (mass<= min_mass)then
               mass = min_mass

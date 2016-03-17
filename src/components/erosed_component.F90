@@ -363,6 +363,9 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
+
+
+
   !initialization
 
   bedmodel = .false.
@@ -530,7 +533,7 @@ contains
         ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
      
-      if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity, rhosol,mass)    
+!      if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity, rhosol,mass, area)    
 
 !      do i = 1, inum
 !        do j = 1, jnum
@@ -729,7 +732,7 @@ contains
     integer,target :: coordDimCount(2),coordDimMap(2,2)
     integer,dimension(2)            :: totalLBound,totalUBound
     integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
-    integer                         :: i,j
+    integer                         :: i,j,l
     type :: allocatable_integer_array
       integer,dimension(:),allocatable :: data
     end type
@@ -805,6 +808,20 @@ contains
       allocate(area(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
       area = 1.0
    end if
+
+     write (0,*) ' lboud, uboud area', lbound (area), ubound(area)
+     write (0,*) 'exclusiveLBound(1):exclusiveUBound(1)',exclusiveLBound(1),exclusiveUBound(1)
+     write (0,*)'exclusiveLBound(2):exclusiveUBound(2)',exclusiveLBound(2),exclusiveUBound(2)
+   !  if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity,rhosol,mass, area)
+   if (bedmodel) then 
+    do l= 1, nfrac
+     do j=exclusiveLBound(2),exclusiveUBound(2)
+      do i = exclusiveLBound(1),exclusiveUBound(1)
+       mass (l,inum*(j -1)+i) = init_thick * area (i,j) * (1.0-porosity) * rhosol (l) * frac (l,inum*(j -1)+i)
+      enddo
+     enddo
+    enddo
+   endif
 
 !   Complete Import Fields
     do i=1,size(importList)
@@ -1481,7 +1498,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
                 & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
                 & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
                 & relative_thickness_of_layers, kmaxsd, taubmax )
-!write (0,*) ' ESMF_Kind_R8 precision', digits(1._ESMF_KIND_R8), 'erosed fp precision', digits(1._fp)
   n =0
     do l = 1, nfrac
       do nm = nmlb, nmub
@@ -1497,21 +1513,22 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             kmx = kmaxsd
 
         end if
+
         if ( mask(i,j) .gt. 0 ) then
+          
            deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
            entrainment_rate = sour(l,nm)
-          if (bedmodel) &
- !           write (0,*) 'entrainment_rate before call update', entrainment_rate
-            call update_sediment_mass (mass(l,nm), dt, &
-              deposition_rate, &
-              entrainment_rate, area(i,j))
-  !          write (0,*) 'mass in l, nm', l,nm, mass(l,nm) , 'diff spm und real fp spm', real(spm_concentration(i,j,kmx,l),fp)/1000._fp &
-  !                       -     spm_concentration(i,j,kmx,l)/1000._fp
-   !         write (0,*) 'entrainment_rate after update', entrainment_rate, 'deposition_rate in componnet', deposition_rate
+          
+          if (bedmodel) then
+             dt = 120._fp
+              !@ToDO timestep just hardcoded, but should be corrected as soon as
+              !possible
+              call update_sediment_mass (mass(l,nm), dt,deposition_rate,entrainment_rate, area(i,j))
+          end if
+        
           size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = entrainment_rate *1000.0_fp - deposition_rate *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
-
-        end if
-     enddo
+        endif
+      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
