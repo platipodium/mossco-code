@@ -1361,7 +1361,7 @@ module getm_component
       deBlockList(:,2,1+pet) = (/ i0+ilen-1 , j0+jlen-1 , 1+klen-1 /)
    end do
 
-!  indexflag=ESMF_INDEX_DELOCAL (default) starting at 1
+!  indexflag=ESMF_INDEX_DELOCAL (default) exclusive region starting at 1
 !  (for ESMF_INDEX_USER [grid|stagger]MemLBound can be set)
 #if 1
 !  Single-tile DistGrid (1 subdomain = 1 DE)
