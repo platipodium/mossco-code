@@ -29,7 +29,7 @@ else:
      #filename = 'constant_fabm_sediment_netcdf.yaml'
      filename = 'constant_constant_netcdf.yaml'
      filename = 'getm--fabm_pelagic--netcdf.yaml'
-     filename='gotm--fabm_pelagic--fabm_sediment--netcdf'
+     filename='gotm--fabm_pelagic--fabm_sediment'
 
 if not filename.endswith('yaml'):
   filename = filename + '.yaml'
