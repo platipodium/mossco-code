@@ -178,7 +178,15 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     rc_ = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Consolidate all flux fields into field bundle, as fluxes can come from
+    ! multiple importStates and aggregate in an exportState
+    !> @todo apply to all fluxes (also surface), after adjusting soil_pelagic connectors 
+    call MOSSCO_StateMoveFieldsToBundle(exportState, include='_flux_in_water', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call link_fields_and_fieldbundles_in_states(importState, exportState, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
