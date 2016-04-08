@@ -1650,8 +1650,8 @@ contains
   end subroutine MOSSCO_StateLinkFieldsToBundle
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_StateMoveFieldsToBundle"
-  subroutine MOSSCO_StateMoveFieldsToBundle(state, kwe, rc)
+#define ESMF_METHOD "MOSSCO_StateMoveNumericFieldsToBundle"
+  subroutine MOSSCO_StateMoveNumericFieldsToBundle(state, kwe, rc)
 
     type(ESMF_State), intent(inout)              :: state
     logical, intent(in), optional                :: kwe
@@ -1808,7 +1808,7 @@ contains
 
     return
 
-  end subroutine MOSSCO_StateMoveFieldsToBundle
+  end subroutine MOSSCO_StateMoveNumericFieldsToBundle
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateGetFieldList"
