@@ -723,7 +723,7 @@ module filtration_component
 
     ! Get flux species, be careful to look at the creator attribute to choose
     ! the right one
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
       itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
