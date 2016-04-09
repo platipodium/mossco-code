@@ -1728,14 +1728,14 @@ module fabm_pelagic_component
 
   end subroutine Finalize
 
-  subroutine integrate_flux_in_water(pel,importState)
+  subroutine integrate_flux_in_water(pel, importState)
     type(ESMF_State)               :: importState
     type(type_mossco_fabm_pelagic) :: pel
     type(ESMF_Field)               :: field
-    type(ESMF_Field),allocatable   :: fieldList(:)
+    type(ESMF_Field),allocatable   :: fieldList(:), tempList(:)
     type(ESMF_FieldBundle)         :: fieldBundle
     type(ESMF_StateItem_FLAG)      :: itemtype
-    integer                        :: n,i,j,k, localrc, rc
+    integer                        :: n,i,j,k,m, localrc, rc
     integer                        :: fieldCount, external_index
     integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3), rank
     character(len=ESMF_MAXSTR)     :: message, varname
@@ -1762,7 +1762,6 @@ module fabm_pelagic_component
       endwhere
     enddo
 
-
     do n=1,pel%nvar
       varname = trim(pel%export_states(n)%standard_name)
       if (associated(pel%volume_flux)) then
@@ -1782,49 +1781,72 @@ module fabm_pelagic_component
             enddo
           endif
       endif
-      call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
-
-        call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', fieldBundle, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(varname)//'_flux_in_water', &
-          fieldCount=fieldCount, rc=localrc)
-
-        if (fieldCount == 0) cycle
-        call MOSSCO_Reallocate(fieldList, fieldCount, rc=localrc)
-        call ESMF_FieldBundleGet(fieldBundle, &
-            fieldName=trim(varname)//'_flux_in_water', &
-            fieldList = fieldList, rc=localrc)
-
-        do k=1,fieldCount
-          call ESMF_AttributeGet(fieldList(k), name='external_index', &
-                 value=external_index, &
-                 defaultValue=-1,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          ! only use field, if external_index matches own index
-          if (external_index == pel%export_states(n)%fabm_id) field = fieldList(k)
-        end do
-
-      else if (itemType == ESMF_STATEITEM_FIELD) then
-
-        call ESMF_StateGet(importState, trim(varname)//'_flux_in_water', field, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      else
-        cycle
-      end if
-
-      call ESMF_FieldGet(field, rank=rank, rc=localrc)
+      call MOSSCO_StateGetFieldList(importState, fieldList, &
+        itemSearch=trim(varname)//'_flux_in_water', fieldCount=fieldCount, &
+        fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !> vertically homogeneous flux in water (e.g. rivers)
-      if (rank == 2) then
+
+      if (fieldCount == 0) cycle
+      if (fieldCount > 1) then
+
+        call MOSSCO_Reallocate(tempList, fieldCount, rc=localrc)
+
+        ! filter out all fields with non-matching external_index
+        m = 0
+        do k=1, fieldCount
+          call ESMF_AttributeGet(fieldList(k), name='external_index', &
+                 value=external_index, defaultValue=-1,rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          ! only use field, if external_index matches own index
+          if (external_index /= pel%export_states(n)%fabm_id .and. external_index > -1) cycle
+          m = m + 1
+          tempList(m) = fieldlist(k)
+        end do
+        fieldCount = m
+        if (fieldCount == 0) cycle
+
+        call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
+        fieldList(:) = tempList(1:m)
+        call MOSSCO_Reallocate(tempList, fieldCount, keep=.false., rc=localrc)
+
+        ! filter out all fields with no external_index if one exists
+        m = 0
+        do k=1, fieldCount
+          call ESMF_AttributeGet(fieldList(k), name='external_index', &
+                 value=external_index, defaultValue=-1,rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          ! only use field, if external_index matches own index
+          if (external_index /= pel%export_states(n)%fabm_id) cycle
+          m = m + 1
+          tempList(m) = fieldlist(k)
+        end do
+
+        if (m > 0) then ! found exactly matching external index
+          fieldCount = m
+          call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
+          fieldList(:) = tempList(1:m)
+        endif
+        call MOSSCO_Reallocate(tempList, 0, keep=.false., rc=localrc)
+      endif
+
+      do i=1, fieldCount
+        field = fieldList(i)
+        call ESMF_FieldGet(field, rank=rank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') '  integrating '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+        !> vertically homogeneous flux in water (e.g. rivers)
+        if (rank == 2) then
           call ESMF_FieldGet(field, farrayPtr=ratePtr2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1838,7 +1860,7 @@ module fabm_pelagic_component
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k)
           end do
-      elseif (rank == 3) then
+        elseif (rank == 3) then
           call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1849,8 +1871,9 @@ module fabm_pelagic_component
 
           pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) &
                 + dt * ratePtr3(RANGE3D) * pel%cell_per_column_volume(RANGE3D)
-      end if
-    end do
+        end if
+      end do
+    enddo
 
   end subroutine integrate_flux_in_water
 
