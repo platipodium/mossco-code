@@ -2092,12 +2092,6 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    do i=1, fieldCount_
-      message='mossco_state: '
-      call MOSSCO_FieldString(fieldList(i), message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-    enddo
-
     if (.not.present(fieldCount) .and. fieldCount_ == 0) rc_ = ESMF_RC_NOT_FOUND
     if (present(fieldCount)) fieldCount = fieldCount_
     if (present(rc)) rc = rc_
