@@ -537,9 +537,11 @@ end subroutine MOSSCO_FieldCopy
 
     rc_ = ESMF_SUCCESS
 
-    call ESMF_FieldGet(field, status=fieldStatus, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
+      if (present(rc)) rc=ESMF_RC_OBJ_BAD
+      return
+    endif
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message,'(A)') 'Cannot initialize incomplete '
