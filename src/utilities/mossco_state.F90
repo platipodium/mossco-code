@@ -2011,6 +2011,10 @@ contains
         if (fieldInBundleCount > 0) then
           fieldCount_ = fieldCount_ + fieldInBundleCount
 
+          call MOSSCO_Reallocate(fieldInBundleList, fieldInBundleCount, keep=.false., rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.true., rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2024,7 +2028,7 @@ contains
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          fieldList(fieldCount_-fieldInBundleCount+1:fieldCount)=fieldInBundleList(1:fieldInBundleCount)
+          fieldList(fieldCount_-fieldInBundleCount+1:fieldCount_)=fieldInBundleList(1:fieldInBundleCount)
         endif
       endif
     enddo
@@ -2036,6 +2040,12 @@ contains
         rc_ = ESMF_RC_NOT_FOUND
       endif
     endif
+
+    ! do i=1, fieldCount_
+    !   message='mossco_state: '
+    !   call MOSSCO_FieldString(fieldList(i), message)
+    !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    ! enddo
 
     call MOSSCO_Reallocate(fieldInBundleList, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -2060,34 +2070,38 @@ contains
         if (fieldStatus /= fieldStatus_) cycle
         n = n + 1
         tempList(n) = fieldList(i)
+
       enddo
-      if (n == 0) then
+
+      fieldCount_ = n
+
+      if (fieldCount_ == 0) then
         call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        if (present(fieldCount)) then
-          fieldCount = 0
-        else
-          rc_ = ESMF_RC_NOT_FOUND
-        endif
       else
-        call MOSSCO_Reallocate(fieldList, n, keep=.false., rc=localrc)
+        call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.false., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        fieldList(1:n) = tempList(1:n)
-        if (present(fieldCount)) fieldCount = n
+        fieldList(1:fieldCount_) = tempList(1:fieldCount_)
       endif
-
-      call MOSSCO_Reallocate(tempList, 0, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     endif
 
+    call MOSSCO_Reallocate(tempList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, fieldCount_
+      message='mossco_state: '
+      call MOSSCO_FieldString(fieldList(i), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    enddo
+
+    if (.not.present(fieldCount) .and. fieldCount_ == 0) rc_ = ESMF_RC_NOT_FOUND
     if (present(fieldCount)) fieldCount = fieldCount_
     if (present(rc)) rc = rc_
+
     return
 
   end subroutine MOSSCO_StateGetFieldList
