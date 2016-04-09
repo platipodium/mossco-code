@@ -569,7 +569,8 @@ module mossco_netcdf
     integer                        :: ungriddedID, ungriddedLength,dimrank
     integer(ESMF_KIND_I4), allocatable, dimension(:) :: uubnd,ulbnd
     logical                        :: isPresent
-    real(ESMF_KIND_R4)             :: missingValue=-1E30
+    real(ESMF_KIND_R4)             :: missingValueR4=-1E30
+    real(ESMF_KIND_R8)             :: missingValueR8=-1E30
     integer(ESMF_KIND_I4)          :: localrc
     character(len=11)              :: precision_
 
@@ -677,10 +678,27 @@ module mossco_netcdf
         precision=self%precision
       endif
 
-      if (precision=='NF90_DOUBLE') then
-        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
-      else
+      call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
+      if (typekind==ESMF_TYPEKIND_I4) then
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,dimids,varid)
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,dimids,varid)
+      elseif (typekind==ESMF_TYPEKIND_R4) then
         ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_REAL,dimids,varid)
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        if (precision=='NF90_DOUBLE') then
+          ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
+        else
+          ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_REAL,dimids,varid)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        !> @todo
+        if (ESMF_LogFoundError(ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        !> @todo
+        if (ESMF_LogFoundError(ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       if (ncStatus /= NF90_NOERR) then
@@ -688,12 +706,14 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call ESMF_AttributeGet(field, 'numeric_precision', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) call ESMF_AttributeSet(field, 'numeric_precision', trim(precision), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (typeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, 'numeric_precision', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, 'numeric_precision', trim(precision), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       !call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -717,19 +737,36 @@ module mossco_netcdf
       if (.not.isPresent) call ESMF_AttributeSet(field, 'coordinates', trim(coordinates), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValue, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValue, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      if (typeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueR4, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueR4, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (typeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueR8, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueR8, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      !call MOSSCO_FieldLog(field)
       call MOSSCO_AttributeNetcdfWrite(field, self%ncid, varid=varid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -776,7 +813,8 @@ module mossco_netcdf
         ncStatus = nf90_enddef(self%ncid)
         if (ncStatus /= NF90_NOERR) then
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
 
         allocate(dimlen(ubound(dimids,1)-1))
@@ -806,7 +844,8 @@ module mossco_netcdf
         ncStatus = nf90_enddef(self%ncid)
         if (ncStatus /= NF90_NOERR) then
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       endif
 
@@ -1194,7 +1233,8 @@ module mossco_netcdf
     ncStatus = nf90_enddef(nc%ncid)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     nc%name=trim(filename)
@@ -1753,7 +1793,8 @@ module mossco_netcdf
       ncStatus = nf90_enddef(self%ncid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode',ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
