@@ -1403,4 +1403,148 @@ write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(
 
   end subroutine MOSSCO_FieldWeightField
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldLog"
+  subroutine MOSSCO_FieldLog(field, kwe, log, rc)
+
+    type(ESMF_Field)                :: field
+    logical,intent(in ),optional    :: kwe !keyword-enforcer
+    type(ESMF_Log), optional        :: log
+    integer(ESMF_KIND_I4), optional :: rc
+
+    integer(ESMF_KIND_I4)           :: localRc, i, j, maxDigits, count, itemCount
+    character(len=ESMF_MAXPATHLEN)  :: string, message
+    character(len=ESMF_MAXSTR)      :: name, attributeName
+    integer(ESMF_KIND_I4)           :: totalLWidth(7), totalUWidth(7)
+    type(ESMF_TypeKind_Flag)        :: typeKind
+    logical, allocatable            :: logicalValueList(:)
+    real(kind=ESMF_KIND_R4), allocatable    :: real4ValueList(:)
+    real(kind=ESMF_KIND_R8), allocatable    :: real8ValueList(:)
+    integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
+    integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
+    character(len=4096)       , allocatable :: characterValueList(:)
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_FieldGet(field, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_FieldString(field, message, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (present(log)) then
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+    else
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call ESMF_AttributeGet(field, count=count, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (count==0) then
+      write(message,'(A)')  trim(name)//' contains no attributes'
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    do i=1, count
+      call ESMF_AttributeGet(field, attributeIndex=i , name=attributeName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(name)//' attribute'
+      call MOSSCO_MessageAdd(message,' '//trim(attributeName)//'=')
+
+      call ESMF_AttributeGet(field, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (typekind==ESMF_TYPEKIND_LOGICAL) then
+        allocate(logicalValueList(itemCount))
+        call ESMF_AttributeGet(field, name=attributeName, valueList=logicalValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+        enddo
+        deallocate(logicalValueList)
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        if (allocated(characterValueList)) deallocate(characterValueList)
+        allocate(characterValueList(itemCount))
+        call ESMF_AttributeGet(field, name=attributeName, valueList=characterValueList, rc=localrc)
+        if (localrc /= ESMF_SUCCESS) then
+          !(ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+          !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          !>@ todo: how to deal with very long attributes that don't fit into valueList?
+          rc=ESMF_SUCCESS
+        endif
+
+        if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
+          write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
+          do j=2, itemCount-1
+            write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
+          enddo
+        endif
+        if (allocated(characterValueList)) deallocate(characterValueList)
+      elseif (typekind==ESMF_TYPEKIND_I4) then
+        allocate(integer4ValueList(itemCount))
+        call ESMF_AttributeGet(field, name=attributeName, valueList=integer4ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+        enddo
+        deallocate(integer4ValueList)
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        allocate(integer8ValueList(itemCount))
+        call ESMF_AttributeGet(field, name=attributeName, valueList=integer8ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+        enddo
+        deallocate(integer8ValueList)
+      elseif (typekind==ESMF_TYPEKIND_R4) then
+        allocate(real4ValueList(itemCount))
+        call ESMF_AttributeGet(field, name=attributeName, valueList=real4ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+        enddo
+        deallocate(real4ValueList)
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        allocate(real8ValueList(itemCount))
+        call ESMF_AttributeGet(field, name=attributeName, valueList=real8ValueList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
+        do j=2, itemCount-1
+          write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+        enddo
+        deallocate(real8ValueList)
+      endif
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    enddo
+
+  end subroutine MOSSCO_FieldLog
+
 end module mossco_field
