@@ -888,6 +888,7 @@ module fabm_pelagic_component
 
 
     !! prepare upward_flux forcing
+    !> todo: this should be moved to fieldBundle to allow multiple fluxes
     do n=1,size(pel%model%state_variables)
       varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux_at_soil_surface'
       field = ESMF_FieldCreate(horizontal_grid, &
@@ -1033,12 +1034,10 @@ module fabm_pelagic_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    type(ESMF_Field)           :: field
-    type(ESMF_StateItem_FLAG)  :: itemType
-    type(ESMF_FieldStatus_FLAG):: fieldStatus
+    type(ESMF_Field), allocatable  :: fieldList(:)
     type(ESMF_Time)            :: currTime
     character(len=ESMF_MAXSTR) :: message, name
-    integer(ESMF_KIND_I4)      :: localrc
+    integer(ESMF_KIND_I4)      :: localrc, fieldCount
     type(ESMF_Clock)           :: clock
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
@@ -1052,29 +1051,27 @@ module fabm_pelagic_component
     !call ReadRestart(gridComp, importState, exportState, parentClock, rc=localrc)
 
     !> get volume_flux pointer
-    call ESMF_StateGet(importState,'volume_flux_in_water',itemType=itemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if (itemType==ESMF_STATEITEM_FIELD) then
-      call ESMF_StateGet(importState,'volume_flux_in_water',field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (fieldStatus==ESMF_FIELDSTATUS_COMPLETE) then
-        call ESMF_FieldGet(field, farrayPtr=pel%volume_flux, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
-        pel%volume_flux=>null()
-      end if
+    call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch='volume_flux_in_water', &
+      fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldCount == 1) then
+      call ESMF_FieldGet(fieldList(1), farrayPtr=pel%volume_flux, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      pel%volume_flux=>null()
     end if
 
     !> update sinking after restart
     call pel%update_export_states(update_sinking=.true.)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP2
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "update_import_pointers"
@@ -1119,6 +1116,7 @@ module fabm_pelagic_component
 
 #if 0
     !! re-link upward_flux forcing
+    !> @todo enable this for fieldBundles
     do n=1,size(pel%model%state_variables)
       varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux_at_soil_surface'
       call ESMF_StateGet(importState, trim(varname), itemType,rc=localrc)
@@ -1232,7 +1230,8 @@ module fabm_pelagic_component
     call pel%update_export_states(update_sinking=.true.)
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
 
@@ -1428,8 +1427,8 @@ module fabm_pelagic_component
 
         do k = 1, size(suffixList)
 
-          call MOSSCO_StateGetFieldList(importState, trim(prefix)//trim(suffixList(k)), &
-            fieldList, fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+          call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
+            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1466,8 +1465,8 @@ module fabm_pelagic_component
         if (exportFieldCount == 0) cycle
 
         do k = 1, size(suffixList)
-          call MOSSCO_StateGetFieldList(importState, trim(prefix)//trim(suffixList(k)), &
-            fieldList, fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+          call MOSSCO_StateGetFieldList(importState, fieldList, itemSearch=trim(prefix)//trim(suffixList(k)), &
+            fieldCount=fieldCount, fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
           if (fieldCount /= 1 .and. fieldCount /= exportFieldCount ) cycle
 
           nmatch = nmatch + fieldCount
