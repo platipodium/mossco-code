@@ -1860,6 +1860,7 @@ module fabm_pelagic_component
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 + dt * ratePtr2(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k)
           end do
+
         elseif (rank == 3) then
           call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1870,7 +1871,11 @@ module fabm_pelagic_component
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) &
-                + dt * ratePtr3(RANGE3D) * pel%cell_per_column_volume(RANGE3D)
+                + dt * ratePtr3(RANGE3D)
+          !* pel%cell_per_column_volume(RANGE3D)
+          !write(0,'(A,ES10.3,A,ES10.3)') 'Max 3D integrating ', &
+          !  maxval(-dt * ratePtr3(RANGE3D)), &
+          ! ' of ', maxval(pel%conc(RANGE3D,n))
         end if
       end do
     enddo
