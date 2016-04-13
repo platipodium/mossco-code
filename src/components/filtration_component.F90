@@ -270,7 +270,7 @@ module filtration_component
 
     ! Create a list to hold the names of the item to filter, the names of the
     ! velocity fields, and the names of other items to co-filter
-    call MOSSCO_Reallocate(itemNameList, 4 + otherCount, keep=.false., rc=localrc)
+    call MOSSCO_Reallocate(itemNameList, 5 + otherCount, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -317,11 +317,11 @@ module filtration_component
     enddo
 
     !> Create export states, add diagnostic variables
-    itemNameList(4) = 'mussel_abundance_in_water'
-    itemNameList(5) = 'layer_height_in_water'
-    do i = 4, ubound(itemNameList,1)
+    itemNameList(3) = 'mussel_abundance_in_water'
+    itemNameList(4) = 'layer_height_in_water'
+    do i = 3, ubound(itemNameList,1)
       !> Create export states for diagnostic, filter and co-filter items
-      if (i < 6) then
+      if (i < 5) then
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i)), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -621,6 +621,7 @@ module filtration_component
     real(ESMF_KIND_R8)      :: minimumFoodFlux, mussel_mass
     real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
+    integer(ESMF_KIND_I4)                :: ubndZ(3), lbndZ(3)
     type(ESMF_Field), allocatable        :: fieldList(:)
 
     character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName, creatorName
@@ -689,20 +690,26 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! Get layer height  to export
-    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+    call MOSSCO_StateGetFieldList(exportState, fieldList,  &
       itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=layerHeight, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! Get layer information from grid with z-positions of vertical layer interfaces
     call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
-           farrayPtr=interfaceDepth, rc=localrc)
+           farrayPtr=interfaceDepth, exclusiveUbound=ubndZ, exclusiveLBound=lbndZ, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    write(0,*) 'lbndZ = ',lbndZ, ' ubndZ=', ubndZ
     do i = lbnd(3),ubnd(3)
       !> @todo consider mask??  if (.not.mask(RANGE2D,i))
-      layerHeight(RANGE2D,i) = interfaceDepth(RANGE2D,i) -  interfaceDepth(RANGE2D,i-1)
+      layerHeight(RANGE2D,i) = interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbndZ(3)-1+i) &
+         -  interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbndZ(3)-1+i)
     end do
 
     ! Get mussel abundance to export
