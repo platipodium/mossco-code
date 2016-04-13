@@ -399,7 +399,7 @@ module filtration_component
     character(ESMF_MAXSTR)  :: foreignGridFieldName
     type(ESMF_Time)         :: currTime
 
-    type(ESMF_Grid)             :: grid
+    type(ESMF_Grid)             :: grid, grid2
     type(ESMF_Field)            :: field
     type(ESMF_Field), allocatable, dimension(:) :: fieldList
     integer(ESMF_KIND_I4)       :: localrc, i, rank, gridRank
@@ -407,6 +407,7 @@ module filtration_component
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXSTR)              :: itemName
     integer(ESMF_KIND_I4)                   :: itemCount
     real(ESMF_KIND_R8)                      :: mussel_mass, minimumFoodFlux
 
@@ -485,9 +486,14 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, itemCount
+      call ESMF_FieldGet(fieldList(i), name=itemName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       call ESMF_FieldEmptySet(fieldList(i), grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       write(message,'(A)') trim(name)//' added grid to '
       call MOSSCO_FieldString(fieldList(i), message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -605,11 +611,13 @@ module filtration_component
     real(ESMF_KIND_R8),allocatable               :: maximumFiltrationRate(:,:,:)
     real(ESMF_KIND_R8),allocatable               :: foodFlux(:,:,:)
     real(ESMF_KIND_R8),allocatable               :: foodFluxFactor(:,:,:)
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate
+    real(ESMF_KIND_R8),pointer,dimension(:,:)    :: abundanceAtSoil, abundanceAtSurface
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate, layerHeight
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: interfaceDepth
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration, velocity
-    !real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: layer_height, water_depth_at_interface
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
+    type(ESMF_Grid)         :: grid
     integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j
     real(ESMF_KIND_R8)      :: minimumFoodFlux, mussel_mass
     real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
@@ -676,40 +684,83 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! Get mussel abundance
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+    !> @todo get grid from specified grid variable
+    call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Get layer height  to export
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+      itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Get layer information from grid with z-positions of vertical layer interfaces
+    call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+           farrayPtr=interfaceDepth, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i = lbnd(3),ubnd(3)
+      !> @todo consider mask??  if (.not.mask(RANGE2D,i))
+      layerHeight(RANGE2D,i) = interfaceDepth(RANGE2D,i) -  interfaceDepth(RANGE2D,i-1)
+    end do
+
+    ! Get mussel abundance to export
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
       itemSearch='mussel_abundance_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (fieldCount /= 1) then
-      write(message,'(A)') trim(name)//' did not find complete field with name mussel_abundance_in_water'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(importState)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    call ESMF_FieldGet(fieldList(1), rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (rank /= 3) then
-      write(message,'(A)') trim(name)//' received non-rank 3 field'
-      call MOSSCO_FieldString(fieldList(1), message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    allocate(ubnd(rank), stat=localrc)
-    allocate(lbnd(rank), stat=localrc)
-
-    call ESMF_FieldGet(fieldList(1), farrayPtr=abundance, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
+    call ESMF_FieldGet(fieldList(1), farrayPtr=abundance, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_FieldGetMissingValue(fieldList(1), missingValue, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Get mussel abundance to import
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='mussel_abundance_at_soil_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+
+    nullify(abundanceAtSoil)
+    if (fieldCount == 1) then
+      call ESMF_FieldGet(fieldList(1), farrayPtr=abundanceAtSoil, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    ! Get mussel abundance to import
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='mussel_abundance_at_water_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+
+    nullify(abundanceAtSurface)
+    if (fieldCount == 1) then
+      call ESMF_FieldGet(fieldList(1), farrayPtr=abundanceAtSurface, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (.not.(associated(abundanceAtSurface) .or. associated(abundanceAtSoil))) then
+      write(message,'(A)') trim(name)//' found no abundance'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
+    endif
+
+    if (associated(abundanceAtSurface)) then
+      where (layerHeight(RANGE2D,ubnd(3)) > 0)
+        abundance(RANGE2D,ubnd(3)) = abundanceAtSurface(RANGE2D) &
+          / layerHeight(RANGE2D,ubnd(3))
+      endwhere
+    endif
+
+    if (associated(abundanceAtSoil)) then
+      where (layerHeight(RANGE2D,ubnd(1)) > 0)
+        abundance(RANGE2D,ubnd(1)) = abundanceAtSoil(RANGE2D) &
+          / layerHeight(RANGE2D,ubnd(1))
+      endwhere
+    endif
 
     if (allocated(mask)) deallocate(mask)
     allocate(mask(ubnd(1)-lbnd(1)+1, ubnd(2)-lbnd(2)+1, ubnd(3)-lbnd(3)+1), stat=localrc)
