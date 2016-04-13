@@ -276,15 +276,25 @@ module filtration_component
 
     itemNameList(1) = trim(xVelocity)
     itemNameList(2) = trim(yVelocity)
-    itemNameList(3) = 'mussel_abundance'
-    itemNameList(4) = trim(filterSpecies)
+    itemNameList(3) = 'mussel_abundance'  ! '_in_water'
+    itemNameList(4) = 'mussel_abundance'  ! '_at_soil_surface'
+    itemNameList(5) = 'mussel_abundance'  ! '_at_water_surface'
+
+    itemNameList(6) = trim(filterSpecies)
     do i = 1, othercount
-      itemNameList(4 + i) = trim(filterSpeciesList(i))
+      itemNameList(6 + i) = trim(filterSpeciesList(i))
     enddo
 
     do i = 1, ubound(itemNameList,1)
-      ! Create import state for co-filtration fields
-      field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_in_water', rc=localrc)
+
+      if (i < 4 .or. i > 5) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_in_water', rc=localrc)
+      elseif (i == 4) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_water_surface', rc=localrc)
+      elseif (i == 5) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_soil_surface', rc=localrc)
+      endif
+
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -292,8 +302,10 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (i == 1)  call ESMF_AttributeSet(field, 'units', 'm-3', rc=localrc)
-      if (i == 4)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
+      if (i < 3) call ESMF_AttributeSet(field, 'units', 'm s-1', rc=localrc)
+      if (i == 3)  call ESMF_AttributeSet(field, 'units', 'm-3', rc=localrc)
+      if (i == 4 .or. i == 5)  call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
+      if (i > 5)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -307,10 +319,10 @@ module filtration_component
     enddo
 
     !> Create export states, add diagnostic variables
-    !itemNameList(3) = 'layer_height_in_water'
-    do i = 4, ubound(itemNameList,1)
+    itemNameList(5) = 'layer_height_in_water'
+    do i = 5, ubound(itemNameList,1)
       !> Create export states for filter and co-filter items
-      if (i < 4) then
+      if (i < 6) then
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i)), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -327,6 +339,11 @@ module filtration_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_flux_in_water', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !> @todo check units for co-filtered and filter species
+        call ESMF_AttributeSet(field, 'units', 'mmol m-3 s-1', rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -348,10 +365,6 @@ module filtration_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (i == 4)  call ESMF_AttributeSet(field, 'units', 'mmol m-3 s-1', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -398,7 +411,6 @@ module filtration_component
     real(ESMF_KIND_R8)                      :: mussel_mass, minimumFoodFlux
 
     rc = ESMF_SUCCESS
-    rank = 3
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -773,7 +785,7 @@ module filtration_component
     maximumFiltrationRate(RANGE3D) = .83 * (concentration(RANGE3D) * mgPermmol) ** .983
 
     ! Convert unit of maximumFiltrationRate to mg phyC mg-1 Mytilus s-1
-    maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / 300.0 / 3600.0
+    maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / (300.0 * 3600.0)
 
     ! The food flux in mmol s-1 is the product of clearance rate
     ! in m3 s-1 and concentration mmol phyC m-3
