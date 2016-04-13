@@ -627,6 +627,7 @@ module filtration_component
     character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName, creatorName
     character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
     type(ESMF_FieldStatus_Flag) :: fieldStatus
+    logical                     :: isSoil, isSurface
     type(ESMF_StateItem_Flag)   :: itemType
 
     mmolPermg = 0.03083348776
@@ -709,7 +710,9 @@ module filtration_component
     do i = lbnd(3),ubnd(3)
       !> @todo consider mask??  if (.not.mask(RANGE2D,i))
       layerHeight(RANGE2D,i) = interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbndZ(3)-1+i) &
-         -  interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbndZ(3)-1+i)
+         -  interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbndZ(3)-2+i)
+      !layerHeight(RANGE2D,i) = interfaceDepth(RANGE2D,lbnd(3)-1+i) &
+      !   -  interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbnd(3)-2+i)
     end do
 
     ! Get mussel abundance to export
@@ -727,44 +730,57 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! Get mussel abundance to import
+    nullify(abundanceAtSoil)
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='mussel_abundance_at_soil_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    nullify(abundanceAtSoil)
+    isSoil = .false.
     if (fieldCount == 1) then
+      isSoil = .true.
       call ESMF_FieldGet(fieldList(1), farrayPtr=abundanceAtSoil, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      write(message,'(A)') trim(name)//' found no abundance at soil'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      return
     endif
 
     ! Get mussel abundance to import
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='mussel_abundance_at_water_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
 
-    nullify(abundanceAtSurface)
+    isSurface = .false.
     if (fieldCount == 1) then
       call ESMF_FieldGet(fieldList(1), farrayPtr=abundanceAtSurface, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      isSurface = .true.
+    else
+        write(message,'(A)') trim(name)//' found no abundance at surface'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        return
     endif
 
-    if (.not.(associated(abundanceAtSurface) .or. associated(abundanceAtSoil))) then
-      write(message,'(A)') trim(name)//' found no abundance'
+    if (.not.(isSurface .or. isSoil)) then
+      write(message,'(A)') trim(name)//' found no abundance at all'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       return
     endif
 
-    if (associated(abundanceAtSurface)) then
+    if (isSurface) then
       where (layerHeight(RANGE2D,ubnd(3)) > 0)
         abundance(RANGE2D,ubnd(3)) = abundanceAtSurface(RANGE2D) &
           / layerHeight(RANGE2D,ubnd(3))
       endwhere
     endif
 
-    if (associated(abundanceAtSoil)) then
-      where (layerHeight(RANGE2D,ubnd(1)) > 0)
-        abundance(RANGE2D,ubnd(1)) = abundanceAtSoil(RANGE2D) &
-          / layerHeight(RANGE2D,ubnd(1))
+    if (isSoil) then
+      where (layerHeight(RANGE2D,lbnd(3)) > 0)
+        abundance(RANGE2D,lbnd(3)) = abundanceAtSoil(RANGE2D) &
+          / layerHeight(RANGE2D,lbnd(3))
       endwhere
     endif
 
@@ -772,6 +788,7 @@ module filtration_component
     allocate(mask(ubnd(1)-lbnd(1)+1, ubnd(2)-lbnd(2)+1, ubnd(3)-lbnd(3)+1), stat=localrc)
     mask(RANGE3D) = (abundance(RANGE3D) /= missingValue)
     mask(RANGE3D) = (abundance(RANGE3D) > 0 .and. mask(RANGE3D))
+
 
     if (.not.any(mask)) then
       write(message,'(A)') trim(name)//' found no abundance'
