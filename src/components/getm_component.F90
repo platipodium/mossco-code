@@ -2036,7 +2036,7 @@ module getm_component
    use parameters     ,only: rho_0
    use domain         ,only: imin,imax,jmin,jmax,kmax
    use domain         ,only: az
-   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv
+   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv,convc
    use domain         ,only: dxv,dyu,arcd1
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
@@ -2072,6 +2072,8 @@ module getm_component
    REALTYPE,dimension(:,:,:),pointer    :: p_vel3d
    integer                              :: k,klen
    REALTYPE,parameter                   :: vel_missing=0.0d0
+   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+   REALTYPE, parameter :: deg2rad=pi/180
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -2263,7 +2265,7 @@ module getm_component
    end if
 
    if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
-      waveDir = atan2(sinwavedir,coswavedir)
+      waveDir = atan2(sinwavedir,coswavedir) - convc*deg2rad
    end if
    if (waveforcing_method .ne. NO_WAVES .and. waves_method.ne.WAVES_NOSTOKES) then
 !     provide Eulerian velocities
@@ -2311,7 +2313,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain         ,only: grid_type
+   use domain         ,only: grid_type,convc
    use meteo          ,only: metforcing,met_method,METEO_FROMEXT,calc_met
    use meteo          ,only: u10,v10,new_meteo
    use waves          ,only: waveforcing_method,WAVES_FROMEXT,new_waves
@@ -2326,7 +2328,8 @@ module getm_component
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES:
-!
+   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+   REALTYPE, parameter :: deg2rad=pi/180
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -2353,8 +2356,8 @@ module getm_component
          waveT_ = waveT
          waveK_ = waveK
       end if
-      coswavedir = cos(waveDir)
-      sinwavedir = sin(waveDir)
+      coswavedir = cos( waveDir + convc*deg2rad )
+      sinwavedir = sin( waveDir + convc*deg2rad )
    end if
 
 #ifdef DEBUG
