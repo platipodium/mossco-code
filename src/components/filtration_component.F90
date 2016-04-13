@@ -276,22 +276,21 @@ module filtration_component
 
     itemNameList(1) = trim(xVelocity)
     itemNameList(2) = trim(yVelocity)
-    itemNameList(3) = 'mussel_abundance'  ! '_in_water'
-    itemNameList(4) = 'mussel_abundance'  ! '_at_soil_surface'
-    itemNameList(5) = 'mussel_abundance'  ! '_at_water_surface'
+    itemNameList(3) = 'mussel_abundance'  ! '_at_soil_surface'
+    itemNameList(4) = 'mussel_abundance'  ! '_at_water_surface'
 
-    itemNameList(6) = trim(filterSpecies)
+    itemNameList(5) = trim(filterSpecies)
     do i = 1, othercount
-      itemNameList(6 + i) = trim(filterSpeciesList(i))
+      itemNameList(5 + i) = trim(filterSpeciesList(i))
     enddo
 
     do i = 1, ubound(itemNameList,1)
 
-      if (i < 4 .or. i > 5) then
+      if (i < 3 .or. i > 4) then
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_in_water', rc=localrc)
-      elseif (i == 4) then
+      elseif (i == 3) then
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_water_surface', rc=localrc)
-      elseif (i == 5) then
+      elseif (i == 4) then
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_soil_surface', rc=localrc)
       endif
 
@@ -303,9 +302,8 @@ module filtration_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (i < 3) call ESMF_AttributeSet(field, 'units', 'm s-1', rc=localrc)
-      if (i == 3)  call ESMF_AttributeSet(field, 'units', 'm-3', rc=localrc)
-      if (i == 4 .or. i == 5)  call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
-      if (i > 5)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
+      if (i == 4 .or. i == 3)  call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
+      if (i > 4)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -319,9 +317,10 @@ module filtration_component
     enddo
 
     !> Create export states, add diagnostic variables
+    itemNameList(4) = 'mussel_abundance_in_water'
     itemNameList(5) = 'layer_height_in_water'
-    do i = 5, ubound(itemNameList,1)
-      !> Create export states for filter and co-filter items
+    do i = 4, ubound(itemNameList,1)
+      !> Create export states for diagnostic, filter and co-filter items
       if (i < 6) then
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i)), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
