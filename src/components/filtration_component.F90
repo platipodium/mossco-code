@@ -858,6 +858,7 @@ module filtration_component
     if (allocated(exchangeRate)) deallocate(exchangeRate)
     allocate(exchangeRate(RANGE3D))
 
+    write(0,*) 'lbnd_filt=', lbnd, 'ubnd=', ubnd
     do i=lbnd(3),ubnd(3)
       exchangeRate(RANGE2D,i) = sqrt( (yVelocity(RANGE2D,i)/ywidth(RANGE2D)) ** 2 &
                                     + (xVelocity(RANGE2D,i)/xwidth(RANGE2D)) ** 2 )
