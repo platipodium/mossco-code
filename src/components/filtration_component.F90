@@ -607,7 +607,8 @@ module filtration_component
 
     real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: maximumFiltrationRate
     real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFlux, exchangeRate
-    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: xWidth, yWidth, fractionalLossRate
+    real(ESMF_KIND_R8),allocatable, dimension(:,:)   :: xWidth, yWidth
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: fractionalLossRate
     real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)    :: abundanceAtSoil, abundanceAtSurface
@@ -857,7 +858,10 @@ module filtration_component
     if (allocated(exchangeRate)) deallocate(exchangeRate)
     allocate(exchangeRate(RANGE3D))
 
-    exchangeRate = sqrt( (yVelocity/ywidth)** 2 + (xVelocity/xwidth)**2 )
+    do i=lbnd(3),ubnd(3)
+      exchangeRate(RANGE2D,i) = sqrt( (yVelocity(RANGE2D,i)/ywidth(RANGE2D)) ** 2 &
+                                    + (xVelocity(RANGE2D,i)/xwidth(RANGE2D)) ** 2 )
+    enddo
 
     if (allocated(yWidth)) deallocate(ywidth)
     if (allocated(xWidth)) deallocate(xwidth)
