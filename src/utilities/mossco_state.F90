@@ -2202,5 +2202,4 @@ contains
 
   end subroutine MOSSCO_StateGetVelocity
 
-
 end module mossco_state
