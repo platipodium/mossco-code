@@ -16,6 +16,7 @@
 
 #define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
 #define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+#define RANGE3DDIM lbnd(1):ubnd(1)-1,lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)
 
 module mossco_grid
 
@@ -787,5 +788,159 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   if (present(interface)) interface = interface_
 
 end subroutine MOSSCO_GridGetDepth
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridGetWidth"
+subroutine MOSSCO_GridGetWidth(grid, kwe, xwidth, ywidth, rc)
+
+  type(ESMF_Grid), intent(in)           :: grid
+  logical, intent(in), optional         :: kwe
+  real(ESMF_KIND_R8), intent(out), allocatable, dimension(:,:,:) :: xwidth, ywidth
+  integer(ESMF_KIND_I4),  intent(out), optional  :: rc
+
+  integer(ESMF_KIND_I4)          :: ubnd(3), lbnd(3), lbnd2(2), ubnd2(2)
+  integer(ESMF_KIND_I4)          :: rc_, localrc, i, rank
+  character(len=ESMF_MAXSTR)     :: message
+  real(ESMF_KIND_R8), pointer, dimension(:,:,:)     :: lon, lat
+  real(ESMF_KIND_R8), pointer, dimension(:,:)       :: lon2, lat2
+  real(ESMF_KIND_R8), allocatable, dimension(:,:,:) :: dlon, dlat, a
+  type(ESMF_CoordSys_Flag)       :: coordSys
+  real(ESMF_KIND_R8),parameter   :: radius = 6371000.0D0
+
+  rc_ = ESMF_SUCCESS
+  if (present(kwe)) rc_ = ESMF_SUCCESS
+  if (present(rc))  rc = rc_
+
+  call ESMF_GridGet(grid, rank=rank, coordSys=coordSys, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (coordSys /= ESMF_COORDSYS_SPH_DEG) then
+    rc_ = ESMF_RC_NOT_IMPL
+    if (present(rc)) rc=rc_
+    return
+  endif
+
+  if (rank == 2) then
+    call ESMF_GridGetCoordBounds(grid, coordDim=1, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      exclusiveLBound=lbnd2, exclusiveUbound=ubnd2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ubnd(1:2) = ubnd2(:)
+    lbnd(1:2) = lbnd2(:)
+    ubnd(3) = 1
+    lbnd(3) = 1
+
+    call ESMF_GridGetCoord(grid, coordDim=1, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      farrayPtr=lon2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridGetCoord(grid, coordDim=2, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+      farrayPtr=lat2, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    allocate(lon(RANGE3D), stat=localrc)
+    allocate(lat(RANGE3D), stat=localrc)
+    lon(RANGE2D,1) = lon2(RANGE2D)
+    lat(RANGE2D,1) = lat2(RANGE2D)
+  else
+    call ESMF_GridGetCoordBounds(grid, coordDim=1, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridGetCoord(grid, coordDim=1, staggerloc=ESMF_STAGGERLOC_CORNER, &
+      farrayPtr=lon, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridGetCoord(grid, coordDim=2, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
+      farrayPtr=lat, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  endif
+
+  allocate(dlat(RANGE3DDIM), stat=localrc)
+allocate(dlon(RANGE3DDIM), stat=localrc)
+
+  ! Calculate xwidth
+  ! dlon is (rotated) longitudinal difference at mid-height
+  allocate(xwidth(RANGE3DDIM), stat=localrc)
+
+  dlon(RANGE3DDIM)  &
+    = (lon(lbnd(1)+1:ubnd(1),lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      - lon(lbnd(1):ubnd(1)-1,lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      + lon(lbnd(1)+1:ubnd(1),lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)) &
+      - lon(RANGE3DDIM) &
+    ) * 0.5
+
+  dlat(RANGE3DDIM)  &
+    = (lat(lbnd(1)+1:ubnd(1),lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      - lat(lbnd(1):ubnd(1)-1,lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      + lat(lbnd(1)+1:ubnd(1),lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)) &
+      - lat(RANGE3DDIM) &
+    ) * 0.5
+
+  !> Haversine formula
+  allocate(a(RANGE3DDIM), stat=localrc)
+
+  a = (sin(dlat(RANGE3DDIM)/2))**2 &
+    + cos(0.5 * ( lat(lbnd(1):ubnd(1)-1,lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)) &
+                 +lat(lbnd(1):ubnd(1)-1,lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)))) &
+    * cos(0.5 * ( lat(lbnd(1)+1:ubnd(1),lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)) &
+                 +lat(lbnd(1)+1:ubnd(1),lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)))) &
+    * (sin(dlon(RANGE3DDIM)/2))**2
+  a = sqrt(a)
+  where(a > 1)
+    a = 1
+  endwhere
+  xwidth = radius * 2 * asin(a)
+
+  ! Calculate ywidth
+  ! dlon is (rotated) longitudinal difference at mid-lon
+  ! dlat is (rotated) latitudinal difference at mid-lon
+  allocate(xwidth(RANGE3DDIM), stat=localrc)
+
+  dlon(RANGE3DDIM)  &
+    = ( lon(lbnd(1)+1:ubnd(1),lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      - lon(lbnd(1)+1:ubnd(1),lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)) &
+      + lon(lbnd(1):ubnd(1)-1,lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      - lon(RANGE3DDIM) &
+      ) * 0.5
+
+  dlat(RANGE3DDIM)  &
+    = ( lat(lbnd(1)+1:ubnd(1),lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      - lat(lbnd(1)+1:ubnd(1),lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)) &
+      + lat(lbnd(1):ubnd(1)-1,lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+      - lat(RANGE3DDIM) &
+      ) * 0.5
+
+  a = (sin(dlat(RANGE3DDIM)/2)) ** 2 &
+    + cos(0.5 * ( lat(lbnd(1):ubnd(1)-1,lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)) &
+                 +lat(lbnd(1)+1:ubnd(1),lbnd(2):ubnd(2)-1,lbnd(3):ubnd(3)))) &
+    * cos(0.5 * ( lat(lbnd(1):ubnd(1)-1,lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)) &
+                 +lat(lbnd(1)+1:ubnd(1),lbnd(2)+1:ubnd(2),lbnd(3):ubnd(3)))) &
+    * (sin(dlon(RANGE3DDIM)/2)) ** 2
+
+  a = sqrt(a)
+  where(a > 1)
+    a = 1
+  endwhere
+  ywidth = radius * 2 * asin(a)
+
+  if (allocated(a)) deallocate(a)
+  if (allocated(dlon)) deallocate(dlon)
+  if (allocated(dlat)) deallocate(dlat)
+
+  if (rank == 2 .and. associated(lon)) nullify(lon)
+  if (rank == 2 .and. associated(lat)) nullify(lat)
+
+  if (present(rc)) rc=rc_
+
+end subroutine MOSSCO_GridGetWidth
 
 end module mossco_grid
