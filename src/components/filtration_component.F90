@@ -605,15 +605,16 @@ module filtration_component
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
 
-    real(ESMF_KIND_R8),allocatable               :: fractionalLossRate(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: filtrationRate(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: maximumFiltrationRate(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: foodFlux(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: foodFluxFactor(:,:,:)
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: maximumFiltrationRate
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFlux, exchangeRate
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: xWidth, yWidth, fractionalLossRate
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
+
     real(ESMF_KIND_R8),pointer,dimension(:,:)    :: abundanceAtSoil, abundanceAtSurface
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate, layerHeight
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: interfaceDepth
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration, velocity
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration
+
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: grid
@@ -700,20 +701,9 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! Get layer information from grid with z-positions of vertical layer interfaces
-    call ESMF_GridGetCoord(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
-           farrayPtr=interfaceDepth, exclusiveUbound=ubndZ, exclusiveLBound=lbndZ, rc=localrc)
+    call MOSSCO_GridGetDepth(grid,  height=layerHeight,  rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    write(0,*) 'lbndZ = ',lbndZ, ' ubndZ=', ubndZ
-    do i = lbnd(3),ubnd(3)
-      !> @todo consider mask??  if (.not.mask(RANGE2D,i))
-      layerHeight(RANGE2D,i) = interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbndZ(3)-1+i) &
-         -  interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbndZ(3)-2+i)
-      !layerHeight(RANGE2D,i) = interfaceDepth(RANGE2D,lbnd(3)-1+i) &
-      !   -  interfaceDepth(lbndZ(1):ubndZ(1),lbndZ(2):ubndZ(2),lbnd(3)-2+i)
-    end do
 
     ! Get mussel abundance to export
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
@@ -840,10 +830,37 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! Obtain the water transport in m3 s-1 from velocity and grid properties
-    call MOSSCO_StateGetVelocity(importState, velocity, rc=localrc)
+    ! Obtain the water exchange rate s-1 from velocity and grid properties
+    ! The subroutine will allocate xwidth and ywidth
+    call MOSSCO_GridGetWidth(grid, xwidth=xWidth, ywidth=yWidth, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='x_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=xVelocity, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='y_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=yVelocity, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (allocated(exchangeRate)) deallocate(exchangeRate)
+    allocate(exchangeRate(RANGE3D))
+
+    exchangeRate = sqrt( (yVelocity/ywidth)** 2 + (xVelocity/xwidth)**2 )
+
+    if (allocated(yWidth)) deallocate(ywidth)
+    if (allocated(xWidth)) deallocate(xwidth)
 
     ! New core of the model (9 March 2016)
     if (.not.allocated(maximumFiltrationRate)) allocate(maximumFiltrationRate(RANGE3D), stat=localrc)
@@ -861,11 +878,9 @@ module filtration_component
     ! Convert unit of maximumFiltrationRate to mg phyC mg-1 Mytilus s-1
     maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / (300.0 * 3600.0)
 
-    ! The food flux in mmol s-1 is the product of clearance rate
-    ! in m3 s-1 and concentration mmol phyC m-3
-    ! clearance rate is identical to transport and thus numerically identical to
-    ! velocity (@todo: let Richard check this)
-    foodFlux(RANGE3D) = velocity(RANGE3D) * concentration(RANGE3D)
+    ! The food flux in mmol s-1 is the product of exchange rate
+    ! in s-1 and concentration mmol phyC m-3
+    foodFlux(RANGE3D) = exchangeRate(RANGE3D) * concentration(RANGE3D)
 
     ! The food flux factor is a threshold function that limits
     ! the supply at low rates
