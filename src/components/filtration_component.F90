@@ -766,6 +766,9 @@ module filtration_component
         abundance(RANGE2D,ubnd(3)) = abundanceAtSurface(RANGE2D) &
           / layerHeight(RANGE2D,ubnd(3))
       endwhere
+      write(message,'(A,ES10.3,A)') trim(name)//' max upper layer abundance is ', &
+          maxval(abundance(RANGE2D,ubnd(3))),' m-3'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     if (isSoil) then
@@ -773,6 +776,9 @@ module filtration_component
         abundance(RANGE2D,lbnd(3)) = abundanceAtSoil(RANGE2D) &
           / layerHeight(RANGE2D,lbnd(3))
       endwhere
+      write(message,'(A,ES10.3,A)') trim(name)//' max lowest layer abundance is ', &
+          maxval(abundance(RANGE2D,lbnd(3))),' m-3'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     if (allocated(mask)) deallocate(mask)
@@ -795,6 +801,9 @@ module filtration_component
       if (allocated(mask)) deallocate(mask)
       return
     endif
+    write(message,'(A,ES10.3,A)') trim(name)//' max food concentration is ', &
+        maxval(concentration(RANGE3D), mask=mask),' mmol m-3'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     write(fluxName,'(A)') trim(filterSpecies)//'_flux_in_water'
 
@@ -858,11 +867,14 @@ module filtration_component
     if (allocated(exchangeRate)) deallocate(exchangeRate)
     allocate(exchangeRate(RANGE3D))
 
-    write(0,*) 'lbnd_filt=', lbnd, 'ubnd=', ubnd
     do i=lbnd(3),ubnd(3)
       exchangeRate(RANGE2D,i) = sqrt( (yVelocity(RANGE2D,i)/ywidth(RANGE2D)) ** 2 &
                                     + (xVelocity(RANGE2D,i)/xwidth(RANGE2D)) ** 2 )
     enddo
+    write(message,'(A,ES10.3,A)') trim(name)//' max exchange rate is ', &
+        maxval(exchangeRate(RANGE3D), mask=mask),' s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
 
     if (allocated(yWidth)) deallocate(ywidth)
     if (allocated(xWidth)) deallocate(xwidth)
@@ -877,18 +889,30 @@ module filtration_component
     ! The maximum filtration rate is taken from Bayne et al. 1993, who found
     ! an empirical relationship between TPM and filtration rate, given in
     ! units of mg PhyC h-1 (300 mg)-1 Mytilus; we convert mmol of concentration to
-    ! mg for this relationship
+    ! mg for this relationship.  Concentrations are around 8 mmol m-3, so this calculation
+    ! yields 250 = .83 * (8 / 0.03083348776)** .983
     maximumFiltrationRate(RANGE3D) = .83 * (concentration(RANGE3D) * mgPermmol) ** .983
 
     ! Convert unit of maximumFiltrationRate to mg phyC mg-1 Mytilus s-1
+    ! This typically yields 250E-6
     maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / (300.0 * 3600.0)
+
+    write(message,'(A,ES10.3,A)') trim(name)//' max filtration max rate is ', &
+        maxval(maximumFiltrationRate(RANGE3D), mask=mask),' mg mg-1 s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ! The food flux in mmol s-1 is the product of exchange rate
     ! in s-1 and concentration mmol phyC m-3
+    ! At 1 m s-1 velocity and 1000 m grid dimension, the exchange rate is 1E-3, such
+    ! that foodFlux is typically 8E-3
     foodFlux(RANGE3D) = exchangeRate(RANGE3D) * concentration(RANGE3D)
+    write(message,'(A,ES10.3,A)') trim(name)//' max food flux rate is ', &
+        maxval(foodFlux(RANGE3D), mask=mask),' mmol s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ! The food flux factor is a threshold function that limits
-    ! the supply at low rates
+    ! the supply at low rates, it is typically
+    ! minimumFoodFlux  = 0.6166697552  ! mmol C s-1 m-3, equiv to 20 mg C
     foodFluxFactor(RANGE3D) = 1
     where(foodFluxFactor(RANGE3D) < minimumFoodFlux)
       foodFluxFactor(RANGE3D) = foodFlux(RANGE3D) / minimumFoodFlux
@@ -899,6 +923,10 @@ module filtration_component
     ! a supply-dependent food flux factor.
     filtrationRate(RANGE3D) = &
       maximumFiltrationRate(RANGE3D) * foodFluxFactor(RANGE3D)
+    write(message,'(A,ES10.3,A)') trim(name)//' max filtration rate is ', &
+        maxval(filtrationRate(RANGE3D), mask=mask),' mg mg-1 s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     ! The loss rate is in mg PhyC m-3 s-1
     lossRate = &
     ! and is proportinal to mussel dry mass concentration, calculated
