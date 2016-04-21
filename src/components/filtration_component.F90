@@ -753,9 +753,15 @@ module filtration_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
+    ! Return from this component if nothing can be done as there is no abundance
     if (.not.(isSurface .or. isSoil)) then
       write(message,'(A)') trim(name)//' found no abundance at all'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       return
     endif
 
@@ -786,9 +792,13 @@ module filtration_component
 
 
     if (.not.any(mask)) then
-      write(message,'(A)') trim(name)//' found no abundance'
+      write(message,'(A)') trim(name)//' found no unmasked abundance'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       if (allocated(mask)) deallocate(mask)
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       return
     endif
 
@@ -797,6 +807,10 @@ module filtration_component
       write(message,'(A)') trim(name)//' found no concentration at abundance'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       if (allocated(mask)) deallocate(mask)
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       return
     endif
     write(message,'(A,ES10.3,A)') trim(name)//' max food concentration is ', &
