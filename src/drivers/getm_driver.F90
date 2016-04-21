@@ -163,7 +163,9 @@
    end if
 
    STDERR LINE
-   STDERR 'getm ver. ',RELEASE,': Started on  ',dstr,' ',tstr
+   !> @todo: GETM API changed, please update retrieving the version
+   !STDERR 'getm ver. ',RELEASE,': Started on  ',dstr,' ',tstr
+   STDERR 'getm ver. XXXXX : Started on  ',dstr,' ',tstr
    STDERR LINE
    STDERR 'Initialising....'
    STDERR LINE
