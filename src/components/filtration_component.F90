@@ -736,7 +736,6 @@ module filtration_component
     else
       write(message,'(A)') trim(name)//' found no abundance at soil'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-      return
     endif
 
     ! Get mussel abundance to import
@@ -752,7 +751,6 @@ module filtration_component
     else
         write(message,'(A)') trim(name)//' found no abundance at surface'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        return
     endif
 
     if (.not.(isSurface .or. isSoil)) then
