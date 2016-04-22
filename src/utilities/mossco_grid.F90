@@ -750,8 +750,8 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   real(ESMF_KIND_R8), intent(out), optional, pointer      :: interface(:,:,:)
   integer(ESMF_KIND_I4),  intent(out), optional  :: rc
 
-  integer(ESMF_KIND_I4), allocatable :: ubnd(:), lbnd(:)
-  integer(ESMF_KIND_I4)          :: rc_, localrc, i
+  integer(ESMF_KIND_I4), allocatable :: ifUbnd(:), iflbnd(:), ubnd(:), lbnd(:)
+  integer(ESMF_KIND_I4)          :: rc_, localrc, i, j, k
   character(len=ESMF_MAXSTR)     :: message
   real(ESMF_KIND_R8), pointer    :: interface_(:,:,:)
 
@@ -761,9 +761,11 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
 
   allocate(ubnd(3), stat=localrc)
   allocate(lbnd(3), stat=localrc)
+  allocate(ifubnd(3), stat=localrc)
+  allocate(iflbnd(3), stat=localrc)
 
   call ESMF_GridGetCoordBounds(grid, coordDim=3, staggerloc=ESMF_STAGGERLOC_CENTER_VFACE, &
-    exclusiveLBound=lbnd, exclusiveUbound=ubnd, rc=localrc)
+    exclusiveLBound=iflbnd, exclusiveUbound=ifubnd, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -772,19 +774,81 @@ subroutine MOSSCO_GridGetDepth(grid, kwe, depth, height, interface, rc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  i = 0
+  j = 0
+
   if (present(height)) then
-    if (.not.associated(height)) allocate(height(RANGE3D))
-    do i = lbnd(3)+1, ubnd(3)
-      height(RANGE2D,i) = interface_(RANGE2D, i) - interface_(RANGE2D, i-1)
+    if (associated(height)) then
+      ubnd=ubound(height)
+      lbnd=lbound(height)
+      if (ubnd(1) <= ifUbnd(1) .and. lbnd(1) >= ifLbnd(1)) then
+        i = lbnd(1) - iflbnd(1)
+      else
+        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = rc_
+        write(0,*) 'height: ', lbound(height), ubound(height), size(height), shape(height)
+        write(0,*) 'iface: ', lbound(interface_), ubound(interface_), size(interface_), shape(interface_)
+        write(0,*) 'l/ubnd: ',lbnd, ubnd, iflbnd, ifubnd
+        return
+      endif
+      if (ubnd(2) <= ifUbnd(2) .and. lbnd(2) >= ifLbnd(2)) then
+        j = lbnd(2) - iflbnd(2)
+      else
+        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = rc_
+        return
+      endif
+    else
+      Ubnd=ifubnd
+      ubnd(3)=ifubnd(3)
+      lbnd=iflbnd(3)+1
+      allocate(height(RANGE3D), stat=localrc)
+    endif
+
+    !write(0,*) 'height: ', lbound(height), ubound(height), size(height), shape(height)
+    !write(0,*) 'iface: ', lbound(interface_), ubound(interface_), size(interface_), shape(interface_)
+    do k = 0, ubnd(3) - lbnd(3)
+      height(RANGE2D,lbnd(3)+k) &
+        = interface_(RANGE2D, lbnd(3) + i) - interface_(RANGE2D, lbnd(3) + i - 1)
     enddo
   endif
 
   if (present(depth)) then
-    if (.not.associated(depth)) allocate(depth(RANGE3D))
-    do i = lbnd(3)+1, ubnd(3)
-      depth(RANGE2D,i) = (interface_(RANGE2D, i) + interface_(RANGE2D, i-1)) * 0.5
+
+    if (associated(depth)) then
+      ubnd=ubound(depth)
+      lbnd=lbound(depth)
+      if (ubnd(1) <= ifUbnd(1) .and. lbnd(1) >= ifLbnd(1)) then
+        i = lbnd(1) - iflbnd(1)
+      else
+        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = rc_
+        return
+      endif
+      if (ubnd(2) <= ifUbnd(2) .and. lbnd(2) >= ifLbnd(2)) then
+        j = lbnd(2) - iflbnd(2)
+      else
+        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = rc_
+        return
+      endif
+    else
+      Ubnd=ifubnd
+      ubnd(3)=ifubnd(3)
+      lbnd=iflbnd(3)+1
+      allocate(depth(RANGE3D), stat=localrc)
+    endif
+
+    do k = 0, ubnd(3) - lbnd(3)
+      depth(RANGE2D,lbnd(3)+k) = 0.5  &
+        * (interface_(RANGE2D, lbnd(3) + i) + interface_(RANGE2D, lbnd(3) + i - 1))
     enddo
   endif
+
+  if (allocated(ubnd)) deallocate(ubnd)
+  if (allocated(lbnd)) deallocate(lbnd)
+  if (allocated(ifubnd)) deallocate(ifubnd)
+  if (allocated(iflbnd)) deallocate(iflbnd)
 
   if (present(interface)) interface = interface_
 
