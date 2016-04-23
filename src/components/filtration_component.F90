@@ -525,7 +525,7 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message,'(A,ES9.3)') trim(name)//' minimum food flux is ', minimumFoodFlux
+    write(message,'(A,ES10.3)') trim(name)//' minimum food flux is ', minimumFoodFlux
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(gridComp, name='mussel_mass', &
@@ -533,7 +533,7 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message,'(A,ES9.3)') trim(name)//' mussel mass is ', mussel_mass
+    write(message,'(A,ES10.3)') trim(name)//' mussel mass is ', mussel_mass
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(gridComp, name='filter_species', &
