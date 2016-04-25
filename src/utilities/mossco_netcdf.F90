@@ -1,9 +1,9 @@
 !> @brief Implementation ESMF/NetCDF utility functions
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
-!> @author Richard Hofmeister
-!> @author Carsten Lemmen
+!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -69,8 +69,9 @@ module mossco_netcdf
     procedure :: getvar => mossco_netcdf_var_get
     procedure :: getAxis => grid_get_coordinate_axis
     procedure :: refTime => mossco_netcdf_reftime
-    procedure :: maxTime => mossco_netcdf_maxtime
     procedure :: timeIndex => mossco_netcdf_find_time_index
+    procedure :: timeGet => MOSSCO_NcGetTime
+    procedure :: getatt => mossco_netcdf_var_get_att
   end type type_mossco_netcdf
 
   integer, parameter :: MOSSCO_NC_ERROR=-1
@@ -110,12 +111,19 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)       :: grid2Lbnd(2), grid2Ubnd(2), grid3Lbnd(3), grid3Ubnd(3)
     integer(ESMF_KIND_I4)       :: localDeCount, i, j, k
 
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: farrayPtr4
-    real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3
-    real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2
-    real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1
-    real(ESMF_KIND_R4)                               :: missingValue=-1.0E30
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: farrayPtr4=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:)      :: farrayPtr2=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:)        :: farrayPtr1=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: ncarray4=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: ncarray3=>null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:)      :: ncarray2=>null()
+    real(ESMF_KIND_R4)                               :: missingValueR4=-1.0E30
+    real(ESMF_KIND_R8)                               :: missingValueR8=-1.0D30, missingValue=-1.0D30
+    real(ESMF_KIND_I4)                               :: missingValueI4=-9999
+    real(ESMF_KIND_I8)                               :: missingValueI8=-9999
     real(ESMF_KIND_R8)                               :: representableValue
+    type(ESMF_TypeKind_Flag)                         :: mvTypeKind, typeKind
 
     character(len=11)                 :: precision_
 
@@ -123,16 +131,17 @@ module mossco_netcdf
     type(ESMF_Grid)                   :: grid
     integer(ESMF_KIND_I4)             :: gridRank
     type(ESMF_GeomType_Flag)          :: geomType
-    logical                           :: catchNaN=.false., isPresent, gridIsPresent
+    logical                           :: isPresent, gridIsPresent
 
     rc_ = ESMF_SUCCESS
 
     call ESMF_FieldGet(field, name=varname, rank=rank, &
-      localDeCount=localDeCount, rc=localrc)
+      localDeCount=localDeCount, typeKind=typeKind, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (localDeCount==0) return
+    if (typeKind /= ESMF_TYPEKIND_R8) return
 
     allocate(lbnd(rank))
     allocate(ubnd(rank))
@@ -252,7 +261,7 @@ module mossco_netcdf
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask2, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask2)
-          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite('Disregard five errors above', ESMF_LOGMSG_ERROR)
         else
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid2Lbnd, &
             exclusiveUBound=grid2Ubnd, rc=localrc)
@@ -263,7 +272,7 @@ module mossco_netcdf
         call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
           nullify(gridmask3)
-          call ESMF_LogWrite('Disregard error above', ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite('Disregard five errors above', ESMF_LOGMSG_ERROR)
         else
           call ESMF_GridGetItemBounds(grid, ESMF_GRIDITEM_MASK, exclusiveLbound=grid3Lbnd, &
             exclusiveUBound=grid3Ubnd, rc=localrc)
@@ -280,7 +289,27 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_AttributeGet(field, 'missing_value', missingValue, rc=localrc)
+      call ESMF_AttributeGet(field, 'missing_value', typeKind=mvTypeKind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (mvTypeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueR8, rc=localrc)
+        missingValue = missingValueR8
+      elseif (mvTypeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueR4, rc=localrc)
+        missingValue = dble(missingValueR4)
+      elseif (mvTypeKind == ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueI8, rc=localrc)
+        missingValue = dble(missingValueI8)
+      elseif (mvTypeKind == ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(field, 'missing_value', missingValueI4, rc=localrc)
+        missingValue = dble(missingValueI4)
+      else
+        write(message,'(A)')  '  missing value non-implemented type '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -291,12 +320,17 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      !> @todo We should *not* write into any parts of the pointer, rather make a copy
+      if (associated(ncarray4)) deallocate(ncarray4)
+      allocate(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)),stat=localrc)
+      ncarray4 = farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))
+
       if (associated(gridmask3)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             do k=lbnd(3),ubnd(3)
               if (gridmask3(grid3lbnd(1)-1+i,grid3lbnd(2)-1+j,grid3lbnd(3)-1+k) .le. 0) &
-                farrayPtr4(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3)-1+k,lbnd(4):ubnd(4))=missingValue
+                ncarray4(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3)-1+k,lbnd(4):ubnd(4))=missingValue
             enddo
           enddo
         enddo
@@ -304,58 +338,47 @@ module mossco_netcdf
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             if (gridmask2(grid2lbnd(1)-1+i,grid2lbnd(2)-1+j) .le. 0) &
-              farrayPtr4(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
+              ncarray4(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3):ubnd(3),lbnd(4):ubnd(4))=missingValue
           enddo
         enddo
       end if
 
-      if (catchNan) then
-        if (missingValue < 0.0) then
-          if (any(farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) < missingValue)) then
-            call self%close()
-            write(message,'(A)')  '  Possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-        elseif (missingValue > 0.0) then
-          if (any(farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) > missingValue)) then
-            call self%close()
-            write(message,'(A)')  '  Possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-        else
-          if (any(farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= &
-                  farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))) then
-            call self%close()
-            write(message,'(A)')  '  NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-        endif
-      endif
-
-      where (farrayPtr4 > RepresentableValue) farrayPtr4=missingValue
-      where (farrayPtr4 < RepresentableValue) farrayPtr4=missingValue
-
       ! it is recommended to check of nans with x /= x, as this is true for NaN
       ! it is recommended to check for inf with abs(x) > huge(x)
+      if (any(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= &
+              ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))) then
+        call self%close()
+        write(message,'(A)')  '  NaN detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      if (any(abs(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > huge(missingValue))) then
+        call self%close()
+        write(message,'(A)')  '  Inf detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      where (ncarray4 > RepresentableValue) ncarray4=missingValue
+      where (ncarray4 < RepresentableValue) ncarray4=missingValue
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)), &
         start=(/1,1,1,1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
         write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
-        write(0,*) 'values = ',farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))
+        write(0,*) 'values = ',ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      if (associated(ncarray4)) deallocate(ncarray4); nullify(ncarray4)
 
     elseif (rank==3) then
 
@@ -363,12 +386,16 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      if (associated(ncarray3)) deallocate(ncarray3)
+      allocate(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)),stat=localrc)
+      ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+
       if (associated(gridmask3)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             do k=lbnd(3),ubnd(3)
               if (gridmask3(grid3lbnd(1)-1+i,grid3lbnd(2)-1+j,grid3lbnd(3)-1+k) .le. 0) &
-                farrayPtr3(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3)-1+k)=missingValue
+                ncarray3(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3)-1+k)=missingValue
              enddo
           enddo
         enddo
@@ -376,49 +403,42 @@ module mossco_netcdf
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             if (gridmask2(grid2lbnd(1)-1+i,grid2lbnd(2)-1+j) .le. 0) &
-                farrayPtr3(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3):ubnd(3))=missingValue
+                ncarray3(lbnd(1)-1+i,lbnd(2)-1+j,lbnd(3):ubnd(3))=missingValue
           enddo
         enddo
       end if
 
-      if (catchNan) then
+      if (any(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) /= &
+              ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))) then
+        call self%close()
+        write(message,'(A)')  '  NaN detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
-        call ESMF_LogWrite('Catching NaN: ...',ESMF_LOGMSG_INFO)
-        if (missingValue < 0.0) then
-          if ( any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) < missingValue) .or. &
-               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) < -1E30) .or. &
-               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) > 1E30)) then
-            call self%close()
-            write(message,'(A)')  '  Possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            endif
-        else
-          if ( any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) > missingValue) .or. &
-               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) < -1E30) .or. &
-               any(farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) > 1E30)) then
-            call self%close()
-            write(message,'(A)')  '  Possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            endif
-        endif
+      if (any(abs(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))) > huge(missingValue))) then
+        call self%close()
+        write(message,'(A)')  '  Inf detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, real(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))), &
         start=(/1,1,1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))
+        ncStatus = nf90_put_var(self%ncid, var%varid, real(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
         write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
-        write(0,*) 'values = ',farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+        write(0,*) 'values = ',ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      if (associated(ncarray3)) deallocate(ncarray3); nullify(ncarray3)
 
     elseif (rank==2) then
 
@@ -426,48 +446,50 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      if (associated(ncarray2)) deallocate(ncarray2)
+      allocate(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)),stat=localrc)
+      ncarray2 = farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+
       if (associated(gridmask2)) then
         do i=lbnd(1),ubnd(1)
           do j=lbnd(2),ubnd(2)
             if (gridmask2(grid2lbnd(1)-1+i,grid2lbnd(2)-1+j) .le. 0) &
-                farrayPtr2(lbnd(1)-1+i,lbnd(2)-1+j)=missingValue
+                ncarray2(lbnd(1)-1+i,lbnd(2)-1+j)=missingValue
           enddo
         enddo
       end if
 
-      if (catchNan) then
-        if (missingValue < 0.0) then
-          if (any(farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) < missingValue)) then
-            call self%close()
-            write(message,'(A)')  '  Possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            endif
-        else
-          if (any(farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) > missingValue)) then
-            call self%close()
-            write(message,'(A)')  '  Possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            endif
-        endif
+      if (any(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) /= &
+              ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))) then
+        call self%close()
+        write(message,'(A)')  '  NaN detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      if (any(abs(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))) > huge(missingValue))) then
+        call self%close()
+        write(message,'(A)')  '  Inf detected in field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       if (any(var%dimids==self%timeDimId)) then
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), &
         start=(/1,1,dimlen/))
       else
-        ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
+        ncStatus = nf90_put_var(self%ncid, var%varid, ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
         write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
-        write(0,*) 'values = ',farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+        write(0,*) 'values = ',ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      if (associated(ncarray2)) deallocate(ncarray2); nullify(ncarray2)
 
     elseif (rank==1) then
 
@@ -475,25 +497,6 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (catchNan) then
-        if (missingValue < 0.0) then
-          if (any(farrayPtr1(lbnd(1):ubnd(1)) < missingValue)) then
-            call self%close()
-            write(message,'(A)')  '  possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            endif
-        else
-          if (any(farrayPtr1(lbnd(1):ubnd(1)) > missingValue)) then
-            call self%close()
-            write(message,'(A)')  '  possible NaN detected in field '
-            call MOSSCO_FieldString(field, message)
-            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-            endif
-        endif
-      endif
 
       if (any(var%dimids==self%timeDimId)) then
         ncStatus = nf90_put_var(self%ncid, var%varid, farrayPtr1(lbnd(1):ubnd(1)), &
@@ -566,7 +569,8 @@ module mossco_netcdf
     integer                        :: ungriddedID, ungriddedLength,dimrank
     integer(ESMF_KIND_I4), allocatable, dimension(:) :: uubnd,ulbnd
     logical                        :: isPresent
-    real(ESMF_KIND_R4)             :: missingValue=-1E30
+    real(ESMF_KIND_R4)             :: missingValueR4=-1E30
+    real(ESMF_KIND_R8)             :: missingValueR8=-1E30
     integer(ESMF_KIND_I4)          :: localrc
     character(len=11)              :: precision_
 
@@ -667,7 +671,6 @@ module mossco_netcdf
         enddo
       endif
 
-
       !! define variable
       if (present(precision)) then
         precision_=precision
@@ -675,10 +678,27 @@ module mossco_netcdf
         precision=self%precision
       endif
 
-      if (precision=='NF90_DOUBLE') then
-        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
-      else
+      call ESMF_FieldGet(field, typeKind=typeKind, rc=localrc)
+      if (typekind==ESMF_TYPEKIND_I4) then
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,dimids,varid)
+      elseif (typekind==ESMF_TYPEKIND_I8) then
+        ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_INT,dimids,varid)
+      elseif (typekind==ESMF_TYPEKIND_R4) then
         ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_REAL,dimids,varid)
+      elseif (typekind==ESMF_TYPEKIND_R8) then
+        if (precision=='NF90_DOUBLE') then
+          ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_DOUBLE,dimids,varid)
+        else
+          ncStatus = nf90_def_var(self%ncid,trim(varname),NF90_REAL,dimids,varid)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        !> @todo
+        if (ESMF_LogFoundError(ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        !> @todo
+        if (ESMF_LogFoundError(ESMF_RC_NOT_IMPL, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       if (ncStatus /= NF90_NOERR) then
@@ -686,16 +706,25 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) then
-        write(message,'(A)')  '  field '//trim(fieldName)//' has no standard_name attribute. Using its name instead.'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-        call ESMF_AttributeSet(field, 'standard_name', trim(fieldName), rc=localrc)
+      if (typeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, 'numeric_precision', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, 'numeric_precision', trim(precision), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      !call ESMF_AttributeGet(field, 'standard_name', isPresent=isPresent, rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !if (.not.isPresent) then
+      !  write(message,'(A)')  '  field '//trim(fieldName)//' has no standard_name attribute. Using its name instead.'
+      !  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      !  call ESMF_AttributeSet(field, 'standard_name', trim(fieldName), rc=localrc)
+      !  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !endif
       call ESMF_AttributeGet(field, 'long_name', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -708,19 +737,36 @@ module mossco_netcdf
       if (.not.isPresent) call ESMF_AttributeSet(field, 'coordinates', trim(coordinates), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValue, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValue, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      if (typeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueR4, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueR4, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (typeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, 'missing_value', missingValueR8, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeGet(field, '_FillValue', isPresent=isPresent, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (.not.isPresent) call ESMF_AttributeSet(field, '_FillValue', missingValueR8, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      !call MOSSCO_FieldLog(field)
       call MOSSCO_AttributeNetcdfWrite(field, self%ncid, varid=varid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -739,8 +785,8 @@ module mossco_netcdf
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot define variable '//trim(varname),ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        ncStatus = nf90_put_att(self%ncid,varid,'standard_name','persistent_execution_thread')
-        ncStatus = nf90_put_att(self%ncid,varid,'long_name','persistent_execution_thread')
+        ncStatus = nf90_put_att(self%ncid,varid,'mossco_name','persistent_execution_thread')
+        ncStatus = nf90_put_att(self%ncid,varid,'long_name','persistent execution thread')
         ncStatus = nf90_put_att(self%ncid,varid,'coordinates',trim(coordinates))
         ncStatus = nf90_put_att(self%ncid,varid,'units','1')
         ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-1)
@@ -767,7 +813,8 @@ module mossco_netcdf
         ncStatus = nf90_enddef(self%ncid)
         if (ncStatus /= NF90_NOERR) then
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
 
         allocate(dimlen(ubound(dimids,1)-1))
@@ -797,7 +844,8 @@ module mossco_netcdf
         ncStatus = nf90_enddef(self%ncid)
         if (ncStatus /= NF90_NOERR) then
           call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       endif
 
@@ -995,7 +1043,7 @@ module mossco_netcdf
 
       localrc = nf90_inq_varid(nc%ncid,'time', varid)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable', ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable present', ESMF_LOGMSG_WARNING)
       else
         localrc = nf90_get_att(nc%ncid, varid, 'units', timeUnit_)
         if (localrc /= NF90_NOERR) then
@@ -1185,7 +1233,8 @@ module mossco_netcdf
     ncStatus = nf90_enddef(nc%ncid)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode', ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     nc%name=trim(filename)
@@ -1203,13 +1252,13 @@ module mossco_netcdf
     integer                        :: varid, rc_, localrc, dimId
     type(type_mossco_netcdf_variable), pointer :: var
 
-    rc_=MOSSCO_NC_NOERR
+    rc_ = ESMF_SUCCESS
 
     localrc = nf90_redef(self%ncid)
 
     localrc = nf90_def_dim(self%ncid, 'time', NF90_UNLIMITED, self%timeDimId)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define dimension time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1218,7 +1267,7 @@ module mossco_netcdf
     ! Define a dimension for holding data/time information as 19 character YYYY-MM-DDThh:mm:ss array
     localrc = nf90_def_dim(self%ncid, 'date_len', 19, dimId)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define dimension date_len in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1226,7 +1275,7 @@ module mossco_netcdf
 
     localrc = nf90_def_var(self%ncid, 'time', NF90_DOUBLE, self%timeDimId, varid)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable time in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1237,25 +1286,25 @@ module mossco_netcdf
 
     localrc = nf90_def_var(self%ncid, 'doy', NF90_INT, self%timeDimId, varid)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable doy in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
     localrc = nf90_put_att(self%ncid, varid, 'units', 'days')
-    localrc = nf90_put_att(self%ncid, varid, 'standard_name', 'day_of_year')
+    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'day_of_year')
 
     localrc = nf90_def_var(self%ncid, 'date_string', NF90_CHAR, (/dimId, self%timeDimId/), varid)
     if (localrc==NF90_ENAMEINUSE) then
-      rc_=MOSSCO_NC_EXISTING
+      rc_ = MOSSCO_NC_EXISTING
     elseif (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot define variable date_string in file '//trim(self%name), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     endif
 
     localrc = nf90_put_att(self%ncid, varid, 'units', '')
-    localrc = nf90_put_att(self%ncid, varid, 'standard_name', 'date_string')
+    localrc = nf90_put_att(self%ncid, varid, 'mossco_name', 'date_string')
 
     localrc = nf90_enddef(self%ncid)
 
@@ -1290,18 +1339,18 @@ module mossco_netcdf
       var%varid = i
       localrc = nf90_inquire_variable(self%ncid, i, ndims=var%rank, natts=nvaratts, name=var%name)
       if (localrc /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire varialbe in file '//trim(self%name), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire variable in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       endif
 
       localrc = nf90_get_att(self%ncid,var%varid, 'standard_name', var%standard_name)
-      if (localrc /= NF90_NOERR) var%standard_name=var%name
+      if (localrc /= NF90_NOERR) var%standard_name=''
 
       localrc = nf90_get_att(self%ncid,var%varid, 'units', var%units)
       if (localrc /= NF90_NOERR) then
-        write(message,'(A)') '  '//trim(var%name)
-        call MOSSCO_MESSAGEAdd(message,' did not specify units in '//trim(self%name))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        !write(message,'(A)') '  '//trim(var%name)
+        !call MOSSCO_MESSAGEAdd(message,' did not specify units in '//trim(self%name))
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         var%units=''
       endif
 
@@ -1386,7 +1435,8 @@ module mossco_netcdf
     character(len=ESMF_MAXSTR)    :: message
     integer(ESMF_KIND_I4)         :: parametricDim, spatialDim, numOwnedElements
 
-    rc_ = MOSSCO_NC_NOERR
+    rc_ = ESMF_SUCCESS
+
     dimcheck=0
     call ESMF_FieldGet(field,mesh=mesh,dimCount=dimCount,rank=rank,rc=esmfrc)
     if (esmfrc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
@@ -1429,11 +1479,11 @@ module mossco_netcdf
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
           totalubound(i)-totallbound(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
-          rc_=MOSSCO_NC_EXISTING
+          rc_ = MOSSCO_NC_EXISTING
         elseif  (ncStatus==NF90_NOERR) then
-          rc_=MOSSCO_NC_NOERR
+          rc_ = ESMF_SUCCESS
         else
-          rc_=MOSSCO_NC_ERROR
+          rc_ = ESMF_SUCCESS
         end if
       enddo
       ncStatus = nf90_enddef(self%ncid)
@@ -1465,7 +1515,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4)         :: dimCount, dimid, rank, i, localrc
     character(len=ESMF_MAXSTR)    :: message
 
-    rc_ = MOSSCO_NC_NOERR
+    rc_ = ESMF_SUCCESS
 
     dimcheck=0
     call ESMF_GridGet(grid, name=geomName, rank=rank, rc=localrc)
@@ -1503,11 +1553,11 @@ module mossco_netcdf
         ncStatus = nf90_def_dim(self%ncid, trim(name), &
           ubounds(i)-lbounds(i)+1,dimids(i))
         if (ncStatus==NF90_ENAMEINUSE) then
-          rc_=MOSSCO_NC_EXISTING
+          rc_ = MOSSCO_NC_EXISTING
         elseif  (ncStatus==NF90_NOERR) then
-          rc_=MOSSCO_NC_NOERR
+          rc_ = ESMF_SUCCESS
         else
-          rc_=MOSSCO_NC_ERROR
+          rc_ = ESMF_SUCCESS
         end if
       enddo
 
@@ -1587,7 +1637,7 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
+      !ncStatus = nf90_put_att(self%ncid,varid,'standard_name',varName)
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',varName)
       ncStatus = nf90_enddef(self%ncid)
 
@@ -1618,6 +1668,8 @@ module mossco_netcdf
 #define ESMF_METHOD "mossco_netcdf_coordinate_create"
   subroutine mossco_netcdf_coordinate_create(self, grid)
 
+    use mossco_grid
+
     implicit none
     class(type_mossco_netcdf)               :: self
     type(ESMF_Grid), intent(in)             :: grid
@@ -1647,6 +1699,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)            :: int8
     integer(ESMF_KIND_I4)            :: int4
     character(len=ESMF_MAXSTR)       :: string
+    logical                          :: logvalue
     type(ESMF_Field)                 :: field
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
@@ -1660,15 +1713,15 @@ module mossco_netcdf
     if (coordSys == ESMF_COORDSYS_SPH_DEG) then
       coordnames=(/'lon  ','lat  ','layer'/)
       coordunits=(/'degree','degree','1     '/)
-      standardNameList=(/'longitude','latitude ','layer    '/)
+      standardNameList=(/'longitude         ','latitude          ','model_level_number'/)
     elseif (coordSys == ESMF_COORDSYS_SPH_RAD) then
       coordnames=(/'lon  ','lat  ','layer'/)
       coordunits=(/'rad','rad','1  '/)
-      standardNameList=(/'longitude','latitude ','layer    '/)
+      standardNameList=(/'longitude         ','latitude          ','model_level_number'/)
     else
       coordnames=(/'x','y','z'/)
-      coordunits=(/'1','1','1'/)
-      standardNameList=(/'x','y','z'/)
+      coordunits=(/'m','m','1'/)
+      standardNameList=(/'projection_y_coordinate','projection_y_coordinate','model_level_number     '/)
     endif
 
     axisNameList=(/'X','Y','Z'/)
@@ -1714,10 +1767,10 @@ module mossco_netcdf
 
       !! Write default attributes into netCDF
       !!ncStatus = nf90_put_att(self%ncid,varid,'standard_name',trim(varName))
-      if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute standard_name='//trim(varname),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      !if (ncStatus /= NF90_NOERR) then
+      !  call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot put attribute standard_name='//trim(varname),ESMF_LOGMSG_ERROR)
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !endif
 
       ncStatus = nf90_put_att(self%ncid,varid,'units','1')
       if (ncStatus /= NF90_NOERR) then
@@ -1740,7 +1793,8 @@ module mossco_netcdf
       ncStatus = nf90_enddef(self%ncid)
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot end definition mode',ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(ESMF_RC_OBJ_BAD, ESMF_ERR_PASSTHRU, ESMF_CONTEXT)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
@@ -1748,6 +1802,8 @@ module mossco_netcdf
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write data for variable'//trim(varname),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+
+      write(0,*) 'Write axis '//axisNameList(i), intptr1(:)
     enddo
 
     do i=1,dimCount
@@ -1787,7 +1843,7 @@ module mossco_netcdf
       ncStatus = nf90_put_att(self%ncid,varid,'long_name',trim(varName))
       ncStatus = nf90_put_att(self%ncid,varid,'units',trim(coordUnits(i)))
       ncStatus = nf90_put_att(self%ncid,varid,'missing_value',-990._ESMF_KIND_R8)
-      ncStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
+      !ncStatus = nf90_put_att(self%ncid,varid,'formula_terms','')
       ncStatus = nf90_put_att(self%ncid,varid,'horizontal_stagger_location','center')
       !! axis attribute added only for 1-D coordinate variables
       if (coordDimCount(i)==1) then
@@ -1815,10 +1871,20 @@ module mossco_netcdf
          elseif (typekind==ESMF_TYPEKIND_R8) then
            call ESMF_AttributeGet(array, attributeName, real8, rc=rc)
            ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),real8)
-         else
+         elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
            call ESMF_AttributeGet(array, attributeName, string, rc=rc)
-           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),trim(string))
-         endif
+           ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName), trim(string))
+         elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+           call ESMF_AttributeGet(array, attributeName, logvalue, rc=rc)
+           if (logValue) then
+             ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.true.')
+          else
+              ncStatus = nf90_put_att(self%ncid,varid,trim(attributeName),'.false.')
+          endif
+        else
+          write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        endif
       enddo
 
       if (allocated(coordDimids)) deallocate(coordDimids)
@@ -1887,9 +1953,9 @@ module mossco_netcdf
 
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         write(message,'(A)')  '  this error will be fixed in the future, disregard for now'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         write(message,'(A)')  '  did not write coordinate variable '//trim(varname)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         cycle
       endif
@@ -1902,18 +1968,21 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      ! CF forbids missing_value attributes in coordinates
       if (isPresent) then
         call ESMF_AttributeGet(array, 'missing_value', value=missingValue, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
-        missingValue=-999.0
-        write(message,'(A,I1,A)')  '  did not receive missing_value attribute for coordinate ',i,', used default -999.0'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        missingValue=-999.0D0
+        !write(message,'(A,I1,A)')  '  did not receive missing_value attribute for coordinate ',i,', used default -999.0'
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       endif
 
-      ! Detect missing values in 'all' dimensions (entire rows) of coordinates, if so, then mark this as missing (-1)
+      ! Detect missing values in any dimension of coordinates, if so,
+      ! then mark this as missing (-1)
       ! in the respective auxiliary coordinate
+      write(0,*) 'Missing value in axis ',i,': ',missingValue
 
       do j=1,coordDimCount(i)
 
@@ -1966,7 +2035,7 @@ module mossco_netcdf
         endif
 
         if (any(intptr1(:) < 1)) then
-          write(0,*) 'Coordinate ',i,' with missing values: ',intPtr1(:)
+          write(0,*) 'Coordinate axis ',i,' with missing values: ',intPtr1(:)
           ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
         endif
 
@@ -2274,7 +2343,7 @@ module mossco_netcdf
     type(ESMF_DELayout)                          :: delayout
     type(ESMF_Vm)                                :: Vm
 
-    rc_=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
 
     nullify(intPtr1)
 
@@ -2329,13 +2398,13 @@ module mossco_netcdf
 
     implicit none
     class(type_mossco_netcdf)                    :: self
-    type(ESMF_Field), intent(inout)               :: field
+    type(ESMF_Field), intent(inout)              :: field
     type(type_mossco_netcdf_variable)            :: var
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4), intent(in), optional  :: itime
 
     integer(ESMF_KIND_I4)                        :: localrc, udimid, localDeCount, rc_
-    integer(ESMF_KIND_I4)                        :: fieldRank, gridRank, itime_, j, i
+    integer(ESMF_KIND_I4)                        :: fieldRank, gridRank, itime_, j, i, k
     type(ESMF_FieldStatus_Flag)                  :: fieldStatus
     integer(ESMF_KIND_I4), allocatable           :: start(:), count(:), ubnd(:), lbnd(:)
     integer(ESMF_KIND_I4), allocatable           :: ncubnd(:),fstart(:)
@@ -2345,7 +2414,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), pointer                  :: netcdfPtr3(:,:,:)=>null()
     real(ESMF_KIND_R8), pointer                  :: netcdfPtr4(:,:,:,:)=>null()
     real(ESMF_KIND_R8), pointer                  :: farrayPtr3(:,:,:)=>null(), farrayPtr4(:,:,:,:)=>null()
-    character(len=ESMF_MAXSTR)                   :: message
+    character(len=ESMF_MAXSTR)                   :: message, name
 
     integer(ESMF_KIND_I4)                        :: deCount,localPet
     integer(ESMF_KIND_I4),allocatable            :: minIndexPDe(:,:), maxIndexPDe(:,:)
@@ -2357,13 +2426,13 @@ module mossco_netcdf
     rc_ = ESMF_SUCCESS
 
     if (present(itime)) then
-      itime_=itime
+      itime_ = itime
     else
-      itime_=1
+      itime_ = 1
     endif
 
     ! Test for field completeness and terminate if not complete
-    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+    call ESMF_FieldGet(field, status=fieldStatus, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2378,14 +2447,17 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (localDeCount==0) return
+    if (localDeCount == 0) then
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
 
     if (fieldRank > 4) then
       write(message, '(A)')  'Rank > 4 not implemented for reading field '
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      rc = ESMF_RC_NOT_IMPL
+      if (present(rc)) rc = ESMF_RC_NOT_IMPL
+      return
     endif
 
     call ESMF_FieldGet(field, grid=grid, rc=localrc)
@@ -2404,8 +2476,9 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    allocate(minIndexPDe(gridRank, deCount))
-    allocate(maxIndexPDe(gridRank, deCount))
+    !> @todo check error state
+    allocate(minIndexPDe(gridRank, deCount), stat=localrc)
+    allocate(maxIndexPDe(gridRank, deCount), stat=localrc)
 
     call ESMF_DistGridGet(distGrid, minIndexPDe=minIndexPDe, &
                                     maxIndexPDe=maxIndexPDe, rc=localrc)
@@ -2420,6 +2493,7 @@ module mossco_netcdf
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> @todo check error state
     allocate(start(fieldRank)); start(1:fieldRank) = 1
     allocate(count(fieldRank)); count(1:fieldRank)=1
     allocate(ubnd(fieldRank))
@@ -2461,8 +2535,14 @@ module mossco_netcdf
     enddo
 
     if (any(count <= 0)) then
-      write(0,*) 'count<0 for variable ',trim(var%name)
-      if (present(rc)) rc=ESMF_RC_CANNOT_GET
+      write(0,*) '  fstart = ', fstart
+      write(0,*) '  start = ', start
+      write(0,*) '  count = ', count
+      write(0,*) '  ncubnd = ', ncubnd
+      write(message,'(A)') '  count<0 for '
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (present(rc)) rc = ESMF_RC_CANNOT_GET
       return
     end if
 
@@ -2476,7 +2556,7 @@ module mossco_netcdf
       elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr1, (/start(1),itime_/), (/count(1),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2497,7 +2577,7 @@ module mossco_netcdf
       elseif (var%rank==fieldRank+1 .and. var%dimids(fieldRank+1) == self%timeDimId ) then
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr2, (/start(1),start(2),itime/), (/count(1),count(2),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2522,7 +2602,7 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr3, &
           (/start(1),start(2),start(3),itime_/), (/count(1),count(2), count(3),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc=ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2534,6 +2614,34 @@ module mossco_netcdf
                  fstart(2):fstart(2)+count(2)-1, &
                  fstart(3):fstart(3)+count(3)-1) &
         = netcdfPtr3
+
+      ! If the variable is an _in_water quality and the input is a collapsed 3rd dimension, then
+      ! fill the entire water column with this collapsed 3rd dimensions
+      if (index(name, '_in_water') > 1 .and. count(3) == 1 .and. (ubnd(3)-lbnd(3)+1 > 1)) then
+        do k = 0, ubnd(3) - lbnd(3)
+          farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                     fstart(2):fstart(2)+count(2)-1, &
+                     fstart(3)+k:fstart(3)+k) &
+            = netcdfPtr3
+        enddo
+      endif
+
+      ! If the variable is an _in_water quality and the input is a 2-dimensional dimension, then
+      ! fill the upper and the lower layer only
+      !> @todo this should be configurable
+      if (index(name, '_in_water') > 1 .and. count(3) == 2 .and. (ubnd(3)-lbnd(3)+1 > 1)) then
+        farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                   fstart(2):fstart(2)+count(2)-1, &
+                   fstart(3)+ 0) = netcdfPtr3(:,:,1)
+        farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                   fstart(2):fstart(2)+count(2)-1, &
+                   fstart(3)+ ubnd(3) - lbnd(3)) = netcdfPtr3(:,:,2)
+        do k = 1, ubnd(3) - lbnd(3) - 1
+          farrayPtr3(fstart(1):fstart(1)+count(1)-1, &
+                     fstart(2):fstart(2)+count(2)-1, &
+                     fstart(3)+k:fstart(3)+k) = 0.0D0
+        enddo
+      endif
 
       if (associated(netcdfPtr3)) deallocate(netcdfPtr3)
     elseif (fieldRank == 4) then
@@ -2547,7 +2655,7 @@ module mossco_netcdf
         localrc = nf90_get_var(self%ncid, var%varid, netcdfPtr4, &
           (/start(1),start(2),start(3),start(4),itime_/), (/count(1),count(2),count(3),count(4),1/))
       else
-        rc_ = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc=ESMF_RC_NOT_IMPL
         return
       endif
       if (localrc /= NF90_NOERR) then
@@ -2571,7 +2679,9 @@ module mossco_netcdf
     if (allocated(start)) deallocate(start)
     if (allocated(fstart)) deallocate(fstart)
 
-    if (present(rc)) rc=rc_
+    call self%getatt(field, var, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     return
 
@@ -2611,27 +2721,37 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_find_time_index"
-  subroutine mossco_netcdf_find_time_index(self, currTime, itime, rc)
+  subroutine mossco_netcdf_find_time_index(self, currTime, itime, kwe, jtime, weight, rc)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
-    integer(ESMF_KIND_I4), intent(out), optional :: rc, itime
     type(ESMF_Time), intent(in)                  :: currTime
+    integer(ESMF_KIND_I4), intent(out)           :: itime
+    logical, intent(in), optional                :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: jtime
+    real(ESMF_KIND_R8), intent(out), optional    :: weight
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_Time)                              :: refTime
-    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, ntime, varid
+    integer(ESMF_KIND_I4)                        :: i, rc_, jtime_
+    integer(ESMF_KIND_I4)                        :: localrc, ntime, varid
     real(ESMF_KIND_R8), allocatable              :: farray(:)
+    real(ESMF_KIND_R8)                           :: weight_
     integer(ESMF_KIND_I8)                        :: ticks
     character(ESMF_MAXSTR)                       :: timeUnit, message
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = rc_
+    if (present(rc)) rc = rc_
+
+    itime = 1
+    jtime_ = 1
+    weight_ = 0.0
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  no time variable found, choosing default time index 1', ESMF_LOGMSG_INFO)
-      itime_ = 1
     else
-
       call self%reftime(refTime, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2658,9 +2778,9 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      itime_ = 1
       ntime = self%dimlens(self%timeDimId)
       if (ntime < 1) then
+        !> @todo: this can actually be possible (if time is unlimited and no time-dependent data)
         call ESMF_LogWrite('  time dimension has length zero', ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -2683,18 +2803,31 @@ module mossco_netcdf
       !! Search for the largest index i with farray(i) <= ticks*1.0D0
       do i = 1, ntime
         if (farray(i) <= ticks*1.0D0) then
-          itime_=i
+          itime=i
         else
           exit
         endif
       enddo
-      if (farray(ntime) <= ticks*1.0D0) itime_ = ntime
+      if (farray(ntime) <= ticks*1.0D0) itime = ntime
+
+      if (farray(itime) == ticks*1.0D0) then
+        jtime_ = itime
+      else
+        jtime_ = itime + 1
+      endif
+
+      if (jtime_ > ntime) then
+        jtime_ = ntime
+      else
+        weight_ = (ticks*1.0D0 - farray(itime)) / (farray(jtime_) - farray(itime))
+      endif
 
       if (allocated(farray)) deallocate(farray)
     endif
 
+    if (present(weight)) weight=weight_
+    if (present(jtime)) jtime=jtime_
     if (present(rc)) rc=rc_
-    if (present(itime)) itime=itime_
 
   end subroutine mossco_netcdf_find_time_index
 
@@ -2714,13 +2847,14 @@ module mossco_netcdf
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable for reference time', ESMF_LOGMSG_INFO)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
     endif
 
     localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit for reference time', ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -2739,29 +2873,55 @@ module mossco_netcdf
   end subroutine mossco_netcdf_reftime
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "mossco_netcdf_maxtime"
-  subroutine mossco_netcdf_maxtime(self, maxTime, rc)
+#define ESMF_METHOD "MOSSCO_NcGetTime"
+!> @brief the method MOSSCO_NcGetTime returns for a netcdf object
+!> the ESMF Time for a requested index
+!> @param[currTime] :: required, out
+!> @param[searchIndex] :: optional, in, the index in the time array, default is 1
+!> @param[stopTime] :: the maximum time (last index) in the time array
+!> @param[startTime] :: the minimum time (first index) in the time array
+!> @param[refTime] :: the reference time  in the time variable
+  subroutine MOSSCO_NcGetTime(self, currTime, searchIndex, kwe, stopTime, startTime, refTime, rc)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
+    type(ESMF_Time), intent(out)                 :: currTime
+    integer(ESMF_KIND_I4), intent(in), optional  :: searchIndex
+    logical, optional                            :: kwe
+    type(ESMF_Time), intent(out), optional       :: startTime, refTime, stopTime
     integer(ESMF_KIND_I4), intent(out), optional :: rc
-    type(ESMF_Time), intent(out)                 :: maxTime
 
-    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid, ntime
+    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid, ntime, index_
     character(ESMF_MAXSTR)                       :: timeUnit, message
     type(ESMF_TimeInterval)                      :: timeInterval
     real(ESMF_KIND_R8), allocatable              :: farray(:)
+    type(ESMF_Time)                              :: refTime_
 
     rc_ = ESMF_SUCCESS
+    if (present(searchIndex)) then
+      index_ = searchIndex
+    else
+      index_ = 1
+    endif
 
-    call self%refTime(maxTime, rc=localrc)
+    call self%refTime(refTime_, rc=localrc)
+    if (localrc == ESMF_RC_NOT_FOUND) then
+      if (present(rc)) rc=localrc
+      return
+    endif
+
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (present(refTime)) refTime=refTime_
+
+    ! Default time is refTime
+    currTime = refTime_
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)//', no time variable'), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable to get time', ESMF_LOGMSG_INFO)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
     endif
 
     localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
@@ -2770,7 +2930,7 @@ module mossco_netcdf
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    i=index(timeunit,'since ')
+    i=index(timeUnit,'since ')
     if (i<1) then
       call ESMF_LogWrite('  unknown time unit "'//trim(timeUnit)//'"', ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2779,35 +2939,79 @@ module mossco_netcdf
     timeUnit=timeUnit(1:i-2)
 
     ntime = self%dimlens(self%timeDimId)
-    allocate(farray(ntime))
+    if (allocated(farray)) deallocate(farray)
+    allocate(farray(ntime), stat=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (index_ < 1) index_ = 1
+    if (index_ > ntime) index_ = ntime
 
     localrc = nf90_get_var(self%ncid, varid, farray)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    select case(trim(timeUnit))
-      case ('seconds')
-        call ESMF_TimeIntervalSet(timeInterval, s_r8=farray(ntime), rc=localrc)
-      case ('hours')
-        call ESMF_TimeIntervalSet(timeInterval, h_r8=farray(ntime), rc=localrc)
-      case ('days')
-        call ESMF_TimeIntervalSet(timeInterval, d_r8=farray(ntime), rc=localrc)
-      case ('years')
-        call ESMF_TimeIntervalSet(timeInterval, yy=int(farray(ntime)), rc=localrc)
-      case default
-        call ESMF_LogWrite('  time unit "'//trim(timeUnit)//'" not implemented', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    end select
+    if (size(farray) == 0) then
+      currTime = refTime_
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(index_), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    currTime = refTime_ + timeInterval
+
+    if (present(startTime)) then
+      call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      startTime = refTime_ + timeInterval
+    endif
+
+    if (present(stopTime)) then
+      call MOSSCO_TimeIntervalFromTimeValue(timeInterval, timeUnit, farray(1), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      stopTime = refTime_ + timeInterval
+    endif
+
     if (allocated(farray)) deallocate(farray)
-
-    maxTime=maxTime + timeInterval
-
     if (present(rc)) rc=rc_
 
-  end subroutine mossco_netcdf_maxtime
+  end subroutine MOSSCO_NcGetTime
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_TimeIntervalFromTimeValue"
+  subroutine MOSSCO_TimeIntervalFromTimeValue(timeInterval, unit, value, rc)
+
+    type(ESMF_TimeInterval), intent(out) :: timeInterval
+    character(len=*), intent(in)         :: unit
+    real(ESMF_KIND_R8)                   :: value
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc
+
+    select case(trim(unit))
+    case ('seconds')
+      call ESMF_TimeIntervalSet(timeInterval, s_r8=value, rc=localrc)
+    case ('hours')
+      call ESMF_TimeIntervalSet(timeInterval, h_r8=value, rc=localrc)
+    case ('days')
+      call ESMF_TimeIntervalSet(timeInterval, d_r8=value, rc=localrc)
+    case ('years')
+      call ESMF_TimeIntervalSet(timeInterval, yy=int(value), rc=localrc)
+    case default
+      call ESMF_LogWrite('  time unit "'//trim(unit)//'" not implemented', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    end select
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    return
+  end subroutine MOSSCO_TimeIntervalFromTimeValue
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_GetFreeLun"
@@ -2848,10 +3052,11 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)            :: int8
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
-    character(len=ESMF_MAXSTR)       :: attributeName, string
+    character(len=ESMF_MAXSTR)       :: attributeName, string, message
     type(ESMF_Typekind_Flag)         :: typeKind
+    logical                          :: logValue
 
-    rc_=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
     ncStatus=NF90_NOERR
 
     if (present(varid)) then
@@ -2882,10 +3087,20 @@ module mossco_netcdf
       elseif (typekind==ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(array, attributeName, real8, rc=localrc)
         ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
-      else
-        call ESMF_AttributeGet(array, attributeName, string, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
-      endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(array, attributeName, string, rc=rc)
+        ncStatus = nf90_put_att(ncid,varid,trim(attributeName), trim(string))
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_AttributeGet(array, attributeName, logvalue, rc=rc)
+        if (logValue) then
+          ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.true.')
+       else
+           ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.false.')
+       endif
+     else
+       write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+     endif
     enddo
 
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2915,10 +3130,11 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)            :: int8
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
-    character(len=ESMF_MAXSTR)       :: attributeName, string
+    character(len=ESMF_MAXSTR)       :: attributeName, string, message
     type(ESMF_Typekind_Flag)         :: typeKind
+    logical                          :: logValue
 
-    rc_=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
     ncStatus=NF90_NOERR
 
     if (present(varid)) then
@@ -2949,10 +3165,20 @@ module mossco_netcdf
       elseif (typekind==ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(state, attributeName, real8, rc=localrc)
         ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
-      else
-        call ESMF_AttributeGet(state, attributeName, string, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
-      endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(state, attributeName, string, rc=rc)
+        ncStatus = nf90_put_att(ncid,varid,trim(attributeName), trim(string))
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_AttributeGet(state, attributeName, logvalue, rc=rc)
+        if (logValue) then
+          ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.true.')
+       else
+           ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.false.')
+       endif
+     else
+       write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+     endif
     enddo
 
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -2978,20 +3204,28 @@ module mossco_netcdf
     integer, intent(out), optional   :: rc
 
     integer(ESMF_KIND_I4)            :: attributeCount, rc_, localrc, int4, ncStatus
-    integer(ESMF_KIND_I4)            :: varid_, i
+    integer(ESMF_KIND_I4)            :: varid_, i, precision
     integer(ESMF_KIND_I8)            :: int8
     real(ESMF_KIND_R8)               :: real8
     real(ESMF_KIND_R4)               :: real4
-    character(len=ESMF_MAXSTR)       :: attributeName, string
+    character(len=ESMF_MAXSTR)       :: attributeName, string, message
     type(ESMF_Typekind_Flag)         :: typeKind
+    logical                          :: logValue
 
-    rc_=ESMF_SUCCESS
-    ncStatus=NF90_NOERR
+    rc_ = ESMF_SUCCESS
+    ncStatus = NF90_NOERR
 
     if (present(varid)) then
       varid_=varid
     else
       varid_=0 !> @todo get_globals here!
+    endif
+
+    ncStatus = nf90_inquire_variable(ncid, varid_, xtype = precision)
+    if (ncStatus /= NF90_NOERR) then
+      write(message, '(A)') '  '//trim(nf90_strerror(ncStatus)//', could not get precision')
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_AttributeGet(field, count=attributeCount, rc=localrc)
@@ -3000,9 +3234,12 @@ module mossco_netcdf
 
     do i=1, attributeCount
       call ESMF_AttributeGet(field, attributeIndex=i, name=attributeName, &
-        typekind=typekind, rc=rc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        typekind=typekind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
+        write(0,*) i, attributeName, typeKind
+        cycle
+        !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
 
       if (typekind==ESMF_TYPEKIND_I4) then
         call ESMF_AttributeGet(field, attributeName, int4, rc=localrc)
@@ -3012,14 +3249,36 @@ module mossco_netcdf
         ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),int8)
       elseif (typekind==ESMF_TYPEKIND_R4) then
         call ESMF_AttributeGet(field, attributeName, real4, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
+        if ((  trim(attributeName) == 'missing_value' &
+          .or. trim(attributeName) == '_FillValue')    &
+          .and. precision == NF90_DOUBLE) then
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),dble(real4))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real4)
+        endif
       elseif (typekind==ESMF_TYPEKIND_R8) then
         call ESMF_AttributeGet(field, attributeName, real8, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
-      else
-        call ESMF_AttributeGet(field, attributeName, string, rc=localrc)
-        ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),trim(string))
-      endif
+        if ((  trim(attributeName) == 'missing_value' &
+          .or. trim(attributeName) == '_FillValue')    &
+          .and. precision == NF90_REAL) then
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real(real8))
+        else
+          ncStatus = nf90_put_att(ncid,varid_,trim(attributeName),real8)
+        endif
+      elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(field, attributeName, string, rc=rc)
+        ncStatus = nf90_put_att(ncid,varid,trim(attributeName), trim(string))
+      elseif (typekind==ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_AttributeGet(field, attributeName, logvalue, rc=rc)
+        if (logValue) then
+          ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.true.')
+       else
+           ncStatus = nf90_put_att(ncid,varid,trim(attributeName),'.false.')
+       endif
+     else
+       write(message, '(A,I2)') '  attribute '//trim(attributeName)//' has unknown typekind ',typeKind
+       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+     endif
     enddo
 
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -3033,5 +3292,101 @@ module mossco_netcdf
     if (present(rc)) rc=rc_
 
   end subroutine MOSSCO_AttributeNetcdfWriteField
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_var_get_att"
+  subroutine mossco_netcdf_var_get_att(self, field, var, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    type(ESMF_Field), intent(inout)              :: field
+    type(type_mossco_netcdf_variable)            :: var
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                        :: localrc, rc_, attributeCount
+    integer(ESMF_KIND_I4)                        :: i
+
+    integer(ESMF_KIND_I4)                        :: int4, attributeType, attributeLength
+    integer(ESMF_KIND_I8)                        :: int8
+    real(ESMF_KIND_R8)                           :: real8
+    real(ESMF_KIND_R4)                           :: real4
+    character(len=ESMF_MAXSTR)                   :: attributeName, string
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_inquire_variable(self%ncid, var%varid, nAtts=attributeCount)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    do i=1, attributeCount
+
+      localrc = nf90_inq_attname(self%ncid, var%varid, i, attributeName)
+      if (localrc /= NF90_NOERR) then
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      localrc = nf90_inquire_attribute(self%ncid, var%varid, attributeName, &
+        xtype=attributeType, len=attributeLength)
+      if (localrc /= NF90_NOERR) then
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      ! Defined values for attributeType are:
+      ! NF90_BYTE, NF90_CHAR, NF90_SHORT, NF90_INT, NF90_FLOAT, and NF90_DOUBLE.
+
+      if (attributeType == NF90_CHAR) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  string)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), trim(string), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        cycle
+      endif
+
+      if (attributeLength>1) then
+        localrc = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = localrc
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) return
+      endif
+
+      if (attributeType == NF90_DOUBLE) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  real8)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), real8, rc=localrc)
+      elseif (attributeType == NF90_FLOAT) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  real4)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), real4, rc=localrc)
+      elseif (attributeType == NF90_INT) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName, int8)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName),int8, rc=localrc)
+      elseif (attributeType == NF90_SHORT) then
+        localrc = nf90_get_att(self%ncid, var%varid, attributeName,  int4)
+        if (localrc /= NF90_NOERR) then
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+        call ESMF_AttributeSet(field, trim(attributeName), int4, rc=localrc)
+      else
+        localrc = ESMF_RC_NOT_IMPL
+        if (present(rc)) rc = localrc
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) return
+      endif
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
+    if (present(rc)) rc = rc_
+
+  end subroutine mossco_netcdf_var_get_att
 
 end module

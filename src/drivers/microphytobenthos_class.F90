@@ -59,10 +59,10 @@ implicit none
 
 class (Microphytobenthos)  :: this
 real (fp), dimension (:,:), pointer, optional  :: spatialvar
-character (len = 10), optional  :: Biounit
+character (len = 255), optional  :: Biounit
 
 real (fp), dimension (:,:), allocatable  :: Biomass
-character (len = 10)       :: units
+character (len = 255)       :: units
 integer                    :: StringLength, UnitNr, istat
 logical                    :: opnd, exst
 real (fp)                  :: Mass

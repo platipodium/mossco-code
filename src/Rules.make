@@ -71,6 +71,12 @@ else
       ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     endif
   endif
+  ESMF_OPENMP = $(strip $(shell grep "\# ESMF_OPENMP:" $(ESMFMKFILE) | cut -d':' -f2-))
+  ifeq ("$(ESMF_OPENMP)","OFF")
+    export MOSSCO_OMP ?= false
+  else
+    export MOSSCO_OMP ?= true
+  endif
   ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
     export MOSSCO_NETCDF ?= true
@@ -317,7 +323,7 @@ endif
 ifeq ($(MOSSCO_GOTM),true)
   export GOTM_LIBRARY_PATH=$(GOTM_PREFIX)/lib
   GOTM_LIBS:=-lgotm -lairsea -lmeanflow -loutput
-  GOTM_LIBS+=-lobservations -linput -lturbulence -lutil
+  GOTM_LIBS+=-lobservations -linput -lturbulence $(GOTM_PREFIX)/lib/libutil.a
   #export GOTM_LIBRARY_PATH=$(GOTMDIR)/lib/$(FORTRAN_COMPILER)
   #GOTM_LIBS:=-lgotm_prod -lairsea_prod -lmeanflow_prod -lseagrass_prod -loutput_prod
   #GOTM_LIBS+=-lobservations_prod -linput_prod -lturbulence_prod -lutil_prod
@@ -364,6 +370,11 @@ ifeq ($(MOSSCO_GETM),true)
   export GETM_CPPFLAGS += -I$(GETMDIR)/include -I$(GETMDIR)/modules/$(FORTRAN_COMPILER)
   export GETM_CPPFLAGS += -I$(GOTM_PREFIX)/include
   export GETM_LDFLAGS = $(GETM_LINKDIRS) $(GETM_LIBS)
+
+  ifeq ($(GETM_SLICE_MODEL),true)
+    DEFINES += -DGETM_SLICE_MODEL
+  endif
+
 endif
 export MOSSCO_GETM
 
@@ -574,10 +585,9 @@ INCLUDES += -I$(MOSSCO_DIR)/src/include
 
 #!> @todo expand existing F90FLAGS var but check for not duplicating the -J entry
 CFLAGS = $(MOSSCO_CFLAGS) $(ESMF_CXXCOMPILEOPTS)
-F90FLAGS = $(MOSSCO_FFLAGS) $(ESMF_F90COMPILEOPTS)
 #F90FLAGS += $(HAMSOM_FFLAGS)
 ifeq ($(FORTRAN_COMPILER),GFORTRAN)
-F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH) $(MOSSCO_FFLAGS)
+F90FLAGS += -O3 -J$(MOSSCO_MODULE_PATH)
 #F90FLAGS += -ffast-math -march=native -fstack-arrays -fno-protect-parens
 # -flto crashes on darwin
 EXTRA_CPP=
@@ -633,6 +643,13 @@ ifeq ($(FORTRAN_COMPILER),XLF)
 CPPFLAGS += -WF,-DMOSSCO_MPI
 else
 CPPFLAGS += -DMOSSCO_MPI
+endif
+endif
+ifeq ("x$(MOSSCO_OMP)","xtrue")
+ifeq ($(FORTRAN_COMPILER),XLF)
+CPPFLAGS += -WF,-DMOSSCO_OMP
+else
+CPPFLAGS += -DMOSSCO_OMP
 endif
 endif
 export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.
@@ -711,7 +728,7 @@ fabm_build:
 ifeq ($(MOSSCO_FABM),true)
 ifndef MOSSCO_FABM_BINARY_DIR
 	@mkdir -p $(FABM_BINARY_DIR)
-	(cd $(FABM_BINARY_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST))
+	(cd $(FABM_BINARY_DIR) && cmake $(FABMDIR)/src -DCMAKE_INSTALL_PREFIX=$(FABM_PREFIX) -DFABM_HOST=$(FABMHOST) -DCMAKE_Fortran_FLAGS="$(FABM_FFLAGS)")
 endif
 endif
 
@@ -775,7 +792,7 @@ gotm_build:
 ifeq ($(MOSSCO_GOTM),true)
 ifndef MOSSCO_GOTM_BINARY_DIR
 	@mkdir -p $(GOTM_BINARY_DIR)
-	(cd $(GOTM_BINARY_DIR) && cmake $(GOTMDIR)/src -DCMAKE_INSTALL_PREFIX=$(GOTM_PREFIX) -DGOTM_USE_FABM=OFF)
+	(cd $(GOTM_BINARY_DIR) && cmake $(GOTMDIR)/src -DCMAKE_INSTALL_PREFIX=$(GOTM_PREFIX) -DGOTM_USE_FABM=OFF -DCMAKE_Fortran_FLAGS="$(GOTM_FFLAGS)")
 endif
 endif
 

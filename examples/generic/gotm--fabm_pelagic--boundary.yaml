@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 1D coupling
+# between gotm, pelagic ecosystem, and forcing by
+# in situ or climatological data
+#
+# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+dependencies:
+  - boundary_input:
+    - component: gotm
+      grid: temperature_in_water
+  - restart:
+    - component: gotm
+      grid: temperature_in_water
+  - fabm_pelagic:
+    - component: gotm
+      grid: temperature_in_water
+
+instances:
+  - mossco_jfn: netcdf
+  - restart: netcdf_input
+  - boundary_input: netcdf_input
+
+coupling:
+  - components:
+     - boundary_input
+     - nudge_connector
+     - fabm_pelagic
+    interval: 20 m
+  - components:
+     - restart
+     - fabm_pelagic
+    interval: none
+  - components:
+     - gotm
+     - fabm_pelagic
+    interval: 20 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - gotm
+    interval: none
+  - components:
+     - gotm
+     - mossco_jfn
+    interval: 30 h
+  - components:
+     - fabm_pelagic
+     - mossco_jfn
+    interval: 30 h

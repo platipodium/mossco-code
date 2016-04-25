@@ -105,7 +105,7 @@ else
 endif
 
 gotm_clone:
-ifeq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
+ifeq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
 	$(GIT) clone http://git.code.sf.net/p/gotm/code $(external_GOTMDIR)
 else
 	$(MAKE) gotm_update

@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister
 
 !
@@ -15,6 +15,7 @@
 module toplevel_component
 
   use esmf
+  use mossco_component
 
   ! Registration routines for fabm
   use fabm_sediment_component, only : fabmsed_SetServices => SetServices
@@ -41,7 +42,7 @@ module toplevel_component
 #ifdef MOSSCO_EROSED
   type(ESMF_GridComp), save    :: erosedComp
 #endif
-  type(ESMF_GridComp), save    :: netcdfComp  
+  type(ESMF_GridComp), save    :: netcdfComp
   type(ESMF_CplComp),save      :: pbCplComp,bpCplComp, linkConn
   type(ESMF_State),save,target :: state, constantState
   type(ESMF_State),pointer     :: pelagicstate,sedimentstate
@@ -60,7 +61,7 @@ module toplevel_component
   end subroutine SetServices
 
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -122,7 +123,7 @@ module toplevel_component
     pbCplComp = ESMF_CplCompCreate(name="pbCoupler",rc=rc)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
     call ESMF_CplCompSetServices(pbCplComp,pb_coupler_SetServices, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT) 
+    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !> State for exchange (only one generic)
     !! keep pelagicstate and sedimentstate as used before 2014-03-20
@@ -172,7 +173,7 @@ module toplevel_component
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -203,7 +204,7 @@ module toplevel_component
 
       !> run grid components
       call ESMF_GridCompGet(gotmComp,clockIsPresent=clockIsPresent)
-      if (clockIsPresent) then 
+      if (clockIsPresent) then
         call ESMF_GridCompGet(gotmComp,clock=childClock)
         call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
       else
@@ -213,7 +214,7 @@ module toplevel_component
 
 #ifdef MOSSCO_EROSED
       call ESMF_GridCompGet(erosedComp,clockIsPresent=clockIsPresent)
-      if (clockIsPresent) then 
+      if (clockIsPresent) then
         call ESMF_GridCompGet(erosedComp,clock=childClock)
         call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
       else
@@ -223,7 +224,7 @@ module toplevel_component
 #endif
 
       call ESMF_GridCompGet(fabmgotmComp,clockIsPresent=clockIsPresent)
-      if (clockIsPresent) then 
+      if (clockIsPresent) then
         call ESMF_GridCompGet(fabmgotmComp,clock=childClock)
         call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
       else
@@ -232,7 +233,7 @@ module toplevel_component
       call ESMF_GridCompRun(fabmgotmComp, importState=sedimentstate, exportState=pelagicstate, clock=parentClock, rc=rc)
 
       call ESMF_GridCompGet(fabmsedComp,clockIsPresent=clockIsPresent)
-      if (clockIsPresent) then 
+      if (clockIsPresent) then
         call ESMF_GridCompGet(fabmsedComp,clock=childClock)
         call ESMF_ClockSet(childClock,stopTime=currTime+cplInterval)
       else
@@ -244,7 +245,7 @@ module toplevel_component
       !  call ESMF_GridCompGet(gotmComp,clock=childClock)
       !  call ESMF_ClockGetAlarm(childClock,'outputAlarm', alarm, rc=rc)
       !  write(0,*) rc
-      
+
       if (mod(advanceCount,240)==0) then
         call ESMF_GridCompGet(netcdfComp,clock=childClock)
         call ESMF_TimeIntervalGet(cplInterval,s_r8=dt,rc=rc)
@@ -253,21 +254,21 @@ module toplevel_component
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
         call ESMF_ClockSet(childClock,stopTime=currTime+outputInterval,rc=rc)
         if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-        !call ESMF_GridCompRun(netcdfComp, & 
+        !call ESMF_GridCompRun(netcdfComp, &
         !  importState=sedimentstate, exportState=sedimentstate, clock=parentClock, rc=rc)
-      end if      
+      end if
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
-    enddo 
+    enddo
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
- 
+
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -316,7 +317,7 @@ module toplevel_component
 
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
     if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-   
+
     rc=ESMF_SUCCESS
 
   end subroutine Finalize

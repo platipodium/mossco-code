@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF toplevel coupling
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -13,6 +13,7 @@
 module toplevel_component
 
   use esmf
+  use mossco_component
 
   ! Registration routines for fabm0d
   use fabm0d_component, only : fabm0d_SetServices => SetServices
@@ -41,7 +42,7 @@ module toplevel_component
   end subroutine SetServices
 
   subroutine Initialize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
@@ -67,7 +68,7 @@ module toplevel_component
    ! Create FABMSED component, call setservices, and create states
     fabmsedComp = ESMF_GridCompCreate(name="fabmsedComp", grid=grid, rc=rc)
     call ESMF_GridCompSetServices(fabmsedComp,fabmsed_SetServices, rc=rc)
-    
+
     fabmsedImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabmsedImp")
     fabmsedExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabmsedExp")
 
@@ -79,7 +80,7 @@ module toplevel_component
     ! Create FABM0D component, call setservices, and create states
     fabm0dComp = ESMF_GridCompCreate(name="fabm0dComp", grid=grid, rc=rc)
     call ESMF_GridCompSetServices(fabm0dComp,fabm0d_SetServices, rc=rc)
-    
+
     fabm0dImp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_IMPORT,name="fabm0dImp")
     fabm0dExp = ESMF_StateCreate(stateintent=ESMF_STATEINTENT_EXPORT,name="fabm0dExp")
 
@@ -88,12 +89,12 @@ module toplevel_component
 
     call ESMF_GridCompInitialize(fabm0dComp, importState=fabm0dImp, exportState=fabm0dExp, clock=parentClock, rc=rc)
 
-    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO) 
+    call ESMF_LogWrite("Toplevel component initialized",ESMF_LOGMSG_INFO)
 
   end subroutine Initialize
 
   subroutine Run(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -108,15 +109,15 @@ module toplevel_component
 
       call ESMF_ClockAdvance(parentClock, rc=rc)
       if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-      
-    enddo 
+
+    enddo
 
     call ESMF_LogWrite("Toplevel component finished running. ",ESMF_LOGMSG_INFO)
- 
+
   end subroutine Run
 
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
-    
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
@@ -130,7 +131,7 @@ module toplevel_component
     call ESMF_GridCompDestroy(fabm0dComp, rc=rc)
 
     call ESMF_LogWrite("Toplevel component finalized",ESMF_LOGMSG_INFO)
-   
+
     rc=ESMF_SUCCESS
 
   end subroutine Finalize

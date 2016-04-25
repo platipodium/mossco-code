@@ -1,0 +1,47 @@
+dependencies:
+  - fabm_pelagic:
+    - component: gotm
+      grid: temperature_in_water
+  - fabm_sediment:
+    - component: gotm
+      grid: temperature_at_soil_surface
+
+instances:
+  - mossco_jfs : netcdf
+  
+coupling:
+  - components:
+     - gotm
+     - fabm_pelagic
+    interval: 1 h
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - gotm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval: 1 h
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
+    interval: 1 h
+  - components:
+     - constant
+     - fabm_sediment
+    interval: 1 yy
+  - components:
+     - fabm_sediment
+     - mossco_jfs
+    interval: 1 d
+  - components:
+     - gotm
+     - mossco_jfs
+    interval: 1 d
+  - components:
+     - fabm_pelagic
+     - mossco_jfs
+    interval: 1 d

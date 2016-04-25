@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 3D coupling
+# between getm, pelagic and sediment ecosystem, and forcing by
+# porosity, rivers, and lateral boundaries
+#
+# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+
+dependencies:
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - restart_soil:
+    - component: fabm_sediment
+      grid: temperature_in_soil
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - fabm_sediment:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - river_input:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - boundary_input:
+    - component: getm
+      grid: temperature_in_water
+  - porosity_input:
+    - component: getm
+      grid: temperature_at_soil_surface
+
+instances:
+  - mossco_gfnsrp: netcdf
+  - boundary_input: netcdf_input
+  - river_input: netcdf_input
+  - restart_soil: netcdf_input
+  - restart_water: netcdf_input
+  - porosity_input: netcdf_input
+
+coupling:
+  - components:
+     - boundary_input
+     - nudge_connector
+     - fabm_pelagic
+    interval:  1 d
+  - components:
+     - porosity_input
+     - fabm_sediment
+    interval: none
+  - components:
+     - restart_water
+     - fabm_pelagic
+    interval: none
+  - components:
+     - restart_soil
+     - fabm_sediment
+    interval: none
+  - components:
+     - river_input
+     - fabm_pelagic
+    interval: 1 d
+  - components:
+     - constant
+     - fabm_sediment
+    interval: none
+  - components:
+     - getm
+     - fabm_sediment
+    interval: 30 m
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval:  30 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - getm
+     - mossco_gfnsrp
+    interval: 60 h
+  - components:
+     - fabm_pelagic
+     - mossco_gfnsrp
+    interval: 60 h
+  - components:
+     - fabm_sediment
+     - mossco_gfnsrp
+    interval: 60 h

@@ -41,7 +41,7 @@ implicit none
 
 class (BenthosEffect) :: this
 real(kind=8), dimension (:,:), pointer, optional  :: spatialvar
-character (len = 10), optional  :: Biounit
+character (len = 255), optional  :: Biounit
 
 end subroutine setting
 

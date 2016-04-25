@@ -34,7 +34,7 @@ integer                            :: i, j
 
  do j = 1, jnum
   do i = 1, inum
-     if (trim(Chl%units) == 'mgg' ) then
+     if (trim(Chl%units) == 'mgg**-1' ) then
         g_erod_microphyto (i,j)= 1. - 0.018 * Chl%amount(i,j) ! Paarlberg et al (2005)
      else
         g_erod_microphyto= 1.0
@@ -77,23 +77,22 @@ real (fp)    :: b2     = 5.08e-8
  do j = 1, jnum
   do i = 1, inum
 
-    if (trim(Mbalthica%units) == 'ind.m**-2' )  then
-      if ((Mbalthica%intensity (i,j)==0.0_fp) ) then
+    if (trim(Mbalthica%units) == 'm**-2' )  then
+      if ((Mbalthica%intensity (i,j)<=1.0_fp) ) then
 
-        g_erod_Macrofauna = 1.0
-        exit
+        g_erod_Macrofauna (i,j)= 1.0
+        cycle
 
       else
-
-        g_erod_Macrofauna (i,j)=    b2 * gammaa /II/(b2 + gammaa * b1** Mbalthica%intensity(i,j)) ! Paarlberg et al (2005)
-
+         g_erod_Macrofauna (i,j)= 1.0   ! due to large uncertainity on validity of the following equation it is left
+!        g_erod_Macrofauna (i,j)=    b2 * gammaa /II/(b2 + gammaa * b1** Mbalthica%intensity(i,j)) ! Paarlberg et al (2005)
       end if
 
-    else if(trim(Mbalthica%units) == 'gCm-2' ) then   ! according to Borsje et al. (2008)
-      if (Mbalthica%amount(i,j) == 0.0_fp ) then
+    else if(trim(Mbalthica%units) == 'gCm**-2' ) then   ! according to Borsje et al. (2008)
+      if (Mbalthica%amount(i,j) <= 1.0_fp ) then
 
-        g_erod_Macrofauna = 1.0
-        exit
+        g_erod_Macrofauna (i,j)= 1.0
+        cycle
       else
 
         g_erod_Macrofauna (i,j) = 0.4989 * log (Mbalthica%amount(i,j)) +0.952

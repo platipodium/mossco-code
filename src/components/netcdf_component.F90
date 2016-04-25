@@ -1,7 +1,7 @@
 !> @brief Implementation of an ESMF netcdf output component
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 
 !
@@ -87,7 +87,7 @@ module netcdf_component
     integer, intent(out)  :: rc
 
     character(len=10)           :: InitializePhaseMap(1)
-    character(len=ESMF_MAXSTR)  :: name, message
+    character(len=ESMF_MAXSTR)  :: name
     type(ESMF_Time)             :: currTime
     integer                     :: localrc
 
@@ -130,12 +130,12 @@ module netcdf_component
     character(len=ESMF_MAXSTR) :: name, configFileName, fileName
     character(len=4096)        :: message
     type(ESMF_Time)            :: currTime
-    integer(ESMF_KIND_I4)      :: localrc, j, n
-    logical                    :: isPresent, fileIsPresent, labelIsPresent, configIsPresent
+    integer(ESMF_KIND_I4)      :: localrc
+    logical                    :: fileIsPresent, labelIsPresent, configIsPresent
     type(ESMF_Config)          :: config
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
 
-    rc=ESMF_SUCCESS
+    rc  = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -181,7 +181,7 @@ module netcdf_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)') trim(fileName(1:ESMF_MAXSTR))
+        write(message,'(A)') trim(name)
         call MOSSCO_MessageAdd(message,' found in file')
         call MOSSCO_MessageAdd(message,trim(configFileName))
         call MOSSCO_MessageAdd(message,' filename: '//trim(fileName))
@@ -248,10 +248,20 @@ module netcdf_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    rc=ESMF_SUCCESS
+    integer(ESMF_KIND_I4) :: localrc
+
+    rc = ESMF_SUCCESS
 
     !> Here omes your restart code, which in the simplest case copies
     !> values from all fields in importState to those in exportState
+
+    call ESMF_StateReconcile(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateReconcile(exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
 
@@ -266,34 +276,23 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer, intent(out) :: rc
 
     character(len=19)       :: timestring
-    type(ESMF_Time)         :: currTime, currentTime, ringTime, time, refTime, startTime, stopTime, maxTime
-    type(ESMF_TimeInterval) :: timeInterval, timeStep
-    integer(ESMF_KIND_I8)   :: i, j, n, advanceCount
+    type(ESMF_Time)         :: currTime, refTime
+    type(ESMF_Time)         :: startTime, stopTime, maxTime, minTime
+    type(ESMF_TimeInterval) :: timeStep
+    integer(ESMF_KIND_I8)   :: i, j, advanceCount
     real(ESMF_KIND_R8)      :: seconds
-    integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet, fieldCount, ii, petCount
-    integer(ESMF_KIND_I4)   :: localDeCount, localrc
-    integer(ESMF_KIND_I4), dimension(:), allocatable :: totalUBound, totalLBound
+    integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet,  petCount
+    integer(ESMF_KIND_I4)   :: localrc
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
-    type(ESMF_Field)        :: field
-    type(ESMF_Field), allocatable, dimension(:) :: fieldList
-    type(ESMF_Array)        :: array
-    type(ESMF_FieldBundle)  :: fieldBundle
-    type(ESMF_ArrayBundle)  :: arrayBundle
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
-    character(len=ESMF_MAXSTR) :: fieldName
-    character(len=3)        :: numberstring
     type(ESMF_Clock)        :: clock
-    logical                 :: clockIsPresent, isMatch, isPresent
+    logical                 :: isMatch
     character(len=ESMF_MAXSTR) :: form
-    type(ESMF_VM)              :: vm
 
-    character(len=ESMF_MAXSTR) :: message, fileName, name, numString, timeUnit
-    type(ESMF_FileStatus_Flag) :: fileStatus=ESMF_FILESTATUS_REPLACE
-    type(ESMF_IOFmt_Flag)      :: ioFmt
+    character(len=ESMF_MAXSTR) :: message, fileName, name, timeUnit
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
-    type(ESMF_log)             :: log
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -377,12 +376,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       !! Check for monotonic time, if not, then set itemCount=0 to skip writing of
       !! variables.  Continue an error message
 
-      maxTime=currTime
-      !call nc%maxTime(maxTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call nc%timeGet(minTime, searchIndex=1, stopTime=maxTime, rc=localrc)
+      if (localrc == ESMF_RC_NOT_FOUND .or. maxTime < currTime) then
+        call nc%add_timestep(seconds, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      elseif (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (currTime < maxTime) then
+      elseif (maxTime > currTime) then
         call ESMF_TimeGet(currTime, timeStringISOFrac=timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -395,12 +396,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
 
         itemCount=0
-
-      else
-
-        call nc%add_timestep(seconds, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       call nc%update()
@@ -563,12 +558,12 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent
+    character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)   :: localrc
+
+    rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -591,11 +586,11 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_fieldbundle_write"
-  subroutine nc_state_fieldbundle_write(state, bundleName, keywordEnforcer, rc)
+  subroutine nc_state_fieldbundle_write(state, bundleName, kwe, rc)
 
     type(ESMF_State), intent(in)           :: state
     character(len=*), intent(in)           :: bundleName
-    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
+    type(ESMF_KeywordEnforcer), optional   :: kwe
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_FieldBundle)              :: fieldBundle
@@ -604,7 +599,9 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     character(ESMF_MAXSTR)              :: numberString
     type(ESMF_StateItem_Flag)           :: itemType
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc))  rc = rc_
 
     call ESMF_StateGet(state, trim(bundleName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -648,18 +645,20 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_field_write"
-  subroutine nc_state_field_write(state, fieldName, keywordEnforcer, rc)
+  subroutine nc_state_field_write(state, fieldName, kwe, rc)
 
     type(ESMF_State), intent(in)           :: state
     character(len=*), intent(in)           :: fieldName
-    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
+    type(ESMF_KeywordEnforcer), optional   :: kwe
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_Field)           :: field
     type(ESMF_StateItem_Flag)  :: itemType
     integer(ESMF_KIND_I4)      :: localrc, rc_
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc))  rc = rc_
 
     call ESMF_StateGet(state, trim(fieldName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -684,17 +683,19 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_field_write"
-  subroutine nc_field_write(field, keywordEnforcer, postFix, rc)
+  subroutine nc_field_write(field, kwe, postFix, rc)
 
     type(ESMF_Field), intent(inout)        :: field
-    type(ESMF_KeywordEnforcer), optional   :: keywordEnforcer
+    type(ESMF_KeywordEnforcer), optional   :: kwe
     character(len=*), intent(in), optional :: postFix
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     integer(ESMF_KIND_I4)               :: localDeCount, localrc, rc_
     character(ESMF_MAXSTR)              :: fieldName
 
-    if (present(rc)) rc=ESMF_SUCCESS
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc))  rc = rc_
 
     call ESMF_FieldGet(field, name=fieldName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &

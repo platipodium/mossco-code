@@ -11,6 +11,7 @@ time_units = netcdf.getAtt(ncid,varid,'units');
 t_offset = datenum(time_units(15:end),'yyyy-mm-dd HH:MM:SS');
 time= (ncread(ncfile,'time')/86400)+t_offset;
 year= floor(time/365.25);
+doy=floor(mod(time,365.25)+1);
 
 if IsSoil
   soil_dz   = squeeze(ncread(ncfile,'layer_height_in_soil'));
@@ -27,6 +28,7 @@ if IsWater
      water_dz=ones(nz,length(time));
   end
   water_depth= cumsum(water_dz,1);
+  depth = unique(water_depth);
   water_dzt  = squeeze(sum(water_dz,1));
 end
 % Get name and length of first dimension
@@ -36,4 +38,28 @@ end
 %for i=nv(1)+1:nv(2)  vinfo = ncinfo(ncfile,[ms var2{i}]);
 %  if length(vinfo.Size) < 4, Is2D(i)=1; end
 %end
+i_loc=[1 1];
+if length(loc) >0 | nfigm>0
+ % reading geo-coordinates
+ varid=netcdf.inqVarID(ncid,'getmGrid3D_getm_lon');
+% [id loni]=netcdf.inqDim(ncid,varid);
+ lon=netcdf.getVar(ncid,varid);
 
+ varid=netcdf.inqVarID(ncid,'getmGrid3D_getm_lat');
+% [id lati]=netcdf.inqDim(ncid,varid);
+ lat=netcdf.getVar(ncid,varid);
+% limits
+ ig=find(lon>0 & lon<9E9 );
+ lonlimit=cl_minmax(cl_minmax(lon(ig)));
+%lonlimit(1)=lonlimit(1)+1.2; lonlimit(2)=lonlimit(2)-0.0; 
+ ig=find(lat>0 & lat<9E9 );
+ latlimit=cl_minmax(cl_minmax(lat(ig)));
+%% positioning (Helgoland)
+
+% dr=0.03; [ix_hr iy_hr]=find(abs(lat-54.15)<dr & abs(lon-7.8)<dr);
+  for li=1:size(loc,1)
+    [m1 i]=min(abs(lat-loc(li,1))+abs(lon-loc(li,2)),[],1);
+    [m j]=min(m1);
+    i_loc(li,1:2)=[i(j) j];
+  end
+end

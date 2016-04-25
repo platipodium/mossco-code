@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-# This script is is part of MOSSCO. It creates from basic grid parameters 
+# This script is is part of MOSSCO. It creates from basic grid parameters
 # a SCRIP complient NetCDF file.
 #
 # @copyright (C) 2014 Helmholtz-Zentrum Geesthacht
@@ -32,7 +32,7 @@ if (2==2): ## spherical box / deep lake test case
   ur_lon=1.25
   ll_lat=45.0
   ur_lat=45.25
-  
+
 if __name__ == '__main__':
 
   nlat=abs(ur_lat-ll_lat)/abs(delta_lat)
@@ -42,7 +42,7 @@ if __name__ == '__main__':
   if (nlat != round(nlat)):
       delta_lat=abs(ur_lat-ll_lat)/round(nlat)
   nlat=int(round(nlat))
-   
+
   if (nlon != round(nlon)):
       delta_lon=abs(ur_lon-ll_lon)/round(nlon)
   nlon=int(round(nlon))
@@ -58,23 +58,23 @@ if __name__ == '__main__':
   nc.createDimension('grid_size',nlon*nlat)
   nc.createDimension('grid_corners',4)
   nc.createDimension('grid_rank',2)
- 
+
   grid_dims = nc.createVariable('grid_dims','i4',('grid_rank'))
   grid_imask = nc.createVariable('grid_imask','i4',('grid_size'))
 
   grid_center_lat = nc.createVariable('grid_center_lat','f8',('grid_size'))
-  grid_center_lat.units='degree_north' 
+  grid_center_lat.units='degrees'
 #  grid_center_lat[:]= ...
 
   grid_center_lon = nc.createVariable('grid_center_lon','f8',('grid_size'))
-  grid_center_lon.units='degree_east' 
+  grid_center_lon.units='degrees'
 #  grid_center_lon[:]= ...
 
   grid_corner_lat = nc.createVariable('grid_corner_lat','f8',('grid_size','grid_corners'))
-  grid_corner_lat.units='degree_north' 
- 
+  grid_corner_lat.units='degrees'
+
   grid_corner_lon = nc.createVariable('grid_corner_lon','f8',('grid_size','grid_corners'))
-  grid_corner_lon.units='degree_east' 
+  grid_corner_lon.units='degrees'
 
 # Meta data
   nc.history = 'Created ' + time.ctime(time.time()) + ' by ' + sys.argv[0]
@@ -82,7 +82,7 @@ if __name__ == '__main__':
   nc.license = 'Creative Commons share-alike (CCSA)'
   nc.copyright = 'Helmholtz-Zentrum Geesthacht'
   nc.Conventions = 'SCRIP'
-  
+
 
   grid_dims[:]=[nlon,nlat]
   grid_imask[:]=1
@@ -92,17 +92,17 @@ if __name__ == '__main__':
 
   glon=ll_lon+(ilon+0.5)*delta_lon
   glat=ll_lat+(jlat+0.5)*delta_lat
-  
+
   for j in jlat:
-      k=ilon+j*nlon    
+      k=ilon+j*nlon
       grid_center_lon[k]=glon
       #grid_center_lat[k]=ll_lat + (repeat(j,nlon)+0.5) * delta_lat
   for i in ilon:
-      k=jlat+i*nlat    
+      k=jlat+i*nlat
       grid_center_lat[k]=glat
       #grid_center_lat[k]=ll_lat + (repeat(j,nlon)+0.5) * delta_lat
-     
-           
+
+
   grid_corner_lon[:,0]=grid_center_lon[:] - 0.5 * delta_lon
   grid_corner_lon[:,1]=grid_center_lon[:] + 0.5 * delta_lon
 
@@ -111,10 +111,8 @@ if __name__ == '__main__':
   grid_corner_lon[:,2]=grid_corner_lon[:,1]
   grid_corner_lon[:,3]=grid_corner_lon[:,0]
   grid_corner_lat[:,1]=grid_corner_lat[:,0]
-  grid_corner_lat[:,3]=grid_corner_lat[:,2]  
-  
+  grid_corner_lat[:,3]=grid_corner_lat[:,2]
+
   print grid_corner_lon[0,0], grid_corner_lon[-1,2]
   print grid_corner_lat[0,0], grid_corner_lat[-1,2]
   nc.close()
-
-

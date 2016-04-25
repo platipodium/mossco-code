@@ -30,9 +30,6 @@ SUBDIRS += fabmsed_fabm0d
 SUBDIRS += ocean_fabm0d
 SUBDIRS += ocean_fabm0d_fabmsed
 SUBDIRS += fabm_benthic_pelagic
-ifeq ($(MOSSCO_GETM),true)
-SUBDIRS += getm--fabm_pelagic--netcdf
-endif
 ifeq ($(MOSSCO_EROSED),true)
 SUBDIRS += benthic_geoecology
 SUBDIRS += generic

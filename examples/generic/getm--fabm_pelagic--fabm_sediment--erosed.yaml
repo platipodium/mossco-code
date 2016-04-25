@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 3D coupling
+# between getm, pelagic + benthic ecosystem and erosion
+
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+
+dependencies:
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - fabm_sediment:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - erosed:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - erosed: fabm_pelagic
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - restart_soil:
+    - component: fabm_sediment
+      grid: temperature_in_soil
+
+instances:
+  - mossco_gfse : netcdf
+  - restart_soil: netcdf_input
+  - restart_water: netcdf_input
+
+coupling:
+  - components:
+     - restart_water
+     - fabm_pelagic
+    interval: none
+  - components:
+     - restart_soil
+     - fabm_sediment
+    interval: none
+  - components:
+     - constant
+     - fabm_sediment
+    interval: none
+  - components:
+     - getm
+     - fabm_sediment
+    interval: 30 m
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval:  30 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - getm
+     - mossco_gfse
+    interval: 60 h
+  - components:
+     - fabm_pelagic
+     - mossco_gfse
+    interval: 60 h
+  - components:
+     - fabm_sediment
+     - mossco_gfse
+    interval: 60 h
+  - components:
+     - getm
+     - erosed
+    interval: 60 m
+  - components:
+     - fabm_pelagic
+     - erosed
+    interval: 60 m
+  - components:
+     - erosed
+     - mossco_gfse
+    interval: 60 h

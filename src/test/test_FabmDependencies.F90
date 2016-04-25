@@ -64,32 +64,20 @@ model => fabm_create_model_from_file(namlst)
   do while (associated(link))
     if (.not.link%target%read_indices%is_empty().and.link%target%state_indices%is_empty()) then
       select case (link%target%domain)
-        case (domain_bulk)
+        case (domain_interior)
           if (.not.associated(model%data(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal)) then
-            if (.not.associated(link%target%standard_variable)) then
-              LEVEL3 '      bulk: ',trim(link%name),' [',trim(link%target%units),']'
-            else
-              LEVEL3 '      bulk: ',trim(link%target%standard_variable%name),' [',trim(link%target%standard_variable%units),']'
-            end if
+            LEVEL3 '  interior: ',trim(link%name),' [',trim(link%target%units),']'
           end if
   case (domain_horizontal,domain_bottom,domain_surface)
           if (.not.associated(model%data_hz(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal)) then
-            if (.not.associated(link%target%standard_variable)) then
-              LEVEL3 'horizontal: ',trim(link%name),' [',trim(link%target%units),']'
-            else
-              LEVEL3 'horizontal: ',trim(link%target%standard_variable%name),' [',trim(link%target%standard_variable%units),']'
-            end if
+            LEVEL3 'horizontal: ',trim(link%name),' [',trim(link%target%units),']'
           end if
         case (domain_scalar)
           if (.not.associated(model%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
               .and..not.(link%target%presence==presence_internal)) then
-            if (.not.associated(link%target%standard_variable)) then
-              LEVEL3 '    global: ',trim(link%name),' [',trim(link%target%units),']'
-            else
-              LEVEL3 '    global: ',trim(link%target%standard_variable%name),' [',trim(link%target%standard_variable%units),']'
-            end if
+            LEVEL3 '    global: ',trim(link%name),' [',trim(link%target%units),']'
           end if
       end select
     end if

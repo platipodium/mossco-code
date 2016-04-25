@@ -41,9 +41,9 @@ allocate (this%Bioturbation%TauEffect(inum,jnum))
 allocate (this%Bioturbation%ErodibilityEffect(inum,jnum))
 !allocate (this%Bioturbation%ErodibilityEffect,stat= istatus)
 !if (istatus == 0) then
-!    write (*,*) 'allocation of ErodibilityEffect was successfull'
+!    write (0,*) 'allocation of ErodibilityEffect was successfull'
 !else
-!    write (*,*) 'Error , allocation of ErodibilityEffect was NOT successfull'
+!    write (0,*) 'Error , allocation of ErodibilityEffect was NOT successfull'
 !end if
 
   this%inum      = inum
@@ -58,11 +58,11 @@ implicit none
 
 class (Mbalthica_Object)  :: this
 real (fp), dimension (:,:), pointer, optional  :: spatialvar
-character (len = 10), optional  :: Biounit
+character (len = 255), optional  :: Biounit
 
 
 real (fp), dimension (:,:), allocatable :: amounts
-character (len = 10)      :: units
+character (len = 255)      :: units
 integer                   :: StringLength, UnitNr,istat
 logical                   :: opnd, exst
 real (fp)                 :: amount
@@ -70,7 +70,6 @@ real (fp)                 :: amount
 namelist /Macrofaun/  units, amount
 
 if (.not.present(spatialvar)) then
-
   allocate ( amounts ( this%inum, this%jnum ) )
   units = ''
   amount = 0.0_fp
@@ -78,51 +77,51 @@ if (.not.present(spatialvar)) then
   this%Species='Mbalthica'
 
   inquire ( file = 'mbalthica.nml', exist=exst , opened =opnd, Number = UnitNr )
-  !write (*,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
+  !write (0,*) 'exist ', exst, 'opened ', opnd, ' file unit', UnitNr
 
   if (exst.and.(.not.opnd)) then
 
     UnitNr = 11
     open (unit = UnitNr, file = 'mbalthica.nml', action = 'read ', status = 'old', delim = 'APOSTROPHE')
-    !write (*,*) ' in Mbalthica the file unit ', UnitNr, ' was just opened'
+    !write (0,*) ' in Mbalthica the file unit ', UnitNr, ' was just opened'
 
     read (UnitNr, nml=Macrofaun, iostat = istat)
     if (istat /= 0 ) stop ' Error in reading Mbalthica data'
 
   elseif (opnd) then
 
-    write (*,*)  ' In Mbalthica the file unit ', UnitNr, ' alreday opened'
+    write (0,*)  ' In Mbalthica the file unit ', UnitNr, ' alreday opened'
 
     read (UnitNr, nml=Macrofaun, iostat = istat)
     if (istat /= 0 ) stop 'Error in reading Mbalthica data'
 
-    write (*,*) ' units and  amount are ', units, amount
+    write (0,*) ' units and  amount are ', units, amount
 
   else
 
-    write (*,*) ' Warning: The input file for Mbalthica doesnot exists!'
-    write (*,*) ' Biological effects on erodibility and bed shear stress are set to 1.'
+    write (0,*) ' Warning: The input file for Mbalthica doesnot exists!'
+    write (0,*) ' Biological effects on erodibility and bed shear stress are set to 1.'
 
     this%StateVar%intensity = amounts
 
     allocate (This%StateVar%units)
     This%StateVar%units = trim (units)
-
+    
     return
   end if
 
 
-  if (units == 'ind.m**-2') then
+  if (trim(units) == 'm**-2') then
 
-    !write (*,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
+    !write (0,*) ' In Mbalthica_class, the dimensionless density of Mbalthica is ', amount
      amounts(:,:)= amount
      This%StateVar%intensity = amounts
      nullify (This%StateVar%amount)
-    ! write (*,*) ' in mbalthica_class: intensity = ', This%StateVar%intensity
+    ! write (0,*) ' in mbalthica_class: intensity = ', This%StateVar%intensity
 
-  elseif  (units == 'gCm-2') then
+  elseif  (trim(units) == 'gCm**-2') then
 
- ! write (*,*) ' In Mbalthica_class, the biomass of Mbalthica is ', amount
+ ! write (0,*) ' In Mbalthica_class, the biomass of Mbalthica is ', amount
 
      !allocate (This%StateVar%amount( this%inum, this%jnum))
      amounts(:,:)= amount
@@ -130,8 +129,8 @@ if (.not.present(spatialvar)) then
      nullify (This%StateVar%intensity)
   else
 
-    write (*,*) 'Warning! no units has been defined in macrofauna data file. This leads to '
-    write (*,*) 'assumption of no biological effect on the sediment transport.'
+    write (0,*) 'Warning! no units has been defined in macrofauna data file. This leads to '
+    write (0,*) 'assumption of no biological effect on the sediment transport.'
     This%StateVar%amount = 0.0_fp
     This%StateVar%intensity = 0.0_fp
 
@@ -148,21 +147,20 @@ if (.not.present(spatialvar)) then
 
 
 else
-
-  if (biounit == 'ind.m**-2')then
+  if (trim(biounit) == 'm**-2')then
 
     This%StateVar%intensity = spatialvar
     nullify (This%StateVar%amount)
 
-  elseif(biounit == 'gCm-2') then
+  elseif(trim(biounit) == 'gCm**-2') then
 
     This%StateVar%amount = spatialvar
     nullify (This%StateVar%intensity)
   else
     This%StateVar%amount = 0.0_fp
     This%StateVar%intensity = 0.0_fp
-    write (*,*) 'Warning! no units has been defined in macrofauna data file. This leads to '
-    write (*,*) 'assumption of no biological effect on the sediment transport.'
+    write (0,*) 'Warning! no units has been defined in macrofauna data file. This leads to '
+    write (0,*) 'assumption of no biological effect on the sediment transport.'
   endif
 
   StringLength = len_trim (biounit)
@@ -183,7 +181,6 @@ subroutine run_Mbalthica(this)
 implicit none
 
 class (Mbalthica_Object) :: this
-
 integer                  :: i,j
 
 !do j = 1, this%jnum
@@ -194,13 +191,13 @@ integer                  :: i,j
 !end do
 
 #ifdef DEBUG
-write (*,*)
-write (*,*) 'Biotic effect of ', this%Species, ' on the tau (M_balthica%Bioturbation%TauEffect): '&
+write (0,*)' ------- mbalthica run ------------'
+write (0,*) 'Biotic effect of ', this%Species, ' on the tau (M_balthica%Bioturbation%TauEffect): '&
             , this%Bioturbation%TauEffect
-write (*,*)
-write (*,*) 'Biotic effect of ', this%Species, ' on the Erodibility (M_balthica%Bioturbation%ErodibilityEffect): '&
+write (0,*)
+write (0,*) 'Biotic effect of ', this%Species, ' on the Erodibility (M_balthica%Bioturbation%ErodibilityEffect): '&
             , this%Bioturbation%ErodibilityEffect
-write (*,*)
+write (0,*)'-----------------------------'
 #endif
 
 end subroutine run_Mbalthica
@@ -217,7 +214,7 @@ if (This%StateVar%units == '-') then
 
   deallocate (This%StateVar%intensity)
 
-elseif  (This%StateVar%units == 'gCm-2') then
+elseif  (This%StateVar%units == 'gCm**-2') then
 
   deallocate (This%StateVar%amount)
 

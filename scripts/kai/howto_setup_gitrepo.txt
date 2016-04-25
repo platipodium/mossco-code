@@ -1,0 +1,25 @@
+git status
+git diff
+git stash
+git stash drop
+
+git pull
+git rebase master
+OR
+git pull --rebase
+
+git remote -v
+git remote add repo ssh://kaiwirtz2@git.code.sf.net/p/mossco/code
+
+git pull [repo master]
+git push [repo master]
+
+git remote remove origin
+git remote rename repo origin
+git remote -v
+git push --set-upstream origin master
+
+
+ssh-keygen -t dsa
+cat /home/wirtz/.ssh/id_dsa.pub
+

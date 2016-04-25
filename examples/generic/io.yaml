@@ -1,0 +1,42 @@
+dependencies:
+  - boundary_input:
+    - component: getm
+      grid: temperature_in_water
+  - river_input:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - porosity_input:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - mussel_input:
+    - component: getm
+      grid: temperature_at_soil_surface
+
+instances:
+  - mossco_io: netcdf
+  - mussel_input: netcdf_input
+  - river_input: netcdf_input
+  - porosity_input: netcdf_input
+  - boundary_input: netcdf_input
+
+coupling:
+  - components:
+     - mussel_input
+     - mossco_io
+    interval: 10 m
+  - components:
+     - river_input
+     - mossco_io
+    interval: 10 m
+  - components:
+     - porosity_input
+     - mossco_io
+    interval: 10 m
+  - components:
+     - boundary_input
+     - mossco_io
+    interval: 10 m
+  - components:
+     - getm
+     - mossco_io
+    interval: 10 m

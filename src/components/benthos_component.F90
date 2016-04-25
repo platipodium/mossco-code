@@ -308,9 +308,9 @@ contains
     !> (for example read by netcdf-input component)
     allocate (importList(2))
     importList(1)%name  = 'tellina_fabula_mean_abundance'
-    importList(1)%units = ''
+    importList(1)%units = 'm**-2'
     importList(2)%name  = 'microphytobenthos_at_soil_surface'
-    importList(2)%units = ''
+    importList(2)%units = 'mgg**-1'
 
      do i=1,size(importList)
 
@@ -444,10 +444,12 @@ contains
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    else
-      allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-      mask = 0
-      mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
+      allocate(mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+      mask = 1
    end if
+  ! Initialize microphytobenthos and macrofauna effects on the erodibility and the critical bed shear stress 
+    call Micro%initialize(inum, jnum)
+    call Macrofauna_init(Total_Bioturb,inum, jnum)
 
 !   Complete Import Fields
     do i=1,size(importList)
@@ -455,18 +457,22 @@ contains
       call ESMF_FieldGet(field,status=status)
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
-        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
+        allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+        call ESMF_FieldEmptyComplete(field,importList(i)%data,ESMF_INDEX_DELOCAL)
         importList(i)%data = 0.0d0
+         if (trim (importList(i)%name )== 'tellina_fabula_mean_abundance') then
+           call Macrofauna_set( )
+       !   write (0,*)'tellina_fabula_mean_abundance internal',importList(i)%data
+         elseif  (trim (importList(i)%name )== 'microphytobenthos_at_soil_surface') then
+           call micro%set()
+       !  write (0,*)'microphytobenthos internal',importList(i)%data
+         endif
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
-                   .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
+        if (.not. (      all(lbound(importList(i)%data) .eq. exclusiveLBound) &
+                   .and. all(ubound(importList(i)%data) .eq. exclusiveUBound) ) ) then
           call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
@@ -484,13 +490,17 @@ contains
            call MOSSCO_FieldString(field, message)
            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
            importList(i)%units=''
-           write (*,*) 'unit of macrofauna or microphytoobenthos is not present, therefore set to '')'
+           write (0,*) 'unit of macrofauna or microphytoobenthos is not present, therefore set to '')'
          endif
 
          if (trim (importList(i)%name )== 'tellina_fabula_mean_abundance') then
            call Macrofauna_set(importList(i)%data,importList(i)%units )
+      !   write (0,*)'tellina_fabula_mean_abundance data,external', importList(i)%data
+      !   write (0,*)'tellina_fabula_mean_abundance data,external',importList(i)%units
          elseif  (trim (importList(i)%name )== 'microphytobenthos_at_soil_surface') then
            call micro%set(importList(i)%data,importList(i)%units)
+      !   write (0,*)'microphytobenthos_at_soil_surface, external', importList(i)%data
+      !   write (0,*)'microphytobenthos_at_soil_surface, external', importList(i)%units
          endif
 
       else
@@ -506,18 +516,15 @@ contains
       call ESMF_FieldGet(field,status=status)
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         call ESMF_LogWrite(' export to internal field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
-        allocate(exportList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,exportList(i)%data,                &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
-        exportList(i)%data = 0.0d0
+        allocate(exportList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+        call ESMF_FieldEmptyComplete(field,exportList(i)%data,ESMF_INDEX_DELOCAL)
+        exportList(i)%data = 1.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        if (.not. (      all(lbound(exportList(i)%data) .eq. totalLBound) &
-                   .and. all(ubound(exportList(i)%data) .eq. totalUBound) ) ) then
+        if (.not. (      all(lbound(exportList(i)%data) .eq. exclusiveLBound) &
+                   .and. all(ubound(exportList(i)%data) .eq. exclusiveUBound) ) ) then
           call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
@@ -528,8 +535,7 @@ contains
       end if
     end do
 
-    call Micro%initialize(inum, jnum)
-    call Macrofauna_init(Total_Bioturb,inum, jnum)
+  
 
     deallocate(Micro%ErodibilityEffect)
     deallocate(Micro%TauEffect)
@@ -541,8 +547,7 @@ contains
     Total_Bioturb%ErodibilityEffect => exportList(3)%data
     Total_Bioturb%TauEffect         => exportList(4)%data
 
-    call Micro%set()
-    call Macrofauna_set()
+ 
 
 !#define DEBUG
 #ifdef DEBUG
@@ -686,13 +691,12 @@ contains
 
 
 #ifdef DEBUG
+    write(0,*) '==== in Benthos ======'
     write(0,*) 'Mircrophy. erodibility effect', Micro%ErodibilityEffect
     write(0,*) 'Mircrophy. Tau effect', Micro%TauEffect
     write(0,*) ' Macro. erodibility effect', Total_Bioturb%ErodibilityEffect
     write(0,*) ' Macro. Critical bed Shear stress', Total_Bioturb%TauEffect
-    write(0,*) 'tau (macrofaunau and microphytobenthos) =' ,tau,' Both Biotic Critical bed shear stress effect= ',&
-      &   Total_Bioturb%TauEffect, 'Both Biotic erodibility',Total_Bioturb%ErodibilityEffect
-    write(0,*)
+    write(0,*)'======================'
 #endif
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)

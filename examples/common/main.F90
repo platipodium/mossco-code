@@ -2,7 +2,7 @@
 !> @file main.F90
 !!
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !> @author Knut Klingbeil <knut.klingbeil@io-warnemuende.de>
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
@@ -31,7 +31,7 @@ program main
   type(ESMF_Time)            :: time1, time2, startTime, stopTime
   type(ESMF_TimeInterval)    :: runDuration, timeStep
   integer                    :: localrc, rc,nmlunit=2013
-  double precision           :: seconds
+  double precision           :: seconds, runseconds
   character(len=40)          :: timestring, logKind='multi', name='main'
   character(len=40)          :: start='2000-01-01 00:00:00'
   character(len=40)          :: stop='2000-01-05 00:00:00'
@@ -49,20 +49,25 @@ program main
   type(ESMF_Config)          :: config
   character(len=ESMF_MAXSTR) :: configFileName='mossco.cfg'
   character(len=ESMF_MAXSTR) :: logLevel='all'
+  character(len=ESMF_MAXSTR) :: logLevelZero='not_given'
   logical                    :: logFlush=.false.
+
+  integer(ESMF_KIND_I8)      :: system_clock_start, system_clock_stop, system_clock_max
+  integer(ESMF_KIND_I8)      :: system_clock_rate, system_clock_duration
 
 !> Read the namelist `mossco_run.nml`and evaluate five parameters:
 !> 1. `start`: the start date of the simulation in YYYY-MM-DD hh:mm:ss format
 !> 2. `stop` : the stop date of the simulation in the same format
 !> 3. `title`: the title of the simulation.
 !> 4. `logkind`: an ESMF LOGKIND, multi | single | none, default is multi
-!> 5. `loglevel`: an ESMF LOGMSGFLAG, none | error | warning | all, default is all
+!> 5. `loglevel`: an ESMF LOGMSGFLAG, none | error | warning | all | one  default is all
 !> 6. `logflush`: a logical, .false. | .true. , default is .true.
+!> 5. `loglevelzero`: an ESMF LOGMSGFLAG for the first PET
 !>
 !> If this file is not present, then the default simulation with title "Untitled"
 !> will be executed for the time 2000-01-01 00:00:00 to 2000-01-05 00:00:00
 
-  namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush
+  namelist /mossco_run/ title,start,stop,logkind,loglevel,logflush,loglevelzero
 
   configfilename='mossco.cfg'
   inquire(file=trim(configfilename), exist=fileIsPresent)
@@ -187,8 +192,28 @@ program main
       write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' loglevel: '//trim(loglevel)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
+
+    call ESMF_ConfigFindLabel(config, label='loglevelzero:', isPresent=labelIsPresent, rc = localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (labelIsPresent) then
+      call ESMF_ConfigGetAttribute(config, loglevelzero, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(name)//' found in file '//trim(configFileName)//' loglevelzero: '//trim(loglevelzero)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
   endif
 
+
+  call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (trim(logLevelZero) == 'not_given') logLevelZero = logLevel
+  if (localPet == 0) logLevel = trim(logLevelzero)
   !> Find out what level of log to write, the default is all, overwrite previous decision
 
   if (logLevel == 'none') then
@@ -220,18 +245,19 @@ program main
 
   if (allocated(logMsgList)) deallocate(logMsgList)
 
-  call ESMF_VMGet(vm, petCount=petCount, localPet=localPet, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
   write(message,'(A)')  'MOSSCO '//trim(title)//" coupled system starts"
   if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-  write(formatstring,'(A)') '(A,'//intformat(localPet)//',A,'//intformat(petCount)//')'
+  write(formatstring,'(A)') '(A,'//intformat(petCount)//',A,'//intformat(petCount)//')'
   write(message,formatstring) 'Creating multiple logs, this is processor ',localPet,' of ', petCount
   if (logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
- ! Get the wall clock starting time
+  ! Initialize the system clock (which measures CPU time)
+  call system_clock(count_rate=system_clock_rate)
+  call system_clock(count_max=system_clock_max)
+  call system_clock(system_clock_start)
+
+  ! Get the wall clock starting time
   call ESMF_TimeSet(time1, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -274,6 +300,27 @@ program main
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite("Simulation ends at "//timestring, ESMF_LOGMSG_INFO)
+
+  write(message,'(A, I2)') 'ESMF double precision (KIND_R8) has '
+  if (digits(1.0_ESMF_KIND_R8) < 10) then
+    write(message,'(A,I1,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R8),' significant digits.'
+  elseif (digits(1.0_ESMF_KIND_R8) < 100) then
+    write(message,'(A,I2,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R8),' significant digits.'
+  else
+    write(message,'(A,I3,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R8),' significant digits.'
+  endif
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+  write(message,'(A, I2)') 'ESMF single precision (KIND_R4) has '
+  if (digits(1.0_ESMF_KIND_R4) < 10) then
+    write(message,'(A,I1,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R4),' significant digits.'
+  elseif (digits(1.0_ESMF_KIND_R4) < 100) then
+    write(message,'(A,I2,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R4),' significant digits.'
+  else
+    write(message,'(A,I3,A)')  trim(message)//' ',digits(1.0_ESMF_KIND_R4),' significant digits.'
+  endif
+  call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
 
 ! Create toplevel component and call its setservices routines, if namelist was successfully read, then copy the
 ! main clock to the toplevel (child) clock.  If no time information from namelist, then let the toplevel component
@@ -355,16 +402,27 @@ program main
     endif
   end if
 
-
   !> @todo create simulation attribute package for CIM and write this to XML if XERCES is set, otherwise write
   !> tab-delimited info
+
+  call ESMF_VmBarrier(vm, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call ESMF_GridCompRun(topComp, importState=topState, exportState=topState, clock=mainClock, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+  call ESMF_VmBarrier(vm, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
   ! Destroy toplevel component and clean up
   call ESMF_GridCompFinalize(topComp, importState=topState, exportState=topState, clock=mainClock, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  call ESMF_VmBarrier(vm, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -374,6 +432,8 @@ program main
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   call ESMF_LogWrite("All ESMF components destroyed", ESMF_LOGMSG_INFO)
+
+  call system_clock(system_clock_stop)
 
   call ESMF_TimeSet(time2, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -393,11 +453,27 @@ program main
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  write(message,'(A,ES10.4,A)') trim(title)//' needed ',seconds,' seconds to run'
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-  if (localPet==0 .or. logKindFlag==ESMF_LOGKIND_MULTI) &
-    call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
+  write(message,'(A,ES10.3,A)') trim(title)//' needed ',seconds,' seconds to run'
+  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
+  call ESMF_TimeIntervalGet(runduration, s_r8=runseconds, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  if (seconds > 0) then
+    write(message,'(A,ES10.3,A)') trim(title)//' total speedup is ',runseconds/seconds
+    if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+    write(message,'(A,ES10.3,A)') trim(title)//' speedup per CPU is ',runseconds/seconds/petCount
+    if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+  endif
+
+  system_clock_duration = system_clock_stop - system_clock_start / system_clock_rate
+  write(message,'(A,ES10.3,A)') trim(title)//' CPU time ',dble(system_clock_duration),' seconds'
+  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+  if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) &
+    call ESMF_LogWrite('MOSSCO '//trim(title)//' finished at wall clock '//timestring,ESMF_LOGMSG_INFO)
 
   call ESMF_StateDestroy(topState,rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &

@@ -10,7 +10,7 @@
 ! !DESCRIPTION:
 !
 ! !USES:
-   use initialise, only: runtype,dryrun
+   use initialise
 !  these variables are needed in init_time(), but cannot be included there
 !  because of name-clash with NML
    use time, only: start,stop,timestep,days_in_mon
@@ -27,7 +27,7 @@
          integer,intent(in)            :: AH_method
          REALTYPE,intent(in)           :: AH_const,AH_Prt,AH_stirr_const
          REALTYPE,intent(inout)        :: f(I3DFIELD)
-         REALTYPE,intent(out),optional :: phymix(I3DFIELD)
+         REALTYPE,dimension(:,:,:),pointer,intent(out),optional :: phymix
       end subroutine tracer_diffusion
    end interface
 
@@ -163,7 +163,7 @@
    end if
 
    STDERR LINE
-   STDERR 'getm ver. ',RELEASE,': Started on  ',dstr,' ',tstr
+   STDERR 'getm: Started on  ',dstr,' ',tstr
    STDERR LINE
    STDERR 'Initialising....'
    STDERR LINE
@@ -213,16 +213,14 @@
    use domain, only: kmax
    use time, only: update_time,write_time_string
    use time, only: start,timestr,timestep
-   use m2d, only: init_2d,postinit_2d,depth_update
-   use variables_2d, only: zo,z,D,Dvel,DU,DV
+   use m2d, only: init_2d,hotstart_2d,postinit_2d
+   use variables_2d, only: Dvel
    use les, only: init_les
    use getm_timers, only: init_getm_timers, tic, toc, TIM_INITIALIZE
 #ifndef NO_3D
-   use m3d, only: init_3d,postinit_3d
+   use m3d, only: init_3d,hotstart_3d,postinit_3d
 #ifndef NO_BAROCLINIC
-   use m3d, only: T,calc_temp,calc_salt
-   use temperature, only: init_temperature_field
-   use salinity, only: init_salinity_field
+   use m3d, only: T
 #endif
    use m3d, only: use_gotm
    use turbulence, only: init_turbulence
@@ -234,7 +232,6 @@
 #ifdef _FABM_
    use getm_fabm, only: fabm_calc
    use getm_fabm, only: init_getm_fabm, postinit_getm_fabm
-   use getm_fabm, only: init_getm_fabm_fields
    use rivers, only: init_rivers_fabm
 #endif
 #ifdef GETM_BIO
@@ -333,29 +330,14 @@
       call write_time_string()
       LEVEL3 timestr
       MinN = MinN+1
+
+      call hotstart_2d(runtype)
 #ifndef NO_3D
-#ifndef NO_BAROCLINIC
-      if (calc_temp) then
-         LEVEL2 'hotstart temperature:'
-         call init_temperature_field()
+      if (runtype .ge. 2) then
+         call hotstart_3d(runtype)
       end if
-      if (calc_salt) then
-         LEVEL2 'hotstart salinity:'
-         call init_salinity_field()
-      end if
-#endif
-#ifdef _FABM_
-      if (fabm_calc) then
-         LEVEL2 'hotstart getm_fabm:'
-         call init_getm_fabm_fields()
-      end if
-#endif
 #endif
    end if
-
-!  Note (KK): we need Dvel for do_waves()
-!  KK-TODO: we would not need Dvel if we use H for WAVES_FROMWIND
-   call depth_update(zo,z,D,Dvel,DU,DV)
 
 !  Note (KK): init_input() calls do_3d_bdy_ncdf() which requires hn
    call init_input(input_dir,MinN)
@@ -398,10 +380,25 @@
    end if
 #endif
 
+   call do_register_all_variables(runtype)
+
+#ifdef _FLEXIBLE_OUTPUT_
+   allocate(type_getm_host::output_manager_host)
+   if (myid .ge. 0) then
+      write(postfix,'(A,I4.4)') '.',myid
+      call output_manager_init(fm,title,trim(postfix))
+   else
+      call output_manager_init(fm,title)
+   end if
+#endif
+
    call toc(TIM_INITIALIZE)
 
    if (.not. dryrun) then
       call do_output(runtype,MinN-1,timestep)
+#ifdef _FLEXIBLE_OUTPUT_
+      if (save_initial) call output_manager_save(julianday,secondsofday,MinN-1)
+#endif
    end if
 
 #ifdef DEBUG
@@ -800,6 +797,9 @@
    Ncall = Ncall+1
    write(debug,*) 'do_transport_3d() # ',Ncall
 #endif
+#ifdef GETM_SLICE_MODEL
+   j = jmax/2
+#endif
 
 !  see comments in do_transport()
    call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
@@ -817,7 +817,9 @@
    Taur = 1.d15
    ws1d(0   ) = _ZERO_
    ws1d(kmax) = _ZERO_
+#ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
+#endif
       do i=imin,imax
          if (az(i,j) .eq. 1) then
 !           Do advection step due to settling or rising
@@ -829,7 +831,11 @@
                              f(i,j,:),f(i,j,:))
          end if
       end do
+#ifndef GETM_SLICE_MODEL
    end do
+#else
+   f(:,j+1,:) = f(:,j,:)
+#endif
 
 #ifdef DEBUG
    write(debug,*) 'Leaving do_transport_3d()'
@@ -852,6 +858,9 @@
    logical :: clip=.false.
    ! hackmax: if negative, do not change boundary state, otherwise clip
    integer :: i,j
+#ifdef GETM_SLICE_MODEL
+   j = jmax/2
+#endif
 
    clip = hackmax > 0.0
    hackmaxvec(:) = hackmax
@@ -861,7 +870,9 @@
    call wait_halo(H_TAG)
 
    ! set zero-gradient in x-direction
+#ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
+#endif
      do i=imin,imax
        ! western boundary
        if ((au(i,j) .eq. 2) .and. (au(i-1,j) .eq. 0)) then
@@ -880,10 +891,14 @@
          end if
        end if
      end do
+#ifndef GETM_SLICE_MODEL
    end do
+#endif
 
    ! set zero-gradient in y-direction
+#ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
+#endif
      do i=imin,imax
        ! southern boundary
        if ((av(i,j) .eq. 2) .and. (av(i,j-1) .eq. 0)) then
@@ -902,7 +917,9 @@
          end if
        end if
      end do
+#ifndef GETM_SLICE_MODEL
    end do
+#endif
 
    end subroutine zero_gradient_3d_bdy
 
@@ -910,5 +927,5 @@
    end module getm_driver
 
 !-----------------------------------------------------------------------
-! Copyright (C) 2013 - Hans Burchard                                   !
+! Copyright (C) 2013 - Knut Klingbeil                                  !
 !-----------------------------------------------------------------------

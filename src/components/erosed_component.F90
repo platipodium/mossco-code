@@ -47,35 +47,38 @@ module erosed_component
   !size_classes_of_upward_flux_of_pim_at_bottom
 
   type :: ptrarray2D
-     real(ESMF_KIND_R8),dimension(:,:),pointer :: ptr=>NULL()
+     real(ESMF_KIND_R8),dimension(:,:),pointer           :: ptr=>NULL()
   end type ptrarray2D
-  type(ptrarray2D),dimension(:),allocatable :: size_classes_of_upward_flux_of_pim_at_bottom
-  type(ptrarray2D) :: rms_orbital_velocity, bottom_shear_stress, bottom_shear_stress_noncoh, equilibrium_spm
+  type(ptrarray2D),dimension(:),allocatable              :: size_classes_of_upward_flux_of_pim_at_bottom
+  type(ptrarray2D)                                       :: rms_orbital_velocity, bottom_shear_stress
+  type(ptrarray2D)                                       :: bottom_shear_stress_noncoh, equilibrium_spm
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
-  integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
-  ! Dimensions (x,y,depth layer, fraction index)
-  type (BioturbationEffect)                     :: BioEffects
-  integer,dimension(:),allocatable              :: external_idx_by_nfrac,nfrac_by_external_idx
-  integer                                       :: ubnd(4),lbnd(4)
-  real(kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer::  layers_height=>null(),sigma_midlayer=>null(),relative_thickness_of_layers=>null()
-  real(kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer::spm_concentration=>null()
+  
+  type (BioturbationEffect)                              :: BioEffects
 
+  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: layers_height=>null(),sigma_midlayer=>null(),sediment_mass=>null()
+  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: relative_thickness_of_layers=>null()
+  real   (kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer  :: spm_concentration=>null() ! Dimensions (x,y,depth layer, fraction index)
+  
+  integer(kind=ESMF_KIND_I4),dimension(:,:)    ,pointer  :: mask=>NULL()
+  real   (kind=ESMF_KIND_R8),dimension(:,:)    ,pointer  :: area=>NULL()
+  integer                   ,dimension(:),allocatable    :: external_idx_by_nfrac,nfrac_by_external_idx
+  integer                                                :: ubnd(4),lbnd(4)
+  
    integer                                      :: nmlb           ! first cell number
    integer                                      :: nmub           ! last cell number
-   integer                                      :: inum, jnum     ! number of elements in x and y directions , inum * jnum== nmub - nmlb + 1
+   integer                                      :: inum, jnum     ! number of elements in y and x directions , inum * jnum== nmub - nmlb + 1
    integer                                      :: flufflyr       ! switch for fluff layer concept
    integer                                      :: iunderlyr      ! Underlayer mechanism
    integer                                      :: nfrac          ! number of sediment fractions
+   real(fp)                                     :: init_thick     ! Initial thickness of the bed layer
+   real(fp)                                     :: porosity       ! porosity of the bed layer (ideally mixed single bed layer)
    real(fp)    , dimension(:,:)    , pointer    :: mfluff=>null() ! composition of fluff layer: mass of mud fractions [kg/m2]
    real(fp)    , dimension(:,:)    , pointer    :: frac=>null()
     !
     ! Local variables
     !
-    integer                                     :: i            ! diffusion layer counter
-    integer                                     :: l            ! sediment counter
-    integer                                     :: nm           ! cell counter
-   !integer                                     :: istat        ! error flag
     integer     , dimension(:)  , allocatable   :: sedtyp       ! sediment type [-]
     real(fp)                                    :: g            ! gravitational acceleration [m/s2]
     real(fp)                                    :: morfac       ! morphological scale factor [-]
@@ -92,18 +95,15 @@ module erosed_component
     real(fp)    , dimension(:)  , allocatable   :: u_bot        ! velocity at the (center of the) bottom cell in u-direction
     real(fp)    , dimension(:)  , allocatable   :: v_bot        ! velocity at the (center of the) bottom cell in v-direction
 
-    real(fp)    , dimension(:,:), allocatable   :: mass         ! change in sediment composition of top layer, [kg/m2]
+    real(fp)    , dimension(:,:), allocatable,save   :: mass         ! sediment mass in bottom layer as an ideally mixed single bed layer, [kg/m2]
     real(fp)    , dimension(:,:), allocatable   :: massfluff    ! change in sediment composition of fluff layer [kg/m2]
-!   real(fp)    , dimension(:,:), allocatable   :: r0           ! concentration old time level[kg/m3]
-!   real(fp)    , dimension(:,:), allocatable   :: r1           ! concentration new time level[kg/m3]
-!   real(fp)    , dimension(:,:), allocatable   :: rn           ! concentration [kg/m3]
     real(fp)    , dimension(:,:), allocatable   :: sink         ! sediment sink flux [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sinkf        ! sediment sink flux fluff layer [m/s]
     real(fp)    , dimension(:,:), allocatable   :: sour         ! sediment source flux [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: sourf        ! sediment source flux fluff layer [kg/m2/s]
     real(fp)    , dimension(:,:), allocatable   :: ws           ! settling velocity [m/s]
     real(fp)    , dimension(:)  , allocatable   :: mudfrac
-    logical                                     :: lexist, anymud, wave
+    logical                                     :: lexist, anymud, wave, bedmodel
     real(fp)    , dimension(:)  , allocatable   :: uorb, tper, teta ! Orbital velocity [m/s], Wave period, angle between current and wave
     real(fp)    , dimension(:)  , allocatable   :: eq_conc    ! equilibrium sand fraction concentration [g.m**-3]    integer :: unit707
 
@@ -236,6 +236,7 @@ contains
     real(fp),dimension(:), allocatable :: eropartmp, tcrdeptmp,tcrerotmp,depefftmp,depfactmp, &
                              &   parfluff0tmp,parfluff1tmp,tcrflufftmp, fractmp, wstmp, spm_const
     real (fp)                 :: pmcrittmp
+    integer                   :: i
 
     namelist /globaldata/g, rhow
     namelist /benthic/   nmlb       ! = 1  ! first cell number
@@ -251,6 +252,7 @@ contains
                                     !  1: all mud to fluff layer, burial to bed layers
                                     !  2: part mud to fluff layer, other part to bed layers (no burial)
     namelist /benthic/   anymud     != .true.
+    namelist /benthic/   bedmodel   ! = .true. means a simple bed model for tracking mass balanace at sea bed is activated
 
 !#define DEBUG
     rc = ESMF_SUCCESS
@@ -362,6 +364,12 @@ contains
     endif
 
 
+
+
+  !initialization
+
+  bedmodel = .false.
+
   inquire ( file = 'globaldata.nml', exist=exst , opened =opnd, Number = UnitNr )
 
   if (exst.and.(.not.opnd)) then
@@ -411,8 +419,12 @@ contains
     allocate (eq_conc     (nmlb:nmub))
     allocate (ws        (nfrac,nmlb:nmub))
     !
-    allocate (mass      (nfrac,nmlb:nmub))
-    allocate (massfluff (nfrac,nmlb:nmub))
+    if (bedmodel) then
+      allocate (mass (nfrac,nmlb:nmub))
+      mass = 0.0d0
+    end if
+    
+!    allocate (massfluff (nfrac,nmlb:nmub))
     allocate (sink      (nfrac,nmlb:nmub))
     allocate (sinkf     (nfrac,nmlb:nmub))
     allocate (sour      (nfrac,nmlb:nmub))
@@ -440,14 +452,14 @@ contains
     sour = 0.0_fp
     sinkf=0.0_fp
     sourf=0.0_fp
-    mass =0.0_fp
-    massfluff=0.0_fp
+!    massfluff=0.0_fp
     mudfrac = 0.0_fp
     mfluff =0.0_fp
     uorb = 0.0_fp
     tper = 1.0_fp
     teta = 0.0_fp
     wave = .false.
+  
     BioEffects%TauEffect =1.0_fp
     BioEffects%ErodibilityEffect = 1.0_fp
 !write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
@@ -496,8 +508,17 @@ contains
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((parfluff1(i,j), i=1, nfrac), j=nmlb,nmub)! erosion parameter 2 [ms/kg]
 !      if (istat ==0 ) read (UnitNr,*, iostat = istat) ((tcrfluff(i,j), i=1, nfrac), j=nmlb,nmub) ! critical bed shear stress for fluff layer erosion [N/m2]
       if (istat ==0 ) read (UnitNr,*, iostat = istat) wave
+      if (istat ==0.and. bedmodel ) read (UnitNr,*, iostat = istat) init_thick
+      if (istat ==0.and. bedmodel ) read (UnitNr,*, iostat = istat) porosity
+      if (istat /= 0) then
+        call ESMF_LogWrite('Error in reading sedparams !!!!', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
       if (istat /=0) stop ' Error in reading sedparams !!!!'
+
       close (UnitNr)
+
       do i =nmlb, nmub
         eropar   (:,i) = eropartmp   (:)
         tcrdep   (:,i) = tcrdeptmp   (:)
@@ -511,7 +532,9 @@ contains
         tcrfluff (:,i) = tcrflufftmp (:)
         ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
-!write (*,*) 'wave', wave
+     
+!      if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity, rhosol,mass, area)    
+
 !      do i = 1, inum
 !        do j = 1, jnum
 !          spm_concentration (i,j,:) = spm_const (:)
@@ -545,21 +568,21 @@ contains
     eq_conc =0.0_fp
 #ifdef DEBUG
     ! Open file for producing output
-    call ESMF_UtilIOUnitGet(unit707, rc = localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    inquire (file ='delft_sediment.out', exist = lexist)
+!   call ESMF_UtilIOUnitGet(unit707, rc = localrc)
+!   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+!     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!   inquire (file ='delft_sediment.out', exist = lexist)
 
 !! This file output is not MPI compatible
-    if (lexist) then
+!   if (lexist) then
 
-        open (unit = unit707, file = 'delft_sediment.out', status = 'REPLACE', action = 'WRITE')
-    else
-        open (unit = unit707, file = 'delft_sediment.out', status = 'NEW', action = 'WRITE')
-    end if
+!       open (unit = unit707, file = 'delft_sediment.out', status = 'REPLACE', action = 'WRITE')
+!   else
+!       open (unit = unit707, file = 'delft_sediment.out', status = 'NEW', action = 'WRITE')
+!   end if
 
-    write (unit707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
-        'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
+!   write (unit707, '(A4,2x,A8,2x, A5,7x,A13,3x,A14,4x,A5,6x,A7, 10x, A4, 8x, A8)') &
+!       'Step','Fractions','layer','Sink(g/m^2/s)','Source(g/m^2/s)', 'nfrac', 'mudfrac', 'taub', 'sink vel'
 #endif
 
     allocate (size_classes_of_upward_flux_of_pim_at_bottom(nfrac))
@@ -709,7 +732,7 @@ contains
     integer,target :: coordDimCount(2),coordDimMap(2,2)
     integer,dimension(2)            :: totalLBound,totalUBound
     integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
-    integer                         :: i,j
+    integer                         :: i,j,l
     type :: allocatable_integer_array
       integer,dimension(:),allocatable :: data
     end type
@@ -719,7 +742,7 @@ contains
     type(ESMF_FieldBundle)                      :: fieldBundle
     integer(ESMF_KIND_I4)                       :: fieldCount
 
-    real(ESMF_KIND_R8),dimension(:,:),pointer   :: ptr_f2=>null()
+    real(ESMF_KIND_R8),dimension(:,:)  ,pointer   :: ptr_f2=>null()
 
     integer :: n
     integer,dimension(:),allocatable :: spm_flux_id
@@ -765,13 +788,40 @@ contains
    end if
    if (localrc == ESMF_SUCCESS) then
 #endif
-      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask)
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
    else
-      allocate(mask(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-      mask = 0
-      mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)) = 1
+      allocate(mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+      mask = 1
    end if
+
+   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
+                         staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
+                         isPresent=isPresent, rc=localrc)
+   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   if (isPresent) then
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
+                            staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
+                            farrayPtr=area, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   else
+      allocate(area(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+      area = 1.0
+   end if
+
+     write (0,*) ' lboud, uboud area', lbound (area), ubound(area)
+     write (0,*) 'exclusiveLBound(1):exclusiveUBound(1)',exclusiveLBound(1),exclusiveUBound(1)
+     write (0,*)'exclusiveLBound(2):exclusiveUBound(2)',exclusiveLBound(2),exclusiveUBound(2)
+   !  if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity,rhosol,mass, area)
+   if (bedmodel) then 
+    do l= 1, nfrac
+     do j=exclusiveLBound(2),exclusiveUBound(2)
+      do i = exclusiveLBound(1),exclusiveUBound(1)
+       mass (l,inum*(j -1)+i) = init_thick * area (i,j) * (1.0-porosity) * rhosol (l) * frac (l,inum*(j -1)+i)
+      enddo
+     enddo
+    enddo
+   endif
 
 !   Complete Import Fields
     do i=1,size(importList)
@@ -780,18 +830,17 @@ contains
       if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
         if ( importList(i)%optional ) cycle
         call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
-        allocate(importList(i)%data(totalLBound(1):totalUBound(1),totalLBound(2):totalUBound(2)))
-        call ESMF_FieldEmptyComplete(field,importList(i)%data,                &
-                                     ESMF_INDEX_DELOCAL,                      &
-                                     totalLWidth=exclusiveLBound-totalLBound, &
-                                     totalUWidth=totalUBound-exclusiveUBound)
+        allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+        call ESMF_FieldEmptyComplete(field,importList(i)%data,ESMF_INDEX_DELOCAL)
         importList(i)%data = 0.0d0
       else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
         call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT,rc=rc)
-        if (.not. (      all(lbound(importList(i)%data) .eq. totalLBound) &
-                   .and. all(ubound(importList(i)%data) .eq. totalUBound) ) ) then
+        if (.not. (    (      all(lbound(importList(i)%data) .eq. totalLBound    )           &
+                        .and. all(ubound(importList(i)%data) .eq. totalUBound    ) )         &
+                   .or.(      all(lbound(importList(i)%data) .eq. exclusiveLBound)           &
+                        .and. all(ubound(importList(i)%data) .eq. exclusiveUBound) ) ) ) then
           call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
@@ -801,6 +850,8 @@ contains
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
+
+
 
   !> first try to get "external_index" from "concentration_of_SPM" fieldBundle in import State
     call ESMF_StateGet(importState,"concentration_of_SPM_in_water",fieldBundle,rc=localrc)
@@ -898,10 +949,6 @@ contains
                      .and. all(ubound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. (/inum,jnum/) ) ) ) then
             call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
             call ESMF_Finalize(endflag=ESMF_END_ABORT)
-          end if
-          if (.not. (      all(lbound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. totalLBound) &
-                     .and. all(ubound(size_classes_of_upward_flux_of_pim_at_bottom(n)%ptr) .eq. totalUBound) ) ) then
-            call ESMF_LogWrite(' field bounds do not match total domain',ESMF_LOGMSG_WARNING,ESMF_CONTEXT)
           end if
         else
           call ESMF_LogWrite('incomplete field',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
@@ -1010,8 +1057,47 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+!#ifdef DEBUG
+    if (bedmodel) then
+
+     field = ESMF_FieldCreate(grid, &
+                         typekind=ESMF_TYPEKIND_R8, &
+                         name='sediment_mass_in_bed',&
+                         staggerloc=ESMF_STAGGERLOC_CENTER, &
+                         ungriddedLBound=(/1/),ungriddedUBound=(/nfrac/), &
+                         gridToFieldMap=(/1,2/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field,'units',trim('Kg'),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!        call ESMF_AttributeSet(field,'missing_value',sed%missing_value,rc=localrc)
+!        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+!          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(field=field, farrayPtr=sediment_mass,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !    sediment_mass(:,:,:)= 0.0_fp
+        do j=1,jnum
+         do i= 1, inum
+          sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
+         end do
+        end do
+     
+        call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
+
+
+
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP2
 
@@ -1083,12 +1169,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     real(kind=ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr_f3=>null()
     type(ESMF_Field)         :: Microphytobenthos_erodibility,Microphytobenthos_critical_bed_shearstress, &
                               & Macrofauna_erodibility,Macrofauna_critical_bed_shearstress
-    integer                  :: n, i, j, k, localrc, istat
+    integer                  :: n, i, j, k,l, localrc, istat,nm
     type(ESMF_Field)         :: field
     type(ESMF_Field),dimension(:),allocatable :: fieldlist
     type(ESMF_FieldBundle)   :: fieldBundle
     logical                  :: forcing_from_coupler=.true.
-    real(kind=ESMF_KIND_R8),parameter :: porosity=0.1 !> @todo make this an import field (e.g. by bed component)
     real(kind=ESMF_KIND_R8),parameter :: ws_convention_factor=-1.0 !upward positive
 
     integer                  :: petCount, localPet
@@ -1103,8 +1188,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_FieldStatus_Flag) :: status
     integer,dimension(2)     :: totalLBound,totalUBound
     integer,dimension(2)     :: exclusiveLBound,exclusiveUBound
+    integer,dimension(3)     :: exclusiveLBound3,exclusiveUBound3,totalLBound3,totalUBound3
     integer(ESMF_KIND_I4)    :: ubnd(3), lbnd(3), tubnd(3), tlbnd(3)
     integer                  :: kmx, kmaxsd !(kmaxsd: kmax-layer index for sand)
+    real (kind=fp) :: deposition_rate, entrainment_rate
 !#define DEBUG
     rc=ESMF_SUCCESS
 
@@ -1391,8 +1478,15 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          end do
      end do
 #ifdef DEBUG
-       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect
-       write (*,*) 'in erosed component run:MPB and Mbalthica BioEffects%TauEffect=', BioEffects%TauEffect
+     do j = 1, jnum
+         do i = 1, inum
+            if (mask(i,j)== 0) then
+       write (0,*) 'in erosed component run:MPB and Mbalthica BioEffects%ErodibilityEffect=', BioEffects%ErodibilityEffect(i,j)
+       write (0,*) 'in erosed component run:MPB and Mbalthica BioEffects%TauEffect=', BioEffects%TauEffect(i,j)
+            end if
+         end do
+     end do
+
 #endif
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
@@ -1400,11 +1494,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     call erosed(  nmlb   , nmub   , flufflyr , mfluff , frac , mudfrac , ws_convention_factor*ws, &
                 & umod   , h1     , chezy    , taub   , nfrac, rhosol  , sedd50                 , &
-                & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud   , wave ,  uorb, &
-                & tper   , teta   , spm_concentration , BioEffects     , nybot    , sigma_midlayer, &
+                & sedd90 , sedtyp , sink     , sinkf  , sour , sourf   , anymud      , wave ,  uorb, &
+                & tper   , teta   , spm_concentration , BioEffects     , nybot       , sigma_midlayer, &
                 & u_bot  , v_bot  , u2d      , v2d    , h0   , mask    , advancecount, taubn,eq_conc, &
                 & relative_thickness_of_layers, kmaxsd, taubmax )
-
   n =0
     do l = 1, nfrac
       do nm = nmlb, nmub
@@ -1420,19 +1513,22 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             kmx = kmaxsd
 
         end if
+
         if ( mask(i,j) .gt. 0 ) then
-
-          size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = sour(l,nm) *1000.0_fp -  sink(l,nm) * spm_concentration(i,j,kmx,l)  ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
-
-#ifdef DEBUG
- !       write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, sink(l,nm)*spm_concentration(i,j,l) , sour (l,nm)*1000.0,frac (l,nm), mudfrac(nm), taub(nm), &
- !       size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j),uorb (inum*(j -1)+i)
-         if (l==1)  write (unit707, '(I4,4x,I4,4x,I5,6(4x,F11.4))' ) advancecount, l, nm, wavek(i,j) , waveH(i,j), waveT(i,j), uorb (nm), taub(nm), &
-         depth(i,j)
-#endif
-
-        end if
-     enddo
+          
+           deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
+           entrainment_rate = sour(l,nm)
+          
+          if (bedmodel) then
+             dt = 120._fp
+              !@ToDO timestep just hardcoded, but should be corrected as soon as
+              !possible
+              call update_sediment_mass (mass(l,nm), dt,deposition_rate,entrainment_rate, area(i,j))
+          end if
+        
+          size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = entrainment_rate *1000.0_fp - deposition_rate *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
+        endif
+      enddo
       !> @todo check units and calculation of sediment upward flux, rethink ssus to be taken from FABM directly, not calculated by
       !! vanrjin84. So far, we add bed source due to sinking velocity and add material to water using constant bed porosity and
       !! sediment density.
@@ -1441,28 +1537,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     !> save current water level to the old water level for the next time step
     h0 = h1
-
-        !
-        !   Compute change in sediment composition of top layer and fluff layer
-        !
-!    mass       = 0.0_fp    ! change in sediment composition of top layer, [kg/m2]
-!    massfluff  = 0.0_fp    ! change in sediment composition of fluff layer [kg/m2]
-!        !
-!    do l = 1, nfrac
-!            do nm = nmlb, nmub
-!                !
-!                ! Update dbodsd value at nm
-!                !
-!                mass(l, nm) = mass(l, nm) + dt*morfac*( sink(l,nm)*rn(l,nm) - sour(l,nm) )
-!                !
-!                ! Update dfluff value at nm
-!                !
-!                if (flufflyr>0) then
-!                    massfluff(l, nm) = massfluff(l, nm) + dt*( sinkf(l,nm)*rn(l,nm) - sourf(l,nm) )
-!                endif
-!            enddo
-!    enddo
-        !
 
     call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1515,13 +1589,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    end if
-
-    if (.not. (      all(lbound(rms_orbital_velocity%ptr) .eq. totalLBound) &
-      .and. all(ubound(rms_orbital_velocity%ptr) .eq. totalUBound) ) ) then
-      write(message, '(A)') trim(name)//' bounds do not match total domain in field'
-      call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
     end if
 
     do j=1,jnum
@@ -1654,9 +1721,50 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       end do
     end do
 
+!#ifdef DEBUG
+
+    if (bedmodel) then
+    call ESMF_StateGet(exportState,'sediment_mass_in_bed', itemType=itemType,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message, '(A)') trim(name)//' did not find field sediment_mass_in_bed'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(exportState, 'sediment_mass_in_bed', field=field,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=status, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)') trim(name)//' received incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=sediment_mass,exclusiveLBound=exclusiveLBound3, &
+      exclusiveUBound=exclusiveUBound3, totalLBound=totalLBound3, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @todo proper bounds checking with eLBound required here
+
+    do j=1,jnum
+      do i= 1, inum
+        sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
+    !    write (0,*) ' sediment_mass(i,j,:)',i,j,sediment_mass(i,j,:)
+      end do
+    end do
+    end if
+!#endif
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1713,8 +1821,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 !    deallocate (rn)
     deallocate (ws)
     !
-    deallocate (mass)
-    deallocate (massfluff)
+    if (allocated (mass) ) deallocate (mass)
+!    deallocate (massfluff)
     deallocate (sink)
     deallocate (sinkf)
     deallocate (sour)
@@ -1730,6 +1838,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
     deallocate (spm_concentration)
     deallocate (relative_thickness_of_layers, sigma_midlayer)
+    if ( associated( sediment_mass)) nullify (sediment_mass)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 

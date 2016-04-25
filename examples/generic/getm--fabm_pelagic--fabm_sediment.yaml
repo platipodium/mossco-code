@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 3D coupling
+# between getm, pelagic + benthic ecosystem without forcing 
+
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+
+dependencies:
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - restart_soil:
+    - component: fabm_sediment
+      grid: temperature_in_soil
+  - fabm_sediment:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+
+instances:
+  - mossco_gfs: netcdf
+  - restart_soil: netcdf_input
+  - restart_water: netcdf_input
+
+coupling:
+  - components:
+     - restart_water
+     - fabm_pelagic
+    interval: none
+  - components:
+     - restart_soil
+     - fabm_sediment
+    interval: none
+  - components:
+     - getm
+     - fabm_sediment
+    interval: 30 m
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - fabm_pelagic
+     - pelagic_soil_connector
+     - fabm_sediment
+    interval:  30 m
+  - components:
+     - fabm_sediment
+     - soil_pelagic_connector
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - getm
+     - mossco_gfs
+    interval: 12 h
+  - components:
+     - fabm_sediment
+     - mossco_gfs
+    interval: 12 h

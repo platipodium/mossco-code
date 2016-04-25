@@ -1,9 +1,10 @@
 !> @brief Implementation of a GETM ocean component
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
-!> @author Knut Klingbeil, IOW
-!> @author Carsten Lemmen, HZG
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @author Knut Klingbeil <klingbeil@io-warnemuende.de>
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -85,6 +86,8 @@ module getm_component
      real(ESMF_KIND_R8),dimension(:,:,:),pointer :: ptr=>NULL()
      real(ESMF_KIND_R8)                          :: hackmax=-1.0
      real(ESMF_KIND_R8)                          :: hackmaxmin=0.0
+     logical                                     :: has_boundary_data=.false.
+     character(len=ESMF_MAXSTR)                  :: fieldname
   end type ptrarray3D
   type(ptrarray3D),dimension(:),allocatable :: transport_ws,transport_conc
 
@@ -554,6 +557,9 @@ module getm_component
 
                if (concFlags(i) .eq. 0) cycle
 
+!              assign fieldname (to easy re-access the field later)
+               transport_conc(n)%fieldname = trim(itemNameList(i))
+
                call ESMF_FieldGet(concFieldList(i),status=status, rc=localrc)
                if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -583,17 +589,15 @@ module getm_component
                   call ESMF_Finalize(endflag=ESMF_END_ABORT)
                end if
 
-               !> set maximum value for boundary condition
-               if (trim(itemNameList(i))=='Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water') then
-                 transport_conc(n)%hackmax=0.8
-                 transport_conc(n)%hackmaxmin=0.2
-                 call ESMF_LogWrite('  use maximum boundary value of 0.8 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
-               end if
-               if (trim(itemNameList(i))=='Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water') then
-                 transport_conc(n)%hackmaxmin=2.0
-                 transport_conc(n)%hackmax=8.0
-                 call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(itemNameList(i)),ESMF_LOGMSG_WARNING)
-               end if
+               !> get information about boundary condition
+               call ESMF_AttributeGet(concFieldList(i), 'has_boundary_data', value=transport_conc(n)%has_boundary_data, defaultValue=.false., rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call ESMF_AttributeGet(concFieldList(i), 'hackmax', value=transport_conc(n)%hackmax, defaultValue=-1.d0, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+               call ESMF_AttributeGet(concFieldList(i), 'hackmaxmin', value=transport_conc(n)%hackmaxmin, defaultValue=-1.d0, rc=localrc)
+               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !              search for corresponding z_velocity
                itemName = itemNameList(i)(:namelenList(i)-len_trim(conc_suffix))//ws_suffix
@@ -673,6 +677,67 @@ module getm_component
 
    end subroutine InitializeP2
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "update_use_boundary_data"
+   subroutine update_use_boundary_data(importState, advanceCount, rc)
+
+    type(ESMF_State), intent(in)                  :: importState
+    integer(ESMF_KIND_I8), intent(in), optional   :: advanceCount
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+
+    type(ESMF_FieldBundle)        :: fieldBundle
+    type(ESMF_Field), allocatable :: fieldList(:)
+    character(len=ESMF_MAXSTR)    :: fieldName, message
+    integer                       :: localrc, i, j, rc_, fieldCount
+
+    rc_ = ESMF_SUCCESS
+
+    if (.not.allocated(transport_conc)) then
+      if (present(rc)) rc = rc_
+      return
+    endif
+
+    call ESMF_StateGet(importState, "concentrations_in_water", fieldBundle, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1,size(transport_conc)
+      call ESMF_FieldBundleGet(fieldBundle, trim(transport_conc(i)%fieldname), &
+        fieldCount=fieldCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldCount < 1 ) cycle
+
+      if (.not.allocated(fieldList)) allocate(fieldList(fieldCount), stat=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldBundleGet(fieldBundle, trim(transport_conc(i)%fieldname), &
+        fieldList=fieldList,rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do j = 1, fieldCount
+        call ESMF_AttributeGet(fieldList(j), 'has_boundary_data', &
+          value=transport_conc(i)%has_boundary_data, defaultValue=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (transport_conc(i)%has_boundary_data) then
+          if ((present(advanceCount) .and. advanceCount == 0) &
+            .or. (.not.present(advanceCount))) then
+            call ESMF_LogWrite('  use boundary conditions for '//trim(transport_conc(i)%fieldname), ESMF_LOGMSG_INFO)
+          endif
+        end if
+      enddo
+
+      if (allocated(fieldList)) deallocate(fieldList)
+    end do
+
+   if (present(rc)) rc = rc_
+
+   end subroutine update_use_boundary_data
+
 !-----------------------------------------------------------------------
 #undef  ESMF_METHOD
 #define ESMF_METHOD "ReadRestart"
@@ -707,13 +772,13 @@ module getm_component
     type(ESMF_Clock)    :: clock        ! may be uninitialized
     integer,intent(out) :: rc
 
-    type(ESMF_Clock)      :: myClock
-    type(ESMF_Time)       :: currTime, stopTime
+    type(ESMF_Clock)        :: myClock
+    type(ESMF_Time)         :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeInterval
-    integer(ESMF_KIND_I8) :: advanceCount
+    integer(ESMF_KIND_I8)   :: advanceCount
     type(ESMF_Time)         :: nextTime
     integer                 :: n
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4)   :: localrc
 
     rc=ESMF_SUCCESS
 
@@ -722,12 +787,13 @@ module getm_component
     call getmCmp_update_importState()
 
     call ESMF_GridCompGet(gridComp, clock=myClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_ClockGet(myClock,currTime=currTime, advanceCount=advanceCount, &
       timeStep=timeInterval, stopTime=stopTime, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !  use clock to do determine time of calling routine
     call ESMF_ClockGetNextTime(clock,nextTime,rc=localrc)
@@ -735,9 +801,9 @@ module getm_component
       call ESMF_LogWrite('will continue until own stopTime',ESMF_LOGMSG_WARNING, &
        line=__LINE__,file=__FILE__,method='Run()')
       call ESMF_ClockGet(myClock,stopTime=NextTime, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end if
-
 
     do while (currTime + 0.5d0*timeInterval <= nextTime)
 
@@ -746,6 +812,11 @@ module getm_component
                             line=__LINE__,file=__FILE__,method='Run()')
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
+
+!     Update information about boundary conditions
+      call update_use_boundary_data(importState, advanceCount=advanceCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 !     This is where the model specific computation goes.
       if (.not.dryrun) then
@@ -757,9 +828,11 @@ module getm_component
       if (mod(n,M).eq.0) call getmCmp_transport(currTime)
 
       call ESMF_ClockAdvance(myClock, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_ClockGet(myClock,currtime=currTime,advanceCount=advanceCount, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end do
 
     call getmCmp_update_grid(gridComp)
@@ -1084,6 +1157,13 @@ module getm_component
       allocate(maskC(E2DFIELD)) ; maskC = az
       allocate(maskX(E2DFIELD)) ; maskX = ax
    end if
+#ifdef GETM_SLICE_MODEL
+   maskC => null(); maskX => null()
+   allocate(maskC(E2DFIELD)) ; maskC = az
+   allocate(maskX(E2DFIELD)) ; maskX = ax
+   maskC(:,3) = 0
+   maskX(:,3) = 0
+#endif
 
    allocate(areaC(E2DFIELD))
    allocate(maskC3D(E2DFIELD,0:klen))
@@ -1103,6 +1183,10 @@ module getm_component
    maskC3D(:,:,0) = 0
    maskX3D(:,:,0) = 0
    areaW3D(:,:,0) = areaC
+#ifdef GETM_SLICE_MODEL
+   maskC3D(:,3,:) = 0
+   maskX3D(:,3,:) = 0
+#endif
 
    allocate(zw(E2DFIELD ,0:klen))
    allocate(zc(E2DFIELD ,1:klen))
@@ -1277,7 +1361,7 @@ module getm_component
       deBlockList(:,2,1+pet) = (/ i0+ilen-1 , j0+jlen-1 , 1+klen-1 /)
    end do
 
-!  indexflag=ESMF_INDEX_DELOCAL (default) starting at 1
+!  indexflag=ESMF_INDEX_DELOCAL (default) exclusive region starting at 1
 !  (for ESMF_INDEX_USER [grid|stagger]MemLBound can be set)
 #if 1
 !  Single-tile DistGrid (1 subdomain = 1 DE)
@@ -1952,7 +2036,7 @@ module getm_component
    use parameters     ,only: rho_0
    use domain         ,only: imin,imax,jmin,jmax,kmax
    use domain         ,only: az
-   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv
+   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv,convc
    use domain         ,only: dxv,dyu,arcd1
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
@@ -1988,6 +2072,8 @@ module getm_component
    REALTYPE,dimension(:,:,:),pointer    :: p_vel3d
    integer                              :: k,klen
    REALTYPE,parameter                   :: vel_missing=0.0d0
+   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+   REALTYPE, parameter :: deg2rad=pi/180
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -2179,7 +2265,7 @@ module getm_component
    end if
 
    if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
-      waveDir = atan2(sinwavedir,coswavedir)
+      waveDir = atan2(sinwavedir,coswavedir) - convc*deg2rad
    end if
    if (waveforcing_method .ne. NO_WAVES .and. waves_method.ne.WAVES_NOSTOKES) then
 !     provide Eulerian velocities
@@ -2227,7 +2313,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain         ,only: grid_type
+   use domain         ,only: grid_type,convc
    use meteo          ,only: metforcing,met_method,METEO_FROMEXT,calc_met
    use meteo          ,only: u10,v10,new_meteo
    use waves          ,only: waveforcing_method,WAVES_FROMEXT,new_waves
@@ -2242,7 +2328,8 @@ module getm_component
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES:
-!
+   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+   REALTYPE, parameter :: deg2rad=pi/180
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -2269,8 +2356,8 @@ module getm_component
          waveT_ = waveT
          waveK_ = waveK
       end if
-      coswavedir = cos(waveDir)
-      sinwavedir = sin(waveDir)
+      coswavedir = cos( waveDir + convc*deg2rad )
+      sinwavedir = sin( waveDir + convc*deg2rad )
    end if
 
 #ifdef DEBUG
@@ -2347,22 +2434,25 @@ module getm_component
          end if
       end if
 
+      if (.not.(transport_conc(n)%has_boundary_data)) then
+
+        ! Hack for Kai with seasonally varying maximum value for boundary concentrations
+        ! if you don't give currtime, then only an upper maximum is used.
+        if (present(currTime)) then
+          call ESMF_TimeGet(currTime, dayOfYear=doy, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          amplitude=transport_conc(n)%hackmax - transport_conc(n)%hackmaxmin
+          y0=transport_conc(n)%hackmaxmin
+          hackmax=y0 + amplitude * cos(2.0*pi*doy/365.25) ! reformulate according to need
+          call zero_gradient_3d_bdy(p_conc,hackmax)
+        else
+          call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)
+        endif
+      end if
+
       call do_transport_3d(p_conc,p_ws)
-
-      ! Hack for Kai with seasonally varying maximum value for boundary concentrations
-      ! if you don't give currtime, then only an upper maximum is used.
-      if (present(currTime)) then
-        call ESMF_TimeGet(currTime, dayOfYear=doy, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        amplitude=transport_conc(n)%hackmax - transport_conc(n)%hackmaxmin
-        y0=transport_conc(n)%hackmaxmin
-        hackmax=y0 + amplitude * cos(2.0*pi*doy/365.25) ! reformulate according to need
-        call zero_gradient_3d_bdy(p_conc,hackmax)
-      else
-        call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)
-      endif
 
       if (noKindMatch) then
          transport_conc(n)%ptr = t_conc

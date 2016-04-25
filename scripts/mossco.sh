@@ -90,6 +90,7 @@ function predict_time {
   M=$(expr $D \* 40 / ${NP})
   H=$(expr $M / 60)
   M=$(expr $M % 60)
+  if [ $H -lt 1 ] ; then if [ $M -lt 1 ] ; then M=1; fi ; fi
   echo  $H:$M:00
 }
 

@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+# This configuration is is part of MOSSCO. It describes a 3D coupling
+# between getm, pelagic and forcing by lateral boundaries
+#
+# @copyright (C) 2016 Helmholtz-Zentrum Geesthacht
+# @author Carsten Lemmen <carsten.lemmen@hzg.de>
+#
+# MOSSCO is free software: you can redistribute it and/or modify it under the
+# terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+dependencies:
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - fabm_pelagic:
+    - component: getm
+      grid: temperature_in_water
+  - boundary:
+    - component: getm
+      grid: temperature_in_water
+
+instances:
+  - mossco_gfn: netcdf
+  - restart_water: netcdf_input
+  - boundary: netcdf_input
+
+coupling:
+  - components:
+     - restart_water
+     - fabm_pelagic
+    interval: none
+  - components:
+     - boundary
+     - nudge_connector
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - getm
+     - fabm_pelagic
+    interval: 30 m
+  - components:
+     - fabm_pelagic
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - getm
+     - mossco_gfn
+    interval: 12 h
+  - components:
+     - fabm_pelagic
+     - mossco_gfn
+    interval: 12 h

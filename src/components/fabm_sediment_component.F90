@@ -4,7 +4,7 @@
 !! MOSSCO sediment component.
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 !
@@ -97,14 +97,16 @@ module fabm_sediment_component
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_READRESTART, phase=1, &
       userRoutine=ReadRestart, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
-    call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompSetEntryPoint(gridcomp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
@@ -239,7 +241,11 @@ module fabm_sediment_component
     if (sed%grid%type==UGRID) then
       surface_mesh = ESMF_MeshCreate(meshname='sediment_surface_mesh', &
                                   filename=ugrid_name, &
-                                  filetypeflag=ESMF_FILEFORMAT_UGRID,rc=localrc)
+#if ESMF_VERSION_MAJOR > 6
+          fileformat=ESMF_FILEFORMAT_UGRID, rc=localrc)
+#else
+          filetypeflag=ESMF_FILEFORMAT_UGRID, rc=localrc)
+#endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       !call ESMF_AttributeSet(surface_mesh,'creator', trim(name), rc=localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -312,7 +318,8 @@ module fabm_sediment_component
     sed1d%grid%dzmin=dzmin
 
     !! Write log entries
-    write(message,*) trim(name)//' initialise grid with [inum x jnum x knum]',_INUM_,' x ',_JNUM_,' x ',_KNUM_
+    write(message,'(A,I5,A,I5,A,I5)') trim(name)//' initialize grid [inum x jnum x knum]', &
+      _INUM_,' x ',_JNUM_,' x ',_KNUM_
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     !! get grid mask
@@ -329,11 +336,10 @@ module fabm_sediment_component
           end do
         end do
       else
-        write(message,*) trim(name)//'no mask found in foreign grid, compute every sediment column'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+        write(message,*) trim(name)//' found no mask in foreign grid, compute every sediment column'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       end if
     end if
-
 
     call sed%grid%init_grid()
     call sed%initialize()
@@ -402,9 +408,15 @@ module fabm_sediment_component
     ! use Dirichlet boundary condition for pre-simulation
     sed%bcup_dissolved_variables = 2
     sed1d%bcup_dissolved_variables = 2
+    sed1d%adaptive_solver_diagnostics = .true.
     do tidx=1,int(presimulation_years*365*24/(dt_spinup/3600.0_rk),kind=ESMF_KIND_I8)
       call ode_solver(sed1d,dt_spinup,ode_method)
     end do
+    if (ode_method == 2) then
+      write (message,*) 'minimum dt:',sed1d%last_min_dt,' at cell ',sed1d%last_min_dt_grid_cell
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    end if
+
     do i=1,sed%inum
       do j=1,sed%jnum
         if (.not.sed%mask(i,j,1)) &
@@ -635,9 +647,13 @@ module fabm_sediment_component
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units))
+        call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !> do not set missing value and leave this to netcdf component
+        !call ESMF_AttributeSet(field,'missing_value',sed%missing_value, rc=localrc)
+        !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_FieldGet(field=field, farrayPtr=ptr_f3, &
                        totalLBound=lbnd3,totalUBound=ubnd3, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -864,23 +880,24 @@ module fabm_sediment_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> browse through list of state variables and
     !! copy data from importState fields with same name
-    do n=1,size(sed%export_states)
+    do n = 1, size(sed%export_states)
 
       varname=trim(sed%export_states(n)%standard_name)//'_in_soil'
       call ESMF_StateGet(importState, trim(varname), itemType=itemType, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemType /= ESMF_STATEITEM_FIELD) then
+      if (itemType == ESMF_STATEITEM_NOTFOUND) cycle
 
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
+      if (itemType /= ESMF_STATEITEM_FIELD) then
+        write(message,'(A)') trim(name)//' skipped hotstart for non-field '//trim(varname)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         call MOSSCO_StateLog(importState, rc=localrc)
         cycle
@@ -895,15 +912,10 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
-
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' incomplete field '
-        call mossco_fieldString(field, message)
+        write(message,'(A)') trim(name)//' skipped hotstart for incomplete '
+        call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
-
       endif
 
       call ESMF_FieldGet(field, rank=rank, rc=localrc)
@@ -911,15 +923,10 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (rank /= 3) then
-
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' expected rank 3 but got field '
-        call mossco_fieldString(field, message)
+        write(message,'(A)') trim(name)//' skipped hotstart for not rank 3 '
+        call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
-
       endif
 
       call ESMF_FieldGet(field, farrayPtr=ptr_f3, &
@@ -941,17 +948,11 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (any (exportUbnd /= ubnd) .or. any(exportLbnd /= lbnd)) then
-        write(message,'(A)') trim(name)//' skipped hotstart for variable '//trim(varname)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-        call MOSSCO_StateLog(importState, rc=localrc)
-        write(message,'(A)') trim(name)//' array bounds do not match '
-        call mossco_fieldString(field, message)
+        write(message,'(A)') trim(name)//' skipped hotstart for no-match array bounds '
+        call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
-
       endif
-
-
 
       ! ownshape = shape(sed%export_states(n)%data)
       !
@@ -986,10 +987,10 @@ module fabm_sediment_component
         ! end if
       !end if
 
-      sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), exportLBnd(3):exportUBnd(3)) &
-        = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
-      write(message,'(A)') trim(name)//' hotstarted field'
-      call mossco_fieldString(field, message)
+      sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), &
+        exportLBnd(3):exportUBnd(3)) = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+      write(message,'(A)') trim(name)//' hotstarted '
+      call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end do
 
@@ -1005,9 +1006,6 @@ module fabm_sediment_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
-
-
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
@@ -1373,7 +1371,7 @@ module fabm_sediment_component
 !tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
 
             fluxes(_IRANGE_,_JRANGE_,i) = -(sed%conc(:,:,1,i)-bdys(:,:,i+1))/ &
-              sed%grid%dz(:,:,1)*(sed%bioturbation + 2.*sed%diffusivity+bdys(:,:,1) * &
+              sed%grid%dz(:,:,1)*(sed%bioturbation + sed%diffusivity+bdys(:,:,1) * &
               0.035d0)*sed%porosity(:,:,1)/86400._rk/10000._rk
           else
             !> reset fluxes to zero

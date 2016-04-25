@@ -2,7 +2,7 @@
 !> @brief 3D generic driver for the Framework for Aquatic Biogeochemical Models (FABM)
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Richard Hofmeister <richard.hofmeister@hzg.de>
 
 !
@@ -100,12 +100,13 @@
   contains
 
   !> creates instance of pelagic fabm class
-  function mossco_create_fabm_pelagic() result(pf)
+  function mossco_create_fabm_pelagic(fabm_nml) result(pf)
 
+    character(len=*), optional, intent(in)  :: fabm_nml
     type(type_mossco_fabm_pelagic), allocatable :: pf
 
     integer  :: n
-    integer  :: namlst=123
+    integer  :: namlst_unit=123
     real(rk) :: dt
 
     allocate(pf)
@@ -113,7 +114,11 @@
     pf%conc => null()
     pf%par => null()
     ! Build FABM model tree.
-    pf%model => fabm_create_model_from_file(namlst)
+    if (present(fabm_nml)) then
+      pf%model => fabm_create_model_from_file(namlst_unit,trim(fabm_nml))
+    else
+      pf%model => fabm_create_model_from_file(namlst_unit,'fabm.nml')
+    endif
 
     pf%nvar = size(pf%model%state_variables)
     pf%ndiag = size(pf%model%diagnostic_variables)
@@ -349,7 +354,7 @@
   !> append external bulk dependency
   subroutine add_bulk_dependency(deps, standard_variable, name, units)
     type(type_bulk_standard_variable),dimension(:), pointer :: deps
-    type(type_standard_variable),target,optional            :: standard_variable
+    type(type_base_standard_variable),target,optional       :: standard_variable
     character(len=*), optional                              :: name
     character(len=*), optional                              :: units
 
@@ -386,9 +391,11 @@
   end subroutine
 
   !> append external horizontal dependency
-  subroutine add_horizontal_dependency(deps, var)
+  subroutine add_horizontal_dependency(deps, var, name, units)
     type(type_horizontal_standard_variable),dimension(:), pointer :: deps
-    type(type_standard_variable),target                           :: var
+    type(type_base_standard_variable),target,optional             :: var
+    character(len=256), optional                                  :: name
+    character(len=256), optional                                  :: units
 
     type(type_horizontal_standard_variable),dimension(:), pointer :: deps_tmp
     integer :: n_hor
@@ -406,8 +413,18 @@
       allocate(deps(1))
     end if
 
-    deps(n_hor+1)%units = var%units
-    deps(n_hor+1)%name = var%name
+    if (present(var)) then
+      deps(n_hor+1)%units = var%units
+      deps(n_hor+1)%name = var%name
+    else
+      if (present(name) .and. present(units)) then
+        deps(n_hor+1)%units = trim(units)
+        deps(n_hor+1)%name = trim(name)
+      else
+        write(0,*) 'cannot register bulk dependency without name and unit'
+        stop
+      end if
+    end if
 
   end subroutine
 
@@ -430,29 +447,26 @@
     do while (associated(link))
       if (.not.link%target%read_indices%is_empty().and.link%target%state_indices%is_empty()) then
         select case (link%target%domain)
-          case (domain_bulk)
+          case (domain_interior)
             if (.not.associated(pf%model%data(link%target%read_indices%pointers(1)%p)%p) &
                 .and..not.(link%target%presence==presence_internal)) then
-              if (associated(link%target%standard_variable)) then
-                call add_bulk_dependency(pf%bulk_dependencies,standard_variable=link%target%standard_variable)
-              else
-                call add_bulk_dependency(pf%bulk_dependencies,name=link%name,units=link%target%units)
-              end if
+              !> @todo: use fabm's standard variable set infrastructure
+              !if (associated(link%target%standard_variable)) then
+              !  call add_bulk_dependency(pf%bulk_dependencies,standard_variable=link%target%standard_variable)
+              call add_bulk_dependency(pf%bulk_dependencies,name=link%name,units=link%target%units)
             end if
     case (domain_horizontal,domain_bottom,domain_surface)
             if (.not.associated(pf%model%data_hz(link%target%read_indices%pointers(1)%p)%p) &
-                .and..not.(link%target%presence==presence_internal) &
-                .and.associated(link%target%standard_variable)) then
-              if (trim(link%target%standard_variable%name) == "surface_downwelling_photosynthetic_radiative_flux") then
+                .and..not.(link%target%presence==presence_internal)) then
+              if (trim(link%target%name) == "surface_downwelling_photosynthetic_radiative_flux") then
                  link => link%next
                  cycle
               end if
-              call add_horizontal_dependency(pf%horizontal_dependencies,link%target%standard_variable)
+              call add_horizontal_dependency(pf%horizontal_dependencies,name=link%target%name,units=link%target%units)
             end if
           case (domain_scalar)
             if (.not.associated(pf%model%data_scalar(link%target%read_indices%pointers(1)%p)%p) &
-                .and..not.(link%target%presence==presence_internal) &
-                .and.associated(link%target%standard_variable)) then
+                .and..not.(link%target%presence==presence_internal)) then
             end if
         end select
       end if
@@ -524,18 +538,10 @@
   !  export_state%conc => pf%conc(:,:,:,export_state%fabm_id)
   !  allocate(export_state%ws(pf%inum,pf%jnum,pf%knum))
   !  export_state%ws = 0.0d0
-    !> first check for present standard name
-    if (pf%model%state_variables(fabm_id)%standard_variable%name/='') then
-      export_state%standard_name = &
-        trim(pf%model%state_variables(fabm_id)%standard_variable%name)
-      export_state%units = &
-        trim(pf%model%state_variables(fabm_id)%standard_variable%units)
-    else
-    !> otherwise use CF-ed version of long_name
-      export_state%standard_name = only_var_name( &
-            pf%model%state_variables(fabm_id)%long_name)
-      export_state%units = pf%model%state_variables(fabm_id)%units
-    end if
+  !> use CF-ed version of long_name
+    export_state%standard_name = only_var_name( &
+          pf%model%state_variables(fabm_id)%long_name)
+    export_state%units = pf%model%state_variables(fabm_id)%units
   end function get_export_state_by_id
 
 !> Initializes a pelagic FABM export state by FABM variable name
@@ -842,4 +848,3 @@
    end subroutine clip_below_minimum
 
   end module mossco_fabm_pelagic
-

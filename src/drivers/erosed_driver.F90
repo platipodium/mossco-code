@@ -532,7 +532,7 @@ masking: if ( mask(i,j) .gt. 0 ) then
 !                 call compbsskin_arguments%set (u2d(i,j), v2d (i,j) , h(nm)   , wave  ,       &
                   call compbsskin_arguments%set (u_bottom(nm), v_bottom(nm) , h(nm)   , wave  ,       &
                                               & 2.0_fp* uorb(nm)/sqrt (pi), tper  (nm), teta(nm)/pi*180._fp, kssilt,       &
-                                              & kssand  , thcmud(nm), taub(nm), rhowat, vicmol)
+                                              & kssand  , thcmud(nm), rhowat, vicmol)
 
                  call compbsskin_arguments%run ()
                  call compbsskin_arguments%get(taub(nm))
@@ -544,15 +544,15 @@ masking: if ( mask(i,j) .gt. 0 ) then
                  if (mfltot>0.0_fp) fracf   = mfluff(l,nm)/mfltot
 
 #ifdef DEBUG
-                 write (*,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (i,j)
+                 write (0,*) 'bioeffects on erodibility :', Bioeffects%ErodibilityEffect (i,j)
 
-                 write (*,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (i,j)
+                 write (0,*) 'bioeffects on critical tau :', Bioeffects%TauEffect (i,j)
 
-                 write (*,*) 'eropar(l,nm)= in erosed',  eropar(l,nm)
-                 write (*,*) 'tcrero(l,nm)=', tcrero(l,nm)
+                 write (0,*) 'eropar(l,nm)= in erosed',  eropar(l,nm)
+                 write (0,*) 'tcrero(l,nm)=', tcrero(l,nm)
 
-                 write (*,*) 'Bio eropar(l,nm)=', eropar(l,nm)* Bioeffects%ErodibilityEffect (i,j)
-                 write (*,*) 'Bio tcrero(l,nm)=', tcrero(l,nm)* Bioeffects%TauEffect (i,j)
+                 write (0,*) 'Bio eropar(l,nm)=', eropar(l,nm)* Bioeffects%ErodibilityEffect (i,j)
+                 write (0,*) 'Bio tcrero(l,nm)=', tcrero(l,nm)* Bioeffects%TauEffect (i,j)
 #endif
 
                  call  eromud_arguments%set(ws(l,nm) , fixfac(l,nm)  , taub(nm)      , frac(l,nm)    , fracf  , &
@@ -1607,7 +1607,7 @@ Subroutine allocate_compbsskin (compbsskin_arguments)
 
 subroutine set_compbsskin   (compbsskin_arguments, umean   , vmean     , depth      , wave    , &
                            & uorb, tper  , teta, kssilt  , &
-                           & kssand  , thcmud, taumax    , rhowat, vicmol  )
+                           & kssand  , thcmud    , rhowat, vicmol  )
  implicit none
     class (compbsskin_argument)  :: compbsskin_arguments
 
@@ -1623,7 +1623,6 @@ subroutine set_compbsskin   (compbsskin_arguments, umean   , vmean     , depth  
                                     !(not yet used)
     real(fp), intent(in)  :: thcmud ! Total hickness of mud layers
                                     !(to be replaced by mudcnt in future)
-    real(fp), intent(out) :: taumax ! resulting (maximum) bed shear stress muddy silt bed
     logical , intent(in)  :: wave   ! wave impacts included in flow comp. or not
     real(fp), intent(in)  :: rhowat ! water density
     real(fp), intent(in)  :: vicmol ! molecular viscosity
@@ -1637,7 +1636,6 @@ subroutine set_compbsskin   (compbsskin_arguments, umean   , vmean     , depth  
   compbsskin_arguments%kssilt= kssilt
   compbsskin_arguments%kssand= kssand
   compbsskin_arguments%thcmud= thcmud
-  compbsskin_arguments%taumax= taumax
   compbsskin_arguments%wave  = wave
   compbsskin_arguments%rhowat= rhowat
   compbsskin_arguments%vicmol= vicmol
@@ -1701,4 +1699,87 @@ function calcZ0cur (vonkar, sedd50, waterdepth,g)
     calcZ0cur = waterdepth/(exp (1._fp)*(exp(vonkar*chezy2d/sqrt (g)) - 1.0)) !Eq. 9.62 Delft3D p. 211 and taubot.f90 code from Delft3d
                                                                             ! z0cur for 3D case
 end function calcZ0cur
+
+
+subroutine init_mass(nfrac, fractions,nm, init_thickness, porosity, rhos,sediment_mass, area)
+
+      implicit none
+
+      integer    , intent(in)                                :: nfrac, nm
+      real(fp)   , intent(in)                                :: init_thickness,porosity
+      real(fp)   , dimension (:,:)     , pointer             :: fractions
+      real(fp)   , dimension (nfrac)   , intent(in)          :: rhos
+      real(fp)   , dimension (:,:)     , pointer, optional   :: area
+      real(fp)   , dimension (nfrac, nm), intent(out)        :: sediment_mass
+
+      integer                                                :: i,j,l, inum, jnum
+! Note that this subroutine may not work properly, when area includes halo zones
+! (This holds most of the time, better to say 99%). @ToDO, it is better to pass
+! exclusive bounds of area array as arguments. This subroutine is not used at the
+! moment hence. It has been simply moved to erosed_component.
+     sediment_mass=0.0_fp
+
+      do l = 1,nfrac
+       do  j = 1, jnum
+        do  i = 1, inum
+          if (present (area)) then
+           sediment_mass (l,inum*(j -1)+i) = init_thickness * area (i,j) * (1.0- porosity) * rhos (l) * fractions (l,inum*(j -1)+i)
+          else   ! sediment mass per unit area
+           sediment_mass (l,inum*(j -1)+i) = init_thickness * (1.0 - porosity) * rhos (l) *fractions (l,inum*(j -1)+i)
+          end if
+        end do
+       enddo
+      end do
+
+end subroutine  init_mass
+
+
+subroutine update_sediment_mass (mass, dt, deposition_rate, erosion_rate, area)
+
+     implicit none
+
+       real(fp)   , intent(inout)    :: mass, erosion_rate
+       real(fp)   , intent(in)       :: dt
+       real(fp)   , intent(in), target       :: area
+       real(fp)   , intent(in)       :: deposition_rate
+       real(fp)   , parameter        :: min_mass = 1.0e-6  ! Minimum allowable mass of the sediment fraction in the bed element          
+       
+         ! First check if the current mass of the sediment fraction is below the
+         ! minimum (i.e. resulting from extensive erosion in previous time step)
+         if (mass <= min_mass) then 
+             mass = min_mass
+             erosion_rate = 0.0_fp
+         else
+             mass  = mass + (deposition_rate - erosion_rate) * dt *area
+
+           if (mass<= min_mass)then
+              mass = min_mass
+              erosion_rate = deposition_rate - mass /(dt *area)
+           endif
+         endif
+             
+     end subroutine  update_sediment_mass
+     
+     subroutine update_bedlayer (bedlayer_thickness , dt, porosity, rhos, deposition_rate, erosion_rate)
+       implicit none
+
+       real(fp)   , intent(inout)    :: bedlayer_thickness, erosion_rate
+       real(fp)   , intent(in)       :: rhos
+       real(fp)   , intent(in)       :: porosity, dt
+       real(fp)   , intent(in)       :: deposition_rate
+       real(fp)   , parameter        :: min_thickness = 1.0e-7  ! Minimum allowable mass of the sediment fraction in the bed element          
+         if (bedlayer_thickness <= min_thickness) then
+             bedlayer_thickness = min_thickness
+             erosion_rate = 0.0_fp
+         else
+             bedlayer_thickness  = bedlayer_thickness + (deposition_rate - erosion_rate) * dt / ( ( 1._fp - porosity) * rhos )
+              
+              if (bedlayer_thickness <= min_thickness) then
+                   bedlayer_thickness = min_thickness
+                   erosion_rate = deposition_rate - bedlayer_thickness * ( (1._fp - porosity) * rhos ) / dt
+              endif
+         
+         endif
+
+    end subroutine update_bedlayer
 end module erosed_driver

@@ -1,0 +1,64 @@
+# This is a coupling specification that tests how two  FABM instances
+# can run alongside each other.
+
+dependencies:
+  - restart_water:
+    - component: getm
+      grid: temperature_in_water
+  - pelagic_maecs:
+    - component: getm
+      grid: temperature_in_water
+  - pelagic_npzd:
+    - component: getm
+      grid: temperature_in_water
+
+instances:
+  - mossco_gff_maecs: netcdf
+  - mossco_gff_npzd: netcdf
+  - restart_water: netcdf_input
+  - pelagic_npzd: fabm_pelagic
+  - pelagic_maecs: fabm_pelagic
+
+coupling:
+  - components:
+     - restart_water
+     - pelagic_npzd
+    interval: none
+  - components:
+     - restart_water
+     - pelagic_maecs
+    interval: none
+  - components:
+     - getm
+     - pelagic_npzd
+    interval: 30 m
+  - components:
+     - getm
+     - pelagic_maecs
+    interval: 30 m
+  # - components:
+  #    - pelagic_npzd
+  #    - transport_connector
+  #    - getm
+  #   interval: none
+  - components:
+     - pelagic_maecs
+     - transport_connector
+     - getm
+    interval: none
+  - components:
+     - getm
+     - mossco_gff_maecs
+    interval: 12 h
+  - components:
+     - getm
+     - mossco_gff_npzd
+    interval: 12 h
+  - components:
+     - pelagic_npzd
+     - mossco_gff_npzd
+    interval: 12 h
+  - components:
+     - pelagic_maecs
+     - mossco_gff_maecs
+    interval: 12 h
