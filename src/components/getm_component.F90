@@ -1255,6 +1255,7 @@ module getm_component
    end if
 
    allocate(taubmax(I2DFIELD))
+   taubmax = _ZERO_
 
    if (metforcing) then
       if (calc_met .or. met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
@@ -2250,7 +2251,9 @@ module getm_component
       end if
    end if
 
-   taubmax = rho_0 * taubmax_3d
+   if (runtype .ge. 2) then
+      taubmax = rho_0 * taubmax_3d
+   end if
 #endif
 
    if (met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
