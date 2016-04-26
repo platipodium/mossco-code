@@ -19,7 +19,7 @@
 !!   * set_environment - set the environment forcing
 !!   * get_rhs - get the temporal rates
 
-  module mossco_fabm_pelagic
+  module mossco_fabm_benthic
 
 #define RANGE3D 1:pf%inum,1:pf%jnum,1:pf%knum
 #define RANGE2D 1:pf%inum,1:pf%jnum
@@ -58,7 +58,6 @@
     type(type_horizontal_standard_variable), dimension(:), pointer :: horizontal_dependencies => null()
     real(rk), dimension(:,:,:), pointer  :: horizontal_expression_data => null()
     real(rk), dimension(:,:,:), pointer  :: horizontal_data => null()
-    real(rk), dimension(:,:,:,:), pointer:: time_integrated_bulk_variables => null()
     real(rk), dimension(:,:,:), pointer  :: time_integrated_horizontal_variables => null()
     integer, dimension(:), pointer       :: int_idx_from_diag_idx
     integer, dimension(:), pointer       :: int_idx_from_hor_diag_idx
@@ -76,7 +75,6 @@
     procedure :: initialize_concentrations
     procedure :: update_pointers
     procedure :: initialize_domain
-    procedure :: update_expressions
     procedure :: check_expressions
     procedure :: clip_below_minimum
   end type
@@ -175,12 +173,6 @@
 
     call pf%check_expressions()
 
-    ! initialize index mapping and memory for time integrated variables
-    if (.not.associated(pf%time_integrated_bulk_variables)) then
-      allocate(pf%time_integrated_bulk_variables(pf%inum,pf%jnum,pf%ndiag_int))
-      pf%time_integrated_bulk_variables = 0.0d0
-    end if
-
   end subroutine initialize_domain
 
   subroutine initialize_concentrations(pf)
@@ -244,6 +236,7 @@
 
     class(type_mossco_fabm_benthic),intent(inout)     :: rhs_driver
     real(rk),intent(inout),dimension(:,:,:,:),pointer :: rhs
+    real(rk) :: bottom_flux(1:0)
 
     integer :: n,i,j,k
 
@@ -259,7 +252,7 @@
     ! get local rates of change
     do j=1,rhs_driver%jnum
       do i=1,rhs_driver%inum
-        if (.not.rhs_driver%mask(i,j,1)) call fabm_do_bottom(rhs_driver%model,i,j,rhs(i,j,1,:))
+        if (.not.rhs_driver%mask(i,j,1)) call fabm_do_bottom(rhs_driver%model,i,j,rhs(i,j,1,:),bottom_flux(:))
       end do
     end do
 
@@ -328,7 +321,7 @@
               !> @todo: use fabm's standard variable set infrastructure
               !if (associated(link%target%standard_variable)) then
               !  call add_bulk_dependency(pf%bulk_dependencies,standard_variable=link%target%standard_variable)
-              call add_bulk_dependency(pf%bulk_dependencies,name=link%name,units=link%target%units)
+              !call add_bulk_dependency(pf%bulk_dependencies,name=link%name,units=link%target%units)
             end if
     case (domain_horizontal,domain_bottom,domain_surface)
             if (.not.associated(pf%model%data_hz(link%target%read_indices%pointers(1)%p)%p) &
