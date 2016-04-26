@@ -34,7 +34,8 @@ ifeq ($(MOSSCO_EROSED),true)
   TARGETS += libmossco_erosed
 endif
 ifeq ($(MOSSCO_FABM),true)
-  TARGETS +=  libsediment libmossco_fabmpelagic
+TARGETS +=  libsediment libmossco_fabmpelagic
+TARGETS +=  libmossco_fabmbenthic
 ifeq ($(MOSSCO_GOTM),true)
   TARGETS += libmossco_fabm0d
 endif
@@ -101,6 +102,9 @@ $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o):
 libmossco_fabmpelagic_driver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmpelagic
 
+libmossco_fabmbenthic_driver:
+	$(MAKE) -C $(MOSSCO_DIR)/src/drivers libmossco_fabmbenthic
+
 # Why these next two lines???
 #libfabm_mossco:  prefix $(MOSSCO_LIBRARY_PATH)/libsediment.a
 #libgotm_fabm: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_gotmfabm.a
@@ -109,6 +113,9 @@ libsediment: prefix libmossco_sediment_driver \
 
 libmossco_fabmpelagic: prefix libmossco_fabmpelagic_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_component.o)
+
+libmossco_fabmbenthic: prefix libmossco_fabmbenthic_driver \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmbenthic.a(fabm_benthic_component.o)
 
 libmossco_fabm0d: prefix libmossco_fabm0d_driver \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a(fabm0d_component.o)
@@ -149,6 +156,10 @@ fabm_sediment_component.o: fabm_sediment_component.F90
 	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm_pelagic_component.o: fabm_pelagic_component.F90
+	@echo "Compiling $<"
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+fabm_benthic_component.o: fabm_benthic_component.F90
 	@echo "Compiling $<"
 	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
