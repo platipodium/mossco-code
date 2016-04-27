@@ -12,18 +12,19 @@
 %	1					2	    3   4   5	6   7	8   9
 %								    5:is depth index in 3D for maps
 var={
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;40; 1.0;	1; 1;1;'L1'};
+  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;50; 1.0;	1; 1;1;'L1'};
   {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;2.; 15.;	1; 1;1;'L1'};
 %  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'L1'};
-  {'Chl_chl_in_water';'CHL';0.1;60; 1;					1; 1;2;'L1'};
+  {'Chl_chl_in_water';'CHL';0.2;40; 1;					1; 1;2;'L1'};
+  {'Chl_chl_in_water';'CHL';0.2;40; 1;					1; 1;2;'L0'};
   {'Chl_chl_in_water';'CHL';0.8;40; 2;					1; 1;0;'M0369'};
-  {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.1;			1; 2;1;'L0'};
-  {'Detritus_Carbon_detC_in_water';'DetC';0.5;50; 1;			1; 2;0;'M0369'};
-  {'Zooplankton_Carbon_zooC_in_water';'Zoo';0;6; 1;			1; 2;1;'LM'};
-  {'NC';'N:C';0.06;0.36; 1.0;						1; 2;2;'LM'};
-  {'PC';'P:C';0;0.36; 15.0;						1; 2;2;'LM'};
-  {'NC';'N:C';0.06;0.35; 1;						2; 1;0;'M0369'};
-  {'PC';'P:C';0;0.1; 1;							2; 2;0;'M0369'};
+  {'Chl_chl_in_water';'CHL';0.8;40; 1;					1; 2;0;'M0369'};   {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.1;			1; 2;1;'L0'};
+%   {'Detritus_Carbon_detC_in_water';'DetC';0.5;50; 1;			1; 2;0;'M0369'};
+   {'Zooplankton_Carbon_zooC_in_water';'Zoo';0;9; 1;			1; 2;1;'LM'};
+   {'NC';'N:C';0.06;0.36; 1.0;						1; 2;2;'L0'};
+   {'PC';'P:C';0;0.36; 15.0;						1; 2;2;'L0'};
+   {'NC';'N:C';0.06;0.35; 1;						2; 1;0;'M0369'};
+   {'PC';'P:C';0;0.05; 1;						2; 2;0;'M0369'};
 %  {'c PhyP./(PhyC+1E-2)';'P:C';0;0.4; 15;				1; 2;2;'LM'};
 %  {'Phytplankton_Nitrogen_phyN_in_water';'PhyN';0;-9; 1.0;		1; 2;3;'N'};
 %  {'Phytplankton_Phosphorus_phyP_in_water';'PhyP';0;-9; 1.0;		1; 2;3;'N'};
@@ -55,7 +56,7 @@ IsWater=false; IsSoil=false;
 % number of variables to plot
 nvar=length(var); nfig=1; nfigm=0; IsStore=zeros(nvar,1);
 
-%% retrieve or set major meta-info
+% retrieve or set major meta-info
 for i=1:nvar
  Zt(i)=1;
  varn=cell2mat(var{i}(1));
