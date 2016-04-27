@@ -2217,9 +2217,9 @@ for item in gridCompSet.union(cplCompSet):
             fid.write(' $(GOTM_LDFLAGS)')
         if item=='getm':
             fid.write(' $(GETM_LDFLAGS)')
-        if item=='fabm_sediment' .or. item=='fabm_pelagic' .or. item=='fabm_benthic':
+        if item=='fabm_sediment' or item=='fabm_pelagic' or item=='fabm_benthic':
             fid.write(' $(FABM_LDFLAGS)')
-        if item=='fabm' .or. item=='fabm0d':
+        if item=='fabm' or item=='fabm0d':
             fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm_gotm':
             fid.write(' $(GOTM_LDFLAGS) $(FABM_LDFLAGS)')
