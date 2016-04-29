@@ -1749,6 +1749,7 @@ subroutine update_sediment_mass (mass, dt, deposition_rate, erosion_rate, area)
          if (mass <= min_mass) then 
              mass = min_mass
              erosion_rate = 0.0_fp
+             mass  = mass + (deposition_rate - erosion_rate) * dt *area
          else
              mass  = mass + (deposition_rate - erosion_rate) * dt *area
 
