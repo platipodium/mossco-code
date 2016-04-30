@@ -932,6 +932,8 @@ subroutine MOSSCO_GridGetWidth(grid, kwe, xwidth, ywidth, rc)
 
   allocate(dlat(RANGE2D), stat=localrc)
   allocate(dlon(RANGE2D), stat=localrc)
+  allocate(xwidth(RANGE2D), stat=localrc)
+  allocate(ywidth(RANGE2D), stat=localrc)
 
   ! Calculate xwdith (with dlat = 0)
   dlon = 2 * (crnlon(RANGE2D) - lon(RANGE2D))
