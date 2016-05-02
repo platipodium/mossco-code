@@ -4,6 +4,7 @@
 
 dir1=$1
 dir2=$2
+rn='slurm.sh'
 
 mkdir -p $dir2
 cd  $dir1
@@ -15,10 +16,8 @@ ln -s ../$dir1/Topo
 ln -s ../$dir1/Configurations
 ln -s ../$dir1/Forcing
 ln -s ../$dir1/restart
-ln=`awk '/'-N'/{print NR}' sge.sh`
-sed -i "$ln s/.*/#$ -N  $dir2/" sge.sh
-cat sge.sh
-
-
-
+cp -rp ../$dir1/windmussel .
+ln=`awk '/'job-name'/{print NR}' slurm.sh`
+sed -i "$ln s/.*/#SBATCH --job-name=$dir2/" slurm.sh
+cat slurm.sh
 

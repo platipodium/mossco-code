@@ -22,7 +22,7 @@ SUBDIRS=
 GIT?=$(shell which git)
 CVS?=$(shell which cvs)
 SVN?=$(shell which svn)
-SED?=$(shell which gsed)
+SED?=$(shell which gsed 2> /dev/null)
 SED?=$(shell which sed)
 
 # Fix for ksez

@@ -181,7 +181,7 @@ module netcdf_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)') trim(fileName(1:ESMF_MAXSTR))
+        write(message,'(A)') trim(name)
         call MOSSCO_MessageAdd(message,' found in file')
         call MOSSCO_MessageAdd(message,trim(configFileName))
         call MOSSCO_MessageAdd(message,' filename: '//trim(fileName))
