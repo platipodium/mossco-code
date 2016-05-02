@@ -27,11 +27,11 @@ TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration # libconstant_
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS += libmossco_netcdf libmossco_clm #libmossco_river
 endif
-ifeq ($(MOSSCO_BENTHOS),true)
-  TARGETS+=libmossco_benthos
-endif
 ifeq ($(MOSSCO_EROSED),true)
   TARGETS += libmossco_erosed
+  ifeq ($(MOSSCO_BENTHOS),true)
+    TARGETS+=libmossco_benthos
+  endif
 endif
 ifeq ($(MOSSCO_FABM),true)
   TARGETS +=  libsediment libmossco_fabmpelagic
