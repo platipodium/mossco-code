@@ -9,7 +9,7 @@ rn='slurm.sh'
 mkdir -p $dir2
 cd  $dir1
 
-for a in `ls --ignore="mossco*.nc" --ignore="sns*.nc" --ignore="*.std*" --ignore="PET*"`; do echo $a; cp -d $a ../$dir2; done
+for a in `ls --ignore="mossco*.nc" --ignore="sns*.nc" --ignore="boundary*.nc"--ignore="restart.00*" --ignore="*.std*" --ignore="PET*"`; do echo $a; cp -d $a ../$dir2; done
 cp -d sns_climatology.nc ../$dir2
 cd  ../$dir2
 ln -s ../$dir1/Topo
