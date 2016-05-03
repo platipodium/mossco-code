@@ -22,10 +22,10 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
 
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns + nfig;
-  figure(np);  hold on
+  figure(np); set(gcf, 'visible','off','Color','w'); hold on
 %   set(fig,'DoubleBuffer','on','Color','w');%
 % geometry of sub-plot
-  x0=0.06+(ix-1)*1.2*dxpm; y0=0.1+(nrowm-iy)*1.07*dypm;
+  x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(nrowm-iy)*1.03*dypm;
   axs=subplot('Position',[x0 y0 dxpm dypm]);
   hold on
 
@@ -57,7 +57,7 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
  %       set(gca, 'Color', 'k')
   if(islog) set(gca,'Clim',log10([minval maxVal]));
   else set(gca,'Clim',[minval maxVal]); end
-minval
+
   colormap(coljm(i0:end,:));
  %        set(p,'MeshStyle','both','EdgeAlpha',0);
   shading flat;
@@ -80,7 +80,8 @@ minval
 %% print variable & scen name & date
   mons=datestr(doy(it(zi)));
   ta=sprintf('%s %d z=%1.0f',mons(4:6),year(it(zi)),depth(di));
-  m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold');
+ 
+  m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica');
   m_text(lonlimit(2)-1.2,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
   set(gca,'FontSize',fs);
 

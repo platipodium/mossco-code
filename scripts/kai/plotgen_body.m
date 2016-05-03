@@ -144,6 +144,28 @@ for ili=1:size(i_loc,1)
      annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
      occ(np,ix,iy) = occ(np,ix,iy) + 1;
  end
+% plot data
+%fprintf('%d %d data: %d\t%c\n',i,ili,show_dati(ili),cell2mat(var{i}(9)));
+
+ if (show_dati(ili)>0 )%& (cell2mat(var{i}(9))=='L' | cell2mat(var{i}(9))=='M'))
+  id=show_dati(ili); iv=1;
+%  fprintf('datashow: %d \n',size(vars,2));
+  col=colj(occ(np,ix,iy),:); 
+  while length(vars{id,iv})>0 
+%   fprintf('%s:%s\n',varshort0,vars{id,iv});
+   if strcmpi(vars{id,iv},varshort0)
+     dval = data{id,iv};
+     indd  = find(~isnan(dval));
+     if length(indd)>0
+ %      fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
+       plot(datime(indd),dval(indd),'+','Color',col,'MarkerSize',13,'LineWidth',2);
+       break;
+     end
+   end
+   iv=iv+1;
+  end %while
+ end % if show
+
 end   %li 
 
 
