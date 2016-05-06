@@ -17,7 +17,7 @@ for ili=1:size(i_loc,1)
   figure(np); oldfig=np; hold on
   axs=subplot('Position',[x0 y0 dxp dyp]);
   hold on
-  tpos=[x0+0.25*(occ(np,ix,iy)+0.15)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];
+  tpos=[x0+0.23*(min(occ(np,ix,iy),4)+0.11)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];
 
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
@@ -63,7 +63,8 @@ for ili=1:size(i_loc,1)
  case{'L'} %% single lines
   if occ(np,ix,iy) ==0,set(axs,'ylim',[minval maxVal]);ylabel(units); grid on; end
 %  set(cb,'position',[x0cb y0cb 0.015 dyp*0.8],'YAxisLocation','right');
-  col=colj(1+occ(np,ix,iy),:); 
+  if (occ0(np,ix,iy)==0 & ns>1) occ0(np,ix,iy)=occ(np,ix,iy); end
+  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy),:); 
   for li=2:length(ptag)  % loop over given depths
      if isstrprop(ptag(li), 'xdigit') 
        zi=1+str2num(ptag(li));  % depth index from tag list
@@ -71,7 +72,7 @@ for ili=1:size(i_loc,1)
        if(size(res,1)>10) zi=1+round((zi-1)/9*(size(res,1)-1)); end
        y=res(zi,:);
        plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:));
-       annotation('textbox',tpos+[0.08*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+       annotation('textbox',tpos+[0.07*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
      else
        if(dim==3)
 % y=mean(res,2);
@@ -87,8 +88,13 @@ for ili=1:size(i_loc,1)
      end
      plot(time,y(ind),lins(ns,:),'Color' ,col,'LineWidth',linw(ns)); 
      if ntags>0
-       plot(time(it),y(ind(it)),'o','Color',coljj(ns*2-1,:),'MarkerFaceColor',coljj(ns*2-1,:));
-       annotation('textbox',[x0+0.9*dxp y0+(0.85-ns*0.15)*dyp 0.3*dxp 0.11*dyp],'String',tag,'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs,'LineStyle','none');
+       if strfind(tag,'_')
+         tagc=tag(2:end);
+       else
+         tagc=tag; 
+       end
+       plot(time(it),y(ind(it)),'o','Color',coljj(ns*2-1,:),'MarkerFaceColor',coljj(ns*2-1,:),'MarkerSize',8);
+       annotation('textbox',[x0+0.9*dxp y0+(0.85-ns*0.15)*dyp 0.3*dxp 0.11*dyp],'String',tagc,'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs+2,'LineStyle','none');
      end
      fprintf('%d %d\t%s  %1.3f\n',ns,i,varn,mean(y));
   end
@@ -136,25 +142,18 @@ for ili=1:size(i_loc,1)
  end
 %% plot variable name
 %  col='k';
- if(cell2mat(var{i}(9)) ~='N' & occ(np,ix,iy)<4)
-     fac=abs(cell2mat(var{i}(5))-1);
-     if(fac>0.1 & fac<1000) varshort=[varshort0 '*' num2str(cell2mat(var{i}(5)))]; end
-     ii=ix*100+iy*10+occ(np,ix,iy);
-     th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
-     annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
-     occ(np,ix,iy) = occ(np,ix,iy) + 1;
- end
+
 % plot data
 %fprintf('%d %d data: %d\t%c\n',i,ili,show_dati(ili),cell2mat(var{i}(9)));
 
  if (show_dati(ili)>0 )%& (cell2mat(var{i}(9))=='L' | cell2mat(var{i}(9))=='M'))
   id=show_dati(ili); iv=1;
 %  fprintf('datashow: %d \n',size(vars,2));
-  col=colj(occ(np,ix,iy),:); 
+  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy),:); 
   while length(vars{id,iv})>0 
 %   fprintf('%s:%s\n',varshort0,vars{id,iv});
    if strcmpi(vars{id,iv},varshort0)
-     dval = data{id,iv};
+     dval = data{id,iv}*cell2mat(var{i}(5));
      indd  = find(~isnan(dval));
      if length(indd)>0
  %      fprintf('%s: %d\t%1.1f %1.1f \n',varshort0,length(indd),datime(indd(1)),datime(indd(end)));
@@ -167,5 +166,14 @@ for ili=1:size(i_loc,1)
  end % if show
 
 end   %li 
-
+if(cell2mat(var{i}(9)) ~='N' & occ(np,ix,iy)<4 )
+  if ns==1
+     fac=abs(cell2mat(var{i}(5))-1);
+     if(fac>0.1 & fac<1000) varshort=[varshort0 '*' num2str(cell2mat(var{i}(5)))]; end
+     ii=ix*100+iy*10+occ(np,ix,iy);
+     th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
+     annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+  end
+     occ(np,ix,iy) = occ(np,ix,iy) + 1;
+end
 

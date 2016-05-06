@@ -13,7 +13,7 @@
 %								    5:is depth index in 3D for maps
 var={
   {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;50; 1.0;	1; 1;1;'L1'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';-0.1;30; 1.0;	1; 2;0;'M0369'};
+  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.04;40; 1.0;	1; 2;0;'M0369'};
   {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;2.; 1.;	1; 2;1;'L1'};
 %  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'L1'};
   {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L0'};
@@ -21,9 +21,9 @@ var={
   {'Chl_chl_in_water';'CHL';0.8;40; 2;					1; 1;0;'M0369'};
 %%  {'Chl_chl_in_water';'CHL';0.8;40; 1;					1; 2;0;'M0369'};   {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.1;			1; 2;1;'L0'};
 %   {'Detritus_Carbon_detC_in_water';'DetC';0.5;50; 1;			1; 2;0;'M0369'};
-%   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0;9; 1;			1; 2;1;'LM'};
+   {'Zooplankton_Carbon_zooC_in_water';'ZooC';0;9; 5;			1; 1;1;'LM'};
    {'NC';'N:C';0.06;0.36; 1.0;						1; 2;2;'L0'};
-%   {'PC';'P:C';0;0.36; 15.0;						1; 2;2;'L0'};
+   {'PC';'P:C';0;0.36; 15.0;						1; 2;2;'L0'};
 %%    {'NC';'N:C';0.06;0.35; 1;						2; 1;0;'M0369'};
 %%    {'PC';'P:C';0;0.05; 1;						2; 2;0;'M0369'};
 %  {'c PhyP./(PhyC+1E-2)';'P:C';0;0.4; 15;				1; 2;2;'LM'};
