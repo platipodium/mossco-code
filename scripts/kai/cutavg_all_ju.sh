@@ -24,10 +24,10 @@ echo $outdir
 # retrieve final time-step
 N=$(ncdump -h mossco_gfbfrr.029.nc |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -1]
-N=108
+#N=108
 
 # here for 178-cpu setup using 6 processors; 
-for ((a=0;a<6;a++)); do $SCRDIR/cut_avg.sh 117 cut $a 6 $N & done
+for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_ju.sh 117 cut $a 6 $N & done
 
 wait
 #check for completeness;
