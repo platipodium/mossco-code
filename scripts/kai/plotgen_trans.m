@@ -25,7 +25,8 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   hold on
 
 %res = squeeze(tmp)*cell2mat(var{i}(5)); 
-  value = squeeze(tmp(:,:,:,it(zi))); 
+  value = squeeze(tmp(:,:,:,ind(it(zi))));%*cell2mat(var{i}(5)); 
+
   depth = -water_d(:,it(zi))*(nz-1:-1:0)/nz;
 
   tpos=[x0+0.25*(0.15)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];%occ(np,ix,iy)+
@@ -35,6 +36,10 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   if maxVal<-1, maxVal=1.05*max(max(value)); end
   if minval>0 & maxVal/minval > 30, islog=1; else  islog=0; end
 %if minval>0 & maxVal/minval > 30,set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));end
+  if(islog) 
+    value(find(value<minval*1.1))=minval*1.1;
+    value=log10(value);
+  end
 
   set(axs,'FontSize',fs,'box','on');%,,'Xlim',[t0 t1]'Fontweight','bold'
   if(iy<nrow) end
@@ -56,18 +61,22 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   if maxVal>0,
    ii = find(value>maxVal);
    if ii, value(ii) = maxVal;end %value=valuehape(value,size(depth));
-   caxis([minval maxVal]);
+  end
+  if(islog) 
+    zlim(log10([minval maxVal]));
+  else
+    zlim([minval maxVal]);
   end
 %% plot model data
   ix=find(tx>0);
   tt=repmat(tx(ix),nz,1)';
   h = pcolor(tt,depth(ix,:),value(ix,:));
-  ylim([-Dmax*0.85 0]); xlim([min(tx(ix))  max(tx(ix))]);
+  ylim([-Dmax*0.85 0]); xlim([min(tx(ix))+0.02  max(tx(ix))]);
 %caxis([minval maxVal])
   set(h,'edgecolor','none');
 %% find and print min+max
   col=[0.95 0.94 0.97];
- % annotation('textbox',tpos+[0.1*dxp -0.14*dyp 0 0],'String',[num2str(minval,5) '-' num2str(maxVal,5) units],'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+ % annotation('textbox',tpos+[0.1*dxp -0.14*dyp 0 0],'String',[num2str(minval,5) '-' num2str(maxVal,5) units],'Color',col,'Fontweight','bold','FontSize',fs,'LineStyle','none');
 
   mons=datestr(doy(it(zi)));
   if strfind(tag,'_')
@@ -75,8 +84,8 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   else
     tagc=tag;
   end
-  ta=sprintf('%s: %s %d',[varshort0 ' ' tagc],mons(4:6),year(it(zi)));
-  annotation('textbox',tpos+[0.34*dxp -0.95*dyp 0.01 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
+  ta=sprintf('%s (%d,%d) %s %d',[varshort0 ' ' tagc],doy(it(zi)),ind(it(zi)),mons(4:6),year(it(zi)));
+  annotation('textbox',tpos+[0.34*dxp -0.99*dyp 0.02 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none');
 
 %% colorbar settings
 %cb = colorbar;%set(cb,'LineWidth',1,'FontSize',fs-2);%,'Fontweight','bold'
@@ -89,6 +98,6 @@ cb=colorbar;
 title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
 set(cb, 'Position', [x0+0.18*dxp y0+dyp*0.02 .014 0.3*dyp],'FontSize',fs);
 if(islog)
-   ctl =([0.01 0.1 1 5 10 30 100 1E3]);
-   set(cb,'YTick',ctl,'YTicklabel',ctl); 
+   ctl =([0.01 0.1 1 10 20 100 1E3]);
+   set(cb,'YTick',log10(ctl),'YTicklabel',ctl); 
 end

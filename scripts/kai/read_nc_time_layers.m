@@ -74,7 +74,7 @@ if ptag(1)=='T'
     txn='lon';
   else
     txi=1:n2;
-    tx=lat(txi,1);
+    tx=lat(1,txi);
     txn='lat';
   end
   iw=strfind(ncfile,'cutT');

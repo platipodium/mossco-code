@@ -10,7 +10,7 @@ show_data=1; datf='~/data/DeutscheBucht/stations.nc';
 % locations; at least one site-name (locs) should be given 
 loc =[]; 
 %loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'T0';}; % 'T1'; 
+locs={'T1';}; % 'T1'; 
 
 tags={'_new';};%'_res';'_att';
 ntags=length(tags);
@@ -19,7 +19,7 @@ spath  ='/home/wirtz/sns/';%spath  ='/ocean-data/wirtz/';
 setvar_trans;  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
-ncol = 3; nrow = 2; 	% number of columns in fig
+ncol = 3; nrow = 3; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 compn ={'water';'soil'};
 fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
@@ -39,7 +39,7 @@ else
 end
 
 %% open all figures
-for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1440 750],'Visible','off','Color','w'); end
+for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1540 950],'Visible','off','Color','w'); end
 oldfig=-np;
 
 occ = zeros(nfig,ncol,nrow); 
@@ -54,14 +54,15 @@ for ns=1:ntags
 
 % ncfile = fullfile(spath,['hr' tag '/mossco_1d.nc']);
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
- ncfile = fullfile(spath,['cutT0.nc']);
+ ncfile = fullfile(spath,['cut' locs{1} '.nc']);
 % ncfile = fullfile(spath,['mossco_1d' tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
-% t0 = datenum('2003-03-01','yyyy-mm-dd')-1;
-% t1 = datenum('2003-08-01','yyyy-mm-dd')-1;
+ t0 = datenum('2003-07-10','yyyy-mm-dd')-1;
+ t1 = datenum('2003-07-28','yyyy-mm-dd')-1;
 
+ time0=time;
  ind=find(time>= t0 & time<=t1);
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
  it=round(1+(0:9)*(length(time)-1)/9);% discrete index for plotting symbols
