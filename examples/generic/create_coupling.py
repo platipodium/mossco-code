@@ -2123,6 +2123,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'fabm_gotm'                : ['mossco_fabmgotm','solver'],
         'fabm_sediment' : ['sediment', 'mossco_sediment', 'solver'],
         'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver'],
+        'fabm_benthic' : ['mossco_fabmbenthic', 'util', 'solver'],
         'constant'   : ['constant'],
         'constant_grid'   : ['constant_grid'],
         'clm_netcdf' : ['mossco_clm'],
@@ -2169,6 +2170,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'fabm0d'     : ['libmossco_fabm0d'],
         'fabm_sediment' : ['libsediment', 'libmossco_sediment', 'libsolver'],
         'fabm_pelagic' : ['libmossco_fabmpelagic', 'libsolver'],
+        'fabm_benthic' : ['libmossco_fabmbenthic', 'libsolver'],
         'simplewave' : ['libmossco_simplewave'],
         'netcdf'      : ['libmossco_netcdf'],
         'netcdf_input'      : ['libmossco_netcdf'],
@@ -2215,18 +2217,14 @@ for item in gridCompSet.union(cplCompSet):
             fid.write(' $(GOTM_LDFLAGS)')
         if item=='getm':
             fid.write(' $(GETM_LDFLAGS)')
-        if item=='fabm_sediment':
+        if item=='fabm_sediment' or item=='fabm_pelagic' or item=='fabm_benthic':
             fid.write(' $(FABM_LDFLAGS)')
-        if item=='fabm_pelagic':
-            fid.write(' $(FABM_LDFLAGS)')
-        if item=='fabm':
+        if item=='fabm' or item=='fabm0d':
             fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
         if item=='fabm_gotm':
             fid.write(' $(GOTM_LDFLAGS) $(FABM_LDFLAGS)')
         if item=='gotmfabm':
             fid.write(' $(GOTM_LDFLAGS) $(FABM_LDFLAGS)')
-        if item=='fabm0d':
-            fid.write(' $(FABM_LDFLAGS) -L$(GOTM_LIBRARY_PATH)')
         fid.write('\n')
 
 #fid.write('LDFLAGS += $(LIBS) -lmossco_util -lesmf $(ESMF_NETCDF_LIBS)  -llapack\n\n')
@@ -2265,7 +2263,8 @@ libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
 libsediment libconstant libconstant_grid libmossco_clm libmossco_erosed \
-libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid:
+libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid \
+libmossco_fabmbenthic:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
 
 libempty libmossco_inout libmossco_getm libmossco_simplewave libmossco_netcdf libmossco_benthos:

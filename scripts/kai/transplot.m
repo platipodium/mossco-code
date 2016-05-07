@@ -5,51 +5,30 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; Is1D=1;
-datf='~/data/DeutscheBucht/stations.nc';
+show_data=1; datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
-%loc =[]; 
-loc =[[54.18,7.82];]; %[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'Helgoland';}; %'Sylt';'T22';'T26';}; %  
-%'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
-%  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
-%  'T22';     'T5';      'T12';   'T11'
-%[54.1,54.1];[55.0,8.4];[54.6,8.4];[54.0,8.7];[53.7,7.2];
-%[53.7,6.4];[54.2,7.5];[54.0,8.1];[55.0,8.0];[55.2,5.0];
-%[54.1,6.3];[55.0,6.3];[54.7,7.4];[54.7,6.9];
+loc =[]; 
+%loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
+locs={'T1';}; % 'T1'; 
 
-% load and prepare data
-if show_data, read_stations_nc; end;
-%tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
-%tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
-if Is1D 
-  spath= '/home/wirtz/mossco/mossco-setups/helgoland/';
-  tags = {'_0';'_1';};
-  ncf0 = 'mossco_1d'; % base file name of input netcdf
-  setvar_1D  % defines variables to show - and where/how to do it 
- %% graph settings
-  ncol = 3; nrow = 2; 	% number of columns in fig
-else
-  tags = {'_new';};%'_den';'_zoo';'_res';'_att';
-  spath= '/home/wirtz/sns';  %spath  ='/ocean-data/wirtz/';
-%% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
-  ncf0 = 'sns'; 
-  setvar_sns  % defines variables to show - and where/how to do it %setvar  
-  ncol = 2; nrow = 2; 	% number of columns in fig
-end
+tags={'_new';};%'_res';'_att';
 ntags=length(tags);
-
-nrowm = 2;
+spath  ='/home/wirtz/sns/';%spath  ='/ocean-data/wirtz/';
+%spath  ='/media/archiv/'
+setvar_trans;  % defines variables to show - and where/how to do it %setvar  
+%setvar_1D  % defines variables to show - and where/how to do it 
+%% graph settings
+ncol = 3; nrow = 3; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
-dxpm = 0.86/( 4 +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
 fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
 
-linw=[3 2*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
+linw=[2 1*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
 
 %ncfile = fullfile(spath,['cut_29_' tag '.nc']);
+%spath  ='/home/wirtz/mossco/mossco-setups/helgoland/';%
 
 %% check for tag file
 tagfile = fullfile(spath,['tag.lst']);
@@ -60,23 +39,30 @@ else
 end
 
 %% open all figures
-for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1440 750],'Visible','off','Color','w'); end
+for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1540 950],'Visible','off','Color','w'); end
 oldfig=-np;
-ptag=cell2mat(var{1}(9));
-occ = zeros(nfig,ncol,nrow); occ0=occ;
+
+occ = zeros(nfig,ncol,nrow); 
+
 for ns=1:ntags
  %% loop over scenarios/stations/layers
 
  %% read model output
  tag=cell2mat(tags(ns));
- ncfile = fullfile(spath,[ncf0 tag '.nc']);
+
+% loop over transects (eg from 3D output)
+
+% ncfile = fullfile(spath,['hr' tag '/mossco_1d.nc']);
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
+ ncfile = fullfile(spath,['cut' locs{1} '.nc']);
+% ncfile = fullfile(spath,['mossco_1d' tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
-% t0 = datenum('2003-03-01','yyyy-mm-dd')-1;
-% t1 = datenum('2004-03-01','yyyy-mm-dd')-1;
+ t0 = datenum('2003-07-10','yyyy-mm-dd')-1;
+ t1 = datenum('2003-07-28','yyyy-mm-dd')-1;
 
+ time0=time;
  ind=find(time>= t0 & time<=t1);
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
  it=round(1+(0:9)*(length(time)-1)/9);% discrete index for plotting symbols
@@ -103,8 +89,8 @@ for ns=1:ntags
       end
     end
 %% plotting either over time (incl contour) or time sliced maps  
-    if (ptag(1)=='M')
-      plotgen_maps
+    if (ptag(1)=='T')
+      plotgen_trans
     else
       plotgen_body
     end
@@ -113,13 +99,11 @@ for ns=1:ntags
  netcdf.close(ncid);
 %% add tag label from file
 %name = sprintf('%s%s_%s_%s',cell2mat(vars(:,1)),cell2mat(varn{end)),run,datestr(t0,'yyyy'));
- if ns==1
-  for nt=1:tagn
+ for nt=1:tagn
    if(strfind(tag,cell2mat(tagd.textdata(nt,1)))>0)
      annotation('textbox',[ns*0.15-0.1 0.95 0.15 0.04],'String',[cell2mat(tagd.textdata(nt,2)) ':' num2str(tagd.data(nt))],'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs,'LineStyle','none');
    end 
-  end % tagn
- end
+ end % tagn
 end %ns scneario tags
 
 %% create directory (name) for utput
@@ -127,18 +111,15 @@ figdir = fullfile(spath,'plots');
 if ~exist(figdir),  mkdir(figdir); end;
 
 %% plot each figure as EPS & PNG
-for np=1:nfig+nfigm
+for np=1:nfig
   figure(np);  
   set(gcf,'PaperPositionMode','auto', 'InvertHardCopy', 'off','Visible','off');
 %% add site name to each figure/page
-  if(np<=nfig)
-    li=floor(np/nfig0);
-    annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
+  li=ceil(np/nfig0);
+  annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
 %% create base file name
-    fnam0=sprintf('%s%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
-  else
-    fnam0=sprintf('map_%s_%d',vt{np-nfig},np);
-  end
+  fnam0=sprintf('T%s_%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
+
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
 %  fprintf('save EPS in %s ...\n',fnam);
 %  print(gcf,'-depsc',fnam);

@@ -1,0 +1,29 @@
+dependencies:
+  - restart_benthic:
+    - component: getm
+      grid: temperature_at_soil_surface
+  - fabm_benthic:
+    - component: getm
+      grid: temperature_at_soil_surface
+
+instances:
+  - mossco_gi: netcdf
+  - restart_benthic: netcdf_input
+
+coupling:
+  - components:
+     - restart_benthic
+     - fabm_benthic
+    interval: none
+  - components:
+     - getm
+     - fabm_benthic
+    interval: 30 m
+  - components:
+     - getm
+     - mossco_gi
+    interval: 12 h
+  - components:
+     - fabm_benthic
+     - mossco_gi
+    interval: 12 h

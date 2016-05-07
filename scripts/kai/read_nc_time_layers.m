@@ -25,7 +25,7 @@ if IsWater
      varid=netcdf.inqDimID(ncid,'getmGrid3D_getm_3');
      [id nz]=netcdf.inqDim(ncid,varid);
      fprintf('using equidistant mesh\n');
-     water_dz=ones(nz,length(time));
+     water_dz = ones(nz,length(time));
   end
   water_depth= cumsum(water_dz,1);
   depth = unique(water_depth);
@@ -39,7 +39,7 @@ end
 %  if length(vinfo.Size) < 4, Is2D(i)=1; end
 %end
 i_loc=[1 1];
-if length(loc) >0 | nfigm>0
+if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
  % reading geo-coordinates
  varid=netcdf.inqVarID(ncid,'getmGrid3D_getm_lon');
 % [id loni]=netcdf.inqDim(ncid,varid);
@@ -56,10 +56,34 @@ if length(loc) >0 | nfigm>0
  latlimit=cl_minmax(cl_minmax(lat(ig)));
 %% positioning (Helgoland)
 
+ if length(loc) >0
 % dr=0.03; [ix_hr iy_hr]=find(abs(lat-54.15)<dr & abs(lon-7.8)<dr);
   for li=1:size(loc,1)
     [m1 i]=min(abs(lat-loc(li,1))+abs(lon-loc(li,2)),[],1);
     [m j]=min(m1);
     i_loc(li,1:2)=[i(j) j];
   end
+ end
+end %length(locs) >1
+if ptag(1)=='T'
+  varid=netcdf.inqDimID(ncid,'getmGrid3D_getm_1');
+  [id n1]=netcdf.inqDim(ncid,varid);
+  varid=netcdf.inqDimID(ncid,'getmGrid3D_getm_2');
+  [id n2]=netcdf.inqDim(ncid,varid);
+  if(n1>n2)
+    txi=1:n1;
+    tx=lon(1,txi);
+    txn='lon';
+  else
+    txi=1:n2;
+    tx=lat(1,txi);
+    txn='lat';
+  end
+  iw=strfind(ncfile,'cutT');
+  ncfileD=ncfile; ncfileD(iw:iw+3)='cutD';
+    water_d = squeeze(ncread(ncfileD,'water_depth_at_soil_surface'));
+%    water_dz = water_dz.*water_d/size(water_dz,1);
+  Dmax=round(max(max(water_d))); 
 end
+
+

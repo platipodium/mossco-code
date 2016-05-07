@@ -1,4 +1,5 @@
 # Regular abbreviations by first letter
+remtc_atmosphere: a
 benthos: b
 constant: c
 deposition: d
@@ -6,16 +7,20 @@ erosed: e
 fabm_pelagic: f
 getm: g
 hamsom: h
+# irregular i, see below
+# irregular j, see below
 mussel: m
+# irregular n, see below
+remtc_ocean: o
 porosity: p
+# irregular q, see below
 river: r
+fabm_sediment: s
 tracer: t
+simplewave: w
 
 # Irregular abbreviations
 boundary: n # for 'nudge'
 fabm_gotm: q
-fabm_sediment: s
+fabm_benthic: i # for 'interface'
 gotm: j
-remtc_atmosphere: a
-remtc_ocean: o
-simplewave: w
