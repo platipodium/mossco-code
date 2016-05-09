@@ -242,7 +242,7 @@ MOSSCO_GETM=false
 
 export external_GETMDIR=$(MOSSCO_DIR)/external/getm/code
 ifndef MOSSCO_GETMDIR
-  ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+  ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
     export MOSSCO_GETMDIR=$(external_GETMDIR)
   endif
 endif
