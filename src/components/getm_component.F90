@@ -849,6 +849,7 @@ module getm_component
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
+    use getm_timers, only: write_getm_timers
 
     implicit none
 
@@ -866,7 +867,11 @@ module getm_component
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
-    call clean_up(dryrun,runtype,MaxN)
+   call clean_up(dryrun,runtype,MaxN)
+#ifndef NO_TIMERS
+   STDERR LINE
+   call write_getm_timers
+#endif
 
     call ESMF_GridCompGet(gridComp,clockIsPresent=ClockIsPresent, &
                                    gridIsPresent=GridIsPresent,   &
