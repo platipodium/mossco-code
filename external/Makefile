@@ -70,7 +70,7 @@ update: fabm_update gotm_update getm_update \
 
 clean: extraclean
 
-distclean: getm_distclean gotm_distclean fabm_clean #json_clean
+distclean: getm_distclean gotm_clean fabm_clean #json_clean
 
 extraclean:
 
@@ -114,11 +114,6 @@ endif
 gotm_update:
 ifneq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
 	( cd $(external_GOTMDIR) ; $(GIT) pull origin master )
-endif
-
-gotm_distclean:
-ifneq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
-	( unset FABM ; $(MAKE) -C $(external_GOTMDIR) distclean )
 endif
 
 getm_clone:
