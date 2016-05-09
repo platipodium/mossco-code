@@ -501,7 +501,7 @@ module nudge_connector
       endif
 
       if (itemType /= ESMF_STATEITEM_FIELDBUNDLE) then
-        write(message, '(A)') trim(name)//' only implements field(Bundles), skip item ',trim(itemName)
+        write(message, '(A)') trim(name)//' only implements fields and fieldBundles, skip item ',trim(itemName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         cycle
       endif
@@ -560,7 +560,7 @@ module nudge_connector
         end do importloop
         if (.not.foundItem) then
           write(message,'(A)') trim(name)//' detected fieldBundle '//trim(itemName)//' with non-identical item attributes'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         end if
         call MOSSCO_FieldWeightField(exportFieldList(jj), importFieldList(j), weight, &
