@@ -104,15 +104,10 @@ else
 	( cd $(external_JSONDIR) && $(GIT) pull )
 endif
 
-gotm_clone:
+gotm_clone gotm_update:
 ifeq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
 	$(GIT) clone git://github.com/gotm-model/code.git $(external_GOTMDIR)
 else
-	$(MAKE) gotm_update
-endif
-
-gotm_update:
-ifneq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
 	( cd $(external_GOTMDIR) ; $(GIT) pull )
 endif
 
