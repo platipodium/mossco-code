@@ -112,12 +112,12 @@ else
 endif
 
 gotm_update:
-ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
+ifneq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
 	( cd $(external_GOTMDIR) ; $(GIT) pull origin master )
 endif
 
 gotm_distclean:
-ifneq ($(wildcard $(external_GOTMDIR)/src/Makefile),)
+ifneq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
 	( unset FABM ; $(MAKE) -C $(external_GOTMDIR) distclean )
 endif
 
