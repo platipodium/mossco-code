@@ -113,7 +113,7 @@ endif
 
 gotm_update:
 ifneq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
-	( cd $(external_GOTMDIR) ; $(GIT) pull origin master )
+	( cd $(external_GOTMDIR) ; $(GIT) pull )
 endif
 
 getm_clone:
