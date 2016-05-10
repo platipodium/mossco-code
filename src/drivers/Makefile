@@ -24,7 +24,7 @@ ifeq ($(MOSSCO_NETCDF),true)
 endif
 
 ifeq ($(MOSSCO_FABM),true)
-  TARGETS+=libmossco_sediment libmossco_fabmpelagic #libmossco_fabm0d
+  TARGETS+=libmossco_sediment libmossco_fabmpelagic libmossco_fabmbenthic #libmossco_fabm0d
   ifeq ($(MOSSCO_GOTM),true)
     ifeq ($(MOSSCO_NETCDF),true)
       TARGETS+=libmossco_fabmgotm
@@ -79,6 +79,8 @@ libmossco_clm: prefix libmossco_clm_driver
 libmossco_clm_driver: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 libmossco_fabmpelagic: prefix libmossco_util libsolver libfabm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmpelagic.a(fabm_pelagic_driver.o)
+libmossco_fabmbenthic: prefix libmossco_util libsolver libfabm_external \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_fabmbenthic.a(fabm_benthic_driver.o)
 
 libmossco_getm: prefix libgetm_external \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_getm.a(getm_driver.o)
@@ -88,6 +90,10 @@ fabm_sediment_driver.o: fabm_sediment_driver.F90
 	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
 fabm_pelagic_driver.o: fabm_pelagic_driver.F90
+	@echo "Compiling $<"
+	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
+
+fabm_benthic_driver.o: fabm_benthic_driver.F90
 	@echo "Compiling $<"
 	$(F90) $(FABM_CPPFLAGS) $(CPPFLAGS) $(F90FLAGS) -c $< -o $@
 
