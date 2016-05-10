@@ -812,9 +812,9 @@ contains
       area = 1.0
    end if
 
-     write (0,*) ' lboud, uboud area', lbound (area), ubound(area)
-     write (0,*) 'exclusiveLBound(1):exclusiveUBound(1)',exclusiveLBound(1),exclusiveUBound(1)
-     write (0,*)'exclusiveLBound(2):exclusiveUBound(2)',exclusiveLBound(2),exclusiveUBound(2)
+!     write (0,*) ' lboud, uboud area', lbound (area), ubound(area)
+!     write (0,*) 'exclusiveLBound(1):exclusiveUBound(1)',exclusiveLBound(1),exclusiveUBound(1)
+ !    write (0,*)'exclusiveLBound(2):exclusiveUBound(2)',exclusiveLBound(2),exclusiveUBound(2)
    !  if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity,rhosol,mass, area)
    if (bedmodel) then 
     do l= 1, nfrac
