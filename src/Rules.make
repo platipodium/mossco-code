@@ -71,6 +71,12 @@ else
       ESMF_CC:=$(shell $(ESMF_CXXCOMPILER) -compile_info 2> /dev/null | cut -d' ' -f1 | cut -d'-' -f1)
     endif
   endif
+  ESMF_OPENMP = $(strip $(shell grep "\# ESMF_OPENMP:" $(ESMFMKFILE) | cut -d':' -f2-))
+  ifeq ("$(ESMF_OPENMP)","OFF")
+    export MOSSCO_OMP ?= false
+  else
+    export MOSSCO_OMP ?= true
+  endif
   ESMF_NETCDF = $(strip $(shell grep "\# ESMF_NETCDF:" $(ESMFMKFILE) | cut -d':' -f2-))
   ifneq ("$(ESMF_NETCDF)","")
     export MOSSCO_NETCDF ?= true
@@ -236,7 +242,7 @@ MOSSCO_GETM=false
 
 export external_GETMDIR=$(MOSSCO_DIR)/external/getm/code
 ifndef MOSSCO_GETMDIR
-  ifneq ($(wildcard $(external_GETMDIR)/src/Makefile),)
+  ifneq ($(wildcard $(external_GETMDIR)/src/getm/main.F90),)
     export MOSSCO_GETMDIR=$(external_GETMDIR)
   endif
 endif
@@ -637,6 +643,13 @@ ifeq ($(FORTRAN_COMPILER),XLF)
 CPPFLAGS += -WF,-DMOSSCO_MPI
 else
 CPPFLAGS += -DMOSSCO_MPI
+endif
+endif
+ifeq ("x$(MOSSCO_OMP)","xtrue")
+ifeq ($(FORTRAN_COMPILER),XLF)
+CPPFLAGS += -WF,-DMOSSCO_OMP
+else
+CPPFLAGS += -DMOSSCO_OMP
 endif
 endif
 export CPPFLAGS += $(EXTRA_CPP) $(INCLUDES) $(ESMF_F90COMPILECPPFLAGS) -I.

@@ -10,7 +10,7 @@
 ! !DESCRIPTION:
 !
 ! !USES:
-   use initialise, only: runtype,dryrun
+   use initialise
 !  these variables are needed in init_time(), but cannot be included there
 !  because of name-clash with NML
    use time, only: start,stop,timestep,days_in_mon
@@ -163,7 +163,7 @@
    end if
 
    STDERR LINE
-   STDERR 'getm ver. ',RELEASE,': Started on  ',dstr,' ',tstr
+   STDERR 'getm: Started on  ',dstr,' ',tstr
    STDERR LINE
    STDERR 'Initialising....'
    STDERR LINE
@@ -213,16 +213,14 @@
    use domain, only: kmax
    use time, only: update_time,write_time_string
    use time, only: start,timestr,timestep
-   use m2d, only: init_2d,postinit_2d,depth_update
-   use variables_2d, only: zo,z,D,Dvel,DU,DV
+   use m2d, only: init_2d,hotstart_2d,postinit_2d
+   use variables_2d, only: Dvel
    use les, only: init_les
    use getm_timers, only: init_getm_timers, tic, toc, TIM_INITIALIZE
 #ifndef NO_3D
-   use m3d, only: init_3d,postinit_3d
+   use m3d, only: init_3d,hotstart_3d,postinit_3d
 #ifndef NO_BAROCLINIC
-   use m3d, only: T,calc_temp,calc_salt
-   use temperature, only: init_temperature_field
-   use salinity, only: init_salinity_field
+   use m3d, only: T
 #endif
    use m3d, only: use_gotm
    use turbulence, only: init_turbulence
@@ -234,7 +232,6 @@
 #ifdef _FABM_
    use getm_fabm, only: fabm_calc
    use getm_fabm, only: init_getm_fabm, postinit_getm_fabm
-   use getm_fabm, only: init_getm_fabm_fields
    use rivers, only: init_rivers_fabm
 #endif
 #ifdef GETM_BIO
@@ -333,29 +330,14 @@
       call write_time_string()
       LEVEL3 timestr
       MinN = MinN+1
+
+      call hotstart_2d(runtype)
 #ifndef NO_3D
-#ifndef NO_BAROCLINIC
-      if (calc_temp) then
-         LEVEL2 'hotstart temperature:'
-         call init_temperature_field()
+      if (runtype .ge. 2) then
+         call hotstart_3d(runtype)
       end if
-      if (calc_salt) then
-         LEVEL2 'hotstart salinity:'
-         call init_salinity_field()
-      end if
-#endif
-#ifdef _FABM_
-      if (fabm_calc) then
-         LEVEL2 'hotstart getm_fabm:'
-         call init_getm_fabm_fields()
-      end if
-#endif
 #endif
    end if
-
-!  Note (KK): we need Dvel for do_waves()
-!  KK-TODO: we would not need Dvel if we use H for WAVES_FROMWIND
-   call depth_update(zo,z,D,Dvel,DU,DV)
 
 !  Note (KK): init_input() calls do_3d_bdy_ncdf() which requires hn
    call init_input(input_dir,MinN)
@@ -398,10 +380,25 @@
    end if
 #endif
 
+   call do_register_all_variables(runtype)
+
+#ifdef _FLEXIBLE_OUTPUT_
+   allocate(type_getm_host::output_manager_host)
+   if (myid .ge. 0) then
+      write(postfix,'(A,I4.4)') '.',myid
+      call output_manager_init(fm,title,trim(postfix))
+   else
+      call output_manager_init(fm,title)
+   end if
+#endif
+
    call toc(TIM_INITIALIZE)
 
    if (.not. dryrun) then
       call do_output(runtype,MinN-1,timestep)
+#ifdef _FLEXIBLE_OUTPUT_
+      if (save_initial) call output_manager_save(julianday,secondsofday,MinN-1)
+#endif
    end if
 
 #ifdef DEBUG
@@ -566,6 +563,7 @@
 !
 ! !USES:
    use time,     only: update_time,timestep
+   use time,     only: julianday,secondsofday
    use domain,   only: kmax
    use meteo,    only: do_meteo,tausx,tausy,airp,swr,albedo
    use meteo,    only: ssu,ssv
@@ -595,6 +593,9 @@
    use output,   only: do_output
 #ifdef TEST_NESTING
    use nesting,   only: nesting_file
+#endif
+#ifdef _FLEXIBLE_OUTPUT_
+   use output_manager
 #endif
    IMPLICIT NONE
 !
@@ -626,7 +627,6 @@
       do_3d = (runtype .ge. 2 .and. mod(n,M) .eq. 0)
 #endif
       call do_input(n,do_3d)
-      call set_sea_surface_state(runtype,ssu,ssv,do_3d)
       if(runtype .le. 2) then
          call do_meteo(n)
 #ifndef NO_3D
@@ -677,6 +677,8 @@
       end if
 #endif
 
+      call set_sea_surface_state(runtype,ssu,ssv,do_3d)
+
 #ifdef TEST_NESTING
       if (mod(n,80) .eq. 0) then
          call nesting_file(WRITING)
@@ -685,6 +687,9 @@
       call update_time(n)
 
       call do_output(runtype,n,timestep)
+#ifdef _FLEXIBLE_OUTPUT_
+      call output_manager_save(julianday,secondsofday,n)
+#endif
 #ifdef DIAGNOSE
       call diagnose(n,MaxN,runtype)
 #endif
@@ -930,5 +935,5 @@
    end module getm_driver
 
 !-----------------------------------------------------------------------
-! Copyright (C) 2013 - Hans Burchard                                   !
+! Copyright (C) 2013 - Knut Klingbeil                                  !
 !-----------------------------------------------------------------------

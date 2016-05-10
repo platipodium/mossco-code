@@ -849,6 +849,7 @@ module getm_component
 
     use initialise ,only: runtype,dryrun
     use integration,only: MaxN
+    use getm_timers, only: write_getm_timers
 
     implicit none
 
@@ -866,7 +867,11 @@ module getm_component
 
     call MOSSCO_GridCompEntryLog(gridComp)
 
-    call clean_up(dryrun,runtype,MaxN)
+   call clean_up(dryrun,runtype,MaxN)
+#ifndef NO_TIMERS
+   STDERR LINE
+   call write_getm_timers
+#endif
 
     call ESMF_GridCompGet(gridComp,clockIsPresent=ClockIsPresent, &
                                    gridIsPresent=GridIsPresent,   &
@@ -1255,6 +1260,7 @@ module getm_component
    end if
 
    allocate(taubmax(I2DFIELD))
+   taubmax = _ZERO_
 
    if (metforcing) then
       if (calc_met .or. met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
@@ -1361,7 +1367,7 @@ module getm_component
       deBlockList(:,2,1+pet) = (/ i0+ilen-1 , j0+jlen-1 , 1+klen-1 /)
    end do
 
-!  indexflag=ESMF_INDEX_DELOCAL (default) starting at 1
+!  indexflag=ESMF_INDEX_DELOCAL (default) exclusive region starting at 1
 !  (for ESMF_INDEX_USER [grid|stagger]MemLBound can be set)
 #if 1
 !  Single-tile DistGrid (1 subdomain = 1 DE)
@@ -2036,7 +2042,7 @@ module getm_component
    use parameters     ,only: rho_0
    use domain         ,only: imin,imax,jmin,jmax,kmax
    use domain         ,only: az
-   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv
+   use domain         ,only: grid_type,xc,xu,xv,yc,yu,yv,convc
    use domain         ,only: dxv,dyu,arcd1
    use initialise     ,only: runtype
    use variables_2d   ,only: zo,z,D,Dvel,U,DU,V,DV
@@ -2072,6 +2078,8 @@ module getm_component
    REALTYPE,dimension(:,:,:),pointer    :: p_vel3d
    integer                              :: k,klen
    REALTYPE,parameter                   :: vel_missing=0.0d0
+   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+   REALTYPE, parameter :: deg2rad=pi/180
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -2248,7 +2256,9 @@ module getm_component
       end if
    end if
 
-   taubmax = rho_0 * taubmax_3d
+   if (runtype .ge. 2) then
+      taubmax = rho_0 * taubmax_3d
+   end if
 #endif
 
    if (met_method.eq.METEO_CONST .or. met_method.eq.METEO_FROMFILE) then
@@ -2263,7 +2273,7 @@ module getm_component
    end if
 
    if (waveforcing_method.eq.WAVES_FROMWIND .or. waveforcing_method.eq.WAVES_FROMFILE) then
-      waveDir = atan2(sinwavedir,coswavedir)
+      waveDir = atan2(sinwavedir,coswavedir) - convc*deg2rad
    end if
    if (waveforcing_method .ne. NO_WAVES .and. waves_method.ne.WAVES_NOSTOKES) then
 !     provide Eulerian velocities
@@ -2311,7 +2321,7 @@ module getm_component
 ! !DESCRIPTION:
 !
 ! !USES:
-   use domain         ,only: grid_type
+   use domain         ,only: grid_type,convc
    use meteo          ,only: metforcing,met_method,METEO_FROMEXT,calc_met
    use meteo          ,only: u10,v10,new_meteo
    use waves          ,only: waveforcing_method,WAVES_FROMEXT,new_waves
@@ -2326,7 +2336,8 @@ module getm_component
 !  Original Author(s): Knut Klingbeil
 !
 ! !LOCAL VARIABLES:
-!
+   REALTYPE, parameter :: pi=3.1415926535897932384626433832795029d0
+   REALTYPE, parameter :: deg2rad=pi/180
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -2353,8 +2364,8 @@ module getm_component
          waveT_ = waveT
          waveK_ = waveK
       end if
-      coswavedir = cos(waveDir)
-      sinwavedir = sin(waveDir)
+      coswavedir = cos( waveDir + convc*deg2rad )
+      sinwavedir = sin( waveDir + convc*deg2rad )
    end if
 
 #ifdef DEBUG

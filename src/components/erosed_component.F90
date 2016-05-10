@@ -54,7 +54,7 @@ module erosed_component
   type(ptrarray2D)                                       :: bottom_shear_stress_noncoh, equilibrium_spm
 
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList
-  
+
   type (BioturbationEffect)                              :: BioEffects
 
   real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: layers_height=>null(),sigma_midlayer=>null(),sediment_mass=>null()
@@ -62,12 +62,12 @@ module erosed_component
   real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: depth_avg_spm_concentration=>null()! Dimensions (x,y,fraction index)
   real   (kind=ESMF_KIND_R8),dimension(:,:)    ,pointer  :: sum_depth_avg_spm_concentration=>null()!Dimensions (x,y)
   real   (kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer  :: spm_concentration=>null() ! Dimensions (x,y,depth layer, fraction index)
-  
+
   integer(kind=ESMF_KIND_I4),dimension(:,:)    ,pointer  :: mask=>NULL()
   real   (kind=ESMF_KIND_R8),dimension(:,:)    ,pointer  :: area=>NULL()
   integer                   ,dimension(:),allocatable    :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                                :: ubnd(4),lbnd(4)
-  
+
    integer                                      :: nmlb           ! first cell number
    integer                                      :: nmub           ! last cell number
    integer                                      :: inum, jnum     ! number of elements in y and x directions , inum * jnum== nmub - nmlb + 1
@@ -426,7 +426,7 @@ contains
       allocate (mass (nfrac,nmlb:nmub))
       mass = 0.0d0
     end if
-    
+
 !    allocate (massfluff (nfrac,nmlb:nmub))
     allocate (sink      (nfrac,nmlb:nmub))
     allocate (sinkf     (nfrac,nmlb:nmub))
@@ -462,7 +462,7 @@ contains
     tper = 1.0_fp
     teta = 0.0_fp
     wave = .false.
-  
+
     BioEffects%TauEffect =1.0_fp
     BioEffects%ErodibilityEffect = 1.0_fp
 !write (*,*)'in Init BioEffects%TauEffect ',BioEffects%TauEffect
@@ -535,8 +535,8 @@ contains
         tcrfluff (:,i) = tcrflufftmp (:)
         ws       (:,i) = wstmp       (:) ! initialization, for the case no sediment transport model is coupled with erosed
       end do
-     
-!      if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity, rhosol,mass, area)    
+
+!      if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity, rhosol,mass, area)
 
 !      do i = 1, inum
 !        do j = 1, jnum
@@ -816,7 +816,7 @@ contains
 !     write (0,*) 'exclusiveLBound(1):exclusiveUBound(1)',exclusiveLBound(1),exclusiveUBound(1)
  !    write (0,*)'exclusiveLBound(2):exclusiveUBound(2)',exclusiveLBound(2),exclusiveUBound(2)
    !  if (bedmodel) call init_mass(nfrac, frac,nmub, init_thick, porosity,rhosol,mass, area)
-   if (bedmodel) then 
+   if (bedmodel) then
     do l= 1, nfrac
      do j=exclusiveLBound(2),exclusiveUBound(2)
       do i = exclusiveLBound(1),exclusiveUBound(1)
@@ -1089,7 +1089,7 @@ contains
           sediment_mass(i,j,:) = mass(:,inum*(j -1)+i)
          end do
         end do
-     
+
         call ESMF_StateAdd(exportState,(/field/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1162,36 +1162,98 @@ contains
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4) :: localrc, rc_, i, j
     logical               :: isPresent
+    type(ESMF_Clock)      :: clock
+    type(ESMF_Time)       :: currTime
+    character(len=ESMF_MAXSTR) :: message, name
+
+    type(ESMF_Field), dimension(:), allocatable :: exportFieldList, importFieldList
+    integer(ESMF_KIND_I4)                       :: importFieldCount, exportFieldCount
+    integer(ESMF_KIND_I4), dimension(3)         :: ubnd, lbnd
+    real(ESMF_KIND_R8), dimension(:,:,:), pointer :: farrayPtr3
 
     rc=ESMF_SUCCESS
 
-    !> It does not make sense to readrestart this component, thus, we
-    !> 1. do not log calls to this function with CompEntry/CompExit
-    !> 2. use dummy variables to avoid -Wunused
-
-    call ESMF_GridCompValidate(gridComp, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_ClockValidate(parentClock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    ! Restart in this component is relevant only for the sediment mass,
+    ! Currently, this is a 2D gridded field with an additional 3rd dimension
+    ! to describe the nfrac sediment fractions.  This could also come as
+    ! a fieldBundle in the future.
+
+    call MOSSCO_StateGetFieldList(exportState, exportFieldList, fieldCount=exportFieldCount, &
+      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (exportFieldCount < 1) then
+      if (allocated(exportFieldList)) deallocate(exportFieldList)
+      return
+    endif
+
+    if (exportFieldCount > 1) then
+      write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (allocated(exportFieldList)) deallocate(exportFieldList)
+      rc = ESMF_RC_NOT_IMPL
+      return
+    endif
+
+    call MOSSCO_StateGetFieldList(importState, importFieldList, fieldCount=importFieldCount, &
+      itemSearch='sediment_mass_in_bed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (importFieldCount < 1) then
+      write(message, '(A)') trim(name)//' did not hotstart'
+      call MOSSCO_FieldString(exportFieldList(1), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      if (allocated(exportFieldList)) deallocate(exportFieldList)
+      if (allocated(importFieldList)) deallocate(importFieldList)
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      return
+    endif
+
+    if (importFieldCount > 1) then
+      write(message, '(A)') trim(name)//' cannot handle more than one field with sediment mass'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      if (allocated(exportFieldList)) deallocate(exportFieldList)
+      if (allocated(importFieldList)) deallocate(importFieldList)
+      rc = ESMF_RC_NOT_IMPL
+      return
+    endif
+
+    call MOSSCO_FieldCopy(exportfieldList(1), importFieldList(1), rc=localrc)
+    if  (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_FieldGet(exportFieldList(1), farrayPtr=farrayPtr3, exclusiveLBound=lbnd, &
+      exclusiveUBound=ubnd, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
+    !>@ todo proper bound checking is required here, the following is certainly wrong
+
+    do j=0,ubnd(2)-lbnd(2)
+      do i=0, ubnd(1)-lbnd(1)
+        mass(:,inum*(j) + i + 1) = sediment_mass(lbnd(1)+i,lbnd(2)+j,:)
+      end do
+    end do
+
+    write(message, '(A)') trim(name)//' restarted '
+    call MOSSCO_FieldString(exportFieldList(1), message)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (allocated(exportFieldList)) deallocate(exportFieldList)
+    if (allocated(importFieldList)) deallocate(importFieldList)
+
+    call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1575,17 +1637,17 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         end if
 
         if ( mask(i,j) .gt. 0 ) then
-          
+
            deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
            entrainment_rate = sour(l,nm)
-          
+
           if (bedmodel) then
              dt = 120._fp
               !@ToDO timestep just hardcoded, but should be corrected as soon as
               !possible
               call update_sediment_mass (mass(l,nm), dt,deposition_rate,entrainment_rate, area(i,j))
           end if
-        
+
           size_classes_of_upward_flux_of_pim_at_bottom(l)%ptr(i,j) = entrainment_rate *1000.0_fp - deposition_rate *1000._fp   ! spm_concentration is in [g m-3] and sour in [Kgm-3] (that is why the latter is multiplied by 1000.
         endif
       enddo

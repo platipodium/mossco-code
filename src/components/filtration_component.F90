@@ -135,6 +135,7 @@ module filtration_component
     type(ESMF_Time)         :: currTime
     integer(ESMF_KIND_I4)   :: localrc, rank, otherCount, i
     type(ESMF_Field)        :: field
+    type(ESMF_FieldBundle)  :: fieldBundle
     type(ESMF_Config)       :: config
     logical                 :: configIsPresent, fileIsPresent, labelIsPresent
     real(ESMF_KIND_R8)      :: mussel_mass, minimumFoodFlux
@@ -269,21 +270,30 @@ module filtration_component
 
     ! Create a list to hold the names of the item to filter, the names of the
     ! velocity fields, and the names of other items to co-filter
-    call MOSSCO_Reallocate(itemNameList, 4 + otherCount, keep=.false., rc=localrc)
+    call MOSSCO_Reallocate(itemNameList, 5 + otherCount, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     itemNameList(1) = trim(xVelocity)
     itemNameList(2) = trim(yVelocity)
-    itemNameList(3) = 'mussel_abundance'
-    itemNameList(4) = trim(filterSpecies)
+    itemNameList(3) = 'mussel_abundance'  ! '_at_soil_surface'
+    itemNameList(4) = 'mussel_abundance'  ! '_at_water_surface'
+
+    itemNameList(5) = trim(filterSpecies)
     do i = 1, othercount
-      itemNameList(4 + i) = trim(filterSpeciesList(i))
+      itemNameList(5 + i) = trim(filterSpeciesList(i))
     enddo
 
     do i = 1, ubound(itemNameList,1)
-      ! Create import state for co-filtration fields
-      field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_in_water', rc=localrc)
+
+      if (i < 3 .or. i > 4) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_in_water', rc=localrc)
+      elseif (i == 3) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_water_surface', rc=localrc)
+      elseif (i == 4) then
+        field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_at_soil_surface', rc=localrc)
+      endif
+
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -291,8 +301,9 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (i == 1)  call ESMF_AttributeSet(field, 'units', 'm-3', rc=localrc)
-      if (i == 4)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
+      if (i < 3) call ESMF_AttributeSet(field, 'units', 'm s-1', rc=localrc)
+      if (i == 4 .or. i == 3)  call ESMF_AttributeSet(field, 'units', 'm-2', rc=localrc)
+      if (i > 4)  call ESMF_AttributeSet(field, 'units', 'mmol m-3', rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -306,13 +317,48 @@ module filtration_component
     enddo
 
     !> Create export states, add diagnostic variables
-    !itemNameList(3) = 'layer_height_in_water'
-    do i = 4, ubound(itemNameList,1)
-      !> Create export states for filter and co-filter items
-      if (i < 4) then
+    itemNameList(3) = 'mussel_abundance_in_water'
+    itemNameList(4) = 'layer_height_in_water'
+    do i = 3, ubound(itemNameList,1)
+      !> Create export states for diagnostic, filter and co-filter items
+      if (i < 5) then
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i)), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_StateAddReplace(exportState, (/field/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message, '(A)') trim(name)//' created empty field'
+
       else
+        fieldBundle = ESMF_FieldBundleCreate(name=trim(itemNameList(i))//'_flux_in_water', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         field = ESMF_FieldEmptyCreate(name=trim(itemNameList(i))//'_flux_in_water', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !> @todo check units for co-filtered and filter species
+        call ESMF_AttributeSet(field, 'units', 'mmol m-3 s-1', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldBundleAdd(fieldBundle, (/field/), multiflag=.true., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_AttributeSet(fieldBundle, 'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_StateAddReplace(exportState, (/fieldBundle/),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message, '(A)') trim(name)//' created bundled empty field'
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -321,17 +367,8 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (i == 4)  call ESMF_AttributeSet(field, 'units', 'mmol m-3 s-1', rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      write(message, '(A)') trim(name)//' created empty field'
       call MOSSCO_FieldString(field, message)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      call ESMF_StateAddReplace(exportState, (/field/),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     enddo
 
@@ -361,18 +398,19 @@ module filtration_component
     character(ESMF_MAXSTR)  :: foreignGridFieldName
     type(ESMF_Time)         :: currTime
 
-    type(ESMF_Grid)             :: grid
+    type(ESMF_Grid)             :: grid, grid2
     type(ESMF_Field)            :: field
+    type(ESMF_Field), allocatable, dimension(:) :: fieldList
     integer(ESMF_KIND_I4)       :: localrc, i, rank, gridRank
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
     character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXSTR)              :: itemName
     integer(ESMF_KIND_I4)                   :: itemCount
     real(ESMF_KIND_R8)                      :: mussel_mass, minimumFoodFlux
 
     rc = ESMF_SUCCESS
-    rank = 3
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState,  exportState=exportState, rc=localrc)
@@ -440,79 +478,45 @@ module filtration_component
     call MOSSCO_FieldString(field, message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
+    ! Get all fields that are empty and provide them with a grid
+    call MOSSCO_StateGetFieldList(exportState, fieldList, &
+      fieldStatus=ESMF_FIELDSTATUS_EMPTY, fieldCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_Reallocate(itemNameList, itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_Reallocate(itemTypeList, itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemCount > 0) then
-      call ESMF_StateGet(exportState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
 
     do i=1, itemCount
-
-      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
-
-      call ESMF_StateGet(exportState, trim(itemNameList(i)), field=field, rc=localrc)
+      call ESMF_FieldGet(fieldList(i), name=itemName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+      call ESMF_FieldEmptySet(fieldList(i), grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-        call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        write(message,'(A)') trim(name)//' added grid to '
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
-
-      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldStatus == ESMF_FIELDSTATUS_GRIDSET) then
-        call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
-      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-        write(message,'(A)') trim(name)//' expected complete '
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
-      !> Initialize the field with zero
-      call MOSSCO_FieldInitialize(field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+      write(message,'(A)') trim(name)//' added grid to '
+      call MOSSCO_FieldString(fieldList(i), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
-    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+    ! Get all fields that are gridset and complete them with a typekind
+    call MOSSCO_StateGetFieldList(exportState, fieldList, &
+      fieldStatus=ESMF_FIELDSTATUS_GRIDSET, fieldCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i=1, itemCount
+      call ESMF_FieldEmptyComplete(fieldList(i), typekind=ESMF_TYPEKIND_R8, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_FieldInitialize(fieldList(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(name)//' completed and initialized with zero '
+      call MOSSCO_FieldString(fieldList(i), message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
 
     ! get parameters from the gridComp, we can safely assume that they are present
 
@@ -521,7 +525,7 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message,'(A,ES9.3)') trim(name)//' minimum food flux is ', minimumFoodFlux
+    write(message,'(A,ES10.3)') trim(name)//' minimum food flux is ', minimumFoodFlux
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(gridComp, name='mussel_mass', &
@@ -529,7 +533,7 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message,'(A,ES9.3)') trim(name)//' mussel mass is ', mussel_mass
+    write(message,'(A,ES10.3)') trim(name)//' mussel mass is ', mussel_mass
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(gridComp, name='filter_species', &
@@ -601,24 +605,31 @@ module filtration_component
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
 
-    real(ESMF_KIND_R8),allocatable               :: fractionalLossRate(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: filtrationRate(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: maximumFiltrationRate(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: foodFlux(:,:,:)
-    real(ESMF_KIND_R8),allocatable               :: foodFluxFactor(:,:,:)
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration, velocity
-    !real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: layer_height, water_depth_at_interface
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: maximumFiltrationRate
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFlux, exchangeRate
+    real(ESMF_KIND_R8),allocatable, dimension(:,:)   :: xWidth, yWidth
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: fractionalLossRate
+    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
+
+    real(ESMF_KIND_R8),pointer,dimension(:,:)    :: abundanceAtSoil, abundanceAtSurface
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate, layerHeight
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration
+
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
-    integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount
+    type(ESMF_Grid)         :: grid
+    integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j
     real(ESMF_KIND_R8)      :: minimumFoodFlux, mussel_mass
     real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
+    integer(ESMF_KIND_I4)                :: ubndZ(3), lbndZ(3)
+    type(ESMF_Field), allocatable        :: fieldList(:)
 
-    character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName
+    character(len=ESMF_MAXSTR)  :: filterSpecies, fluxName, creatorName
     character(len=ESMF_MAXSTR), allocatable  :: filterSpeciesList(:)
     type(ESMF_FieldStatus_Flag) :: fieldStatus
+    logical                     :: isSoil, isSurface
     type(ESMF_StateItem_Flag)   :: itemType
 
     mmolPermg = 0.03083348776
@@ -657,93 +668,137 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateGet(importState, trim(filterSpecies)//'_in_water', itemType=itemType, rc=localrc)
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch=trim(filterSpecies)//'_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (itemType /= ESMF_STATEITEM_FIELD) then
-      write(message,'(A)') trim(name)//' did not find field with name '//trim(filterSpecies)
+    if (fieldCount /= 1) then
+      write(message,'(A)') trim(name)//' did not find complete field with name '//trim(filterSpecies)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call MOSSCO_StateLog(importState)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    call ESMF_StateGet(importState, trim(filterSpecies)//'_in_water', field=field, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message,'(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     allocate(ubnd(3), stat=localrc)
     allocate(lbnd(3), stat=localrc)
 
-    call ESMF_FieldGet(field, farrayPtr=concentration, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
+    call ESMF_FieldGet(fieldList(1), farrayPtr=concentration, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateGet(importState, 'mussel_abundance_in_water', itemType=itemType, rc=localrc)
+    !> @todo get grid from specified grid variable
+    call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (itemType /= ESMF_STATEITEM_FIELD) then
-      write(message,'(A)') trim(name)//' did not find field with name mussel_abundance_in_water'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(importState)
+    ! Get layer height  to export
+    call MOSSCO_StateGetFieldList(exportState, fieldList,  &
+      itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=layerHeight, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_GridGetDepth(grid,  height=layerHeight,  rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Get mussel abundance to export
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+      itemSearch='mussel_abundance_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=abundance, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_FieldGetMissingValue(fieldList(1), missingValue, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    ! Get mussel abundance to import
+    nullify(abundanceAtSoil)
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='mussel_abundance_at_soil_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    isSoil = .false.
+    if (fieldCount == 1) then
+      isSoil = .true.
+      call ESMF_FieldGet(fieldList(1), farrayPtr=abundanceAtSoil, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      write(message,'(A)') trim(name)//' found no abundance at soil'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
-    call ESMF_StateGet(importState, 'mussel_abundance_in_water', field=field, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    ! Get mussel abundance to import
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='mussel_abundance_at_water_surface', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
 
-    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message,'(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    isSurface = .false.
+    if (fieldCount == 1) then
+      call ESMF_FieldGet(fieldList(1), farrayPtr=abundanceAtSurface, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      isSurface = .true.
+    else
+        write(message,'(A)') trim(name)//' found no abundance at surface'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
 
-    call ESMF_FieldGet(field, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    ! Return from this component if nothing can be done as there is no abundance
+    if (.not.(isSurface .or. isSoil)) then
+      write(message,'(A)') trim(name)//' found no abundance at all'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
-    if (rank /= 3) then
-      write(message,'(A)') trim(name)//' received non-rank 3 field'
-      call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      return
     endif
 
-    allocate(ubnd(rank), stat=localrc)
-    allocate(lbnd(rank), stat=localrc)
+    if (isSurface) then
+      where (layerHeight(RANGE2D,ubnd(3)) > 0)
+        abundance(RANGE2D,ubnd(3)) = abundanceAtSurface(RANGE2D) &
+          / layerHeight(RANGE2D,ubnd(3))
+      endwhere
+      write(message,'(A,ES10.3,A)') trim(name)//' max upper layer abundance is ', &
+          maxval(abundance(RANGE2D,ubnd(3))),' m-3'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
 
-    call ESMF_FieldGet(field, farrayPtr=abundance, exclusiveUbound=ubnd, exclusiveLbound=lbnd, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_FieldGetMissingValue(field, missingValue, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (isSoil) then
+      where (layerHeight(RANGE2D,lbnd(3)) > 0)
+        abundance(RANGE2D,lbnd(3)) = abundanceAtSoil(RANGE2D) &
+          / layerHeight(RANGE2D,lbnd(3))
+      endwhere
+      write(message,'(A,ES10.3,A)') trim(name)//' max lowest layer abundance is ', &
+          maxval(abundance(RANGE2D,lbnd(3))),' m-3'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
 
     if (allocated(mask)) deallocate(mask)
     allocate(mask(ubnd(1)-lbnd(1)+1, ubnd(2)-lbnd(2)+1, ubnd(3)-lbnd(3)+1), stat=localrc)
     mask(RANGE3D) = (abundance(RANGE3D) /= missingValue)
     mask(RANGE3D) = (abundance(RANGE3D) > 0 .and. mask(RANGE3D))
 
+
     if (.not.any(mask)) then
-      write(message,'(A)') trim(name)//' found no abundance'
+      write(message,'(A)') trim(name)//' found no unmasked abundance'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       if (allocated(mask)) deallocate(mask)
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       return
     endif
 
@@ -752,34 +807,40 @@ module filtration_component
       write(message,'(A)') trim(name)//' found no concentration at abundance'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       if (allocated(mask)) deallocate(mask)
+      call MOSSCO_CompExit(gridComp, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       return
     endif
+    write(message,'(A,ES10.3,A)') trim(name)//' max food concentration is ', &
+        maxval(concentration(RANGE3D), mask=mask),' mmol m-3'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     write(fluxName,'(A)') trim(filterSpecies)//'_flux_in_water'
 
-    call ESMF_StateGet(exportState, trim(fluxName), itemType=itemType, rc=localrc)
+    ! Get flux species, be careful to look at the creator attribute to choose
+    ! the right one
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+      itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (itemType /= ESMF_STATEITEM_FIELD) then
-      write(message,'(A)') trim(name)//' did not find field with name '//trim(fluxname)
+    do i=1, fieldCount
+      call ESMF_AttributeGet(fieldList(i), 'creator', creatorName, defaultValue='none', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (trim(creatorName) /= trim(name)) then
+        fieldCount=fieldCount - 1
+        cycle
+      endif
+      field=fieldList(i)
+    enddo
+
+    if (fieldCount /= 1) then
+      write(message,'(A)') trim(name)//' did not find complete field with name '//trim(fluxName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(exportState)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
-    call ESMF_StateGet(exportState, trim(fluxName), field=field, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-      write(message,'(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call MOSSCO_StateLog(importState)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -791,10 +852,44 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! Obtain the water transport in m3 s-1 from velocity and grid properties
-    call MOSSCO_StateGetVelocity(importState, velocity, rc=localrc)
+    ! Obtain the water exchange rate s-1 from velocity and grid properties
+    ! The subroutine will allocate xwidth and ywidth
+    call MOSSCO_GridGetWidth(grid, xwidth=xWidth, ywidth=yWidth, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='x_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=xVelocity, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='y_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(fieldList(1), farrayPtr=yVelocity, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (allocated(exchangeRate)) deallocate(exchangeRate)
+    allocate(exchangeRate(RANGE3D))
+
+    do i=lbnd(3),ubnd(3)
+      exchangeRate(RANGE2D,i) = sqrt( (yVelocity(RANGE2D,i)/ywidth(RANGE2D)) ** 2 &
+                                    + (xVelocity(RANGE2D,i)/xwidth(RANGE2D)) ** 2 )
+    enddo
+    write(message,'(A,ES10.3,A)') trim(name)//' max exchange rate is ', &
+        maxval(exchangeRate(RANGE3D), mask=mask),' s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+
+    if (allocated(yWidth)) deallocate(ywidth)
+    if (allocated(xWidth)) deallocate(xwidth)
 
     ! New core of the model (9 March 2016)
     if (.not.allocated(maximumFiltrationRate)) allocate(maximumFiltrationRate(RANGE3D), stat=localrc)
@@ -806,20 +901,30 @@ module filtration_component
     ! The maximum filtration rate is taken from Bayne et al. 1993, who found
     ! an empirical relationship between TPM and filtration rate, given in
     ! units of mg PhyC h-1 (300 mg)-1 Mytilus; we convert mmol of concentration to
-    ! mg for this relationship
+    ! mg for this relationship.  Concentrations are around 8 mmol m-3, so this calculation
+    ! yields 250 = .83 * (8 / 0.03083348776)** .983
     maximumFiltrationRate(RANGE3D) = .83 * (concentration(RANGE3D) * mgPermmol) ** .983
 
     ! Convert unit of maximumFiltrationRate to mg phyC mg-1 Mytilus s-1
-    maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / 300.0 / 3600.0
+    ! This typically yields 250E-6
+    maximumFiltrationRate(RANGE3D) = maximumFiltrationRate(RANGE3D) / (300.0 * 3600.0)
 
-    ! The food flux in mmol s-1 is the product of clearance rate
-    ! in m3 s-1 and concentration mmol phyC m-3
-    ! clearance rate is identical to transport and thus numerically identical to
-    ! velocity (@todo: let Richard check this)
-    foodFlux(RANGE3D) = velocity(RANGE3D) * concentration(RANGE3D)
+    write(message,'(A,ES10.3,A)') trim(name)//' max filtration max rate is ', &
+        maxval(maximumFiltrationRate(RANGE3D), mask=mask),' mg mg-1 s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    ! The food flux in mmol s-1 is the product of exchange rate
+    ! in s-1 and concentration mmol phyC m-3
+    ! At 1 m s-1 velocity and 1000 m grid dimension, the exchange rate is 1E-3, such
+    ! that foodFlux is typically 8E-3
+    foodFlux(RANGE3D) = exchangeRate(RANGE3D) * concentration(RANGE3D)
+    write(message,'(A,ES10.3,A)') trim(name)//' max food flux rate is ', &
+        maxval(foodFlux(RANGE3D), mask=mask),' mmol s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ! The food flux factor is a threshold function that limits
-    ! the supply at low rates
+    ! the supply at low rates, it is typically
+    ! minimumFoodFlux  = 0.6166697552  ! mmol C s-1 m-3, equiv to 20 mg C
     foodFluxFactor(RANGE3D) = 1
     where(foodFluxFactor(RANGE3D) < minimumFoodFlux)
       foodFluxFactor(RANGE3D) = foodFlux(RANGE3D) / minimumFoodFlux
@@ -830,6 +935,10 @@ module filtration_component
     ! a supply-dependent food flux factor.
     filtrationRate(RANGE3D) = &
       maximumFiltrationRate(RANGE3D) * foodFluxFactor(RANGE3D)
+    write(message,'(A,ES10.3,A)') trim(name)//' max filtration rate is ', &
+        maxval(filtrationRate(RANGE3D), mask=mask),' mg mg-1 s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     ! The loss rate is in mg PhyC m-3 s-1
     lossRate = &
     ! and is proportinal to mussel dry mass concentration, calculated
@@ -862,28 +971,28 @@ module filtration_component
     do i = 1, otherCount
       write(fluxName,'(A)') trim(filterSpeciesList(i))//'_flux_in_water'
 
-      call ESMF_StateGet(exportState, trim(fluxName), itemType=itemType, rc=localrc)
+      ! Get cofiltered flux species, be careful to look at the creator attribute to choose
+      ! the right one
+      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+        itemSearch=trim(fluxName), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (itemType /= ESMF_STATEITEM_FIELD) then
-        write(message,'(A)') trim(name)//' did not find field with name '//trim(fluxname)//' for '//trim(filterSpeciesList(i))
+      do j=1, fieldCount
+        call ESMF_AttributeGet(fieldList(j), 'creator', creatorName, defaultValue='none', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (trim(creatorName) /= trim(name)) then
+          fieldCount=fieldCount - 1
+          cycle
+        endif
+        field=fieldList(j)
+      enddo
+
+      if (fieldCount /= 1) then
+        write(message,'(A)') trim(name)//' did not find complete field with name '//trim(fluxName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-
-      call ESMF_StateGet(exportState, trim(fluxName), field=field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
-        write(message,'(A)') trim(name)//' received incomplete field'
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call MOSSCO_StateLog(importState)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -930,6 +1039,10 @@ module filtration_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     enddo
+
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_Reallocate(filterSpeciesList, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &

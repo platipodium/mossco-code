@@ -101,11 +101,9 @@ export ESMF_COMM=$C
 export ESMFMKFILE=$ESMF_INSTALL_PREFIX/lib/libg/${ESMF_STRING}/esmf.mk
 EOT
 
-       if [ $(hostname) = "ocean-fe.fzg.local" ] ; then
-          echo "unset ESMF_XERCES" >> $HOME/.esmf_${ESMF_STRING}
-       else
-          echo "export ESMF_XERCES=standard" >> $HOME/.esmf_${ESMF_STRING}
-       fi
+       echo "export ESMF_XERCES=standard" >> $HOME/.esmf_${ESMF_STRING}
+       echo "# Comment the following line if you have libxerces"
+       echo "unset ESMF_XERCES" >> $HOME/.esmf_${ESMF_STRING}
 
        source $HOME/.esmf_${ESMF_STRING}
        cat $HOME/.esmf_${ESMF_STRING}
@@ -131,4 +129,3 @@ EOT
     done
   done
 done
-

@@ -10,4 +10,4 @@ else
   outfile=$1
 fi
 
-cat maecs_*.nml fabm.nml fabm_pelagic.nml fabm_sed.nml run_sed.nml soil_pelagic_connector.nml mossco_run.nml > $outfile
+cat maecs_*.nml fabm.nml fabm_pelagic.nml fabm_sed.nml run_sed.nml *connector.nml mossco_run.nml > $outfile

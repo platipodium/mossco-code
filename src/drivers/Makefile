@@ -17,7 +17,7 @@ include $(MOSSCO_DIR)/src/Rules.make
 
 EXTRA_DIST=README
 
-TARGETS = libmossco_benthos libmossco_simplewave
+TARGETS = libmossco_simplewave
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS+=libmossco_clm
   #TARGETS+=libmossco_river
@@ -38,6 +38,7 @@ endif
 
 ifeq ($(MOSSCO_EROSED),true)
   TARGETS += libmossco_erosed
+  TARGETS += libmossco_benthos
   CPPFLAGS += -I$(EROSED_DIR)/include
 endif
 
