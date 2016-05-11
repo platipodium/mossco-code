@@ -58,7 +58,9 @@ module erosed_component
   type (BioturbationEffect)                              :: BioEffects
 
   real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: layers_height=>null(),sigma_midlayer=>null(),sediment_mass=>null()
-  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: relative_thickness_of_layers=>null()
+  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: relative_thickness_of_layers=>null(), thickness_of_layers=>null()
+  real   (kind=ESMF_KIND_R8),dimension(:,:,:)  ,pointer  :: depth_avg_spm_concentration=>null()! Dimensions (x,y,fraction index)
+  real   (kind=ESMF_KIND_R8),dimension(:,:)    ,pointer  :: sum_depth_avg_spm_concentration=>null()!Dimensions (x,y)
   real   (kind=ESMF_KIND_R8),dimension(:,:,:,:),pointer  :: spm_concentration=>null() ! Dimensions (x,y,depth layer, fraction index)
 
   integer(kind=ESMF_KIND_I4),dimension(:,:)    ,pointer  :: mask=>NULL()
@@ -399,7 +401,8 @@ contains
 
     if (.not.associated(BioEffects%ErodibilityEffect)) allocate (BioEffects%ErodibilityEffect(inum, jnum))
     if (.not.associated(BioEffects%TauEffect))         allocate (BioEffects%TauEffect(inum,jnum))
-!   TODO: Replace static allocation to 30 layers !!!!!
+    if (.not.associated(depth_avg_spm_concentration))  allocate(depth_avg_spm_concentration(inum,jnum,nfrac))
+    if (.not.associated(sum_depth_avg_spm_concentration))  allocate(sum_depth_avg_spm_concentration(inum,jnum))
     if (.not.associated(spm_concentration))            allocate(spm_concentration(inum,jnum,knum,nfrac))
     allocate (cdryb     (nfrac))
     allocate (rhosol    (nfrac))
@@ -1093,6 +1096,56 @@ contains
 
     end if
 
+     field = ESMF_FieldCreate(grid, &
+                         typekind=ESMF_TYPEKIND_R8, &
+                         name='depth_average_concentration_of_SPM_in_water',&
+                         staggerloc=ESMF_STAGGERLOC_CENTER, &
+                         ungriddedLBound=(/1/),ungriddedUBound=(/nfrac/), &
+                         gridToFieldMap=(/1,2/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      write(message,'(A)') trim(name)//' created field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO) 
+       call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!        call ESMF_AttributeSet(field,'missing_value',sed%missing_value,rc=localrc)
+!        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+!          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_FieldGet(field=field, farrayPtr=depth_avg_spm_concentration,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        depth_avg_spm_concentration(:,:,:)= 0.0_fp
+         
+        call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        sum_depth_avg_spm_concentration(:,:) =0.0_fp
+
+        field = ESMF_FieldCreate(grid, farrayPtr=sum_depth_avg_spm_concentration, &
+            name='Sum_depth_average_concentration_of_SPM_in_water', rc=localrc)
+        call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
+         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        write(message,'(A)') trim(name)//' created field'
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+        call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+   
+        call ESMF_StateAdd(exportState,(/field/), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1460,6 +1513,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          first_entry = .false.
       end if
 
+       if (.not. associated (thickness_of_layers)) then
+        allocate (thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
+        if (istat/=0) write (*,*) 'Warning/Error in allocation of thickness_of_layers in erosed_component'
+      end if     
+      
       if (.not. associated (relative_thickness_of_layers)) then
         allocate (relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
         if (istat/=0) write (*,*) 'Warning/Error in allocation of relative_thickness_of_layers in erosed_component'
@@ -1474,8 +1532,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         do k = 1,ubnd(3)
 
-         relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
-                                                           & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2), k-1) )/ &
+          thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)= layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k  ) &
+                                                               & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k-1)
+
+          relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)=  thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k)/&
                                                            & (layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),ubnd(3)) &
                                                            & -layers_height(lbnd(1):ubnd(1),lbnd(2):ubnd(2),0) )
         end do
@@ -1548,6 +1608,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
      end do
 
 #endif
+
+ 
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
     sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
@@ -1608,6 +1670,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
+
+    ! Preparing for output
     call ESMF_StateGet(exportState, 'rms_orbital_velocity_at_soil_surface', itemType=itemType, &
       rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1825,8 +1889,89 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     end do
     end if
 !#endif
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+
+    call ESMF_StateGet(exportState,'depth_average_concentration_of_SPM_in_water', itemType=itemType,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message, '(A)') trim(name)//' did not find field depth_average_concentration_of_SPM_in_water'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(exportState, 'depth_average_concentration_of_SPM_in_water', field=field,rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=status, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+
+    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)') trim(name)//' received incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=depth_avg_spm_concentration,exclusiveLBound=exclusiveLBound3, &
+      exclusiveUBound=exclusiveUBound3, totalLBound=totalLBound3, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    depth_avg_spm_concentration = 0.0_fp
+    do i = 1,ubnd(1)
+     do j = 1, ubnd(2)
+      do l = 1, nfrac
+       do k = 1,ubnd(3)
+         depth_avg_spm_concentration (i,j,l)= depth_avg_spm_concentration (i,j,l)+ spm_concentration (i,j,k,l)&
+         &                                   *thickness_of_layers (i,j,k)
+       end do
+      end do
+     end do    
+    end do
+
+    do i = 1, ubnd(1)
+     do j= 1, ubnd(2)
+      depth_avg_spm_concentration (i,j,:)= depth_avg_spm_concentration (i,j,:)/depth (i,j)
+     end do
+    end do
+ 
+
+    call ESMF_StateGet(exportState, 'Sum_depth_average_concentration_of_SPM_in_water',itemType=itemType, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemType /= ESMF_STATEITEM_FIELD) then
+      write(message, '(A)') trim(name)//' did not find field Sum_depth_average_concentration_of_SPM_in_water'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_StateGet(exportState,'Sum_depth_average_concentration_of_SPM_in_water',field=field, &
+      rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldGet(field, status=status, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (status /= ESMF_FIELDSTATUS_COMPLETE) then
+      write(message, '(A)') trim(name)//' received incomplete field'
+      call MOSSCO_FieldString(field, message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call ESMF_FieldGet(field, farrayPtr=sum_depth_avg_spm_concentration,exclusiveLBound=exclusiveLBound, &
+      exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    
+    sum_depth_avg_spm_concentration = sum (depth_avg_spm_concentration, dim=3)
 
     call ESMF_StateValidate(exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1896,8 +2041,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     deallocate (BioEffects%TauEffect)
     deallocate (BioEffects%ErodibilityEffect)
     deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
-    deallocate (spm_concentration)
-    deallocate (relative_thickness_of_layers, sigma_midlayer)
+    deallocate (spm_concentration, depth_avg_spm_concentration,sum_depth_avg_spm_concentration)
+    deallocate (thickness_of_layers,relative_thickness_of_layers, sigma_midlayer)
     if ( associated( sediment_mass)) nullify (sediment_mass)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
