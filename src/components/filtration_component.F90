@@ -887,9 +887,33 @@ module filtration_component
         maxval(exchangeRate(RANGE3D), mask=mask),' s-1'
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-
     if (allocated(yWidth)) deallocate(ywidth)
     if (allocated(xWidth)) deallocate(xwidth)
+
+    ! Assume for all layers above the surface layer that the filter feeders grow
+    ! on structures in the water column. Then, the shear stress
+    ! is calculated as tau = cw * rho * u^2, and the shear velocity is
+    ! u* = sqrt(tau/rho) = sqrt(cw) * u
+    ! for cylindric structures, like wind farm piles, cw in a high Re number
+    ! turbulent regime is cw=0.35, such that u* = .6 * u
+
+    exchangeRate(RANGE2D,:) = .6 * exchangeRate(RANGE2D,:)
+
+    !> @todo consider boundary layer decrease of velocity/exchange rate.
+    ! According to van Duren 2006, typical values for a high-velocity regime
+    ! are z0=4.4 mm, shear velocity u* = 4E-2 m s-1
+    ! we can also calculate shear velocity from the ocean model's maximum_bottom_stress
+
+    ! call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+    !   itemSearch='maximum_bottom_stress', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !
+    ! call ESMF_FieldGet(fieldList(1), farrayPtr=tau, rc=localrc)
+    ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !
+    ! u = sqrt(tau / rho) / karman * log(z/z0)
 
     ! New core of the model (9 March 2016)
     if (.not.allocated(maximumFiltrationRate)) allocate(maximumFiltrationRate(RANGE3D), stat=localrc)
