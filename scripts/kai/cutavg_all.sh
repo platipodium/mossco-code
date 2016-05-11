@@ -22,7 +22,7 @@ echo $outdir
 # run cutting and averaging in parallel mode
 
 # retrieve final time-step
-N=$(ncdump -h mossco_gffrpr.029.nc |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
+N=$(ncdump -h mossco_gfbfrr.029.nc |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -1]
 #N=100
 
