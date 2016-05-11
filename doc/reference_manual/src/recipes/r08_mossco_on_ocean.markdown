@@ -36,19 +36,21 @@ It is advisable to have `$MOSSCO_DIR` somewhere in your `/home` and `$MOSSCO_SET
 
 ## Downloading MOSSCO and obtaining external sources
 
-	mkdir -p $MOSSCO_DIR
-	git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
-    make -C $MOSSCO_DIR external # to obtain getm/gotm/fabm
+        mkdir -p $MOSSCO_DIR
+        git clone git://git.code.sf.net/p/mossco/code $MOSSCO_DIR
+        make -C $MOSSCO_DIR external # to obtain getm/gotm/fabm
 
-.. and the same for the setups
+... and the same for the setups
 
 	mkdir -p $MOSSCO_SETUPDIR
 	git clone git://git.code.sf.net/p/mossco/setups $MOSSCO_SETUPDIR
     make -C $MOSSCO_SETUPDIR external # to obtain editscenario
 
-> if you want to enable debugging, you can set `$MOSSCO_FFLAGS`
+> if you want to enable debugging (you probably do not want this), you can set `$MOSSCO_FFLAGS` and
+> `$STATIC` (for getm)
 
-	export MOSSCO_FFLAGS="-g -C -check -traceback -check noarg_temp_created"
+        export MOSSCO_FFLAGS="-g -C -check -traceback -check noarg_temp_created"
+        export STATIC="-g -C -check -traceback -check noarg_temp_created"
 
 ## Install ESMF on ocean
 
@@ -61,14 +63,14 @@ It is already done (usually), but in case you want to do this again:
 		export ESMF_ABI=64
 		export ESMF_MOAB=OFF
 		export ESMF_OPTLEVEL=2
-		export ESMF_INSTALL_PREFIX=$ESMF_DIR
+		export ESMF_INSTALL_PREFIX=${HOME}/opt
 		export ESMF_LAPACK=internal
 		export ESMF_NETCDF=standard
 		export ESMF_NETCDF_INCLUDE=/opt/netcdf/3.6.2/intel/include
 		export ESMF_NETCDF_LIBPATH=/opt/netcdf/3.6.2/intel/lib
 		export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
 		unset ESMF_PIO
-		export ESMF_SITE=ESMF_7_0_0_beta_snapshot_43
+		export ESMF_SITE=ESMF_7_0_0_beta_snapshot_65
 		export ESMF_COMPILER=intel
 		export ESMF_COMM=openmpi
 		unset ESMF_XERCES
