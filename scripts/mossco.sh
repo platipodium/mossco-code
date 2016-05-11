@@ -4,7 +4,7 @@
 #        You may want to link this script into directory within your $PATH
 #
 # This computer program is part of MOSSCO.
-# @copyright Copyright (C) 2014, 2015, Helmholtz-Zentrum Geesthacht
+# @copyright Copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -378,7 +378,7 @@ case ${SYSTEM} in
 EOT
 
     echo "" >> pbs.sh
-    echo  ${EXE} >> slurm.sh
+    echo  ${EXE} >> pbs.sh
 
 ;;
   SLURM)
