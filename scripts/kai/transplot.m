@@ -10,16 +10,16 @@ show_data=1; datf='~/data/DeutscheBucht/stations.nc';
 % locations; at least one site-name (locs) should be given 
 loc =[]; 
 %loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'T1';}; % 'T1'; 
+locs={'T0';}; % 'T1'; 
 
-tags={'_new';};%'_res';'_att';
+tags={'';};%_new'_res';'_att';
 ntags=length(tags);
 spath  ='/home/wirtz/sns/';%spath  ='/ocean-data/wirtz/';
 %spath  ='/media/archiv/'
 setvar_trans;  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
-ncol = 3; nrow = 3; 	% number of columns in fig
+ncol = 5; nrow = 3; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 compn ={'water';'soil'};
 fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
@@ -39,7 +39,7 @@ else
 end
 
 %% open all figures
-for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1540 950],'Visible','off','Color','w'); end
+for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1750 850],'Visible','off','Color','w'); end
 oldfig=-np;
 
 occ = zeros(nfig,ncol,nrow); 
@@ -59,8 +59,8 @@ for ns=1:ntags
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- t0 = datenum('2003-07-10','yyyy-mm-dd')-1;
- t1 = datenum('2003-07-28','yyyy-mm-dd')-1;
+% t0 = datenum('2003-07-10','yyyy-mm-dd')-1;
+% t1 = datenum('2003-07-28','yyyy-mm-dd')-1;
 
  time0=time;
  ind=find(time>= t0 & time<=t1);

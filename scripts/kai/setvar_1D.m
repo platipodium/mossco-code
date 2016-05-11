@@ -9,7 +9,7 @@
 %             N : not shown but stored		P : profiles   	C : Depth-time countours
 %	long name				short name  min max fac	fig row col type
 %	1					2	    3   4   5	6   7	8   9
-var={{'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;40; 1.0;	1; 1;1;'L9'};
+var={{'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;45; 1.0;	1; 1;1;'L9'};
   {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;-9; 15;	1; 1;1;'L9'};
   {'Chl_chl_in_water';'CHL';0.1;120; 3;					1; 1;2;'L9'};
   {'Chl_chl_in_water';'CHL';0.1;120; 3;					1; 1;2;'L0'};

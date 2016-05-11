@@ -19,6 +19,9 @@ for ili=1:size(i_loc,1)
   hold on
   tpos=[x0+0.23*(min(occ(np,ix,iy),4)+0.11)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];
 
+%fprintf('first %s\t np=%d c=%d ili=%d i=%d\t occ=%d\n',varshort,np,1+occ(np,ix,iy)-occ0(np,ix,iy),ili,i,occ(np,ix,iy));
+
+
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(res)); end
@@ -96,7 +99,7 @@ for ili=1:size(i_loc,1)
        plot(time(it),y(ind(it)),'o','Color',coljj(ns*2-1,:),'MarkerFaceColor',coljj(ns*2-1,:),'MarkerSize',8);
        annotation('textbox',[x0+0.9*dxp y0+(0.85-ns*0.15)*dyp 0.3*dxp 0.11*dyp],'String',tagc,'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs+2,'LineStyle','none');
      end
-     fprintf('%d %d\t%s  %1.3f\n',ns,i,varn,mean(y));
+ %    fprintf('%d %d\t%s  %1.3f\n',ns,i,varn,mean(y));
   end
  case{'M'}  %% map in extra window
   if maxVal>0,
@@ -165,15 +168,20 @@ for ili=1:size(i_loc,1)
   end %while
  end % if show
 
-end   %li 
+%fprintf('%s\t np=%d c=%d ili=%d i=%d\t occ=%d\n',varshort,np,1+occ(np,ix,iy)-occ0(np,ix,iy),ili,i,occ(np,ix,iy));
+
 if(cell2mat(var{i}(9)) ~='N' & occ(np,ix,iy)<4 )
   if ns==1
      fac=abs(cell2mat(var{i}(5))-1);
      if(fac>0.1 & fac<1000) varshort=[varshort0 '*' num2str(cell2mat(var{i}(5)))]; end
      ii=ix*100+iy*10+occ(np,ix,iy);
+     col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy),:); 
+%fprintf('%s\t tpy=%1.1f \t %d\n',varshort,tpos(2),ii);
+
      th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
      annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
   end
      occ(np,ix,iy) = occ(np,ix,iy) + 1;
 end
+end   %li 
 

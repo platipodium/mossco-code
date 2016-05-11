@@ -1,20 +1,34 @@
-ili=1;
-for li=2:length(ptag)  % loop over time steps 0:first 9:last
- if isstrprop(ptag(li), 'xdigit') 
+ili=1; 
+if isstrprop(ptag(2), 'xdigit') 
+  vli=2:length(ptag); mode='s';
+else
+  vli=0:nrow*ncol-1; mode='v';
+end
+
+
+for im=1:length(vli)
+ if mode=='s' % loop over time steps 0:first 9:last
+  li=vli(im);
   zi=1+str2num(ptag(li)); 
 %% index position of sub-plot
   iy=cell2mat(var{i}(7)); 
 % zero indicates running index for time slices
-  if(iy==0) iy = mod(li-2,nrowm); end
+  if(iy==0) iy = mod(li-2,nrow); end
   ix=cell2mat(var{i}(8)); 
   if(ix==0) 
     if(cell2mat(var{i}(7))==0)
-      ix = floor((li-1)/nrowm);
+      ix = floor((li-1)/nrow);
     else
       ix = li-1;
     end
   end
-
+  ti=it(zi);
+ else
+  ix = 1+mod(im-1,ncol);
+  iy = 1+floor((im-1)/ncol);
+  ti=(cell2mat(var{i}(6))-1)*(nrow*ncol)+im;
+ end
+ if ti<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns;
   figure(np); set(gcf, 'visible','off','Color','w'); hold on
@@ -25,9 +39,10 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   hold on
 
 %res = squeeze(tmp)*cell2mat(var{i}(5)); 
-  value = squeeze(tmp(:,:,:,ind(it(zi))));%*cell2mat(var{i}(5)); 
-
-  depth = -water_d(:,it(zi))*(nz-1:-1:0)/nz;
+  value = squeeze(tmp(:,:,:,ind(ti)));%*cell2mat(var{i}(5)); 
+  dz=1-0.5*(0:nz-1)/nz;
+  dz=dz/max(dz);
+  depth = -water_d(:,ti)*(nz-1:-1:0)/nz;
 
   tpos=[x0+0.25*(0.15)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];%occ(np,ix,iy)+
 
@@ -68,23 +83,23 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
     zlim([minval maxVal]);
   end
 %% plot model data
-  ix=find(tx>0);
-  tt=repmat(tx(ix),nz,1)';
-  h = pcolor(tt,depth(ix,:),value(ix,:));
-  ylim([-Dmax*0.85 0]); xlim([min(tx(ix))+0.02  max(tx(ix))]);
+  iix=find(tx>0);
+  tt=repmat(tx(iix),nz,1)';
+  h = pcolor(tt,depth(iix,:).*repmat(dz,length(iix),1),value(iix,:));
+  ylim([-Dmax*0.85 0]); xlim([min(tx(iix))+0.02  max(tx(iix))]);
 %caxis([minval maxVal])
   set(h,'edgecolor','none');
 %% find and print min+max
   col=[0.95 0.94 0.97];
  % annotation('textbox',tpos+[0.1*dxp -0.14*dyp 0 0],'String',[num2str(minval,5) '-' num2str(maxVal,5) units],'Color',col,'Fontweight','bold','FontSize',fs,'LineStyle','none');
 
-  mons=datestr(doy(it(zi)));
+  mons=datestr(doy(ti));
   if strfind(tag,'_')
     tagc=tag(2:end);
   else
     tagc=tag;
   end
-  ta=sprintf('%s (%d,%d) %s %d',[varshort0 ' ' tagc],doy(it(zi)),ind(it(zi)),mons(4:6),year(it(zi)));
+  ta=sprintf('%s (%d,%d) %s %d',[varshort0 ' ' tagc],doy(ti),ind(ti),mons(4:6),year(ti));
   annotation('textbox',tpos+[0.34*dxp -0.99*dyp 0.02 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none');
 
 %% colorbar settings

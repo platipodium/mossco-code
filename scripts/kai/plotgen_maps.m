@@ -79,7 +79,7 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   end
 %% print variable & scen name & date
   mons=datestr(doy(it(zi)));
-  ta=sprintf('%s %d z=%1.0f',mons(4:6),year(it(zi)),depth(di));
+  ta=sprintf('%s%d %d z%1.0f',mons(4:6),year(it(zi)),doy(it(zi)),depth(di));
  
   m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica');
   m_text(lonlimit(2)-1.2,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);

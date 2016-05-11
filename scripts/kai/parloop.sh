@@ -8,8 +8,8 @@ export hd=${PWD}
 rm -f tag.lst
 
 #declare -a pnam=("phi_agg" "syn_nut" "PAds""rFast"  "rSlow" "NCrFdet" )
-declare -a pnam=("PAds" "mort_zatt")
-declare -a pval=( 0.4     0.05  )
+declare -a pnam=("a_minfr" "fT_exp_mort" "zm_fa_delmax" "mort_zoo" "zstoich_PN" "syn_nut" "decay_nut" "kwFzmaxMeth" "PAds")
+declare -a pval=( 0.16       2.           6.             0.05        2.0        -6.          0.04       2    0.01 )
 
 cd helgoland
 echo "creating dirs ..." ${#pnam[@]}
@@ -31,5 +31,9 @@ for (( i=0; $i < ${#pnam[@]}; i++ )) do
 done # i
 wait
 cd $hd
-for a in hr_*; do ~/kai/add_denit.sh $a/mossco_1d.nc; done
+#for a in hr_*; do ~/kai/add_denit.sh $a/mossco_1d.nc; done
+mkdir -p hr_res
+for (( i=0; $i < ${#pnam[@]}; i++ )) do
+ cp hr_$i/mossco_1d.nc hr_res/mossco_1d${pnam[$i]}.nc
+done
 

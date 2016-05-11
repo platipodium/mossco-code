@@ -14,9 +14,15 @@ year= floor(time/365.25);
 doy=floor(mod(time,365.25)+1);
 
 if IsSoil
-  soil_dz   = squeeze(ncread(ncfile,'layer_height_in_soil'));
-  soil_depth= squeeze(ncread(ncfile,'layer_center_depth_in_soil'));
+  try
+    soil_dz   = squeeze(ncread(ncfile,'layer_height_in_soil'));
+    soil_depth= squeeze(ncread(ncfile,'layer_center_depth_in_soil'));
+  catch exception
+    soil_dz = 0.05*ones(2,length(time));
+    soil_depth= cumsum(soil_dz,1);;
+  end
   soil_dzt  = squeeze(sum(soil_dz,1));
+
 end
 if IsWater
   try
@@ -62,6 +68,7 @@ if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
     [m1 i]=min(abs(lat-loc(li,1))+abs(lon-loc(li,2)),[],1);
     [m j]=min(m1);
     i_loc(li,1:2)=[i(j) j];
+    fprintf('%s: %1.2f %1.2f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),lat(i_loc(li,1),i_loc(li,2)),i_loc(li,1),i_loc(li,2));
   end
  end
 end %length(locs) >1
@@ -81,7 +88,7 @@ if ptag(1)=='T'
   end
   iw=strfind(ncfile,'cutT');
   ncfileD=ncfile; ncfileD(iw:iw+3)='cutD';
-    water_d = squeeze(ncread(ncfileD,'water_depth_at_soil_surface'));
+  water_d = squeeze(ncread(ncfileD,'water_depth_at_soil_surface'));
 %    water_dz = water_dz.*water_d/size(water_dz,1);
   Dmax=round(max(max(water_d))); 
 end

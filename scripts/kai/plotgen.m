@@ -5,13 +5,13 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; Is1D=1;
+show_data=1; Is1D=0;
 datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.82];]; %[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'Helgoland';}; %'Sylt';'T22';'T26';}; %  
+loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; %; % 
+locs={'Helgoland';'Sylt';'T22';'T26';}; %}; %  
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -26,19 +26,21 @@ if show_data, read_stations_nc; end;
 if Is1D 
   spath= '/home/wirtz/mossco/mossco-setups/helgoland/';
   tags = {'_0';'_1';};
+  tags = {'';};
+ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
  %% graph settings
   ncol = 3; nrow = 2; 	% number of columns in fig
 else
-  tags = {'_new';};%'_den';'_zoo';'_res';'_att';
+  tags = {'';};%'_den';'_zoo';'_res';'_att';_new
+ntags=length(tags);
   spath= '/home/wirtz/sns';  %spath  ='/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 
   setvar_sns  % defines variables to show - and where/how to do it %setvar  
-  ncol = 2; nrow = 2; 	% number of columns in fig
+  ncol = 3; nrow = 2; 	% number of columns in fig
 end
-ntags=length(tags);
 
 nrowm = 2;
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
@@ -74,7 +76,7 @@ for ns=1:ntags
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
-% t0 = datenum('2003-03-01','yyyy-mm-dd')-1;
+ t0 = datenum('2002-12-01','yyyy-mm-dd')-1;
 % t1 = datenum('2004-03-01','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
