@@ -21,16 +21,16 @@ use esmf
 implicit none
 
 private
-public MOSSCO_ConfigGetList
+public MOSSCO_ConfigGet
 
-interface MOSSCO_ConfigGetList
+interface MOSSCO_ConfigGet
   module procedure MOSSCO_ConfigGetInt4
   module procedure MOSSCO_ConfigGetInt8
   module procedure MOSSCO_ConfigGetReal8
   module procedure MOSSCO_ConfigGetListInt4
   module procedure MOSSCO_ConfigGetListString
   module procedure MOSSCO_ConfigGetListStringKeyValue
-end interface MOSSCO_ConfigGetList
+end interface MOSSCO_ConfigGet
 
 contains
 
