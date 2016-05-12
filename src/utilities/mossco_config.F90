@@ -1,7 +1,7 @@
 !> @brief Implementation of ESMF Config utilities
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -24,12 +24,133 @@ private
 public MOSSCO_ConfigGetList
 
 interface MOSSCO_ConfigGetList
+  module procedure MOSSCO_ConfigGetInt4
+  module procedure MOSSCO_ConfigGetInt8
+  module procedure MOSSCO_ConfigGetReal8
   module procedure MOSSCO_ConfigGetListInt4
   module procedure MOSSCO_ConfigGetListString
   module procedure MOSSCO_ConfigGetListStringKeyValue
 end interface MOSSCO_ConfigGetList
 
 contains
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_ConfigGetInt4"
+  subroutine MOSSCO_ConfigGetInt4(config, label, int4, rc)
+
+    type(ESMF_Config), intent(inout)       :: config
+    character(len=*), intent(in)           :: label
+    integer(ESMF_KIND_I4), intent(inout)   :: int4
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_
+    logical                              :: isPresent
+    character(len=ESMF_MAXSTR)           :: message
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_ConfigFindLabel(config, label=trim(label), isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) then
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
+
+    call ESMF_ConfigFindLabel(config, label=trim(label), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ConfigGetAttribute(config, value=int4, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A,I5)') trim(message)//' ', int4
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    if (present(rc)) rc = rc_
+
+  end subroutine MOSSCO_ConfigGetInt4
+
+#undef  ESMF_METHOD
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_ConfigGetInt8"
+  subroutine MOSSCO_ConfigGetInt8(config, label, int8, rc)
+
+    type(ESMF_Config), intent(inout)       :: config
+    character(len=*), intent(in)           :: label
+    integer(ESMF_KIND_I8), intent(inout)   :: int8
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_
+    logical                              :: isPresent
+    character(len=ESMF_MAXSTR)           :: message
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_ConfigFindLabel(config, label=trim(label), isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) then
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
+
+    call ESMF_ConfigFindLabel(config, label=trim(label), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ConfigGetAttribute(config, value=int8, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A,ES10.3)') trim(message)//' ', dble(int8)
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    if (present(rc)) rc = rc_
+
+  end subroutine MOSSCO_ConfigGetInt8
+
+#undef ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_ConfigGetReal8"
+  subroutine MOSSCO_ConfigGetReal8(config, label, real8, rc)
+
+    type(ESMF_Config), intent(inout)       :: config
+    character(len=*), intent(in)           :: label
+    real(ESMF_KIND_R8), intent(inout)   :: real8
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_
+    logical                              :: isPresent
+    character(len=ESMF_MAXSTR)           :: message
+
+    rc_ = ESMF_SUCCESS
+
+    call ESMF_ConfigFindLabel(config, label=trim(label), isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) then
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
+
+    call ESMF_ConfigFindLabel(config, label=trim(label), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ConfigGetAttribute(config, value=real8, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    write(message,'(A)') '  found '//trim(label)//':'
+    write(message,'(A,ES10.3)') trim(message)//' ', real8
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    if (present(rc)) rc = rc_
+
+  end subroutine MOSSCO_ConfigGetReal8
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_ConfigGetListInt4"
