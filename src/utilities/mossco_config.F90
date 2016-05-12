@@ -26,6 +26,7 @@ public MOSSCO_ConfigGet
 interface MOSSCO_ConfigGet
   module procedure MOSSCO_ConfigGetInt4
   module procedure MOSSCO_ConfigGetInt8
+  module procedure MOSSCO_ConfigGetString
   module procedure MOSSCO_ConfigGetReal8
   module procedure MOSSCO_ConfigGetListInt4
   module procedure MOSSCO_ConfigGetListString
@@ -120,7 +121,7 @@ contains
 
     type(ESMF_Config), intent(inout)             :: config
     character(len=*), intent(in)                 :: label
-    character(len=ESMF_MAXSTR), intent(inout)    :: value
+    character(len=*), intent(inout)    :: value
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_
@@ -253,7 +254,7 @@ contains
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
-    character(len=ESMF_MAXSTR), intent(inout), allocatable :: stringList(:)
+    character(len=*), intent(inout), allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
