@@ -2,7 +2,7 @@
 
 tantalos is the local cluster at BAW. It offers recent Intel compilers, gcc 4.8.2 as module  and parallelism via mpi (mpt- from SGI and mpich).  
 
-First gfortran and mpt modules should be loaded:
+First gfortran and mpt modules should be loaded. At best do it by includining th efollowing statements directly in your profile.
 
 module load gcc/4.8.2
 module load mpt/2.06
@@ -16,8 +16,10 @@ Download the latest PyYAML source package, then install it as a user
 
 	python setup.py install --user </path/to/PyYAML/source/>
 
-### Environment variables (for GNU compiler)
+### Environment variables (for GNU compiler) set in your local profile (~/.profile)
+
 #### ESMF
+
 It is assumed that netcdf3.6.3 has been already installed
 
 export NETCDFHOME=$MOSSCO_BASE/07_Netcdf/netcdf_3.6.3
@@ -36,9 +38,15 @@ unset ESMF_XERCES
 
 export MPIINC="$HOME/include -I/sw/sdev/mpt-x86_64/2.06-p10901/include"
 
+
+#### MOSSCO
+To make mossco recognize mpt/2.6 with gfortran support it is necessary to include the following in ~/.profile.
+export INCLUDES="-I$HOME/include -I/sw/sdev/mpt-x86_64/2.06-p10901/include"
+
 #### Python
 
 export PYTHONPATH=/home/ak2mnase/lib64/python2.6/site-packages
+
 
 This example also assumes that you have downloaded or `git clone`d MOSSCO into a directory referred to by the environment variable `$MOSSCO_DIR`, and have `git clone`d the MOSSCO setups into `$MOSSCO_SETUPDIR`.
 
@@ -81,4 +89,7 @@ It is already done, but in case you want to do this again:
 		mkdir -p $ESMF_DIR
                 git clone git://esmf.git.sourceforge.net/gitroot/esmf/esmf $ESMF_DIR
                 cd $ESMF_DIR
-		make lib
+		make
+or alterbatively run $MOSSCO_DIR/scripts/installation/install_esmf_versions.sh to install ESMF for you. Please note that following parameters should be set in advance in this file:
+COMPS="gfortran"
+COMMS="mpi"
