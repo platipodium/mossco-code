@@ -49,7 +49,7 @@ for im=1:length(vli)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(value)); end
-  if minval>0 & maxVal/minval > 30, islog=1; else  islog=0; end
+  if minval>0 & maxVal/minval > 20, islog=1; else  islog=0; end
 %if minval>0 & maxVal/minval > 30,set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));end
   if(islog) 
     value(find(value<minval*1.1))=minval*1.1;
@@ -85,8 +85,9 @@ for im=1:length(vli)
 %% plot model data
   iix=find(tx>0);
   tt=repmat(tx(iix),nz,1)';
-  h = pcolor(tt,depth(iix,:).*repmat(dz,length(iix),1),value(iix,:));
-  ylim([-Dmax*0.85 0]); xlim([min(tx(iix))+0.02  max(tx(iix))]);
+%  h = pcolor(tt,depth(iix,:).*repmat(dz,length(iix),1),value(iix,:));
+  h = pcolor(tt,depth(iix,:),value(iix,:));
+  ylim([-Dmax*0.95 0]); xlim([min(tx(iix))+0.02  max(tx(iix))]);
 %caxis([minval maxVal])
   set(h,'edgecolor','none');
 %% find and print min+max
@@ -100,7 +101,9 @@ for im=1:length(vli)
     tagc=tag;
   end
   ta=sprintf('%s (%d,%d) %s %d',[varshort0 ' ' tagc],doy(ti),ind(ti),mons(4:6),year(ti));
-  annotation('textbox',tpos+[0.34*dxp -0.99*dyp 0.02 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none');
+  if nice==0
+    annotation('textbox',tpos+[0.34*dxp -0.94*dyp 0.02 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none');
+  end
 
 %% colorbar settings
 %cb = colorbar;%set(cb,'LineWidth',1,'FontSize',fs-2);%,'Fontweight','bold'
