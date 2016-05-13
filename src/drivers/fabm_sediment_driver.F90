@@ -58,6 +58,7 @@ type,extends(type_rhs_driver), public :: type_sed !< sediment driver class (exte
    type(fabm_sed_grid)          :: grid
    type(type_model),pointer     :: model
    real(rk)                     :: bioturbation,diffusivity
+   real(rk)                     :: bioturbation_ae
    real(rk)                     :: k_par
    real(rk),dimension(:,:,:),pointer :: fluxes,bdys
    integer                      :: bcup_dissolved_variables=2
@@ -177,10 +178,11 @@ logical :: distributed_pom_flux=.false.
 integer :: nml_unit=128
 real(rk) :: diffusivity,bioturbation,porosity_max,porosity_fac
 real(rk) :: k_par,bioturbation_depth,bioturbation_min
+real(rk) :: bioturbation_ae
 real(rk) :: pom_flux_max
 namelist /sed_nml/ diffusivity,bioturbation_profile,bioturbation, &
         porosity_max,porosity_fac,k_par, distributed_pom_flux, pom_flux_max, &
-        bioturbation_depth,bioturbation_min
+        bioturbation_depth,bioturbation_min, bioturbation_ae
 
 ! read parameters
 bioturbation_profile = 1
@@ -188,6 +190,7 @@ diffusivity   = 0.9 ! cm2/d
 bioturbation  = 0.9 ! cm2/d
 bioturbation_depth = 5.0 ! cm
 bioturbation_min = 0.2 ! cm2/d
+bioturbation_ae = 4500.
 porosity_max  = 0.7
 porosity_fac  = 0.9 ! per m
 k_par         = 2.0d-3 ! 1/m
@@ -196,6 +199,7 @@ pom_flux_max  = 2.0d4  ! so far mmol/m2/d
 read(33,nml=sed_nml)
 
 sed%bioturbation = bioturbation
+sed%bioturbation_ae = bioturbation_ae
 sed%diffusivity  = diffusivity
 sed%k_par        = k_par
 if (distributed_pom_flux) then
@@ -505,7 +509,7 @@ call fabm_link_bulk_data(rhs_driver%model,standard_variables%downwelling_photosy
 !call fabm_link_bulk_data(rhs_driver%model,standard_variables%porosity,rhs_driver%porosity)
 
 ! calculate diffusivities (temperature)
-f_T = _ONE_*exp(-4500.d0*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
+f_T = _ONE_*exp(-rhs_driver%bioturbation_ae*(1.d0/(rhs_driver%temp3d+273.d0) - (1.d0/288.d0)))
 do n=1,size(rhs_driver%model%state_variables)
    rhs_driver%diff = rhs_driver%bioturbation * f_T / 86400.0_rk / 10000_rk * &
               (rhs_driver%ones3d - rhs_driver%intf_porosity)*rhs_driver%bioturbation_factor
