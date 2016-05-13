@@ -4,9 +4,10 @@
 # @copyright (C) 2015 Helmholtz-Zentrum Geesthacht
 # @author Kai W. Wirtz
 
-#ncpu=61#ncpu=116ncpu=158
-ncpu=178
-fg=%03g
+ncpu=61
+#ncpu=116ncpu=158
+#ncpu=178
+fg=%02g
 declare -a exnam=("rate" "flux" "velocity")
 
 #mkdir -p $ncpu

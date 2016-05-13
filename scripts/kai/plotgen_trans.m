@@ -49,7 +49,7 @@ for im=1:length(vli)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(value)); end
-  if minval>0 & maxVal/minval > 20, islog=1; else  islog=0; end
+  if minval>0 & maxVal/minval > 30, islog=1; else  islog=0; end
 %if minval>0 & maxVal/minval > 30,set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));end
   if(islog) 
     value(find(value<minval*1.1))=minval*1.1;

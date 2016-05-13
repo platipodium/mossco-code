@@ -9,7 +9,18 @@
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 
 # edit  cut_avg.sh (e.g. variable, names, vertical sclicing,..)
-SCRDIR=~/devel/MOSSCO/code/scripts/kai
+#SCRDIR=~/devel/MOSSCO/code/scripts/kai
+SCRDIR=~/kai
+nproc=178
+prefix=mossco_gfbfrr
+
+if [[ $nproc -lt 100 ]]; then
+  form="%02g"
+  fname=${prefix}'29.nc'
+else
+  form="%03g"
+  fname=${prefix}'029.nc'
+fi
 
 if [ $# -lt 1 ]; then
   outdir=${PWD##*/}    # simulation set-up folder
@@ -22,12 +33,12 @@ echo $outdir
 # run cutting and averaging in parallel mode
 
 # retrieve final time-step
-N=$(ncdump -h mossco_gfbfrr.029.nc |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
+N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -1]
 #N=100
 
 # here for 178-cpu setup using 6 processors; 
-for ((a=0;a<6;a++)); do $SCRDIR/cut_avg.sh 178 cut $a 6 $N & done
+for ((a=0;a<6;a++)); do $SCRDIR/cut_avg.sh $nproc cut $a 6 $N & done
 
 wait
 #check for completeness;
@@ -42,10 +53,16 @@ rm $fname
 fname='cut2_*.nc'
 rm $fname
 
+
 # stitch the pieces
 python  $SCRDIR/stitch_tiles.py cut_\*.nc $outdir'.nc'
 #python  $SCRDIR/stitch_tiles.py cutz  # surface sums
 #python  $SCRDIR/stitch_tiles.py cutm_\*.nc $outdir'_m.nc'  #monthly maximum
+
+fname='cut_*.nc'
+rm $fname
+fname='cutm_*.nc'
+rm $fname
 
 # view results
 ncview $outdir'.nc' &

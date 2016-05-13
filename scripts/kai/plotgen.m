@@ -10,8 +10,11 @@ datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; %; % 
+loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[54.2,7.5];]; %; %[54.96,8.4]; 
+% [52.25 4.4];[52.3 4.3]; % 17 m 28 m
+% Noordwijk-10 Noordwijk-70
 locs={'Helgoland';'Sylt';'T22';'T26';}; %}; %  
+
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -42,9 +45,9 @@ ntags=length(tags);
   ncol = 3; nrow = 2; 	% number of columns in fig
 end
 
-nrowm = 2;
+nrowm = 3; ncolm = 5;
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
-dxpm = 0.86/( 4 +0.05); dypm= 0.86/(nrowm+0.05);
+dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
 fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
@@ -62,7 +65,7 @@ else
 end
 
 %% open all figures
-for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1440 750],'Visible','off','Color','w'); end
+for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1580 850],'Visible','off','Color','w'); end
 oldfig=-np;
 ptag=cell2mat(var{1}(9));
 occ = zeros(nfig,ncol,nrow); occ0=occ;

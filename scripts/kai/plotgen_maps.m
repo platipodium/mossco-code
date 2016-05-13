@@ -1,12 +1,16 @@
-% it=1:round(length(time)/10):length(time); % discrete index for plotting symbols
+ili=1; 
+if isstrprop(ptag(2), 'xdigit') 
+  vli=2:length(ptag); mode='s';
+else
+  vli=0:nrowm*ncolm-1; mode='v';
+end
+
 di = cell2mat(var{i}(5)); %depth index
-for li=2:length(ptag)  % loop over time steps 0:first 9:last
- if isstrprop(ptag(li), 'xdigit') 
+
+for im=1:length(vli)
+ if mode=='s' % loop over time steps 0:first 9:last
+  li=vli(im);
   zi=1+str2num(ptag(li)); 
-
-% loop over sites (eg from 3D output)
-% for ili=1:size(i_loc,1)
-
 %% index position of sub-plot
   iy=cell2mat(var{i}(7)); 
 % zero indicates running index for time slices
@@ -19,7 +23,13 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
       ix = li-1;
     end
   end
-
+  ti=it(zi);
+ else
+  ix = 1+mod(im-1,ncolm);
+  iy = 1+floor((im-1)/ncolm);
+  ti=(cell2mat(var{i}(6))-1)*(nrowm*ncolm)+im;
+ end
+ if ti<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns + nfig;
   figure(np); set(gcf, 'visible','off','Color','w'); hold on
@@ -30,7 +40,7 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   hold on
 
 % set data matrix
-  value = squeeze(tmp(:,:,cell2mat(var{i}(5)),it(zi))); 
+  value = squeeze(tmp(:,:,cell2mat(var{i}(5)),ti)); 
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(value)); end
@@ -46,7 +56,7 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   la=lat(lx0+dx0:end-dx,ly0+dy0:end-dy);
 
 %% plot 2D data
-  value = squeeze(tmp(:,:,di,it(zi))); 
+  value = squeeze(tmp(:,:,di,ti)); 
 %   value(find(value<1E-4 | value>1E4 ))=-1;
   if(islog) 
     value(find(value<minval*1.1))=minval*1.1;
@@ -64,7 +74,7 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   m_grid('box','off','color','k','backcolor','none','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel',''); 
   m_usercoast('sns_coast','color',ones(3,1)*0.5,'linewidth',1.0,'linestyle','-');
 
-  if(li==2)
+  if(im==2)
 %% colorbar settings
     cb=colorbar;
     title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
@@ -78,8 +88,8 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
     vt{np-nfig}=[varshort0 tag];
   end
 %% print variable & scen name & date
-  mons=datestr(doy(it(zi)));
-  ta=sprintf('%s%d %d z%1.0f',mons(4:6),year(it(zi)),doy(it(zi)),depth(di));
+  mons=datestr(doy(ti));
+  ta=sprintf('%s%d %d z%1.0f',mons(4:6),year(ti),doy(ti),depth(di));
  
   m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica');
   m_text(lonlimit(2)-1.2,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
@@ -93,6 +103,5 @@ for li=2:length(ptag)  % loop over time steps 0:first 9:last
   end
 % ,'VerticalAlignment','center'annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
  end % if
-end  % li 
-
+end  % if
 

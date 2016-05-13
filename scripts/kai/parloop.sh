@@ -7,15 +7,17 @@ model=maecs
 export hd=${PWD}
 rm -f tag.lst
 
-#declare -a pnam=("phi_agg" "syn_nut" "PAds""rFast"  "rSlow" "NCrFdet" )
-declare -a pnam=("a_minfr" "fT_exp_mort" "zm_fa_delmax" "mort_zoo" "zstoich_PN" "syn_nut" "decay_nut" "kwFzmaxMeth" "PAds")
-declare -a pval=( 0.16       2.           6.             0.05        2.0        -6.          0.04       2    0.01 )
+#declare -a pnam=("fT_exp_mort"  "PAds""rFast"  "rSlow" "NCrFdet" "syn_nut"vS_det""mort_zoo")zm_fa_inf remin "zm_fa_delmax"
+#declare -a pnam=("Q10" "QP_phy_max" "syn_nut")
+declare -a pnam=("vS_det" "sinking_factor" "bioturbation"  "PAds" "PAdsODU" "rSlow")
+declare -a pval=(  4.5       0.2              2             0.01    20       0.006)
 
 cd helgoland
 echo "creating dirs ..." ${#pnam[@]}
 ~/kai/create_hr_dirs.sh ${#pnam[@]}
 ls ..
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
+  echo "'${pnam[$i]}${pval[$i]}';"
   echo "go to ..." $hd/hr_$i
   cd $hd/hr_$i
 #   echo $i
@@ -32,8 +34,12 @@ done # i
 wait
 cd $hd
 #for a in hr_*; do ~/kai/add_denit.sh $a/mossco_1d.nc; done
-mkdir -p hr_res
+mkdir -p hrres
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
- cp hr_$i/mossco_1d.nc hr_res/mossco_1d${pnam[$i]}.nc
-done
+ cp hr_$i/mossco_1d.nc hrres/mossco_1d${pnam[$i]}${pval[$i]}.nc
 
+done
+cd hrres
+#ln -s ../helgoland/mossco_1d_2.nc mossco_1dref.nc
+cd ..
+more tag.lst

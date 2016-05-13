@@ -25,7 +25,7 @@ for ili=1:size(i_loc,1)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(res)); end
-  if minval>0 & maxVal/minval > 30,  set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));  end
+  if minval>0 & maxVal/minval > 20,  set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));  end
 
   if(ptag(1)=='P')
     set(axs,'FontSize',fs,'Xlim',[minval maxVal],'box','on');
@@ -58,7 +58,8 @@ for ili=1:size(i_loc,1)
      end
   %% area settings
      ylabel('m');
-     set(axs,'ylim',[mean(depth(end,:)) mean(depth(1))]);
+     yy=[mean(depth(end,:)) mean(depth(1))];
+     set(axs,'ylim',[min(yy) max(yy)]);
  end
 
  switch(ptag(1))  % plot type
@@ -67,14 +68,14 @@ for ili=1:size(i_loc,1)
   if occ(np,ix,iy) ==0,set(axs,'ylim',[minval maxVal]);ylabel(units); grid on; end
 %  set(cb,'position',[x0cb y0cb 0.015 dyp*0.8],'YAxisLocation','right');
   if (occ0(np,ix,iy)==0 & ns>1) occ0(np,ix,iy)=occ(np,ix,iy); end
-  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy),:); 
+  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy)*(ns-1),:); 
   for li=2:length(ptag)  % loop over given depths
      if isstrprop(ptag(li), 'xdigit') 
        zi=1+str2num(ptag(li));  % depth index from tag list
        % rescale depth index for more than 10 layers
        if(size(res,1)>10) zi=1+round((zi-1)/9*(size(res,1)-1)); end
        y=res(zi,:);
-       plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:));
+       plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:),'MarkerSize',4+2*mod(ns+1,4));
        annotation('textbox',tpos+[0.07*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
      else
        if(dim==3)
@@ -91,15 +92,15 @@ for ili=1:size(i_loc,1)
      end
      plot(time,y(ind),lins(ns,:),'Color' ,col,'LineWidth',linw(ns)); 
      if ntags>0
-       if strfind(tag,'_')
-         tagc=tag(2:end);
-       else
-         tagc=tag; 
-       end
+ %      if strfind(tag,'_')
+ %        tagc=tag(2:end);
+ %      else
+ %        tagc=tag; 
+ %      end
        plot(time(it),y(ind(it)),'o','Color',coljj(ns*2-1,:),'MarkerFaceColor',coljj(ns*2-1,:),'MarkerSize',8);
-       annotation('textbox',[x0+0.9*dxp y0+(0.85-ns*0.15)*dyp 0.3*dxp 0.11*dyp],'String',tagc,'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs+2,'LineStyle','none');
+       annotation('textbox',[x0+0.88*dxp y0+(0.85-ns*0.15)*dyp 0.3*dxp 0.11*dyp],'String',tag,'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs+2,'LineStyle','none','Interpreter','none');
      end
- %    fprintf('%d %d\t%s  %1.3f\n',ns,i,varn,mean(y));
+     fprintf('%d %d\t%s  %1.3f\n',ns,i,varn,mean(y));
   end
  case{'M'}  %% map in extra window
   if maxVal>0,
@@ -135,11 +136,12 @@ for ili=1:size(i_loc,1)
 %lh = ylabel(cb,units,'FontSize',fs-2);
 
  case{'P'}   %% profiles
-  for li=2:length(ptag)  % loop over given times
-     ii=1+round((length(ind)-1)*str2num(ptag(li))/9);
+    col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy)*(ns-1),:); 
+    for li=2:length(ptag)  % loop over given times
+    ii=1+round((length(ind)-1)*str2num(ptag(li))/9);
      %% plot model data
-     plot(res(:,ind(ii)),depth,lins(ns,:),'Color' ,col,'LineWidth',linw(ns));
-     plot(res(:,ind(ii)),depth,'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:));
+     plot(res(:,ind(ii)),depth,lins(ns,:),'Color',coljj(li-1,:) ,'LineWidth',linw(ns));
+     plot(res(:,ind(ii)),depth,'o','Color',col,'MarkerFaceColor',col);
      annotation('textbox',tpos+[0.09*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(time(ii)-t_offset)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
   end
  end
@@ -149,10 +151,10 @@ for ili=1:size(i_loc,1)
 % plot data
 %fprintf('%d %d data: %d\t%c\n',i,ili,show_dati(ili),cell2mat(var{i}(9)));
 
- if (show_dati(ili)>0 )%& (cell2mat(var{i}(9))=='L' | cell2mat(var{i}(9))=='M'))
+ if (show_dati(ili)>0 & ns==1)%& (cell2mat(var{i}(9))=='L' | cell2mat(var{i}(9))=='M'))
   id=show_dati(ili); iv=1;
 %  fprintf('datashow: %d \n',size(vars,2));
-  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy),:); 
+  col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy)*(ns-1),:); 
   while length(vars{id,iv})>0 
 %   fprintf('%s:%s\n',varshort0,vars{id,iv});
    if strcmpi(vars{id,iv},varshort0)
@@ -181,7 +183,7 @@ if(cell2mat(var{i}(9)) ~='N' & occ(np,ix,iy)<4 )
      th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
      annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
   end
-     occ(np,ix,iy) = occ(np,ix,iy) + 1;
+  occ(np,ix,iy) = occ(np,ix,iy) + 1;
 end
 end   %li 
 
