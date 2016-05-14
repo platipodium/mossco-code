@@ -68,7 +68,8 @@ module getm_component
   real(ESMF_KIND_R8),pointer :: zw(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zc(:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: zx(:,:,:)=>NULL()
-  real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL(),hbot(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: depth(:,:)=>NULL()
+  real(ESMF_KIND_R8),pointer :: h3D (:,:,:)=>NULL(),hbot(:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: U2D (:,:)  =>NULL(),V2D (:,:)  =>NULL()
   real(ESMF_KIND_R8),pointer :: U3D (:,:,:)=>NULL(),V3D (:,:,:)=>NULL()
   real(ESMF_KIND_R8),pointer :: Ubot(:,:)  =>NULL(),Vbot(:,:)  =>NULL()
@@ -359,6 +360,9 @@ module getm_component
 
     if (associated(depth)) then
       call getmCmp_StateAddPtr("water_depth_at_soil_surface",depth,exportState,"m",name)
+    end if
+    if (associated(h3D)) then
+      call getmCmp_StateAddPtr("layer_height_in_water",h3D,exportState,"m",name)
     end if
     if (associated(hbot)) then
       call getmCmp_StateAddPtr("layer_height_at_soil_surface",hbot,exportState,"m",name)
@@ -1000,10 +1004,9 @@ module getm_component
       end select
       allocate(depth(E2DFIELD))
       if (runtype .eq. 1) then
-         hbot => depth
       else
 #ifndef NO_3D
-         allocate(hbot(E2DFIELD))
+         allocate(h3D(I3DFIELD))
          allocate(nybot(I2DFIELD))
          allocate(tkebot(I2DFIELD))
          allocate(epsbot(I2DFIELD))
@@ -1074,15 +1077,9 @@ module getm_component
       end select
       depth => D
       if (runtype .eq. 1) then
-         hbot => D
       else
 #ifndef NO_3D
-#if 0
-         hbot(imin-HALO:,jmin-HALO:) => hn(:,:,1)
-#else
-         p2d => hn(:,:,1)
-         hbot(imin-HALO:,jmin-HALO:) => p2d
-#endif
+         h3D => hn
 #if 1
 !        turbulent quantities still without target attribute in getm
          allocate(nybot (I2DFIELD))
@@ -1144,6 +1141,12 @@ module getm_component
          waveT   => waveT_
          waveK   => waveK_
       end if
+   end if
+
+   if (runtype .eq. 1) then
+      hbot => depth
+   else
+      p2d => h3D(:,:,1) ; hbot(imin-HALO:,jmin-HALO:) => p2d
    end if
 
    select case (grid_type)
@@ -2093,7 +2096,7 @@ module getm_component
       depth = D
 #ifndef NO_3D
       if (runtype .gt. 1) then
-         hbot   = hn (:,:,1)
+         h3D    = hn
          nybot  = num(:,:,1)
          tkebot = tke(:,:,1)
          epsbot = eps(:,:,1)
