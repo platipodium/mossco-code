@@ -35,7 +35,7 @@ echo $outdir
 # retrieve final time-step
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -1]
-#N=100
+N=371
 
 # here for 178-cpu setup using 6 processors; 
 for ((a=0;a<6;a++)); do $SCRDIR/cut_avg.sh $nproc cut $a 6 $N & done
@@ -67,8 +67,3 @@ rm $fname
 # view results
 ncview $outdir'.nc' &
 # ncview $outdir'_m.nc' &
-
-#ls -lrt
-# the difference between values in cutm and cut indicates temporal variability
-
-

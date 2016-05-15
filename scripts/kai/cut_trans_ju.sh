@@ -18,6 +18,8 @@ prefix=mossco_gfbfrr.  # Prefix of files to process
 dt=1      # slicing of time dimension; 20 gives monthly means at 36h-output
 tmin=2009-06-12 # initial time-step; skips trailer 
 tmax=2009-08-09
+#tmin=2010-06-12 # initial time-step; skips trailer 
+#tmax=2010-09-28
 
 if [ $# -lt 1 ]; then
   ncpu=178     # sns configuration (#cpus)
