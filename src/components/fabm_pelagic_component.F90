@@ -684,6 +684,17 @@ module fabm_pelagic_component
         call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
       end if
 
+      if (trim(varname)=='Detritus_Nitrogen_detN_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 8.0d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 1.0d0)
+        call ESMF_LogWrite('  use maximum boundary value of 8.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      if (trim(varname)=='Detritus_Phosphorus_detP_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 0.80d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.2d0)
+        call ESMF_LogWrite('  use maximum boundary value of 0.8 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+
       !> add fabm index in concentration array as "external_index" to be used by other components
       call ESMF_AttributeSet(concfield,'external_index',pel%export_states(n)%fabm_id)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
