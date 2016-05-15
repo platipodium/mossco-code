@@ -5,12 +5,12 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; nice=1; datf='~/data/DeutscheBucht/stations.nc';
+show_data=1; nice=0; datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 loc =[]; 
 %loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'T0';}; % 'T1'; 
+locs={'Tsns_09-06_0';}; % 'T1'; 
 
 tags={'';};%_new'_res';'_att';
 ntags=length(tags);
@@ -19,8 +19,8 @@ spath  ='/home/wirtz/sns/';%spath  ='/ocean-data/wirtz/';
 setvar_trans;  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
-%ncol = 5; nrow = 3; 	% number of columns in fig
-ncol = 1; nrow = 1; 	% number of columns in fig
+ncol = 5; nrow = 3; 	% number of columns in fig
+%ncol = 1; nrow = 1; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 compn ={'water';'soil'};
 fs = 16+nice*4; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
@@ -60,8 +60,8 @@ for ns=1:ntags
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- t0 = datenum('2003-07-24','yyyy-mm-dd')-1;
- t1 = datenum('2003-07-25','yyyy-mm-dd')-1;
+% t0 = datenum('2003-07-24','yyyy-mm-dd')-1;
+% t1 = datenum('2003-07-25','yyyy-mm-dd')-1;
 
  time0=time;
  ind=find(time>= t0 & time<=t1);
@@ -118,11 +118,10 @@ for np=1:nfig
 %% add site name to each figure/page
   li=ceil(np/nfig0);
   if nice==0,
-     annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
+     annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none','Interpreter','none');
   end
 %% create base file name
-  fnam0=sprintf('T%s_%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
-
+  fnam0=sprintf('trans%s_%s%s_%d',locs{li},varshort0,cell2mat(tags(1)),np);
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
 %  fprintf('save EPS in %s ...\n',fnam);
 %  print(gcf,'-depsc',fnam);

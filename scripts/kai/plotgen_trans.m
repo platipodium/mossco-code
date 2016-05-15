@@ -28,13 +28,13 @@ for im=1:length(vli)
   iy = 1+floor((im-1)/ncol);
   ti=(cell2mat(var{i}(6))-1)*(nrow*ncol)+im;
  end
+ x0=0.06+(ix-1)*1.15*dxp; y0=0.1+(nrow-iy)*1.03*dyp;
  if ti<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns;
   figure(np); set(gcf, 'visible','off','Color','w'); hold on
 %   set(fig,'DoubleBuffer','on','Color','w');%
 % geometry of sub-plot
-  x0=0.06+(ix-1)*1.15*dxp; y0=0.1+(nrow-iy)*1.03*dyp;
   axs=subplot('Position',[x0 y0 dxp dyp]);
   hold on
 

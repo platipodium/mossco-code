@@ -10,11 +10,14 @@
 # hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
 # LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
 # ---------------------
-homed=$PWD
-Nstart=306 # initial time-step; skips trailer 
+homed=$(pwd)
+setname=$(basename $homed)
+
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
 prefix=mossco_gfbfrr.  # Prefix of files to process
-dt=2      # slicing of time dimension; 20 gives monthly means at 36h-output
+dt=1      # slicing of time dimension; 20 gives monthly means at 36h-output
+tmin=2009-06-12 # initial time-step; skips trailer 
+tmax=2009-08-09
 
 if [ $# -lt 1 ]; then
   ncpu=178     # sns configuration (#cpus)
@@ -79,7 +82,7 @@ fi
 
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -1]
-N=364
+N=190
 #echo $N
 
 mkdir -p $outdir
@@ -119,12 +122,12 @@ for nt in $(seq 0 3); do
 	-d getmGrid2D_getm_2,${dy[nt]} \
 	-d getmGrid3D_getm_1,${dx[nt]} \
 	-d getmGrid3D_getm_2,${dy[nt]} \
-	-d time,$Nstart,$N,$dt $fname $outname
+	-d time,${tmin},${tmax},${dt} $fname $outname
 
   ncks -F -O -v $tg,water_depth_at_soil_surface \
 	-d getmGrid2D_getm_1,${dx[nt]} \
 	-d getmGrid2D_getm_2,${dy[nt]} \
-	-d time,$Nstart,$N,$dt $fname $outnameD
+	-d time,${tmin},${tmax},${dt} $fname $outnameD
 
  # Make getmGrid3D_getm_1 record dimension
    ncpdq -O -a getmGrid3D_getm_${gd[nt]},time $outname $outname
@@ -132,10 +135,10 @@ for nt in $(seq 0 3); do
    ls -l  $fname $outname
  done
  cd $outdir
- out='cutT'$nt'.nc'
+ out='cutT'${setname}'_'${tmin:2:5}'_'$nt'.nc'
  echo 'cutT'$nt'_*.nc'
  ncrcat -O cutT$nt\_*.nc $out
- outD='cutD'$nt'.nc'
+ outD='cutD'${setname}'_'${tmin:2:5}'_'$nt'.nc'
  echo 'cutD'$nt'_*.nc'
  ncrcat -O cutD$nt\_*.nc $outD
 
