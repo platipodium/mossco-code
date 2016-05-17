@@ -628,6 +628,7 @@ module filtration_component
     real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)    :: abundanceAtSoil, abundanceAtSurface
+    real(ESMF_KIND_R8),pointer,dimension(:,:)    :: bottomShearStress
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate, layerHeight
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration
@@ -920,16 +921,21 @@ module filtration_component
     ! are z0=4.4 mm, shear velocity u* = 4E-2 m s-1
     ! we can also calculate shear velocity from the ocean model's maximum_bottom_stress
 
-    ! call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-    !   itemSearch='maximum_bottom_stress', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-    ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !
-    ! call ESMF_FieldGet(fieldList(1), farrayPtr=tau, rc=localrc)
-    ! if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-    !     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !
-    ! u = sqrt(tau / rho) / karman * log(z/z0)
+    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+      itemSearch='maximum_bottom_stress', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldCount > 0) then
+      call ESMF_FieldGet(fieldList(1), farrayPtr=bottomShearStress, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      ! u = sqrt(tau / rho) / karman * log(z/z0)
+      ! u = sqrt(bottomShearStress/1000) / karman * log(musselLengthScale/roughnessLength) &
+
+      !> @todo: translate this to exchangeRate
+    endif
 
     ! New core of the model (9 March 2016)
     if (.not.allocated(maximumFiltrationRate)) allocate(maximumFiltrationRate(RANGE3D), stat=localrc)
