@@ -10,10 +10,10 @@ datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[54.2,7.5];]; %; %[54.96,8.4]; 
-% [52.25 4.4];[52.3 4.3]; % 17 m 28 m
+loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[54.2,7.5];[52.3 4.38];[52.3 1.8];]; %; %[54.96,8.4]; 
+%  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt';'T22';'T26';}; %}; %  
+locs={'Helgoland';'Sylt';'T22';'T26';'Noordwijk-10';'Noordwijk-70';}; %  
 
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
@@ -37,7 +37,7 @@ ntags=length(tags);
   ncol = 3; nrow = 2; 	% number of columns in fig
 else
   tags = {'';};%'_den';'_zoo';'_res';'_att';_new
-ntags=length(tags);
+  ntags=length(tags);
   spath= '/home/wirtz/sns';  %spath  ='/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 

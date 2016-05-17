@@ -11,7 +11,8 @@
 # edit  cut_avg.sh (e.g. variable, names, vertical sclicing,..)
 #SCRDIR=~/devel/MOSSCO/code/scripts/kai
 SCRDIR=~/kai
-nproc=178
+#nproc=178
+nproc=61
 prefix=mossco_gfbfrr
 
 if [[ $nproc -lt 100 ]]; then
@@ -21,6 +22,7 @@ else
   form="%03g"
   fname=${prefix}'029.nc'
 fi
+echo 'retrieve meta-info from ' $fname
 
 if [ $# -lt 1 ]; then
   outdir=${PWD##*/}    # simulation set-up folder
@@ -34,8 +36,10 @@ echo $outdir
 
 # retrieve final time-step
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
-N=$[$N -1]
-N=371
+N=$[$N -2]
+echo 'cutting until time step ' $N
+#N=600
+#echo 'cutting until time step ' $N
 
 # here for 178-cpu setup using 6 processors; 
 for ((a=0;a<6;a++)); do $SCRDIR/cut_avg.sh $nproc cut $a 6 $N & done
@@ -67,3 +71,8 @@ rm $fname
 # view results
 ncview $outdir'.nc' &
 # ncview $outdir'_m.nc' &
+
+#ls -lrt
+# the difference between values in cutm and cut indicates temporal variability
+
+
