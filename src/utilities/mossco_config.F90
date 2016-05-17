@@ -114,7 +114,6 @@ contains
 
   end subroutine MOSSCO_ConfigGetInt8
 
-#
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_ConfigGetString"
   subroutine MOSSCO_ConfigGetString(config, label, value, rc)
