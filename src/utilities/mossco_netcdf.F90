@@ -2762,8 +2762,14 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
+      ! Allow climato* prefix before unit specification
+      if (timeUnit(1:10) == 'climatolog') then
+        i=index(timeUnit,' ')
+        timeUnit=timeUnit(i+1:len_trim(timeUnit))
+      endif
+
       i=index(timeUnit,' ')
-      timeUnit=timeUnit(1:i-1)
+      if (i>0) timeUnit=timeUnit(1:i-1)
 
       ticks4 = -1
       ticks = -1
