@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -29,6 +29,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_parameter.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_variable_types.o) \
@@ -66,6 +67,7 @@ mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
 mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90
 mossco_attribute.o : mossco_attribute.F90
+mossco_parameter.o : mossco_parameter.F90
 mossco_config.o : mossco_config.F90
 mossco_db.o : mossco_db.F90 \
 	$(MOSSCO_LIBRARY_PATH)/libmossco_db.a(fsqlite.o)
@@ -97,6 +99,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_parameter.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_config.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_gridspec.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_dictionary.mod
