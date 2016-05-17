@@ -566,6 +566,8 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         timeunit=timeunit(1:i-1)
+      else
+        refTime = currTime
       endif
 
       if (trim(timeUnit) == 'seconds') then
