@@ -4,7 +4,7 @@
 !> @export
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Hassan Nasermoaddeli, Bundesanstalt für Wasserbau
 !> @author Carsten Lemmen
 !
@@ -774,30 +774,33 @@ contains
         end if
       end do
     end do
-   !> The preferred interface would be to use isPresent, but htis only works in ESMF from Nov 2014
-   !> @todo replace if 0 by ESMF_VERSION macros
+    !> The preferred interface would be to use isPresent, but htis only works in ESMF from Nov 2014
 
-#if 0
-   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
-   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#if ESMF_VERSION_MAJOR > 6
+    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   if (isPresent) then
-#else
-   call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
-   !! Do not check for success here as NOT_FOUND is expected behaviour, @todo: check for NOT_FOUND flag
-   if (localrc .ne. ESMF_SUCCESS) then
-      call ESMF_LogWrite('ignore ERROR messages above related to GridGetItem - waiting for new ESMF release', &
-                         ESMF_LOGMSG_INFO,ESMF_CONTEXT)
-   end if
-   if (localrc == ESMF_SUCCESS) then
-#endif
+    if (isPresent) then
       call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   else
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
       allocate(mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
       mask = 1
-   end if
+    endif
+#else
+    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=mask, rc=localrc)
+    !! Do not check for success here as NOT_FOUND is expected behaviour, @todo: check for NOT_FOUND flag
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+      call ESMF_LogWrite('ignore ERROR messages above related to GridGetItem - waiting for new ESMF release', &
+                         ESMF_LOGMSG_INFO,ESMF_CONTEXT)
+      allocate(mask(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+      mask = 1
+    end if
+#endif
 
+#if ESMF_VERSION_MAJOR > 6
    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
                          staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
                          isPresent=isPresent, rc=localrc)
@@ -811,6 +814,16 @@ contains
       allocate(area(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
       area = 1.0
    end if
+#else
+    call ESMF_GridGetItem(grid, ESMF_GRIDITEM_AREA,                  &
+                      staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
+                      farrayPtr=area, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) then
+      allocate(area(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
+      area = 1.0
+    end if
+#endif
+
 
 !     write (0,*) ' lboud, uboud area', lbound (area), ubound(area)
 !     write (0,*) 'exclusiveLBound(1):exclusiveUBound(1)',exclusiveLBound(1),exclusiveUBound(1)
@@ -1109,7 +1122,7 @@ contains
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       write(message,'(A)') trim(name)//' created field'
       call MOSSCO_FieldString(field, message)
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO) 
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
        call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1120,7 +1133,7 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         depth_avg_spm_concentration(:,:,:)= 0.0_fp
-         
+
         call ESMF_StateAdd(exportState,(/field/), rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1139,7 +1152,7 @@ contains
         call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU,ESMF_CONTEXT,rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-   
+
         call ESMF_StateAdd(exportState,(/field/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1516,8 +1529,8 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
        if (.not. associated (thickness_of_layers)) then
         allocate (thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
         if (istat/=0) write (*,*) 'Warning/Error in allocation of thickness_of_layers in erosed_component'
-      end if     
-      
+      end if
+
       if (.not. associated (relative_thickness_of_layers)) then
         allocate (relative_thickness_of_layers(lbnd(1):ubnd(1),lbnd(2):ubnd(2) ,lbnd(3):ubnd(3) ), stat=istat)
         if (istat/=0) write (*,*) 'Warning/Error in allocation of relative_thickness_of_layers in erosed_component'
@@ -1609,7 +1622,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
 #endif
 
- 
+
     call getfrac_dummy (anymud,sedtyp,nfrac,nmlb,nmub,frac,mudfrac)
 
     sedd90 = 1.50_fp *sedd50 ! according to manual of Delft3d page 356
@@ -1929,7 +1942,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
          &                                   *thickness_of_layers (i,j,k)
        end do
       end do
-     end do    
+     end do
     end do
 
     do i = 1, ubnd(1)
@@ -1937,7 +1950,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       depth_avg_spm_concentration (i,j,:)= depth_avg_spm_concentration (i,j,:)/depth (i,j)
      end do
     end do
- 
+
 
     call ESMF_StateGet(exportState, 'Sum_depth_average_concentration_of_SPM_in_water',itemType=itemType, &
       rc=localrc)
@@ -1970,7 +1983,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       exclusiveUBound=exclusiveUBound, totalLBound=totalLBound, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    
+
     sum_depth_avg_spm_concentration = sum (depth_avg_spm_concentration, dim=3)
 
     call ESMF_StateValidate(exportState, rc=localrc)
