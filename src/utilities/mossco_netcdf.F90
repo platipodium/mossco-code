@@ -2733,7 +2733,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_Time)                              :: refTime
-    integer(ESMF_KIND_I4)                        :: i, rc_, jtime_
+    integer(ESMF_KIND_I4)                        :: i, rc_, jtime_, ticks4
     integer(ESMF_KIND_I4)                        :: localrc, ntime, varid
     real(ESMF_KIND_R8), allocatable              :: farray(:)
     real(ESMF_KIND_R8)                           :: weight_
@@ -2765,11 +2765,19 @@ module mossco_netcdf
       i=index(timeUnit,' ')
       timeUnit=timeUnit(1:i-1)
 
-      if (trim(timeUnit) == 'seconds') then
+      ticks4 = -1
+      ticks = -1
+      if (timeUnit(1:6) == 'second') then
         call ESMF_TimeIntervalGet(currTime - refTime, s_i8=ticks, rc=localrc)
-      elseif (trim(timeUnit) == 'days') then
+      elseif (timeUnit(1:6) == 'minute') then
+        call ESMF_TimeIntervalGet(currTime - refTime, m=ticks4, rc=localrc)
+      elseif (timeUnit(1:4) == 'hour') then
+        call ESMF_TimeIntervalGet(currTime - refTime, h=ticks4, rc=localrc)
+      elseif (timeUnit(1:3) == 'day') then
         call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
-      elseif (trim(timeUnit) == 'years') then
+      elseif (timeUnit(1:5) == 'month') then
+        call ESMF_TimeIntervalGet(currTime - refTime, mm=ticks4, rc=localrc)
+      elseif (timeUnit(1:4) == 'year') then
         call ESMF_TimeIntervalGet(currTime - refTime, yy_i8=ticks, rc=localrc)
       else
         call ESMF_LogWrite('  time unit '//trim(timeUnit)//' not implemented', ESMF_LOGMSG_ERROR)
@@ -2777,6 +2785,8 @@ module mossco_netcdf
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (ticks4 > -1) ticks = ticks4
 
       ntime = self%dimlens(self%timeDimId)
       if (ntime < 1) then
