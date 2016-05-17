@@ -221,7 +221,7 @@ module grid_component
       endif
 
       !> @todo implement this
-      !call MOSSCO_ConfigGetList(config, 'decomposition:', decompositionList, localrc)
+      !call MOSSCO_ConfigGet(config, 'decomposition:', decompositionList, localrc)
       !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
