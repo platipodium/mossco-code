@@ -358,6 +358,9 @@ fi
 
 EMAIL=${MOSSCO_USER_EMAIL:-$(who am i |cut -f1 -d" ")@$(hostname)}
 WALLTIME=$(predict_time $NP)
+if [[ ${SYSTEM} == SLURM ]]; then
+  WALLTIME="4:00:00"
+fi
 
 case ${SYSTEM} in
   PBS)
