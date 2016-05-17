@@ -68,6 +68,7 @@ module mossco_netcdf
     procedure :: getvarvar => mossco_netcdf_var_get_var
     procedure :: getvar => mossco_netcdf_var_get
     procedure :: getAxis => grid_get_coordinate_axis
+    procedure :: refTimeString => mossco_netcdf_reftime_string
     procedure :: refTime => mossco_netcdf_reftime
     procedure :: timeIndex => mossco_netcdf_find_time_index
     procedure :: timeGet => MOSSCO_NcGetTime
@@ -874,7 +875,7 @@ module mossco_netcdf
     type(ESMF_Time)                  :: reftime
     type(ESMF_TimeInterval)          :: timeInterval
     integer(ESMF_KIND_I4)            :: doy
-    character(ESMF_MAXSTR)           :: timeString
+    character(ESMF_MAXSTR)           :: timeString, refTimeISOString
 
     rc_ = ESMF_SUCCESS
 
@@ -925,7 +926,7 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call self%reftime(refTime, localrc)
+      call self%reftime(refTime, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -2738,7 +2739,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8), allocatable              :: farray(:)
     real(ESMF_KIND_R8)                           :: weight_
     integer(ESMF_KIND_I8)                        :: ticks
-    character(ESMF_MAXSTR)                       :: timeUnit, message
+    character(ESMF_MAXSTR)                       :: timeUnit, message, refTimeISOString
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = rc_
@@ -2752,9 +2753,17 @@ module mossco_netcdf
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  no time variable found, choosing default time index 1', ESMF_LOGMSG_INFO)
     else
-      call self%reftime(refTime, localrc)
+      call self%reftimeString(refTimeISOString, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (len_trim(refTimeISOString) > 0) then
+        call MOSSCO_TimeSet(refTime, refTimeISOString, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      else
+        reftime=currTime
+      endif
 
       localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
       if (localrc /= NF90_NOERR) then
@@ -2848,6 +2857,45 @@ module mossco_netcdf
   end subroutine mossco_netcdf_find_time_index
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "mossco_netcdf_reftime_string"
+  subroutine mossco_netcdf_reftime_string(self, refTimeISOString, rc)
+
+    implicit none
+    class(type_mossco_netcdf)                    :: self
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    character(len=ESMF_MAXSTR)                   :: refTimeISOString
+
+    integer(ESMF_KIND_I4)                        :: i, rc_, itime_, localrc, varid
+    character(ESMF_MAXSTR)                       :: timeUnit
+
+    rc_ = ESMF_SUCCESS
+
+    localrc = nf90_inq_varid(self%ncid, 'time', varid)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable for reference time', ESMF_LOGMSG_INFO)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
+    if (localrc /= NF90_NOERR) then
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit for reference time', ESMF_LOGMSG_ERROR)
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    i=index(timeunit,'since ')
+    if (i<1) then
+      call ESMF_LogWrite('  no reference time given in unit '//trim(timeUnit), ESMF_LOGMSG_WARNING)
+      refTimeISOString=''
+    else
+      reftimeISOString=timeunit(i+6:len_trim(timeunit))
+    endif
+
+    if (present(rc)) rc=rc_
+
+  end subroutine mossco_netcdf_reftime_string
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_reftime"
   subroutine mossco_netcdf_reftime(self, refTime, rc)
 
@@ -2876,8 +2924,9 @@ module mossco_netcdf
 
     i=index(timeunit,'since ')
     if (i<1) then
-      call ESMF_LogWrite('  unknown time unit '//trim(timeUnit), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite('  no reference time given in unit '//trim(timeUnit), ESMF_LOGMSG_WARNING)
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
     endif
 
     call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
@@ -2887,6 +2936,7 @@ module mossco_netcdf
     if (present(rc)) rc=rc_
 
   end subroutine mossco_netcdf_reftime
+
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_NcGetTime"
@@ -3018,6 +3068,8 @@ module mossco_netcdf
       call ESMF_TimeIntervalSet(timeInterval, h_r8=value, rc=localrc)
     case ('days')
       call ESMF_TimeIntervalSet(timeInterval, d_r8=value, rc=localrc)
+    case ('months')
+      call ESMF_TimeIntervalSet(timeInterval, m=int(value, kind=ESMF_KIND_I4), rc=localrc)
     case ('years')
       call ESMF_TimeIntervalSet(timeInterval, yy=int(value), rc=localrc)
     case default
