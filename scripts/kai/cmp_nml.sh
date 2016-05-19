@@ -8,7 +8,7 @@ for a in maecs_*.nml fabm_*.nml run_sed.nml *_connector.nml *_input.cfg
   echo -n ""
 #  echo "identical $a"
  else
-  sdiff -o $a.tmp -W --suppress-common-lines $a $cmpdir/$a
+#  sdiff -o $a.tmp -W --suppress-common-lines $a $cmpdir/$a
   echo -e "\t\t*****  $a  *****"
  fi
 done
