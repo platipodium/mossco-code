@@ -120,7 +120,7 @@ contains
 
     type(ESMF_Config), intent(inout)             :: config
     character(len=*), intent(in)                 :: label
-    character(len=*), intent(inout)    :: value
+    character(len=*), intent(inout)              :: value
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_
@@ -134,6 +134,8 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.isPresent) then
+    !> @todo reconsider return value and add an optinoal isPresent argument to this
+    !> subroutine
       if (present(rc)) rc = ESMF_SUCCESS
       return
     endif
@@ -148,6 +150,7 @@ contains
 
     write(message,'(A)') '  found '//trim(label)//': '//trim(value)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    
     if (present(rc)) rc = rc_
 
   end subroutine MOSSCO_ConfigGetString
