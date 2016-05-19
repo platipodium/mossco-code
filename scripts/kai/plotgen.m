@@ -10,11 +10,10 @@ datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[54.2,7.5];[52.3 4.38];[52.3 1.8];]; %; %[54.96,8.4]; 
+loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[52.3 4.3];[52.3 2.4];]; %;[54.2,7.5]; %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt';'T22';'T26';'Noordwijk-10';'Noordwijk-70';}; %  
-
+locs={'Helgoland';'Sylt';'T22';'Noordwijk-10';'Noordwijk-70';}; % 'T26'; 
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -36,9 +35,10 @@ ntags=length(tags);
  %% graph settings
   ncol = 3; nrow = 2; 	% number of columns in fig
 else
-  tags = {'';};%'_den';'_zoo';'_res';'_att';_new
+  tags = {'';'_aspm';'_awater';};%'_adap';'';'_vphy';'_mortz';
   ntags=length(tags);
-  spath= '/home/wirtz/sns';  %spath  ='/ocean-data/wirtz/';
+ % spath= '/home/wirtz/sns';  
+  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 
   setvar_sns  % defines variables to show - and where/how to do it %setvar  
@@ -68,19 +68,19 @@ end
 for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1580 850],'Visible','off','Color','w'); end
 oldfig=-np;
 ptag=cell2mat(var{1}(9));
-occ = zeros(nfig,ncol,nrow); occ0=occ;
+occ = zeros(nfig,ncol,nrow); occ0=occ+1;
 for ns=1:ntags
  %% loop over scenarios/stations/layers
 
  %% read model output
  tag=cell2mat(tags(ns));
- ncfile = fullfile(spath,[ncf0 tag '.nc']);
-%% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
+%% ncfile = fullfile(spath,[ncf0 tag '.nc']);
+ ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- t0 = datenum('2002-12-01','yyyy-mm-dd')-1;
-% t1 = datenum('2004-03-01','yyyy-mm-dd')-1;
+ t0 = datenum('2003-02-01','yyyy-mm-dd')-1;
+ t1 = datenum('2003-12-31','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
@@ -142,7 +142,7 @@ for np=1:nfig+nfigm
 %% create base file name
     fnam0=sprintf('%s%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
   else
-    fnam0=sprintf('map_%s_%d',vt{np-nfig},np);
+    fnam0=sprintf('map_%s_%d',vt{ceil((np-nfig)/ntags)},np);
   end
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
 %  fprintf('save EPS in %s ...\n',fnam);

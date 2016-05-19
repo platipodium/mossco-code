@@ -13,7 +13,7 @@
 SCRDIR=~/kai
 #nproc=178
 nproc=61
-prefix=mossco_gfbfrr
+prefix=mossco_gfbfrr.
 
 if [[ $nproc -lt 100 ]]; then
   form="%02g"

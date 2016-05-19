@@ -27,7 +27,7 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti=(cell2mat(var{i}(6))-1)*(nrowm*ncolm)+im;
+  ti=((cell2mat(var{i}(6))-1)*(nrowm*ncolm)+im)*1;
  end
  if ti<=length(ind)
 % goes to new figure (if required)
@@ -91,7 +91,7 @@ for im=1:length(vli)
   mons=datestr(doy(ti));
   ta=sprintf('%s%d %d z%1.0f',mons(4:6),year(ti),doy(ti),depth(di));
  
-  m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica');
+  m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica','Interpreter','none');
   m_text(lonlimit(2)-1.2,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
   set(gca,'FontSize',fs);
 
