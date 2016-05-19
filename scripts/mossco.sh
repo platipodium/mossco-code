@@ -260,7 +260,7 @@ if [[ ${SYSTEM} = "" ]] ; then SYSTEM=BACKGROUND; fi
 
 # Adapt to different MPI implementations
 case ${SYSTEM} in
-  PBS)  MPI_PREFIX=""
+  PBS)  MPI_PREFIX="mpiexec_mpt"
                 ;;
   MOAB)  MPI_PREFIX="mpiexec"
                 ;;
