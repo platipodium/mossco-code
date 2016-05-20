@@ -1409,7 +1409,7 @@ write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(
       endselect
 
       if (numChanged>0) then
-        write(message,'(A,ES9.2,A,I5.5,A)') ' weight ', weight_, ' ', numChanged, ' cells '
+        write(message,'(A,ES9.2,A,I5.5,A)') '  weight ', weight_, ' changed ', numChanged, ' cells '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
