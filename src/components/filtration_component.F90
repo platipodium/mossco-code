@@ -869,12 +869,6 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    ! Obtain the water exchange rate s-1 from velocity and grid properties
-    ! The subroutine will allocate xwidth and ywidth
-    call MOSSCO_GridGetWidth(grid, xwidth=xWidth, ywidth=yWidth, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='x_velocity_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -893,19 +887,12 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (allocated(exchangeRate)) deallocate(exchangeRate)
-    allocate(exchangeRate(RANGE3D))
+    if (allocated(speed)) deallocate(speed)
+    allocate(speed(RANGE3D))
 
-    do i=lbnd(3),ubnd(3)
-      exchangeRate(RANGE2D,i) = sqrt( (yVelocity(RANGE2D,i)/ywidth(RANGE2D)) ** 2 &
-                                    + (xVelocity(RANGE2D,i)/xwidth(RANGE2D)) ** 2 )
-    enddo
-    write(message,'(A,ES10.3,A)') trim(name)//' max exchange rate is ', &
-        maxval(exchangeRate(RANGE3D), mask=mask),' s-1'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    if (allocated(yWidth)) deallocate(ywidth)
-    if (allocated(xWidth)) deallocate(xwidth)
+    ! Calculate the absolute velocity, i.e. speed (in m s-1)
+    speed(RANGE3D) = sqrt( yVelocity(RANGE3D) ** 2 &
+                         + xVelocity(RANGE3D) **2)
 
     ! Assume for all layers above the surface layer that the filter feeders grow
     ! on structures in the water column. Then, the shear stress
@@ -914,13 +901,19 @@ module filtration_component
     ! for cylindric structures, like wind farm piles, cw in a high Re number
     ! turbulent regime is cw=0.35, such that u* = .6 * u
 
-    exchangeRate(RANGE2D,:) = .6 * exchangeRate(RANGE2D,:)
+    speed(RANGE2D,lbound(speed,3)+1):ubound(speed,3)) &
+      = 0.6 * speed(RANGE2D,lbound(speed,3)+1):ubound(speed,3))
 
     !> @todo consider boundary layer decrease of velocity/exchange rate.
     ! According to van Duren 2006, typical values for a high-velocity regime
     ! are z0=4.4 mm, shear velocity u* = 4E-2 m s-1
-    ! we can also calculate shear velocity from the ocean model's maximum_bottom_stress
 
+    speed(RANGE2D,lbound(speed,3)) &
+      = 4.0E-2 & ! This is now the default value for the shear velocity u*
+      / karman * log(musselLengthScale/roughnessLength)
+
+    ! Alternatively, we can also calculate shear velocity from the ocean model's &
+    ! maximum_bottom_stress
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='maximum_bottom_stress', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -931,10 +924,8 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      ! u = sqrt(tau / rho) / karman * log(z/z0)
-      ! u = sqrt(bottomShearStress/1000) / karman * log(musselLengthScale/roughnessLength) &
-
-      !> @todo: translate this to exchangeRate
+      speed(RANGE2D,lbound(speed,3))  = sqrt(bottomShearStress/1000) &
+        / karman * log(musselLengthScale/roughnessLength)
     endif
 
     ! New core of the model (9 March 2016)
