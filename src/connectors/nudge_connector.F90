@@ -395,6 +395,10 @@ module nudge_connector
       call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      write(message,'(A)') trim(name)//' found nothing to nudge from'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call MOSSCO_Log(importState)
     endif
 
     call MOSSCO_AttributeGetList(cplComp, 'filter_pattern_include', filterIncludeList, rc=localrc)
@@ -471,7 +475,7 @@ module nudge_connector
       !> Make sure that import state's item type (in list) and export state's agree. Also,
       !> now only fields are implemented
       if (itemType /= itemTypeList(i)) then
-        write(message,*) trim(name)//' itemType not matching for item ',trim(itemName)
+        write(message,'(A)') trim(name)//' itemType not matching for item ',trim(itemName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         call MOSSCO_Log(exportState)
         call MOSSCO_Log(importState)
