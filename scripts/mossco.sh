@@ -41,10 +41,10 @@ function usage {
 	echo "            the default is <system>_postprocess.h"
 	echo "    [-l A|W|E|N|T|D] :  specify the log level, as one of all|warning|error"
 	echo "            |none|trace|default, if not specified, it is taken from mossco_run.nml."
-	echo "    [-n X]: build for or/and run on X processors.  Default is content of par_setup.dat or n=1"
+	echo "    [-n X[:YxZ]]: build for or/and run on X processors.  Default is content of par_setup.dat or n=1"
   echo
 	echo "      [-n 0]:   MPI is not used at all."
-  echo "      [-n XxY]: The layout X cpu-per-node times Y nodes is used"
+  echo "      [-n X[:YxZ]]: The layout Y cpu-per-node times Z nodes is used"
   echo
 	echo "    [-s M|S|J|F|B|P]: exeute batch queue for a specific system, which is"
   echo "            autodetected by default"
@@ -282,17 +282,21 @@ if [[ ${NP} == NONE ]]; then
 fi
 
 
-if [[ ${NP} == 0 ]]; then
+if [[ "${NP}" == "0" ]]; then
   NP=1
   MPI_PREFIX=""
 fi
 
-NODES=1
-PPN=$(echo ${NP} | cut -d'x' -f1)
+NPROC=$(echo ${NP} | cut -d':' -f1)
+PPN=$(echo ${NP} | cut -d':' -f2 | cut -d'x' -f1)
+NODES=$(echo ${NP} | cut -d':' -f2 | cut -d'x' -f2)
 
-if [[ "${PPN}" ==  "${NP}" ]]; then
+NP=${NPROC}
+#echo $NPROC $PPN $NODES
+
+if [[ "${NP}" ==  "${NODES}" ]]; then
   case ${SYSTEM} in
-    PBS)   NODES=$(expr \( $NP - 1 \) / 8 + 1 )
+    PBS)   NODES=$(expr \( $NP - 1 \) / 16 + 1 )
            PPN=$(expr \( $NP - 1 \) / $NODES + 1 )
            NP=$(expr $NODES \* $PPN )
            ;;
@@ -309,13 +313,15 @@ if [[ "${PPN}" ==  "${NP}" ]]; then
            ;;
     *)     ;;
   esac
-else
-  NODES=$(echo ${NP} | cut -d'x' -f2)
-  TPP=$(echo ${NP} | cut -d'x' -f3)
-  NP=$(expr ${NODES} \* ${PPN})
+fi
+NP=$(expr ${NODES} \* ${PPN})
+
+if [[ ${NPROC} > ${NP} ]]; then
+  echo "Illegal to specify more processors than resources requested (${NPROC} > ${NODES}x${PPN})"
+  exit 1
 fi
 
-echo "Building scripts for system ${SYSTEM} with MPI_PREFIX ${MPI_PREFIX} -np ${NP}"
+echo "Building scripts for system ${SYSTEM} with MPI_PREFIX ${MPI_PREFIX} for ${NPROC} cpus on ${PPN}x${NODES} processors x nodes"
 
 #case ${SYSTEM} in
 #  SLURM) if [[ ${POSTPROCESS} -eq NONE ]]; then
@@ -351,7 +357,7 @@ if [[ "x${MPI_PREFIX}" != "x" ]] ; then
         ;;
     SLURM)  MPI_PREFIX=${MPI_PREFIX}
         ;;
-    *) MPI_PREFIX="${MPI_PREFIX} -np ${NP}"
+    *) MPI_PREFIX="${MPI_PREFIX} -np ${NPROC}"
        ;;
   esac
 fi
@@ -364,12 +370,12 @@ fi
 
 case ${SYSTEM} in
   PBS)
-    echo '#!/usr/bin/zsh' > pbs.sh
+    echo '#!/usr/bin/ksh' > pbs.sh
     cat << EOT >> pbs.sh
 #PBS -N ${TITLE}
-#PBS -S /usr/bin/zsh
+#PBS -S /usr/bin/ksh
 #PBS -q mpi_64
-#PBS -l select=${NODES}:ncpus=${NP}:mpiprocs=${NP}
+#PBS -l select=${NODES}:ncpus=${PPN}:mpiprocs=${PPN}
 #PBS -l place=scatter:excl
 #PBS -j oe
 #PBS -r n
@@ -378,16 +384,34 @@ case ${SYSTEM} in
 #PBS -W umask=000
 #PBS -m e
 #PBS -M ${EMAIL}
-EOT
 
-    echo "" >> pbs.sh
-    echo  ${EXE} >> pbs.sh
+module load gcc/4.8.2
+module load mpt/2.06
+
+export SGI_MPI_HOME=${MPI_ROOT}
+export PATH=${MOSSCO_SETUPDIR}/sns:${PATH}
+export RAMFILES=1
+export NPROC=${NPROC}
+
+${MPI_PREFIX} ${EXE}
+
+cd \$PBS_O_WORKDIR
+echo 'Working Directory     : '\$PBS_O_WORKDIR
+echo 'Queue                 : '\$PBS_O_QUEUE
+echo 'Job-ID                : '\$PBS_JOBID
+echo 'Shell                 : '\$SHELL
+echo 'MPI_ROOT              : '\$MPI_ROOT
+echo 'License File          : '\$CDLMD_LICENSE_FILE
+echo 'PBS-PATH              : '\$PBS_O_PATH
+#
+cat \$PBS_NODEFILE
+EOT
 
 ;;
   SLURM)
     echo '#!/bin/bash -x' > slurm.sh
     cat << EOT >> slurm.sh
-#SBATCH --ntasks=${NP}
+#SBATCH --ntasks=${NPROC}
 #SBATCH --output=${TITLE}-%j.stdout
 #SBATCH --error=${TITLE}-%j.stderr
 #SBATCH --time=${WALLTIME}
@@ -438,7 +462,7 @@ EOT
 #!/bin/bash
 
 #$ -N ${TITLE}
-#$ -pe orte $NP
+#$ -pe orte $NPROC
 #$ -m beas
 #$ -M ${EMAIL}
 #$ -cwd
@@ -530,20 +554,20 @@ if [[ ${RETITLE} != 0 ]] ; then
 fi
 
 if test -f ./par_setup.dat ; then
-  if test -f ./Parallel/par_setup.${NP}p.dat ; then
-    ln -sf ./Parallel/par_setup.${NP}p.dat par_setup.dat
-    echo "Linked Parallel/par_setup.${NP}p.dat to par_setup.dat"
+  if test -f ./Parallel/par_setup.${NPROC}p.dat ; then
+    ln -sf ./Parallel/par_setup.${NPROC}p.dat par_setup.dat
+    echo "Linked Parallel/par_setup.${NPROC}p.dat to par_setup.dat"
   else
-    echo "Warning: check that par_setup.dat is correctly setup for ${NP} processors"
+    echo "Warning: check that par_setup.dat is correctly setup for ${NPROC} processors"
   fi
 fi
 
 for F in $(ls *.dim 2> /dev/null) ; do
-  if test -f Parallel/${F%%.dim}.${NP}p.dim ; then
-    ln -sf Parallel/${F%%.dim}.${NP}p.dim $F
-    echo "Linked Parallel/${F%%.dim}.${NP}p.dim to $F"
+  if test -f Parallel/${F%%.dim}.${NPROC}p.dim ; then
+    ln -sf Parallel/${F%%.dim}.${NPROC}p.dim $F
+    echo "Linked Parallel/${F%%.dim}.${NPROC}p.dim to $F"
   else
-    echo "Warning: check that $F is correctly setup for ${NP} processors"
+    echo "Warning: check that $F is correctly setup for ${NPROC} processors"
   fi
 done
 
