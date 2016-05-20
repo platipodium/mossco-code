@@ -470,8 +470,10 @@ module nudge_connector
       !> Make sure that import state's item type (in list) and export state's agree. Also,
       !> now only fields are implemented
       if (itemType /= itemTypeList(i)) then
-        write(message,*) 'itemType not matching for item ',trim(itemName)
+        write(message,*) trim(name)//' itemType not matching for item ',trim(itemName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        call MOSSCO_StateLog(exportState)
+        call MOSSCO_StateLog(importState)
         cycle
       end if
 
