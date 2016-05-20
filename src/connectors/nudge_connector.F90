@@ -24,6 +24,7 @@ module nudge_connector
   use mossco_component
   use mossco_config
   use mossco_attribute
+  use mossco_logging
 
   implicit none
 
@@ -378,7 +379,7 @@ module nudge_connector
       endif
     endif
 
-    call MOSSCO_StateLog(importState, rc=localrc)
+    call MOSSCO_Log(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -472,8 +473,8 @@ module nudge_connector
       if (itemType /= itemTypeList(i)) then
         write(message,*) trim(name)//' itemType not matching for item ',trim(itemName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        call MOSSCO_StateLog(exportState)
-        call MOSSCO_StateLog(importState)
+        call MOSSCO_Log(exportState)
+        call MOSSCO_Log(importState)
         cycle
       end if
 
