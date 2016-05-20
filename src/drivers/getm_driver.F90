@@ -888,7 +888,6 @@
      do i=imin,imax
        ! western boundary
        if ((au(i,j) .eq. 2) .and. (au(i-1,j) .eq. 0)) then
-           LEVEL1 'hack west clip: ',clip,i,j
          if (clip) then
            f(i,j,:) = min(hackmaxvec,f(i+1,j,:))
          else
@@ -897,7 +896,6 @@
        end if
        ! eastern boundary
        if ((au(i-1,j) .eq. 2) .and. (au(i,j) .eq. 0)) then
-           LEVEL1 'hack east clip: ',clip,i,j
          if (clip) then
            f(i,j,:) = min(hackmaxvec,f(i-1,j,:))
          else
@@ -913,44 +911,21 @@
 !
 !***************************************************************
 !
-   LEVEL1 'zero-gradient in y-direction',imin,imax
 #ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
 #endif
      do i=imin,imax
        ! southern boundary
        if ((av(i,j) .eq. 2) .and. (av(i,j-1) .eq. 0)) then
-           LEVEL1 'hack south clip: ',clip
          if (clip) then
            f(i,j,:) = min(hackmaxvec,f(i,j+1,:))
-!
-!***************************************************************
-!
-           LEVEL1 'hack south: ',i,j,hackmaxvec(5),min(hackmaxvec,f(i,j-1,:))
-!
-!***************************************************************
-!***************************************************************
-!***************************************************************
-!**** TODO: remove
-
          else
            f(i,j,:) = f(i,j+1,:)
          end if
        end if
        ! northern boundary
        if ((av(i,j-1) .eq. 2) .and. (av(i,j) .eq. 0)) then
-           LEVEL1 'hack north clip: ',clip,i,j
          if (clip) then
-!
-!***************************************************************
-!
-           LEVEL1 'hack north: ',i,j,hackmaxvec(5),min(hackmaxvec,f(i,j-1,:))
-!
-!***************************************************************
-!***************************************************************
-!***************************************************************
-!**** TODO: remove
-!
            f(i,j,:) = min(hackmaxvec,f(i,j-1,:))
          else
            f(i,j,:) = f(i,j-1,:)
