@@ -379,10 +379,6 @@ module nudge_connector
       endif
     endif
 
-    call MOSSCO_Log(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -429,6 +425,10 @@ module nudge_connector
     checkExcludeList(11)='has_boundary_data'
 
     do i=1, itemCount
+
+      ! Currently, this only works for fields and field bundles
+      if ((itemTypeList(i) .ne. ESMF_STATEITEM_FIELD) .and. &
+          (itemTypeList(i) .ne. ESMF_STATEITEM_FIELDBUNDLE)) cycle
 
       itemName=trim(itemNameList(i))
 
