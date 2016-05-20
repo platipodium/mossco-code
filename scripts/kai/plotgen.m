@@ -35,12 +35,12 @@ ntags=length(tags);
  %% graph settings
   ncol = 3; nrow = 2; 	% number of columns in fig
 else
-  tags = {'';'_aspm';'_awater';};%'_adap';'';'_vphy';'_mortz';
+  tags = {'';};%'_aspm';'_awater';'_adap';'';'_vphy';'_mortz';
   ntags=length(tags);
- % spath= '/home/wirtz/sns';  
-  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+  spath= '/home/wirtz';%/sns  
+%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
-  ncf0 = 'sns'; 
+  ncf0 = 'sns_30'; 
   setvar_sns  % defines variables to show - and where/how to do it %setvar  
   ncol = 3; nrow = 2; 	% number of columns in fig
 end
@@ -74,8 +74,8 @@ for ns=1:ntags
 
  %% read model output
  tag=cell2mat(tags(ns));
-%% ncfile = fullfile(spath,[ncf0 tag '.nc']);
- ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '.nc']);
+%% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
