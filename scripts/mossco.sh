@@ -288,8 +288,16 @@ if [[ "${NP}" == "0" ]]; then
 fi
 
 NPROC=$(echo ${NP} | cut -d':' -f1)
-PPN=$(echo ${NP} | cut -d':' -f2 | cut -d'x' -f1)
-NODES=$(echo ${NP} | cut -d':' -f2 | cut -d'x' -f2)
+if [[ ${NPROC} == ${NP} ]]; then
+  PPN=${NPROC}
+  NODES=1
+else
+  PPN=$(echo ${NP} | cut -d':' -f2 | cut -d'x' -f1)
+  NODES=$(echo ${NP} | -d'x' -f2)
+  if [[ ${NODES} == ${NP} ]]; then
+    NODES=1
+  fi
+fi
 
 NP=${NPROC}
 #echo $NPROC $PPN $NODES
