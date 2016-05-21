@@ -4,12 +4,12 @@
 
 dir1=$1
 dir2=$2
-rn=slurm.sh
-tag='#SBATCH --job-name='
-tags=job-name
-#rn=sge.sh
-#tag='#$ -N '
-#tags='-N'
+#rn=slurm.sh
+#tag='#SBATCH --job-name='
+#tags=job-name
+rn=sge.sh
+tag='#$ -N '
+tags='-N'
 
 mkdir -p $dir2
 cd  $dir1
