@@ -102,7 +102,7 @@ for im=1:length(vli)
   end
   ta=sprintf('%s (%d,%d) %s %d',[varshort0 ' ' tagc],doy(ti),ind(ti),mons(4:6),year(ti));
   if nice==0
-    annotation('textbox',tpos+[0.34*dxp -0.94*dyp 0.02 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none');
+    annotation('textbox',tpos+[0.6*dxp -0.94*dyp 0.012 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none','HorizontalAlignment','right');
   end
 
 %% colorbar settings
@@ -114,7 +114,7 @@ end
 %% colorbar settings
 cb=colorbar;
 title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
-set(cb, 'Position', [x0+0.18*dxp y0+dyp*0.02 .014 0.3*dyp],'FontSize',fs);
+set(cb, 'Position', [x0+0.18*dxp y0+dyp*0.005 .014 0.3*dyp],'FontSize',fs);
 if(islog)
    ctl =([0.01 0.1 1 10 20 100 1E3]);
    set(cb,'YTick',log10(ctl),'YTicklabel',ctl); 

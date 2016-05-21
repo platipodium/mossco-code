@@ -872,6 +872,10 @@
 
    clip = hackmax > 0.0
    hackmaxvec(:) = hackmax
+!
+!***************************************************************
+!
+!           LEVEL1 'clip',clip
 
    ! a halo update is necessary here to be fully consistent in parallel
    call update_3d_halo(f,f,az,imin,jmin,imax,jmax,kmax,H_TAG)
@@ -904,6 +908,9 @@
 #endif
 
    ! set zero-gradient in y-direction
+!
+!***************************************************************
+!
 #ifndef GETM_SLICE_MODEL
    do j=jmin,jmax
 #endif

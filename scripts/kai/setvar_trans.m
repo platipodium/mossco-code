@@ -13,8 +13,9 @@
 %					    5:is depth index in 3D for maps
 var={
 %  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';-0.1;25; 1.0;	1; 1;0;'T357'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;0.9; 1.;	1; 1;0;'Ti'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;0.9; 1.;	2; 1;0;'Ti'};
+  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;0.8; 1.;	1; 1;0;'Ti'};
+  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;0.8; 1.;	2; 1;0;'Ti'};
+  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;0.8; 1.;	3; 1;0;'Ti'};
 %  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'L1'};
 %%  {'Chl_chl_in_water';'CHL';0.;12; 1;					1; 1;0;'Ti'};
 %%  {'Chl_chl_in_water';'CHL';0.;12; 1;					2; 1;0;'Ti'};

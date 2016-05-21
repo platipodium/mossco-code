@@ -20,7 +20,7 @@ tb='denitrification_rate_in_soil,layer_height_in_soil,fast_detritus_C_in_soil,de
 model=''   # FABM model name, e.g. hzg_maecs
 n1=0       # starting domain-no of loop
 dn=1       # increment in domain-no of loop
-Nstart=1  # initial time-step; skips trailer 
+Nstart=60  # initial time-step; skips trailer 
 soil=0
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
