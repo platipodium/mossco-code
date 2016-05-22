@@ -855,11 +855,11 @@ module filtration_component
 
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if ((fieldCount == 0) .and. allocated(layerHeight)) deallocate(layerHeight)
+      if ((fieldCount == 0) .and. associated(layerHeight)) deallocate(layerHeight)
 
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='mussel_abundance_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if ((fieldCount == 0) .and. allocated(abundance)) deallocate(abundance)
+      if ((fieldCount == 0) .and. associated(abundance)) deallocate(abundance)
 
       call MOSSCO_CompExit(gridComp, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -916,11 +916,11 @@ module filtration_component
 
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if ((fieldCount == 0) .and. allocated(layerHeight)) deallocate(layerHeight)
+      if ((fieldCount == 0) .and. associated(layerHeight)) deallocate(layerHeight)
 
       call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='mussel_abundance_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
-      if ((fieldCount == 0) .and. allocated(abundance)) deallocate(abundance)
+      if ((fieldCount == 0) .and. associated(abundance)) deallocate(abundance)
 
       call MOSSCO_CompExit(gridComp, localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1306,50 +1306,50 @@ module filtration_component
       itemSearch='potential_clearance_rate', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(potentialClearanceRate)) &
+    if ((fieldCount == 0) .and. associated(potentialClearanceRate)) &
       deallocate(potentialClearanceRate)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='maximum_filtration_rate', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(maximumFiltrationRate)) deallocate(maximumFiltrationRate)
+    if ((fieldCount == 0) .and. associated(maximumFiltrationRate)) deallocate(maximumFiltrationRate)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='shear_speed', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(ustar)) deallocate(ustar)
+    if ((fieldCount == 0) .and. associated(ustar)) deallocate(ustar)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='boundary_layer_speed', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(speed)) deallocate(speed)
+    if ((fieldCount == 0) .and. associated(speed)) deallocate(speed)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='fractional_loss_rate', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(fractionalLossRate)) deallocate(fractionalLossRate)
+    if ((fieldCount == 0) .and. associated(fractionalLossRate)) deallocate(fractionalLossRate)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='potential_clearance_rate', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(potentialClearanceRate)) deallocate(potentialClearanceRate)
+    if ((fieldCount == 0) .and. associated(potentialClearanceRate)) deallocate(potentialClearanceRate)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='layer_height_in_water', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(layerheight)) deallocate(layerheight)
+    if ((fieldCount == 0) .and. associated(layerheight)) deallocate(layerheight)
 
     call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
       itemSearch='mussel_abundance_in_water', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if ((fieldCount == 0) .and. allocated(abundance)) deallocate(abundance)
+    if ((fieldCount == 0) .and. associated(abundance)) deallocate(abundance)
 
     !! This component has no do loop over an internal timestep, it is advanced with the
     !! timestep written into its local clock from a parent component
