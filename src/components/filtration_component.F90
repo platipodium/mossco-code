@@ -455,7 +455,7 @@ module filtration_component
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_StateItem_Flag)   :: itemType
     type(ESMF_StateItem_Flag), allocatable  :: itemTypeList(:)
-    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:)
+    character(len=ESMF_MAXSTR), allocatable :: itemNameList(:), diagNameList(:)
     character(len=ESMF_MAXSTR)              :: itemName
     integer(ESMF_KIND_I4)                   :: itemCount
     real(ESMF_KIND_R8)                      :: mussel_mass, minimumFoodFlux
@@ -674,15 +674,14 @@ module filtration_component
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
 
-    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: maximumFiltrationRate
-    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: potentialClearanceRate, ustar, speed
     real(ESMF_KIND_R8),allocatable, dimension(:,:)   :: xWidth, yWidth
-    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: fractionalLossRate
     real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
 
     real(ESMF_KIND_R8),pointer,dimension(:,:)    :: abundanceAtSoil, abundanceAtSurface
     real(ESMF_KIND_R8),pointer,dimension(:,:)    :: bottomShearStress
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate, layerHeight
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: potentialClearanceRate, ustar, speed
+    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: maximumFiltrationRate, fractionalLossRate
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
     real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration
 
@@ -690,9 +689,10 @@ module filtration_component
     type(ESMF_Field)        :: field
     type(ESMF_Grid)         :: grid
     integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j
-    real(ESMF_KIND_R8)      :: minimumFoodFlux, musselMass, crossSection
+    real(ESMF_KIND_R8)      :: surfaceRoughness, diameter, distance
+    real(ESMF_KIND_R8)      :: minimumFoodFlux, musselMass, crossSection, sandRoughness
     real(ESMF_KIND_R8)      :: roughnessLength, musselLengthScale, frictionCoefficient
-    real(ESMF_KIND_R8)      :: skinFrictionDragCoefficient
+    real(ESMF_KIND_R8)      :: skinFrictionDragCoefficient, karman, hydraulicRadius
     real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
     integer(ESMF_KIND_I4)                :: ubndZ(3), lbndZ(3)
@@ -703,9 +703,11 @@ module filtration_component
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     logical                     :: isSoil, isSurface
     type(ESMF_StateItem_Flag)   :: itemType
+    real(ESMF_KIND_R8),parameter:: pi=3.141592653589793d0
 
     mmolPermg = 0.03083348776
     mgPermmol = 1./mmolPermg
+    karman = 0.4
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -774,7 +776,7 @@ module filtration_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! Get layer height  to export
-    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount &
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
       itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -851,11 +853,11 @@ module filtration_component
       write(message,'(A)') trim(name)//' found no abundance at all'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 
-      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount &
+      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if ((fieldCount == 0) .and. allocated(layerHeight)) deallocate(layerHeight)
 
-      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount &
+      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='mussel_abundance_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if ((fieldCount == 0) .and. allocated(abundance)) deallocate(abundance)
 
@@ -912,11 +914,11 @@ module filtration_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       if (allocated(mask)) deallocate(mask)
 
-      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount &
+      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='layer_height_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if ((fieldCount == 0) .and. allocated(layerHeight)) deallocate(layerHeight)
 
-      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount &
+      call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
         itemSearch='mussel_abundance_in_water', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
       if ((fieldCount == 0) .and. allocated(abundance)) deallocate(abundance)
 
@@ -1036,7 +1038,7 @@ module filtration_component
     !> $k_s$ = 30 z_0$.
     sandRoughness = 30 * surfaceRoughness
     frictionCoefficient = - 2.03 * log10(sandRoughness / 14.84 / hydraulicRadius)
-    frictionCoefficient = 1 / (frictionCoefficient ^ 2)
+    frictionCoefficient = 1 / (frictionCoefficient * frictionCoefficient)
 
     !> For typical valus of z0 = 4.4 mm and the hydraulic radius of 25, the
     !> friction coefficient is 1 / 50 = 0.02
@@ -1061,8 +1063,8 @@ module filtration_component
     !> i.e. for typical velocities of .1 m s-1 it is 0.025 Pa
     !> The skin friction shear speed u* is then $u* = \sqrt(\tau/rho)$,
     !> and on the order of 0.005 m s-1
-    ustar(RANGE2D,lbound(speed,3)+1):ubound(speed,3)) &
-      = sqrt(skinFrictionDragCoefficient) * speed(RANGE2D,lbound(speed,3)+1):ubound(speed,3))
+    ustar(RANGE2D,lbound(speed,3)+1:ubound(speed,3)) &
+      = sqrt(skinFrictionDragCoefficient) * speed(RANGE2D,lbound(speed,3)+1:ubound(speed,3))
 
     !> According to van Duren 2006, typical values for a high-velocity regime
     !> are z0=4.4 mm, shear velocity u* = 4E-2 m s-1 (we get roughness length from
