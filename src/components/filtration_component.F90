@@ -674,16 +674,19 @@ module filtration_component
     type(ESMF_Time)       :: currTime, stopTime
     type(ESMF_TimeInterval) :: timeStep
 
-    real(ESMF_KIND_R8),allocatable, dimension(:,:)   :: xWidth, yWidth
-    real(ESMF_KIND_R8),allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
+    real(ESMF_KIND_R8), allocatable, dimension(:,:)   :: xWidth, yWidth
+    real(ESMF_KIND_R8), allocatable, dimension(:,:,:) :: foodFluxFactor, filtrationRate
 
-    real(ESMF_KIND_R8),pointer,dimension(:,:)    :: abundanceAtSoil, abundanceAtSurface
-    real(ESMF_KIND_R8),pointer,dimension(:,:)    :: bottomShearStress
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: abundance, lossRate, layerHeight
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: potentialClearanceRate, ustar, speed
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: maximumFiltrationRate, fractionalLossRate
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
-    real(ESMF_KIND_R8),pointer,dimension(:,:,:)  :: concentration
+    real(ESMF_KIND_R8), pointer, dimension(:,:)    :: abundanceAtSurface => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:)    :: abundanceAtSoil => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:)    :: bottomShearStress => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: abundance => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: lossRate => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: layerHeight => null()
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: potentialClearanceRate, ustar, speed
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate, fractionalLossRate
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
+    real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration
 
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
