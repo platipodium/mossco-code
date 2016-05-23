@@ -3,6 +3,11 @@ if isstrprop(ptag(2), 'xdigit')
   vli=2:length(ptag); mode='s';
 else
   vli=0:nrowm*ncolm-1; mode='v';
+  moffs=moffs+1;
+  if(~strcmp(varshort,varshortm0))
+    moff=moffs;
+  end
+  varshortm0=varshort;
 end
 
 di = cell2mat(var{i}(5)); %depth index
@@ -27,11 +32,12 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti=((cell2mat(var{i}(6))-1)*(nrowm*ncolm)+im)*1;
+  ti=((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;     
  end
  if ti<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns + nfig;
+  if(im==1) vt{np-nfig}=[varshort0 tag]; end
   figure(np); set(gcf, 'visible','off','Color','w'); hold on
 %   set(fig,'DoubleBuffer','on','Color','w');%
 % geometry of sub-plot
@@ -40,7 +46,10 @@ for im=1:length(vli)
   hold on
 
 % set data matrix
-  value = squeeze(tmp(:,:,cell2mat(var{i}(5)),ti)); 
+  value = squeeze(tmp(:,:,di,ti)); 
+  indn=find(~isnan(value));
+%  fprintf('%d %s/%s\t np=%d/%d im=%d i=%d %d %d\tmean=%1.2f\n',i,varshort,varn,np,cell2mat(var{i}(6)),im,ix,iy,di,mean(mean(value(indn))));
+
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(value)); end
@@ -56,7 +65,6 @@ for im=1:length(vli)
   la=lat(lx0+dx0:end-dx,ly0+dy0:end-dy);
 
 %% plot 2D data
-  value = squeeze(tmp(:,:,di,ti)); 
 %   value(find(value<1E-4 | value>1E4 ))=-1;
   if(islog) 
     value(find(value<minval*1.1))=minval*1.1;
@@ -85,7 +93,6 @@ for im=1:length(vli)
       ctl =log10([1E-3 0.01 0.03 0.1 1 3 10 30 100 1E3]);
       set(cb,'YTick',ctl,'YTicklabel',power(10,ctl)); 
     end
-    vt{np-nfig}=[varshort0 tag];
   end
 %% print variable & scen name & date
   mons=datestr(doy(ti));

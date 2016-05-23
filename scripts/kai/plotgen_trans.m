@@ -3,6 +3,11 @@ if isstrprop(ptag(2), 'xdigit')
   vli=2:length(ptag); mode='s';
 else
   vli=0:nrow*ncol-1; mode='v';
+  moffs=moffs+1;
+  if(~strcmp(varshort,varshortm0))
+    moff=moffs;
+  end
+  varshortm0=varshort;
 end
 
 
@@ -26,12 +31,13 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncol);
   iy = 1+floor((im-1)/ncol);
-  ti=(cell2mat(var{i}(6))-1)*(nrow*ncol)+im;
+  ti=((cell2mat(var{i}(6))-moff)*(nrow*ncol)+im)*3;     
  end
  x0=0.06+(ix-1)*1.15*dxp; y0=0.1+(nrow-iy)*1.03*dyp;
  if ti<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns;
+  if(im==1) vt{np}=[varshort0 tag]; end
   figure(np); set(gcf, 'visible','off','Color','w'); hold on
 %   set(fig,'DoubleBuffer','on','Color','w');%
 % geometry of sub-plot
