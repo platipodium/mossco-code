@@ -7,6 +7,11 @@
 ncid  = netcdf.open(ncfile,'NC_NOWRITE');
 varid = netcdf.inqVarID(ncid,'time');
 time_units = netcdf.getAtt(ncid,varid,'units');
+if Is1D 
+  coordn='helgoland3d';
+else
+  coordn='getmGrid3D_getm';
+end
 
 t_offset = datenum(time_units(15:end),'yyyy-mm-dd HH:MM:SS');
 time= (ncread(ncfile,'time')/86400)+t_offset;
@@ -28,7 +33,7 @@ if IsWater
   try
     water_dz   = squeeze(ncread(ncfile,'grid_height_in_water'));
   catch exception
-     varid=netcdf.inqDimID(ncid,'getmGrid3D_getm_3');
+     varid=netcdf.inqDimID(ncid,[coordn '_3']);
      [id nz]=netcdf.inqDim(ncid,varid);
      fprintf('using equidistant mesh\n');
      water_dz = ones(nz,length(time));
@@ -47,11 +52,11 @@ end
 i_loc=[1 1];
 if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
  % reading geo-coordinates
- varid=netcdf.inqVarID(ncid,'getmGrid3D_getm_lon');
+ varid=netcdf.inqVarID(ncid,[coordn '_lon']);
 % [id loni]=netcdf.inqDim(ncid,varid);
  lon=netcdf.getVar(ncid,varid);
 
- varid=netcdf.inqVarID(ncid,'getmGrid3D_getm_lat');
+ varid=netcdf.inqVarID(ncid,[coordn '_lat']);
 % [id lati]=netcdf.inqDim(ncid,varid);
  lat=netcdf.getVar(ncid,varid);
 % limits
@@ -73,9 +78,9 @@ if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
  end
 end %length(locs) >1
 if ptag(1)=='T'
-  varid=netcdf.inqDimID(ncid,'getmGrid3D_getm_1');
+  varid=netcdf.inqDimID(ncid,[coordn '_1']);
   [id n1]=netcdf.inqDim(ncid,varid);
-  varid=netcdf.inqDimID(ncid,'getmGrid3D_getm_2');
+  varid=netcdf.inqDimID(ncid,[coordn '_2']);
   [id n2]=netcdf.inqDim(ncid,varid);
   if(n1>n2)
     txi=1:n1;

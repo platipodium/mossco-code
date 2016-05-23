@@ -15,8 +15,8 @@ var={{'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;40; 1.0;	1; 1;1;'
   {'Dissolved_Organic_Phosphorus_domP_in_water';'DOP';0.;2; 1;		1; 1;3;'L9'};
   {'Phytplankton_Phosphorus_phyP_in_water';'PhyP';0;2.5; 1.0;		1; 1;3;'L9'};
   {'Chl_chl_in_water';'CHL';0.5;18; 1;				1; 1;2;'L9'};
-  {'Chl_chl_in_water';'CHL';0.;8; 1;				1; 1;4;'P034'};
-  {'Chl_chl_in_water';'CHL';0.;8; 1;				1; 2;4;'P579'};% {'Chl_chl_in_water';'CHL';0.9;120; 3;					1; 1;2;'L0'};
+%  {'Chl_chl_in_water';'CHL';0.;8; 1;				1; 1;4;'P034'};
+%  {'Chl_chl_in_water';'CHL';0.;8; 1;				1; 2;4;'P579'};% {'Chl_chl_in_water';'CHL';0.9;120; 3;					1; 1;2;'L0'};
   {'Phytplankton_Carbon_phyC_in_water';'PhyC';1;80; 1.0;		1; 1;2;'N'};
   {'Phytplankton_Nitrogen_phyN_in_water';'PhyN';0;-9; 1.0;		1; 2;3;'N'};
   {'c PhyN./(PhyC+1E-2)';'N:C';0.06;0.25; 1.0;				1; 2;1;'LM'};

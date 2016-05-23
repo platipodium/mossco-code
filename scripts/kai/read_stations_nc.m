@@ -3,9 +3,9 @@
 if ~exist(datf,'file') warning('File %s does not exist, skipped',datf); continue; end
 
 ncid=netcdf.open(datf,'NC_NOWRITE');
-[ndim nvar natt udimid] = netcdf.inq(ncid); 
+[ndim ndvar natt udimid] = netcdf.inq(ncid); 
 is=0; iv=1; oldstatn='dummy';
-for id=0:nvar-1
+for id=0:ndvar-1
   [datvarname,xtype,dimids,natts]=netcdf.inqVar(ncid,id);
   if strcmp(datvarname,'time') 
     datime=netcdf.getVar(ncid,id)/86400; 
