@@ -1154,7 +1154,7 @@ end subroutine MOSSCO_FieldCopy
 
     if (importTypeKind == ESMF_TYPEKIND_CHARACTER .and. exportTypeKind == ESMF_TYPEKIND_CHARACTER) then
         if (trim(exportString) /= trim(importString)) then
-write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(exportString)//' vs. '//trim(importString)
+!write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(exportString)//' vs. '//trim(importString)
           isSame = .false.
         else
           isSame = .true.
@@ -1164,8 +1164,8 @@ write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(
 
     if (importReal8 == exportReal8) then
       isSame = .true.
-    else
-      write(0,*) 'difference in numeric attribute '//trim(attributeName)//': ',exportReal8,' vs. ',importReal8
+!    else
+!      write(0,*) 'difference in numeric attribute '//trim(attributeName)//': ',exportReal8,' vs. ',importReal8
     endif
 
   end function MOSSCO_FieldAttributeIsSameValue
@@ -1409,7 +1409,7 @@ write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(
       endselect
 
       if (numChanged>0) then
-        write(message,'(A,ES9.2,A,I5.5,A)') ' weight ', weight_, ' ', numChanged, ' cells '
+        write(message,'(A,ES9.2,A,I5.5,A)') '  weight ', weight_, ' changed ', numChanged, ' cells '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif

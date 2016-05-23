@@ -2456,7 +2456,8 @@ module getm_component
 
           amplitude=transport_conc(n)%hackmax - transport_conc(n)%hackmaxmin
           y0=transport_conc(n)%hackmaxmin
-          hackmax=y0 + amplitude * cos(2.0*pi*doy/365.25) ! reformulate according to need
+          hackmax=y0 + amplitude * 0.5
+!          hackmax=y0 + amplitude * cos(pi*doy/365.25)**2 ! reformulate according to need
           call zero_gradient_3d_bdy(p_conc,hackmax)
         else
           call zero_gradient_3d_bdy(p_conc,transport_conc(n)%hackmax)

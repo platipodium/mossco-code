@@ -24,6 +24,7 @@ module nudge_connector
   use mossco_component
   use mossco_config
   use mossco_attribute
+  use mossco_logging
 
   implicit none
 
@@ -378,10 +379,6 @@ module nudge_connector
       endif
     endif
 
-    call MOSSCO_StateLog(importState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -398,6 +395,10 @@ module nudge_connector
       call ESMF_StateGet(importState, itemNameList=itemNameList, itemTypeList=itemTypeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    else
+      write(message,'(A)') trim(name)//' found nothing to nudge from'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call MOSSCO_Log(importState)
     endif
 
     call MOSSCO_AttributeGetList(cplComp, 'filter_pattern_include', filterIncludeList, rc=localrc)
@@ -428,6 +429,10 @@ module nudge_connector
     checkExcludeList(11)='has_boundary_data'
 
     do i=1, itemCount
+
+      ! Currently, this only works for fields and field bundles
+      if ((itemTypeList(i) .ne. ESMF_STATEITEM_FIELD) .and. &
+          (itemTypeList(i) .ne. ESMF_STATEITEM_FIELDBUNDLE)) cycle
 
       itemName=trim(itemNameList(i))
 
@@ -470,10 +475,10 @@ module nudge_connector
       !> Make sure that import state's item type (in list) and export state's agree. Also,
       !> now only fields are implemented
       if (itemType /= itemTypeList(i)) then
-        write(message,*) trim(name)//' itemType not matching for item ',trim(itemName)
+        write(message,'(A)') trim(name)//' itemType not matching for item ',trim(itemName)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        call MOSSCO_StateLog(exportState)
-        call MOSSCO_StateLog(importState)
+        call MOSSCO_Log(exportState)
+        call MOSSCO_Log(importState)
         cycle
       end if
 

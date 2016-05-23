@@ -29,6 +29,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_logging.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_parameter.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_time.o)		\
@@ -62,6 +63,7 @@ libsolver: prefix $(MOSSCO_LIBRARY_PATH)/libsolver.a(solver_library.o)
 libmossco_util:  prefix sha $(LIBMOSSCO_UTIL_OBJS)
 libmossco_db: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_db.a(mossco_db.o)
 mossco_state.o : mossco_field.o mossco_state.F90
+mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging.F90
 mossco_field.o : mossco_strings.o mossco_field.F90
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
@@ -92,6 +94,7 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_util.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/solver_library.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_logging.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_state.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_field.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_attribute.mod

@@ -36,7 +36,7 @@ echo $outdir
 
 # retrieve final time-step
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
-N=$[$N -2]
+N=$[$N - 1]
 echo 'cutting until time step ' $N
 #N=600
 #echo 'cutting until time step ' $N
@@ -74,5 +74,3 @@ ncview $outdir'.nc' &
 
 #ls -lrt
 # the difference between values in cutm and cut indicates temporal variability
-
-

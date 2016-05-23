@@ -13,15 +13,15 @@
 %								    5:is depth index in 3D for maps
 var={
   {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;50; 1.0;	1; 1;1;'L1'};
-%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.04;40; 1.0;	1; 2;0;'M0369'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;2.; 1.;	1; 2;1;'L1'};
+{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;2.; 1.;	1; 2;1;'L1'};
   {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'N'};
   {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L1'};
   {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L0'};
   {'Chl_chl_in_water';'CHL';0.5;20; 2;					1; 1;0;'Mi'};
   {'Chl_chl_in_water';'CHL';0.5;20; 2;					2; 1;0;'Mi'};
   {'Chl_chl_in_water';'CHL';0.5;20; 2;					3; 1;0;'Mi'};
-%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					4; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 2;	4; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 2;	5; 1;0;'Mi'};  %  {'Chl_chl_in_water';'CHL';0.5;20; 2;					4; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.8;40; 1;					1; 2;0;'M0369'};   {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.1;			1; 2;1;'L0'};
 %   {'Detritus_Carbon_detC_in_water';'DetC';0.5;50; 1;			1; 2;0;'M0369'};
    {'Zooplankton_Carbon_zooC_in_water';'ZooC';0;9; 1;			1; 2;2;'LM'};

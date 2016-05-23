@@ -3,6 +3,11 @@ if isstrprop(ptag(2), 'xdigit')
   vli=2:length(ptag); mode='s';
 else
   vli=0:nrow*ncol-1; mode='v';
+  moffs=moffs+1;
+  if(~strcmp(varshort,varshortm0))
+    moff=moffs;
+  end
+  varshortm0=varshort;
 end
 
 
@@ -26,12 +31,13 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncol);
   iy = 1+floor((im-1)/ncol);
-  ti=(cell2mat(var{i}(6))-1)*(nrow*ncol)+im;
+  ti=((cell2mat(var{i}(6))-moff)*(nrow*ncol)+im)*3;     
  end
  x0=0.06+(ix-1)*1.15*dxp; y0=0.1+(nrow-iy)*1.03*dyp;
  if ti<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns;
+  if(im==1) vt{np}=[varshort0 tag]; end
   figure(np); set(gcf, 'visible','off','Color','w'); hold on
 %   set(fig,'DoubleBuffer','on','Color','w');%
 % geometry of sub-plot
@@ -102,7 +108,7 @@ for im=1:length(vli)
   end
   ta=sprintf('%s (%d,%d) %s %d',[varshort0 ' ' tagc],doy(ti),ind(ti),mons(4:6),year(ti));
   if nice==0
-    annotation('textbox',tpos+[0.34*dxp -0.94*dyp 0.02 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none');
+    annotation('textbox',tpos+[0.6*dxp -0.94*dyp 0.012 0.1],'String',ta,'Color','k','Fontweight','bold','FontSize',fs,'LineStyle','none','HorizontalAlignment','right');
   end
 
 %% colorbar settings
@@ -114,7 +120,7 @@ end
 %% colorbar settings
 cb=colorbar;
 title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
-set(cb, 'Position', [x0+0.18*dxp y0+dyp*0.02 .014 0.3*dyp],'FontSize',fs);
+set(cb, 'Position', [x0+0.18*dxp y0+dyp*0.005 .014 0.3*dyp],'FontSize',fs);
 if(islog)
    ctl =([0.01 0.1 1 10 20 100 1E3]);
    set(cb,'YTick',log10(ctl),'YTicklabel',ctl); 
