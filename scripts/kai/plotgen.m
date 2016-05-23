@@ -35,12 +35,12 @@ ntags=length(tags);
  %% graph settings
   ncol = 3; nrow = 2; 	% number of columns in fig
 else
-  tags = {'';'_aspm';'_awater';};%'_adap';'';'_vphy';'_mortz';
+  tags = {'';};%'_aspm';'_awater';'_adap';'';'_vphy';'_mortz';
   ntags=length(tags);
- % spath= '/home/wirtz/sns';  
-  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+  spath= '/home/wirtz/sns';%  
+%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
-  ncf0 = 'sns'; 
+  ncf0 = 'sns_30'; 
   setvar_sns  % defines variables to show - and where/how to do it %setvar  
   ncol = 3; nrow = 2; 	% number of columns in fig
 end
@@ -66,21 +66,21 @@ end
 
 %% open all figures
 for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1580 850],'Visible','off','Color','w'); end
-oldfig=-np;
+oldfig=-np; 
 ptag=cell2mat(var{1}(9));
 occ = zeros(nfig,ncol,nrow); occ0=occ+1;
-for ns=1:ntags
- %% loop over scenarios/stations/layers
-
+for ns=1:ntags %% loop over scenarios/stations/layers
+ % reset index for map time offset
+ moffs=0; varshortm0='';
  %% read model output
  tag=cell2mat(tags(ns));
-%% ncfile = fullfile(spath,[ncf0 tag '.nc']);
- ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '.nc']);
+%% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- t0 = datenum('2003-02-01','yyyy-mm-dd')-1;
- t1 = datenum('2003-12-31','yyyy-mm-dd')-1;
+% t0 = datenum('2003-02-01','yyyy-mm-dd')-1;
+% t1 = datenum('2003-12-31','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
@@ -109,6 +109,7 @@ for ns=1:ntags
     end
 %% plotting either over time (incl contour) or time sliced maps  
     if (ptag(1)=='M')
+
       plotgen_maps
     else
       plotgen_body
@@ -142,7 +143,7 @@ for np=1:nfig+nfigm
 %% create base file name
     fnam0=sprintf('%s%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
   else
-    fnam0=sprintf('map_%s_%d',vt{ceil((np-nfig)/ntags)},np);
+    fnam0=sprintf('map_%s_%d',vt{np-nfig},np);
   end
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
 %  fprintf('save EPS in %s ...\n',fnam);

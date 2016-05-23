@@ -2449,8 +2449,6 @@ module getm_component
 
         ! Hack for Kai with seasonally varying maximum value for boundary concentrations
         ! if you don't give currtime, then only an upper maximum is used.
-         LEVEL1 'no bound_data ',transport_conc(n)%hackmax
-
         if (present(currTime)) then
           call ESMF_TimeGet(currTime, dayOfYear=doy, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
