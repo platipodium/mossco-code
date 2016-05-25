@@ -9,6 +9,22 @@ show_data=1; Is1D=1;
 datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
+%loc =[]; 
+loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[52.3 4.3];[52.56 3.5];]; %;[54.2,7.5]; %[54.96,8.4]; 
+%  % 17 m 28 m
+% Noordwijk-10 Noordwijk-70
+locs={'Helgoland';'Sylt';'T22';'Noordwijk-10';'Noordwijk-70';}; % 'T26'; 
+%'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
+%  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
+%  'T22';     'T5';      'T12';   'T11'
+%[54.1,54.1];[55.0,8.4];[54.6,8.4];[54.0,8.7];[53.7,7.2];
+%[53.7,6.4];[54.2,7.5];[54.0,8.1];[55.0,8.0];[55.2,5.0];
+%[54.1,6.3];[55.0,6.3];[54.7,7.4];[54.7,6.9];
+
+% load and prepare data
+if show_data, read_stations_nc; end;
+%tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
+%tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
@@ -21,21 +37,11 @@ ntags=length(tags);
  %% graph settings
   ncol = 3; nrow = 2; 	% number of columns in fig
 else
-  loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[52.3 4.3];[52.3 2.4];]; %[54.2,7.5]; %[54.96,8.4]; 
-%  % 17 m 28 m
-% Noordwijk-10 Noordwijk-70
-  locs={'Helgoland';'Sylt';'T22';'Noordwijk-10';'Noordwijk-70';}; % 'T26'; 
-%'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
-%  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
-%  'T22';     'T5';      'T12';   'T11'
-%[54.1,54.1];[55.0,8.4];[54.6,8.4];[54.0,8.7];[53.7,7.2];
-%[53.7,6.4];[54.2,7.5];[54.0,8.1];[55.0,8.0];[55.2,5.0];
-%[54.1,6.3];[55.0,6.3];[54.7,7.4];[54.7,6.9];
-  tags = {'_ref0';'_zm_fa_delmax6';'_fT_exp_mort4';}; 
-%'_adap';'_vphy';'_mortz';'_a_minfr0.25';'_QP_phy_max0.008';'_vS_det5';'_vS_phy0.5';
+  tags = {'_20';'_30';};%'_aspm';'_awater';'_adap';'';'_vphy';'_mortz';
   ntags=length(tags);
-%  spath= '/home/wirtz/sns';%  
-  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+  spath= '/home/wirtz/sns';%  
+%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+%% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 
   setvar_sns  % defines variables to show - and where/how to do it %setvar  
   ncol = 3; nrow = 2; 	% number of columns in fig
@@ -75,8 +81,8 @@ for ns=1:ntags %% loop over scenarios/stations/layers
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- t0 = datenum('2003-03-01','yyyy-mm-dd')-1;
- t1 = datenum('2004-11-31','yyyy-mm-dd')-1;
+% t0 = datenum('2003-02-01','yyyy-mm-dd')-1;
+% t1 = datenum('2009-11-31','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
