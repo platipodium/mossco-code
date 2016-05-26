@@ -15,7 +15,7 @@
 				multi
 			</logkind>
 			<loglevel>
-				all
+				warning
 			</loglevel>
 			<logflush>
 				True
