@@ -1,0 +1,3 @@
+ncrename -v hzg_maecs_nutP,Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water bdy_3d_ecoham_2000-2010_renamed.nc
+ncrename -v hzg_maecs_nutN,Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water bdy_3d_ecoham_2000-2010_renamed.nc
+
