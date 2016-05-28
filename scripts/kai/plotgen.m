@@ -28,9 +28,10 @@ if show_data, read_stations_nc; end;
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
-  spath= '/local/home/wirtz/mossco/mossco-setups/helgoland/';
-  tags = {'_0';'_1';};
-%  tags = {'';};
+  spath= '/local/home/wirtz/mossco/mossco-setups/hrres/';%helgoland/';
+%  tags = {'_0';'_1';};
+  tags = {'ref';'vS_det5';'remNP0.';'remNP-0.2';};
+%  tags = {'ref';'rnit300';'rSlow0.005';'PAds0.05';};
 ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
@@ -137,7 +138,7 @@ if ~exist(figdir),  mkdir(figdir); end;
 %% plot each figure as EPS & PNG
 for np=1:nfig+nfigm
   figure(np);  
-  set(gcf,'PaperPositionMode','auto', 'InvertHardCopy', 'off','Visible','off');
+  set(gcf,'PaperPositionMode','auto', 'InvertHardCopy', 'off');%,'Visible','off'
 %% add site name to each figure/page
   if(np<=nfig)
     li=floor(np/nfig0);

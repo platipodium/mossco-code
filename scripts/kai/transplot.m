@@ -19,7 +19,7 @@ spath  ='/home/wirtz/sns/transMay21/';%spath  ='/ocean-data/wirtz/';
 setvar_trans;  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
-ncol = 5; nrow = 3; 	% number of columns in fig
+ncol = 4; nrow = 3; 	% number of columns in fig
 %ncol = 1; nrow = 1; 	% number of columns in fig
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 compn ={'water';'soil'};

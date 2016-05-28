@@ -20,8 +20,8 @@ var={
   {'Chl_chl_in_water';'CHL';0.5;20; 2;					1; 1;0;'Mi'};
   {'Chl_chl_in_water';'CHL';0.5;20; 2;					2; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					3; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 2;	3; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 2;	4; 1;0;'Mi'};  %  {'Chl_chl_in_water';'CHL';0.5;20; 2;					4; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 1;	3; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 1;	4; 1;0;'Mi'};  %  {'Chl_chl_in_water';'CHL';0.5;20; 2;					4; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.8;40; 1;					1; 2;0;'M0369'};   {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.1;			1; 2;1;'L0'};
 %   {'Detritus_Carbon_detC_in_water';'DetC';0.5;50; 1;			1; 2;0;'M0369'};
    {'Zooplankton_Carbon_zooC_in_water';'ZooC';0;9; 1;			1; 2;2;'LM'};
