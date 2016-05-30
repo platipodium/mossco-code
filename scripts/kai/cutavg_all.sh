@@ -11,8 +11,13 @@
 # edit  cut_avg.sh (e.g. variable, names, vertical sclicing,..)
 #SCRDIR=~/devel/MOSSCO/code/scripts/kai
 SCRDIR=~/kai
-#nproc=178
-nproc=61
+if [[ "x$1" == "x" ]] ; then
+ #nproc=178
+ nproc=61
+else
+  nproc=$1
+fi
+
 prefix=mossco_gfbfrr.
 
 if [[ $nproc -lt 100 ]]; then

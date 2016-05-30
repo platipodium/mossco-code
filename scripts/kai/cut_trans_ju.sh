@@ -16,8 +16,8 @@ setname=$(basename $homed)
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
 prefix=mossco_gfbfrr.  # Prefix of files to process
 dt=1      # slicing of time dimension; 20 gives monthly means at 36h-output
-tmin=2009-06-25 # initial time-step; skips trailer 
-tmax=2009-09-19
+tmin=2013-03-25 # initial time-step; skips trailer 
+tmax=2013-11-29
 #tmin=2010-06-12 # initial time-step; skips trailer 
 #tmax=2010-09-28
 
@@ -63,7 +63,7 @@ case $ncpu in
    fname=${prefix}'29.nc'
    ;;
  *)
-   echo "unkown configuration (#cpus)"
+   echo "unknown configuration (#cpus)"
    exit 1
 esac
 dx[0]=1,,1
@@ -90,7 +90,7 @@ fi
 
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N -1]
-N=190
+#N=190
 #echo $N
 
 mkdir -p $outdir
