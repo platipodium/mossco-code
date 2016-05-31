@@ -392,7 +392,8 @@ module netcdf_input_component
 
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' received no filename to read from'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_NOT_FOUND
       call MOSSCO_CompExit(gridComp)
       return
     endif
@@ -414,7 +415,8 @@ module netcdf_input_component
 
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' cannot read file '//trim(fileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_NOT_FOUND
       call MOSSCO_CompExit(gridComp)
       return
     endif
