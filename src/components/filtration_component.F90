@@ -687,6 +687,8 @@ module filtration_component
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate, fractionalLossRate
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration
+    real(ESMF_KIND_R8), allocatable, dimension(:)  :: depthAtSoil, frictionCoefficient
+    real(ESMF_KIND_R8), allocatable, dimension(:)  :: hydraulicRadius
 
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
@@ -694,8 +696,8 @@ module filtration_component
     integer(ESMF_KIND_I4)   :: localrc, i, rank, otherCount, fieldCount, j
     real(ESMF_KIND_R8)      :: surfaceRoughness, diameter, distance
     real(ESMF_KIND_R8)      :: minimumFoodFlux, musselMass, crossSection, sandRoughness
-    real(ESMF_KIND_R8)      :: roughnessLength, musselLengthScale, frictionCoefficient
-    real(ESMF_KIND_R8)      :: skinFrictionDragCoefficient, karman, hydraulicRadius
+    real(ESMF_KIND_R8)      :: roughnessLength, musselLengthScale
+    real(ESMF_KIND_R8)      :: karman
     real(ESMF_KIND_R8)      :: missingValue, mmolPermg, mgPermmol
     integer(ESMF_KIND_I4), allocatable   :: ubnd(:), lbnd(:)
     integer(ESMF_KIND_I4)                :: ubndZ(3), lbndZ(3)
@@ -795,6 +797,9 @@ module filtration_component
     call MOSSCO_GridGetDepth(grid,  height=layerHeight,  rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.allocated(depthAtSoil)) allocate(depthAtSoil(RANGE2D), stat=localrc)
+    depthAtSoil(RANGE2D) = sum(layerHeight, dim=3)
 
     ! Get mussel abundance to export
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
@@ -1020,12 +1025,14 @@ module filtration_component
     !> $$
 
     !> The hydraulic radius $r_{hy}$ is calculated as the ratio of the channel width
-    !> (space between windpiles) divided by the wetted surface (circumference of one
-    !> pile).  For typical values of diameter 3 m and distance 250 m, the hydraulicRadius
-    !> radius is around 25 (unit missing?)
+    !> (space between windpiles) times water depth divided by the wetted circumference
+    !> interspace + 2 * water depth.  For typical values of diameter 3 m, distance 250 m,
+    !> and depth 40 m, the hydraulic radius is 30 m
+    if (.not.allocated(hydraulicRadius)) allocate(hydraulicRadius(RANGE2D))
     diameter = 3
     distance = 250
-    hydraulicRadius = (distance - diameter) / diameter / pi
+    hydraulicRadius = ((distance - diameter) * depthAtSoil(RANGE2D)) &
+      / (distance - diameter + 2 * depthAtSoil(RANGE2D))
 
     !> The Colebrook-White resistance law
     !> $$
@@ -1039,15 +1046,18 @@ module filtration_component
     !> $$
     !> with the equivalent sand roughness 30 times the surface roughness
     !> $k_s$ = 30 z_0$.
+    if (.not.allocated(frictionCoefficient)) allocate(frictionCoefficient(RANGE2D))
     sandRoughness = 30 * surfaceRoughness
-    frictionCoefficient = - 2.03 * log10(sandRoughness / 14.84 / hydraulicRadius)
-    frictionCoefficient = 1 / (frictionCoefficient * frictionCoefficient)
+    frictionCoefficient(RANGE2D) = - 2.03 * log10(sandRoughness &
+      / 14.84 / hydraulicRadius(RANGE2D))
+    frictionCoefficient(RANGE2D) = 1 / (frictionCoefficient(RANGE2D) &
+      * frictionCoefficient(RANGE2D))
 
     !> For typical valus of z0 = 4.4 mm and the hydraulic radius of 25, the
     !> friction coefficient is 1 / 50 = 0.02
     !> The friction drag factor $c_w$ is then $\lambda / 8$, and has a typical
     !> value of 0.0025
-    skinFrictionDragCoefficient = frictionCoefficient / 8
+    !> skinFrictionDragCoefficient = frictionCoefficient / 8
 
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
       itemSearch='shear_speed', fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
@@ -1067,7 +1077,8 @@ module filtration_component
     !> The skin friction shear speed u* is then $u* = \sqrt(\tau/rho)$,
     !> and on the order of 0.005 m s-1
     ustar(RANGE2D,lbound(speed,3)+1:ubound(speed,3)) &
-      = sqrt(skinFrictionDragCoefficient) * speed(RANGE2D,lbound(speed,3)+1:ubound(speed,3))
+      = sqrt(frictionCoefficient(RANGE2D)/8) &
+      * speed(RANGE2D,lbound(speed,3)+1:ubound(speed,3))
 
     !> According to van Duren 2006, typical values for a high-velocity regime
     !> are z0=4.4 mm, shear velocity u* = 4E-2 m s-1 (we get roughness length from
@@ -1353,6 +1364,10 @@ module filtration_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if ((fieldCount == 0) .and. associated(abundance)) deallocate(abundance)
+
+    if (allocated(depthAtSoil)) deallocate(depthAtSoil)
+    if (allocated(hydraulicRadius)) deallocate(hydraulicRadius)
+    if (allocated(frictionCoefficient)) deallocate(frictionCoefficient)
 
     !! This component has no do loop over an internal timestep, it is advanced with the
     !! timestep written into its local clock from a parent component
