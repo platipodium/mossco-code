@@ -89,7 +89,7 @@ for ili=1:size(i_loc,1)
          end
          y = squeeze(sum(res.*dz,1)./dzt); %sum(res(:,ii)'*dz,1)
        else
-         y=res;
+         y = res;
        end %dim==3
      end %xdigit
      plot(time,y(ind),lins(ns,:),'Color' ,col,'LineWidth',linw(ns)); 

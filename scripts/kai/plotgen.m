@@ -5,7 +5,7 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; Is1D=1;
+show_data=1; Is1D=0; IsNOAH=1;
 datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
@@ -20,11 +20,16 @@ locs={'Helgoland';'Sylt';'T22';'Noordwijk-10';'Noordwijk-70';}; % 'T26';
 %[54.1,54.1];[55.0,8.4];[54.6,8.4];[54.0,8.7];[53.7,7.2];
 %[53.7,6.4];[54.2,7.5];[54.0,8.1];[55.0,8.0];[55.2,5.0];
 %[54.1,6.3];[55.0,6.3];[54.7,7.4];[54.7,6.9];
-
+if IsNOAH
+ loc =[[53.989,6.237];	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
+ locs={'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
+end
 % load and prepare data
 if show_data, read_stations_nc; end;
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
 %tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
+ncol = 3; nrow = 2; 	% number of columns in fig
+nrowm = 3; ncolm = 5;
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
@@ -38,17 +43,21 @@ ntags=length(tags);
  %% graph settings
   ncol = 3; nrow = 2; 	% number of columns in fig
 else
-  tags = {'_20';'_30';};%'_aspm';'_awater';'_adap';'';'_vphy';'_mortz';
+%  loc =[54.18,7.82];
+  tags = {'';};%'_aspm';'_awater';'_adap';'';'_vphy';'_mortz';
   ntags=length(tags);
-  spath= '/home/wirtz/sns';%  
+  spath= '/home/wirtz/';%sns  
 %  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 
-  setvar_sns  % defines variables to show - and where/how to do it %setvar  
-  ncol = 3; nrow = 2; 	% number of columns in fig
+  if IsNOAH
+    setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
+    nrowm = 1; ncolm = 1;
+  else
+    setvar_sns  % defines variables to show - and where/how to do it %setvar  
+  end
 end
 
-nrowm = 3; ncolm = 5;
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
@@ -82,10 +91,11 @@ for ns=1:ntags %% loop over scenarios/stations/layers
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
-% t0 = datenum('2003-02-01','yyyy-mm-dd')-1;
-% t1 = datenum('2009-11-31','yyyy-mm-dd')-1;
+ t0 = datenum('2013-07-02','yyyy-mm-dd')-1;
+% t1 = datenum('2014-09-20','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
+ toffm = min(find(time>= t0))-1;
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
  it=round(1+(0:9)*(length(time)-1)/9);% discrete index for plotting symbols
 

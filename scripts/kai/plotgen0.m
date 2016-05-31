@@ -5,25 +5,29 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; nice=0; Is1D=0; datf='~/data/DeutscheBucht/stations.nc';
+
 %% settings
 % locations; at least one site-name (locs) should be given 
-loc =[]; 
-%loc =[[54.18,7.82];[54.96,8.4];[54.1,6.3];[54.2,7.5];]; % 
-locs={'Tsns_13-03_0';}; % 'T1'; 
-
-tags={'';};%_new'_res';'_att';
+%loc =[]; 
+loc =[[54.18,7.82];[53.7,7.6];[54.45,7.42];]; % Helgoland Spiekeroog NOAH-E
+locs={'Helgoland';'Spiekeroog';'NOAH-E';}; %  
+%tags={'_00';'_22';}; 
+%tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
+tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
 ntags=length(tags);
-spath  ='/home/wirtz/sns/';%spath  ='/ocean-data/wirtz/';
-%spath  ='/media/archiv/'
-setvar_trans;  % defines variables to show - and where/how to do it %setvar  
+%spath  ='/home/wirtz';
+spath  ='/ocean-data/wirtz/';
+
+setvar_sns  % defines variables to show - and where/how to do it %setvar  
 %setvar_1D  % defines variables to show - and where/how to do it 
 %% graph settings
-ncol = 4; nrow = 3; 	% number of columns in fig
-%ncol = 1; nrow = 1; 	% number of columns in fig
+ncol = 2; nrow = 2; 	% number of columns in fig
+%ncol = 2; nrow = 2; 	% number of columns in fig
+nrowm = 2;
 dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
+dxpm = 0.83/( 4 +0.05); dypm= 0.83/(nrowm+0.05);
 compn ={'water';'soil'};
-fs = 16+nice*4; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
+fs = 14; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
 
 linw=[2 1*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
@@ -40,33 +44,27 @@ else
 end
 
 %% open all figures
-for np=1:nfig, figure(np); set(gcf,'Position',[0 0 1750-nice*400 850-nice*140],'Visible','off','Color','w'); end
+for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1440 750],'Visible','off'); end
 oldfig=-np;
 
-occ = zeros(nfig,ncol,nrow); 
-
-for ns=1:ntags  %% loop over scenarios/stations/layers
- % reset index for map time offset
- moffs=0; varshortm0='';
+for ns=1:ntags
+ %% loop over scenarios/stations/layers
+ occ = zeros(nfig,ncol,nrow); 
  %% read model output
  tag=cell2mat(tags(ns));
 
-% loop over transects (eg from 3D output)
-
 % ncfile = fullfile(spath,['hr' tag '/mossco_1d.nc']);
-%% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
- ncfile = fullfile(spath,['cut' locs{1} '.nc']);
+ ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
 % ncfile = fullfile(spath,['mossco_1d' tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
-% t0 = datenum('2003-07-24','yyyy-mm-dd')-1;
-% t1 = datenum('2003-07-25','yyyy-mm-dd')-1;
+ t0 = datenum('2004-02-01','yyyy-mm-dd')-1;
+ t1 = datenum('2006-02-01','yyyy-mm-dd')-1;
 
- time0=time;
  ind=find(time>= t0 & time<=t1);
  year=year(ind);time=time(ind); doy=doy(ind); years= unique(year);
- it=round(1+(0:9)*(length(time)-1)/9);% discrete index for plotting symbols
+ it=1:round(length(time)/10):length(time); % discrete index for plotting symbols
 
 %% loop over all variables to show
   for i=1:nvar
@@ -90,8 +88,8 @@ for ns=1:ntags  %% loop over scenarios/stations/layers
       end
     end
 %% plotting either over time (incl contour) or time sliced maps  
-    if (ptag(1)=='T')
-      plotgen_trans
+    if (ptag(1)=='M')
+      plotgen_maps
     else
       plotgen_body
     end
@@ -112,16 +110,18 @@ figdir = fullfile(spath,'plots');
 if ~exist(figdir),  mkdir(figdir); end;
 
 %% plot each figure as EPS & PNG
-for np=1:nfig
+for np=1:nfig+nfigm
   figure(np);  
-  set(gcf,'PaperPositionMode','auto', 'InvertHardCopy', 'off','Visible','off');
+  set(gcf,'PaperPositionMode','auto');
 %% add site name to each figure/page
-  li=ceil(np/nfig0);
-  if nice==0,
-     annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none','Interpreter','none');
-  end
+  if(np<=nfig)
+    li=floor(np/nfig0);
+    annotation('textbox',[0.45 0.95 0.2 0.045],'String',locs{li},'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none');
 %% create base file name
-  fnam0=sprintf('trans%s_%s%s_%d',locs{li},vt{np},cell2mat(tags(1)),np);%varshort0
+    fnam0=sprintf('%s_%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
+  else
+    fnam0=sprintf('map_%s_%d',vt{np-nfig},np);
+  end
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
 %  fprintf('save EPS in %s ...\n',fnam);
 %  print(gcf,'-depsc',fnam);

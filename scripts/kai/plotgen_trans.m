@@ -31,7 +31,7 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncol);
   iy = 1+floor((im-1)/ncol);
-  ti=((cell2mat(var{i}(6))-moff)*(nrow*ncol)+im)*3;     
+  ti=((cell2mat(var{i}(6))-moff)*(nrow*ncol)+im)*4;     
  end
  x0=0.06+(ix-1)*1.15*dxp; y0=0.1+(nrow-iy)*1.03*dyp;
  if ti<=length(ind)
