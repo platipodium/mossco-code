@@ -129,7 +129,7 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR) :: foreignGridFieldName, form
     type(ESMF_Time)            :: currTime, ncTime
     type(ESMF_TimeInterval)    :: climatologyTimeStep
-    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc
+    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc, int4
     type(ESMF_Clock)           :: clock
 
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
@@ -143,7 +143,7 @@ module netcdf_input_component
     integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid
     integer(ESMF_KIND_I4)      :: fieldRank, gridRank
     type(ESMF_Time)            :: refTime, climatologyTime
-    real(ESMF_KIND_R8)         :: seconds
+    real(ESMF_KIND_R8)         :: ticks
     type(ESMF_Field), allocatable :: fieldList(:)
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterExcludeList(:), filterIncludeList(:)
@@ -571,15 +571,32 @@ module netcdf_input_component
         refTime = currTime
       endif
 
-      if (trim(timeUnit) == 'seconds') then
-        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=rc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
-        write(message,'(A)')  trim(name)//' not implemented: unit for time is '//trim(timeUnit)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        seconds=0.0
-      endif
+      int4=0
+      ticks=0.0
+      select case (trim(timeUnit))
+      case ('year', 'years')
+        call ESMF_TimeIntervalGet(currTime-refTime, yy=int4, rc=rc)
+      case ('month', 'months')
+        call ESMF_TimeIntervalGet(currTime-refTime, mm=int4, rc=rc)
+      case ('day', 'days')
+        call ESMF_TimeIntervalGet(currTime-refTime, d=int4, rc=rc)
+      case ('hour', 'hours')
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+      case ('minute', 'minutes')
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+      case ('second', 'seconds')
+        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=ticks, rc=rc)
+      case default
+        write(message,'(A)')  trim(name)//' invalid or not implemented unit for time '//trim(timeUnit)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call MOSSCO_CompExit(gridComp)
+        rc=ESMF_RC_ARG_BAD
+        return
+      endselect
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (ticks == 0.0) ticks=dble(int4)
 
       call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
