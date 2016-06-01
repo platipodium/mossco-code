@@ -233,7 +233,7 @@ do k=1,_KNUM_
    !> set porosity, located at cell centers
    sed%porosity(:,:,k) = porosity_max * (1_rk - porosity_fac * sed%grid%zc(:,:,k))
 
-   ! todo: pom_flux_max units have to be unified - need to come in mg/m2/d and then scaled in
+   ! todo: pom_flux_max units have to be unified - need to come in mg m-2 d-1 and then scaled in
    ! transport routine with the molar mass
    sed%flux_cap(:,:,k) = pom_flux_max/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dz(:,:,k)
    if (k .gt. 2) then
@@ -325,7 +325,7 @@ if (from_surface_eff) then
 
   do k=1,_KNUM_
     !> @todo: pom_flux_max units have to be unified -
-    !!        need to come in mg/m2/d and then scaled in
+    !!        need to come in mg m-2 d-1 and then scaled in
     !!        transport routine with the molar mass
     sed%flux_cap(:,:,k) = sed%pom_flux_max/86400.0d0 * (1.0d0 - sed%porosity(:,:,k)) * sed%grid%dz(:,:,k)
     if (k .gt. 2) then
@@ -723,7 +723,7 @@ subroutine get_all_export_states(self)
    allocate(self%export_states(self%nvar+5))
    self%export_states(1)%standard_name='porosity'
    self%export_states(1)%data => self%porosity
-   self%export_states(1)%units ='m3/m3'
+   self%export_states(1)%units ='m3 m-3'
 
    self%export_states(2)%standard_name='layer_height'
    self%export_states(2)%data => self%grid%dz
@@ -739,7 +739,7 @@ subroutine get_all_export_states(self)
 
    self%export_states(5)%standard_name='photosynthetically_available_radiation'
    self%export_states(5)%data => self%par
-   self%export_states(5)%units ='W/m2'
+   self%export_states(5)%units ='W m-2'
 
    do fabm_id=1,self%nvar
        self%export_states(5+fabm_id) = self%get_export_state_by_id(fabm_id)
