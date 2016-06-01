@@ -662,9 +662,13 @@ module netcdf_input_component
         enddo
       endif
 
-      if (trim(itemName) == 'time') cycle
-      if (trim(itemName) == 'latitude') cycle
-      if (trim(itemName) == 'longitude') cycle
+      if (   trim(itemName) == 'time' .or. trim(itemName) == 'latitude' &
+        .or. trim(itemName) == 'lat' .or. trim(itemName) == 'longitude' &
+        .or. trim(itemName) == 'lon' ) then
+        write(message,'(A)')  trim(name)//' excluded item '//trim(itemName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        cycle
+      endif
 
       ! Look for an exclusion pattern on this field name
       if (allocated(filterExcludeList)) then
@@ -701,7 +705,7 @@ module netcdf_input_component
       endif
 
       if (nc%variables(i)%rank < 2) then
-        write(message,'(A)') trim(name)//' does not implemented reading of rank < 2 item'
+        write(message,'(A)') trim(name)//' does not implement reading of rank < 2 item'
         call MOSSCO_MessageAdd(message, ' '//trim(itemName)//'"')
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
