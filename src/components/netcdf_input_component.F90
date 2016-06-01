@@ -715,7 +715,7 @@ module netcdf_input_component
       call MOSSCO_MessageAdd(message, trim(itemName)//'"')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      write(message,'(A,I3,A,I1,A)') trim(name)//' id = ', &
+      write(message,'(A,I3,A,I1,A)') trim(name)//' nc.varid = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -892,23 +892,31 @@ module netcdf_input_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4)      :: localrc
+    character(len=ESMF_MAXSTR) :: name
 
     rc = ESMF_SUCCESS
 
     !> Here omes your restart code, which in the simplest case copies
     !> values from all fields in importState to those in exportState
 
-    call ESMF_StateReconcile(importState, rc=localrc)
+    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateReconcile(exportState, rc=localrc)
+    call ESMF_StateGet(importState, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(exportState, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
