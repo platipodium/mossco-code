@@ -257,7 +257,7 @@ module filtration_component
 
       if (allocated(diagNameList)) then
         write(message,'(A)') trim(name)//' found diagnostic:'
-        call MOSSCO_MessageAdd(message, filterSpeciesList, rc=localrc)
+        call MOSSCO_MessageAdd(message, diagNameList, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else ! provide default diagnostic names
         call MOSSCO_Reallocate(diagNameList, 6, keep=.false., rc=localrc)
@@ -687,8 +687,8 @@ module filtration_component
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: maximumFiltrationRate, fractionalLossRate
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: interfaceDepth, xVelocity, yVelocity
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)  :: concentration
-    real(ESMF_KIND_R8), allocatable, dimension(:)  :: depthAtSoil, frictionCoefficient
-    real(ESMF_KIND_R8), allocatable, dimension(:)  :: hydraulicRadius
+    real(ESMF_KIND_R8), allocatable, dimension(:,:):: depthAtSoil, frictionCoefficient
+    real(ESMF_KIND_R8), allocatable, dimension(:,:):: hydraulicRadius
 
     logical, allocatable, dimension(:,:,:)       :: mask
     type(ESMF_Field)        :: field
@@ -1004,7 +1004,7 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-      allocate(speed(RANGE3D), rc=localrc)
+      allocate(speed(RANGE3D), stat=localrc)
     endif
 
     !> Calculate the absolute velocity, i.e. speed (in m s-1)
@@ -1069,16 +1069,17 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-      allocate(ustar(RANGE3D), rc=localrc)
+      allocate(ustar(RANGE3D), stat=localrc)
     endif
 
     !> the friction stress $\tau$ is then  $\tau = c_w \cdot \rho \cdot v^2$,
     !> i.e. for typical velocities of .1 m s-1 it is 0.025 Pa
     !> The skin friction shear speed u* is then $u* = \sqrt(\tau/rho)$,
     !> and on the order of 0.005 m s-1
-    ustar(RANGE2D,lbound(speed,3)+1:ubound(speed,3)) &
-      = sqrt(frictionCoefficient(RANGE2D)/8) &
-      * speed(RANGE2D,lbound(speed,3)+1:ubound(speed,3))
+    do i = lbound(speed,3)+1, ubound(speed,3)
+      ustar(RANGE2D,i) = speed(RANGE2D,i) &
+        * sqrt(frictionCoefficient(RANGE2D)/8)
+    enddo
 
     !> According to van Duren 2006, typical values for a high-velocity regime
     !> are z0=4.4 mm, shear velocity u* = 4E-2 m s-1 (we get roughness length from
@@ -1119,8 +1120,17 @@ module filtration_component
       call ESMF_FieldGet(fieldList(1), farrayPtr=potentialClearanceRate, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeAdd(fieldList(1), 'units', 'mmol m-3 s-1', rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeAdd(fieldList(1), 'creator', trim(name), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     else
-      allocate(potentialClearanceRate(RANGE3D), rc=localrc)
+      allocate(potentialClearanceRate(RANGE3D), stat=localrc)
     endif
 
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
@@ -1133,7 +1143,7 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-      allocate(maximumFiltrationRate(RANGE3D), rc=localrc)
+      allocate(maximumFiltrationRate(RANGE3D), stat=localrc)
     endif
 
     call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
@@ -1146,7 +1156,7 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
-      allocate(fractionalLossRate(RANGE3D), rc=localrc)
+      allocate(fractionalLossRate(RANGE3D), stat=localrc)
     endif
 
     if (.not.allocated(filtrationRate)) allocate(filtrationRate(RANGE3D), stat=localrc)
