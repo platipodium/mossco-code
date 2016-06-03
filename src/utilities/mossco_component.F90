@@ -1242,6 +1242,7 @@ contains
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
        if (typekind==ESMF_TYPEKIND_Logical) then
+         call MOSSCO_MessageAdd(message,' (L)')
          allocate(logicalValueList(itemCount))
          call ESMF_AttributeGet(gridComp, name=attributeName, valueList=logicalValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1266,13 +1267,14 @@ contains
            rc=ESMF_SUCCESS
          endif
 
-         call MOSSCO_MessageAdd(message,' '//trim(characterValueList(1)))
+         call MOSSCO_MessageAdd(message,' "'//trim(characterValueList(1))//'"')
          do j=2, itemCount-1
-            call MOSSCO_MessageAdd(message,', '//trim(characterValueList(j)))
+            call MOSSCO_MessageAdd(message,', "'//trim(characterValueList(j))//'"')
          enddo
          if (allocated(characterValueList)) deallocate(characterValueList)
 
        elseif (typekind==ESMF_TYPEKIND_I4) then
+         call MOSSCO_MessageAdd(message,' (I4)')
          allocate(integer4ValueList(itemCount))
          call ESMF_AttributeGet(gridComp, name=attributeName, valueList=integer4ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1286,6 +1288,7 @@ contains
          enddo
          deallocate(integer4ValueList)
        elseif (typekind==ESMF_TYPEKIND_I8) then
+         call MOSSCO_MessageAdd(message,' (I8)')
          allocate(integer8ValueList(itemCount))
          call ESMF_AttributeGet(gridComp, name=attributeName, valueList=integer8ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1299,6 +1302,7 @@ contains
          enddo
          deallocate(integer8ValueList)
        elseif (typekind==ESMF_TYPEKIND_R4) then
+         call MOSSCO_MessageAdd(message,' (R4)')
          allocate(real4ValueList(itemCount))
          call ESMF_AttributeGet(gridComp, name=attributeName, valueList=real4ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1312,6 +1316,7 @@ contains
          enddo
          deallocate(real4ValueList)
        elseif (typekind==ESMF_TYPEKIND_R8) then
+         call MOSSCO_MessageAdd(message,' (R8)')
          allocate(real8ValueList(itemCount))
          call ESMF_AttributeGet(gridComp, name=attributeName, valueList=real8ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1339,7 +1344,7 @@ contains
   subroutine MOSSCO_CplCompLog(cplComp, kwe, log, rc)
 
     type(ESMF_CplComp)             :: cplComp
-    logical,intent(in ),optional    :: kwe !keyword-enforcer
+    type(ESMF_KeywordEnforcer), intent(in ), optional :: kwe
     type(ESMF_Log), optional        :: log
      integer(ESMF_KIND_I4), optional :: rc
 
@@ -1469,7 +1474,12 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message, '(A,I2,A)') trim(message), count, ' single attributes'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (present(log)) then
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+    else
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+    endif
 
     call ESMF_AttributeGet(cplComp, count=count, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1480,14 +1490,15 @@ contains
        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-       write(message,'(A)')  trim(name)//' attribute'
-       call MOSSCO_MessageAdd(message,' '//trim(attributeName)//'=')
+       write(message,'(A)')  trim(name)//':'
+       call MOSSCO_MessageAdd(message,trim(attributeName)//' =')
 
        call ESMF_AttributeGet(cplComp, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
        if (typekind==ESMF_TYPEKIND_Logical) then
+         call MOSSCO_MessageAdd(message,' (L)')
          allocate(logicalValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=logicalValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1512,13 +1523,14 @@ contains
            rc=ESMF_SUCCESS
          endif
 
-         call MOSSCO_MessageAdd(message, ' '//trim(characterValueList(1)))
+         call MOSSCO_MessageAdd(message, ' "'//trim(characterValueList(1))//'"')
          do j=2, itemCount-1
-           call MOSSCO_MessageAdd(message, ', '//trim(characterValueList(j)))
+           call MOSSCO_MessageAdd(message, ', "'//trim(characterValueList(j))//'"')
           enddo
          if (allocated(characterValueList)) deallocate(characterValueList)
 
        elseif (typekind==ESMF_TYPEKIND_I4) then
+         call MOSSCO_MessageAdd(message,' (I4)')
          allocate(integer4ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=integer4ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1533,6 +1545,7 @@ contains
          if (allocated(integer4ValueList)) deallocate(integer4ValueList)
 
        elseif (typekind==ESMF_TYPEKIND_I8) then
+         call MOSSCO_MessageAdd(message,' (I8)')
          allocate(integer8ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=integer8ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1547,6 +1560,7 @@ contains
          deallocate(integer8ValueList)
 
        elseif (typekind==ESMF_TYPEKIND_R4) then
+         call MOSSCO_MessageAdd(message,' R4)')
          allocate(real4ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=real4ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1561,6 +1575,7 @@ contains
          deallocate(real4ValueList)
 
        elseif (typekind==ESMF_TYPEKIND_R8) then
+         call MOSSCO_MessageAdd(message,' (R8)')
          allocate(real8ValueList(itemCount))
          call ESMF_AttributeGet(cplComp, name=attributeName, valueList=real8ValueList, rc=localrc)
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
