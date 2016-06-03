@@ -572,8 +572,8 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)')  trim(name)//' attribute'
-      call MOSSCO_MessageAdd(message,' '//trim(attributeName)//'=')
+      write(message,'(A)')  trim(name)//':'
+      call MOSSCO_MessageAdd(message,trim(attributeName)//' =')
 
       call ESMF_AttributeGet(state, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -586,7 +586,8 @@ contains
 
         write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+          write(string,'(A,L)') ', ',logicalValueList(j)
+          call MOSSCO_MessageAdd(message,', '//trim(string))
         enddo
         deallocate(logicalValueList)
       elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
@@ -603,7 +604,8 @@ contains
         if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
           write(message,'(A)') trim(message)//' "'//trim(characterValueList(1))//'"'
           do j=2, itemCount-1
-            write(message,'(A)') trim(message)//', "',trim(characterValueList(j))//'"'
+            write(string,'(A,A)') ', "',trim(characterValueList(j))//'"'
+            call MOSSCO_MessageAdd(message,', '//trim(string))
           enddo
         endif
         if (allocated(characterValueList)) deallocate(characterValueList)
@@ -615,7 +617,8 @@ contains
 
         write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+          write(string,'(A,I3.3)') ', ',integer4ValueList(j)
+          call MOSSCO_MessageAdd(message,', '//trim(string))
         enddo
         deallocate(integer4ValueList)
 
@@ -627,7 +630,8 @@ contains
 
         write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+          write(string,'(A,I3.3)') ', ',integer8ValueList(j)
+          call MOSSCO_MessageAdd(message,', '//trim(string))
         enddo
         deallocate(integer8ValueList)
 
@@ -639,7 +643,8 @@ contains
 
         write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+          write(string,'(A,ES9.2)') ', ',real4ValueList(j)
+          call MOSSCO_MessageAdd(message,', '//trim(string))
         enddo
         deallocate(real4ValueList)
 
@@ -651,7 +656,8 @@ contains
 
         write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+          write(string,'(A,ES9.2)') ', ',real8ValueList(j)
+          call MOSSCO_MessageAdd(message,', '//trim(string))
         enddo
         deallocate(real8ValueList)
 
