@@ -1302,22 +1302,22 @@ module netcdf_input_component
 
     call nc%close()
 
-    !! This component has no do loop over an internal timestep, it is advanced with the
-    !! timestep written into its local clock from a parent component
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
+    !! For this component, it does not make sense to advance its clock by a regular
+    !! timestep.  Thus, it is advanced to the next alarm time.
+
+    call MOSSCO_ClockGetTimeStepToNextAlarm(clock, timeStep, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_ClockGet(clock, currTime=currTime, stopTime=stopTime, rc=localrc)
+    call ESMF_ClockGet(clock, stopTime=stopTime, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    timeStep=stopTime-currTime
-    if (stopTime>currTime) then
+    !if (timeStep>0) then
       call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
+    !endif
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
