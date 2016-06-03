@@ -156,11 +156,13 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_ConfigGetString"
-  subroutine MOSSCO_ConfigGetString(config, label, value, rc)
+  subroutine MOSSCO_ConfigGetString(config, label, value, kwe, defaultValue, rc)
 
     type(ESMF_Config), intent(inout)             :: config
     character(len=*), intent(in)                 :: label
     character(len=*), intent(inout)              :: value
+    type(ESMF_KeywordEnforcer), optional         :: kwe
+    character(len=*), intent(in), optional       :: defaultValue
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_
@@ -168,15 +170,19 @@ contains
     character(len=ESMF_MAXSTR)           :: message
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     call ESMF_ConfigFindLabel(config, label=trim(label)//':', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.isPresent) then
-    !> @todo reconsider return value and add an optinoal isPresent argument to this
-    !> subroutine
-      if (present(rc)) rc = ESMF_SUCCESS
+      if (present(defaultValue)) then
+        value=trim(defaultValue)
+        if (present(rc)) rc = ESMF_SUCCESS
+      else
+        if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      endif
       return
     endif
 

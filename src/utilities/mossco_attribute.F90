@@ -561,16 +561,25 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateAttributeGetLogical"
-  subroutine MOSSCO_StateAttributeGetLogical(state, label, value, rc)
+  subroutine MOSSCO_StateAttributeGetLogical(state, label, value, kwe, defaultValue, rc)
 
     type(ESMF_State), intent(in)     :: state
     character(len=*), intent(in)     :: label
     logical, intent(inout)           :: value
+    type(ESMF_KeywordEnforcer), optional   :: kwe
+    logical, intent(in), optional    :: defaultValue
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc
 
-    call ESMF_AttributeGet(state, trim(label), value=value, rc=localrc)
+    if (present(kwe)) localrc = ESMF_SUCCESS
+
+    if (present(defaultValue)) then
+      call ESMF_AttributeGet(state, trim(label), value=value, &
+        defaultValue=defaultValue, rc=localrc)
+    else
+      call ESMF_AttributeGet(state, trim(label), value=value, rc=localrc)
+    endif
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_StateAttributeGetLogical
