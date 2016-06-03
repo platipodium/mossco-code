@@ -1288,7 +1288,10 @@ fid.write('''
     write(message,'(A)') trim(myName)//' '//trim(childName)//' alarms ring next at '//trim(timestring)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-#if ESMF_VERSION_MAJOR > 6
+    !> @todo te following code throws attribute warnings in ESMF7, this needs
+    !> to be investigated and is disabled for now.
+    
+#if ESMF_VERSION_MAJOR > 7
     !> Write Responsible party ISO 19115 attributes
     convention = 'ISO 19115'
     purpose    = 'RespParty'
