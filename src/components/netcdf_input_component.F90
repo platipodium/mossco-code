@@ -148,7 +148,7 @@ module netcdf_input_component
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterExcludeList(:), filterIncludeList(:)
     character(len=ESMF_MAXSTR), allocatable :: climatologyList(:)
-    logical                    :: isMatch
+    logical                    :: isMatch, checkFile
 
     rc = ESMF_SUCCESS
 
@@ -159,6 +159,15 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> Make a guess on whether to exit when the file to read is not present (checkFile=.true.)
+    !> This should be enabled for boundary forcing of any kind, but should be disabled for
+    !> restart files as restart is mostly enabled by default in many coupling constellations
+    if (name(1:7) == 'restart') then
+      checkFile = .false.
+    else
+      checkFile = .true.
+    endif
+
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -167,6 +176,10 @@ module netcdf_input_component
       rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Default filename to read (if not given in .cfg) is the same as the name of
+    !> the component
+    fileName=trim(name)//'.nc'
 
     configfilename=trim(name)//'.cfg'
     inquire(file=trim(configfilename), exist=fileIsPresent)
@@ -194,7 +207,12 @@ module netcdf_input_component
       i=len_trim(fileName)
       if (fileName(i-2:i) /= '.nc') fileName(i+1:i+4) = '.nc'
 
-      call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
+      call MOSSCO_ConfigGet(config, label='checkFile', value=checkFile, &
+        defaultValue=checkFile, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(importState, 'check_file', checkFile, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -371,21 +389,13 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
+    call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (.not.isPresent) then
-      write(message,'(A)') trim(name)//' received no filename to read from'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      rc = ESMF_RC_NOT_FOUND
-      call MOSSCO_CompExit(gridComp)
-      return
-    endif
-
-    call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
+    call ESMF_AttributeSet(importState, 'check_file', checkFile, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     ! For multiprocessor applications, try to read cpu-specific input first, default
     ! back to overall file
@@ -399,14 +409,19 @@ module netcdf_input_component
     inquire(file=trim(fileName), exist=isPresent)
 
     if (.not.isPresent) then
-      write(message,'(A)') trim(name)//' cannot read file '//trim(fileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      rc = ESMF_RC_NOT_FOUND
+      write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
+      if (checkFile) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc = ESMF_RC_NOT_FOUND
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        rc = ESMF_SUCCESS
+      endif
       call MOSSCO_CompExit(gridComp)
       return
     endif
 
-    write(message,'(A)')  trim(name)//' reading file '//trim(fileName)
+    write(message,'(A)')  trim(name)//' uses file '//trim(fileName)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     call ESMF_AttributeGet(gridComp, name='grid_file_name', &
@@ -868,19 +883,13 @@ module netcdf_input_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: name
-    type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc
 
-    rc = ESMF_SUCCESS
-
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp)
-    return
 
   end subroutine InitializeP2
 
@@ -947,7 +956,7 @@ module netcdf_input_component
 
     character(len=ESMF_MAXSTR) :: message, name, interpolationMethod
     integer(ESMF_KIND_I4)      :: localrc, itime, jtime
-    logical                    :: isPresent
+    logical                    :: isPresent, checkFile
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
     type(ESMF_TypeKind_Flag)   :: typeKind
     type(ESMF_Grid)            :: grid
@@ -967,22 +976,25 @@ module netcdf_input_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (.not.isPresent) then
-      call MOSSCO_CompExit(gridComp)
-      return
-    endif
-
+    !> We can safely assume that the filename is present
     call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     inquire(file=trim(fileName), exist=isPresent)
-
     if (.not.isPresent) then
+      call ESMF_AttributeGet(importState, 'check_file', value=checkFile, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
+      if (checkFile) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc = ESMF_RC_NOT_FOUND
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        rc = ESMF_SUCCESS
+      endif
       call MOSSCO_CompExit(gridComp)
       return
     endif
