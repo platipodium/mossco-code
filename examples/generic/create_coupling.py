@@ -1084,10 +1084,10 @@ fid.write('''
 # Go through all components and log their import and export states
 fid.write('''
     !> Go through all components and log their import and export states
-    call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO)
+    call ESMF_LogWrite('====== Status at end of child readrestarting ======', ESMF_LOGMSG_INFO, log=stateLog)
 
     !do i=1,numGridComp
-    !  call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO)
+    !  call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
     !  call MOSSCO_StateLog(gridImportStateList(i))
     !  call MOSSCO_StateLog(gridExportStateList(i))
     !enddo
