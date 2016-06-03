@@ -38,11 +38,13 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_ConfigGetLogical"
-  subroutine MOSSCO_ConfigGetLogical(config, label, value, rc)
+  subroutine MOSSCO_ConfigGetLogical(config, label, value, kwe, defaultValue, rc)
 
     type(ESMF_Config), intent(inout)       :: config
     character(len=*), intent(in)           :: label
     logical, intent(inout)                 :: value
+    type(ESMF_KeywordEnforcer), optional   :: kwe
+    logical, intent(in), optional          :: defaultValue
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                :: localrc, rc_
@@ -50,13 +52,19 @@ contains
     character(len=ESMF_MAXSTR)           :: message
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     call ESMF_ConfigFindLabel(config, label=trim(label)//':', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.isPresent) then
-      if (present(rc)) rc = ESMF_SUCCESS
+      if (present(defaultValue)) then
+        value=defaultValue
+        if (present(rc)) rc = ESMF_SUCCESS
+      else
+        if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      endif
       return
     endif
 
