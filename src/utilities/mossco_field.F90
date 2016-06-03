@@ -1494,6 +1494,7 @@ end subroutine MOSSCO_FieldCopy
           write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
         enddo
         deallocate(logicalValueList)
+        call MOSSCO_MessageAdd(message,' (L)')
       elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
         if (allocated(characterValueList)) deallocate(characterValueList)
         allocate(characterValueList(itemCount))
@@ -1512,6 +1513,7 @@ end subroutine MOSSCO_FieldCopy
           enddo
         endif
         if (allocated(characterValueList)) deallocate(characterValueList)
+        call MOSSCO_MessageAdd(message,' (C)')
       elseif (typekind==ESMF_TYPEKIND_I4) then
         allocate(integer4ValueList(itemCount))
         call ESMF_AttributeGet(field, name=attributeName, valueList=integer4ValueList, rc=localrc)
@@ -1523,6 +1525,7 @@ end subroutine MOSSCO_FieldCopy
           write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
         enddo
         deallocate(integer4ValueList)
+        call MOSSCO_MessageAdd(message,' (I4)')
       elseif (typekind==ESMF_TYPEKIND_I8) then
         allocate(integer8ValueList(itemCount))
         call ESMF_AttributeGet(field, name=attributeName, valueList=integer8ValueList, rc=localrc)
@@ -1534,6 +1537,7 @@ end subroutine MOSSCO_FieldCopy
           write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
         enddo
         deallocate(integer8ValueList)
+        call MOSSCO_MessageAdd(message,' (I8)')
       elseif (typekind==ESMF_TYPEKIND_R4) then
         allocate(real4ValueList(itemCount))
         call ESMF_AttributeGet(field, name=attributeName, valueList=real4ValueList, rc=localrc)
@@ -1545,6 +1549,7 @@ end subroutine MOSSCO_FieldCopy
           write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
         enddo
         deallocate(real4ValueList)
+        call MOSSCO_MessageAdd(message,' (R4)')
       elseif (typekind==ESMF_TYPEKIND_R8) then
         allocate(real8ValueList(itemCount))
         call ESMF_AttributeGet(field, name=attributeName, valueList=real8ValueList, rc=localrc)
@@ -1556,6 +1561,7 @@ end subroutine MOSSCO_FieldCopy
           write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
         enddo
         deallocate(real8ValueList)
+        call MOSSCO_MessageAdd(message,' (R8)')
       endif
       if (present(log)) then
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
