@@ -49,6 +49,8 @@ module fabm_sediment_component
   integer   :: ode_method=_ADAPTIVE_EULER_
   integer   :: presimulation_years=-1
   integer   :: bcup_dissolved_variables=2
+  real(rk)  :: pel_NO3=5.0_rk, pel_NH4=5.0_rk, pel_PO4=0.5_rk, pel_O2=250_rk
+  real(rk)  :: pflux_fDet=10.0_rk, pflux_sDet=10.0_rk, pflux_DetP=0.2_rk, pel_Temp=5.0_rk
   real(rk),dimension(:,:,:,:),allocatable,target :: conc
   real(rk),dimension(:,:,:),pointer              :: diag
   real(rk),dimension(:,:,:),allocatable,target   :: bdys,fluxes
@@ -62,8 +64,8 @@ module fabm_sediment_component
   type(type_sed),save :: sed1d
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
-                     dt_min,relative_change_min,ugrid_name, output, &
-                     bcup_dissolved_variables
+                     dt_min,relative_change_min,ugrid_name, bcup_dissolved_variables, &
+                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_fDet, pflux_sDet ,pflux_DetP 
 
   public SetServices
 
@@ -391,17 +393,17 @@ module fabm_sediment_component
     sed1d%fluxes => fluxes(1:1,1:1,:)
 
     ! set boundary conditions for pre-simulation
-    bdys(:,:,1) = 5.0 !degC
+    bdys(:,:,1) = pel_Temp !degC
     do i=1,size(sed%model%state_variables)
       varname = trim(only_var_name(sed%model%state_variables(i)%long_name))
-      if (trim(varname) == 'dissolved_nitrate') bdys(:,:,i+1)=5.
-      if (trim(varname) == 'dissolved_ammonium') bdys(:,:,i+1)=5.
-      if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=0.5
-      if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=250.
-      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0
-      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=10.0_rk/86400.0_rk
-      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=10.0_rk/86400.0_rk
-      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=0.2_rk/86400.0_rk
+      if (trim(varname) == 'dissolved_nitrate') bdys(:,:,i+1)=pel_NO3
+      if (trim(varname) == 'dissolved_ammonium') bdys(:,:,i+1)=pel_NH4
+      if (trim(varname) == 'dissolved_phosphate') bdys(:,:,i+1)=pel_PO4
+      if (trim(varname) == 'dissolved_oxygen') bdys(:,:,i+1)=pel_O2
+      if (trim(varname) == 'dissolved_reduced_substances') bdys(:,:,i+1)=0.0_rk
+      if (trim(varname) == 'fast_detritus_C') fluxes(:,:,i)=pflux_fDet/86400.0_rk
+      if (trim(varname) == 'slow_detritus_C') fluxes(:,:,i)=pflux_sDet/86400.0_rk
+      if (trim(varname) == 'detritus-P') fluxes(:,:,i)=pflux_DetP/86400.0_rk
       !write(0,*) i,trim(only_var_name(sed%model%state_variables(i)%long_name)),bdys(:,:,i+1),fluxes(:,:,i)
     end do
 
