@@ -50,10 +50,9 @@ contains
   subroutine MOSSCO_StateGetF1(state, fieldNameList, farrayPtr, kwe, lbnd, ubnd, verbose, rc)
 
     type(ESMF_State), intent(in)                 :: state
-    character(len=*), dimension(:), intent(in)    :: fieldNameList
+    character(len=*), dimension(:), intent(in)   :: fieldNameList
     real(ESMF_KIND_R8), pointer,dimension(:), intent(inout) :: farrayPtr
-
-    logical, intent(in ), optional               :: kwe !keyword-enforcer
+    type(ESMF_KeywordEnforcer), optional         :: kwe !keyword-enforcerga
     integer(ESMF_KIND_I4), intent(out),optional  :: ubnd(1),lbnd(1)
     logical, intent(in), optional                :: verbose
     integer, intent(out), optional               :: rc
@@ -409,18 +408,21 @@ contains
   integer                           :: localrc
 
   !> get Attribute list
-  call ESMF_AttributeGet(state,attCount,rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  call ESMF_AttributeGet(state, attCount, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   do n=1,attCount
     call ESMF_AttributeGet(state,attributeIndex=n,name=attName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> check for ":required"
     idx = index(attName,':required ')
     if (idx>0) then
       call ESMF_AttributeGet(state,name=attName,value=required,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (required) then
         fieldName=attName(1:idx-1)
@@ -434,16 +436,19 @@ contains
     end if
     !> check for fieldName in state
     call ESMF_StateGet(state,fieldName,itemFlag,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemFlag == ESMF_STATEITEM_NOTFOUND) then
       !> create field
       field = ESMF_FieldCreate(grid,typekind=typeKind,name=fieldName,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> append field to state
       call ESMF_StateAdd(state,(/ field /),rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
       !write(0,*) 'item ',trim(fieldName),' already present',itemFlag
     end if
@@ -467,16 +472,19 @@ contains
 
   !> get Attribute list
   call ESMF_AttributeGet(state,attCount,rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   do n=1,attCount
     call ESMF_AttributeGet(state,attributeIndex=n,name=attName, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     !> check for ":optional"
     idx = index(attName,':optional ')
     if (idx>0) then
       call ESMF_AttributeGet(state,name=attName,value=optional,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (optional) then
         potentialFieldName=attName(1:idx-1)
@@ -494,12 +502,14 @@ contains
       if (trim(names(idx))==trim(potentialFieldName)) then
         !> check for fieldName in state
         call ESMF_StateGet(state,potentialFieldName,itemFlag,rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (itemFlag == ESMF_STATEITEM_NOTFOUND) then
           !> create field
           field = ESMF_FieldCreate(grid,typekind=typeKind,name=potentialFieldName,rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           !> append field to state
          call ESMF_StateAdd(state,(/ field /),rc=rc)
         else
@@ -550,14 +560,17 @@ contains
     if (present(deep)) deep_ = deep
 
     call ESMF_StateGet(state, name=name, rc=localRc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(state, count=attributeCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, attributeCount
       call ESMF_AttributeGet(state, attributeIndex=i , name=attributeName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)')  trim(name)//' attribute'
       call MOSSCO_MessageAdd(message,' '//trim(attributeName)//'=')
@@ -566,6 +579,7 @@ contains
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (typekind==ESMF_TYPEKIND_Logical) then
+        call MOSSCO_MessageAdd(message, '(L)')
         allocate(logicalValueList(itemCount))
         call ESMF_AttributeGet(state, name=attributeName, valueList=logicalValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -575,7 +589,6 @@ contains
           write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
         enddo
         deallocate(logicalValueList)
-        call MOSSCO_MessageAdd(message, ' (L)')
       elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
         if (allocated(characterValueList)) deallocate(characterValueList)
         allocate(characterValueList(itemCount))
@@ -588,14 +601,14 @@ contains
         endif
 
         if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
-          write(message,'(A,A)') trim(message)//' ',trim(characterValueList(1))
+          write(message,'(A)') trim(message)//' "'//trim(characterValueList(1))//'"'
           do j=2, itemCount-1
-            write(message,'(A,A)') trim(message)//', ',trim(characterValueList(j))
+            write(message,'(A)') trim(message)//', "',trim(characterValueList(j))//'"'
           enddo
         endif
         if (allocated(characterValueList)) deallocate(characterValueList)
-        call MOSSCO_MessageAdd(message, ' (C)')
       elseif (typekind==ESMF_TYPEKIND_I4) then
+        call MOSSCO_MessageAdd(message, '(I4)')
         allocate(integer4ValueList(itemCount))
         call ESMF_AttributeGet(state, name=attributeName, valueList=integer4ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -605,9 +618,9 @@ contains
           write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
         enddo
         deallocate(integer4ValueList)
-        call MOSSCO_MessageAdd(message, ' (I4)')
 
       elseif (typekind==ESMF_TYPEKIND_I8) then
+        call MOSSCO_MessageAdd(message, ' (I8)')
         allocate(integer8ValueList(itemCount))
         call ESMF_AttributeGet(state, name=attributeName, valueList=integer8ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -617,9 +630,9 @@ contains
           write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
         enddo
         deallocate(integer8ValueList)
-        call MOSSCO_MessageAdd(message, ' (I8)')
 
       elseif (typekind==ESMF_TYPEKIND_R4) then
+        call MOSSCO_MessageAdd(message, '(R4)')
         allocate(real4ValueList(itemCount))
         call ESMF_AttributeGet(state, name=attributeName, valueList=real4ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -629,9 +642,9 @@ contains
           write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
         enddo
         deallocate(real4ValueList)
-        call MOSSCO_MessageAdd(message, ' (R4)')
 
       elseif (typekind==ESMF_TYPEKIND_R8) then
+        call MOSSCO_MessageAdd(message, '(R8)')
         allocate(real8ValueList(itemCount))
         call ESMF_AttributeGet(state, name=attributeName, valueList=real8ValueList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -641,7 +654,6 @@ contains
           write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
         enddo
         deallocate(real8ValueList)
-        call MOSSCO_MessageAdd(message, ' (R8)')
 
       endif
       if (present(log)) then
@@ -655,7 +667,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount==0 .and. attributeCount ==0) then
-      write(message,'(A)')  trim(name)//' contains no attributes or items'
+      write(message,'(A)')  trim(name)//' contains neither attributes nor items'
       if (present(log)) then
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
       else
@@ -682,9 +694,9 @@ contains
 
         if (deep) then
           if (present(log)) then
-            call MOSSCO_FieldLog(field, log=log, rc=localrc)
+            call MOSSCO_FieldLog(field, log=log, prefix=trim(name)//':', rc=localrc)
           else
-            call MOSSCO_FieldLog(field, rc=localrc)
+            call MOSSCO_FieldLog(field, prefix=trim(name)//':', rc=localrc)
           endif
         else
           write(message,'(A)')  trim(name)//' field'
@@ -701,31 +713,51 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldCount, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        allocate(fieldList(fieldCount),fieldNameList(fieldCount))
-        call ESMF_FieldBundleGet(fieldBundle, fieldNameList=fieldNameList, fieldList=fieldList, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        do j=1, fieldCount
-          write(message,'(A)')  trim(name)//' field '//trim(itemNameList(i))//'/'
-          call MOSSCO_FieldString(fieldList(j), message)
-          !!> @todo write out attributes of field
-          if (present(log)) then
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
-          else
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-          endif
-        enddo
-        deallocate(fieldList,fieldNameList)
+        call ESMF_FieldBundleGet(fieldBundle, fieldNameList=fieldNameList, &
+          fieldList=fieldList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (deep_) then
+          do j=1, fieldCount
+            call MOSSCO_FieldLog(fieldList(j), prefix=trim(name)//':'//trim(itemNameList(i))//':', rc=localrc)
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            if (present(log)) then
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+            else
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            endif
+          enddo
+        else
+          do j=1, fieldCount
+            write(message,'(A)')  trim(name)//' field '//trim(itemNameList(i))//':'
+            call MOSSCO_FieldString(fieldList(j), message)
+            if (present(log)) then
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+            else
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+            endif
+          enddo
+          deallocate(fieldList,fieldNameList)
+        endif
+        call MOSSCO_Reallocate(fieldList, 0, keep=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
-        write(message,'(A)')  trim(name)//' non-field item '//trim(itemNameList(i))//' skipped'
+        write(message,'(A)')  trim(name)//' non-field item '//trim(itemNameList(i))
         if (present(log)) then
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
         else
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
-        cycle
       endif
 
       !call ESMF_LocStreamGet(locStream, name=gridName, rc=localRc)
