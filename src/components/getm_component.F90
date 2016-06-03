@@ -27,8 +27,6 @@ module getm_component
   use esmf
   use getm_driver
   use mossco_component
-  use mossco_state
-  use mossco_field
 
   implicit none
   private
