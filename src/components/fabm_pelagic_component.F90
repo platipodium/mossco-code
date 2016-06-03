@@ -685,19 +685,49 @@ module fabm_pelagic_component
       end if
 
       if (trim(varname)=='Detritus_Nitrogen_detN_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 1.0d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.0d0)
+        call ESMF_AttributeSet(concfield,'hackmax', 1.2d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.2d0)
+        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      if (trim(varname)=='Phytplankton_Nitrogen_phyN_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 1.2d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.2d0)
         call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
       end if
       if (trim(varname)=='Detritus_Phosphorus_detP_in_water') then
         call ESMF_AttributeSet(concfield,'hackmax', 0.2d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.04d0)
+        call ESMF_LogWrite('  use maximum boundary value of 0.3 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      if (trim(varname)=='Phytplankton_Phosphorus_phyP_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 0.2d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.04d0)
         call ESMF_LogWrite('  use maximum boundary value of 0.3 for '//trim(varname),ESMF_LOGMSG_WARNING)
       end if
       if (trim(varname)=='Detritus_Carbon_detC_in_water') then
-        call ESMF_AttributeSet(concfield,'hackmax', 10.d0)
-        call ESMF_AttributeSet(concfield,'hackmaxmin', 1.d0)
+        call ESMF_AttributeSet(concfield,'hackmax', 14.d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 2.d0)
         call ESMF_LogWrite('  use maximum boundary value of 10. for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      if (trim(varname)=='Phytplankton_Carbon_phyC_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 18.d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 2.d0)
+        call ESMF_LogWrite('  use maximum boundary value of 10. for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      if (trim(varname)=='Chl_chl_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 7.6d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.4d0)
+        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      if (trim(varname)=='fraction_of_Rubisco_Rub_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 7.6d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.4d0)
+        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
+      end if
+      if (trim(varname)=='Zooplankton_Carbon_zooC_in_water') then
+        call ESMF_AttributeSet(concfield,'hackmax', 1.4d0)
+        call ESMF_AttributeSet(concfield,'hackmaxmin', 0.4d0)
+        call ESMF_LogWrite('  use maximum boundary value of 1.0 for '//trim(varname),ESMF_LOGMSG_WARNING)
       end if
 
       !> add fabm index in concentration array as "external_index" to be used by other components
