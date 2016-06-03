@@ -185,33 +185,18 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigFindLabel(config, label='filename:', isPresent=labelIsPresent, rc = localrc)
+      call MOSSCO_ConfigGet(config, label='filename', value=fileName, &
+        defaultValue=trim(name), rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, fileName, rc=localrc, default=trim(name))
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !> Append .nc extension to fileName if not present
+      i=len_trim(fileName)
+      if (fileName(i-2:i) /= '.nc') fileName(i+1:i+4) = '.nc'
 
-        write(message,'(A)')  trim(name)//' found in file'
-        call MOSSCO_MessageAdd(message,' '//trim(configFileName)//' filename: '//trim(fileName))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
-
-      call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (isPresent) then
-        call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      elseif (labelIsPresent) then
-        call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
 
       call ESMF_ConfigFindLabel(config, label='interpolation:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
