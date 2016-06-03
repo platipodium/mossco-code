@@ -564,9 +564,36 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    if (present(log)) then
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+    else
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call ESMF_StateGet(state, itemCount=itemCount, rc=localRc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeGet(state, count=attributeCount, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount == 0 .and. attributeCount == 0) then
+      write(message,'(A)')  'state '//trim(name)//' contains neither attributes nor items'
+      if (present(log)) then
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+      else
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
+    write(message, '(A)') 'state '//trim(name)
+    if (present(log)) then
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+    else
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
 
     do i=1, attributeCount
       call ESMF_AttributeGet(state, attributeIndex=i , name=attributeName, rc=localrc)
@@ -674,22 +701,25 @@ contains
       endif
     enddo
 
+    !> @todo remove return statement here
+    return
+
+    call ESMF_StateReconcile(state, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_StateGet(state, itemCount=itemCount, rc=localRc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (itemCount==0 .and. attributeCount ==0) then
-      write(message,'(A)')  trim(name)//' contains neither attributes nor items'
-      if (present(log)) then
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
-      else
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
-    endif
-
     if (itemCount > 0) then
-      allocate(itemTypeList(itemCount))
-      allocate(itemNameList(itemCount))
+      call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, &
         rc=localRc)
@@ -820,8 +850,13 @@ contains
       !write(message,string)  trim(name)//' field '//trim(fieldName)//' [',totalUWidth
     enddo
 
-    if (allocated(itemTypeList)) deallocate(itemTypeList)
-    if (allocated(itemNameList)) deallocate(itemNameList)
+    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemTypeList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine MOSSCO_StateLog
 
