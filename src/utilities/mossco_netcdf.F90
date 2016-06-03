@@ -91,19 +91,21 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "mossco_netcdf_variable_put"
-  subroutine mossco_netcdf_variable_put(self, field, seconds, name, precision)
+  subroutine mossco_netcdf_variable_put(self, field, kwe, seconds, name, &
+    checkNaN, checkInf, precision, rc)
 
     implicit none
     class(type_mossco_netcdf)                    :: self
     type(ESMF_Field), intent(inout)              :: field
+    logical, intent(in), optional                :: kwe
     real(ESMF_KIND_R8), intent(in),optional      :: seconds
     character(len=*),optional                    :: name
-    character(len=*),optional                    :: precision
+    logical, intent(in), optional                :: checkNaN
+    logical, intent(in), optional                :: checkInf
+    character(len=*),intent(in), optional        :: precision
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
 
-    !>@todo make this an optional output var
-    !integer(ESMF_KIND_I4),intent(out),optional  :: rc
-
-    integer                     :: ncStatus, varid, rc_, rank=0, localrc, rc
+    integer                     :: ncStatus, varid, rc_, rank=0, localrc
     integer                     :: nDims=0, nAtts, udimid, dimlen
     character(len=ESMF_MAXSTR)  :: varname, message
     type(type_mossco_netcdf_variable),pointer :: var=> null()
@@ -111,6 +113,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), dimension(:), allocatable :: lbnd, ubnd, exclusiveCount
     integer(ESMF_KIND_I4)       :: grid2Lbnd(2), grid2Ubnd(2), grid3Lbnd(3), grid3Ubnd(3)
     integer(ESMF_KIND_I4)       :: localDeCount, i, j, k
+    logical                     :: checkNaN_=.true., checkInf_=.true.
 
     real(ESMF_KIND_R8), pointer, dimension(:,:,:,:)  :: farrayPtr4=>null()
     real(ESMF_KIND_R8), pointer, dimension(:,:,:)    :: farrayPtr3=>null()
@@ -135,6 +138,9 @@ module mossco_netcdf
     logical                           :: isPresent, gridIsPresent
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = rc_
+    if (present(checkNaN)) checkNaN_ = checkNaN
+    if (present(checkInf)) checkInf_ = checkInf
 
     call ESMF_FieldGet(field, name=varname, rank=rank, &
       localDeCount=localDeCount, typeKind=typeKind, rc=localrc)
@@ -157,9 +163,11 @@ module mossco_netcdf
     if (present(name)) varname=trim(name)
 
     if (rank>4 .or. rank<1) then
-       write(message,'(A)')  'Writing of fields with rank<1 or rank>4 not supported.'
-       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-       return
+      !> @todo reconsider the return value here
+      write(message,'(A)')  'Writing of fields with rank<1 or rank>4 not supported.'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
     endif
 
     !> If the variable does not exist, create it
@@ -186,13 +194,15 @@ module mossco_netcdf
 
     if (.not.associated(var)) then
       call ESMF_LogWrite('  could not find variable '//trim(varname), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
     endif
 
     ncStatus=nf90_inq_varid(self%ncid, var%name, varid)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  could not find variable '//trim(varname), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
     endif
 
     if (any(var%dimids==self%timeDimId)) ndims=size(var%dimids)-1
@@ -200,6 +210,7 @@ module mossco_netcdf
     if (rank /= nDims) then
        write(message,'(A)')  'Field rank and netcdf dimension count do not match'
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+       if (present(rc)) rc=ESMF_RC_NOT_FOUND
        return
     endif
 
@@ -309,7 +320,8 @@ module mossco_netcdf
         write(message,'(A)')  '  missing value non-implemented type '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (present(rc)) rc=ESMF_RC_NOT_FOUND
+        return
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -346,21 +358,25 @@ module mossco_netcdf
 
       ! it is recommended to check of nans with x /= x, as this is true for NaN
       ! it is recommended to check for inf with abs(x) > huge(x)
-      if (any(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= &
+      if (checkNaN_) then
+        if (any(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) /= &
               ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))) then
-        call self%close()
-        write(message,'(A)')  '  NaN detected in field '
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          call self%close()
+          write(message,'(A)')  '  NaN detected in field '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
       endif
 
-      if (any(abs(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > huge(missingValue))) then
-        call self%close()
-        write(message,'(A)')  '  Inf detected in field '
-        call MOSSCO_FieldString(field, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (checkInf_) then
+        if (any(abs(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > huge(missingValue))) then
+          call self%close()
+          write(message,'(A)')  '  Inf detected in field '
+          call MOSSCO_FieldString(field, message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
       endif
 
       where (ncarray4 > RepresentableValue) ncarray4=missingValue
@@ -409,6 +425,7 @@ module mossco_netcdf
         enddo
       end if
 
+      if (checkNaN_) then
       if (any(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) /= &
               ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))) then
         call self%close()
@@ -417,13 +434,16 @@ module mossco_netcdf
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+      endif
 
+      if (checkInf_) then
       if (any(abs(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))) > huge(missingValue))) then
         call self%close()
         write(message,'(A)')  '  Inf detected in field '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
       endif
 
       if (any(var%dimids==self%timeDimId)) then
@@ -460,6 +480,7 @@ module mossco_netcdf
         enddo
       end if
 
+      if (checkNaN_) then
       if (any(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) /= &
               ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))) then
         call self%close()
@@ -468,13 +489,16 @@ module mossco_netcdf
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
+      endif
 
+      if (checkInf_) then
       if (any(abs(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))) > huge(missingValue))) then
         call self%close()
         write(message,'(A)')  '  Inf detected in field '
         call MOSSCO_FieldString(field, message)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
       endif
 
       if (any(var%dimids==self%timeDimId)) then
@@ -1001,7 +1025,9 @@ module mossco_netcdf
 
     integer                       :: localrc, rc_, varid
     character(len=1)              :: mode_
-    character(len=255)            :: timeUnit_
+    character(len=255)            :: timeUnit_, string, message
+    logical                       :: fileIsPresent
+    integer                       :: fileUnit=1555
 
     rc_ = ESMF_SUCCESS
 
@@ -1031,6 +1057,28 @@ module mossco_netcdf
         nc%timeDimID=-1
       endif
     else
+      inquire(file=trim(fileName), exist=fileIsPresent)
+      if (.not.fileIsPresent) then
+        call ESMF_LogWrite('  file '//trim(filename)//' does not exist', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      !> read the first 4 bytes of the file
+      fileUnit=MOSSCO_GetFreeLun(start=fileUnit)
+      open(file=trim(fileName), unit=fileUnit, form='formatted', recl=4)
+      read(fileUnit, '(A)') string
+      close(fileUnit)
+      if (string(1:3) == 'CDF') then
+        write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF3 format'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      elseif (string(2:4) == 'HDF') then
+        write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF4 format'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      else
+        write(message,'(A)')  '  file '//trim(fileName)//' has unknown format'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
+
       localrc = nf90_open(trim(filename), mode=NF90_NOWRITE, ncid=nc%ncid)
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot open '//trim(filename), ESMF_LOGMSG_ERROR)
@@ -1090,7 +1138,7 @@ module mossco_netcdf
       if (ispresent) then
         call ESMF_LogWrite('  overwriting file '//trim(filename), ESMF_LOGMSG_WARNING)
       else
-        call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_INFO)
       endif
     endif
 

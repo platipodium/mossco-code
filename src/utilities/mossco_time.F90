@@ -179,6 +179,7 @@ subroutine MOSSCO_TimeIntervalSet(timeInterval, timeString, kwe, rc)
   character(len=ESMF_MAXSTR)   :: unit, message, string
 
   rc_=ESMF_SUCCESS
+  if (present(kwe)) rc=rc
 
   string = adjustl(timeString)
   n = len_trim(string)
@@ -198,22 +199,23 @@ subroutine MOSSCO_TimeIntervalSet(timeInterval, timeString, kwe, rc)
   else
 
     select case(trim(unit))
-    case ('yy')
+    case ('yy', 'year', 'years')
       read(string(1:i-1),*) yy
-    case ('mm')
+    case ('mm', 'month', 'months')
       read(string(1:i-1),*) mm
-    case ('d')
+    case ('d', 'day', 'days')
       read(string(1:i-1),*) d
-    case ('h')
+    case ('h', 'hour', 'hours')
       read(string(1:i-1),*) h
-    case ('m')
+    case ('m', 'minute', 'minutes')
       read(string(1:i-1),*) m
-    case ('s')
+    case ('s', 'second', 'seconds')
       read(string(1:i-1),*) s
     case default
       write(message,'(A)') '  obtained unknown unit '//trim(unit)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (present(rc)) rc=ESMF_RC_ARG_BAD
+      return
     endselect
   endif
 

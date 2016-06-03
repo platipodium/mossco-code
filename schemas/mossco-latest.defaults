@@ -20,6 +20,9 @@
 			<logflush>
 				True
 			</logflush>
+			<loglevelzero>
+				all
+			</loglevelzero>
 		</mossco_run>
 	</mossco_run>
 </scenario>

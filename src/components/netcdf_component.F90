@@ -131,11 +131,14 @@ module netcdf_component
     character(len=4096)        :: message
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: localrc
-    logical                    :: fileIsPresent, labelIsPresent, configIsPresent
+    logical                    :: fileIsPresent, configIsPresent
     type(ESMF_Config)          :: config
     character(len=ESMF_MAXSTR), allocatable :: filterExcludeList(:), filterIncludeList(:)
+    logical                    :: checkNaN, checkInf
 
     rc  = ESMF_SUCCESS
+    checkNaN = .true.
+    checkInf = .true.
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -171,33 +174,45 @@ module netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigFindLabel(config, label='filename:', isPresent=labelIsPresent, rc = localrc)
+      !> Value of fileName defaults to name of component
+      write(fileName,'(A)') trim(name)
+      call MOSSCO_ConfigGet(config, label='filename', value=fileName, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      write(fileName,'(A)') trim(name)
-      if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, fileName, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        write(message,'(A)') trim(name)
-        call MOSSCO_MessageAdd(message,' found in file')
-        call MOSSCO_MessageAdd(message,trim(configFileName))
-        call MOSSCO_MessageAdd(message,' filename: '//trim(fileName))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
 
       call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, localrc)
+      call MOSSCO_ConfigGet(config, label='exclude', value=filterExcludeList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> Value of checkNaN defaults to .true.
+      call MOSSCO_ConfigGet(config, label='checkNaN', value=checkNaN, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_AttributeSet(importState, 'check_nan', checkNaN, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> Value of checkInf defaults to .true.
+      call MOSSCO_ConfigGet(config, label='checkInf', value=checkNaN, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_AttributeSet(importState, 'check_inf', checkInf, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> Default value for filter ExcludeList is a non-associated pointer
+      call MOSSCO_ConfigGet(config, label='exclude', value=filterExcludeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(filterExcludeList)) then
-        call MOSSCO_AttributeSetList(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -209,12 +224,13 @@ module netcdf_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, localrc)
+      !> Default value for filterIncludeList is a non-associated pointer
+      call MOSSCO_ConfigGet(config, 'include', value=filterIncludeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(filterIncludeList)) then
-        call MOSSCO_AttributeSetList(importState, 'filter_pattern_include', filterIncludeList, localrc)
+        call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -248,18 +264,27 @@ module netcdf_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4)      :: localrc
+    character(len=ESMF_MAXSTR) :: name
 
     rc = ESMF_SUCCESS
 
     !> Here omes your restart code, which in the simplest case copies
     !> values from all fields in importState to those in exportState
 
-    call ESMF_StateReconcile(importState, rc=localrc)
+    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateReconcile(exportState, rc=localrc)
+    call ESMF_StateGet(importState, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(exportState, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -291,6 +316,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     character(len=ESMF_MAXSTR) :: message, fileName, name, timeUnit
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
+    logical                    :: checkNaN=.true., checkInf=.true.
 
     rc = ESMF_SUCCESS
 
@@ -324,11 +350,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
       write(fileName,form) filename(1:index(filename,'.nc')-1)//'.',localPet,'.nc'
     endif
 
-    call MOSSCO_AttributeGetList(importState, 'filter_pattern_include', filterIncludeList, rc=localrc)
+    call MOSSCO_AttributeGet(importState, 'filter_pattern_include', filterIncludeList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_AttributeGetList(importState, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
+    call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_AttributeGet(importState, 'check_nan', checkNaN, defaultValue=.true., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_AttributeGet(importState, 'check_inf', checkInf, defaultValue=.true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -449,12 +483,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         endif
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-          call nc_state_field_write(importState, trim(itemNameList(i)), rc=localrc)
+          call nc_state_field_write(importState, trim(itemNameList(i)), &
+            checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-          call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), rc=localrc)
+          call nc_state_fieldbundle_write(importState, trim(itemNameList(i)), &
+            checkNaN=checkNaN, checkInf=checkInf, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -586,11 +622,12 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_fieldbundle_write"
-  subroutine nc_state_fieldbundle_write(state, bundleName, kwe, rc)
+  subroutine nc_state_fieldbundle_write(state, bundleName, kwe, checkNaN, checkInf, rc)
 
     type(ESMF_State), intent(in)           :: state
     character(len=*), intent(in)           :: bundleName
     type(ESMF_KeywordEnforcer), optional   :: kwe
+    logical, optional, intent(in)          :: checkNaN, checkInf
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_FieldBundle)              :: fieldBundle
@@ -598,10 +635,13 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4)               :: i, fieldCount, localrc, rc_
     character(ESMF_MAXSTR)              :: numberString
     type(ESMF_StateItem_Flag)           :: itemType
+    logical                             :: checkNaN_ = .true., checkInf_ = .true.
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc))  rc = rc_
+    if (present(checkNaN)) checkNaN_ = checkNaN
+    if (present(checkInf)) checkInf_ = checkInf
 
     call ESMF_StateGet(state, trim(bundleName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -632,7 +672,8 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
       write(numberstring,'(I0.3)') i
 
-      call nc_field_write(fieldList(i), postFix=trim(numberString), rc=localrc)
+      call nc_field_write(fieldList(i), postFix=trim(numberString), &
+        checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -645,20 +686,24 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_state_field_write"
-  subroutine nc_state_field_write(state, fieldName, kwe, rc)
+  subroutine nc_state_field_write(state, fieldName, kwe, checkInf, checkNaN, rc)
 
     type(ESMF_State), intent(in)           :: state
     character(len=*), intent(in)           :: fieldName
     type(ESMF_KeywordEnforcer), optional   :: kwe
+    logical, intent(in), optional          :: checkNaN, checkInf
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     type(ESMF_Field)           :: field
     type(ESMF_StateItem_Flag)  :: itemType
     integer(ESMF_KIND_I4)      :: localrc, rc_
+    logical                    :: checkNaN_ = .true., checkInf_ = .true.
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc))  rc = rc_
+    if (present(checkNaN)) checkNaN_ = checkNaN
+    if (present(checkInf)) checkInf_ = checkInf
 
     call ESMF_StateGet(state, trim(fieldName), itemType=itemType, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -673,7 +718,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call nc_field_write(field, rc=localrc)
+    call nc_field_write(field, checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -683,19 +728,23 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "nc_field_write"
-  subroutine nc_field_write(field, kwe, postFix, rc)
+  subroutine nc_field_write(field, kwe, postFix, checkNaN, checkInf, rc)
 
     type(ESMF_Field), intent(inout)        :: field
     type(ESMF_KeywordEnforcer), optional   :: kwe
+    logical, optional, intent(in)          :: checkNaN, checkInf
     character(len=*), intent(in), optional :: postFix
     integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
     integer(ESMF_KIND_I4)               :: localDeCount, localrc, rc_
     character(ESMF_MAXSTR)              :: fieldName
+    logical                             :: checkNaN_ = .true. , checkInf_ = .true.
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(rc))  rc = rc_
+    if (present(checkNaN)) checkNan_ = checkNaN
+    if (present(checkInf)) checkInf_ = checkInf
 
     call ESMF_FieldGet(field, name=fieldName, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -707,7 +756,10 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     if (present(postFix)) fieldName=trim(fieldName)//'_'//trim(postFix)
     if (localDeCount>0) then
-      call nc%put_variable(field, name=trim(fieldName))
+      call nc%put_variable(field, name=trim(fieldName), &
+        checkNaN=checkNaN_, checkInf=checkInf_, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     if (present(rc)) rc=localrc

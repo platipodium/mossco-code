@@ -236,7 +236,7 @@ module filtration_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(filterSpeciesList)) then
-        call MOSSCO_AttributeSetList(gridComp, 'filter_other_species', filterSpeciesList, localrc)
+        call MOSSCO_AttributeSet(gridComp, 'filter_other_species', filterSpeciesList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -594,7 +594,7 @@ module filtration_component
     write(message,'(A)') trim(name)//' species to filtrate is '//trim(filterSpecies)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-    call MOSSCO_AttributeGetList(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
+    call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1228,7 +1228,11 @@ module filtration_component
       fractionalLossRate(RANGE3D) = lossRate(RANGE3D) / concentration(RANGE3D)
     endwhere
 
-    call MOSSCO_AttributeGetList(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
+    write(message,'(A,ES10.3,A)') trim(name)//' is filtering up to ', &
+        maxval(-lossRate(RANGE3D),mask=mask(RANGE3D)),' mmol m-3 s-1'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    call MOSSCO_AttributeGet(gridComp, 'filter_other_species', filterSpeciesList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

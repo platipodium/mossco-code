@@ -32,9 +32,9 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti=((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;     
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*1;     
  end
- if ti<=length(ind)
+ if ti-toffm<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns + nfig;
   if(im==1) vt{np-nfig}=[varshort0 tag]; end
@@ -46,9 +46,17 @@ for im=1:length(vli)
   hold on
 
 % set data matrix
-  value = squeeze(tmp(:,:,di,ti)); 
+  mons=datestr(doy(ti-toffm));
+  if length(size(tmp))>3
+    value = squeeze(tmp(:,:,di,ti)); 
+ %% print variable & scen name & date
+    ta=sprintf('%s%d %d z%1.0f',mons(4:6),year(ti-toffm),doy(ti-toffm),depth(di));
+  else
+    value = squeeze(tmp(:,:,ti))*di;  % surface maps
+    ta=sprintf('%s%d %d',mons(4:6),year(ti-toffm),doy(ti-toffm));
+  end  
   indn=find(~isnan(value));
-%  fprintf('%d %s/%s\t np=%d/%d im=%d i=%d %d %d\tmean=%1.2f\n',i,varshort,varn,np,cell2mat(var{i}(6)),im,ix,iy,di,mean(mean(value(indn))));
+  fprintf('%d %s/%s\t np=%d/%d im=%d i=%d %d\tmean=%1.2f\n',i,varshort,varn,np,cell2mat(var{i}(6)),im,ix,iy,mean(mean(value(indn))));
 
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
@@ -82,7 +90,7 @@ for im=1:length(vli)
   m_grid('box','off','color','k','backcolor','none','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel',''); 
   m_usercoast('sns_coast','color',ones(3,1)*0.5,'linewidth',1.0,'linestyle','-');
 
-  if(im==2)
+  if(im==2-IsNOAH)
 %% colorbar settings
     cb=colorbar;
     title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
@@ -94,9 +102,6 @@ for im=1:length(vli)
       set(cb,'YTick',ctl,'YTicklabel',power(10,ctl)); 
     end
   end
-%% print variable & scen name & date
-  mons=datestr(doy(ti));
-  ta=sprintf('%s%d %d z%1.0f',mons(4:6),year(ti),doy(ti),depth(di));
  
   m_text(lonlimit(1)-0.3,latlimit(2)-0.2,[varshort0 ' ' tag],'HorizontalAlignment','left','FontSize',fs+8,'FontWeight','bold','FontName','Helvetica','Interpreter','none');
   m_text(lonlimit(2)-1.2,latlimit(1)+0.5,ta,'FontWeight','bold','HorizontalAlignment','right','FontSize',fs);
@@ -104,9 +109,9 @@ for im=1:length(vli)
 
 %% plot sites of interest
   for ili=1:size(loc,1)
-%    m_plot(loc(ili,2),loc(ili,1),'o','markersize',9,'MarkerFaceColor','none','Color','w','Linewidth',2);
-    m_text(lon(i_loc(ili,1),i_loc(ili,2)),lat(i_loc(ili,1),i_loc(ili,2)),'o','Color','w','HorizontalAlignment','center','FontWeight','bold','FontSize',fs)
-%    m_text(loc(ili,2),loc(ili,1),'o','Color','w','HorizontalAlignment','center','FontWeight','bold','FontSize',fs)
+%    m_plot(loc(ili,2),loc(ili,1),'o','markersize',9,'MarkerFaceColor','none','Color','w','Linewidth',2);normal
+    m_text(lon(i_loc(ili,1),i_loc(ili,2)),lat(i_loc(ili,1),i_loc(ili,2)),'o','Color','w','HorizontalAlignment','center','FontWeight','bold','FontSize',fs+(nrowm==1)*4)
+%   bold m_text(loc(ili,2),loc(ili,1),'o','Color','w','HorizontalAlignment','center','FontWeight','bold','FontSize',fs)
   end
 % ,'VerticalAlignment','center'annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
  end % if

@@ -9,8 +9,8 @@ rm -f tag.lst
 
 #declare -a pnam=("fT_exp_mort"  "PAds""rFast"  "rSlow" "NCrFdet" "syn_nut"vS_det""mort_zoo")zm_fa_inf remin "zm_fa_delmax"
 #declare -a pnam=("Q10" "QP_phy_max" "syn_nut")
-declare -a pnam=("vS_det" "sinking_factor" "bioturbation"  "PAds" "PAdsODU" "rSlow")
-declare -a pval=(  4.5       0.2              2             0.01    20       0.006)
+declare -a pnam=("vS_det"  "remNP"  "remNP" "PAds"  "rSlow" "rnit" )
+declare -a pval=(  5         0.     -0.2    0.05    0.005   300  )
 
 cd helgoland
 echo "creating dirs ..." ${#pnam[@]}
@@ -22,7 +22,7 @@ for (( i=0; $i < ${#pnam[@]}; i++ )) do
   cd $hd/hr_$i
 #   echo $i
 #  for (( i=0; i<${#pnam[@]}; i++ )) do
-  for a in *.nml
+  for a in `find *.nml ! -path "*omex*"`
     do cat $a | grep "^[[:space:]]*${pnam[$i]}"
     if [ $? -eq 0 ]; then  fname=$a; fi;
   done
@@ -30,9 +30,10 @@ for (( i=0; $i < ${#pnam[@]}; i++ )) do
   replace  $fname ${pnam[$i]} ${pval[$i]}
   echo $i " " ${pnam[$i]} " " ${pval[$i]} >> ../tag.lst
   nohup ./mossco_1d & 
+  cd $hd
 done # i
 wait
-cd $hd
+
 #for a in hr_*; do ~/kai/add_denit.sh $a/mossco_1d.nc; done
 mkdir -p hrres
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
@@ -40,6 +41,6 @@ for (( i=0; $i < ${#pnam[@]}; i++ )) do
 
 done
 cd hrres
-#ln -s ../helgoland/mossco_1d_2.nc mossco_1dref.nc
+ln -s ../helgoland/mossco_1d_0.nc mossco_1dref.nc
 cd ..
 more tag.lst

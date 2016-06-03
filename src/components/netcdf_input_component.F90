@@ -129,7 +129,7 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR) :: foreignGridFieldName, form
     type(ESMF_Time)            :: currTime, ncTime
     type(ESMF_TimeInterval)    :: climatologyTimeStep
-    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc
+    integer(ESMF_KIND_I4)      :: petCount, localPet, localRc, int4
     type(ESMF_Clock)           :: clock
 
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
@@ -143,7 +143,7 @@ module netcdf_input_component
     integer(ESMF_KIND_I4)      :: itemCount, i, j, timeid, itime, udimid
     integer(ESMF_KIND_I4)      :: fieldRank, gridRank
     type(ESMF_Time)            :: refTime, climatologyTime
-    real(ESMF_KIND_R8)         :: seconds
+    real(ESMF_KIND_R8)         :: ticks
     type(ESMF_Field), allocatable :: fieldList(:)
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterExcludeList(:), filterIncludeList(:)
@@ -185,33 +185,18 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigFindLabel(config, label='filename:', isPresent=labelIsPresent, rc = localrc)
+      call MOSSCO_ConfigGet(config, label='filename', value=fileName, &
+        defaultValue=trim(name), rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (labelIsPresent) then
-        call ESMF_ConfigGetAttribute(config, fileName, rc=localrc, default=trim(name))
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      !> Append .nc extension to fileName if not present
+      i=len_trim(fileName)
+      if (fileName(i-2:i) /= '.nc') fileName(i+1:i+4) = '.nc'
 
-        write(message,'(A)')  trim(name)//' found in file'
-        call MOSSCO_MessageAdd(message,' '//trim(configFileName)//' filename: '//trim(fileName))
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
-
-      call ESMF_AttributeGet(importState, 'filename', isPresent=isPresent, rc=localrc)
+      call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (isPresent) then
-        call ESMF_AttributeGet(importState, 'filename', value=fileName, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      elseif (labelIsPresent) then
-        call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
 
       call ESMF_ConfigFindLabel(config, label='interpolation:', isPresent=labelIsPresent, rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -297,7 +282,7 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(filterExcludeList)) then
-        call MOSSCO_AttributeSetList(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -305,7 +290,7 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_AttributeGetList(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -322,7 +307,7 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(filterIncludeList)) then
-        call MOSSCO_AttributeSetList(importState, 'filter_pattern_include', filterIncludeList, localrc)
+        call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -330,7 +315,7 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_AttributeGetList(importState, 'filter_pattern_include', filterIncludeList, localrc)
+        call MOSSCO_AttributeGet(importState, 'filter_pattern_include', filterIncludeList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -346,7 +331,7 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(aliasList)) then
-        call MOSSCO_AttributeSetList(importState, 'alias_definition', aliasList, localrc)
+        call MOSSCO_AttributeSet(importState, 'alias_definition', aliasList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -354,7 +339,7 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_AttributeGetList(importState, 'alias_definition', aliasList, localrc)
+        call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -392,7 +377,8 @@ module netcdf_input_component
 
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' received no filename to read from'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_NOT_FOUND
       call MOSSCO_CompExit(gridComp)
       return
     endif
@@ -414,7 +400,8 @@ module netcdf_input_component
 
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' cannot read file '//trim(fileName)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      rc = ESMF_RC_NOT_FOUND
       call MOSSCO_CompExit(gridComp)
       return
     endif
@@ -569,15 +556,32 @@ module netcdf_input_component
         refTime = currTime
       endif
 
-      if (trim(timeUnit) == 'seconds') then
-        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=seconds, rc=rc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      else
-        write(message,'(A)')  trim(name)//' not implemented: unit for time is '//trim(timeUnit)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        seconds=0.0
-      endif
+      int4=0
+      ticks=0.0
+      select case (trim(timeUnit))
+      case ('year', 'years')
+        call ESMF_TimeIntervalGet(currTime-refTime, yy=int4, rc=rc)
+      case ('month', 'months')
+        call ESMF_TimeIntervalGet(currTime-refTime, mm=int4, rc=rc)
+      case ('day', 'days')
+        call ESMF_TimeIntervalGet(currTime-refTime, d=int4, rc=rc)
+      case ('hour', 'hours')
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+      case ('minute', 'minutes')
+        call ESMF_TimeIntervalGet(currTime-refTime, m=int4, rc=rc)
+      case ('second', 'seconds')
+        call ESMF_TimeIntervalGet(currTime-refTime, s_r8=ticks, rc=rc)
+      case default
+        write(message,'(A)')  trim(name)//' invalid or not implemented unit for time '//trim(timeUnit)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call MOSSCO_CompExit(gridComp)
+        rc=ESMF_RC_ARG_BAD
+        return
+      endselect
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (ticks == 0.0) ticks=dble(int4)
 
       call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -660,9 +664,13 @@ module netcdf_input_component
         enddo
       endif
 
-      if (trim(itemName) == 'time') cycle
-      if (trim(itemName) == 'latitude') cycle
-      if (trim(itemName) == 'longitude') cycle
+      if (   trim(itemName) == 'time' .or. trim(itemName) == 'latitude' &
+        .or. trim(itemName) == 'lat' .or. trim(itemName) == 'longitude' &
+        .or. trim(itemName) == 'lon' ) then
+        write(message,'(A)')  trim(name)//' excluded item '//trim(itemName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        cycle
+      endif
 
       ! Look for an exclusion pattern on this field name
       if (allocated(filterExcludeList)) then
@@ -699,7 +707,7 @@ module netcdf_input_component
       endif
 
       if (nc%variables(i)%rank < 2) then
-        write(message,'(A)') trim(name)//' does not implemented reading of rank < 2 item'
+        write(message,'(A)') trim(name)//' does not implement reading of rank < 2 item'
         call MOSSCO_MessageAdd(message, ' '//trim(itemName)//'"')
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
@@ -709,7 +717,7 @@ module netcdf_input_component
       call MOSSCO_MessageAdd(message, trim(itemName)//'"')
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      write(message,'(A,I3,A,I1,A)') trim(name)//' id = ', &
+      write(message,'(A,I3,A,I1,A)') trim(name)//' nc.varid = ', &
          nc%variables(i)%varid,', rank = ',nc%variables(i)%rank,' units = "'//trim(nc%variables(i)%units)//'"'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -886,23 +894,31 @@ module netcdf_input_component
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4) :: localrc
+    integer(ESMF_KIND_I4)      :: localrc
+    character(len=ESMF_MAXSTR) :: name
 
     rc = ESMF_SUCCESS
 
     !> Here omes your restart code, which in the simplest case copies
     !> values from all fields in importState to those in exportState
 
-    call ESMF_StateReconcile(importState, rc=localrc)
+    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateReconcile(exportState, rc=localrc)
+    call ESMF_StateGet(importState, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_StateGet(exportState, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine ReadRestart
-
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Run"
@@ -1179,7 +1195,7 @@ module netcdf_input_component
       endif
     endif
 
-    call MOSSCO_AttributeGetList(importState, 'alias_definition', aliasList, rc=localrc)
+    call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
