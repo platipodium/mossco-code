@@ -605,7 +605,7 @@ module filtration_component
       enddo
     endif
 
-    call MOSSCO_AttributeGetList(gridComp, 'diagnostic_variables', diagNameList, rc=localrc)
+    call MOSSCO_AttributeGet(gridComp, 'diagnostic_variables', diagNameList, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
