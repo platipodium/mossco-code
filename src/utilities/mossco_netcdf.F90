@@ -1025,7 +1025,9 @@ module mossco_netcdf
 
     integer                       :: localrc, rc_, varid
     character(len=1)              :: mode_
-    character(len=255)            :: timeUnit_
+    character(len=255)            :: timeUnit_, string, message
+    logical                       :: fileIsPresent
+    integer                       :: fileUnit=1555
 
     rc_ = ESMF_SUCCESS
 
@@ -1055,6 +1057,28 @@ module mossco_netcdf
         nc%timeDimID=-1
       endif
     else
+      inquire(file=trim(fileName), exist=fileIsPresent)
+      if (.not.fileIsPresent) then
+        call ESMF_LogWrite('  file '//trim(filename)//' does not exist', ESMF_LOGMSG_ERROR)
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      !> read the first 4 bytes of the file
+      fileUnit=MOSSCO_GetFreeLun(start=fileUnit)
+      open(file=trim(fileName), unit=fileUnit, form='formatted', recl=4)
+      read(fileUnit, '(A)') string
+      close(fileUnit)
+      if (string(1:3) == 'CDF') then
+        write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF3 format'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      elseif (string(2:4) == 'HDF') then
+        write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF4 format'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      else
+        write(message,'(A)')  '  file '//trim(fileName)//' has unknown format'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      endif
+
       localrc = nf90_open(trim(filename), mode=NF90_NOWRITE, ncid=nc%ncid)
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot open '//trim(filename), ESMF_LOGMSG_ERROR)
@@ -1114,7 +1138,7 @@ module mossco_netcdf
       if (ispresent) then
         call ESMF_LogWrite('  overwriting file '//trim(filename), ESMF_LOGMSG_WARNING)
       else
-        call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_WARNING)
+        call ESMF_LogWrite('  created new file '//trim(filename), ESMF_LOGMSG_INFO)
       endif
     endif
 
