@@ -50,16 +50,17 @@ subroutine MOSSCO_FieldString(field, message, length, kwe, prefix, rc)
   integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, gridRank, n, i, width
   integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
 
-  character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form, prefix_
+  character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form
+  character(len=ESMF_MAXSTR)  :: prefix_
   type(ESMF_Grid)             :: grid
-
-  type(ESMF_GeomType_Flag) :: geomType
+  type(ESMF_GeomType_Flag)    :: geomType
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
 
   if (present(kwe)) localrc = ESMF_SUCCESS
-  prefix_ = ''
-  if (present(prefix)) prefix_ = prefix
+  prefix_ = 'none'
+  !> The following line produces a segmentation fault
+  !if (present(prefix)) prefix_ = trim(prefix)
   rc_ = ESMF_SUCCESS
   rank = 0
   gridRank = 0
@@ -68,18 +69,21 @@ subroutine MOSSCO_FieldString(field, message, length, kwe, prefix, rc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  call ESMF_AttributeGet(field, name='creator', isPresent=isPresent, rc=localrc)
-  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  if (isPresent .and. len_trim(prefix_) == 0) then
-    call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
+  !if (trim(prefix_) == 'none') then
+    call ESMF_AttributeGet(field, name='creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call MOSSCO_MessageAdd(message, ' ['//stringValue)
-    call MOSSCO_MessageAdd(message, ']'//name)
-  else
-    call MOSSCO_MessageAdd(message,' '//name)
-  endif
+
+    if (isPresent) then
+      call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call MOSSCO_MessageAdd(message, ' ['//stringValue)
+      call MOSSCO_MessageAdd(message, ']'//name)
+    else
+      call MOSSCO_MessageAdd(message,' '//name)
+    endif
+  !endif
 
   if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
     call MOSSCO_MessageAdd(message,' (empty)')
@@ -202,15 +206,14 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
   character(len=ESMF_MAXSTR)               :: message
   integer(ESMF_KIND_I4)                    :: rc_, toRank, fromRank, localrc
   integer(ESMF_KIND_I4), allocatable       :: fromUbnd(:), fromLbnd(:), toUbnd(:), toLbnd(:)
-  character(ESMF_MAXSTR)                   :: fromName, toName
 
   real(ESMF_KIND_R8), pointer  :: fromFarrayPtr1(:), toFarrayPtr1(:)
   real(ESMF_KIND_R8), pointer  :: fromFarrayPtr2(:,:), toFarrayPtr2(:,:)
   real(ESMF_KIND_R8), pointer  :: fromFarrayPtr3(:,:,:), toFarrayPtr3(:,:,:)
-  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr4(:,:,:,:), toFarrayPtr4(:,:,:,:)
-  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr5(:,:,:,:,:), toFarrayPtr5(:,:,:,:,:)
-  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr6(:,:,:,:,:,:), toFarrayPtr6(:,:,:,:,:,:)
-  real(ESMF_KIND_R8), pointer  :: fromFarrayPtr7(:,:,:,:,:,:,:), toFarrayPtr7(:,:,:,:,:,:,:)
+  !real(ESMF_KIND_R8), pointer  :: fromFarrayPtr4(:,:,:,:), toFarrayPtr4(:,:,:,:)
+  !real(ESMF_KIND_R8), pointer  :: fromFarrayPtr5(:,:,:,:,:), toFarrayPtr5(:,:,:,:,:)
+  !real(ESMF_KIND_R8), pointer  :: fromFarrayPtr6(:,:,:,:,:,:), toFarrayPtr6(:,:,:,:,:,:)
+  !real(ESMF_KIND_R8), pointer  :: fromFarrayPtr7(:,:,:,:,:,:,:), toFarrayPtr7(:,:,:,:,:,:,:)
 
   type(ESMF_FieldStatus_Flag) :: fromStatus, toStatus
 
@@ -543,9 +546,9 @@ end subroutine MOSSCO_FieldCopy
 #define ESMF_METHOD "MOSSCO_FieldInitialize"
   subroutine MOSSCO_FieldInitialize(field, kwe, rc)
 
-    type(ESMF_Field), intent(inout)                :: field
-    logical, intent(in), optional                  :: kwe ! Keyword enforcer
-    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+    type(ESMF_Field), intent(inout)                  :: field
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe ! Keyword enforcer
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     character(len=ESMF_MAXSTR)               :: message
     integer(ESMF_KIND_I4)                    :: rc_, rank, localrc
@@ -554,12 +557,13 @@ end subroutine MOSSCO_FieldCopy
 
     real(ESMF_KIND_R8), pointer  :: farrayPtr1(:), farrayPtr2(:,:)
     real(ESMF_KIND_R8), pointer  :: farrayPtr3(:,:,:), farrayPtr4(:,:,:,:)
-    real(ESMF_KIND_R8), pointer  :: farrayPtr5(:,:,:,:,:), farrayPtr6(:,:,:,:,:,:)
-    real(ESMF_KIND_R8), pointer  :: farrayPtr7(:,:,:,:,:,:,:)
+    !real(ESMF_KIND_R8), pointer  :: farrayPtr5(:,:,:,:,:), farrayPtr6(:,:,:,:,:,:)
+    !real(ESMF_KIND_R8), pointer  :: farrayPtr7(:,:,:,:,:,:,:)
 
     type(ESMF_FieldStatus_Flag) :: fieldStatus
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
@@ -640,11 +644,11 @@ end subroutine MOSSCO_FieldCopy
   !> @param rc: [optional] return code
   subroutine MOSSCO_FieldMatchFieldsFromState(field, state, fieldList, kwe, rc)
 
-    type(ESMF_Field), intent(in)                 :: field
-    type(ESMF_State), intent(in)                 :: state
-    type(ESMF_Field),  allocatable               :: fieldList(:)
-    logical, intent(in), optional                :: kwe
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_Field), intent(in)                     :: field
+    type(ESMF_State), intent(in)                     :: state
+    type(ESMF_Field),  allocatable                   :: fieldList(:)
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, i, itemCount, fieldCount
     character(len=ESMF_MAXSTR)              :: name
@@ -653,6 +657,7 @@ end subroutine MOSSCO_FieldCopy
     type(ESMF_FieldBundle)                  :: fieldBundle
 
     rc_ = ESMF_SUCCESS
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     if (allocated(fieldList)) deallocate(fieldList)
 
@@ -712,11 +717,11 @@ end subroutine MOSSCO_FieldCopy
 #define ESMF_METHOD "MOSSCO_FieldListReallocate"
   subroutine MOSSCO_FieldListReallocate(fieldList, fieldCount, kwe, keep, rc)
 
-    type(ESMF_Field), intent(inout), allocatable :: fieldList(:)
-    integer(ESMF_KIND_I4), intent(in)            :: fieldCount
-    logical, intent(in), optional                :: kwe
-    logical, intent(in), optional                :: keep
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_Field), intent(inout), allocatable     :: fieldList(:)
+    integer(ESMF_KIND_I4), intent(in)                :: fieldCount
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    logical, intent(in), optional                    :: keep
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, listSize
     logical                                 :: keep_
@@ -727,6 +732,7 @@ end subroutine MOSSCO_FieldCopy
     keep_ = .true.
     if (present(keep)) keep_ = keep
     if (present(rc)) rc = rc_
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     ! Save deallocation with fieldCount < 1
     if (fieldCount < 1) then
@@ -775,10 +781,10 @@ end subroutine MOSSCO_FieldCopy
   subroutine MOSSCO_ItemTypeListReallocate(itemTypeList, itemCount, kwe, keep, rc)
 
     type(ESMF_StateItem_Flag), intent(inout), allocatable :: itemTypeList(:)
-    integer(ESMF_KIND_I4), intent(in)            :: itemCount
-    logical, intent(in), optional                :: kwe
-    logical, intent(in), optional                :: keep
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    integer(ESMF_KIND_I4), intent(in)                :: itemCount
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    logical, intent(in), optional                    :: keep
+    integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
     integer(ESMF_KIND_I4)                   :: rc_, localrc, listSize
     logical                                 :: keep_
@@ -789,6 +795,7 @@ end subroutine MOSSCO_FieldCopy
     keep_ = .true.
     if (present(keep)) keep_ = keep
     if (present(rc)) rc = rc_
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     ! Save deallocation with fieldCount < 1
     if (itemCount < 1) then
@@ -838,7 +845,7 @@ end subroutine MOSSCO_FieldCopy
 
     character(len=*), intent(inout), allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(in)            :: itemCount
-    logical, intent(in), optional                :: kwe
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                :: keep
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
@@ -851,6 +858,7 @@ end subroutine MOSSCO_FieldCopy
     keep_ = .true.
     if (present(keep)) keep_ = keep
     if (present(rc)) rc = rc_
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     ! Safe deallocation with itemCount < 1
     if (itemCount < 1) then
@@ -900,7 +908,7 @@ end subroutine MOSSCO_FieldCopy
 
     character(len=*), intent(inout), allocatable :: stringList(:,:)
     integer(ESMF_KIND_I4), intent(in)            :: itemCount
-    logical, intent(in), optional                :: kwe
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     logical, intent(in), optional                :: keep
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
@@ -913,6 +921,7 @@ end subroutine MOSSCO_FieldCopy
     keep_ = .true.
     if (present(keep)) keep_ = keep
     if (present(rc)) rc = rc_
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     ! Safe deallocation with itemCount < 1
     if (itemCount < 1) then
@@ -962,7 +971,7 @@ end subroutine MOSSCO_FieldCopy
 
     type(ESMF_Field), intent(in)                 :: field
     real(ESMF_KIND_R8), intent(out)              :: missing_value
-    logical, intent(in), optional                :: kwe
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)                        :: localrc, rc_, missingValueI4
@@ -973,7 +982,7 @@ end subroutine MOSSCO_FieldCopy
     type(ESMF_TypeKind_Flag)                     :: typeKind
 
     rc_ = ESMF_SUCCESS
-    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(kwe)) localrc = ESMF_SUCCESS
 
     call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1017,7 +1026,7 @@ end subroutine MOSSCO_FieldCopy
     exclude, rc) result(differCount)
 
     type(ESMF_Field), intent(in)                 :: importField, exportField
-    logical, intent(in), optional                :: kwe
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     character(len=*), dimension(*), optional     :: exclude(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4)                        :: differCount
@@ -1032,7 +1041,6 @@ end subroutine MOSSCO_FieldCopy
     character(len=ESMF_MAXSTR)                   :: importString, exportString
     type(ESMF_TypeKind_Flag)                     :: importTypeKind, exportTypeKind
     character(len=ESMF_MAXSTR), allocatable      :: excludeList(:)
-
 
     rc_ = ESMF_SUCCESS
     differCount = 0
@@ -1182,7 +1190,8 @@ end subroutine MOSSCO_FieldCopy
     type(ESMF_Field), intent(inout)        :: exportField
     type(ESMF_Field), intent(in)           :: importField
     real(ESMF_KIND_R8), intent(in)         :: weight
-    logical, intent(in), optional          :: kwe, tagOnly
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    logical, intent(in), optional          :: tagOnly
     integer(ESMF_KIND_I4), optional        :: rc
 
     character(ESMF_MAXSTR)                 :: message
@@ -1432,7 +1441,7 @@ end subroutine MOSSCO_FieldCopy
   subroutine MOSSCO_FieldLog(field, kwe, log, prefix, rc)
 
     type(ESMF_Field)                :: field
-    logical,intent(in ),optional    :: kwe !keyword-enforcer
+    type(ESMF_KeywordEnforcer), intent(in ), optional :: kwe !keyword-enforcer
     type(ESMF_Log), optional        :: log
     character(len=*), optional, intent(in) :: prefix
     integer(ESMF_KIND_I4), optional :: rc
@@ -1463,8 +1472,7 @@ end subroutine MOSSCO_FieldCopy
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    write(message, '(A)') prefix_
-    call MOSSCO_FieldString(field, message, rc=localrc)
+    call MOSSCO_FieldString(field, message, prefix=prefix_, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1483,8 +1491,8 @@ end subroutine MOSSCO_FieldCopy
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (len_trim(prefix) > 0) then
-        write(message,'(A)') trim(prefix)//trim(name)//':'
+      if (len_trim(prefix_) > 0) then
+        write(message,'(A)') trim(prefix_)//trim(name)//':'
       else
         write(message,'(A)')  trim(name)//':'
       endif
@@ -1503,7 +1511,8 @@ end subroutine MOSSCO_FieldCopy
 
         write(message,'(A,L)') trim(message)//' ',logicalValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,L)') trim(message)//', ',logicalValueList(j)
+          write(string,'(A, L)') ', ',logicalValueList(j)
+          call MOSSCO_MessageAdd(message,trim(string))
         enddo
         deallocate(logicalValueList)
       elseif (typekind==ESMF_TYPEKIND_CHARACTER) then
@@ -1520,7 +1529,8 @@ end subroutine MOSSCO_FieldCopy
         if (len_trim(message) + len_trim(characterValueList(1)) + 1 <= len(message)) then
           write(message,'(A)') trim(message)//' "'//trim(characterValueList(1))//'"'
           do j=2, itemCount-1
-            write(message,'(A)') trim(message)//', "'//trim(characterValueList(j))//'"'
+            write(string,'(A)') ', "'//trim(characterValueList(j))//'"'
+            call MOSSCO_MessageAdd(message,trim(string))
           enddo
         endif
         if (allocated(characterValueList)) deallocate(characterValueList)
@@ -1533,7 +1543,8 @@ end subroutine MOSSCO_FieldCopy
 
         write(message,'(A,I3.3)') trim(message)//' ',integer4ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,I3.3)') trim(message)//', ',integer4ValueList(j)
+          write(string,'(A,I3.3)') ', ',integer4ValueList(j)
+          call MOSSCO_MessageAdd(message,trim(string))
         enddo
         deallocate(integer4ValueList)
       elseif (typekind==ESMF_TYPEKIND_I8) then
@@ -1545,7 +1556,8 @@ end subroutine MOSSCO_FieldCopy
 
         write(message,'(A,I3.3)') trim(message)//' ',integer8ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,I3.3)') trim(message)//', ',integer8ValueList(j)
+          write(string,'(A,I3.3)') ', ',integer8ValueList(j)
+          call MOSSCO_MessageAdd(message,trim(string))
         enddo
         deallocate(integer8ValueList)
       elseif (typekind==ESMF_TYPEKIND_R4) then
@@ -1557,7 +1569,8 @@ end subroutine MOSSCO_FieldCopy
 
         write(message,'(A,ES9.2)') trim(message)//' ',real4ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,ES9.2)') trim(message)//', ',real4ValueList(j)
+          write(string,'(A,ES9.2)') ', ',real4ValueList(j)
+          call MOSSCO_MessageAdd(message,trim(string))
         enddo
         deallocate(real4ValueList)
       elseif (typekind==ESMF_TYPEKIND_R8) then
@@ -1569,7 +1582,8 @@ end subroutine MOSSCO_FieldCopy
 
         write(message,'(A,ES9.2)') trim(message)//' ',real8ValueList(1)
         do j=2, itemCount-1
-          write(message,'(A,ES9.2)') trim(message)//', ',real8ValueList(j)
+          write(string,'(A,ES9.2)') ', ',real8ValueList(j)
+          call MOSSCO_MessageAdd(message,trim(string))
         enddo
         deallocate(real8ValueList)
       endif
@@ -1587,7 +1601,7 @@ end subroutine MOSSCO_FieldCopy
 !   function MOSSCO_FieldIsFinite(field, kwe, checkNaN, checkInf, rc) result(isFinite)
 !
 !     type(ESMF_Field)                :: field
-!     logical,intent(in ),optional    :: kwe !keyword-enforcer
+!     type(ESMF_KeywordEnforcer),intent(in ),optional    :: kwe
 !     logical,intent(in ),optional    :: checkNaN, checkInf
 !     integer(ESMF_KIND_I4), optional :: rc
 !
