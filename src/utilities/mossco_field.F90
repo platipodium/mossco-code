@@ -38,23 +38,28 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldString"
-subroutine MOSSCO_FieldString(field, message, length, rc)
+subroutine MOSSCO_FieldString(field, message, length, kwe, prefix, rc)
 
   type(ESMF_Field), intent(in)                   :: field
   character(len=ESMF_MAXSTR), intent(inout)      :: message
   integer(ESMF_KIND_I4), intent(inout), optional :: length
+  type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+  character(len=*), intent(in), optional         :: prefix
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
   integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, gridRank, n, i, width
   integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
 
-  character(ESMF_MAXSTR)  :: geomName, stringValue, name, form
-  type(ESMF_Grid)         :: grid
+  character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form, prefix_
+  type(ESMF_Grid)             :: grid
 
   type(ESMF_GeomType_Flag) :: geomType
   type(ESMF_FieldStatus_Flag) :: fieldStatus
   logical                     :: isPresent
 
+  if (present(kwe)) localrc = ESMF_SUCCESS
+  prefix_ = ''
+  if (present(prefix)) prefix_ = prefix
   rc_ = ESMF_SUCCESS
   rank = 0
   gridRank = 0
@@ -66,7 +71,7 @@ subroutine MOSSCO_FieldString(field, message, length, rc)
   call ESMF_AttributeGet(field, name='creator', isPresent=isPresent, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  if (isPresent) then
+  if (isPresent .and. len_trim(prefix_) == 0) then
     call ESMF_AttributeGet(field, name='creator', value=stringValue, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1349,7 +1354,7 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> @todo The has_boundary_data attribute is set to .true. by default here,
-    !> this should be changed by a configuration attribute and the attribute name MOSSCO_AttributeGetList
+    !> this should be changed by a configuration attribute and the attribute name MOSSCO_AttributeGet
     !> be synchronized with the transporting component (e.g. getm_component)
     call ESMF_AttributeSet(exportField, 'has_boundary_data', .true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
