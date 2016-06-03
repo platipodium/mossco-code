@@ -1566,4 +1566,54 @@ end subroutine MOSSCO_FieldCopy
 
   end subroutine MOSSCO_FieldLog
 
+! #undef  ESMF_METHOD
+! #define ESMF_METHOD "MOSSCO_FieldIsFinite"
+!   function MOSSCO_FieldIsFinite(field, kwe, checkNaN, checkInf, rc) result(isFinite)
+!
+!     type(ESMF_Field)                :: field
+!     logical,intent(in ),optional    :: kwe !keyword-enforcer
+!     logical,intent(in ),optional    :: checkNaN, checkInf
+!     integer(ESMF_KIND_I4), optional :: rc
+!
+!     integer(ESMF_KIND_I4)           :: localRc, rc_
+!     character(len=ESMF_MAXPATHLEN)  :: message
+!     character(len=ESMF_MAXSTR)      :: name
+!     type(ESMF_TypeKind_Flag)        :: typeKind
+!     logical                         :: checkInf_, checkNaN_
+!     type(ESMF_FieldStatus_Flag)     :: fieldStatus
+!
+!     if (present(rc)) rc = ESMF_SUCCESS
+!     if (present(kwe)) rc_ = ESMF_SUCCESS
+!     checkNaN = .true.
+!     if (present(checkNaN)) checkNaN_ = checkNaN
+!     checkInf = .true.
+!     if (present(checkInf)) checkInf_ = checkInf
+!
+!     call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+!     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
+!
+!     call ESMF_FieldGet(field, rank=rank, typeKind=typeKind, rc=localrc)
+!     if (rank > 4) then
+!       if (present(rc)) rc = ESMF_RC_NOT_IMPL
+!       return
+!     endif
+!
+!     call ESMF_FieldGet(field, grid=grid, rc=localrc)
+!     call ESMF_GridGetItem(grid, GRIDITEM_MASK, rc=localrc)
+!
+!     select case(typeKind)
+!     case(ESMF_TYPEKIND_R8)
+!       select case(rank))
+!       case(1)
+!         call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
+!
+!         if (any(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) /= &
+!                 ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))) then
+!           call self%close()
+!           write(message,'(A)')  '  NaN detected in field '
+!           call MOSSCO_FieldString(field, message)
+!           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+!           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+!         endif
+
 end module mossco_field
