@@ -181,7 +181,7 @@ module getm_component
    write(debug,*) 'InitializeP0() # ',Ncall
 #endif
 
-   call MOSSCO_GridCompEntryLog(gridComp)
+   call MOSSCO_CompEntry(gridComp, clock)
 
 !  Note (KK): NUOPC initialises all components in various phases. By
 !             default NUOPC assumes IPDv00 and thus requires userRoutines
@@ -220,8 +220,7 @@ module getm_component
                                    convention="NUOPC",purpose="General",rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-   call MOSSCO_GridCompExitLog(gridComp)
-
+    call MOSSCO_CompExit(gridComp)
 #ifdef DEBUG
    write(debug,*) 'Leaving InitializeP0()'
    write(debug,*)
@@ -275,7 +274,7 @@ module getm_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_GridCompEntryLog(gridComp)
+    call MOSSCO_CompEntry(gridComp, clock)
 
     call ESMF_GridCompGet(gridComp,vmIsPresent=vmIsPresent,       &
                                    clockIsPresent=clockIsPresent, &
@@ -485,7 +484,7 @@ module getm_component
       STDERR LINE
     end if
 
-    call MOSSCO_GridCompExitLog(gridComp)
+    call MOSSCO_CompExit(gridComp)
 
   end subroutine InitializeP1
 
@@ -518,7 +517,7 @@ module getm_component
 
       rc=ESMF_SUCCESS
 
-      call MOSSCO_GridCompEntryLog(gridComp)
+      call MOSSCO_CompEntry(gridComp, clock)
 
       call ESMF_StateGet(importState,"concentrations_in_water",concFieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -676,7 +675,7 @@ module getm_component
 
       end if
 
-    call MOSSCO_GridCompExitLog(gridComp)
+    call MOSSCO_CompExit(gridComp)
     rc = ESMF_SUCCESS
 
    end subroutine InitializeP2
@@ -786,7 +785,7 @@ module getm_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_GridCompEntryLog(gridComp)
+    call MOSSCO_CompEntry(gridComp, clock)
 
     call getmCmp_update_importState()
 
@@ -842,7 +841,7 @@ module getm_component
     call getmCmp_update_grid(gridComp)
     call getmCmp_update_exportState()
 
-    call MOSSCO_GridCompExitLog(gridComp)
+    call MOSSCO_CompExit(gridComp)
 
   end subroutine Run
 
@@ -869,7 +868,7 @@ module getm_component
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_GridCompEntryLog(gridComp)
+    call MOSSCO_CompEntry(gridComp, clock)
 
    call clean_up(dryrun,runtype,MaxN)
 #ifndef NO_TIMERS
@@ -903,7 +902,7 @@ module getm_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     end if
 
-    call MOSSCO_GridCompExitLog(gridComp)
+    call MOSSCO_CompExit(gridComp)
     rc = ESMF_SUCCESS
 
   end subroutine Finalize
