@@ -1017,11 +1017,11 @@ fid.write('''
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_StateLog(gridImportStateList(i), log=stateLog, rc=localrc)
+        call MOSSCO_StateLog(gridImportStateList(i), log=stateLog, deep=.true., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_StateLog(gridExportStateList(i), log=stateLog, rc=localrc)
+        call MOSSCO_StateLog(gridExportStateList(i), log=stateLog, deep=.true., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       enddo
@@ -1290,7 +1290,7 @@ fid.write('''
 
     !> @todo te following code throws attribute warnings in ESMF7, this needs
     !> to be investigated and is disabled for now.
-    
+
 #if ESMF_VERSION_MAJOR > 7
     !> Write Responsible party ISO 19115 attributes
     convention = 'ISO 19115'
@@ -1868,19 +1868,19 @@ fid.write('''
 
         do i=1,numGridComp
           call ESMF_LogWrite('====== States of '//trim(gridCompNameList(i))//' ======', ESMF_LOGMSG_INFO, log=stateLog)
-          call MOSSCO_StateLog(gridImportStateList(i), log=stateLog, rc=localrc)
+          call MOSSCO_StateLog(gridImportStateList(i), deep=.true., log=stateLog, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          call MOSSCO_StateLog(gridExportStateList(i), log=stateLog, rc=localrc)
+          call MOSSCO_StateLog(gridExportStateList(i), deep=.true., log=stateLog, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         enddo
 
         call ESMF_LogWrite('====== States of '//trim(myName)//' ======', ESMF_LOGMSG_INFO, log=stateLog)
-        call MOSSCO_StateLog(importState, log=stateLog, rc=localrc)
+        call MOSSCO_StateLog(importState, log=stateLog, deep=.true.,  rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call MOSSCO_StateLog(exportState, log=stateLog, rc=localrc)
+        call MOSSCO_StateLog(exportState, log=stateLog, deep=.true., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
