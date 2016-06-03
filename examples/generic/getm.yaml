@@ -4,5 +4,5 @@ instances:
 coupling:
   - components:
      - getm
-     - netcdf
+     - mossco_getm
     interval: 1 h
