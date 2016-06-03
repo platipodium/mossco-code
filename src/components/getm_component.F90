@@ -507,7 +507,7 @@ module getm_component
       character(len=ESMF_MAXSTR)                          :: itemName
       integer                   ,dimension(:),allocatable :: namelenList,concFlags
       integer                                             :: concFieldCount,transportFieldCount,FieldCount
-      integer                                             :: conc_id,ws_id
+      integer(ESMF_KIND_I8)                               :: conc_id,ws_id
       integer                                             :: i,ii,n
       character(len=*),parameter :: ws_suffix="_z_velocity_in_water"
       character(len=*),parameter :: conc_suffix="_in_water"
@@ -615,13 +615,15 @@ module getm_component
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, field=wsField, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                else
-                  call ESMF_AttributeGet(concFieldList(i), 'external_index', value=conc_id, defaultValue=-1, rc=localrc)
+                  call ESMF_AttributeGet(concFieldList(i), 'external_index', &
+                    value=conc_id, defaultValue=int(-1,ESMF_KIND_I8), rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   allocate(fieldList(fieldCount))
                   call ESMF_FieldBundleGet(wsFieldBundle, itemName, fieldList=fieldList, rc=localrc)
                   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                   do ii=1,fieldCount
-                     call ESMF_AttributeGet(fieldList(ii), 'external_index', value=ws_id, defaultValue=-2, rc=localrc)
+                     call ESMF_AttributeGet(fieldList(ii), 'external_index', &
+                       value=ws_id, defaultValue=int(-2,ESMF_KIND_I8), rc=localrc)
                      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
                      if (ws_id .eq. conc_id) then
                         wsField = fieldList(ii)

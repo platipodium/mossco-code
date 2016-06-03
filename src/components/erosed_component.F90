@@ -1307,7 +1307,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     logical                  :: isPresent
     type(ESMF_Time)          :: currTime
     type(ESMF_Clock)         :: clock
-    integer                  :: external_index
+    integer(ESMF_KIND_I8)    :: external_index
     logical                  :: First_entry = .true.
 
     type(ESMF_StateItem_Flag) :: itemType

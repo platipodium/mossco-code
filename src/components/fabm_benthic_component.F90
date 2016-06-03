@@ -719,7 +719,7 @@ module fabm_benthic_component
       end if
 
       !> add fabm index in concentration array as "external_index" to be used by other components
-      call ESMF_AttributeSet(concfield,'external_index',ben%export_states(n)%fabm_id)
+      call ESMF_AttributeSet(concfield,'external_index', int(ben%export_states(n)%fabm_id,ESMF_KIND_I8))
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> add to state depending on existing items
@@ -895,7 +895,7 @@ module fabm_benthic_component
              typekind=ESMF_TYPEKIND_R8, &
              staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_AttributeSet(field,'external_index',ben%export_states(n)%fabm_id)
+      call ESMF_AttributeSet(field,'external_index', int(ben%export_states(n)%fabm_id,ESMF_KIND_I8))
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1103,8 +1103,8 @@ module fabm_benthic_component
     type(ESMF_StateItem_Flag)      :: itemtype
     type(ESMF_Field)               :: field, exportField
     type(ESMF_FieldBundle)         :: fieldBundle
-    integer                        :: fieldCount
-    integer(kind=8)                :: external_index
+    integer(ESMF_KIND_I8)          :: external_index
+    integer(ESMF_KIND_I4)          :: fieldCount
     type(ESMF_Field),dimension(:),allocatable :: fieldList
     logical                        :: foundItem=.false.
 
@@ -1144,11 +1144,11 @@ module fabm_benthic_component
         do k=1,fieldCount
           call ESMF_AttributeGet(fieldList(k), name='external_index', &
                  value=external_index, &
-                 defaultValue=int(-1,kind=8),rc=localrc)
+                 defaultValue=int(-1,ESMF_KIND_I8),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           ! only use field, if external_index matches own index
-          if (external_index == ben%export_states(n)%fabm_id) then
+          if (external_index == int(ben%export_states(n)%fabm_id,ESMF_KIND_I8) then
             field = fieldList(k)
             foundItem=.true.
             exit
@@ -1674,8 +1674,8 @@ module fabm_benthic_component
     type(ESMF_Field),allocatable   :: fieldList(:), tempList(:)
     type(ESMF_FieldBundle)         :: fieldBundle
     type(ESMF_StateItem_FLAG)      :: itemtype
-    integer                        :: n,i,j,k,m, localrc, rc
-    integer                        :: fieldCount, external_index
+    integer(ESMF_KIND_I4)          :: n,i,j,k,m, localrc, rc, fieldCount
+    integer(ESMF_KIND_I8)          :: external_index
     integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3), rank
     character(len=ESMF_MAXSTR)     :: message, varname
     real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:), ratePtr3(:,:,:)
@@ -1719,12 +1719,13 @@ module fabm_benthic_component
         m = 0
         do k=1, fieldCount
           call ESMF_AttributeGet(fieldList(k), name='external_index', &
-                 value=external_index, defaultValue=-1,rc=localrc)
+                 value=external_index, defaultValue=int(-1, ESMF_KIND_I8),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           ! only use field, if external_index matches own index
-          if (external_index /= ben%export_states(n)%fabm_id .and. external_index > -1) cycle
+          if (external_index /= int(ben%export_states(n)%fabm_id,ESMF_KIND_I8) &
+            .and. external_index > -1) cycle
           m = m + 1
           tempList(m) = fieldlist(k)
         end do
@@ -1739,12 +1740,12 @@ module fabm_benthic_component
         m = 0
         do k=1, fieldCount
           call ESMF_AttributeGet(fieldList(k), name='external_index', &
-                 value=external_index, defaultValue=-1,rc=localrc)
+                 value=external_index, defaultValue=int(-1, ESMF_KIND_I8),rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           ! only use field, if external_index matches own index
-          if (external_index /= ben%export_states(n)%fabm_id) cycle
+          if (external_index /= int(ben%export_states(n)%fabm_id,ESMF_KIND_I8) cycle
           m = m + 1
           tempList(m) = fieldlist(k)
         end do
