@@ -1069,8 +1069,8 @@ contains
     elseif (methodFlag == ESMF_METHOD_FINALIZE) then
       write(message,'(A,I1)') trim(name)//' in FINALIZE phase ',phase
     else
+      !> @todo find out why this occurs and re-enable a warning when cleared
       write(message,'(A,I1)') trim(name)//' in unknown method phase ',phase
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
@@ -1378,8 +1378,8 @@ contains
     elseif (methodFlag == ESMF_METHOD_FINALIZE) then
       write(message,'(A,I1)') trim(name)//' in FINALIZE phase ',phase
     else
+      !> @todo clarify what happens here and re-enable WARNING
       write(message,'(A,I1)') trim(name)//' in unknown method phase ',phase
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
     endif
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
