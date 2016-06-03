@@ -526,7 +526,7 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateLog"
-  subroutine MOSSCO_StateLog(state, kwe, deep, log, rc)
+  recursive subroutine MOSSCO_StateLog(state, kwe, deep, log, rc)
     type(ESMF_State)                :: state
     type(ESMF_KeywordEnforcer),optional    :: kwe
     logical, intent(in), optional   :: deep
@@ -553,6 +553,7 @@ contains
     integer(kind=ESMF_KIND_I4), allocatable :: integer4ValueList(:)
     integer(kind=ESMF_KIND_I8), allocatable :: integer8ValueList(:)
     character(len=4096)       , allocatable :: characterValueList(:)
+    type(ESMF_State)                        :: childState
 
     if (present(rc)) rc = ESMF_SUCCESS
     if (present(kwe)) localrc = ESMF_SUCCESS
@@ -759,11 +760,47 @@ contains
           enddo
           deallocate(fieldList,fieldNameList)
         endif
+
         call MOSSCO_Reallocate(fieldList, 0, keep=.false., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      elseif (itemTypeList(i) == ESMF_STATEITEM_STATE) then
+        write(message,'(A)')  trim(name)//' state  '//trim(itemNameList(i))
+        if (present(log)) then
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+        else
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+        !call ESMF_StateGet(state, itemNameList(i), childState, rc=localrc)
+        !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !if (present(log)) then
+        !  call MOSSCO_StateLog(state, deep=deep_, log=log, rc=localrc)
+        !else
+        !  call MOSSCO_StateLog(state, deep=deep_, rc=localrc)
+        !endif
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      elseif (itemTypeList(i) == ESMF_STATEITEM_ARRAY) then
+        write(message,'(A)')  trim(name)//' array  '//trim(itemNameList(i))
+        if (present(log)) then
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+        else
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+
+      elseif (itemTypeList(i) == ESMF_STATEITEM_ARRAYBUNDLE) then
+        write(message,'(A)')  trim(name)//' arrayBundle  '//trim(itemNameList(i))
+        if (present(log)) then
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+        else
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
       else
-        write(message,'(A)')  trim(name)//' non-field item '//trim(itemNameList(i))
+        write(message,'(A)')  trim(name)//' unknown item  '//trim(itemNameList(i))
         if (present(log)) then
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
         else
