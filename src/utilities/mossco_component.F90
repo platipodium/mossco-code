@@ -1218,7 +1218,12 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message, '(A,I2,A)') trim(message), count, ' single attributes'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    if (present(log)) then
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+    else
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
 
     call ESMF_AttributeGet(gridComp, count=count, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
