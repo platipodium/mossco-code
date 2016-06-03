@@ -1229,8 +1229,8 @@ contains
        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-       write(message,'(A)')  trim(name)//' attribute'
-       call MOSSCO_MessageAdd(message,' '//trim(attributeName)//'=')
+       write(message,'(A)')  trim(name)//':'
+       call MOSSCO_MessageAdd(message,trim(attributeName)//' =')
 
        call ESMF_AttributeGet(gridComp, name=attributeName, typekind=typekind,  itemCount=itemCount, rc=localrc)
        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
