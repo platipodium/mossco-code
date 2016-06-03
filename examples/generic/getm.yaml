@@ -1,3 +1,6 @@
+instances:
+  - mossco_getm: netcdf
+
 coupling:
   - components:
      - getm
