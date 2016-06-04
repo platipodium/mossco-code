@@ -58,7 +58,7 @@ contains
 
     type(ESMF_CplComp), intent(inout)              :: cplComp
     type(ESMF_Clock), intent(in)                   :: parentClock
-    character(ESMF_MAXSTR), intent(out), optional  :: name
+    character(len=*), intent(out), optional  :: name
     type(ESMF_Time), intent(out), optional         :: currTime
     integer, intent(out), optional                 :: rc
 
@@ -196,7 +196,7 @@ contains
     type(ESMF_GridComp), intent(inout)             :: gridComp
     type(ESMF_Clock), intent(in)                   :: parentClock
     type(ESMF_KeywordEnforcer), optional           :: keywordEnforcer ! must use keywords below
-    character(ESMF_MAXSTR), intent(out), optional  :: name
+    character(len=*), intent(out), optional  :: name
     type(ESMF_Time), intent(out), optional         :: currTime
     integer, intent(out), optional                 :: rc
     type(ESMF_State), intent(in), optional         :: importState, exportState
@@ -522,7 +522,7 @@ contains
 
     type(ESMF_GridComp)   ,intent(inout)        :: gridComp
     logical               ,intent(in ),optional :: kwe !keyword-enforcer
-    character(ESMF_MAXSTR),intent(out),optional :: name
+    character(len=*),intent(out),optional :: name
     type(ESMF_Method_Flag),intent(out),optional :: currentMethod
     integer               ,intent(out),optional :: currentPhase
     logical               ,intent(out),optional :: clockIsPresent
@@ -606,7 +606,7 @@ contains
                                      clockIsPresent,clock,currTime)
     type(ESMF_GridComp)   ,intent(inout)          :: gridComp
     logical               ,intent(in ),optional :: kwe !keyword-enforcer
-    character(ESMF_MAXSTR),intent(out),optional :: name
+    character(len=*),intent(out),optional :: name
     type(ESMF_Method_Flag),intent(out),optional :: currentMethod
     integer               ,intent(out),optional :: currentPhase
     logical               ,intent(out),optional :: clockIsPresent

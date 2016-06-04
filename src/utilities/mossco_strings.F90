@@ -194,7 +194,7 @@ contains
 #define ESMF_METHOD "MOSSCO_MessageAddString"
   subroutine MOSSCO_MessageAddString(message, string, rc)
 
-    character(ESMF_MAXSTR), intent(inout)  :: message
+    character(len=*), intent(inout)  :: message
     character(len=*), intent(in)           :: string
     integer(ESMF_KIND_I4), optional        :: rc
 
@@ -298,7 +298,7 @@ contains
 #define ESMF_METHOD "MOSSCO_MessageAddList"
   subroutine MOSSCO_MessageAddList(message, stringList, rc)
 
-    character(ESMF_MAXSTR), intent(inout)  :: message
+    character(len=*), intent(inout)  :: message
     character(len=*),  intent(in),  allocatable :: stringList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 

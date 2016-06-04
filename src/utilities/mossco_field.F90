@@ -41,7 +41,7 @@ contains
 subroutine MOSSCO_FieldString(field, message, length, kwe, prefix, rc)
 
   type(ESMF_Field), intent(in)                   :: field
-  character(len=ESMF_MAXSTR), intent(inout)      :: message
+  character(len=*), intent(inout)                :: message
   integer(ESMF_KIND_I4), intent(inout), optional :: length
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
   character(len=*), intent(in), optional         :: prefix

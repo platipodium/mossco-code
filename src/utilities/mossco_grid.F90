@@ -35,7 +35,7 @@ contains
 #define ESMF_METHOD "MOSSCO_GridCreateRegional3D"
 function MOSSCO_GridCreateRegional3D(name, rc) result(grid)
 
-  character(ESMF_MAXSTR), intent(in) :: name
+  character(len=*), intent(in) :: name
   integer,  intent(out), optional    :: rc
   type(ESMF_Grid)                    :: grid
 
@@ -90,7 +90,7 @@ end function MOSSCO_GridCreateRegional3D
 #define ESMF_METHOD "MOSSCO_GridCreateRegional2D"
 function MOSSCO_GridCreateRegional2D(name, rc) result(grid)
 
-  character(ESMF_MAXSTR), intent(in) :: name
+  character(len=*), intent(in) :: name
   integer,  intent(out), optional    :: rc
   type(ESMF_Grid)                    :: grid
 
