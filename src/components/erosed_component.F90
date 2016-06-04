@@ -65,7 +65,7 @@ module erosed_component
 
   integer(kind=ESMF_KIND_I4),dimension(:,:)    ,pointer  :: mask=>NULL()
   real   (kind=ESMF_KIND_R8),dimension(:,:)    ,pointer  :: area=>NULL()
-  integer                   ,dimension(:),allocatable    :: external_idx_by_nfrac,nfrac_by_external_idx
+  integer(ESMF_KIND_I8)     ,dimension(:),allocatable    :: external_idx_by_nfrac,nfrac_by_external_idx
   integer                                                :: ubnd(4),lbnd(4)
 
    integer                                      :: nmlb           ! first cell number
@@ -748,7 +748,7 @@ contains
     real(ESMF_KIND_R8),dimension(:,:)  ,pointer   :: ptr_f2=>null()
 
     integer :: n
-    integer,dimension(:),allocatable :: spm_flux_id
+    integer(ESMF_KIND_I8),dimension(:),allocatable :: spm_flux_id
     logical :: isPresent
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, importState=importState, &
