@@ -175,9 +175,8 @@ module netcdf_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Value of fileName defaults to name of component
-      write(fileName,'(A)') trim(name)
       call MOSSCO_ConfigGet(config, label='filename', value=fileName, &
-        defaultValue=trim(fileName), rc=localrc)
+        defaultValue=trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
