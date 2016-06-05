@@ -176,11 +176,8 @@ module netcdf_component
 
       !> Value of fileName defaults to name of component
       write(fileName,'(A)') trim(name)
-      call MOSSCO_ConfigGet(config, label='filename', value=fileName, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
+      call MOSSCO_ConfigGet(config, label='filename', value=fileName, &
+        defaultValue=trim(fileName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -189,7 +186,7 @@ module netcdf_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Value of checkNaN defaults to .true.
-      call MOSSCO_ConfigGet(config, label='checkNaN', value=checkNaN, rc=localrc)
+      call MOSSCO_ConfigGet(config, label='checkNaN', value=checkNaN, defaultValue=.true., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -198,7 +195,7 @@ module netcdf_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       !> Value of checkInf defaults to .true.
-      call MOSSCO_ConfigGet(config, label='checkInf', value=checkNaN, rc=localrc)
+      call MOSSCO_ConfigGet(config, label='checkInf', value=checkNaN, defaultValue=.true., rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -247,6 +244,10 @@ module netcdf_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
+
+    call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
