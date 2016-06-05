@@ -106,7 +106,7 @@ endif
 
 gotm_clone gotm_update:
 ifeq ($(wildcard $(external_GOTMDIR)/src/CMakeLists.txt),)
-	$(GIT) clone git://github.com/gotm-model/code.git $(external_GOTMDIR)
+	$(GIT) clone https://github.com/gotm-model/code.git $(external_GOTMDIR)
 else
 	( cd $(external_GOTMDIR) ; $(GIT) pull )
 endif
