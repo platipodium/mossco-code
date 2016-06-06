@@ -38,7 +38,7 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldString"
-subroutine MOSSCO_FieldString(field, message, length, kwe, prefix, rc)
+subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
 
   type(ESMF_Field), intent(in)                   :: field
   character(len=*), intent(inout)                :: message
@@ -47,7 +47,7 @@ subroutine MOSSCO_FieldString(field, message, length, kwe, prefix, rc)
   character(len=*), intent(in), optional         :: prefix
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
-  integer(ESMF_KIND_I4)   :: rc_, length_, rank, localrc, gridRank, n, i, width
+  integer(ESMF_KIND_I4)   :: rc_, rank, localrc, gridRank, n, i, width
   integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
 
   character(len=ESMF_MAXSTR)  :: geomName, stringValue, name, form
@@ -191,8 +191,7 @@ subroutine MOSSCO_FieldString(field, message, length, kwe, prefix, rc)
   if (allocated(ungriddedUbnd)) deallocate(ungriddedUbnd)
   if (allocated(ungriddedLbnd)) deallocate(ungriddedLbnd)
 
-  length_=len_trim(message)
-  if (present(length)) length=length_
+  if (present(length)) length=len_trim(message)
   if (present(rc)) rc=rc_
 
 end subroutine MOSSCO_FieldString
