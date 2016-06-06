@@ -758,12 +758,12 @@ contains
         call MOSSCO_Reallocate(fieldNameList, fieldCount, keep=.false., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        
+
         call ESMF_FieldBundleGet(fieldBundle, fieldNameList=fieldNameList, &
           fieldList=fieldList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  
+
         if (deep_) then
           do j=1, fieldCount
             call MOSSCO_FieldLog(fieldList(j), prefix=trim(name)//':'//trim(itemNameList(i))//':', rc=localrc)
@@ -789,6 +789,10 @@ contains
         endif
 
         call MOSSCO_Reallocate(fieldList, 0, keep=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_Reallocate(fieldNameList, 0, keep=.false., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
