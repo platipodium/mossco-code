@@ -348,7 +348,7 @@ module filtration_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message, '(A)') trim(name)//' created empty field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAddReplace(importState, (/field/),rc=localrc)
@@ -413,7 +413,7 @@ module filtration_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     enddo
@@ -525,7 +525,7 @@ module filtration_component
     endif
 
     write(message,'(A)') trim(name)//' obtained grid from '
-    call MOSSCO_FieldString(field, message)
+    call MOSSCO_FieldString(field, message, rc=localrc)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     ! Get all fields that are empty and provide them with a grid
@@ -1296,7 +1296,7 @@ module filtration_component
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
         write(message,'(A)') trim(name)//' received incomplete field'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif

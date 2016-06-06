@@ -272,7 +272,7 @@ module transport_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' added for transport field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
 
       field = ESMF_FieldEmptyCreate(name=trim(itemName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -284,7 +284,7 @@ module transport_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' added for transport field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
     enddo
 
     return
@@ -460,7 +460,7 @@ module transport_connector
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' created for transport empty field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
     endif
 
     return
@@ -547,7 +547,7 @@ module transport_connector
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' created for transport empty field'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
       endif
     enddo
 

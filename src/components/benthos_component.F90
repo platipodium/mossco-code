@@ -332,7 +332,7 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message, '(A)') trim(name)//' created field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAdd(importState,(/field/),rc=localrc)
@@ -487,7 +487,7 @@ contains
            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
          else
            write(message,'(A)')  trim(name)//' did not find "units" attribute in field '
-           call MOSSCO_FieldString(field, message)
+           call MOSSCO_FieldString(field, message, rc=localrc)
            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
            importList(i)%units=''
            write (0,*) 'unit of macrofauna or microphytoobenthos is not present, therefore set to '')'

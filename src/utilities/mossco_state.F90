@@ -732,7 +732,7 @@ contains
           endif
         else
           write(message,'(A)')  trim(name)//' field'
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
 
           if (present(log)) then
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
@@ -1491,7 +1491,7 @@ contains
 
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
       write(message,'(A)') 'Cannot use empty field '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1502,7 +1502,7 @@ contains
 
     if (geomType /= ESMF_GEOMTYPE_GRID) then
       write(message,'(A)') 'Cannot use non-gridded field '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1907,11 +1907,11 @@ contains
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)')  '  moved '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         write(message,'(A)')  '  to '
         !call MOSSCO_FieldString(newfield, message)
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 
@@ -2015,10 +2015,10 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)')  '  moved '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       write(message,'(A)')  '  to '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     enddo

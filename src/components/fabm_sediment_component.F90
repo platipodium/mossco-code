@@ -286,7 +286,7 @@ module fabm_sediment_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' uses foreign horizontal grid from field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       call ESMF_FieldGet(field, grid=flux_grid, rc=localrc)
@@ -477,7 +477,7 @@ module fabm_sediment_component
         end do
 
         write(message, '(A)') trim(name)//' created bulk field'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -500,7 +500,7 @@ module fabm_sediment_component
           fluxmesh_ptr = -fluxes(:,1,sed%export_states(n)%fabm_id)
 
           write(message, '(A)') trim(name)//' created field'
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -521,7 +521,7 @@ module fabm_sediment_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           write(message, '(A)') trim(name)//' created field'
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -535,7 +535,7 @@ module fabm_sediment_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message, '(A)') trim(name)//' created empty field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -552,7 +552,7 @@ module fabm_sediment_component
       fluxmesh_ptr(1:numElements)=bdys(1:numElements,1,1)
 
       write(message, '(A)') trim(name)//' created field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -571,7 +571,7 @@ module fabm_sediment_component
           fluxmesh_ptr(1:numElements)=bdys(:,1,sed%export_states(n)%fabm_id+1)
 
           write(message, '(A)') trim(name)//' created field'
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
 
@@ -595,7 +595,7 @@ module fabm_sediment_component
             fluxmesh_ptr(1:numElements)=-1.0_rk
 
             write(message, '(A)') trim(name)//' created field'
-            call MOSSCO_FieldString(field, message)
+            call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
             call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -663,7 +663,7 @@ module fabm_sediment_component
         ptr_f3 = sed%export_states(n)%data ! initialize with 0.0
 
         write(message, '(A)') trim(name)//' created field'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -687,7 +687,7 @@ module fabm_sediment_component
           ptr_f2 = -fluxes(:,:,sed%export_states(n)%fabm_id)
 
           write(message, '(A)') trim(name)//' created field'
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -711,7 +711,7 @@ module fabm_sediment_component
           call ESMF_AttributeSet(field,'units',trim(sed%model%diagnostic_variables(n)%units))
 
           write(message, '(A)') trim(name)//' created diagnostic field'
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -726,7 +726,7 @@ module fabm_sediment_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message, '(A)') trim(name)//' created empty field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -741,7 +741,7 @@ module fabm_sediment_component
       call ESMF_AttributeSet(field,'units','degC')
 
       write(message, '(A)') trim(name)//' created field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -757,7 +757,7 @@ module fabm_sediment_component
           call ESMF_AttributeSet(field,'units',trim(sed%export_states(n)%units))
 
           write(message, '(A)') trim(name)//' created horizontal field'
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -774,7 +774,7 @@ module fabm_sediment_component
             call ESMF_AttributeSet(field,'units','m/s')
 
             write(message, '(A)') trim(name)//' created horizontal field'
-            call MOSSCO_FieldString(field, message)
+            call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
             call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -837,7 +837,7 @@ module fabm_sediment_component
         sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
         call sed%update_porosity(from_surface=.true.)
         write(message,'(A)') trim(name)//' updated porosity from'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       else
         write(message,'(A)') trim(name)//' received incomplete field, remove field'
@@ -915,7 +915,7 @@ module fabm_sediment_component
 
       if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) then
         write(message,'(A)') trim(name)//' skipped hotstart for incomplete '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
       endif
@@ -926,7 +926,7 @@ module fabm_sediment_component
 
       if (rank /= 3) then
         write(message,'(A)') trim(name)//' skipped hotstart for not rank 3 '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
       endif
@@ -951,7 +951,7 @@ module fabm_sediment_component
 
       if (any (exportUbnd /= ubnd) .or. any(exportLbnd /= lbnd)) then
         write(message,'(A)') trim(name)//' skipped hotstart for no-match array bounds '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         cycle
       endif
@@ -992,7 +992,7 @@ module fabm_sediment_component
       sed%export_states(n)%data(exportLbnd(1):exportUBnd(1),exportLbnd(2):exportUbnd(2), &
         exportLBnd(3):exportUBnd(3)) = ptr_f3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
       write(message,'(A)') trim(name)//' hotstarted '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end do
 
@@ -1067,7 +1067,7 @@ module fabm_sediment_component
         sed%porosity(1:_INUM_,1:_JNUM_,1)=ptr_f2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
         call sed%update_porosity(from_surface=.true.)
         write(message,'(A)') trim(name)//' updated porosity from'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       else
         write(message,'(A)') trim(name)//' received incomplete field'

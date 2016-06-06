@@ -754,7 +754,7 @@ module netcdf_input_component
             call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
             write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-            call MOSSCO_FieldString(field, message)
+            call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
 
             cycle
@@ -766,7 +766,7 @@ module netcdf_input_component
             call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
             write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-            call MOSSCO_FieldString(field, message)
+            call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
 
             cycle

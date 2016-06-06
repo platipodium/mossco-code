@@ -339,7 +339,7 @@ module pelagic_benthic_mediator
 
 	    if (.not.isPresent) then
 	      write(message,'(A)') trim(name)//' found no default value attribute for field '
-	      call MOSSCO_FieldString(field, message)
+	      call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 	    endif

@@ -572,7 +572,7 @@ end subroutine MOSSCO_FieldCopy
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message,'(A)') 'Cannot initialize incomplete '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -623,7 +623,7 @@ end subroutine MOSSCO_FieldCopy
       farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) = 0.0
     else
       write(message,'(A)') 'Not yet implemented, initialize rank>7 '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
     endif
 
@@ -1004,7 +1004,7 @@ end subroutine MOSSCO_FieldCopy
         missing_value = dble(missingValueI4)
       else
         write(message,'(A)')  '  missing value non-implemented type '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -1641,7 +1641,7 @@ end subroutine MOSSCO_FieldCopy
 !                 ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))) then
 !           call self%close()
 !           write(message,'(A)')  '  NaN detected in field '
-!           call MOSSCO_FieldString(field, message)
+!           call MOSSCO_FieldString(field, message, rc=localrc)
 !           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
 !           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !         endif

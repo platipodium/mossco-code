@@ -318,7 +318,7 @@ module mossco_netcdf
         missingValue = dble(missingValueI4)
       else
         write(message,'(A)')  '  missing value non-implemented type '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         if (present(rc)) rc=ESMF_RC_NOT_FOUND
         return
@@ -363,7 +363,7 @@ module mossco_netcdf
               ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)))) then
           call self%close()
           write(message,'(A)')  '  NaN detected in field '
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
@@ -373,7 +373,7 @@ module mossco_netcdf
         if (any(abs(ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))) > huge(missingValue))) then
           call self%close()
           write(message,'(A)')  '  Inf detected in field '
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
@@ -430,7 +430,7 @@ module mossco_netcdf
               ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))) then
         call self%close()
         write(message,'(A)')  '  NaN detected in field '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -440,7 +440,7 @@ module mossco_netcdf
       if (any(abs(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))) > huge(missingValue))) then
         call self%close()
         write(message,'(A)')  '  Inf detected in field '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -485,7 +485,7 @@ module mossco_netcdf
               ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)))) then
         call self%close()
         write(message,'(A)')  '  NaN detected in field '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -495,7 +495,7 @@ module mossco_netcdf
       if (any(abs(ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))) > huge(missingValue))) then
         call self%close()
         write(message,'(A)')  '  Inf detected in field '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
@@ -2487,7 +2487,7 @@ module mossco_netcdf
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)')  'Cannot read into non-complete field '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -2503,7 +2503,7 @@ module mossco_netcdf
 
     if (fieldRank > 4) then
       write(message, '(A)')  'Rank > 4 not implemented for reading field '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       if (present(rc)) rc = ESMF_RC_NOT_IMPL
       return
@@ -2589,7 +2589,7 @@ module mossco_netcdf
       write(0,*) '  count = ', count
       write(0,*) '  ncubnd = ', ncubnd
       write(message,'(A)') '  count<0 for '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       if (present(rc)) rc = ESMF_RC_CANNOT_GET
       return

@@ -396,7 +396,7 @@ module grid_component
       endif
 
       write(message, '(A)') trim(name)//' created field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAdd(exportState, (/field/), rc=localrc)

@@ -314,7 +314,7 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,*) trim(name)//' uses foreign grid from field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       call ESMF_FieldGet(field, grid=grid, rc=localrc)
@@ -343,7 +343,7 @@ contains
       if (rank==3) then
 
         write(message,*) trim(name)//' uses foreign grid from field'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
         call ESMF_FieldGet(field, grid=grid3, rc=localrc)
@@ -665,7 +665,7 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message, '(A)') trim(name)//' created field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call ESMF_StateAdd(importState,(/field/),rc=localrc)
@@ -989,7 +989,7 @@ contains
        call ESMF_AttributeSet(field,'creator', trim(name), rc=localrc)
        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
        write(message,'(A)') trim(name)//' creates field'
-       call MOSSCO_FieldString(field, message)
+       call MOSSCO_FieldString(field, message, rc=localrc)
        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
        call ESMF_FieldBundleAdd(fieldBundle,(/field/),multiflag=.true.,rc=localrc)
@@ -1011,7 +1011,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message)
+    call MOSSCO_FieldString(field, message, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1030,7 +1030,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message)
+    call MOSSCO_FieldString(field, message, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1049,7 +1049,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message)
+    call MOSSCO_FieldString(field, message, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1066,7 +1066,7 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     write(message,'(A)') trim(name)//' created field'
-    call MOSSCO_FieldString(field, message)
+    call MOSSCO_FieldString(field, message, rc=localrc)
     call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
     call ESMF_StateAdd(exportState,(/field/), rc=localrc)
@@ -1121,7 +1121,7 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       write(message,'(A)') trim(name)//' created field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
        call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
@@ -1146,7 +1146,7 @@ contains
          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT,rcToReturn=rc)) &
          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         write(message,'(A)') trim(name)//' created field'
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
         call ESMF_AttributeSet(field,'units',trim('g m**-3'),rc=localrc)
@@ -1376,7 +1376,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           else
             write(message,'(A)')  trim(name)//' did not find "external_index" attribute in field '
-            call MOSSCO_FieldString(field, message)
+            call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             external_index=1
             write (*,*) 'external_index is not present, therefore set to 1)'
@@ -1391,7 +1391,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           else
             sedd50(nfrac_by_external_idx(external_index))=0.0
             write(message,'(A)')  trim(name)//' did not find "mean_particle_diameter" attribute in field '
-            call MOSSCO_FieldString(field, message)
+            call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           endif
 
@@ -1404,7 +1404,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           else
             rhosol(nfrac_by_external_idx(external_index))=0.0
             write(message,'(A)')  trim(name)//' did not find "rhosol" attribute in field. It has bee set to zero'
-            call MOSSCO_FieldString(field, message)
+            call MOSSCO_FieldString(field, message, rc=localrc)
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           endif
 
@@ -1415,14 +1415,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
            !> @todo proper bounds checking with eLBound required here
 !          if (.not. ( all(lbound(ptr_f3)== lbnd).and. all(ubound(ptr_f3)==ubnd ) ) ) then
 !            write(message, '(A)') trim(name)//' invalid field bounds in field'
-!            call MOSSCO_FieldString(field, message)
+!            call MOSSCO_FieldString(field, message, rc=localrc)
 !            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
 !            call ESMF_Finalize(endflag=ESMF_END_ABORT)
 !          end if
 !
 !          if (.not. (all(lbound(ptr_f3)==tlbnd).and. all(ubound(ptr_f3)==tubnd) ) ) then
 !            write(message, '(A)') trim(name)//' bounds do not match total domain in field'
-!            call MOSSCO_FieldString(field, message)
+!            call MOSSCO_FieldString(field, message, rc=localrc)
 !            call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 !          end if
 
@@ -1707,7 +1707,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1723,7 +1723,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (.not. (      all(lbound(rms_orbital_velocity%ptr) .eq. (/   1,   1/) ) &
                      .and. all(ubound(rms_orbital_velocity%ptr) .eq. (/inum,jnum/) ) ) ) then
       write(message, '(A)') trim(name)//' invalid field bounds in field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(endflag=ESMF_END_ABORT)
     end if
@@ -1756,7 +1756,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1798,7 +1798,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1840,7 +1840,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1882,7 +1882,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1924,7 +1924,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1974,7 +1974,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     if (status /= ESMF_FIELDSTATUS_COMPLETE) then
       write(message, '(A)') trim(name)//' received incomplete field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif

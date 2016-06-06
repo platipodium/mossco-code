@@ -915,7 +915,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
 #ifdef VERBOSE
         write(message,'(A)') trim(name)//' replaced empty field '
-        call MOSSCO_FieldString(importField, message)
+        call MOSSCO_FieldString(importField, message, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 #endif
       elseif (itemType==ESMF_STATEITEM_FIELDBUNDLE) then
         call ESMF_StateGet(importState, trim(fieldName), importFieldBundle, rc=localrc)
@@ -978,7 +980,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
       write(message,'(A)') 'cannot assign a value to empty field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       if (present(rc)) rc=rc_
@@ -996,7 +998,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
     if (rank<1 .or. rank > 7) then
       write(message,'(A,I1,A)') trim(name)//' cannot handle rank ',rank,' in field'
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -1035,7 +1037,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     write(message,'(A)') 'assigned value to field'
-    call MOSSCO_FieldString(field, message)
+    call MOSSCO_FieldString(field, message, rc=localrc)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     if (allocated(ubnd)) deallocate(ubnd)

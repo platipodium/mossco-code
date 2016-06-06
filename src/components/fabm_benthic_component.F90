@@ -260,7 +260,7 @@ module fabm_benthic_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' created diagnostic field '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -776,7 +776,7 @@ module fabm_benthic_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' created diagnostic field '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
         call ESMF_StateAddReplace(exportState,(/field/),rc=localrc)
@@ -803,7 +803,7 @@ module fabm_benthic_component
           ptr_f3 = 0.0_rk
 
           write(message,'(A)') trim(name)//' created bulk dependency field '
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
           call ESMF_StateAdd(importState,(/field/),rc=localrc)
@@ -812,7 +812,7 @@ module fabm_benthic_component
         else
           call ESMF_StateGet(importState, trim(ben%bulk_dependencies(n)%name)//'_in_water', field, rc=localrc)
           write(message,'(A)') trim(name)//' uses existing bulk dependency field '
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         end if
         attribute_name=trim(ben%bulk_dependencies(n)%name)//'_in_water'
@@ -848,7 +848,7 @@ module fabm_benthic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           write(message,'(A)') trim(name)//' created horizontal dependency field '
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
           call ESMF_StateAddReplace(importState,(/field/),rc=localrc)
@@ -856,7 +856,7 @@ module fabm_benthic_component
         else
           call ESMF_StateGet(importState, trim(esmf_name), field, rc=localrc)
           write(message,'(A)') trim(name)//' uses existing horizontal dependency field '
-          call MOSSCO_FieldString(field, message)
+          call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         end if
         attribute_name=trim(esmf_name)
@@ -907,7 +907,7 @@ module fabm_benthic_component
       call set_item_flags(importState,attribute_name,requiredFlag=.false.,optionalFlag=.true.,requiredRank=2)
 
       write(message,'(A)') trim(name)//' created field '
-      call MOSSCO_FieldString(field, message)
+      call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
       !> add to importState
@@ -1765,7 +1765,7 @@ module fabm_benthic_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') '  integrating '
-        call MOSSCO_FieldString(field, message)
+        call MOSSCO_FieldString(field, message, rc=localrc)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         !> vertically homogeneous flux in water (e.g. rivers)
