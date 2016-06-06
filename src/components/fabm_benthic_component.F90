@@ -1148,7 +1148,7 @@ module fabm_benthic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           ! only use field, if external_index matches own index
-          if (external_index == int(ben%export_states(n)%fabm_id,ESMF_KIND_I8) then
+          if (external_index == int(ben%export_states(n)%fabm_id,ESMF_KIND_I8)) then
             field = fieldList(k)
             foundItem=.true.
             exit
@@ -1745,7 +1745,7 @@ module fabm_benthic_component
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           ! only use field, if external_index matches own index
-          if (external_index /= int(ben%export_states(n)%fabm_id,ESMF_KIND_I8) cycle
+          if (external_index /= int(ben%export_states(n)%fabm_id,ESMF_KIND_I8)) cycle
           m = m + 1
           tempList(m) = fieldlist(k)
         end do
