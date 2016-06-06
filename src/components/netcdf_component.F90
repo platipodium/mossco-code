@@ -140,23 +140,18 @@ module netcdf_component
     checkNaN = .true.
     checkInf = .true.
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !! The default filename to read is the name of the component with a .nc
+    !! extension
+    fileName=trim(name)//'.nc'
 
     !! Check whether there is a config file with the same name as this component
-    !! If yes, load it.
-    call ESMF_GridCompGet(gridComp, configIsPresent=configIsPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (configIsPresent) then
-      call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    endif
-
+    !! If yes, load it, otherwise try to load one that is already present in the
+    !! component.
     configfilename=trim(name)//'.cfg'
     inquire(file=trim(configfilename), exist=fileIsPresent)
 
@@ -165,7 +160,6 @@ module netcdf_component
       write(message,'(A)')  trim(name)//' reads configuration from '//trim(configFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-      !> @todo deal with already existing config
       config = ESMF_ConfigCreate(rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -174,7 +168,24 @@ module netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !> Value of fileName defaults to name of component
+    else
+      call ESMF_GridCompGet(gridComp, configIsPresent=configIsPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (configIsPresent) then
+        call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)')  trim(name)//' reads configuration from component'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+    endif
+
+    if (fileIsPresent .or. configIsPresent) then
+
+      !> Value of netcdf fileName defaults to name of component
       call MOSSCO_ConfigGet(config, label='filename', value=fileName, &
         defaultValue=trim(name), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -189,16 +200,8 @@ module netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_AttributeSet(importState, 'check_nan', checkNaN, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
       !> Value of checkInf defaults to .true.
       call MOSSCO_ConfigGet(config, label='checkInf', value=checkNaN, defaultValue=.true., rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call MOSSCO_AttributeSet(importState, 'check_inf', checkInf, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -207,42 +210,58 @@ module netcdf_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (allocated(filterExcludeList)) then
-        call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_AttributeGet(importState, 'filter_pattern_exclude', value=message, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        write(message,'(A)') trim(name)//' exclude patterns: '//trim(message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
-
       !> Default value for filterIncludeList is a non-associated pointer
       call MOSSCO_ConfigGet(config, 'include', value=filterIncludeList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (allocated(filterIncludeList)) then
-        call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        call ESMF_AttributeGet(importState, 'filter_pattern_include', value=message, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-        write(message,'(A)') trim(name)//' include patterns: '//trim(message)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
 
       call ESMF_GridCompSet(gridComp, config=config, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
+
+    if (allocated(filterIncludeList)) then
+      call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeGet(importState, 'filter_pattern_include', value=message, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(name)//' include patterns: '//trim(message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    if (allocated(filterExcludeList)) then
+      call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeGet(importState, 'filter_pattern_exclude', value=message, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(name)//' exclude patterns: '//trim(message)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
+
+    call MOSSCO_AttributeSet(importState, 'check_inf', checkInf, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_AttributeSet(importState, 'check_nan', checkNaN, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeSet(importState, 'filename', trim(fileName), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
