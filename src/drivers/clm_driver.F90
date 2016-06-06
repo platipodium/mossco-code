@@ -1,18 +1,29 @@
-!>  @file
+!> @brief Implementation of CLM driver
+!
+!  This computer program is part of MOSSCO.
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
+!> @author Hartmut Kapitza <hartmut.kapitza@hzg.de>
+!> @author Carsten Lemmen <carsten.lemmen@hzg.de>
+!
+! MOSSCO is free software: you can redistribute it and/or modify it under the
+! terms of the GNU General Public License v3+.  MOSSCO is distributed in the
+! hope that it will be useful, but WITHOUT ANY WARRANTY.  Consult the file
+! LICENSE.GPL or www.gnu.org/licenses/gpl-3.0.txt for the full license terms.
+!
 !! This module contains routines specific to the CLM output format.
+!> and encapsulates the CLM atmospheric interface.
 
-!> This module encapsulates the CLM atmospheric interface.
 module clm_driver
-    
-    use netcdf
+
+  use netcdf
 
 #ifdef MOSSCO_MPI
-    use mpi
+  use mpi
 #endif
-    
-    implicit none
 
-    private
+  implicit none
+
+  private
 
     integer, parameter :: nvars=7        !< number of atm. variables
     integer            :: iunit          !< file identifier
@@ -39,8 +50,7 @@ module clm_driver
       real(8), intent(in)  :: app_time_secs
       integer, intent(out) :: lrc
 
-      character (len=80)   :: timestring
-      integer              :: ierr, rc, ibuf(4), dimid
+      integer              :: ierr, ibuf(4), dimid
 
 ! Set return code to no-error
       lrc  = 0
@@ -70,7 +80,7 @@ module clm_driver
         endif
 
       endif
-        
+
 #ifdef MOSSCO_MPI
       call MPI_BCAST( ibuf, 4, MPI_INTEGER,   0, MPI_COMM_WORLD, ierr )
 #endif
@@ -117,7 +127,7 @@ module clm_driver
       real(8), intent(in)  :: app_time_secs
       integer, intent(out) :: lrc
 
-      integer i, rc
+      integer i
 
 ! Set return code to no-error
       lrc = 0
@@ -162,7 +172,7 @@ module clm_driver
       integer, intent(in) :: myrank
       integer, intent(in) :: num
 
-      integer             :: ierr, rc
+      integer             :: ierr
 
 ! Get data records and broadcast
 ! First case: 2 records
@@ -273,20 +283,20 @@ module clm_driver
         print *, "Closing atm.nc"
         ierr = nf90_close(iunit)
       endif
-      
+
       deallocate (work)
 
     end subroutine CLM_final
 
 !----------------------------------------------------------------------------------
 
-!> Check error code 
+!> Check error code
 !! @par Detailed Description:
 !! This subroutine checks the error code of a netCDF call.
 !! In case of error it returns the error message and stops the run.
 !----------------------------------------------------------------------------------
    subroutine cdf_check_err(ierr, lrc)
-   
+
       integer, intent(in)  :: ierr !< netCDF return code
       integer, intent(out) :: lrc  !< local return code
 
