@@ -344,12 +344,12 @@ module netcdf_input_component
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
 
-      call MOSSCO_ConfigGet(config, 'alias', aliasList, localrc)
+      call MOSSCO_ConfigGet(config, 'alias', aliasList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (allocated(aliasList)) then
-        call MOSSCO_AttributeSet(importState, 'alias_definition', aliasList, localrc)
+        call MOSSCO_AttributeSet(importState, 'alias_definition', aliasList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -357,7 +357,7 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, localrc)
+        call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
