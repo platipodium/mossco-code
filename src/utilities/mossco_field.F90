@@ -40,12 +40,12 @@ contains
 #define ESMF_METHOD "MOSSCO_FieldString"
 subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
 
-  type(ESMF_Field), intent(in)                   :: field
-  character(len=*), intent(inout)                :: message
-  integer(ESMF_KIND_I4), intent(inout), optional :: length
+  type(ESMF_Field), intent(in)                     :: field
+  character(len=*), intent(inout)                  :: message
   type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
-  character(len=*), intent(in), optional         :: prefix
-  integer(ESMF_KIND_I4), intent(out), optional   :: rc
+  integer(ESMF_KIND_I4), intent(out), optional     :: length
+  character(len=*), intent(in), optional           :: prefix
+  integer(ESMF_KIND_I4), intent(out), optional     :: rc
 
   integer(ESMF_KIND_I4)   :: rc_, rank, localrc, gridRank, n, i, width
   integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), ungriddedLbnd(:), ungriddedUbnd(:)
@@ -59,8 +59,14 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
 
   if (present(kwe)) localrc = ESMF_SUCCESS
   prefix_ = 'none'
-  !> The following line produces a segmentation fault
-  !if (present(prefix)) prefix_ = trim(prefix)
+  !> @todo The following line produced a segmentation fault
+  if (present(prefix)) then
+    if (len(prefix) > len(prefix_)) then
+      prefix_ = trim(prefix(1:len(prefix_)))
+    else
+      prefix_ = trim(prefix)
+    endif
+  endif
   rc_ = ESMF_SUCCESS
   rank = 0
   gridRank = 0
