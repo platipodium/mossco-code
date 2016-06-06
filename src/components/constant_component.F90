@@ -190,6 +190,7 @@ module constant_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    fileName = ''
     !! Check whether there is a config file with the same name as this component
     !! If yes, load it.
     configfilename=trim(name)//'.cfg'
@@ -381,7 +382,8 @@ module constant_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' created field '
-        call mossco_fieldstring(cur_item%field, message)
+        call mossco_fieldstring(cur_item%field, message, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call ESMF_LogWrite(message,ESMF_LOGMSG_INFO)
 
         call ESMF_StateAdd(exportState,(/cur_item%field/),rc=localrc)
