@@ -40,8 +40,8 @@ integer                            :: i, j
         g_erod_microphyto= 1.0
 
       write (*,*) ' Error: the microphytobenthos effect on the erodibility was calculated base on'// &
-                  '  Chlorophyll a content in UNIT microgram /g dry Sediment, and not in microgram/ m**2'// &
-                  '  area. Therefroe, the bioeffect was not considered.'
+                  '  Chlorophyll a content in UNIT microgram /g dry Sediment (mgg**-1)'// &
+                  '  area. Therefore, the bioeffect was not considered.'
       exit
      end if
   end do

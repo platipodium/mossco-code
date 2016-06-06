@@ -45,7 +45,7 @@ integer                            :: i,j
        fcr_microphyto= 1.0
 
       write (*,*) ' Warning: Missing unit: the microphytobenthos effect on critical shear stress can be only'// &
-                  ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment,'// &
+                  ' calculated base on Chlorophyll a content in UNIT microgram /g dry Sediment (mgg**-1),'// &
                   ' therefore, the effect was not calculated.'
       exit
      end if
