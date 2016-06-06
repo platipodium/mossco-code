@@ -933,13 +933,13 @@ module mossco_netcdf
       maxSeconds = -1.0D0
     endif
 
-    if (maxSeconds>seconds) then
+    if (maxSeconds >  seconds) then
       write(message,'(A,ES10.3,A,ES10.3,A)') '   addition of non-monotonic time ',seconds,' < ',maxSeconds,' not possible (yet)'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     elseif (maxSeconds<seconds) then
       write(message,'(A,ES10.3,A,ES10.3)') '   addition of monotonic time ',seconds,' > ',maxSeconds
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       write(message,'(A,I2,A,I2)') '   varid = ',varid,' start = ',dimlen + 1
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
 
