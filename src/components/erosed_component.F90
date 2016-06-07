@@ -2048,26 +2048,28 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (allocated(sinkf))deallocate (sinkf)
     if (allocated(sour)) deallocate (sour)
     if (allocated(sourf)) deallocate (sourf)
-    !
-    if (associated(mfluff)) nullify (mfluff)
-    if (associated(frac)) nullify (frac)
+
+    !The DEALLOCATE statement releases the space allocated for an allocatable
+    ! array or a pointer target and nullifies the pointer.
+    if (associated(mfluff)) deallocate (mfluff)
+    if (associated(frac)) deallocate (frac)
     if (allocated(sedtyp)) deallocate (sedtyp)
     if (allocated(mudfrac)) deallocate (mudfrac)
 
     if (allocated(uorb)) deallocate (uorb)
     if (allocated(tper)) deallocate (tper)
     if (allocated(teta)) deallocate (teta)
-    if (associated(BioEffects%TauEffect)) nullify (BioEffects%TauEffect)
-    if (associated(BioEffects%ErodibilityEffect)) nullify (BioEffects%ErodibilityEffect)
+    if (associated(BioEffects%TauEffect)) deallocate (BioEffects%TauEffect)
+    if (associated(BioEffects%ErodibilityEffect)) deallocate (BioEffects%ErodibilityEffect)
     if (allocated(size_classes_of_upward_flux_of_pim_at_bottom)) deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
-    if (associated(spm_concentration)) nullify (spm_concentration)
-    if (associated(depth_avg_spm_concentration)) nullify (depth_avg_spm_concentration)
-    if (associated(sum_depth_avg_spm_concentration)) nullify (sum_depth_avg_spm_concentration)
+    if (associated(spm_concentration)) deallocate (spm_concentration)
+    if (associated(depth_avg_spm_concentration)) deallocate (depth_avg_spm_concentration)
+    if (associated(sum_depth_avg_spm_concentration)) deallocate (sum_depth_avg_spm_concentration)
 
-    if (associated(thickness_of_layers)) nullify (thickness_of_layers)
-    if (associated(relative_thickness_of_layers)) nullify (relative_thickness_of_layers)
-    if (associated(sigma_midlayer)) nullify (sigma_midlayer)
-    if (associated(sediment_mass)) nullify (sediment_mass)
+    if (associated(thickness_of_layers)) deallocate (thickness_of_layers)
+    if (associated(relative_thickness_of_layers)) deallocate (relative_thickness_of_layers)
+    if (associated(sigma_midlayer)) deallocate (sigma_midlayer)
+    if (associated(sediment_mass)) deallocate (sediment_mass)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 
