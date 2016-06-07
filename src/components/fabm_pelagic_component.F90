@@ -1178,11 +1178,8 @@ module fabm_pelagic_component
       varname = trim(only_var_name(pel%model%state_variables(n)%long_name))//'_upward_flux_at_soil_surface'
       call ESMF_StateGet(importState, trim(varname), itemType,rc=localrc)
       if (itemType == ESMF_STATEITEM_FIELD) then
-        !write(0,*) 'field ',trim(varname),' found'
         call ESMF_StateGet(importState, trim(varname), field=field, rc=localrc)
         call ESMF_FieldGet(field, farrayPtr=bfl(n)%p, rc=localrc)
-      else
-        !write(0,*) 'field ',trim(varname),' not found'
       end if
     end do
 #endif
@@ -1959,11 +1956,14 @@ module fabm_pelagic_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (advanceCount < 2) then
-          call MOSSCO_CheckUnits(trim(units)//' s-1', fluxunits, isEqual=isEqual, rc=localrc)
+        !> Check units and consider that volume always comes in m-3 and time
+        !> in seconds
+        if (advanceCount < 1) then
+          call MOSSCO_CheckUnits(trim(units)//' s-1', trim(fluxunits)//' m-3', isEqual=isEqual, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
+        write(0,*) __LINE__
 
         if (advanceCount < 2) then
           write(message,'(A)') trim(name)//' integrates'
