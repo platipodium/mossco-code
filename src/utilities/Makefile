@@ -68,9 +68,10 @@ mossco_logging.o : mossco_strings.o mossco_field.o mossco_state.o mossco_logging
 mossco_field.o : mossco_strings.o mossco_field.F90
 mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
-mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90
+mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90 mossco_time.o
 mossco_attribute.o : mossco_attribute.F90
 mossco_memory.o : mossco_memory.F90
+mossco_strings.o : mossco_memory.o mossco_strings.F90
 mossco_parameter.o : mossco_parameter.F90
 mossco_config.o : mossco_config.F90
 mossco_db.o : mossco_db.F90 \
