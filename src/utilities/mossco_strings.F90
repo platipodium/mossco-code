@@ -412,13 +412,13 @@ contains
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, count1
-      call MOSSCO_CleanUnit(unit1List(i), rc=localrc)
+      !call MOSSCO_CleanUnit(unit1List(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
     do i=1, count2
-      call MOSSCO_CleanUnit(unit2List(i), rc=localrc)
+      !call MOSSCO_CleanUnit(unit2List(i), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
@@ -464,6 +464,7 @@ contains
     integer(ESMF_KIND_I4), optional, intent(out) :: rc
 
     integer(ESMF_KIND_I4)            :: rc_, localrc, chunk, i
+    character(len=ESMF_MAXSTR)       :: string
 
     if (present(rc)) rc = ESMF_RC_NOT_IMPL
 
@@ -488,12 +489,29 @@ contains
 
     !>  @todo  Search for division slash '/', replace this by whitespace
     !> and change the next occuring number to negative
+
+    string=unit
     do
-      i=index(unit,'/')
+      i=index(string,'/')
       if (i<1) exit
 
-      write(unit,'(A)') unit(1:i-1)//' '//unit(i:len_trim(unit))
-      unit(i:i)=' '
+      string(i:i) = ' '
+      i=i+1
+      ! Search for a number
+      do
+        if (i == len(string)) return
+        if (string(i:i) > '9' .or. string(i:i) < '0' ) then
+          i=i+1
+        else
+          exit
+        endif
+      enddo
+
+      if (string(i-1:i-1) == '-') then
+        write(string,'(A)') string(1:i-2)//string(i:len_trim(string))
+      else
+        write(string,'(A)') string(1:i-1)//'-'//string(i:len_trim(string))
+      endif
     enddo
 
     !> Remove instances of '**'
