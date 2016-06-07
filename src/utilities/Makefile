@@ -29,6 +29,7 @@ LIBMOSSCO_UTIL_OBJS+= 							\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_state.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_field.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_attribute.o)		\
+	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_memory.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_logging.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_parameter.o)		\
 	$(MOSSCO_LIBRARY_PATH)/libmossco_util.a(mossco_config.o)		\
@@ -69,6 +70,7 @@ mossco_gridspec.o : mossco_strings.o mossco_gridspec.F90
 mossco_component.o : mossco_strings.o mossco_state.o mossco_field.o mossco_component.F90
 mossco_netcdf.o : mossco_gridspec.o mossco_netcdf.F90
 mossco_attribute.o : mossco_attribute.F90
+mossco_memory.o : mossco_memory.F90
 mossco_parameter.o : mossco_parameter.F90
 mossco_config.o : mossco_config.F90
 mossco_db.o : mossco_db.F90 \
@@ -99,6 +101,7 @@ extraclean:
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_field.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_attribute.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_time.mod
+	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_memory.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_strings.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_grid.mod
 	@-rm -f $(MOSSCO_MODULE_PATH)/mossco_netcdf.mod
