@@ -1233,9 +1233,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I4), intent(out), optional    :: rc
 
     integer(ESMF_KIND_I4)                     :: rc_, localrc
-    character(len=ESMF_MAXSTR)                :: message, name, attributeName
+    character(len=ESMF_MAXSTR)                :: message, attributeName
     logical                                   :: isPresent
-    real(ESMF_KIND_R8)                        :: value_R8
+    real(ESMF_KIND_R8)                        :: real8
+    real(ESMF_KIND_R4)                        :: real4
+    integer(ESMF_KIND_I8)                     :: int8
+    integer(ESMF_KIND_I4)                     :: int4
+    type(ESMF_TypeKind_Flag)                  :: typeKind
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc=rc_
@@ -1247,11 +1251,29 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     call ESMF_AttributeGet(importField, trim(attributeName), isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_FieldGet(importField,name=name)
 
     if (.not.isPresent) return
 
-    call ESMF_AttributeGet(importField, trim(attributeName), value=value_R8, rc=localrc)
+    call ESMF_AttributeGet(importField, trim(attributeName), typeKind=typeKind, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (typeKind == ESMF_TYPEKIND_R8) then
+      call ESMF_AttributeGet(importField, trim(attributeName), value=real8, rc=localrc)
+    elseif (typeKind == ESMF_TYPEKIND_R4) then
+      call ESMF_AttributeGet(importField, trim(attributeName), value=real4, rc=localrc)
+      real8=real(real4, ESMF_KIND_R8)
+    elseif (typeKind == ESMF_TYPEKIND_I8) then
+      call ESMF_AttributeGet(importField, trim(attributeName), value=int8, rc=localrc)
+      real8=real(int8, ESMF_KIND_R8)
+    elseif (typeKind == ESMF_TYPEKIND_I4) then
+      call ESMF_AttributeGet(importField, trim(attributeName), value=int4, rc=localrc)
+      real8=real(int4, ESMF_KIND_R8)
+    else
+      if (present(rc)) rc=ESMF_RC_ARG_BAD
+      return
+    endif
+
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1260,12 +1282,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (.not.isPresent) then
-      call ESMF_AttributeSet(exportField, trim(attributeName), value=value_R8, rc=localrc)
+      call ESMF_AttributeSet(exportField, trim(attributeName), value=real8, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call MOSSCO_FieldSetValue(exportField, value_R8, rc=localrc)
+    call MOSSCO_FieldSetValue(exportField, real8, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
