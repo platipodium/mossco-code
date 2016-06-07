@@ -1793,13 +1793,25 @@ module fabm_pelagic_component
     integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3), rank
     character(len=ESMF_MAXSTR)     :: message, varname
     real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:), ratePtr3(:,:,:)
+    real(ESMF_KIND_R8), pointer    :: cell_column_fraction(:,:,:), volume_change(:,:,:)
+
+    ubnd3 = ubound(pel%layer_height)
+    lbnd3 = lbound(pel%layer_height)
 
     ! calculate total water depth
     if (.not.(associated(pel%cell_per_column_volume))) then
-      ubnd3 = ubound(pel%layer_height)
-      lbnd3 = lbound(pel%layer_height)
       allocate(pel%cell_per_column_volume(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
       pel%cell_per_column_volume = 0.0d0
+    end if
+
+    if (.not.(associated(cell_column_fraction))) then
+      allocate(cell_column_fraction(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
+      cell_column_fraction = 0.0d0
+    end if
+
+    if (.not.(associated(volume_change))) then
+      allocate(volume_change(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
+      volume_change = 0.0d0
     end if
 
     do k=1,pel%knum
@@ -1813,24 +1825,39 @@ module fabm_pelagic_component
       pel%cell_per_column_volume(RANGE2D,k) = 1.0d0 / &
         (sum(pel%layer_height(RANGE3D),dim=3)*pel%column_area(RANGE2D))
       endwhere
+
+      where (.not.pel%mask(RANGE2D,k))
+      cell_column_fraction(RANGE2D,k) = pel%layer_height(RANGE2D,k) / &
+        (sum(pel%layer_height(RANGE3D),dim=3))
+      endwhere
     enddo
 
     do n=1,pel%nvar
       varname = trim(pel%export_states(n)%standard_name)
+      volume_change(RANGE3D) = 0.0d0
+
       if (associated(pel%volume_flux)) then
           if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
-            do k=1,pel%knum
+            do k=1, pel%knum
               !> river dilution
-              if (any(dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k) > 0.5d0)) then
+              !> New formulation with Hassan 7 June 2016
+              volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
+                * cell_column_fraction(RANGE2D,k)
+
+              if (any(volume_change(RANGE2D,k) &
+                / (pel%layer_height(RANGE2D,k)  &
+                * pel%column_area(RANGE2D)) > 0.5d0)) then
                 write(message,'(A)') '  cfl for volume flux exceeded'
                 write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
                 write(0,*) k,' pel%cell_per_col_vol=',pel%cell_per_column_volume(RANGE2D,k)
                 call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-              else
-                pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) * &
-                  (1.0d0 - dt*pel%volume_flux(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k))
               endif
+
+              pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+                * pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
+                / (pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
+                + volume_change(RANGE2D,k))
             enddo
           endif
       endif
@@ -1909,10 +1936,14 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          do k=1,pel%knum
-            !> addition of mass
+          !> New formulation with Hassan
+          do k=1, pel%knum
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
-                + dt * ratePtr2(RANGE2D) * pel%cell_per_column_volume(RANGE2D,k)
+            + dt * ratePtr2(RANGE2D) &
+            * cell_column_fraction(RANGE2D,k) &
+            / (sum(pel%layer_height(RANGE3D),3) &
+            * pel%column_area(RANGE2D) &
+            + sum(volume_change(RANGE3D), 3))
           end do
 
         elseif (rank == 3) then
@@ -1924,15 +1955,26 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+          !> If the flux is in concentration units, then the following is correct
           pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) &
                 + dt * ratePtr3(RANGE3D)
-          !* pel%cell_per_column_volume(RANGE3D)
-          !write(0,'(A,ES10.3,A,ES10.3)') 'Max 3D integrating ', &
-          !  maxval(-dt * ratePtr3(RANGE3D)), &
-          ! ' of ', maxval(pel%conc(RANGE3D,n))
+
+          !> If, however, the flux is in powder units (mg s-1 or mmol s-1) then, we
+          !> have an alternative formulation
+          !do k=1,pel%knum
+            !> New formulation with Hassan June 7 2016
+          !  pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+          !  + dt * ratePtr3(RANGE2D,k) &
+          !  / (pel%layer_height(RANGE2D,k) &
+          !  * pel%column_area(RANGE2D) &
+          !  + volume_change(RANGE2D,k))
+          !end do
         end if
       end do
     enddo
+
+    if (associated(volume_change)) deallocate(volume_change)
+    if (associated(cell_column_fraction)) deallocate(cell_column_fraction)
 
   end subroutine integrate_flux_in_water
 
