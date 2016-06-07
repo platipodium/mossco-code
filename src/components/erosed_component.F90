@@ -2020,43 +2020,54 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     close (unit707)
 #endif
 
-    deallocate (cdryb)
+    !> deallocate all globally defined allocatables
+    if (allocated(cdryb)) deallocate (cdryb)
 
-    deallocate (rhosol)
-    deallocate (sedd50)
-    deallocate (sedd90)
+    if (allocated(rhosol)) deallocate (rhosol)
+    if (allocated(sedd50)) deallocate (sedd50)
+    if (allocated(sedd90)) deallocate (sedd90)
     !
-    deallocate (chezy)
-    deallocate (h0)
-    deallocate (h1)
-    deallocate (umod)
-    deallocate (u_bot)
-    deallocate (v_bot)
+    if (allocated(chezy)) deallocate (chezy)
+    if (allocated(h0)) deallocate (h0)
+    if (allocated(h1)) deallocate (h1)
+    if (allocated(umod)) deallocate (umod)
+    if (allocated(u_bot)) deallocate (u_bot)
+    if (allocated(v_bot)) deallocate (v_bot)
 
-    deallocate (taub, taubn, eq_conc)
+    if (allocated(taub)) deallocate (taub)
+    if (allocated(taubn)) deallocate (taubn)
+    if (allocated(eq_conc)) deallocate (eq_conc)
 !    deallocate (r0)
 !    deallocate (r1)
 !    deallocate (rn)
-    deallocate (ws)
+    if (allocated(ws)) deallocate (ws)
     !
     if (allocated (mass) ) deallocate (mass)
 !    deallocate (massfluff)
-    deallocate (sink)
-    deallocate (sinkf)
-    deallocate (sour)
-    deallocate (sourf)
+    if (allocated(sink)) deallocate (sink)
+    if (allocated(sinkf))deallocate (sinkf)
+    if (allocated(sour)) deallocate (sour)
+    if (allocated(sourf)) deallocate (sourf)
     !
-    deallocate (mfluff, frac)
-    deallocate (sedtyp)
-    deallocate (mudfrac)
+    if (associated(mfluff)) nullify (mfluff)
+    if (associated(frac)) nullify (frac)
+    if (allocated(sedtyp)) deallocate (sedtyp)
+    if (allocated(mudfrac)) deallocate (mudfrac)
 
-    deallocate (uorb, tper,teta)
-    deallocate (BioEffects%TauEffect)
-    deallocate (BioEffects%ErodibilityEffect)
-    deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
-    deallocate (spm_concentration, depth_avg_spm_concentration,sum_depth_avg_spm_concentration)
-    deallocate (thickness_of_layers,relative_thickness_of_layers, sigma_midlayer)
-    if ( associated( sediment_mass)) nullify (sediment_mass)
+    if (allocated(uorb)) deallocate (uorb)
+    if (allocated(tper)) deallocate (tper)
+    if (allocated(teta)) deallocate (teta)
+    if (associated(BioEffects%TauEffect)) nullify (BioEffects%TauEffect)
+    if (associated(BioEffects%ErodibilityEffect)) nullify (BioEffects%ErodibilityEffect)
+    if (allocated(size_classes_of_upward_flux_of_pim_at_bottom)) deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
+    if (associated(spm_concentration)) nullify (spm_concentration)
+    if (associated(depth_avg_spm_concentration)) nullify (depth_avg_spm_concentration)
+    if (associated(sum_depth_avg_spm_concentration)) nullify (sum_depth_avg_spm_concentration)
+
+    if (associated(thickness_of_layers)) nullify (thickness_of_layers)
+    if (associated(relative_thickness_of_layers)) nullify (relative_thickness_of_layers)
+    if (associated(sigma_midlayer)) nullify (sigma_midlayer)
+    if (associated(sediment_mass)) nullify (sediment_mass)
 
     call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
 
@@ -2071,6 +2082,10 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     end if
+
+
+    !> @todo clean up states, i.e. find fields, arrays, grids created by this component, remove them
+    !> from states, and destroy them
 
     call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
