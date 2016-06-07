@@ -365,9 +365,12 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-      unit1List(count1) = unit_(1:i-1)
+      unit1List(count1) = adjustl(trim(unit_(1:i-1)))
       unit_=adjustl(unit_(i+1:len_trim(unit_)))
     enddo
+    call MOSSCO_Reallocate(unit1List, count1, keep=.true., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_UtilSort(unit1List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -397,9 +400,12 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-      unit2List(count2) = unit_(1:i-1)
+      unit2List(count2) = adjustl(trim(unit_(1:i-1)))
       unit_=adjustl(unit_(i+1:len_trim(unit_)))
     enddo
+    call MOSSCO_Reallocate(unit2List, count2, keep=.true., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_UtilSort(unit2List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
