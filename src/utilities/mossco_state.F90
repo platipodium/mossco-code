@@ -1108,108 +1108,142 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateDestroyOwn"
-  recursive subroutine MOSSCO_StateDestroyOwn(importState, owner, rc)
+  recursive subroutine MOSSCO_StateDestroyOwn(state, owner, rc)
 
-    type(ESMF_State), intent(inout)              :: importState
-    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
+    type(ESMF_State), intent(inout)              :: state
+    character(len=*),  intent(in)                :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)               :: rc_, localrc, itemCount, i
-    character(len=ESMF_MAXPATHLEN)              :: message, creator
-    logical                             :: isPresent
-    type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
-    character(len=ESMF_MAXPATHLEN), allocatable :: itemNameList(:)
+    integer(ESMF_KIND_I4)                        :: rc_, localrc, itemCount, i
+    character(len=ESMF_MAXPATHLEN)               :: message, creator, name
+    logical                                      :: isPresent
+    type(ESMF_StateItem_Flag), allocatable       :: itemTypeList(:)
+    character(len=ESMF_MAXSTR), allocatable      :: itemNameList(:)
 
-    type(ESMF_State)    :: state
-    type(ESMF_Field)    :: field
+    type(ESMF_State)       :: childState
+    type(ESMF_Field)       :: field
     type(ESMF_FieldBundle) :: fieldBundle
     type(ESMF_RouteHandle) :: routeHandle
-    type(ESMF_Array)    :: array
+    type(ESMF_Array)       :: array
     type(ESMF_ArrayBundle) :: arrayBundle
 
     rc_ = ESMF_SUCCESS
     creator = 'none'
 
-    call ESMF_AttributeGet(importState, 'creator', isPresent=isPresent, rc=localrc)
+    call ESMF_AttributeGet(state, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call ESMF_AttributeGet(importState, 'creator', creator, rc=localrc)
+      call ESMF_AttributeGet(state, 'creator', creator, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
+    call ESMF_StateGet(state, itemCount=itemCount, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount>0) then
-      allocate(itemTypeList(itemCount))
-      allocate(itemNameList(itemCount))
+      call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
-    call ESMF_StateGet(importState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1,itemCount
       if (itemTypeList(i) == ESMF_STATEITEM_STATE) then
-        call ESMF_StateGet(importState, itemNameList(i), state, rc=localRc)
+        call ESMF_StateGet(state, itemNameList(i), childState, rc=localRc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        call MOSSCO_DestroyOwn(state, trim(owner), rc=localrc)
+        call MOSSCO_DestroyOwn(childState, trim(owner), rc=localrc)
       elseif (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
-        call ESMF_StateGet(importState, itemNameList(i), field, rc=localRc)
+        call ESMF_StateGet(state, itemNameList(i), field, rc=localRc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_DestroyOwn(field, trim(owner), rc=localrc)
       elseif (itemTypeList(i) == ESMF_STATEITEM_ROUTEHANDLE) then
-        call ESMF_StateGet(importState, itemNameList(i), routeHandle, rc=localRc)
+        call ESMF_StateGet(state, itemNameList(i), routeHandle, rc=localRc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_DestroyOwn(routeHandle, trim(owner), rc=localrc)
       elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
-        call ESMF_StateGet(importState, itemNameList(i), fieldBundle, rc=localRc)
+        call ESMF_StateGet(state, itemNameList(i), fieldBundle, rc=localRc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_DestroyOwn(fieldBundle, trim(owner), rc=localrc)
       elseif (itemTypeList(i) == ESMF_STATEITEM_ARRAY) then
-        call ESMF_StateGet(importState, itemNameList(i), array, rc=localRc)
+        call ESMF_StateGet(state, itemNameList(i), array, rc=localRc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_DestroyOwn(array, trim(owner), rc=localrc)
       elseif (itemTypeList(i) == ESMF_STATEITEM_ARRAYBUNDLE) then
-        call ESMF_StateGet(importState, itemNameList(i), arrayBundle, rc=localRc)
+        call ESMF_StateGet(state, itemNameList(i), arrayBundle, rc=localRc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_DestroyOwn(arrayBundle, trim(owner), rc=localrc)
       else
-        write(message,'(A)') 'Unknown StateItem_Flag for item '//trim(itemNameList(i))
+        write(message,'(A)') trim(owner)//' has unknown StateItem_Flag for item '//trim(itemNameList(i))
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (trim(owner) == trim(creator)) then
-        call ESMF_StateRemove(importState, (/itemNameList(i)/), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
+      call ESMF_StateRemove(state, (/itemNameList(i)/), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     enddo
 
-    if (trim(owner) == trim(creator)) then
-      call ESMF_StateDestroy(importState, rc=localrc)
+    call ESMF_StateGet(state, itemCount=itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (itemCount>0) then
+      call ESMF_StateGet(state, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    if (allocated(itemTypeList)) deallocate(itemTypeList)
-    if (allocated(itemNameList))   deallocate(itemNameList)
+    do i=1, itemCount
+      write(message,'(A)') trim(owner)//' left item in state '//trim(name)
+      call MOSSCO_MessageAdd(message,': '//trim(itemNameList(i)))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    enddo
 
-    if (present(rc)) rc=rc_
-    return
+    if (trim(owner) == trim(creator)) then
+      call ESMF_StateDestroy(state, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      write(message,'(A)')  trim(owner)//'  destroyed its state '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    endif
+
+    call MOSSCO_Reallocate(itemTypeList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_StateDestroyOwn
 
@@ -1218,14 +1252,14 @@ contains
   subroutine MOSSCO_FieldBundleDestroyOwn(fieldBundle, owner, rc)
 
     type(ESMF_FieldBundle), intent(inout)        :: fieldBundle
-    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
+    character(len=*),  intent(in)                :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)               :: rc_, localrc, itemCount, i
-    character(len=ESMF_MAXPATHLEN)              :: message, creator
-    logical                             :: isPresent
-    character(len=ESMF_MAXPATHLEN), allocatable :: itemNameList(:)
-    type(ESMF_Field), allocatable       :: fieldList(:)
+    integer(ESMF_KIND_I4)                       :: rc_, localrc, itemCount, i
+    character(len=ESMF_MAXSTR)                  :: message, creator, name
+    logical                                     :: isPresent
+    character(len=ESMF_MAXSTR), allocatable     :: itemNameList(:)
+    type(ESMF_Field), allocatable               :: fieldList(:)
 
     rc_ = ESMF_SUCCESS
     creator = 'none'
@@ -1240,18 +1274,24 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_FieldBundleGet(fieldBundle, fieldCount=itemCount, rc=localrc)
+    call ESMF_FieldBundleGet(fieldBundle, fieldCount=itemCount, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(fieldList, itemCount, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount>0) then
-      allocate(itemNameList(itemCount))
-      allocate(fieldList(itemCount))
+      call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldList, &
+        fieldNameList=itemNameList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
-
-    call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldList, fieldNameList=itemNameList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1,itemCount
 
@@ -1271,13 +1311,20 @@ contains
       call ESMF_FieldBundleDestroy(fieldBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(owner)//'  destroyed its fieldBundle '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
-    if (allocated(fieldList))  deallocate(fieldList)
-    if (allocated(itemNameList))   deallocate(itemNameList)
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(rc)) rc=rc_
-    return
 
   end subroutine MOSSCO_FieldBundleDestroyOwn
 
@@ -1286,17 +1333,18 @@ contains
   subroutine MOSSCO_ArrayBundleDestroyOwn(arrayBundle, owner, rc)
 
     type(ESMF_ArrayBundle), intent(inout)        :: arrayBundle
-    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
+    character(len=*),  intent(in)                :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, itemCount, i
-    character(len=ESMF_MAXPATHLEN)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)      :: message, creator, name
     logical                             :: isPresent
     character(len=ESMF_MAXPATHLEN), allocatable :: itemNameList(:)
     type(ESMF_Array), allocatable       :: arrayList(:)
 
     rc_ = ESMF_SUCCESS
     creator = 'none'
+    name = 'none'
 
     call ESMF_AttributeGet(arrayBundle, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1339,14 +1387,18 @@ contains
       call ESMF_ArrayBundleDestroy(arrayBundle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(owner)//'  destroyed its arrayBundle '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
+    if (allocated(arrayList)) deallocate(arrayList)
 
-    if (allocated(arrayList))  deallocate(arrayList)
-    if (allocated(itemNameList))   deallocate(itemNameList)
+    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(rc)) rc=rc_
-    return
 
   end subroutine MOSSCO_ArrayBundleDestroyOwn
 
@@ -1355,15 +1407,16 @@ contains
   subroutine MOSSCO_ArrayDestroyOwn(array, owner, rc)
 
     type(ESMF_Array), intent(inout)              :: array
-    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
+    character(len=*),  intent(in)                :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(len=ESMF_MAXPATHLEN)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)      :: message, creator, name
     logical                             :: isPresent
 
     rc_ = ESMF_SUCCESS
     creator = 'none'
+    name = 'none'
 
     call ESMF_AttributeGet(array, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1379,10 +1432,12 @@ contains
       call ESMF_ArrayDestroy(array, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(owner)//'  destroyed its array '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     if (present(rc)) rc=rc_
-    return
 
   end subroutine MOSSCO_ArrayDestroyOwn
 
@@ -1391,15 +1446,16 @@ contains
   subroutine MOSSCO_FieldDestroyOwn(field, owner, rc)
 
     type(ESMF_Field), intent(inout)              :: field
-    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
+    character(len=*),  intent(in)                :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(len=ESMF_MAXPATHLEN)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)      :: message, creator, name
     logical                             :: isPresent
 
     rc_ = ESMF_SUCCESS
     creator = 'none'
+    name = 'none'
 
     call ESMF_AttributeGet(field, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1415,6 +1471,10 @@ contains
       call ESMF_FieldDestroy(field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(owner)//'  destroyed its field '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     endif
 
     if (present(rc)) rc=rc_
@@ -1427,15 +1487,16 @@ contains
   subroutine MOSSCO_RouteHandleDestroyOwn(routeHandle, owner, rc)
 
     type(ESMF_RouteHandle), intent(inout)        :: routeHandle
-    character(len=ESMF_MAXPATHLEN),  intent(in)          :: owner
+    character(len=*),  intent(in)                :: owner
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(len=ESMF_MAXPATHLEN)              :: message, creator
+    character(len=ESMF_MAXPATHLEN)      :: message, creator, name
     logical                             :: isPresent
 
     rc_ = ESMF_SUCCESS
     creator = 'none'
+    name = 'none'
 
     !call ESMF_AttributeGet(routeHandle, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1451,10 +1512,13 @@ contains
       call ESMF_RouteHandleDestroy(routeHandle, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)')  trim(owner)//'  destroyed its routeHandle '//trim(name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
     endif
 
     if (present(rc)) rc=rc_
-    return
 
   end subroutine MOSSCO_RouteHandleDestroyOwn
 
