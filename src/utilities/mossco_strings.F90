@@ -20,6 +20,7 @@
 module mossco_strings
 
   use esmf
+  use mossco_memory
 
 implicit none
 
@@ -323,5 +324,57 @@ contains
     return
 
   end subroutine MOSSCO_MessageAddList
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CheckUnits"
+  subroutine MOSSCO_CheckUnits(unit1, unit2, isEqual, rc)
+
+    character(len=*), intent(in)   :: unit1, unit2
+    logical, intent(out)           :: isEqual
+    integer(ESMF_KIND_I4), optional, intent(out) :: rc
+
+    integer(ESMF_KIND_I4)            :: rc_, count, i, localrc
+    integer(ESMF_KIND_I4)            :: chunk = 10
+    character(len=ESMF_MAXSTR)       :: unit_
+    character(len=10), allocatable, dimension(:) :: unit1List, unit2List
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    isEqual = .true.
+
+    !> Assume that all parts of a unit are separated by white space
+    if (len(unit1) > len(unit_)) then
+      unit_ = adjustl(trim(unit1(1:len(unit_))))
+    else
+      unit_ = adjustl(trim(unit1(1:len(unit1))))
+    endif
+
+    call MOSSCO_Reallocate(unit1List, chunk, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    count = 0
+    do
+      i=index(unit_,' ')
+      if (i<2) exit
+      count = count + 1
+      if (count > chunk) then
+        chunk = chunk + chunk
+        call MOSSCO_Reallocate(unit1List, chunk, keep=.true., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      unit1List(count) = unit_(1:i-1)
+      unit_=adjustl(unit_(i:len_trim(unit_)))
+    enddo
+
+    !call ESMF_UtilSort(unit1List, rc=localrc)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(unit1List, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine MOSSCO_CheckUnits
 
 end module mossco_strings
