@@ -411,6 +411,18 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    do i=1, count1
+      call MOSSCO_CleanUnit(unit1List(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
+    do i=1, count2
+      call MOSSCO_CleanUnit(unit2List(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
     if (count1>0) then
       write(unit_,'(A)') trim(unit1List(1))
       do i=2, count1
@@ -443,5 +455,69 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine MOSSCO_CheckUnits
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_CleanUnits"
+  subroutine MOSSCO_CleanUnit(unit, rc)
+
+    character(len=*), intent(inout)              :: unit
+    integer(ESMF_KIND_I4), optional, intent(out) :: rc
+
+    integer(ESMF_KIND_I4)            :: rc_, localrc, chunk, i
+
+    if (present(rc)) rc = ESMF_RC_NOT_IMPL
+
+    !> Check for items that are not dealt with here
+    if (index(unit,'(') > 0) return
+    if (index(unit,')') > 0) return
+
+    !> Remove instances of leading, trailing, and double whitespace
+    unit=adjustl(trim(unit))
+    do
+      i=index(unit,'  ')
+      if (i<1) exit
+      write(unit,'(A)') unit(1:i)//unit(i+2:len_trim(unit))
+    enddo
+
+    !> Search for multiplication dot '.'. replace by whitespace
+    do
+      i=index(unit,'.')
+      if (i<1) exit
+      unit(i:i)=' '
+    enddo
+
+    !>  @todo  Search for division slash '/', replace this by whitespace
+    !> and change the next occuring number to negative
+    do
+      i=index(unit,'/')
+      if (i<1) exit
+
+      write(unit,'(A)') unit(1:i-1)//' '//unit(i:len_trim(unit))
+      unit(i:i)=' '
+    enddo
+
+    !> Remove instances of '**'
+    do
+      i=index(unit,'**')
+      if (i<1) exit
+      write(unit,'(A)') unit(1:i-1)//unit(i+2:len_trim(unit))
+    enddo
+
+    !> Remove instances of '^'
+    do
+      i=index(unit,'^')
+      if (i<1) exit
+      write(unit,'(A)') unit(1:i-1)//unit(i+2:len_trim(unit))
+    enddo
+
+    !> Remove instances of single '*'
+    do
+      i=index(unit,'^')
+      if (i<1) exit
+      write(unit,'(A)') unit(1:i-1)//unit(i+2:len_trim(unit))
+    enddo
+
+  end subroutine MOSSCO_CleanUnit
+
 
 end module mossco_strings
