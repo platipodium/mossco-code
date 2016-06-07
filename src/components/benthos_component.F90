@@ -37,12 +37,10 @@ module benthos_component
   type(MOSSCO_VariableFArray2d),dimension(:),allocatable :: importList,exportList
   ! Dimensions (x,y,z)
   integer(ESMF_KIND_I4),dimension(:,:),pointer           :: mask=>NULL()
-  integer                        :: ubnd(3),lbnd(3)
+  integer                        :: lbnd(3)
 
   type (microphytobenthos) ,save :: Micro
   type (BioturbationEffect),save :: Total_Bioturb
-  real (fp)                      :: tau
-  real (fp)                      :: Erod
   integer                        :: inum, jnum
   logical                        :: forcing_from_coupler=.false.
 contains
@@ -735,6 +733,7 @@ contains
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
+    type(ESMF_Config)       :: config
 
     logical                 :: isPresent
     integer                 :: localrc
