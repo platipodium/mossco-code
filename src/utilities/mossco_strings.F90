@@ -333,45 +333,106 @@ contains
     logical, intent(out)           :: isEqual
     integer(ESMF_KIND_I4), optional, intent(out) :: rc
 
-    integer(ESMF_KIND_I4)            :: rc_, count, i, localrc
-    integer(ESMF_KIND_I4)            :: chunk = 10
-    character(len=ESMF_MAXSTR)       :: unit_
+    integer(ESMF_KIND_I4)            :: rc_, count1, count2, i, localrc, chunk
+    integer(ESMF_KIND_I4), parameter :: maxChunk = 10
+    character(len=ESMF_MAXSTR)       :: unit_, message
     character(len=10), allocatable, dimension(:) :: unit1List, unit2List
 
     if (present(rc)) rc = ESMF_SUCCESS
     isEqual = .true.
 
-    !> Assume that all parts of a unit are separated by white space
+    !> Assume that all parts of a unit1 are separated by white space and put
+    !> them in an ordered list
     if (len(unit1) > len(unit_)) then
       unit_ = adjustl(trim(unit1(1:len(unit_))))
     else
       unit_ = adjustl(trim(unit1(1:len(unit1))))
     endif
 
+    chunk = maxChunk
     call MOSSCO_Reallocate(unit1List, chunk, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    count = 0
+    count1 = 0
     do
       i=index(unit_,' ')
       if (i<2) exit
-      count = count + 1
-      if (count > chunk) then
+      count1 = count1 + 1
+      if (count1 > chunk) then
         chunk = chunk + chunk
         call MOSSCO_Reallocate(unit1List, chunk, keep=.true., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
-      unit1List(count) = unit_(1:i-1)
+      unit1List(count1) = unit_(1:i-1)
       unit_=adjustl(unit_(i:len_trim(unit_)))
     enddo
 
-    !call ESMF_UtilSort(unit1List, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_UtilSort(unit1List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> Assume that all parts of a unit2 are separated by white space and put
+    !> them in another ordered list
+    if (len(unit2) > len(unit_)) then
+      unit_ = adjustl(trim(unit2(1:len(unit_))))
+    else
+      unit_ = adjustl(trim(unit2(1:len(unit2))))
+    endif
+
+    chunk = maxChunk
+    call MOSSCO_Reallocate(unit2List, chunk, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    count2 = 0
+    do
+      i=index(unit_,' ')
+      if (i<2) exit
+      count2 = count2 + 1
+      if (count2 > chunk) then
+        chunk = chunk + chunk
+        call MOSSCO_Reallocate(unit2List, chunk, keep=.true., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+      unit2List(count2) = unit_(1:i-1)
+      unit_=adjustl(unit_(i:len_trim(unit_)))
+    enddo
+
+    call ESMF_UtilSort(unit2List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (count1>0) then
+      write(unit_,'(A)') trim(unit1List(1))
+      do i=2, count1
+        call MOSSCO_MessageAdd(unit_,', '//trim(unit1List(i)))
+      enddo
+    endif
+
+    if (count2>0) then
+      write(message,'(A)') trim(unit2List(1))
+      do i=2, count2
+        call MOSSCO_MessageAdd(message,', '//trim(unit2List(i)))
+      enddo
+    endif
+
+    if (trim(unit_) == trim(message)) then
+      isEqual = .true.
+      call ESMF_LogWrite('  equal units '//trim(message), ESMF_LOGMSG_INFO)
+    else
+      isEqual = .false.
+      call ESMF_LogWrite('  wrong units '//trim(message), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite('  differ from '//trim(unit_), ESMF_LOGMSG_WARNING)
+    endif
 
     call MOSSCO_Reallocate(unit1List, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(unit2List, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
