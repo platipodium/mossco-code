@@ -1795,11 +1795,12 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4)          :: n,i,j,k,m, localrc, rc_, fieldCount
     integer(ESMF_KIND_I8)          :: external_index
     integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3), rank
-    character(len=ESMF_MAXSTR)     :: message, varname, name
+    character(len=ESMF_MAXSTR)     :: message, varname, name, units, fluxunits
     real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:), ratePtr3(:,:,:)
     real(ESMF_KIND_R8), pointer    :: volume_change(:,:,:)
     integer(ESMF_KIND_I8)          :: advanceCount
     type(ESMF_Clock)               :: clock
+    logical                        :: isEqual
 
     call ESMF_GridCompGet(gridComp, name=name, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1826,16 +1827,6 @@ module fabm_pelagic_component
       allocate(pel%column_height(RANGE2D))
     end if
 
-    if (.not.(associated(pel%cell_column_fraction))) then
-      allocate(pel%cell_column_fraction(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
-      pel%cell_column_fraction = 0.0d0
-    end if
-
-    if (.not.(associated(volume_change))) then
-      allocate(volume_change(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),lbnd3(3):ubnd3(3)))
-      volume_change = 0.0d0
-    end if
-
     do k=1,pel%knum
       if (any((pel%layer_height(RANGE2D,k) <= 0).and.(.not.pel%mask(RANGE2D,k)))) then
         write(message,'(A)') trim(name)//' received non-positive layer height'
@@ -1843,30 +1834,22 @@ module fabm_pelagic_component
         if (present(rc)) rc = ESMF_RC_ARG_BAD
         return
       endif
-
-!      where (.not.pel%mask(RANGE2D,k))
-!        pel%column_height(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) &
-!          = pel%column_height(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2)) + pel%layer_height(RANGE2D,k)
-!      endwhere
     enddo
 
     pel%column_height(RANGE2D) = sum(pel%layer_height(RANGE3D),3)
 
     do k=1,pel%knum
-
       where (.not.pel%mask(RANGE2D,k))
-      pel%cell_column_fraction(RANGE2D,k) &
-        = pel%layer_height(RANGE2D,k) / (pel%column_height(RANGE2D))
-      endwhere
-
-      where (.not.pel%mask(RANGE2D,k))
-      pel%cell_column_fraction(RANGE2D,k) = pel%layer_height(RANGE2D,k) / &
-        (sum(pel%layer_height(RANGE3D),dim=3))
+        pel%cell_column_fraction(RANGE2D,k) &
+          = pel%layer_height(RANGE2D,k) / (pel%column_height(RANGE2D))
       endwhere
     enddo
 
     do n=1,pel%nvar
+
       varname = trim(pel%export_states(n)%standard_name)
+      units = trim(pel%export_states(n)%units)
+
       volume_change = 0.0d0
 
       if (associated(pel%volume_flux)) then
@@ -1908,6 +1891,7 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       m = 0
+      write(0,*) __LINE__
 
       ! filter out all fields with non-matching external_index
       do k=1, fieldCount
@@ -1923,6 +1907,7 @@ module fabm_pelagic_component
           tempList(m) = fieldlist(k)
       end do
 
+      write(0,*) __LINE__
       fieldCount = m
       if (fieldCount == 0) cycle
 
@@ -1949,6 +1934,7 @@ module fabm_pelagic_component
           m = m + 1
           tempList(m) = fieldlist(k)
       end do
+      write(0,*) __LINE__
 
       if (m > 0) then ! found exactly matching external index
           fieldCount = m
@@ -1964,19 +1950,26 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        write(0,*) __LINE__
       do i=1, fieldCount
         field = fieldList(i)
         call ESMF_FieldGet(field, rank=rank, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        call ESMF_AttributeGet(field, 'units', value=fluxunits, defaultValue='', rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !call MOSSCO_CheckUnits(trim(units)//' s-1', fluxunits, isEqual=isEqual, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         if (advanceCount < 2) then
-          write(message,'(A)') trim(message)//' integrates'
+          write(message,'(A)') trim(name)//' integrates'
           call MOSSCO_FieldString(field, message, rc=localrc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         endif
-
-
 
         !> vertically homogeneous flux in water (e.g. rivers)
         if (rank == 2) then
@@ -1988,6 +1981,7 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+            write(0,*) __LINE__
           !> New formulation with Hassan
           do k=1, pel%knum
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
@@ -1997,6 +1991,7 @@ module fabm_pelagic_component
             * pel%column_area(RANGE2D) &
             + sum(volume_change, 3))
           end do
+          write(0,*) __LINE__
 
         elseif (rank == 3) then
           call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
@@ -2007,6 +2002,7 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+            write(0,*) __LINE__
           !> If the flux is in concentration units, then the following is correct
           pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) &
                 + dt * ratePtr3(RANGE3D)
