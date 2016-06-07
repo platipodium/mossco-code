@@ -1819,7 +1819,7 @@ module fabm_pelagic_component
     end if
 
     if (.not.(associated(volume_change))) then
-      allocate(volume_change(RANGE3D))
+      allocate(volume_change(RANGE2D,lbnd3(3):ubnd3(3)))
       volume_change = 0.0d0
     end if
 
