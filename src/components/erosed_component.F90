@@ -1999,22 +1999,25 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
   subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+
     type(ESMF_GridComp)  :: gridComp
     type(ESMF_State)     :: importState, exportState
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
     character(ESMF_MAXSTR) :: name
-    logical                :: clockIsPresent, isPresent
+    logical                :: isPresent
     type(ESMF_Time)        :: currTime
     type(ESMF_Clock)       :: clock
+    type(ESMF_Config)      :: config
     integer                :: localrc
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
 #ifdef DEBUG
     close (unit707)
@@ -2071,9 +2074,11 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (associated(sigma_midlayer)) deallocate (sigma_midlayer)
     if (associated(sediment_mass)) deallocate (sediment_mass)
 
-    call ESMF_GridCompGet(gridComp, clockIsPresent=clockIsPresent)
+    call ESMF_GridCompGet(gridComp, clockIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (clockIsPresent) then
+    if (isPresent) then
 
       call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -2085,9 +2090,21 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
     end if
 
+    call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> @todo clean up states, i.e. find fields, arrays, grids created by this component, remove them
-    !> from states, and destroy them
+    if (isPresent) then
+
+      call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ConfigDestroy(config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
 
     call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -2097,11 +2114,19 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
