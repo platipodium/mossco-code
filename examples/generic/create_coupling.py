@@ -366,13 +366,6 @@ fid.write('''
   character(len=ESMF_MAXSTR), dimension(:), save, allocatable :: gridCompNameList, cplCompNameList, cplNames
 ''')
 
-for item in cplCompList:
-    fid.write('  type(ESMF_CplComp), save  :: ' + item + 'Comp\n')
-for item in gridCompList:
-    fid.write('  type(ESMF_GridComp), save :: ' + item + 'Comp\n')
-for item in gridCompList:
-    fid.write('  type(ESMF_State), save    :: ' + item + 'ExportState, ' + item + 'ImportState\n')
-
 fid.write('''
   contains
 
