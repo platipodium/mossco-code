@@ -750,7 +750,7 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_AttributeSet(wsfield,'units','m/s')
+      call ESMF_AttributeSet(wsfield,'units','m s-1')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       call ESMF_FieldGet(field=wsfield, localDe=0, farrayPtr=pel%export_states(n)%ws, &
@@ -1847,8 +1847,10 @@ module fabm_pelagic_component
 
     do n=1,pel%nvar
 
+      units = '(default)'
+
       varname = trim(pel%export_states(n)%standard_name)
-      units = trim(pel%export_states(n)%units)
+      units = trim(pel%model%state_variables(n)%units)
 
       volume_change = 0.0d0
 
@@ -1857,10 +1859,10 @@ module fabm_pelagic_component
             do k=1, pel%knum
               !> river dilution
               !> New formulation with Hassan 7 June 2016
-              volume_change(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),k) = dt * pel%volume_flux(RANGE2D) &
+              volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
                 * pel%cell_column_fraction(RANGE2D,k)
 
-              if (any(volume_change(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),k) &
+              if (any(volume_change(RANGE2D,k) &
                 / (pel%layer_height(RANGE2D,k)  &
                 * pel%column_area(RANGE2D)) > 0.5d0)) then
 
