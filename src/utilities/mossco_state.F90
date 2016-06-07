@@ -1356,7 +1356,7 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    call ESMF_ArrayBundleGet(arrayBundle, arrayCount=itemCount, rc=localrc)
+    call ESMF_ArrayBundleGet(arrayBundle, arrayCount=itemCount, name=name, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1418,6 +1418,10 @@ contains
     creator = 'none'
     name = 'none'
 
+    call ESMF_ArrayGet(array, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeGet(array, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1456,6 +1460,10 @@ contains
     rc_ = ESMF_SUCCESS
     creator = 'none'
     name = 'none'
+
+    call ESMF_FieldGet(field, name=name, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(field, 'creator', isPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
