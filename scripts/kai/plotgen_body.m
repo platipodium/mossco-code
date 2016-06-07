@@ -2,7 +2,7 @@
 % index position of sub-plot
 iy=cell2mat(var{i}(7)); ix=cell2mat(var{i}(8));  
 % geometry of sub-plot
-x0=0.06+(ix-1)*1.2*dxp; y0=0.1+(nrow-iy)*1.07*dyp;
+x0=0.05+(ix-1)*1.2*dxp; y0=0.1+(nrow-iy)*1.07*dyp;
 
 % loop over sites (eg from 3D output)
 for ili=1:size(i_loc,1)
@@ -17,7 +17,7 @@ for ili=1:size(i_loc,1)
   figure(np); oldfig=np; hold on
   axs=subplot('Position',[x0 y0 dxp dyp]);
   hold on
-  tpos=[x0+0.23*(min(occ(np,ix,iy),4)+0.11)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];
+  tpos=[x0+0.223*(min(occ(np,ix,iy),4)+0.11)*dxp y0+0.85*dyp 0.3*dxp 0.11*dyp];
 
 %fprintf('first %s\t np=%d c=%d ili=%d i=%d\t occ=%d\n',varshort,np,1+occ(np,ix,iy)-occ0(np,ix,iy),ili,i,occ(np,ix,iy));
 
@@ -78,7 +78,7 @@ for ili=1:size(i_loc,1)
        if(size(res,1)>10) zi=1+round((zi-1)/9*(size(res,1)-1)); end
        y=res(zi,:);
        plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:),'MarkerSize',4+2*mod(ns+1,4));
-       annotation('textbox',tpos+[0.07*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+       annotation('textbox',tpos+[0.05*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
      else
        if(dim==3)
 % y=mean(res,2);

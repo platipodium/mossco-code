@@ -5,15 +5,15 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; Is1D=0; IsNOAH=1;
+show_data=1; Is1D=0; IsNOAH=0;
 datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.82];[55.,8.3];[54.1,6.3];[52.3 4.3];[52.56 3.5];]; %;[54.2,7.5]; %[54.96,8.4]; 
+loc =[[54.18,7.82];[55.,8.3];[52.3 4.3];[52.56 3.5];]; %[54.1,6.3];;[54.2,7.5]; %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt';'T22';'Noordwijk-10';'Noordwijk-70';}; % 'T26'; 
+locs={'Helgoland';'Sylt';'Noordwijk-10';'Noordwijk-70';}; %'T22'; 'T26'; 
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -33,21 +33,29 @@ nrowm = 3; ncolm = 5;
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
-  spath= '/local/home/wirtz/mossco/mossco-setups/hrres/';%helgoland/';
-%  tags = {'_0';'_1';};
-  tags = {'ref';'vS_det5';'remNP0.';'remNP-0.2';};
-%  tags = {'ref';'rnit300';'rSlow0.005';'PAds0.05';};
+  spath= '/local/home/wirtz/mossco/mossco-setups/helgoland/';%';hrres/
+ % spath= '/local/home/wirtz/mossco/mossco-setups/hrres/'
+  tags = {'_2';'_3';};%%'rnit400';'syn_nut-5';
+% tags = {'ref';'rSlow0.0003';'remin0.005';};
+%  tags = {'ref';'PAds0';'PAds0.3';'PAdsODU60';};
+%      };
+%  tags = {'ref';};'vS_det15';'sinking_factor_min0.5';'remNP0.';'remNP-0.2';'Nqual0';
 ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
  %% graph settings
-  ncol = 3; nrow = 2; 	% number of columns in fig
+  ncol = 4; nrow = 2; 	% number of columns in fig
 else
 %  loc =[54.18,7.82];
-  tags = {'';};%'_aspm';'_awater';'_adap';'';'_vphy';'_mortz';
-  ntags=length(tags);
-  spath= '/home/wirtz/';%sns  
-%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+%'ref0';'PAds12';'PAdsODU40';bash-4.1$'_genMeth12';'_a_chl0.02';'_mort_zoo0.016';'_rFast0.08';
+%'_sinking_factor_min0.3';'_vS_det16';
+%%tags = {'';'_Zmorta';'_a_water1.3';'_Q101.8';};
+%%tags = {'';'_vS_det16';'_PAdsODU220';'_syn_nut-4.6';};
+%%tags = {'';'_rSlow0.005';'_genMeth6';'_mort_zoo0.024';};
+tags = {'';'_PAdsODU220';};
+ ntags=length(tags);
+%  spath= '/home/wirtz/';%sns  
+  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 
   if IsNOAH
@@ -58,7 +66,7 @@ else
   end
 end
 
-dxp = 0.83/(ncol+0.05); dyp = 0.83/(nrow +0.05);
+dxp = 0.82/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
 fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
@@ -77,7 +85,7 @@ end
 if show_data, read_stations_nc; end;
 
 %% open all figures
-for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1580 850],'Visible','off','Color','w'); end
+for np=1:nfig+nfigm, figure(np); set(gcf,'Position',[0 0 1680 850],'Visible','off','Color','w'); end
 oldfig=-np; 
 ptag=cell2mat(var{1}(9));
 occ = zeros(nfig,ncol,nrow); occ0=occ+1;
@@ -86,13 +94,13 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  moffs=0; varshortm0='';
  %% read model output
  tag=cell2mat(tags(ns));
- ncfile = fullfile(spath,[ncf0 tag '.nc']);
-%% ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+ %ncfile = fullfile(spath,[ncf0 tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- t0 = datenum('2013-07-02','yyyy-mm-dd')-1;
-% t1 = datenum('2014-09-20','yyyy-mm-dd')-1;
+ %t0 = datenum('2003-03-20','yyyy-mm-dd')-1;
+ %t1 = datenum('2005-06-01','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  toffm = min(find(time>= t0))-1;
@@ -122,7 +130,6 @@ for ns=1:ntags %% loop over scenarios/stations/layers
     end
 %% plotting either over time (incl contour) or time sliced maps  
     if (ptag(1)=='M')
-
       plotgen_maps
     else
       plotgen_body

@@ -6,10 +6,10 @@
 export hd=${PWD}
 rm -f tag.lst
 
-#declare -a pnam=("fT_exp_mort"  "PAds""rFast"  "rSlow" "NCrFdet" "syn_nut"vS_det""mort_zoo")zm_fa_inf remin "sinking_factor" "bioturbation"  "PAds" "PAdsODU" "rSlow""Q10""syn_nut"-4.5"zm_fa_delmax""a_water"
-#declare -a pnam=( )# "vS_det" "QP_phy_max"  "fT_exp_mort" "a_minfr" "sinking_factor_min")
-declare -a pnam=("ref"  "genMeth"  "genMeth" "mort_zoo" "a_minfr"  "a_chl" "a_fz" ) 
-declare -a pval=( 0        17        0         0.017      0.05       0.005    6 )    
+#declare -a pnam=("fT_exp_mort"  "PAds""rFast"  "rSlow" "NCrFdet" "syn_nut"vS_det""mort_zoo")zm_fa_inf remin "sinking_factor" "bioturbation"  "PAds" "PAdsODU" "rSlow""Q10"-4.5"zm_fa_delmax""a_water"
+#declare -a pnam=( )# "QP_phy_max"  "fT_exp_mort" "a_minfr")"ref"
+declare -a pnam=(  "genMeth"  "mort_zoo" "PAdsODU" "rSlow" "a_water" "syn_nut"  "sinking_factor_min" "Q10"  "vS_det") 
+declare -a pval=(    6        0.024       220     0.005   1.3       -4.6      0.3                    1.8     16 )    
 
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
   echo "'${pnam[$i]}${pval[$i]}';"
@@ -26,13 +26,13 @@ for (( i=0; $i < ${#pnam[@]}; i++ )) do
   echo "change " ${pnam[$i]} " from " $fname " to " ${pval[$i]} 
   replace  $fname ${pnam[$i]} ${pval[$i]}
   echo $i " " ${pnam[$i]} " " ${pval[$i]} >> $hd/tag.lst
-  qsub  sge.sh
-#  qsub -q small.q sge.sh
+#  qsub  sge.sh
+  qsub -q small.q sge.sh
   cd $hd
 done # i
 #wait
 qstat
 more tag.lst
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
-  echo -n  "'${pnam[$i]}${pval[$i]}';"
+  echo -n  "'_${pnam[$i]}${pval[$i]}';"
 done

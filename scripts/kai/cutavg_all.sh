@@ -11,15 +11,16 @@
 # edit  cut_avg.sh (e.g. variable, names, vertical sclicing,..)
 #SCRDIR=~/devel/MOSSCO/code/scripts/kai
 SCRDIR=~/kai
+#if [ $# -lt 1 ]; then
 if [[ "x$1" == "x" ]] ; then
  #nproc=178
  nproc=61
 else
   nproc=$1
 fi
-
 prefix=mossco_gfbfrr.
-
+outdir=${PWD##*/}    # simulation set-up folder
+echo $outdir
 if [[ $nproc -lt 100 ]]; then
   form="%02g"
   fname=${prefix}'29.nc'
@@ -29,12 +30,6 @@ else
 fi
 echo 'retrieve meta-info from ' $fname
 
-if [ $# -lt 1 ]; then
-  outdir=${PWD##*/}    # simulation set-up folder
-else
-  outdir=$1
-fi
-echo $outdir
 # cd $outdir
 
 # run cutting and averaging in parallel mode
@@ -43,8 +38,8 @@ echo $outdir
 N=$(ncdump -h $fname |grep '= UNLIMITED' |cut -f2 -d'(' |cut -f1 -d' ')
 N=$[$N - 1]
 echo 'cutting until time step ' $N
-#N=600
-#echo 'cutting until time step ' $N
+##N=30
+echo 'cutting until time step ' $N
 
 # here for 178-cpu setup using 6 processors; 
 for ((a=0;a<6;a++)); do $SCRDIR/cut_avg.sh $nproc cut $a 6 $N & done

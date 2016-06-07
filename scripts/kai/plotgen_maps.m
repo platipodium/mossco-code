@@ -32,7 +32,7 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*1;     
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;     
  end
  if ti-toffm<=length(ind)
 % goes to new figure (if required)
@@ -84,21 +84,22 @@ for im=1:length(vli)
   if(islog) set(gca,'Clim',log10([minval maxVal]));
   else set(gca,'Clim',[minval maxVal]); end
 
-  colormap(coljm(i0:end,:));
+%  colormap(coljm(i0:end,:));
+  colormap(ssec);  %% choose color map
  %        set(p,'MeshStyle','both','EdgeAlpha',0);
   shading flat;
   m_grid('box','off','color','k','backcolor','none','tickdir','out','linestyle','none','xtick',[],'ytick',[],'xticklabel','','yticklabel',''); 
   m_usercoast('sns_coast','color',ones(3,1)*0.5,'linewidth',1.0,'linestyle','-');
 
-  if(im==2-IsNOAH)
+  if(im==1) %2-IsNOAH
 %% colorbar settings
     cb=colorbar;
     title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
     set(cb, 'Position', [x0+0.03*dxpm y0+dypm*0.06 .014 0.3*dypm],'FontSize',fs);
     if(islog)
       %ctl=power(10,ceil(log10(minval)):log10(5):ceil(log10(maxVal)))
-%      ctl =ceil(log10(minval)):1:ceil(log10(maxVal)));
-      ctl =log10([1E-3 0.01 0.03 0.1 1 3 10 30 100 1E3]);
+      ctl =ceil(log10(minval)):0.5:ceil(log10(maxVal));
+%      ctl =log10([1E-3 0.01 0.03 0.1 1 3 10 30 100 1E3]);
       set(cb,'YTick',ctl,'YTicklabel',power(10,ctl)); 
     end
   end
