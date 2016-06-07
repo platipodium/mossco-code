@@ -43,10 +43,9 @@
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
     real(rk),dimension(:,:),pointer    :: volume_flux=>null()
     real(rk),dimension(:,:),pointer    :: column_area=>null()
-    real(rk),dimension(:,:),pointer    :: column_height=>null()
     logical ,dimension(:,:),pointer    :: is_openboundary_hz=>null()
     real(rk),dimension(:,:,:),pointer  :: zi=>null() !> layer interface depth
-    real(rk),dimension(:,:,:),pointer  :: cell_column_fraction=>null()
+    real(rk),dimension(:,:,:),pointer  :: cell_per_column_volume=>null()
     logical ,dimension(:,:,:),pointer  :: is_openboundary=>null()
     real(rk),dimension(:,:),pointer    :: wind_sf,taub,par_sf,I_0=>null()
     real(rk),dimension(:,:),pointer    :: albedo=>null()
