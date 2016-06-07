@@ -366,7 +366,7 @@ contains
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
       unit1List(count1) = unit_(1:i-1)
-      unit_=adjustl(unit_(i:len_trim(unit_)))
+      unit_=adjustl(unit_(i+1:len_trim(unit_)))
     enddo
 
     call ESMF_UtilSort(unit1List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
@@ -398,7 +398,7 @@ contains
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
       unit2List(count2) = unit_(1:i-1)
-      unit_=adjustl(unit_(i:len_trim(unit_)))
+      unit_=adjustl(unit_(i+1:len_trim(unit_)))
     enddo
 
     call ESMF_UtilSort(unit2List, ESMF_SORTFLAG_ASCENDING, rc=localrc)
@@ -408,14 +408,14 @@ contains
     if (count1>0) then
       write(unit_,'(A)') trim(unit1List(1))
       do i=2, count1
-        call MOSSCO_MessageAdd(unit_,', '//trim(unit1List(i)))
+        call MOSSCO_MessageAdd(unit_,'.'//trim(unit1List(i)))
       enddo
     endif
 
     if (count2>0) then
       write(message,'(A)') trim(unit2List(1))
       do i=2, count2
-        call MOSSCO_MessageAdd(message,', '//trim(unit2List(i)))
+        call MOSSCO_MessageAdd(message,'.'//trim(unit2List(i)))
       enddo
     endif
 
