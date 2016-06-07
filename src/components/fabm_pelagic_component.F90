@@ -1814,7 +1814,7 @@ module fabm_pelagic_component
     lbnd3 = lbound(pel%layer_height)
 
     if (.not.(associated(pel%cell_column_fraction))) then
-      allocate(pel%cell_column_fraction(RANGE3D))
+      allocate(pel%cell_column_fraction(RANGE2D,lbnd3(3):ubnd3(3)))
       pel%cell_column_fraction = 0.0d0
     end if
 
@@ -1893,7 +1893,6 @@ module fabm_pelagic_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       m = 0
-      write(0,*) __LINE__
 
       ! filter out all fields with non-matching external_index
       do k=1, fieldCount
@@ -1909,7 +1908,6 @@ module fabm_pelagic_component
           tempList(m) = fieldlist(k)
       end do
 
-      write(0,*) __LINE__
       fieldCount = m
       if (fieldCount == 0) cycle
 
@@ -1936,7 +1934,6 @@ module fabm_pelagic_component
           m = m + 1
           tempList(m) = fieldlist(k)
       end do
-      write(0,*) __LINE__
 
       if (m > 0) then ! found exactly matching external index
           fieldCount = m
@@ -1952,7 +1949,6 @@ module fabm_pelagic_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(0,*) __LINE__
       do i=1, fieldCount
         field = fieldList(i)
         call ESMF_FieldGet(field, rank=rank, rc=localrc)
@@ -1985,7 +1981,6 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            write(0,*) __LINE__
           !> New formulation with Hassan
           do k=1, pel%knum
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
@@ -1995,7 +1990,6 @@ module fabm_pelagic_component
             * pel%column_area(RANGE2D) &
             + sum(volume_change, 3))
           end do
-          write(0,*) __LINE__
 
         elseif (rank == 3) then
           call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
@@ -2006,7 +2000,6 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            write(0,*) __LINE__
           !> If the flux is in concentration units, then the following is correct
           pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) &
                 + dt * ratePtr3(RANGE3D)
