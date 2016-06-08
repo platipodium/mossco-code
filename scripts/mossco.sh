@@ -18,6 +18,7 @@ GENERIC=1          # By default, use a hardcoded example
 REMAKE=0           # Do not recompile if not necessary
 BUILD_ONLY=0       # Executed, don't stop after build
 COMPILE_ONLY=0
+WALLTIME=00:00:00     # Default run time, if this is zero the run time is estimated automatically
 DEFAULT=getm--fabm_pelagic--fabm_sediment--river--porosity--restart  # Default example
 AUTOTITLE=1          # Whether to change the simulation title in mossco_run and getm.inp/gotmrun.nml
 POSTPROCESS=NONE
@@ -33,12 +34,8 @@ function usage {
 	echo "Accepted options are -r, -b, -t <title>, -n <numproc>, -s <system> -l <loglevel> <example>"
 	echo "If not provided, the default <example> is ${DEFAULT}"
 	echo
-	echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
-	echo "    [-b] :  build-only.  Does not execute the example"
+  echo "    [-b] :  build-only.  Does not execute the example. Rebuilds job script."
 	echo "    [-c] :  compile-only.  Does not prepare and execute the example"
-	echo "    [-t] :  give a title in mossco_run.nml and getm.inp/gotmrun.nml"
-	echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
-	echo "            the default is <system>_postprocess.h"
 	echo "    [-l A|W|E|N|T|D] :  specify the log level, as one of all|warning|error"
 	echo "            |none|trace|default, if not specified, it is taken from mossco_run.nml."
 	echo "    [-n X[:YxZ]]: build for or/and run on X processors.  Default is content of par_setup.dat or n=1"
@@ -46,6 +43,9 @@ function usage {
 	echo "      [-n 0]:   MPI is not used at all."
   echo "      [-n X[:YxZ]]: The layout Y cpu-per-node times Z nodes is used"
   echo
+  echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
+	echo "            the default is <system>_postprocess.h"
+  echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
 	echo "    [-s M|S|J|F|B|P]: exeute batch queue for a specific system, which is"
   echo "            autodetected by default"
 	echo
@@ -56,8 +56,12 @@ function usage {
 	echo "      [-s F]: Command line interactive, running in foreground"
 	echo "      [-s B]: Command line interactive, running in background"
 	echo
-  echo "    [-w W] : wait W seconds for polling batch jobs (only -s J|B)"
-	exit
+  echo "    [-t] :    give a title in mossco_run.nml and getm.inp/gotmrun.nml"
+  echo "    [-w W] :  wait W seconds for polling batch jobs (only -s J|B)"
+  echo "    [-z HH:MM] : set HH:MM as maximum run duration walltime"
+  echo "              of a job in the format HH:MM as hours and minutes. If not"
+  echo "              set, the time is estimated for your system"
+  exit
 }
 
 # Function for selecting the queue on SGE system
@@ -71,8 +75,16 @@ function select_sge_queue {
 }
 
 # Function for predicting simulation time (adjusted for slurm)
-# Calculation assumes 1 day per core and cpu-hour
 function predict_time {
+
+  S=30
+  case ${SYSTEM} in
+    PBS)  S=1000;;
+    SGE)  S=300;;
+    SLURM) S=2000;;
+  esac
+
+  S=2000
   NP=$1
   START=$(cat mossco_run.nml | grep start| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
   STOP=$(cat mossco_run.nml | grep stop| awk -F"'" '{print $2}' | awk -F" " '{print $1}')
@@ -87,7 +99,7 @@ function predict_time {
     exit
   fi
   D=$(expr \( ${Y2} - ${Y1} \) \* 365 + \( ${M2} - ${M1} \) \* 31 + ${D2} - ${D1} + 1)
-  M=$(expr $D \* 40 / ${NP})
+  M=$(expr $D \* 200000 / ${NP} / ${S})
   H=$(expr $M / 60)
   M=$(expr $M % 60)
   if [ $H -lt 1 ] ; then if [ $M -lt 1 ] ; then M=1; fi ; fi
@@ -95,7 +107,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bcn:s:l:w:p:" opt; do
+while getopts ":rt:bcn:s:l:w:p:z:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -117,6 +129,8 @@ while getopts ":rt:bcn:s:l:w:p:" opt; do
   l)  LOGLEVEL=${OPTARG}
       ;;
   w)  WAITTIME=${OPTARG}
+      ;;
+  z)  WALLTIME=${OPTARG}
       ;;
   \?) usage
       ;;
@@ -371,9 +385,9 @@ if [[ "x${MPI_PREFIX}" != "x" ]] ; then
 fi
 
 EMAIL=${MOSSCO_USER_EMAIL:-$(who am i |cut -f1 -d" ")@$(hostname)}
-WALLTIME=$(predict_time $NP)
-if [[ ${SYSTEM} == SLURM ]]; then
-  WALLTIME="4:00:00"
+
+if [[ "x${WALLTIME}" == "x00:00:00" ]] ; then
+  WALLTIME=$(predict_time $NP $SYSTEM)
 fi
 
 case ${SYSTEM} in
@@ -486,7 +500,8 @@ EOT
   ;;
 esac
 
-rm -rf PET?.${TITLE} ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
+rm -rf PET[0-9].${TITLE} PET[0-9][0-9].${TITLE} PET[0-9][0-9][0-9].${TITLE} PET[0-9][0-9][0-9][0-9].${TITLE}
+rm -f ${TITLE}*stdout ${TITLE}*stderr ${STDERR} ${STDOUT}
 
 # Unify loglevel input
 case ${LOGLEVEL} in
