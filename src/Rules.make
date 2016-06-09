@@ -1,6 +1,6 @@
 # This Makefile snippet is part of MOSSCO; definition of MOSSCO-wide make rules
 #
-# Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+# Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # Author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -21,6 +21,17 @@ ifndef MOSSCO_PREFIX
 ifeq ($(shell make --version | grep -c GNU),0)
   $(error GNU make is required)
 endif
+
+# System-dependent flags
+ifeq ($(shell hostname),KSEZ8002)
+#ifeq ($(origin ARFLAGS)),default)
+export ARFLAGS=rvU
+export AR=ar
+$(warning use changed ARFLAGS=rvU)
+#endif
+endif
+
+
 
 MOSSCO_INSTALL_PREFIX?=$(MOSSCO_DIR)
 
