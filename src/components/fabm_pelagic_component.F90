@@ -1794,10 +1794,11 @@ module fabm_pelagic_component
     integer(kind=ESMF_KIND_I4)     :: ubnd(2),lbnd(2),ubnd3(3),lbnd3(3), rank
     character(len=ESMF_MAXSTR)     :: message, varname, name, units, fluxunits
     real(ESMF_KIND_R8), pointer    :: ratePtr2(:,:), ratePtr3(:,:,:)
-    real(ESMF_KIND_R8), pointer    :: volume_change(:,:,:)
     integer(ESMF_KIND_I8)          :: advanceCount
     type(ESMF_Clock)               :: clock
     logical                        :: isEqual
+
+    if (present(rc)) rc = ESMF_SUCCESS
 
     call ESMF_GridCompGet(gridComp, name=name, clock=clock, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -1815,14 +1816,8 @@ module fabm_pelagic_component
       pel%cell_column_fraction = 0.0d0
     end if
 
-    if (.not.(associated(volume_change))) then
-      allocate(volume_change(RANGE2D,lbnd3(3):ubnd3(3)))
-      volume_change = 0.0d0
-    end if
-
-    if (.not.(associated(pel%column_height))) then
-      allocate(pel%column_height(RANGE2D))
-    end if
+    if (.not.(associated(pel%volume_change))) allocate(pel%volume_change(RANGE2D,lbnd3(3):ubnd3(3)))
+    if (.not.(associated(pel%column_height))) allocate(pel%column_height(RANGE2D))
 
     do k=1,pel%knum
       if (any((pel%layer_height(RANGE2D,k) <= 0).and.(.not.pel%mask(RANGE2D,k)))) then
@@ -1833,7 +1828,7 @@ module fabm_pelagic_component
       endif
     enddo
 
-    pel%column_height(RANGE2D) = sum(pel%layer_height(RANGE3D),3)
+    pel%column_height(RANGE2D) = sum(pel%layer_height(RANGE2D,lbnd3(3):ubnd3(3)),3)
 
     do k=1,pel%knum
       where (.not.pel%mask(RANGE2D,k))
@@ -1849,17 +1844,17 @@ module fabm_pelagic_component
       varname = trim(pel%export_states(n)%standard_name)
       units = trim(pel%model%state_variables(n)%units)
 
-      volume_change = 0.0d0
+      pel%volume_change(RANGE2D,lbnd3(3):ubnd3(3)) = 0.0d0
 
       if (associated(pel%volume_flux)) then
           if (.not.(pel%model%state_variables(n)%no_river_dilution)) then
             do k=1, pel%knum
               !> river dilution
               !> New formulation with Hassan 7 June 2016
-              volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
+              pel%volume_change(RANGE2D,k) = dt * pel%volume_flux(RANGE2D) &
                 * pel%cell_column_fraction(RANGE2D,k)
 
-              if (any(volume_change(RANGE2D,k) &
+              if (any(pel%volume_change(RANGE2D,k) &
                 / (pel%layer_height(RANGE2D,k)  &
                 * pel%column_area(RANGE2D)) > 0.5d0)) then
 
@@ -1872,7 +1867,7 @@ module fabm_pelagic_component
               pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
                 * pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
                 / (pel%layer_height(RANGE2D,k)*pel%column_area(RANGE2D) &
-                + volume_change(RANGE2D,k))
+                + pel%volume_change(RANGE2D,k))
             enddo
           endif
       endif
@@ -1988,7 +1983,7 @@ module fabm_pelagic_component
             * pel%cell_column_fraction(RANGE2D,k) &
             / (pel%column_height(RANGE2D) &
             * pel%column_area(RANGE2D) &
-            + sum(volume_change, 3))
+            + sum(pel%volume_change, 3))
           end do
 
         elseif (rank == 3) then
@@ -2012,13 +2007,11 @@ module fabm_pelagic_component
           !  + dt * ratePtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),k) &
           !  / (pel%layer_height(RANGE2D,k) &
           !  * pel%column_area(RANGE2D) &
-          !  + volume_change(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),k))
+          !  + pel%volume_change(lbnd3(1):ubnd3(1),lbnd3(2):ubnd3(2),k))
           !end do
         end if
       end do
     enddo
-
-    if (associated(volume_change)) deallocate(volume_change)
 
   end subroutine integrate_flux_in_water
 
