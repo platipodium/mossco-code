@@ -3,7 +3,7 @@
 !> @file inout_component.F90
 !!
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2013, 2014, 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen <carsten.lemmen@hzg.de>
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -220,13 +220,6 @@ module inout_component
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
     !! 2. Deallocate all your model's internal allocated memory
-    !! 3. Destroy your clock
-
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    call ESMF_ClockDestroy(clock, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
 
     !! Finally, log the successful completion of this function
     call MOSSCO_CompExit(gridComp, rc)

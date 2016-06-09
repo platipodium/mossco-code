@@ -65,7 +65,7 @@ module fabm_sediment_component
 
   namelist /run_nml/ numyears,dt,output,numlayers,dzmin,ode_method,presimulation_years, &
                      dt_min,relative_change_min,ugrid_name, bcup_dissolved_variables, &
-                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_fDet, pflux_sDet ,pflux_DetP 
+                     pel_Temp, pel_NO3, pel_NH4, pel_PO4, pel_O2, pflux_fDet, pflux_sDet ,pflux_DetP
 
   public SetServices
 
@@ -1251,12 +1251,6 @@ module fabm_sediment_component
     if (allocated(bdys)) deallocate(bdys)
     if (allocated(fluxes)) deallocate(fluxes)
 
-
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    !if (clockIsPresent) call ESMF_ClockDestroy(clock, rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

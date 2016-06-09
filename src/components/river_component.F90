@@ -4,7 +4,7 @@
 !> @export all upward fluxes of variables in river data file
 !
 !  This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015 Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen
 !
 ! MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -325,15 +325,6 @@ module river_component
     !! 1. Destroy all fields that you created, be aware that other components
     !!    might have interfered with your fields, e.g., moved them into a fieldBundle
     !! 2. Deallocate all your model's internal allocated memory
-    !! 3. Destroy your clock
-
-    !! @todo The clockIsPresent statement does not detect if a clock has been destroyed
-    !! previously, thus, we comment the clock destruction code while this has not
-    !! been fixed by ESMF
-    call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    !call ESMF_ClockDestroy(clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
