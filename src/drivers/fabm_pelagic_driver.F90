@@ -42,6 +42,7 @@
     real(rk),dimension(:,:,:),pointer  :: temp,salt,par,dens,current_depth
     real(rk),dimension(:,:,:),pointer  :: layer_height=>null()
     real(rk),dimension(:,:),pointer    :: volume_flux=>null()
+    real(rk),dimension(:,:,:),pointer  :: volume_change=>null()
     real(rk),dimension(:,:),pointer    :: column_area=>null()
     real(rk),dimension(:,:),pointer    :: column_height=>null()
     logical ,dimension(:,:),pointer    :: is_openboundary_hz=>null()
