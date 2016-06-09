@@ -54,9 +54,9 @@ coupling:
     interval: none
   - components:
      - getm
-     - mossco_gfnsrp
+     - mossco_gfnr
     interval: 60 m
   - components:
      - fabm_pelagic
-     - mossco_gfnsrp
+     - mossco_gfnr
     interval: 60 m
