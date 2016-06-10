@@ -4,7 +4,7 @@ dependencies:
       grid: grid_2d
 
 instances:
-  - mossco_grid: netcdf
+  - mossco_xs: netcdf
 
 coupling:
   - components:
@@ -17,5 +17,5 @@ coupling:
     interval: none
   - components:
      - fabm_sediment
-     - mossco_grid
+     - mossco_xs
     interval: 12 h
