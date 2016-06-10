@@ -1,0 +1,23 @@
+dependencies:
+  - tracer:
+    - component: hamsom
+      grid: time_averaged_temperature_in_water
+
+instances:
+  mossco_ht: netcdf
+
+coupling:
+  - components:
+     - hamsom
+     - tracer
+    interval: 1 h
+
+  - components:
+     - hamsom
+     - netcdf
+    interval: 1 h
+
+  - components:
+     - tracer
+     - netcdf
+    interval: 1 h
