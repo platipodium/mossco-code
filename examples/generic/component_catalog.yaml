@@ -1,26 +1,31 @@
-# Regular abbreviations by first letter
+# Regular alphabetic abbreviations by first letter
 remtc_atmosphere: a
-benthos: b
-constant: c
-deposition: d
-erosed: e
-fabm_pelagic: f
-getm: g
-hamsom: h
-# irregular i, see below
-# irregular j, see below
-mussel: m
-# irregular n, see below
-remtc_ocean: o
-porosity: p
-# irregular q, see below
-river: r
-fabm_sediment: s
-tracer: t
-simplewave: w
+benthos:          b
+constant:         c
+deposition:       d  # as instance of netcdf_input
+erosed:           e
+fabm_pelagic:     f
+getm:             g
+hamsom:           h
+# irregular       i, see below
+# irregular       j, see below
+mussel:           m # as instance of filtration
+# irregular       n, see below
+remtc_ocean:      o
+porosity:         p  # as instance of netcdf_input
+# irregular       q, see below
+river:            r  # as instance of netcdf_input
+fabm_sediment:    s
+tracer:           t
+#                 u # not yet assigned
+#                 v # not yet assigned
+simplewave:       w
+grid:             x # not yet assigned
+#                 y # not yet assigned
+#                 z # not yet assigned
 
 # Irregular abbreviations
-boundary: n # for 'nudge'
-fabm_gotm: q
-fabm_benthic: i # for 'interface'
-gotm: j
+boundary:         n # instance of netcdf_input with  'nudging'
+fabm_gotm:        q
+fabm_benthic:     i # for 'interface'
+gotm:             j
