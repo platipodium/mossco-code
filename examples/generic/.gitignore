@@ -1,5 +1,2 @@
 Makefile.coupling
 toplevel_component.F90
-restart.yaml
-# Abbreviated yamls created with
-# create_short_yaml.py

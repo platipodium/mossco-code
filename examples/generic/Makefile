@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2014, 2015 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen
 #
 # MOSSCO is free software: you can redistribute it and/or modify it under the
@@ -39,49 +39,9 @@ exec: Makefile.coupling
 
 clean: extraclean
 
+links: $(shell ls *--*.yaml)
+	python create_short_examples.py
+
 extraclean: Makefile.coupling
 	$(MAKE) -f Makefile.coupling $@
-	$(RM) Makefile.coupling toplevel_component.F90 $(EXAMPLES)
-
-################################################
-# Recreate all standalone examples
-
-#	python $<
-clm: create_coupling.py clm_coupling.yaml
-	python $^
-
-benthos: create_coupling.py benthos_coupling.yaml
-	python $^
-
-erosed: create_coupling.py erosed_coupling.yaml
-	python $^
-
-fabm0d: create_coupling.py fabm0d_coupling.yaml
-	python $^
-
-fabm_sediment: create_coupling.py fabm_sediment_coupling.yaml
-	python $^
-
-gotm: create_coupling.py gotm_coupling.yaml
-	python $^
-
-gotmfabm: create_coupling.py gotmfabm_coupling.yaml
-	python $^
-
-getm: create_coupling.py getm_coupling.yaml
-	python $^
-
-simplewave: create_coupling.py simplewave_coupling.yaml
-	python $^
-
-empty: create_coupling.py empty_coupling.yaml
-	python $^
-
-constant: create_coupling.py constant_coupling.yaml
-	python $^
-
-
-
-
-
-
+	$(RM) Makefile.coupling toplevel_component.F90 toplevel.component.o $(EXAMPLES)
