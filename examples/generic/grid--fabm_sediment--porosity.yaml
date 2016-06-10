@@ -1,0 +1,31 @@
+dependencies:
+  - fabm_sediment:
+    - component: grid
+      grid: grid_2d
+  - porosity:
+    - component: grid
+      grid: grid_2d
+
+instances:
+  - mossco_xsp: netcdf
+  - porosity: netcdf_input
+
+coupling:
+  - components:
+     - constant
+     - fabm_sediment
+    interval: none
+  - components:
+     - grid
+     - fabm_sediment
+    interval: none
+  - components:
+     - porosity
+     - fabm_sediment
+    interval: none
+  - components:
+     - fabm_sediment
+     - mossco_xsp
+    interval: 10 m
+
+
