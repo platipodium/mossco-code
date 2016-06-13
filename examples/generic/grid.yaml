@@ -1,0 +1,8 @@
+instances:
+  - mossco_grid: netcdf
+
+coupling:
+  - components:
+     - grid
+     - mossco_grid
+    interval: 10 m
