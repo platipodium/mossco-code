@@ -5,7 +5,7 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; Is1D=0; IsNOAH=0;
+show_data=0; Is1D=1; IsNOAH=0;
 datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
@@ -25,7 +25,8 @@ if IsNOAH
  locs={'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
 end
 % load and prepare data
-if show_data, read_stations_nc; end;
+if show_data, read_stations_nc; 
+else show_dati=zeros(size(loc,1)); end;
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
 %tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
 ncol = 3; nrow = 2; 	% number of columns in fig
@@ -34,12 +35,14 @@ if Is1D
   locs={'Helgoland'};
   loc =[54.18,7.82];
   spath= '/local/home/wirtz/mossco/mossco-setups/helgoland/';%';hrres/
- % spath= '/local/home/wirtz/mossco/mossco-setups/hrres/'
-  tags = {'_2';'_3';};%%'rnit400';'syn_nut-5';
-% tags = {'ref';'rSlow0.0003';'remin0.005';};
-%  tags = {'ref';'PAds0';'PAds0.3';'PAdsODU60';};
-%      };
-%  tags = {'ref';};'vS_det15';'sinking_factor_min0.5';'remNP0.';'remNP-0.2';'Nqual0';
+%  spath= '/local/home/wirtz/mossco/mossco-setups/hrres/'
+%tags = {'ref';'phi_agg0.0004';'phi_agg0.002';};%'agg_doc0.01';'mort_zoo0.015';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
+%tags = {'ref';'mort_zoo0.015';'mort_zoo0.025';};%'agg_doc0.01';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
+%tags = {'ref';'vir_loss0.0';'vir_loss1.2';};%'rnit140';'Nqual0.';'vS_det15';};
+ tags ={'';};% {'_0';'_1';};%'phi_agg5E-4';'agg_doc0.01';'vir_loss0.';};
+%tags = {'ref';'Nqual0.';'rnit150';'PAds0';};%'sinking_factor_min0.5';'remNP0.';'remNP-0.2';'Nqual0';
+%tags = {'ref';'agg_doc0.01';'agg_doc0.2';};
+%tags = {'ref';'AffP0.05';'hydrol0.02';};
 ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
@@ -94,8 +97,8 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  moffs=0; varshortm0='';
  %% read model output
  tag=cell2mat(tags(ns));
- %ncfile = fullfile(spath,[ncf0 tag '.nc']);
- ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '.nc']);
+ %ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
