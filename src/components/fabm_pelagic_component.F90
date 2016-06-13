@@ -1842,8 +1842,7 @@ module fabm_pelagic_component
                 * pel%cell_column_fraction(RANGE2D,k)
 
               if (any(pel%volume_change(RANGE2D,k) &
-                / (pel%layer_height(RANGE2D,k)  &
-                * pel%column_area(RANGE2D)) > 0.5d0)) then
+                / (pel%layer_height(RANGE2D,k) * pel%column_area(RANGE2D)) > 0.5d0)) then
 
                 write(message,'(A)') trim(name)//' cfl for volume flux exceeded'
                 write(0,*) k,' pel%volume_flux=',pel%volume_flux(RANGE2D)
@@ -1945,7 +1944,7 @@ module fabm_pelagic_component
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
-        write(0,*) __LINE__
+!!        write(0,*) __LINE__
 
         if (advanceCount < 2) then
           write(message,'(A)') trim(name)//' integrates'
@@ -1971,8 +1970,7 @@ module fabm_pelagic_component
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
             + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
 !! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
-             / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) + &
-                dt * pel%volume_flux(RANGE2D))            
+             / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) + dt * pel%volume_flux(RANGE2D))            
           end do
 
         elseif (rank == 3) then
@@ -1985,8 +1983,7 @@ module fabm_pelagic_component
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           !> If the flux is in concentration units, then the following is correct
-          pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) &
-                + dt * ratePtr3(RANGE3D)
+          pel%conc(RANGE3D,n) = pel%conc(RANGE3D,n) + dt * ratePtr3(RANGE3D)
 
           !> If, however, the flux is in powder units (mg s-1 or mmol s-1) then, we
           !> have an alternative formulation
