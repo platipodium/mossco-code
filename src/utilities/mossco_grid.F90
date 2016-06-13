@@ -373,38 +373,22 @@ end function MOSSCO_GridCreateRegional2D
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      !gridb = ESMF_GridCreate(distGridB, name=trim(nameB), gridAlign=(/1,1,1/), &
-      !  coordSys=coordSys, coordDimCount=coordDimCount3, &
-      !  coordDimMap=int(coordDimMap3(:,:)), rc=localrc)
+      gridb = ESMF_GridCreate(distGridB, name=trim(nameB), gridAlign=(/1,1,1/), &
+        coordSys=coordSys, coordDimCount=coordDimCount3, &
+        coordDimMap=int(coordDimMap3(:,:)), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    !>l@ todo : delete code below and use abovedistgrid information, this is impolemented
-    ! in fabm_pelagic_component.F90 and should be completley moved to here.
-
-      call ESMF_GridGetFieldBounds(grida, totalUBound=ubnd2, &
-         totalLBound=lbnd2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      !
-      gridb = ESMF_GridCreateNoPeriDim(minIndex=(/lbnd2(1),lbnd2(2),nlayer_/), &
-                    maxIndex=(/ubnd2(1),ubnd2(2),1/), &
-                    regDecomp=(/1,1,1/), &
-                    coordSys=ESMF_COORDSYS_SPH_DEG, &
-                    indexflag=ESMF_INDEX_GLOBAL,  &
-                    coordTypeKind=ESMF_TYPEKIND_R8,coordDep1=(/1/), &
-                    coorddep2=(/2/),rc=localrc)
-       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     endif
+
     call ESMF_GridAddCoord(gridb, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> @todo: implement multidimensional grid coordinates in MOSSCO_GridCopyCoords
-    !call MOSSCO_GridCopyCoords(grida, gridb, coordDims=(/1,2/), rc=localrc)
-    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_GridCopyCoords(grida, gridb, coordDims=(/1,2/), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (present(rc)) rc = rc_
 
@@ -423,38 +407,35 @@ end function MOSSCO_GridCreateRegional2D
 
     integer(ESMF_KIND_I4)                     :: rc_, localrc, localDeCount
     integer(ESMF_KIND_I4)                     :: ubndA(3), lbndA(3), ubndB(3), lbndB(3)
-    integer(ESMF_KIND_I4)                     :: coordDim, i, ranka, rankb
-    real(ESMF_KIND_R8), pointer               :: coordA(:), coordB(:)
+    integer(ESMF_KIND_I4)                     :: coordDim, i, ranka, rankb, dimCountA, dimCountB
+    real(ESMF_KIND_R8), pointer               :: coordA1(:), coordB1(:)
+    real(ESMF_KIND_R8), pointer               :: coordA2(:,:), coordB2(:,:)
+    real(ESMF_KIND_R8), pointer               :: coordA3(:,:,:), coordB3(:,:,:)
     character(len=ESMF_MAXSTR)                :: message
 
     integer(ESMF_KIND_I4), allocatable        :: coordDimCountA(:), coordDimCountB(:)
 
     rc_ = ESMF_SUCCESS
-    call ESMF_GridGet(grida, rank=ranka, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    call ESMF_GridGet(gridb, rank=rankb, rc=localrc)
+    call ESMF_GridGet(grida, rank=ranka, dimCount=dimCountA, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Make a link if both grids are of the same rank, otherwise create new grid
-    !! of the missing (2/3) rank
-    if (ranka == rankb) then
-      gridb = grida
-      if (present(rc)) rc=rc_
-      return
-    endif
+    call ESMF_GridGet(gridb, rank=rankb, dimCount=dimCountB, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (ranka<2 .or.ranka>3) then
       write(message,'(A,I1)') '  input grid rank must be of rank 2 or 3, but is rank ',ranka
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
     endif
 
     if (rankb<2 .or.rankb>3) then
       write(message,'(A,I1)') '  output grid rank must be of rank 2 or 3, but is rank ',rankb
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
     endif
 
     call ESMF_GridGet(grida, localDeCount=localDeCount, rc=localrc)
@@ -468,63 +449,99 @@ end function MOSSCO_GridCreateRegional2D
 
     if (localDeCount<1) return
 
-    allocate(coordDimCountA(ranka))
+    allocate(coordDimCountA(dimCountA))
+
     call ESMF_GridGet(grida, coordDimCount=coordDimCountA, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if (any(coordDimCountA /= 1 )) then
-      write(message,*) '  not implemented: copying grids with multidimensional coordinates', coordDimCountA
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-      !call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    endif
 
-    allocate(coordDimCountB(rankb))
+    allocate(coordDimCountB(dimCountB))
     call ESMF_GridGet(gridb, coordDimCount=coordDimCountB, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if (any(coordDimCountB /= 1 )) then
-      write(message,*) '  not implemented: copying grids with multidimensional coordinates', coordDimCountB
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
-      !call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+
+    if (dimCountA < ubound(coordDims,1)) then
+      write(message,'(A,I1,A)') '  input grid must have at least', ubound(coordDims,1), ' dimensions'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
+    if (ubound(coordDims,1) > dimCountB) then
+      write(message,'(A,I1,A)') '  output grid must have at least', ubound(coordDims,1), ' dimensions'
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
     endif
 
     do i=1, ubound(coordDims,1)
-      coordDim=coordDims(i)
 
       call ESMF_GridGetCoordBounds(gridb,coordDim=i,localDE=0, &
         exclusiveLBound=lbndB, exclusiveUBound=ubndB, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (ubndB(1)-lbndB(1) <= 0) then
-        write(message,'(A)') '  no coord data on this DE, skipped'
-        continue
-      endif
 
-      call ESMF_GridGetCoord(gridb, coordDim=i, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
-        farrayPtr=coordB, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (any(ubndB(1:coordDimCountB(i))-lbndB(1:coordDimCountB(i)) < 0)) then
+        write(message,'(A)') '  no coord data on this DE, skipped'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        cycle
+      endif
 
       call ESMF_GridGetCoordBounds(grida,coordDim=i,localDE=0, &
         exclusiveLBound=lbndA, exclusiveUBound=ubndA, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (ubndA(1)-lbndA(1) <= 0) then
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (any(ubndA(1:coordDimCountA(i))-lbndA(1:coordDimCountA(i)) < 0)) then
         write(message,'(A)') '  no coord data on this DE, skipped'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-        continue
+        cycle
       endif
 
-      call ESMF_GridGetCoord(grida,coordDim=i,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
-         farrayPtr=coordA,rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      select case (coordDimCountA(i))
+      case (1)
+        call ESMF_GridGetCoord(gridb, coordDim=i, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
+          farrayPtr=coordB1, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      coordB(lbndB(1):ubndB(1)) = coordA(lbndB(1):ubndB(1))
+        call ESMF_GridGetCoord(grida,coordDim=i,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+           farrayPtr=coordA1,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        coordB1(lbndB(1):ubndB(1)) = coordA1(lbndB(1):ubndB(1))
+      case (2)
+        call ESMF_GridGetCoord(gridb, coordDim=i, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
+          farrayPtr=coordB2, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridGetCoord(grida,coordDim=i,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+           farrayPtr=coordA2,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        coordB2(lbndB(1):ubndB(1),lbndB(2):ubndB(2)) = coordA2(lbndA(1):ubndA(1),lbndA(2):ubndA(2))
+      case (3)
+        call ESMF_GridGetCoord(gridb, coordDim=i, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
+          farrayPtr=coordB3, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridGetCoord(grida,coordDim=i,localDE=0,staggerloc=ESMF_STAGGERLOC_CENTER, &
+           farrayPtr=coordA3,rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        coordB3(lbndB(1):ubndB(1),lbndB(2):ubndB(2),lbndB(3):ubndB(3)) &
+          = coordA3(lbndA(1):ubndA(1),lbndA(2):ubndA(2),lbndA(3):ubndA(3))
+      case default
+      end select
     enddo
 
-    deallocate(coordDimCountA)
-    deallocate(coordDimCountB)
+    if (allocated(coordDimCountA)) deallocate(coordDimCountA)
+    if (allocated(coordDimCountB)) deallocate(coordDimCountB)
 
     if (present(rc)) rc=rc_
 
