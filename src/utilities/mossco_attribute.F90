@@ -27,10 +27,12 @@ interface MOSSCO_AttributeSet
   module procedure MOSSCO_StateAttributeSetLogical
   module procedure MOSSCO_StateAttributeSetList1
   module procedure MOSSCO_StateAttributeSetList2
+  module procedure MOSSCO_StateAttributeSetInt4List1
   module procedure MOSSCO_CplCompAttributeSetList1
   module procedure MOSSCO_CplCompAttributeSetList2
   module procedure MOSSCO_GridCompAttributeSetList1
   module procedure MOSSCO_GridCompAttributeSetList2
+  module procedure MOSSCO_GridCompAttributeSetInt4List1
 end interface MOSSCO_AttributeSet
 
 interface MOSSCO_AttributeGet
@@ -41,6 +43,8 @@ interface MOSSCO_AttributeGet
   module procedure MOSSCO_CplCompAttributeGetList2
   module procedure MOSSCO_GridCompAttributeGetList1
   module procedure MOSSCO_GridCompAttributeGetList2
+  module procedure MOSSCO_GridCompAttributeGetInt4List1
+  module procedure MOSSCO_StateAttributeGetInt4List1
 end interface MOSSCO_AttributeGet
 
 interface MOSSCO_AttributeGetForeignGrid
@@ -93,6 +97,65 @@ contains
   end subroutine MOSSCO_StateAttributeSetList1
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateAttributeSetInt4List1"
+  subroutine MOSSCO_StateAttributeSetInt4List1(state, label, list, rc)
+
+    type(ESMF_State), intent(inout)                :: state
+    character(len=*), intent(in)                   :: label
+    integer(ESMF_KIND_I4), intent(in), allocatable :: list(:)
+    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i
+    character(len=8)                    :: string
+    character(len=32)                    :: attributeString
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (.not.allocated(list)) return
+
+    string=''
+    do i=lbound(list,1), ubound(list,1)
+      write(string,'(I8)') list(i)
+      if (len_trim(attributeString)>0) write(attributeString,'(A)') trim(attributeString)//','
+      write(attributeString,'(A)') adjustl(trim(attributeString))//adjustl(trim(string))
+    enddo
+
+    call ESMF_AttributeSet(state, trim(label), value=trim(attributeString), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine MOSSCO_StateAttributeSetInt4List1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompAttributeSetInt4List1"
+  subroutine MOSSCO_GridCompAttributeSetInt4List1(gridComp, label, list, rc)
+
+    type(ESMF_GridComp), intent(inout)             :: gridComp
+    character(len=*), intent(in)                   :: label
+    integer(ESMF_KIND_I4), intent(in), allocatable :: list(:)
+    integer(ESMF_KIND_I4), intent(out), optional   :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i
+    character(len=8)                     :: string
+    character(len=ESMF_MAXSTR)           :: attributeString
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (.not.allocated(list)) return
+
+    attributeString=''
+    string=''
+    do i=lbound(list,1), ubound(list,1)
+      write(string,'(I8)') list(i)
+      if (len_trim(attributeString)>0) write(attributeString,'(A)') trim(attributeString)//','
+      write(attributeString,'(A)') adjustl(trim(attributeString))//adjustl(trim(string))
+    enddo
+
+    call ESMF_AttributeSet(gridComp, trim(label), value=trim(attributeString), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+  end subroutine MOSSCO_GridCompAttributeSetInt4List1
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateAttributeSetList2"
   subroutine MOSSCO_StateAttributeSetList2(state, label, stringList, rc)
 
@@ -119,7 +182,8 @@ contains
 
   end subroutine MOSSCO_StateAttributeSetList2
 
-
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateAttributeGetList1"
   subroutine MOSSCO_StateAttributeGetList1(state, label, stringList, rc)
 
     type(ESMF_State), intent(in)  :: state
@@ -160,6 +224,92 @@ contains
     enddo
 
   end subroutine MOSSCO_StateAttributeGetList1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_StateAttributeGetInt4List1"
+  subroutine MOSSCO_StateAttributeGetInt4List1(state, label, list, rc)
+
+    type(ESMF_State), intent(in)  :: state
+    character(len=*), intent(in)  :: label
+    integer(ESMF_KIND_I4), intent(out), allocatable :: list(:)
+    integer(ESMF_KIND_I4), intent(out), optional    :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j
+    logical                              :: isPresent
+    character(len=ESMF_MAXSTR)           :: attributeString
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_AttributeGet(state, name=trim(label), isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) return
+
+    call ESMF_AttributeGet(state, trim(label), value=attributeString, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    n=1
+    do i=1,len_trim(attributeString)
+      if (attributeString(i:i)==',') n=n+1
+    enddo
+
+    if (n>0) allocate(list(n))
+    do i=1,n
+      j=index(attributeString,',')
+      if (j>0) then
+        read(attributeString(1:j-1),*) list(i)
+      else
+        read(attributeString,*) list(i)
+      endif
+      write(attributeString,'(A)') attributeString(j+1:len_trim(attributeString))
+    enddo
+
+  end subroutine MOSSCO_StateAttributeGetInt4List1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_GridCompAttributeGetInt4List1"
+  subroutine MOSSCO_GridCompAttributeGetInt4List1(gridComp, label, list, rc)
+
+    type(ESMF_GridComp), intent(in)  :: gridComp
+    character(len=*), intent(in)     :: label
+    integer(ESMF_KIND_I4), intent(out), allocatable :: list(:)
+    integer(ESMF_KIND_I4), intent(out), optional    :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n, j
+    logical                              :: isPresent
+    character(len=ESMF_MAXSTR)           :: attributeString
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    call ESMF_AttributeGet(gridComp, name=trim(label), isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) return
+
+    call ESMF_AttributeGet(gridComp, trim(label), value=attributeString, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    n=1
+    do i=1,len_trim(attributeString)
+      if (attributeString(i:i)==',') n=n+1
+    enddo
+
+    if (n>0) allocate(list(n))
+    do i=1,n
+      j=index(attributeString,',')
+      if (j>0) then
+        read(attributeString(1:j-1),*) list(i)
+      else
+        read(attributeString,*) list(i)
+      endif
+      write(attributeString,'(A)') attributeString(j+1:len_trim(attributeString))
+    enddo
+
+  end subroutine MOSSCO_GridCompAttributeGetInt4List1
 
   subroutine MOSSCO_StateAttributeGetList2(state, label, stringList, rc)
 
