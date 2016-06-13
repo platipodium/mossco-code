@@ -5,12 +5,12 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=0; Is1D=1; IsNOAH=0;
+show_data=1; Is1D=0; IsNOAH=0;
 datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.82];[55.,8.3];[52.3 4.3];[52.56 3.5];]; %[54.1,6.3];;[54.2,7.5]; %[54.96,8.4]; 
+loc =[[54.18,7.86];[55.,8.3];[52.3 4.3];[52.56 3.5];]; %[54.1,6.3];;[54.2,7.5]; %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
 locs={'Helgoland';'Sylt';'Noordwijk-10';'Noordwijk-70';}; %'T22'; 'T26'; 
@@ -54,11 +54,11 @@ else
 %'_sinking_factor_min0.3';'_vS_det16';
 %%tags = {'';'_Zmorta';'_a_water1.3';'_Q101.8';};
 %%tags = {'';'_vS_det16';'_PAdsODU220';'_syn_nut-4.6';};
-%%tags = {'';'_rSlow0.005';'_genMeth6';'_mort_zoo0.024';};
-tags = {'';'_PAdsODU220';};
+%%tags = {'';'_rSlow0.005';'_genMeth6';'_mort_zoo0.024';};'_PAdsODU220';
+tags = {'';};
  ntags=length(tags);
-%  spath= '/home/wirtz/';%sns  
-  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+  spath= '/home/wirtz/';%sns  
+%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 
   if IsNOAH

@@ -1,6 +1,7 @@
 
 % index position of sub-plot
 iy=cell2mat(var{i}(7)); ix=cell2mat(var{i}(8));  
+ytl=[1E-5 1E-4 1E-3 0.01 0.1 0.3 1 3 10 20 50 100 1E3 1E4 1E5 1E6];  
 % geometry of sub-plot
 x0=0.05+(ix-1)*1.2*dxp; y0=0.1+(nrow-iy)*1.07*dyp;
 
@@ -25,7 +26,7 @@ for ili=1:size(i_loc,1)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(res)); end
-  if minval>0 & maxVal/minval > 20,  set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));  end
+  if minval>0 & maxVal/minval > 20,  set(gca,'YScale','Log','YTick',ytl,'YTicklabel',ytl);  end
 
   if(ptag(1)=='P')
     set(axs,'FontSize',fs,'Xlim',[minval maxVal],'box','on');
