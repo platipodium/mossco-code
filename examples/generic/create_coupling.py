@@ -1961,11 +1961,14 @@ fid.write('''
 
     rc=ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, importState=importState, exportState=exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=myName, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_GridCompGet(gridComp, clock=clock, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Establish number of phases and zero phase for all components
     !! @> todo this interface will likely change in the future and will
@@ -2006,7 +2009,7 @@ fid.write('''
 
     do i=1,ubound(gridCompList,1)
       do phase=1,gridCompPhaseCountList(i)
-        call ESMF_LogWrite(trim(myName)//' tells '//trim(gridCompNameList(i))//' to finalize', ESMF_LOGMSG_INFO)
+        !call ESMF_LogWrite(trim(myName)//' tells '//trim(gridCompNameList(i))//' to finalize', ESMF_LOGMSG_INFO)
         call ESMF_GridCompFinalize(gridCompList(i), importState=gridImportStateList(i), exportState= &
           gridExportStateList(i), clock=clock, phase=phase, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -2016,11 +2019,11 @@ fid.write('''
 
     do i=1,ubound(gridCompList,1)
       !!@todo destroy any remaining fields/arrays in states
-      call ESMF_StateDestroy(gridExportStateList(i), rc=localrc)
+      call MOSSCO_DestroyOwn(gridExportStateList(i), owner=trim(myName),  rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_StateDestroy(gridImportStateList(i), rc=localrc)
+      call MOSSCO_DestroyOwn(gridImportStateList(i), owner=trim(myName),  rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
