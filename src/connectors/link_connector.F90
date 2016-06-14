@@ -128,7 +128,7 @@ module link_connector
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call link_foreign_grid_or_needed_field_in_states(importState, exportState, rc)
+    call link_foreign_grid_or_needed_field_in_states(importState, exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -818,7 +818,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (.not.isNeeded) cycle
       endif
 
-      !call ESMF_LogWrite('Looking for '//trim(attributeName)//' '//trim(fieldName), ESMF_LOGMSG_INFO)
+      write(message,'(A)') trim(name)//' is looking for'
+      call MOSSCO_MessageAdd(message,trim(attributeName)//' '//trim(fieldName))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       ! Check whether it is already there
       call ESMF_StateGet(exportState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
@@ -934,8 +936,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
-
-    call ESMF_LogFlush()
 
   end subroutine link_foreign_grid_or_needed_field_in_states
 
