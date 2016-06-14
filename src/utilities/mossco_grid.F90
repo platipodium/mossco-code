@@ -261,6 +261,8 @@ end function MOSSCO_GridCreateRegional2D
     integer,dimension(:,:,:),allocatable,target :: deBlockList
     character(len=ESMF_MAXSTR)                :: message, nameA, nameB
 
+    nameA='gridA'
+    nameB='gridB'
 
     rc_ = ESMF_SUCCESS
     nlayer_ = 1
@@ -268,9 +270,14 @@ end function MOSSCO_GridCreateRegional2D
     if (present(kwe)) rc_ = ESMF_SUCCESS
     if (present(nlayer)) nlayer_ = nlayer
 
+    !write(0,*) '"'//trim(nameA)//'", "'//trim(nameB)//'"'
+
     call ESMF_GridGet(grida, rank=rank, distGrid=distGridA, name=nameA, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    !> @todo something strange here with names, somehow nameA is set to 'gridB'
+    !write(0,*) '"'//trim(nameA)//'", "'//trim(nameB)//'"'
 
     if ((rank) == 3 .and. present(nlayer)) then
       write(message,'(A)') '  not allowed to provide nlayer argument with 3D grid'
