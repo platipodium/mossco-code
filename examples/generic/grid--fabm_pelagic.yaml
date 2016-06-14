@@ -1,7 +1,8 @@
 dependencies:
   - fabm_pelagic:
     - component: grid
-      grid: grid_3d
+      grid: grid
+  - fabm_pelagic: constant
 
 instances:
   - mossco_xf: netcdf
@@ -18,4 +19,4 @@ coupling:
   - components:
      - fabm_pelagic
      - mossco_xf
-    interval: 2 h
+    interval: 10 m

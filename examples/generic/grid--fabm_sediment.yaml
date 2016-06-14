@@ -1,7 +1,7 @@
 dependencies:
   - fabm_sediment:
     - component: grid
-      grid: grid_2d
+      grid: grid
 
 instances:
   - mossco_xs: netcdf
