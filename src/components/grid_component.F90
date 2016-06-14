@@ -136,6 +136,7 @@ module grid_component
     type(ESMF_Grid)            :: grid, grid2, grid3
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, gridName, creator, fileFormat
+    character(len=ESMF_MAXSTR) :: geomName
     type(ESMF_Config)          :: config
 
     integer(ESMF_KIND_I4)      :: itemCount, i, j, nlayer
@@ -249,7 +250,7 @@ module grid_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeGet(gridComp, 'grid', value=gridName, &
+    call ESMF_AttributeGet(gridComp, 'grid_file', value=gridName, &
       defaultValue=trim(name)//'.nc', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -278,13 +279,10 @@ module grid_component
       grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, nlayer=nlayer, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
+        call ESMF_GridGet(grid3, name=geomName)
 
       write(message, '(A)') trim(name)//' created grid from file '//trim(gridName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      call ESMF_GridCompSet(gridComp, grid=grid3, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
       hasGrid=.true.
 
@@ -345,7 +343,16 @@ module grid_component
 
     endif
 
-    grid = grid3
+    if (nlayer > 0) then
+      grid = grid3
+    else
+      grid = grid2
+    endif
+
+
+    call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
       name=gridName, rank=rank, rc=localrc)
