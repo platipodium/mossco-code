@@ -303,6 +303,16 @@ module fabm_sediment_component
 
       if (rank == 3) then
         flux_grid = MOSSCO_GridCreateFromOtherGrid(grid, rc=localrc)
+        call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER_VCENTER, &
+          localDe=0, exclusiveUbound=ubnd3, exclusiveLbound=lbnd3, rc=localrc)
+
+        if (numlayers /= ubnd3(3)-lbnd3(3) + 1) then
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          numlayers = ubnd3(3)-lbnd3(3) + 1
+          write(message,'(A,I3)') trim(name)//' overwrites namelist with 3D-grid numlayers = ',numlayers
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+        endif
       else
         flux_grid = grid
       endif
@@ -331,6 +341,7 @@ module fabm_sediment_component
       sed%grid%inum=1
       sed%grid%jnum=1
     end if
+
     !! The grid specification should also go to outside this routine, and update the grid of
     !! this component, numlayers and dzmin are read from nml
     sed%grid%knum=numlayers
@@ -889,7 +900,8 @@ module fabm_sediment_component
     end if
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP2
 
@@ -1118,7 +1130,7 @@ module fabm_sediment_component
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     end if
 
-    call get_boundary_conditions(sed,importState,bdys,fluxes)
+    call get_boundary_conditions(sed, importState, bdys, fluxes)
     sed%bdys   => bdys
     sed%fluxes => fluxes
 
@@ -1165,7 +1177,12 @@ module fabm_sediment_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      call ode_solver(sed,dt,ode_method)
+      !write(0,*) 1171,trim(name)
+      !> @todo the solver is not stable in example xf with sns topo
+
+      call ode_solver(sed, dt, ode_method)
+
+      !write(0,*) 1173,trim(name)
 
       ! reset concentrations to mininum_value
       do n=1,sed%nvar
@@ -1202,6 +1219,8 @@ module fabm_sediment_component
           end do
         end if
       end if
+
+
 
 #ifdef WRITE_PROGRESS
       if (mod(advanceCount*dt,(365.*86400.)).eq.0) write(0,*) '  elapsed [d]',dt*advanceCount/86400.
