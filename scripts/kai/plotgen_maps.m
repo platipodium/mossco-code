@@ -33,7 +33,7 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*1;     
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;     
  end
  if ti-toffm<=length(ind)
 % goes to new figure (if required)
@@ -99,7 +99,8 @@ for im=1:length(vli)
     set(cb, 'Position', [x0+0.03*dxpm y0+dypm*0.06 .014 0.3*dypm],'FontSize',fs);
     if(islog)
 %      ctl =ceil(log10(minval)):0.5:ceil(log10(maxVal));
-      set(cb,'YTick',ytl,'YTicklabel',ytl); 
+       if(islog) set(cb,'YTick',log10(ytl),'YTicklabels',ytl); 
+      else set(cb,'YTick',ytl,'YTicklabels',ytl); end
     end
   end
  

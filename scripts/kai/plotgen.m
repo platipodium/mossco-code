@@ -57,10 +57,10 @@ else
 %%tags = {'';'_rSlow0.005';'_genMeth6';'_mort_zoo0.024';};'_PAdsODU220';
 tags = {'';};
  ntags=length(tags);
-  spath= '/home/wirtz/';%sns  
-%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+%  spath= '/home/wirtz/';%sns  
+  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
-  ncf0 = 'sns'; 
+  ncf0 = 'sns_HR'; 
   if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
     nrowm = 1; ncolm = 1;
@@ -97,8 +97,8 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  moffs=0; varshortm0='';
  %% read model output
  tag=cell2mat(tags(ns));
- ncfile = fullfile(spath,[ncf0 tag '.nc']);
- %ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+ %ncfile = fullfile(spath,[ncf0 tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);

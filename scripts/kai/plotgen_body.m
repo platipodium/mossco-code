@@ -88,7 +88,12 @@ for ili=1:size(i_loc,1)
          if(Zt(i)==2)
           dz = soil_dz; dzt=soil_dzt;
          else
-          dz = water_dz;dzt=water_dzt;
+          if dimdz<3   
+             dz = water_dz; dzt=water_dzt;
+          else
+             dz = squeeze(water_dz(i_loc(ili,1),i_loc(ili,2),:,:));
+             dzt = squeeze(water_dzt(i_loc(ili,1),i_loc(ili,2),:))';
+          end             
          end
          y = squeeze(sum(res.*dz,1)./dzt); %sum(res(:,ii)'*dz,1)
        else
