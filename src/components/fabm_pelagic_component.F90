@@ -320,6 +320,7 @@ module fabm_pelagic_component
     integer(ESMF_KIND_I4) :: totallwidth3(3,1), totaluwidth3(3,1)
     integer(ESMF_KIND_I4) :: totallwidth2(2,1), totaluwidth2(2,1)
     integer(ESMF_KIND_I8) :: tidx
+    type(ESMF_FieldStatus_Flag) :: fieldStatus
 
     character(len=ESMF_MAXSTR) :: timestring, name, message, units, esmf_name
     integer(ESMF_KIND_I4)      :: localPet, petCount, itemCount
@@ -407,21 +408,43 @@ module fabm_pelagic_component
       totalLWidth2(:,1)=0
       totalUWidth2(:,1)=0
     else
+
+      write(message,'(A)') trim(name)//' obtains grid from foreign grid field '//trim(foreignGridFieldName)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
       call ESMF_StateGet(importState, trim(foreignGridFieldName), field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet(field, grid=state_grid, rank=rank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(field, grid=state_grid, status=fieldStatus, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_GridGet(state_grid, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       allocate(maxIndex(rank))
       call ESMF_GridGet(state_grid,staggerloc=ESMF_STAGGERLOC_CENTER,localDE=0, &
              exclusiveCount=maxIndex,rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (rank == 3) call ESMF_FieldGet(field, totalLWidth=totalLWidth3, totalUWidth=totalUWidth3, rc=localrc)
-      if (rank == 2) call ESMF_FieldGet(field, totalLWidth=totalLWidth2, totalUWidth=totalUWidth2, rc=localrc)
+      if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+        if (rank == 3) call ESMF_FieldGet(field, totalLWidth=totalLWidth3, &
+          totalUWidth=totalUWidth3, rc=localrc)
+        if (rank == 2) call ESMF_FieldGet(field, totalLWidth=totalLWidth2, &
+          totalUWidth=totalUWidth2, rc=localrc)
+      else
+        totalLWidth3(:,1)=0
+        totalUWidth3(:,1)=0
+        totalLWidth2(:,1)=0
+        totalUWidth2(:,1)=0
+      endif
+
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       inum=maxIndex(1)
       jnum=maxIndex(2)
 
@@ -434,7 +457,7 @@ module fabm_pelagic_component
         totalLWidth3(3,1)=1
         totalUWidth3(3,1)=1
         horizontal_grid=state_grid
-        state_grid = MOSSCO_GridCreateFromOtherGrid(horizontal_grid, rc=localrc)
+        state_grid = MOSSCO_GridCreateFromOtherGrid(horizontal_grid, nlayer=1, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         write(message,'(A)') trim(name)//' uses experimental feature with rank 2 foreign grid.  Expect trouble.'
@@ -1972,7 +1995,7 @@ module fabm_pelagic_component
             + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
 !! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
              / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) + &
-                dt * pel%volume_flux(RANGE2D))            
+                dt * pel%volume_flux(RANGE2D))
           end do
 
         elseif (rank == 3) then
