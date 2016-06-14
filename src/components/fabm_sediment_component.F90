@@ -289,21 +289,39 @@ module fabm_sediment_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      write(message,'(A)') trim(name)//' uses foreign horizontal grid from field'
+      write(message,'(A)') trim(name)//' uses foreign grid from field'
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
-      call ESMF_FieldGet(field, grid=flux_grid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call ESMF_FieldGet(field, rank=rank, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(field, grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_GridGet(grid, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank == 3) then
+        flux_grid = MOSSCO_GridCreateFromOtherGrid(grid, rc=localrc)
+      else
+        flux_grid = grid
+      endif
+
+      call ESMF_GridGet(flux_grid, rank=rank, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       if (rank/=2) then
-        write(message,*) '  foreign horizontal grid rank <> 2'
+        write(message,'(A)') trim(name)//' could not create rank 2 grid'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       end if
-      call ESMF_FieldGetBounds(field, exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_GridGet(flux_grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
+        exclusiveLBound=lbnd2, exclusiveUBound=ubnd2, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       sed%grid%inum=ubnd2(1)-lbnd2(1)+1
       sed%grid%jnum=ubnd2(2)-lbnd2(2)+1
 
@@ -331,9 +349,23 @@ module fabm_sediment_component
     !! get grid mask
     allocate(sed%mask(1:sed%grid%inum,1:sed%grid%jnum,1:sed%grid%knum))
     sed%mask = .false.
-    if (sed%grid%type==FOREIGN_GRID) then
+    isPresent = .true.
+#if ESMF_VERSION_MAJOR > 6
+    call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#endif
+
+    if (sed%grid%type==FOREIGN_GRID .and. isPresent) then
+
       call ESMF_GridGetItem(flux_grid, ESMF_GRIDITEM_MASK, farrayPtr=gridmask, rc=localrc)
-      if (localrc == ESMF_SUCCESS) then
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+#if ESMF_VERSION_MAJOR > 6
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+#else
+        call ESMF_LogWrite('  ignore error above', ESMF_LOGMSG_ERROR)
+#endif
+
         do i=1,sed%grid%inum
           do j=1,sed%grid%jnum
             do k=1,sed%grid%knum
@@ -341,11 +373,12 @@ module fabm_sediment_component
             end do
           end do
         end do
-      else
-        write(message,*) trim(name)//' found no mask in foreign grid, compute every sediment column'
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       end if
-    end if
+
+    if (.not.isPresent .or. localrc /= ESMF_SUCCESS) then
+        write(message,'(A)') trim(name)//' found no mask in foreign grid, compute every sediment column'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+    endif
 
     call sed%grid%init_grid()
     call sed%initialize()
