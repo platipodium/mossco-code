@@ -468,7 +468,7 @@ program main
     if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
   endif
 
-  system_clock_duration = system_clock_stop - system_clock_start / system_clock_rate
+  system_clock_duration = (system_clock_stop - system_clock_start) / system_clock_rate
   write(message,'(A,ES10.3,A)') trim(title)//' CPU time ',dble(system_clock_duration),' seconds'
   if (localPet == 0 .or. logKindFlag==ESMF_LOGKIND_MULTI) call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
