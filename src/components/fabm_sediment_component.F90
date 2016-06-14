@@ -38,6 +38,7 @@ module fabm_sediment_component
   use mossco_state
   use mossco_field
   use mossco_component
+  use mossco_grid
 
   implicit none
 
@@ -175,7 +176,7 @@ module fabm_sediment_component
     type(ESMF_Array)     :: array
     integer              :: i,j,k
     type(ESMF_DistGrid)  :: distGrid_3d,distGrid_2d
-    type(ESMF_Grid)      :: state_grid,flux_grid
+    type(ESMF_Grid)      :: state_grid,flux_grid, grid
     type(ESMF_Mesh)      :: surface_mesh, state_mesh
     type(ESMF_ArraySpec) :: flux_array,state_array
     type(ESMF_Index_Flag):: indexflag
@@ -195,12 +196,13 @@ module fabm_sediment_component
     type(ESMF_Time)            :: currTime, startTime, stopTime
     integer(ESMF_KIND_I8)      :: seconds, advanceCount
     type(ESMF_TimeInterval)    :: timeStep
-    logical                    :: clockIsPresent
+    logical                    :: clockIsPresent, isPresent
     integer                    :: numElements,numNodes, exclusiveCount(2), rank
     character(len=ESMF_MAXSTR) :: foreignGridFieldName
     integer(ESMF_KIND_I4)      :: localrc
     integer, dimension(:,:), pointer :: gridmask=>null()
     type(ESMF_StateItem_Flag)  :: itemType
+
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
       exportState=exportState, rc=localrc)
@@ -260,7 +262,9 @@ module fabm_sediment_component
     else
       call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
            value=foreignGridFieldName, defaultValue='none',rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       if (trim(foreignGridFieldName)=='none') then
         sed%grid%type=LOCAL_GRID
       else
