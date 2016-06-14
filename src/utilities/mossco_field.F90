@@ -105,7 +105,9 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
       call ESMF_GridGet(grid, name=geomName, rank=gridRank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      call MOSSCO_MessageAdd(message,' '//geomName)
+
+      call MOSSCO_MessageAdd(message,' '//trim(geomName))
+
 
       if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
         call ESMF_FieldGet(field, rank=rank, rc=localrc)
@@ -113,6 +115,40 @@ subroutine MOSSCO_FieldString(field, message, kwe, length, prefix, rc)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
         rank=gridRank ! fall back to gridRank, if field not completed
+        if (len_trim(message) + 7<=len(message)) write(message,'(A,I1)') trim(message)//' rank ',rank
+
+        if (rank > 0) then
+          allocate(ubnd(rank), stat=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          allocate(lbnd(rank), stat=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
+            exclusiveUBound=ubnd, exclusiveLBound=lbnd, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          if (len_trim(message) + 5 <=len(message)) then
+            write(form,'(A)') '(A,'//intformat(ubnd(1)-lbnd(1)+1)//')'
+            write(message,form) trim(message)//' (', ubnd(1)-lbnd(1)+1
+          endif
+
+          do i=2,rank
+            if (ubnd(i)<lbnd(i)) then
+              write(message,'(A)') '  bounds problem, please check your foreign_grid specification'
+              call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            endif
+
+            width=order(ubnd(i)-lbnd(i)+1)+1
+            write(form,'(A)') '(A,'//intformat(ubnd(i)-lbnd(i)+1)//')'
+            if (len_trim(message) + 1 + width <=len(message)) write(message,form) trim(message)//'x', ubnd(i)-lbnd(i)+1
+          enddo
+
+          if (len_trim(message) + 1 <=len(message)) write(message,'(A)') trim(message)//')'
+        endif
       endif
 
       !! Check for ungridded dimensions
