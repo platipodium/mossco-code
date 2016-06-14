@@ -437,8 +437,10 @@ module fabm_sediment_component
     sed%relative_change_min=relative_change_min
     sed1d%dt_min=dt_min
     sed1d%relative_change_min=relative_change_min
-    sed1d%bdys   => bdys(1:1,1:1,:)
-    sed1d%fluxes => fluxes(1:1,1:1,:)
+    if (_INUM_ > 0 .and. _JNUM_ > 0) then
+      sed1d%bdys   => bdys(1:1,1:1,:)
+      sed1d%fluxes => fluxes(1:1,1:1,:)
+    endif
 
     ! set boundary conditions for pre-simulation
     bdys(:,:,1) = pel_Temp !degC
@@ -1185,6 +1187,7 @@ module fabm_sediment_component
       !write(0,*) 1173,trim(name)
 
       ! reset concentrations to mininum_value
+      if (_INUM_ > 0 .and. _JNUM_ > 0)  then
       do n=1,sed%nvar
         do k=1,sed%grid%knum
 !!@todo This has to be adjusted for inum, jnum longer than 1
@@ -1193,6 +1196,7 @@ module fabm_sediment_component
           end if
         end do
       end do
+    endif
 
       if (sed%do_output) then
         !! Check if the output alarm is ringing, if so, quiet it and
