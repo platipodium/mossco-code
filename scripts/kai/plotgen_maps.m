@@ -1,3 +1,4 @@
+ytl=[1E-5 1E-4 1E-3 0.01 0.1 0.3 1 3 10 20 50 100 1E3 1E4 1E5 1E6];  
 ili=1; 
 if isstrprop(ptag(2), 'xdigit') 
   vli=2:length(ptag); mode='s';
@@ -50,7 +51,7 @@ for im=1:length(vli)
   if length(size(tmp))>3
     value = squeeze(tmp(:,:,di,ti)); 
  %% print variable & scen name & date
-    ta=sprintf('%s%d %d z%1.0f',mons(4:6),year(ti-toffm),doy(ti-toffm),depth(di));
+    ta=sprintf('%s%d %d z%d',mons(4:6),year(ti-toffm),doy(ti-toffm),di);
   else
     value = squeeze(tmp(:,:,ti))*di;  % surface maps
     ta=sprintf('%s%d %d',mons(4:6),year(ti-toffm),doy(ti-toffm));
@@ -97,10 +98,9 @@ for im=1:length(vli)
     title(cb,units,'FontSize',fs-2,'FontWeight','bold','Color','k');
     set(cb, 'Position', [x0+0.03*dxpm y0+dypm*0.06 .014 0.3*dypm],'FontSize',fs);
     if(islog)
-      %ctl=power(10,ceil(log10(minval)):log10(5):ceil(log10(maxVal)))
-      ctl =ceil(log10(minval)):0.5:ceil(log10(maxVal));
-%      ctl =log10([1E-3 0.01 0.03 0.1 1 3 10 30 100 1E3]);
-      set(cb,'YTick',ctl,'YTicklabel',power(10,ctl)); 
+%      ctl =ceil(log10(minval)):0.5:ceil(log10(maxVal));
+       if(islog) set(cb,'YTick',log10(ytl),'YTicklabels',ytl); 
+      else set(cb,'YTick',ytl,'YTicklabels',ytl); end
     end
   end
  

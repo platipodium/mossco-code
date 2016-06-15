@@ -1,6 +1,7 @@
 
 % index position of sub-plot
 iy=cell2mat(var{i}(7)); ix=cell2mat(var{i}(8));  
+ytl=[1E-5 1E-4 1E-3 0.01 0.1 0.3 1 3 10 20 50 100 1E3 1E4 1E5 1E6];  
 % geometry of sub-plot
 x0=0.05+(ix-1)*1.2*dxp; y0=0.1+(nrow-iy)*1.07*dyp;
 
@@ -25,7 +26,7 @@ for ili=1:size(i_loc,1)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(res)); end
-  if minval>0 & maxVal/minval > 20,  set(gca,'YScale','Log','YTick',power(10,ceil(log10(minval)):ceil(log10(maxVal))));  end
+  if minval>0 & maxVal/minval > 20,  set(gca,'YScale','Log','YTick',ytl,'YTicklabel',ytl);  end
 
   if(ptag(1)=='P')
     set(axs,'FontSize',fs,'Xlim',[minval maxVal],'box','on');
@@ -67,10 +68,12 @@ for ili=1:size(i_loc,1)
  case{'L'} %% single lines
   if occ(np,ix,iy) ==0,set(axs,'ylim',[minval maxVal]);ylabel(units); grid on; end
 %  set(cb,'position',[x0cb y0cb 0.015 dyp*0.8],'YAxisLocation','right');
-  if (occ0(np,ix,iy)==1 & ns>1) occ0(np,ix,iy)=occ(np,ix,iy); end
-%  fprintf('%d %d\tns=%d oc=%d %d  ci=%d\n',ix,iy,ns,occ(np,ix,iy),occ0(np,ix,iy),1+1*mod(occ(np,ix,iy),occ0(np,ix,iy)+(ns==1)*99));
+  if (occ0(np,ix,iy)==1 & ns>1) occ0(np,ix,iy)=occ(np,ix,iy); end  %
+  ci = 1+mod(occ(np,ix,iy),occ0(np,ix,iy)+(ns==1)*99);
+  if (occ0(np,ix,iy)==2 & occ(np,ix,iy)==3 & ns==4) ci=1; end
+  fprintf('%d %d\tns=%d oc=%d %d  ci=%d\n',ix,iy,ns,occ(np,ix,iy),occ0(np,ix,iy),ci);
 %  col=colj(1+occ(np,ix,iy)-(occ0(np,ix,iy)-0)*(ns-1),:); 
-  col=colj(1+1*mod(occ(np,ix,iy),occ0(np,ix,iy)+(ns==1)*99),:); 
+  col=colj(ci,:); 
   for li=2:length(ptag)  % loop over given depths
      if isstrprop(ptag(li), 'xdigit') 
        zi=1+str2num(ptag(li));  % depth index from tag list
@@ -85,7 +88,12 @@ for ili=1:size(i_loc,1)
          if(Zt(i)==2)
           dz = soil_dz; dzt=soil_dzt;
          else
-          dz = water_dz;dzt=water_dzt;
+          if dimdz<3   
+             dz = water_dz; dzt=water_dzt;
+          else
+             dz = squeeze(water_dz(i_loc(ili,1),i_loc(ili,2),:,:));
+             dzt = squeeze(water_dzt(i_loc(ili,1),i_loc(ili,2),:))';
+          end             
          end
          y = squeeze(sum(res.*dz,1)./dzt); %sum(res(:,ii)'*dz,1)
        else
@@ -166,22 +174,21 @@ for ili=1:size(i_loc,1)
    iv=iv+1;
   end %while
  end % if show
-
-
+ 
 if(cell2mat(var{i}(9)) ~='N'  )
-  if (ns==1 & occ(np,ix,iy)<5)
-     fac=abs(cell2mat(var{i}(5))-1);
-     if(fac>0.1 & fac<1000) varshort=[varshort0 '*' num2str(cell2mat(var{i}(5)))]; end
-     ii=ix*100+iy*10+occ(np,ix,iy);
+ if (ns==1 & occ(np,ix,iy)<5)
+   fac=abs(cell2mat(var{i}(5))-1);
+   if(fac>0.1 & fac<1000) varshort=[varshort0 '*' num2str(cell2mat(var{i}(5)))]; end
+   ii=ix*100+iy*10+occ(np,ix,iy);
 %     col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy),:); 
-  col=colj(1+1*mod(occ(np,ix,iy),occ0(np,ix,iy)+(ns==1)*99),:);
+   col=colj(1+1*mod(occ(np,ix,iy),occ0(np,ix,iy)+(ns==1)*99),:);
 %  col=colj(1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)),:); 
 %fprintf('%s\t np=%d occ=%d %d\t%d\n',varshort,np,occ(np,ix,iy),occ0(np,ix,iy),1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)));
 %fprintf('%s\t tpy=%1.1f \t %d\n',varshort,tpos(2),ii);
-     th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
-     annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
-  end
-  occ(np,ix,iy) = occ(np,ix,iy) + 1;
-end
-end   %li 
+   th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
+   annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+ end %if (ns==1 &
+ occ(np,ix,iy) = occ(np,ix,iy) + 1;
+end  %if 'N'
+end  %li 
 

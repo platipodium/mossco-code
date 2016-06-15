@@ -31,16 +31,17 @@ if IsSoil
 end
 if IsWater
   try
-    water_dz   = squeeze(ncread(ncfile,'grid_height_in_water'));
+    water_dz   = squeeze(ncread(ncfile,'layer_height_in_water'));
   catch exception
      varid=netcdf.inqDimID(ncid,[coordn '_3']);
      [id nz]=netcdf.inqDim(ncid,varid);
      fprintf('using equidistant mesh\n');
      water_dz = ones(nz,length(time));
   end
-  water_depth= cumsum(water_dz,1);
-  depth = unique(water_depth);
-  water_dzt  = squeeze(sum(water_dz,1));
+  dimdz=length(size(water_dz));
+  water_depth= cumsum(water_dz,dimdz-1);
+%  depth = unique(water_depth);
+  water_dzt  = squeeze(sum(water_dz,dimdz-1));
 end
 % Get name and length of first dimension
 %[dimname, dimlen] = netcdf.inqDim(ncid,0)
@@ -73,7 +74,10 @@ if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
     [m1 i]=min(abs(lat-loc(li,1))+abs(lon-loc(li,2)),[],1);
     [m j]=min(m1);
     i_loc(li,1:2)=[i(j) j];
-    fprintf('%s: %1.2f %1.2f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),lat(i_loc(li,1),i_loc(li,2)),i_loc(li,1),i_loc(li,2));
+    fprintf('%s: lon %1.3f %1.3f\t lat %1.3f %1.3f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),loc(li,2),lat(i_loc(li,1),i_loc(li,2)),loc(li,1),i_loc(li,1),i_loc(li,2));
+
+fprintf('dz: %1.2f\t x-+:%1.2f %1.2f\ty-+:%1.2f %1.2f\n',water_dz(i_loc(li,1),i_loc(li,2)),water_dz(i_loc(li,1)-1,i_loc(li,2)),water_dz(i_loc(li,1)+1,i_loc(li,2)),water_dz(i_loc(li,1),i_loc(li,2)-1),water_dz(i_loc(li,1),i_loc(li,2)+1));
+
   end
  end
 end %length(locs) >1

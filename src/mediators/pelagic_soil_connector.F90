@@ -339,25 +339,27 @@ module pelagic_soil_connector
         (/'water_depth_at_soil_surface'/), depth, verbose=verbose, rc=localrc)
 
       fac_env = 1.0d0
-      if (localrc == 0) then
+      if (localrc == 0 .and. half_sedimentation_depth .gt. 1E-3) then
         ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
-        fac_env = fac_env * depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))/(depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) + half_sedimentation_depth)
+        fac_env = fac_env * depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))**2/(depth(lbnd(1):ubnd(1),lbnd(2):ubnd(2))**2 + half_sedimentation_depth**2)
       end if
-      ! reduce sedimentation due to detritus-C (assuming higher DETN in shallow areas)
-      !fac_env = fac_env * 1.0d0/(1.0d0- &
-      !            exp(DETN(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))-critical_detritus)/critical_detritus)**2
       ! ensure minimum sedimentation
 
       ! get TKE from exportState, where the physical model has put its data
       call mossco_state_get(exportState, &
         (/'turbulent_kinetic_energy_at_soil_surface'/), tke, verbose=verbose, rc=localrc)
 
-      if (localrc == 0) then
+      if (localrc == 0 .and. half_sedimentation_tke .lt. 9E9 ) then
         ! reduce sedimentation due to depth (assuming higher wave erosion in shallow areas)
         fac_env = fac_env * half_sedimentation_tke/(tke(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) + half_sedimentation_tke)
       end if
       fac_env = fac_env + sinking_factor_min/sinking_factor
-      
+
+      ! reduce sedimentation due to detritus-C (assuming higher DETN in shallow areas)
+      if (critical_detritus .gt. 1E-3 .and. critical_detritus .lt. 9E9) then
+        fac_env = fac_env * 1.0d0/(1.0d0 + &
+           (DETC(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3))/critical_detritus)**4)
+      end if    
 
       call mossco_state_get(exportState, &
         (/'fast_detritus_C_at_soil_surface'/), ptr_f2, verbose=verbose, rc=localrc)

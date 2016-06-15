@@ -10,7 +10,7 @@ datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.82];[55.,8.3];[52.3 4.3];[52.56 3.5];]; %[54.1,6.3];;[54.2,7.5]; %[54.96,8.4]; 
+loc =[[54.18,7.86];[55.,8.3];[52.3 4.3];[52.56 3.5];]; %[54.1,6.3];;[54.2,7.5]; %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
 locs={'Helgoland';'Sylt';'Noordwijk-10';'Noordwijk-70';}; %'T22'; 'T26'; 
@@ -25,7 +25,8 @@ if IsNOAH
  locs={'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
 end
 % load and prepare data
-if show_data, read_stations_nc; end;
+if show_data, read_stations_nc; 
+else show_dati=zeros(size(loc,1)); end;
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
 %tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
 ncol = 3; nrow = 2; 	% number of columns in fig
@@ -34,12 +35,14 @@ if Is1D
   locs={'Helgoland'};
   loc =[54.18,7.82];
   spath= '/local/home/wirtz/mossco/mossco-setups/helgoland/';%';hrres/
- % spath= '/local/home/wirtz/mossco/mossco-setups/hrres/'
-  tags = {'_2';'_3';};%%'rnit400';'syn_nut-5';
-% tags = {'ref';'rSlow0.0003';'remin0.005';};
-%  tags = {'ref';'PAds0';'PAds0.3';'PAdsODU60';};
-%      };
-%  tags = {'ref';};'vS_det15';'sinking_factor_min0.5';'remNP0.';'remNP-0.2';'Nqual0';
+%  spath= '/local/home/wirtz/mossco/mossco-setups/hrres/'
+%tags = {'ref';'phi_agg0.0004';'phi_agg0.002';};%'agg_doc0.01';'mort_zoo0.015';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
+%tags = {'ref';'mort_zoo0.015';'mort_zoo0.025';};%'agg_doc0.01';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
+%tags = {'ref';'vir_loss0.0';'vir_loss1.2';};%'rnit140';'Nqual0.';'vS_det15';};
+ tags ={'';};% {'_0';'_1';};%'phi_agg5E-4';'agg_doc0.01';'vir_loss0.';};
+%tags = {'ref';'Nqual0.';'rnit150';'PAds0';};%'sinking_factor_min0.5';'remNP0.';'remNP-0.2';'Nqual0';
+%tags = {'ref';'agg_doc0.01';'agg_doc0.2';};
+%tags = {'ref';'AffP0.05';'hydrol0.02';};
 ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
@@ -51,13 +54,13 @@ else
 %'_sinking_factor_min0.3';'_vS_det16';
 %%tags = {'';'_Zmorta';'_a_water1.3';'_Q101.8';};
 %%tags = {'';'_vS_det16';'_PAdsODU220';'_syn_nut-4.6';};
-%%tags = {'';'_rSlow0.005';'_genMeth6';'_mort_zoo0.024';};
-tags = {'';'_PAdsODU220';};
+%%tags = {'';'_rSlow0.005';'_genMeth6';'_mort_zoo0.024';};'_PAdsODU220';
+tags = {'';};
  ntags=length(tags);
 %  spath= '/home/wirtz/';%sns  
   spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
-  ncf0 = 'sns'; 
+  ncf0 = 'sns_HR'; 
   if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
     nrowm = 1; ncolm = 1;
