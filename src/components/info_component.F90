@@ -21,6 +21,7 @@ module info_component
 
   use esmf
   use mossco_component
+  use mossco_state
 
   implicit none
 
@@ -361,56 +362,54 @@ module info_component
 
   end subroutine Run
 
-  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+#undef  ESMF_METHOD
+#define ESMF_METHOD "Finalize"
+subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)   :: petCount, localPet
-    character(ESMF_MAXSTR)  :: name, message, timeString
-    logical                 :: clockIsPresent, isPresent
+    character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
     type(ESMF_Clock)        :: clock
-    integer                 :: localrc
+    integer(ESMF_KIND_I4)   :: localrc
+    logical                 :: isPresent
+    type(ESMF_Config)       :: config
 
-    !> Obtain information on the component, especially whether there is a local
-    !! clock to obtain the time from and to later destroy
-    call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
-      clockIsPresent=clockIsPresent, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    if (.not.clockIsPresent) then
-      clock=parentClock
-    else
-      call ESMF_GridCompGet(gridComp, clock=clock, rc=rc)
-      if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-    endif
+    rc = ESMF_SUCCESS
 
-    !> Get the time and log it
-    call ESMF_ClockGet(clock,currTime=currTime, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A)') trim(timestring)//' '//trim(name)//' finalizing ...'
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Here comes your own finalization code
-    !! 1. Destroy all fields that you created, be aware that other components
-    !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Deallocate all your model's internal allocated memory
+    call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_TimeGet(currTime,timeStringISOFrac=timestring, rc=rc)
-    if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT)
-    write(message,'(A,A)') trim(timeString)//' '//trim(name), &
-          ' finalized'
-    call ESMF_LogWrite(trim(message),ESMF_LOGMSG_TRACE)
+    if (isPresent) then
+
+      call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ConfigDestroy(config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
 
     call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -422,7 +421,13 @@ module info_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    call MOSSCO_CompExit(gridComp, localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine Finalize
 

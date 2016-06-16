@@ -263,31 +263,42 @@ module nudge_connector
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
+subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
 
-    type(ESMF_cplComp)   :: cplComp
+    type(ESMF_CplComp)   :: cplComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
-    type(ESMF_Clock)        :: clock
     integer(ESMF_KIND_I4)   :: localrc
+    logical                 :: isPresent
+    type(ESMF_Config)       :: config
 
-    call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
+    rc = ESMF_SUCCESS
+
+    call MOSSCO_CompEntry(cplComp, parentClock, name=name, currTime=currTime, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_CplCompGet(cplComp, configIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_CplCompGet(cplComp, clock=clock, rc=rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (isPresent) then
 
-    call ESMF_ClockDestroy(clock, rc=rc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_CplCompGet(cplComp, config=config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_CompExit(cplComp, rc)
+      call ESMF_ConfigDestroy(config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
+
+    call MOSSCO_CompExit(cplComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 

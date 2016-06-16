@@ -21,6 +21,7 @@ module empty_component
   use esmf
   use mossco_component
   use mossco_field
+  use mossco_state
 
   implicit none
 
@@ -268,39 +269,63 @@ module empty_component
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "Finalize"
-  subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
+subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
 
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState, exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer                 :: localrc
     character(ESMF_MAXSTR)  :: name
     type(ESMF_Time)         :: currTime
-    type(ESMF_Clock)        :: clock
+    integer(ESMF_KIND_I4)   :: localrc
+    logical                 :: isPresent
+    type(ESMF_Config)       :: config
 
-    rc=ESMF_SUCCESS
+    rc = ESMF_SUCCESS
 
-    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
-      exportState=exportState, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
+      importState=importState, exportState=exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Here comes your own finalization code
-    !! 1. Destroy all fields that you created, be aware that other components
-    !!    might have interfered with your fields, e.g., moved them into a fieldBundle
-    !! 2. Deallocate all your model's internal allocated memory
+    if (isPresent) then
 
-    call ESMF_GridCompValidate(gridComp, rc=localrc)
+      call ESMF_GridCompGet(gridComp, config=config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ConfigDestroy(config, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    end if
+
+    call ESMF_GridCompGet(gridComp, importStateIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(importState, rc=localrc)
+    if (isPresent) call ESMF_StateValidate(importState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateValidate(exportState, rc=localrc)
+    call MOSSCO_DestroyOwn(importState, trim(name), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridCompGet(gridComp, exportStateIsPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) call ESMF_StateValidate(exportState, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
