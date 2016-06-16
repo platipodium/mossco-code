@@ -1,6 +1,6 @@
 !> @brief Implementation of an ESMF connector coupling
 !> This coupler selectively looks at variables in its import state
-!> that satisfy a condition layed out in a "filter_suffix" attribute,
+!> that satisfy a condition layed out in a "include" attribute,
 !> (by default "z_velocity_in_water"), looks at matching fields without this
 !> suffix.
 !>
@@ -8,7 +8,7 @@
 !> in the coupler's export state
 !>
 !> This computer program is part of MOSSCO.
-!> @copyright Copyright (C) 2015, Helmholtz-Zentrum Geesthacht
+!> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
 !> @author Carsten Lemmen, <carsten.lemmen@hzg.de>
 
 !
@@ -29,6 +29,8 @@ module transport_connector
   use mossco_state
   use mossco_field
   use mossco_component
+  use mossco_attribute
+  use mossco_config
 
   implicit none
 
@@ -53,14 +55,21 @@ module transport_connector
 
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=0, &
       userRoutine=InitializeP0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_INITIALIZE, phase=1, &
       userRoutine=InitializeP1, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_RUN, Run, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_CplCompSetEntryPoint(cplComp, ESMF_METHOD_FINALIZE, Finalize, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine SetServices
 
@@ -84,19 +93,24 @@ module transport_connector
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     InitializePhaseMap(1) = "IPDv00p1=1"
 
     call ESMF_AttributeAdd(cplComp, convention="NUOPC", purpose="General", &
       attrList=(/"InitializePhaseMap"/), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     call ESMF_AttributeSet(cplComp, name="InitializePhaseMap", valueList=InitializePhaseMap, &
       convention="NUOPC", purpose="General", rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP0
 
@@ -114,17 +128,96 @@ module transport_connector
     character (len=ESMF_MAXSTR) :: name
     type(ESMF_Time)             :: currTime
 
+    character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
+    character(len=ESMF_MAXSTR)              :: configFileName, message
+    logical                                 :: isPresent
+    type(ESMF_Config)                       :: config
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(cplComp, parentClock, name, currTime, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    configfilename=trim(name)//'.cfg'
+    inquire(file=trim(configfilename), exist=isPresent)
+
+    if (isPresent) then
+
+      write(message,'(A)')  trim(name)//' reads configuration from '//trim(configFileName)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      config = ESMF_ConfigCreate(rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_ConfigLoadFile(config, trim(configfilename), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_ConfigGet(config, 'exclude', filterExcludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (allocated(filterExcludeList)) then
+        call MOSSCO_AttributeSet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_Reallocate(filterExcludeList, 0, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude', filterExcludeList, localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(name)//' uses exclude patterns:'
+        call MOSSCO_MessageAdd(message, filterExcludeList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      endif
+
+      call MOSSCO_ConfigGet(config, 'include', filterIncludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (.not.allocated(filterIncludeList)) then
+        call MOSSCO_Reallocate(filterIncludeList, 1, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        filterIncludeList(1) ='*z_velocity_in_water'
+      endif
+
+      call MOSSCO_AttributeSet(importState, 'filter_pattern_include', filterIncludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(filterIncludeList, 0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_AttributeGet(importState, 'filter_pattern_include', filterIncludeList, localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message,'(A)') trim(name)//' uses include patterns:'
+      call MOSSCO_MessageAdd(message, filterIncludeList, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    endif
 
     call link_fields_in_transport_fieldbundle(importState, exportState, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_CompExit(cplComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP1
 
@@ -189,6 +282,7 @@ module transport_connector
     integer              :: localrc
     integer(ESMF_KIND_I4)       :: i, itemCount
     character (len=ESMF_MAXSTR) :: message, itemName, filter_suffix, name, replace_suffix
+    character(len=ESMF_MAXSTR), allocatable  :: filterIncludeList(:), filterExcludeList(:)
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_Field)            :: field
     integer(ESMF_KIND_I4)       :: length, suffix_length
@@ -199,15 +293,26 @@ module transport_connector
     write(name,'(A)') 'transport_connector'
 
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate/reallocate list do hold item information
     if (itemCount > 0) then
       if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
 
       call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+
+    call MOSSCO_AttributeGet(importState, 'filter_pattern_exclude',filterExcludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_AttributeGet(importState, 'filter_pattern_include', filterExcludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(importState, 'filter_suffix', value=filter_suffix, &
       defaultValue='_z_velocity_in_water', rc=localrc)
@@ -309,47 +414,70 @@ module transport_connector
     type(ESMF_StateItem_Flag)   :: importItemState, exportItemState
     type(ESMF_FieldBundle)      :: concFieldBundle,wsFieldBundle
 
+    logical                                  :: isMatch
+    character (len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
+    integer(ESMF_KIND_I4)                    :: j
+    character (len=ESMF_MAXSTR)              :: message
+
     rc = ESMF_SUCCESS
 
     write(name,'(A)') 'transport_connector'
 
     !> Check whether there is a fieldbundle named "transport" in the exportState, only continue if there is.
     call ESMF_StateGet(exportState, 'concentrations_in_water', exportItemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
 
     call ESMF_StateGet(exportState, 'concentrations_in_water', concFieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Check whether there is a fieldbundle named "transport" in the exportState, only continue if there is.
     call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', exportItemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
 
     call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', wsFieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Find all complete fields in import state whose names correspond to the filter value
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(itemNameList, itemCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate/reallocate list do hold item information
     if (itemCount > 0) then
-      if (.not.allocated(itemNameList)) allocate(itemNameList(itemCount))
-
       call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
+
+    call MOSSCO_AttributeGet(importState, 'filter_pattern_include', filterIncludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_AttributeGet(importState, 'filter_pattern_include', filterExcludeList, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(importState, 'filter_suffix', value=filter_suffix, &
       defaultValue='_z_velocity_in_water', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(importState, 'replace_suffix', value=replace_suffix, &
       defaultValue='_in_water', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     suffix_length=len_trim(filter_suffix)
 
@@ -357,6 +485,39 @@ module transport_connector
     do i=1, itemCount
 
       itemName=trim(itemNameList(i))
+
+      ! Look for an exclusion pattern on this field name
+      if (allocated(filterExcludeList)) then
+        do j = lbound(filterExcludeList,1), ubound(filterExcludeList,1)
+          call MOSSCO_StringMatch(trim(itemName), trim(filterExcludeList(j)), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (ismatch) then
+          write(message,'(A)')  trim(name)//' excluded item'
+          call MOSSCO_MessageAdd(message, ' '//trim(itemName))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
+      endif
+
+      !! Look for an inclusion pattern on this field name
+      if (allocated(filterIncludeList)) then
+        do j = lbound(filterIncludeList,1), ubound(filterIncludeList,1)
+          call MOSSCO_StringMatch(trim(itemName), trim(filterIncludeList(j)), isMatch, localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (ismatch) exit
+        enddo
+        if (.not.ismatch) then
+          write(message,'(A)')  trim(name)//' did not include'
+          call MOSSCO_MessageAdd(message, ' '//trim(itemName))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
+      endif
+
       length=len_trim(itemName)
       if (length <= suffix_length) cycle
       if (itemName(length-suffix_length+1:length) /= trim(filter_suffix)) cycle
@@ -364,24 +525,26 @@ module transport_connector
       !> Get the field name without the suffix, and make sure it is a field
       itemName=trim(itemName(1:length-suffix_length))//trim(replace_suffix)
 
-
-      !> At this stage, both the name of the field and of the velocity field have been found in the
-      !> import state.
+      !> At this stage, both the name of the field and of the velocity field
+      !> have been found in the import state.
 
       call ESMF_StateGet(importState, itemName=trim(itemName), &
           itemType=importItemState, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (importItemState == ESMF_STATEITEM_FIELD) then
-        call link_field_in_transport_fieldbundle(importState, trim(itemName), concFieldBundle, rc=localrc)
-        call link_field_in_transport_fieldbundle(importState, trim(itemNameList(i)), wsFieldBundle, rc=localrc)
+        call link_field_in_transport_fieldbundle(importState, trim(itemName), &
+          concFieldBundle, rc=localrc)
+        call link_field_in_transport_fieldbundle(importState, trim(itemNameList(i)), &
+          wsFieldBundle, rc=localrc)
       elseif (importItemState == ESMF_STATEITEM_FIELDBUNDLE) then
-        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemName), concFieldBundle, rc=localrc)
-        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemNameList(i)), wsFieldBundle, rc=localrc)
+        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemName), &
+          concFieldBundle, rc=localrc)
+        call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemNameList(i)), &
+          wsFieldBundle, rc=localrc)
       endif
-
     enddo
-
   return
 
   end subroutine link_fields_in_transport_fieldbundle
@@ -557,4 +720,3 @@ module transport_connector
 
 
 end module transport_connector
-
