@@ -14,14 +14,14 @@ dependencies:
   - fabm_pelagic:
     - component: getm
       grid: temperature_in_water
-  - boundary:
+  - boundary_input:
     - component: getm
       grid: temperature_in_water
 
 instances:
   - mossco_gfn: netcdf
   - restart_water: netcdf_input
-  - boundary: netcdf_input
+  - boundary_input: netcdf_input
 
 coupling:
   - components:
@@ -29,7 +29,7 @@ coupling:
      - fabm_pelagic
     interval: none
   - components:
-     - boundary
+     - boundary_input
      - nudge_connector
      - fabm_pelagic
     interval: 30 m
