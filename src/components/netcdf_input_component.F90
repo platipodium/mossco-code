@@ -626,7 +626,7 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message,'(A)') trim(name)//' climatology from '//trim(timeString)
+        write(message,'(A)') trim(name)//' uses climatology from '//trim(timeString)
         call nc%timeIndex(ncTime + climatologyTimeStep, itime, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -654,6 +654,8 @@ module netcdf_input_component
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     else
       udimid=-1
@@ -683,7 +685,7 @@ module netcdf_input_component
         .or. trim(itemName) == 'lat' .or. trim(itemName) == 'longitude' &
         .or. trim(itemName) == 'lon' ) then
         write(message,'(A)')  trim(name)//' excluded item '//trim(itemName)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         cycle
       endif
 
@@ -945,7 +947,7 @@ module netcdf_input_component
     type(ESMF_TimeInterval) :: timeStep, climatologyTimeStep
     integer(ESMF_KIND_I8)   :: i, j, advanceCount
     integer(ESMF_KIND_I4)   :: itemCount, localDeCount
-    real(ESMF_KIND_R8)      :: weight
+    real(ESMF_KIND_R8)      :: weight, recentSeconds, nextSeconds
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field, nextField
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
@@ -1063,29 +1065,58 @@ module netcdf_input_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      ! climatologyTime is the point in time that is read (or interpolated) from the
+      ! climatological input file.  First guess is that it equals the current time.
       climatologyTime = currTime
+
+      ! if this value exceeds the climatology start + interval, then successively reduce
+      ! this value by the climatology interval
       do while (climatologyTime > (climatologyStartTime + climatologyTimeStep))
         climatologyTime = climatologyTime - climatologyTimeStep
+      enddo
+
+      ! if this value is less than  the climatology start, then successively increas
+      ! this value by the climatology interval
+      do while (climatologyTime < climatologyStartTime)
+        climatologyTime = climatologyTime + climatologyTimeStep
       enddo
 
       call nc%timeIndex(climatologyTime, itime, jtime=jtime, weight=weight, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      ! Initialize recentTime and nextTime with climatologyTime, initialize weight with zero
+      call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_TimeSet(recentTime, timeString, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_TimeSet(nextTime, timeString, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      weight = 0.0
+
+      call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+      write(message,'(A)') trim(name)//' climatology guess climatologyTime = '//trim(timeString)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A,I2,A,I2)') trim(name)//' climatology  climatologyTime itime = ',itime,' jtime = ',jtime
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       ! if itime and jtime are equal, we have the time exactly represented in
       ! the netcdf file, or only one available time. In other cases, jtime
       ! will be greater itime
       if (jtime > itime) then
         ! Try to move itime and jtime within climatological window
-        call MOSSCO_TimeSet(recentTime, timeString, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call nc%timeGet(recentTime, searchIndex=itime, rc=localrc)
         if (recentTime < climatologyStartTime) then
           call nc%timeIndex(climatologyTime + climatologyTimeStep, itime, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           call nc%timeGet(recentTime, searchIndex=itime, rc=localrc)
         endif
 
@@ -1104,37 +1135,64 @@ module netcdf_input_component
           call nc%timeIndex(recentTime, itime, rc=localrc)
           call nc%timeIndex(nextTime, jtime, rc=localrc)
 
-          if (jtime > itime) then
-            weight = (currTime - recentTime) / (nextTime - recentTime)
-          else
-            weight = (currTime - nextTime) / (nextTime - recentTime)
-          endif
+          call ESMF_TimeIntervalGet(recentTime-climatologyTime, s_r8=recentSeconds, rc=localrc)
+          call ESMF_TimeIntervalGet(nextTime-climatologyTime, s_r8=nextSeconds, rc=localrc)
+
+          !if (jtime > itime) then
+            weight = (0 - recentSeconds) / (nextSeconds - recentSeconds)
+          !else
+          !  weight = (currTime - nextTime) / (nextTime - recentTime)
+          !endif
+          if (weight < 0 ) weight = weight + 1
+          if (weight > 1 ) weight = weight - 1
 
           if (trim(interpolationMethod) == 'nearest') then
             climatologyTime = recentTime
             if (weight > 0.5) climatologyTime = nextTime
+          else
+            !> @todo:
+            !climatologyTime = weight * recentTime + (1-weight) * nextTime
           endif
         endif
-
       endif
 
       call ESMF_TimeGet(currTime, timeString=timeString, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      ! debug
+      write(message,'(A)') trim(name)//' climatology currTime = '//trim(timeString)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_TimeGet(recentTime, timeString=timeString, rc=localrc)
+      write(message,'(A)') trim(name)//' climatology recentTime = '//trim(timeString)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_TimeGet(nextTime, timeString=timeString, rc=localrc)
+      write(message,'(A)') trim(name)//' climatology nextTime = '//trim(timeString)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
+      write(message,'(A)') trim(name)//' climatology climatologyTime = '//trim(timeString)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      write(message,'(A,ES9.3)') trim(name)//' climatology weight = ', weight
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+      ! end debug
+
+
+
+
       write(message,'(A)') trim(name)//' '//trim(timestring)//' uses climatological value from '
 
       if (trim(interpolationMethod) /= 'linear') then
-        call ESMF_TimeGet(currTime, timeString=timeString, rc=localrc)
+        call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         call MOSSCO_MessageAdd(message, ' '//trim(interpolationMethod)//' time '//trim(timeString))
       elseif (jtime == itime) then
-        call ESMF_TimeGet(currTime, timeString=timeString, rc=localrc)
+        call ESMF_TimeGet(climatologyTime, timeString=timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        call MOSSCO_MessageAdd(message, ' linear interpolation at '//trim(timeString))
+        call MOSSCO_MessageAdd(message, ' exact value at '//trim(timeString))
 
       else
         call ESMF_TimeGet(recentTime, timeString=timeString, rc=localrc)
