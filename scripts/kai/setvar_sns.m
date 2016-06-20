@@ -8,30 +8,33 @@
 %       L:show layer x only (TODO until now for x<10)  LM: depth average as line  
 %       DC:depth contours       N : not shown but stored	
 %       P : profiles   	C : Depth-time countours
-%	long name			short name  min max fac	fig row col type
-%	1					2           3   4   5	6   7	8   9
-%								    5:is depth index in 3D for maps
+%	long name		short name  min max fac	fig row col type
+%	1			2           3   4   5	6   7	8   9
+%						    5:is depth index in 3D for maps
 var={
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';2;80; 1.0;	1; 1;1;'L0'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';2;80; 1.0;	1; 1;1;'L4'};
-{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.1;2.; 1.;	1; 2;1;'L1'};
+  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.5;60; 1.0;	1; 1;1;'L0'};
+  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.5;60; 1.0;	1; 1;1;'L4'};
+{'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.2;1.6; 1.;	1; 2;1;'LM'};
   {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'N'};
-  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L1'};
-  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L0'};
+  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L4'};
+   {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L3'};
+ {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L0'};
 %  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L2'};
-  {'Chl_chl_in_water';'CHL';0.5;25; 2;					1; 1;0;'Mi'};
-  {'Chl_chl_in_water';'CHL';0.5;25; 2;					2; 1;0;'Mi'};
-%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					3; 1;0;'Mi'};
-%%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					4; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';2;20; 5;					1; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';2;20; 5;					2; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';2;20; 5;					3; 1;0;'Mi'};
+  {'Chl_chl_in_water';'CHL';2;20; 5;					4; 1;0;'Mi'};
+%  {'Chl_chl_in_water';'CHL';2;20; 5;					4; 1;0;'Mi'};
+%  {'Chl_chl_in_water';'CHL';2;20; 5;					5; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					5; 1;0;'Mi'};
-%%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					3; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';2.;90; 1;	3; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';2.;90; 1;	4; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';2.;90; 1;	5; 1;0;'Mi'};  %
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.25;1.5; 1.;7; 1;0;'Mi'};
-  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.25;1.5; 1.;8; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.5;50; 4;	4; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0.5;50; 4;	5; 1;0;'Mi'};
+%  {'Chl_chl_in_water';'CHL';2;20; 4;					10; 1;0;'Mi'};
+%  {'Chl_chl_in_water';'CHL';2;20; 4;					11; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.25;1.5; 1.;7; 1;0;'Mi'};
+%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0.25;1.5; 1.;8; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.8;40; 1;					1; 2;0;'M0369'};   {'Detritus_Carbon_detC_in_water';'DetC';0;8; 0.1;			1; 2;1;'L0'};
-%   {'Detritus_Carbon_detC_in_water';'DetC';0.5;50; 1;			1; 2;0;'M0369'};
+   {'Detritus_Carbon_detC_in_water';'DetC';0;10; 0.1;			1; 2;2;'LM'};
    {'Zooplankton_Carbon_zooC_in_water';'ZooC';0;9; 1;			1; 2;2;'LM'};
    {'NC';'N2C';0.08;0.3; 1.0;						1; 2;3;'L0'};
    {'PC';'P2C';0;0.3; 16;						1; 2;3;'L0'};
@@ -51,6 +54,12 @@ var={
 %  {'N2flux';'N2 flux';-0.4;5; 1.; 					1; 2;1;'LM'};
 %  {'mole_concentration_of_nitrate_upward_flux_at_soil_surface';'NO3 flux';0;1.; 86400.;1; 2;1;'LM'};
 %  {'mole_concentration_of_ammonium_upward_flux_at_soil_surface';'NH4 flux';0;1.; 86400.; 1; 2;1;'LM'};
+  {'dissolved_oxygen_upward_flux_at_soil_surface';'O2flux';-30;0; 1.; 1; 1;1;'N'};
+  {'dissolved_reduced_substances_upward_flux_at_soil_surface';'ODU flux';-6;0; 1.; 1; 1; 1;'N'};
+  {'c ODUflux-O2flux';'O2 flux';6;45; 72400; 				6; 1;0;'Mi'};
+  {'c ODUflux-O2flux';'O2 flux';6;45; 72400; 				7; 1;0;'Mi'};
+%  {'c ODUflux-O2flux';'O2 flux';10;45; 86400; 				1; 1;1;'LM'};
+
 %  {'dissolved_oxygen_upward_flux_at_soil_surface';'O_2 flux';-30;0; 86400.; 1; 2;3;'LM'};
 %  {'dissolved_oxygen_upward_flux_at_soil_surface';'O_2 flux';-30;0; 86400.; 2; 1;0;'LM'};
 %  {'dissolved_reduced_substances_upward_flux_at_soil_surface';'ODU flux';-6;0; -86400.; 1; 2; 3;'LM'};

@@ -15,8 +15,10 @@ end
 
 t_offset = datenum(time_units(15:end),'yyyy-mm-dd HH:MM:SS');
 time= (ncread(ncfile,'time')/86400)+t_offset;
-year= floor(time/365.25);
-doy=floor(mod(time,365.25)+1);
+tvec=datevec(time);
+year= tvec(:,1);
+tvec(:,2:3)=0;
+doy=datenum(time)-datenum(tvec)+1;
 
 if IsSoil
   try

@@ -8,8 +8,8 @@ rm -f tag.lst
 
 #declare -a pnam=("fT_exp_mort"  "PAds""rFast"  "rSlow" "NCrFdet" "syn_nut"mort_zoo")zm_fa_inf remin "sinking_factor" "bioturbation"  "PAds" "PAdsODU" "rSlow""Q10"-4.5"zm_fa_delmax""a_water""PAdsODU" "rSlow" "a_water" "syn_nut"  "Q10"
 #declare -a pnam=( )# "QP_phy_max"  "fT_exp_mort" "a_minfr")"ref""vS_det""mort_zoo""PAds" 
-declare -a pnam=("Nqual" "vir_loss"  "agg_doc" "remin" "sinking_factor_min"  "genMeth" "basal_resp_zoo")
-declare -a pval=(  0.9     0.3        0.01      0.03             0.25            12       0.07 )
+declare -a pnam=("vS_phy" "vS_phy" "vS_phy" "vS_phy" "sinking_factor_min" "sinking_factor_min" "sinking_factor_min" )
+declare -a pval=(  0.      0.6        1.2      1.8             0.15                   0.27       0.39 )
 
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
   echo "'${pnam[$i]}${pval[$i]}';"
@@ -27,12 +27,13 @@ for (( i=0; $i < ${#pnam[@]}; i++ )) do
   replace  $fname ${pnam[$i]} ${pval[$i]}
   echo $i " " ${pnam[$i]} " " ${pval[$i]} >> $hd/tag.lst
   if [ "${pnam[$i]}" == "sinking_factor_min" ]; then
-    echo "change sinking_factor from " $fname " to " 0.25
-    replace  $fname sinking_factor 0.25
+    sf=$(echo "scale=2;(0.4-${pval[$i]})/0.6" | bc)
+    echo "change sinking_factor from " $fname " to "  $sf
+    replace  $fname sinking_factor $sf
   fi
 
 #  qsub  sge.sh
-  qsub -q small.q sge.sh
+#  qsub -q small.q sge.sh
   cd $hd
 done # i
 #wait

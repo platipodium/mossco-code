@@ -9,16 +9,16 @@
 %       DC:depth contours       N : not shown but stored	
 %       P : profiles   	C : Depth-time countours
 %	long name			short name  min max fac	fig row col type
-%	1					2           3   4   5	6   7	8   9
-%								    5:is depth index in 3D for maps
+%	1				2           3   4   5	6   7	8   9
+%							    5:is depth index in 3D for maps
 var={
  %% {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';0;50; 1.0;	1; 1;1;'L1'};
 %%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;2.; 1.;	1; 2;1;'L1'};
 %%  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'N'};
-  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L1'};
-  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L2'};
-%%  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L0'};
-%%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					1; 1;0;'Mi'};
+   {'Chl_chl_in_water';'CHL';0.3;28; 1;					1; 1;1;'L4'};
+   {'Chl_chl_in_water';'CHL';0.;2; 1;					1; 1;2;'V4'};
+%  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L0'};
+   {'Chl_chl_in_water';'CHL';0;15; 5;					1; 1;0;'M4'};
 %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					2; 1;0;'Mi'};
 %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					3; 1;0;'Mi'};
 %  {'Dissolved_Inorganic_Nitrogen_DIN_nutN_in_water';'DIN';1.;70; 1;	3; 1;0;'Mi'};
@@ -38,11 +38,13 @@ var={
 %  {'mole_concentration_of_ammonium_upward_flux_at_soil_surface';'NH4 flux';0;1.; 86400.; 1; 2;1;'LM'};
   {'dissolved_oxygen_upward_flux_at_soil_surface';'O2flux';-30;0; 1.; 1; 1;1;'N'};
   {'dissolved_reduced_substances_upward_flux_at_soil_surface';'ODU flux';-6;0; 1.; 1; 1; 1;'N'};
-  {'c ODUflux-O2flux';'O2 flux';9;32; 86400; 				1; 1;0;'Mi'};
-  {'c ODUflux-O2flux';'O2 flux';10;45; 86400; 				1; 1;1;'LM'};
+  {'c ODUflux-O2flux- 0.0001';'O2 flux';10;35; 86400; 			2; 1;0;'M4'};
+   {'Chl_chl_in_water';'CHL';0;15; 4;					3; 1;0;'M4'};
+  {'c ODUflux-O2flux - 0.0001';'O2 flux';0;45; 86400; 			1; 2;1;'LM'};
+  {'c ODUflux-O2flux - 0.0001';'O2 flux';0;0.3; 86400; 			1; 2;2;'V4'};
 %  {'fast_detritus_C_in_soil';'TOC fast';2E2;7E4; 1.0; 			1; 2;2;'LM'};
 %  {'slow_detritus_C_in_soil';'TOC slow';5E2;5E4; 1.0; 			1; 2;2;'LM'};
-  {'detritus-P_in_soil';'POP';5E2;5E4; 105.0; 			1; 2;2;'LM'};
+%  {'detritus-P_in_soil';'POP';5E2;5E4; 105.0; 			1; 2;2;'LM'};
 %  {'mole_concentration_of_phosphate_in_soil';'PO4s';5E2;5E4; 105.0; 			1; 3;2;'LM'};
 %  {'fast_detritus_C_in_soil';'TOC fast';2E3;2E4; 1.0; 			1; 3;3;'DC'};
 %  {'mole_concentration_of_ammonium_in_soil';'NH4';3E2;2E3; 1.0; 		1; 3;2;'DC'};

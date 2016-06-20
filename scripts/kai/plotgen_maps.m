@@ -33,7 +33,7 @@ for im=1:length(vli)
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;     
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*1;     
  end
  if ti-toffm<=length(ind)
 % goes to new figure (if required)

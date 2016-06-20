@@ -5,15 +5,15 @@
 %
 clear all;close all;
 addpath('~/tools/m_map');  % map-toolbox needed for 2D plots
-show_data=1; Is1D=0; IsNOAH=0;
+show_data=0; Is1D=0; IsNOAH=1; 
 datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.86];[55.,8.3];[52.3 4.3];[52.56 3.5];]; %[54.1,6.3];;[54.2,7.5]; %[54.96,8.4]; 
+loc =[[54.18,7.86];[55.,8.3];[52.3 4.3];[52.56 3.5];[54.1,6.3];[54.2,7.5];]; % %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt';'Noordwijk-10';'Noordwijk-70';}; %'T22'; 'T26'; 
+locs={'Helgoland';'Sylt';'Noordwijk-10';'Noordwijk-70';'T22'; 'T26';}; %
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -21,7 +21,7 @@ locs={'Helgoland';'Sylt';'Noordwijk-10';'Noordwijk-70';}; %'T22'; 'T26';
 %[53.7,6.4];[54.2,7.5];[54.0,8.1];[55.0,8.0];[55.2,5.0];
 %[54.1,6.3];[55.0,6.3];[54.7,7.4];[54.7,6.9];
 if IsNOAH
- loc =[[53.989,6.237];	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
+ loc =[[53.989,6.237];];%	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
  locs={'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
 end
 % load and prepare data
@@ -34,12 +34,13 @@ nrowm = 3; ncolm = 5;
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
-  spath= '/local/home/wirtz/mossco/mossco-setups/helgoland/';%';hrres/
+  spath= '/home/wirtz/mossco/setups/hr/';%/local';hrres/
 %  spath= '/local/home/wirtz/mossco/mossco-setups/hrres/'
 %tags = {'ref';'phi_agg0.0004';'phi_agg0.002';};%'agg_doc0.01';'mort_zoo0.015';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
 %tags = {'ref';'mort_zoo0.015';'mort_zoo0.025';};%'agg_doc0.01';'PAds0';'rnit140';'Nqual0.';'vS_det15';};
 %tags = {'ref';'vir_loss0.0';'vir_loss1.2';};%'rnit140';'Nqual0.';'vS_det15';};
- tags ={'';};% {'_0';'_1';};%'phi_agg5E-4';'agg_doc0.01';'vir_loss0.';};
+% tags ={'';};% {'_0';'_1';};%'phi_agg5E-4';'agg_doc0.01';'vir_loss0.';};
+tags = {'_0';'_2';};
 %tags = {'ref';'Nqual0.';'rnit150';'PAds0';};%'sinking_factor_min0.5';'remNP0.';'remNP-0.2';'Nqual0';
 %tags = {'ref';'agg_doc0.01';'agg_doc0.2';};
 %tags = {'ref';'AffP0.05';'hydrol0.02';};
@@ -52,18 +53,21 @@ else
 %  loc =[54.18,7.82];
 %'ref0';'PAds12';'PAdsODU40';bash-4.1$'_genMeth12';'_a_chl0.02';'_mort_zoo0.016';'_rFast0.08';
 %'_sinking_factor_min0.3';'_vS_det16';
+tags ={'_vS_phy0.';'_vS_phy0.6';'_vS_phy1.2';'_vS_phy1.8';'_vS_phy2.4';};%
 %%tags = {'';'_Zmorta';'_a_water1.3';'_Q101.8';};
+%tags ={'_sinking_factor_min0.03';'_sinking_factor_min0.15';'_sinking_factor_min0.27';'_sinking_factor_min0.39';};
+%tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};
 %%tags = {'';'_vS_det16';'_PAdsODU220';'_syn_nut-4.6';};
 %%tags = {'';'_rSlow0.005';'_genMeth6';'_mort_zoo0.024';};'_PAdsODU220';
-tags = {'';};
  ntags=length(tags);
-%  spath= '/home/wirtz/';%sns  
-  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+  spath= '/home/wirtz/sns/';%  
+%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
-  ncf0 = 'sns_HR'; 
+  ncf0 = 'sns'; 
   if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
     nrowm = 1; ncolm = 1;
+    ncol = 2; nrow = 2; 	% number of columns in fig
   else
     setvar_sns  % defines variables to show - and where/how to do it %setvar  
   end
@@ -97,13 +101,13 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  moffs=0; varshortm0='';
  %% read model output
  tag=cell2mat(tags(ns));
- %ncfile = fullfile(spath,[ncf0 tag '.nc']);
- ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '.nc']);
+ %ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- %t0 = datenum('2003-03-20','yyyy-mm-dd')-1;
- %t1 = datenum('2005-06-01','yyyy-mm-dd')-1;
+ t0 = datenum('2009-03-01','yyyy-mm-dd')-1;
+ t1 = datenum('2009-10-04','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  toffm = min(find(time>= t0))-1;

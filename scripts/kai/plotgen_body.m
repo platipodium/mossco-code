@@ -31,7 +31,15 @@ for ili=1:size(i_loc,1)
   if(ptag(1)=='P')
     set(axs,'FontSize',fs,'Xlim',[minval maxVal],'box','on');
     xlabel(units);
- else
+  elseif(ptag(1)=='V')
+    set(axs,'FontSize',fs,'box','on');%,'Xlim',[minval maxVal]
+    if occ(np,ix,iy) ==0, % first action in subplot
+     if(iy<nrow) set(axs,'XTickLabel',[]);
+     else 
+       xlabel('Distance');
+     end
+    end
+  else
     set(axs,'FontSize',fs,'Xlim',[t0 t1],'box','on');%,'Fontweight','bold'
     if occ(np,ix,iy) ==0, % first action in subplot
      dtim=t1-t0;
@@ -81,9 +89,9 @@ for ili=1:size(i_loc,1)
        if(size(res,1)>10) zi=1+round((zi-1)/9*(size(res,1)-1)); end
        y=res(zi,:);
        plot(time(it),y(ind(it)),'o','Color',coljj(li-1,:),'MarkerFaceColor',coljj(li-1,:),'MarkerSize',4+2*mod(ns+1,4));
-       annotation('textbox',tpos+[0.05*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+%%       annotation('textbox',tpos+[0.05*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(zi) '/' ptag(li)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
      else
-       if(dim==3)
+       if(dim==3 && isempty(findstr(varn,'flux')) )
 % y=mean(res,2);
          if(Zt(i)==2)
           dz = soil_dz; dzt=soil_dzt;
@@ -141,21 +149,52 @@ for ili=1:size(i_loc,1)
 %lh = ylabel(cb,units,'FontSize',fs-2);
 
  case{'P'}   %% profiles
-    col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy)*(ns-1),:); 
-    for li=2:length(ptag)  % loop over given times
-    ii=1+round((length(ind)-1)*str2num(ptag(li))/9);
+   col=colj(1+occ(np,ix,iy)-occ0(np,ix,iy)*(ns-1),:); 
+   for li=2:length(ptag)  % loop over given times
+     ii=1+round((length(ind)-1)*str2num(ptag(li))/9);
      %% plot model data
      plot(res(:,ind(ii)),depth,lins(ns,:),'Color',coljj(li-1,:) ,'LineWidth',linw(ns));
      plot(res(:,ind(ii)),depth,'o','Color',col,'MarkerFaceColor',col);
-     annotation('textbox',tpos+[0.09*(li-1)*dxp -0.14*dyp 0 0],'String',[num2str(time(ii)-t_offset)],'Color',coljj(li-1,:),'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+   end
+ case{'V'}   %% variogram
+  if ili==1 & length(size(tmp))>2 %only for the entire domain and for maps
+ %  di = cell2mat(var{i}(5)); %depth index
+   for li=2:length(ptag)  % loop over given times
+     ti=it(1+str2num(ptag(li)));
+     dvariofile=[spath num2str(year(ti)) '_' num2str(doy(ti)) '_' varshort(find(~isspace(varshort))) '.mat'];
+     fprintf('looking for variogram of data in %s ...\n',dvariofile);
+     set(gca,'box','on','YScale','lin','Xlim',[0 2.4]);%,'YScale','Log','Ylim',[min(vario.val)*2 max(vario.val)*2]
+     if exist(dvariofile)
+        load(dvariofile);
+        dvar=dvario.mean^2;
+        plot(dvario.distance,dvario.val/dvar,'o','linewidth',2,'Color','k','MarkerSize',12-0.6*sqrt(length(dvario.val)));      
+        set(gca,'Ylim',[0.2 1.05]*max(dvario.val/dvar));
+     end;
+     % extract data matrix
+     if length(size(tmp))>3
+       value = squeeze(tmp(:,:,end,ti))*cell2mat(var{i}(5)); 
+     else
+       value = squeeze(tmp(:,:,ti))*cell2mat(var{i}(5));  % surface maps
+     end 
+     % adjust coordinate 
+     dx=size(lon,1)-lx0+1-size(value,1); if(dx<0) dx0=dx;dx=0; else dx0=0; end
+     dy=size(lat,2)-ly0+1-size(value,2); if(dy<0) dy0=dy;dy=0; else dy0=0; end
+     lo=lon(lx0+dx0:end-dx,ly0+dy0:end-dy);
+     la=lat(lx0+dx0:end-dx,ly0+dy0:end-dy);
+     ig=find(~isnan(value) & (lo>5 | length(size(tmp))==4));
+     vario = variogram([lo(ig) la(ig)],value(ig),'plotit',false,'nrbins',50);
+     dvar2=mean(value(ig))^2;
+     plot(vario.distance,1.3*vario.val/dvar2,'-','linewidth',3,'Color',coljj(ns*2-1,:));
+     annotation('textbox',[x0+0.88*dxp y0+(0.85-ns*0.15)*dyp 0.3*dxp 0.11*dyp],'String',tag,'Color',coljj(ns*2-1,:),'Fontweight','bold','FontSize',fs+2,'LineStyle','none','Interpreter','none');
+%        axis([0 params.maxdist 0 max(S.val)*1.1]);     
+     grid on;
+%     text(2.,0.06,[num2str(doy(ti)) ' ' num2str(min(vario.val),'%1.2f') '-' num2str(max(vario.val),'%1.1f')],'fontweight','bold','fontsize',16);
+   end
   end
  end
-%% plot variable name
-%  col='k';
 
 % plot data
 %fprintf('%d %d data: %d\t%c\n',i,ili,show_dati(ili),cell2mat(var{i}(9)));
-
  if (show_dati(ili)>0 & ns==1)%& (cell2mat(var{i}(9))=='L' | cell2mat(var{i}(9))=='M'))
   id=show_dati(ili); iv=1;
 %  fprintf('datashow: %d \n',size(vars,2));
@@ -185,8 +224,8 @@ if(cell2mat(var{i}(9)) ~='N'  )
 %  col=colj(1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)),:); 
 %fprintf('%s\t np=%d occ=%d %d\t%d\n',varshort,np,occ(np,ix,iy),occ0(np,ix,iy),1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)));
 %fprintf('%s\t tpy=%1.1f \t %d\n',varshort,tpos(2),ii);
-   th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
-   annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+   th(ii)=annotation('textbox',tpos,'String',[varshort ],'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
+%%   annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
  end %if (ns==1 &
  occ(np,ix,iy) = occ(np,ix,iy) + 1;
 end  %if 'N'
