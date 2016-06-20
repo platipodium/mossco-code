@@ -234,7 +234,7 @@ end subroutine MOSSCO_FieldString
 
 subroutine MOSSCO_FieldCopy(to, from, rc)
 
-  type(ESMF_Field), intent(out)                  :: to
+  type(ESMF_Field), intent(inout)                :: to
   type(ESMF_Field), intent(in)                   :: from
   integer(ESMF_KIND_I4), intent(out), optional   :: rc
 
@@ -251,6 +251,9 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
   !real(ESMF_KIND_R8), pointer  :: fromFarrayPtr7(:,:,:,:,:,:,:), toFarrayPtr7(:,:,:,:,:,:,:)
 
   type(ESMF_FieldStatus_Flag) :: fromStatus, toStatus
+  type(ESMF_Grid)             :: grid
+  type(ESMF_TypeKind_Flag)    :: typeKind
+  type(ESMF_StaggerLoc)       :: staggerloc
 
   rc_ = ESMF_SUCCESS
 
@@ -269,8 +272,22 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  if (toStatus /= ESMF_FIELDSTATUS_EMPTY) then
-    !call MOSSCO_FieldComplete(to, from, rc)
+  if (toStatus == ESMF_FIELDSTATUS_EMPTY) then
+    call ESMF_FieldGet(from, grid=grid, staggerloc=staggerloc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldEmptySet(to, grid=grid, staggerloc=staggerloc, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+  endif
+
+  if (toStatus /= ESMF_FIELDSTATUS_COMPLETE) then
+    call ESMF_FieldGet(from, typeKind=typeKind, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_FieldEmptyComplete(to, typeKind=typeKind, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   endif
@@ -291,18 +308,17 @@ subroutine MOSSCO_FieldCopy(to, from, rc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-  if (toRank /= fromRank) then
-    write(message,'(A)') 'Cannot copy fields with incompatible rank, field'
-    call MOSSCO_FieldString(from, message)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+  call ESMF_FieldGetbounds(to, localDe=0,  exclusiveUBound=toUBnd, exclusiveLBound=toLbnd, rc=localrc)
+  if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
     call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-  endif
 
   if (  any(toUbnd-toLBnd /= fromUBnd-fromLBnd) ) then
     write(message,'(A)') 'Cannot copy fields with incompatible bounds, field'
     call MOSSCO_FieldString(from, message)
     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-    call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !write(message,*) toUbnd, toLbnd, fromUbnd, fromLBnd
+    !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+    !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
   endif
 
   if (toRank == 1) then
