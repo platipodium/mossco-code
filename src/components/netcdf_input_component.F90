@@ -150,6 +150,8 @@ module netcdf_input_component
     character(len=ESMF_MAXSTR), allocatable :: climatologyList(:)
     logical                    :: isMatch, checkFile
 
+    type(ESMF_FieldStatus_Flag):: fieldStatus
+
     rc = ESMF_SUCCESS
 
     hasGrid = .false.
@@ -484,11 +486,27 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        write(message, '(A)') trim(name)//' obtains grid from field'
+        call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
+          write(message, '(A)') trim(name)//' cannot find geometry in '
+          call MOSSCO_FieldString(field,message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_ARG_BAD
+          return
+        endif
+
+        write(message, '(A)') trim(name)//' obtains grid from grid in field'
         call MOSSCO_FieldString(field,message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
-        call ESMF_FieldGet(field, grid=grid, rank=fieldRank, rc=localrc)
+        call ESMF_FieldGet(field, grid=grid, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -692,7 +710,7 @@ module netcdf_input_component
       ! Look for an exclusion pattern on this field name
       if (allocated(filterExcludeList)) then
         do j = lbound(filterExcludeList,1), ubound(filterExcludeList,1)
-          write(0,*) 'filterExcludeList '//trim(itemName)//', '//trim(filterExcludeList(j))
+          !write(0,*) 'filterExcludeList '//trim(itemName)//', '//trim(filterExcludeList(j))
           call MOSSCO_StringMatch(trim(itemName), trim(filterExcludeList(j)), isMatch, localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -709,7 +727,7 @@ module netcdf_input_component
       !! Look for an inclusion pattern on this field name
       if (allocated(filterIncludeList)) then
         do j = lbound(filterIncludeList,1), ubound(filterIncludeList,1)
-          write(0,*) 'filterIncludeList '//trim(itemName)//', '//trim(filterIncludeList(j))
+          !write(0,*) 'filterIncludeList '//trim(itemName)//', '//trim(filterIncludeList(j))
           call MOSSCO_StringMatch(trim(itemName), trim(filterIncludeList(j)), isMatch, localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
