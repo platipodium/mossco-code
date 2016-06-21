@@ -390,8 +390,8 @@ module mossco_netcdf
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
-        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
-        write(0,*) 'values = ',ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))
+        !write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        !write(0,*) 'values = ',ncarray4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4))
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -454,8 +454,8 @@ module mossco_netcdf
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
-        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
-        write(0,*) 'values = ',ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+        !write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        !write(0,*) 'values = ',ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -509,8 +509,8 @@ module mossco_netcdf
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
-        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
-        write(0,*) 'values = ',ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
+        !write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        !write(0,*) 'values = ',ncarray2(lbnd(1):ubnd(1),lbnd(2):ubnd(2))
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -531,8 +531,8 @@ module mossco_netcdf
       endif
       if (ncStatus /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname),ESMF_LOGMSG_ERROR)
-        write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
-        write(0,*) 'values = ',farrayPtr1(lbnd(1):ubnd(1))
+        !write(0,*) trim(nf90_strerror(ncStatus))//', could not write variable '//trim(varname)
+        !write(0,*) 'values = ',farrayPtr1(lbnd(1):ubnd(1))
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -1857,7 +1857,7 @@ module mossco_netcdf
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
-      write(0,*) 'Write axis '//axisNameList(i), intptr1(:)
+      !write(0,*) 'Write axis '//axisNameList(i), intptr1(:)
     enddo
 
     do i=1,dimCount
@@ -2036,7 +2036,7 @@ module mossco_netcdf
       ! Detect missing values in any dimension of coordinates, if so,
       ! then mark this as missing (-1)
       ! in the respective auxiliary coordinate
-      write(0,*) 'Missing value in axis ',i,': ',missingValue
+      !write(0,*) 'Missing value in axis ',i,': ',missingValue
 
       do j=1,coordDimCount(i)
 
@@ -2089,7 +2089,7 @@ module mossco_netcdf
         endif
 
         if (any(intptr1(:) < 1)) then
-          write(0,*) 'Coordinate axis ',i,' with missing values: ',intPtr1(:)
+          !write(0,*) 'Coordinate axis ',i,' with missing values: ',intPtr1(:)
           ncStatus = nf90_put_var(self%ncid, varid, intPtr1(:))
         endif
 
@@ -2593,7 +2593,7 @@ module mossco_netcdf
       write(0,*) '  start = ', start
       write(0,*) '  count = ', count
       write(0,*) '  ncubnd = ', ncubnd
-      write(message,'(A)') '  count<0 for '
+      write(message,'(A)') '  count < 0 for '
       call MOSSCO_FieldString(field, message, rc=localrc)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       if (present(rc)) rc = ESMF_RC_CANNOT_GET
@@ -3359,7 +3359,7 @@ module mossco_netcdf
       call ESMF_AttributeGet(field, attributeIndex=i, name=attributeName, &
         typekind=typekind, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
-        write(0,*) i, attributeName, typeKind
+        !write(0,*) i, attributeName, typeKind
         cycle
         !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
