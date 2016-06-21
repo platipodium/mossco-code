@@ -1,4 +1,5 @@
-!> @brief Implementation of an ESMF component that delivers constant data fields
+!> @brief Implementation of an ESMF component that delivers default values
+!> for data fields
 !
 !> @import none
 !> @export all variables that are located in a file read by this component
@@ -17,11 +18,11 @@
 #define ESMF_CONTEXT  line=__LINE__,file=ESMF_FILENAME,method=ESMF_METHOD
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
-#define ESMF_FILENAME "constant_component.F90"
+#define ESMF_FILENAME "default_component.F90"
 
-#define CONSTANT_OLD
+#define default_OLD
 
-module constant_component
+module default_component
 
   use esmf
   use mossco_variable_types
@@ -216,7 +217,7 @@ module constant_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default='constant_ugrid.nc')
+      call ESMF_ConfigGetAttribute(config, fileName, rc = rc, default='default_ugrid.nc')
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -256,21 +257,21 @@ module constant_component
     cur_item => variable_items
     cur_item%next => variable_items
 
-    !> open constant_component.dat
+    !> open default_component.dat
     !! @todo: read filename from configuration namelist/yaml
     open(fileunit,file=trim(name)//'.dat',iostat=rc, action='read', status='old')
     if (rc == 0) then
       write(message,'(A)') trim(name)//' reads from file '//trim(name)//'.dat'
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
     else
-      open(fileunit,file='constant.dat',iostat=rc, action='read', status='old')
+      open(fileunit,file='default.dat',iostat=rc, action='read', status='old')
       if (rc == 0) then
-        write(message,'(A)') trim(name)//' reads from file constant.dat'
+        write(message,'(A)') trim(name)//' reads from file default.dat'
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
       else
-        open(fileunit,file='constant_component.dat',iostat=rc, action='read', status='old')
+        open(fileunit,file='default_component.dat',iostat=rc, action='read', status='old')
         if (rc == 0) then
-          write(message,'(A)') trim(name)//' reads from file constant_component.dat.  This feature is deprecated.'
+          write(message,'(A)') trim(name)//' reads from file default_component.dat.  This feature is deprecated.'
           call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
         else
           write(message,'(A)') trim(name)//' could not open file for reading.'
@@ -282,7 +283,7 @@ module constant_component
 
     if (rc ==0 ) then
       do
-        !> read constant_component.dat line by line, maybe add rank later
+        !> read default_component.dat line by line, maybe add rank later
         !! format of each line is:
         !!   some_standard_name  12.345
         read(fileunit,'(A)', iostat=rc) line
@@ -585,4 +586,4 @@ module constant_component
 
   end subroutine Finalize
 
-end module constant_component
+end module default_component
