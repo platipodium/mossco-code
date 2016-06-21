@@ -1,9 +1,1 @@
-coupling:
-  - components: 
-     - default
-     - simplewave
-    interval: none
-  - components: 
-     - simplewave
-     - netcdf
-    interval: none
+default--simplewave.yaml
