@@ -5,11 +5,11 @@ dependencies:
 
 coupling:
   - components: 
-     - constant
+     - default
      - simplewave
     interval: none
   - components:
-     - constant
+     - default
      - erosed
     interval: none
   - components:

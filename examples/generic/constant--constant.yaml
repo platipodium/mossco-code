@@ -1,20 +1,20 @@
 instances:
-  constant1: 
-    component: constant
+  default1: 
+    component: default
     petList: 1,2
   netcdf: 
     petList: 0,1
-  constant2:
-    component: constant 
+  default2:
+    component: default 
     petList: 0,1
 coupling:
   - components: 
-     - constant1
+     - default1
      - regrid_coupler
-     - constant2
+     - default2
     interval: 17 h
   - components: 
-     - constant2
+     - default2
      - link_connector
      - netcdf
     interval: 30 d

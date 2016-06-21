@@ -1,6 +1,6 @@
 instances:
-  constant:
-    component: constant
+  default:
+    component: default
     petList: 1
   gotm:
     component: gotm
@@ -8,7 +8,7 @@ instances:
 
 coupling:
   - components: 
-     - constant
+     - default
      - regrid_coupler
      - gotm
     interval: 24 h

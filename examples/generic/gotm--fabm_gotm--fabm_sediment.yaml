@@ -3,7 +3,7 @@ dependencies:
 
 coupling:
   - components:
-     - constant
+     - default
      - fabm_sediment
     interval: none
   - components:

@@ -1,6 +1,6 @@
 coupling:
   - components: 
-     - constant
+     - default
      - empty
     interval: 2 d 
   - components: 
@@ -9,5 +9,5 @@ coupling:
     interval: 17 h
   - components: 
      - netcdf
-     - constant
+     - default
     interval: 23 h

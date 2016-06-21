@@ -20,7 +20,7 @@ coupling:
    - fabm_gotm
    interval:  6 m
  - components:
-   - constant # This component delivers needed constant values, e.g oxygen
+   - default # This component delivers needed default values, e.g oxygen
    - fabm_sediment
    interval: 360 d
  - components:

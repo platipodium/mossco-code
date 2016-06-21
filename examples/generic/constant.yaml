@@ -1,5 +1,5 @@
 coupling:
   - components: 
-     - constant
+     - default
      - netcdf
     interval: 48 h
