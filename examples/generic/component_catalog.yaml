@@ -1,7 +1,7 @@
 # Regular alphabetic abbreviations by first letter
 remtc_atmosphere: a
 benthos:          b
-constant:         c
+# irregular, see below c
 deposition:       d  # as instance of netcdf_input
 erosed:           e
 fabm_pelagic:     f
@@ -22,10 +22,12 @@ tracer:           t
 simplewave:       w
 grid:             x # not yet assigned
 #                 y # not yet assigned
-#                 z # not yet assigned
+# irregular       z # see below
 
 # Irregular abbreviations
+default:          c  # for constant values
 boundary:         n # instance of netcdf_input with  'nudging'
 fabm_gotm:        q
 fabm_benthic:     i # for 'interface'
 gotm:             j
+constant:         z
