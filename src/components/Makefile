@@ -21,8 +21,8 @@ EXTRA_DIST=README
 
 SUBDIRS=gotm remtc
 
-TARGETS=libempty libconstant libmossco_grid libmossco_inout
-TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration # libconstant_grid
+TARGETS=libempty libconstant libdefault libmossco_grid libmossco_inout
+TARGETS+=libmossco_simplewave libmossco_info libmossco_filtration
 
 ifeq ($(MOSSCO_NETCDF),true)
   TARGETS += libmossco_netcdf libmossco_clm #libmossco_river
@@ -56,7 +56,7 @@ endif
 all: utilities subdirs $(TARGETS)
 
 libmossco_constant: libconstant
-libmossco_constant_grid: libconstant_grid
+libmossco_default: libdefault
 libmossco_empty: libempty
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
 
@@ -126,7 +126,7 @@ libmossco_getm: libmossco_getm_driver libmossco_util \
 libempty: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libempty.a(empty_component.o)
 libmossco_inout: prefix libmossco_util $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a(inout_component.o)
 libconstant: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant.a(constant_component.o)
-libconstant_grid: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libconstant_grid.a(constant_grid_component.o)
+libdefault: prefix modtypes $(MOSSCO_LIBRARY_PATH)/libdefault.a(default_component.o)
 modtypes: prefix $(MOSSCO_MODULE_PATH)/mossco_variable_types.mod
 
 $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod: fabm_sediment_component.F90
@@ -202,7 +202,7 @@ extraclean:
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libempty.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_inout.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant.a
-	@-rm -f $(MOSSCO_LIBRARY_PATH)/libconstant_grid.a
+	@-rm -f $(MOSSCO_LIBRARY_PATH)/libdefault.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a
 	@-rm -f $(MOSSCO_LIBRARY_PATH)/libmossco_fabm0d.a
 	@-rm -f $(MOSSCO_MODULE_PATH)/fabm_sediment_component.mod
