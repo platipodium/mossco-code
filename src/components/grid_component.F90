@@ -126,7 +126,7 @@ module grid_component
     type(ESMF_Clock)     :: parentClock
     integer, intent(out) :: rc
 
-    character(len=ESMF_MAXSTR) :: timeString, message, name, fileName
+    character(len=ESMF_MAXSTR) :: timeString, message, name
     character(len=ESMF_MAXSTR) :: form
     type(ESMF_Time)            :: currTime
     integer(ESMF_KIND_I4)      :: petCount, localPet, localRc
@@ -135,7 +135,7 @@ module grid_component
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
     type(ESMF_Grid)            :: grid, grid2, grid3
     type(ESMF_Field)           :: field
-    character(len=ESMF_MAXSTR) :: configFileName, gridName, creator, fileFormat
+    character(len=ESMF_MAXSTR) :: configFileName, gridFileName, creator, fileFormat
     character(len=ESMF_MAXSTR) :: geomName
     type(ESMF_Config)          :: config
 
@@ -159,6 +159,7 @@ module grid_component
     hasGrid = .false.
     fileFormat = 'SCRIP'
     nlayer = 0
+    gridFileName = 'grid.nc'
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -190,7 +191,7 @@ module grid_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, label='grid', value=gridName,&
+      call MOSSCO_ConfigGet(config, label='filename', value=gridFileName, &
         defaultValue='grid.nc', rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -238,36 +239,29 @@ module grid_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(gridComp, 'grid_file', trim(gridName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeSet(gridComp, 'file_format', trim(gridName), rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
     call ESMF_AttributeSet(gridComp, 'number_of_vertical_layers', nlayer, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeGet(gridComp, 'grid_file', value=gridName, &
-      defaultValue=trim(name)//'.nc', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    write(message, '(A)') trim(name)//' attempts to read from file '//trim(gridName)
-    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-    inquire(file=trim(gridName), exist=isPresent)
+    inquire(file=trim(gridFileName), exist=isPresent)
     if (isPresent) then
-      write(message,'(A)')  trim(name)//' reading file '//trim(gridName)
+
+      write(message,'(A)')  trim(name)//' reading '//trim(fileFormat)//' file '//trim(gridFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
+      call ESMF_AttributeSet(gridComp, 'grid_file', trim(gridFileName), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeSet(gridComp, 'file_format', trim(fileFormat), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
       if (trim(fileFormat) == 'SCRIP') then
-        grid2 = ESMF_GridCreate(filename=trim(gridName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
+        grid2 = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_SCRIP, &
           regDecomp=decompositionList, isSphere=.false., rc=localrc)
       elseif (trim(fileFormat) == 'GRIDSPEC') then
-        grid2 = ESMF_GridCreate(filename=trim(gridName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
+        grid2 = ESMF_GridCreate(filename=trim(gridFileName), fileFormat=ESMF_FILEFORMAT_GRIDSPEC, &
           regDecomp=decompositionList, isSphere=.false., rc=localrc)
       else
         write(message, '(A)') trim(name)//' wrong file format '//trim(fileformat)//', valid options are SCRIP or GRIDSPEC'
@@ -281,12 +275,16 @@ module grid_component
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
         call ESMF_GridGet(grid3, name=geomName)
 
-      write(message, '(A)') trim(name)//' created grid from file '//trim(gridName)
+      write(message, '(A)') trim(name)//' created grid from file '//trim(gridFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       hasGrid=.true.
 
     else
+
+      write(message,'(A)')  trim(name)//' creates grid from parameters'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
       if (.not.allocated(dimList)) then
         allocate(dimList(2))
         dimList = (/40,40/)
@@ -299,11 +297,13 @@ module grid_component
       endif
 
       if (.not.allocated(cornerList)) then
-        allocate(cornerList(40))
-        cornerList = (/40,40/)
+        !! This should be the lat-lon coordinates of the lower left and upper
+        !! right corner as a list of four values (ll-lon, ll-lat, ur-lon, ur-lat)
+        allocate(cornerList(4))
+        cornerList = (/4,50,9,55/)
       endif
 
-      if (ubound(dimList,1) /= 4) then
+      if (ubound(cornerList,1) /= 4) then
         write(message, '(A)') trim(name)//' wrong number of corners provided'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
         rc = ESMF_RC_NOT_IMPL
@@ -315,7 +315,7 @@ module grid_component
         regDecomp=decompositionList, coordSys=ESMF_COORDSYS_SPH_DEG, &
         indexflag=ESMF_INDEX_GLOBAL,  &
         name=trim(name), coordTypeKind=ESMF_TYPEKIND_R8, coordDep1=(/1/), &
-        coorddep2=(/2/),rc=rc)
+        coorddep2=(/1/),rc=rc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
@@ -329,7 +329,7 @@ module grid_component
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
       do i=lbnd(1), ubnd(1)
-        farrayPtr1(i) = 0 + 0.1 * i + 0.05
+        farrayPtr1(i) = cornerList(1) + (i - 0.5) * (cornerList(3)-cornerList(1))
       enddo
 
       call ESMF_GridGetCoord(grid, coordDim=2, localDE=0, staggerloc=ESMF_STAGGERLOC_CENTER, &
@@ -338,7 +338,7 @@ module grid_component
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
       do i=lbnd(1), ubnd(1)
-        farrayPtr1(i) = 0 + 0.1 * i + 0.05
+        farrayPtr1(i) = cornerList(2) + (i - 0.5) * (cornerList(4)-cornerList(2))
       enddo
 
     endif
@@ -349,13 +349,12 @@ module grid_component
       grid = grid2
     endif
 
-
     call ESMF_GridCompSet(gridComp, grid=grid, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
     call ESMF_GridGet(grid, coordSys=coordSys, dimCount=dimCount, &
-      name=gridName, rank=rank, rc=localrc)
+      name=gridFileName, rank=rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -584,7 +583,7 @@ subroutine Finalize(gridComp, importState, exportState, parentClock, rc)
     call MOSSCO_DestroyOwn(exportState, trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      
+
     call MOSSCO_CompExit(gridComp, localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
