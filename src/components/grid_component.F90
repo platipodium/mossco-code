@@ -196,6 +196,14 @@ module grid_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+      inquire(file=trim(gridFileName), exist=isPresent)
+      if (.not.isPresent) then
+        write(message, '(A)') trim(name)//' cannot find '//trim(gridFileName)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        rc = ESMF_RC_NOT_FOUND
+        return
+      endif
+
       call MOSSCO_ConfigGet(config, label='format', value=fileFormat, &
         defaultValue='SCRIP', rc = localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
