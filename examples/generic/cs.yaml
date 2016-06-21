@@ -1,1 +1,9 @@
-constant--fabm_sediment.yaml
+coupling:
+  - components: 
+     - default
+     - fabm_sediment
+    interval: none
+  - components: 
+     - fabm_sediment
+     - netcdf
+    interval: 24 h
