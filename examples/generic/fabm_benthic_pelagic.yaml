@@ -7,7 +7,7 @@ coupling:
      - fabm_sediment
     interval: 30 m
   - components:
-     - constant
+     - default
      - fabm_sediment
     interval: none
   - components:

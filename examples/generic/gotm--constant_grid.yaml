@@ -1,14 +1,14 @@
 instances:
-  constant: constant_grid
+  default: default_grid
 
 dependencies:
-  - constant:
+  - default:
     - component: gotm
       grid: temperature_in_water
 
 coupling:
   - components: 
-     - constant
+     - default
      - getm
     interval: 30 m
   - components: 

@@ -18,7 +18,7 @@ coupling:
      - pelagic_benthic_mediator
      - fabm_sediment
   - components:
-     - constant
+     - default
      - fabm_sediment
     interval: 1 yy
   - components:

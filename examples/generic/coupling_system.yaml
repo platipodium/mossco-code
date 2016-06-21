@@ -1,6 +1,6 @@
 coupling:
   - components: 
-     - constant
+     - default
      - gotm
     interval: none
   - components: 

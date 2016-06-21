@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # This configuration is is part of MOSSCO. It describes a 3D coupling
-# between constant, getm, and netcdf output
+# between default, getm, and netcdf output
 #
 # @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen <carsten.lemmen@hzg.de>
@@ -11,10 +11,10 @@
 coupling:
   - components:
      - getm
-     - constant
+     - default
   - components:
      - getm
      - netcdf
   - components:
-     - constant
+     - default
      - netcdf

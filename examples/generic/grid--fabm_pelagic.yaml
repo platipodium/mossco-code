@@ -2,14 +2,14 @@ dependencies:
   - fabm_pelagic:
     - component: grid
       grid: grid
-  - fabm_pelagic: constant
+  - fabm_pelagic: default
 
 instances:
   - mossco_xf: netcdf
 
 coupling:
   - components:
-     - constant
+     - default
      - fabm_pelagic
     interval: none
   - components:

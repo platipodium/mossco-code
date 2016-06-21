@@ -17,6 +17,6 @@ coupling:
    - fabm_gotm
    interval: 1 h
  - components:
-   - constant
+   - default
    - fabm_sediment
    interval: 17 h

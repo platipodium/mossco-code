@@ -1,4 +1,4 @@
 coupling:
   - components: 
-     - constant
+     - default
     interval: 24 h

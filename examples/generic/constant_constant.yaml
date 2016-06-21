@@ -1,9 +1,9 @@
 coupling:
   - components: 
-     - constant
-     - constant
+     - default
+     - default
     interval: 48 h
   - components: 
-     - constant
-     - constant
+     - default
+     - default
     interval: 17 h

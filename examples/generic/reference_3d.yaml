@@ -25,11 +25,11 @@ instances:
 
 coupling:
 #  - components:
-#     - constant
+#     - default
 #     - simplewave
 #    interval: none
   - components:
-     - constant
+     - default
      - getm
     interval: none
 #  - components:
@@ -88,7 +88,7 @@ coupling:
 #     - fabm_pelagic
 #    interval: 30 m
 #  - components:
-#     - constant
+#     - default
 #     - fabm_sediment
 #    interval: none
 #  - components:

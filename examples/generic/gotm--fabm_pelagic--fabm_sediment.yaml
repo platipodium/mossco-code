@@ -30,7 +30,7 @@ coupling:
      - fabm_pelagic
     interval: 1 h
   - components:
-     - constant
+     - default
      - fabm_sediment
     interval: 1 yy
   - components:

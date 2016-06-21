@@ -4,7 +4,7 @@ instances:
 
 coupling:
   - components:
-    - constant
+    - default
     - inout1
     interval: 5 h
   - components:
