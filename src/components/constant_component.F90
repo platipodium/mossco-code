@@ -129,11 +129,10 @@ module constant_component
     integer(ESMF_KIND_I4)                       :: i, rank, localrc, fieldCount
     type(ESMF_Time)                             :: currTime
 
-    character(len=ESMF_MAXSTR)                  :: configFileName, foreignGridFieldName
+    character(len=ESMF_MAXSTR)                  :: configFileName
     character(len=ESMF_MAXSTR), allocatable     :: variableList(:,:)
     type(ESMF_Config)                           :: config
     type(ESMF_Field)                            :: field
-    type(ESMF_Field), allocatable               :: fieldList(:)
     type(ESMF_FieldStatus_Flag)                 :: fieldStatus
     type(ESMF_Grid)                             :: grid
     logical                                     :: isPresent
@@ -210,40 +209,8 @@ module constant_component
 
     enddo
 
-    !> Get the foreign grid which is required for this component
-    call ESMF_AttributeGet(importState, name='foreign_grid_field_name', &
-      value=foreignGridFieldName, defaultValue='grid',rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
-      itemSearch=trim(foreignGridFieldName), fieldStatus=ESMF_FIELDSTATUS_GRIDSET, rc=localrc)
-
-    if (fieldCount == 0) then
-      write(message,'(A)') trim(name)//' needs a foreign grid, which was not found.'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=localrc)
-      call MOSSCO_CompExit(gridComp, rc=localrc)
-      rc = ESMF_RC_NOT_FOUND
-      return
-    endif
-
-    call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_GridGet(grid, rank=rank, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (rank<2 .or. rank>3) then
-      write(message,'(A)') trim(name)//' needs a foreign grid of rank 2 or 3'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=localrc)
-      call MOSSCO_CompExit(gridComp, rc=localrc)
-      rc = ESMF_RC_ARG_BAD
-      return
-    endif
-
-    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    call MOSSCO_StateGetForeignGrid(importState, grid=grid, owner=trim(name), &
+      attributeName='foreign_grid_field_name', rank=rank, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
