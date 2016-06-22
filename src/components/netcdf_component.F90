@@ -325,7 +325,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     integer(ESMF_KIND_I8)   :: i, j, advanceCount
     real(ESMF_KIND_R8)      :: seconds
     integer(ESMF_KIND_I4)   :: itemCount, timeSlice, localPet,  petCount
-    integer(ESMF_KIND_I4)   :: localrc
+    integer(ESMF_KIND_I4)   :: localrc, fieldCount
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
     type(ESMF_Clock)        :: clock
@@ -335,6 +335,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     character(len=ESMF_MAXSTR) :: message, fileName, name, timeUnit
     character(len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
     logical                    :: checkNaN=.true., checkInf=.true.
+    type(ESMF_Field), allocatable :: fieldList(:)
 
     rc = ESMF_SUCCESS
 
@@ -495,6 +496,24 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           cycle
         endif
+      endif
+
+      call MOSSCO_StateGetFieldList(importState, fieldList, fieldCount=fieldCount, &
+        itemSearch=trim(itemNameList(i)), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (fieldCount < 1) then
+        if (advanceCount < 1) then
+          write(message,'(A)') trim(name)//' skipped non-field or incomplete item '
+          call MOSSCO_MessageAdd(message,' '//itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        endif
+        cycle
       endif
 
         if (advanceCount < 1) then
