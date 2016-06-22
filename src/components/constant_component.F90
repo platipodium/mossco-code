@@ -167,8 +167,7 @@ module constant_component
 
     endif
 
-
-    if (allocated(variableList)) then
+    if (.not.allocated(variableList)) then
         allocate(variableList(1,2), stat=localrc)
         variableList(1,1) = 'zero'
         variableList(1,2) = '1'
