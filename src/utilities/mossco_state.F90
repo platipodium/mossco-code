@@ -1034,76 +1034,86 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateGetForeignGrid"
-  subroutine MOSSCO_StateGetForeignGrid(state, grid, rc)
+  subroutine MOSSCO_StateGetForeignGrid(state, grid, kwe, owner, other, &
+     attributeName, rank, rc)
 
-    type(ESMF_State), intent(in)              :: state
-    type(ESMF_Grid),  intent(out)             :: grid
-    integer(ESMF_KIND_I4), intent(out), optional :: rc
+    type(ESMF_State), intent(in)                  :: state
+    type(ESMF_Grid),  intent(out)                 :: grid
+    type(ESMF_KeywordEnforcer), optional          :: kwe
+    character(len=*), optional, intent(in)        :: owner
+    type(ESMF_Grid), intent(out), optional        :: other
+    character(len=*), optional, intent(in)        :: attributeName
+    integer(ESMF_KIND_I4), intent(out), optional  :: rank
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
 
-    integer(ESMF_KIND_I4)               :: rc_, localrc
-    character(len=ESMF_MAXPATHLEN)              :: name, message, attributeName, attributeValue
+    integer(ESMF_KIND_I4)               :: rc_, localrc, rank_, fieldCount
+    character(len=ESMF_MAXSTR)          :: name, message, attributeName_, attributeValue
     logical                             :: isPresent
     type(ESMF_Field)                    :: field
+    type(ESMF_Field), allocatable       :: fieldList(:)
     type(ESMF_FieldStatus_Flag)         :: fieldStatus
     type(ESMF_StateItem_Flag)           :: itemType
+    type(ESMF_Grid)                     :: grid2, grid3
 
     rc_ = ESMF_SUCCESS
-    attributeName='foreign_grid_field_name'
+    if (present(kwe)) rc_ = ESMF_SUCCESS
 
-    call ESMF_AttributeGet(state, name=trim(attributeName), &
-      isPresent=isPresent, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if (.not.isPresent) then
-      write(message, '(A)')  'Requested attribute '//trim(attributeName)//' not found.'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state, rc=localrc)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    endif
+    attributeName_ = 'foreign_grid_field_name'
+    if (present(attributeName)) attributeName_ = trim(attributeName)
 
-    call ESMF_AttributeGet(state, name=trim(attributeName), value=attributeValue, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_StateGet(state, trim(attributeValue), itemType=itemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if (itemType == ESMF_STATEITEM_NOTFOUND) then
-      write(message, '(A)')  'Requested item '//trim(attributeValue)//' not found.'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state, rc=localrc)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    endif
-
-    if (itemType /= ESMF_STATEITEM_FIELD) then
-      write(message, '(A)')  'Requested item '//trim(attributeName)//' ist not a field.'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-
-      call MOSSCO_StateLog(state, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
-    endif
-
-    call ESMF_StateGet(state, trim(attributeValue), field, rc=localrc)
+    call ESMF_AttributeGet(state, name=trim(attributeName_), value=attributeValue, &
+      defaultValue='grid', rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call MOSSCO_StateGetFieldList(state, fieldList, fieldCount=fieldCount, &
+      itemSearch=trim(attributeValue), fieldStatus=ESMF_FIELDSTATUS_GRIDSET, rc=localrc)
 
-    if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-      write(message, '(A)')  'Requested field '//trim(attributeName)//' is empty.'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call MOSSCO_StateLog(state, rc=localrc)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
+    if (fieldCount == 0) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' needs a foreign grid, which was not found.'
+      else
+        write(message,'(A)') '  needs a foreign grid, which was not found.'
+      endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=localrc)
+      rc = ESMF_RC_NOT_FOUND
+      return
     endif
 
-    call ESMF_FieldGet(field, grid=grid, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    call ESMF_FieldGet(fieldList(1), grid=grid, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call MOSSCO_Reallocate(fieldList, 0, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_GridGet(grid, rank=rank_, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (present(rank)) rank = rank_
+
+    if (rank_ < 2 .or. rank_ > 3) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' needs a foreign grid of rank 2 or 3'
+      else
+        write(message,'(A)') '  needs a foreign grid of rank 2 or 3'
+      endif
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=localrc)
+      rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
+    if (present(other)) then
+      write(message,'(A)') '  keyword "other" not implemented'
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=localrc)
+      rc = ESMF_RC_NOT_IMPL
+      return
+    endif
 
     if (present(rc)) rc=rc_
-    return
+
   end subroutine MOSSCO_StateGetForeignGrid
 
 #undef  ESMF_METHOD
