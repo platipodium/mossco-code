@@ -2124,7 +2124,7 @@ libs = {'gotm'       : ['solver', 'mossco_gotm'] ,
         'fabm_pelagic' : ['mossco_fabmpelagic', 'util', 'solver'],
         'fabm_benthic' : ['mossco_fabmbenthic', 'util', 'solver'],
         'constant'   : ['constant'],
-        'constant_grid'   : ['constant_grid'],
+        'default'   :  ['default'],
         'clm_netcdf' : ['mossco_clm'],
         'benthos'    : ['mossco_benthos'],
         'grid'       : ['mossco_grid'],
@@ -2179,7 +2179,7 @@ deps = {'clm_netcdf' : ['libmossco_clm'],
         'river'      : ['libmossco_river'],
         'inout'      : ['libmossco_inout'],
         'constant'   : ['libconstant'],
-        'constant_grid'  : ['libconstant_grid'],
+        'default'  : ['libdefault'],
         'gotm'       : ['libmossco_gotm', 'libsolver'],
         'fabm_gotm'                : ['libmossco_fabmgotm'],
         'gotmfabm'       : ['libmossco_gotmfabm', 'libsolver'],
@@ -2261,7 +2261,7 @@ libmossco_gotmfabm libmossco_gotm libmossco_fabmgotm:
 libmossco_util libsolver:
 	$(MAKE) -C $(MOSSCO_DIR)/src/utilities $@
 
-libsediment libconstant libconstant_grid libmossco_clm libmossco_erosed \
+libsediment libconstant libdefault libmossco_clm libmossco_erosed \
 libmossco_fabm0d libmossco_fabmpelagic libmossco_filtration libmossco_grid \
 libmossco_fabmbenthic:
 	$(MAKE) -C $(MOSSCO_DIR)/src/components $@
