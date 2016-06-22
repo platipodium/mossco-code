@@ -16,7 +16,7 @@ var={
 %%  {'Dissolved_Inorganic_Phosphorus_DIP_nutP_in_water';'DIP';0;2.; 1.;	1; 2;1;'L1'};
 %%  {'Phytplankton_Carbon_phyC_in_water';'PhyC';4;200; 1.0;		1; 1;2;'N'};
    {'Chl_chl_in_water';'CHL';0.3;28; 1;					1; 1;1;'L4'};
-   {'Chl_chl_in_water';'CHL';0.;2; 1;					1; 1;2;'V4'};
+%%   {'Chl_chl_in_water';'CHL';0.;20; 1;					1; 1;1;'V4'};
 %  {'Chl_chl_in_water';'chl';0.2;40; 1;					1; 1;2;'L0'};
    {'Chl_chl_in_water';'CHL';0;15; 5;					1; 1;0;'M4'};
 %%  {'Chl_chl_in_water';'CHL';0.5;20; 2;					2; 1;0;'Mi'};
@@ -36,12 +36,12 @@ var={
 %  {'N2flux';'N2 flux';-0.4;5; 1.; 					1; 2;1;'LM'};
 %  {'mole_concentration_of_nitrate_upward_flux_at_soil_surface';'NO3 flux';0;1.; 86400.;1; 2;1;'LM'};
 %  {'mole_concentration_of_ammonium_upward_flux_at_soil_surface';'NH4 flux';0;1.; 86400.; 1; 2;1;'LM'};
-  {'dissolved_oxygen_upward_flux_at_soil_surface';'O2flux';-30;0; 1.; 1; 1;1;'N'};
-  {'dissolved_reduced_substances_upward_flux_at_soil_surface';'ODU flux';-6;0; 1.; 1; 1; 1;'N'};
+  {'dissolved_oxygen_upward_flux_at_soil_surface';'O2flux';-30;0; 1.; 1; 1;3;'N'};
+  {'dissolved_reduced_substances_upward_flux_at_soil_surface';'ODU flux';-6;0; 1.; 1; 1; 3;'N'};
   {'c ODUflux-O2flux- 0.0001';'O2 flux';10;35; 86400; 			2; 1;0;'M4'};
    {'Chl_chl_in_water';'CHL';0;15; 4;					3; 1;0;'M4'};
-  {'c ODUflux-O2flux - 0.0001';'O2 flux';0;45; 86400; 			1; 2;1;'LM'};
-  {'c ODUflux-O2flux - 0.0001';'O2 flux';0;0.3; 86400; 			1; 2;2;'V4'};
+%  {'c ODUflux-O2flux - 0.0001';'O2 flux';0;45; 86400; 			1; 2;1;'LM'};
+%  {'c ODUflux-O2flux - 0.0001';'O2 flux';0;40; 86400; 			1; 1;2;'S4'};
 %  {'fast_detritus_C_in_soil';'TOC fast';2E2;7E4; 1.0; 			1; 2;2;'LM'};
 %  {'slow_detritus_C_in_soil';'TOC slow';5E2;5E4; 1.0; 			1; 2;2;'LM'};
 %  {'detritus-P_in_soil';'POP';5E2;5E4; 105.0; 			1; 2;2;'LM'};

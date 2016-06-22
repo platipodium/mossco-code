@@ -21,7 +21,7 @@ locs={'Helgoland';'Sylt';'Noordwijk-10';'Noordwijk-70';'T22'; 'T26';}; %
 %[53.7,6.4];[54.2,7.5];[54.0,8.1];[55.0,8.0];[55.2,5.0];
 %[54.1,6.3];[55.0,6.3];[54.7,7.4];[54.7,6.9];
 if IsNOAH
- loc =[[53.989,6.237];];%	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
+ loc =[[53.989,6.237];	[53.987,6.870];	[54.070,8.019];	[54.173,7.962];	[54.092,7.357];	[54.439,7.425];	[54.468,6.193];	[55.038,6.403];	[54.830,5.575];	[55.257,4.746];	[55.502,4.168];	[54.685,6.737];	[54.688,7.510];	[54.194,7.234]];
  locs={'NOAH-A-permeable';	'NOAH-B';	'NOAH-C-imperm';	'NOAH-CCPG';	'NOAH-D';	'NOAH-E';	'NOAH-F';	'NOAH-G';	'NOAH-H';	'NOAH-CCPJ';	'NOAH-I';	'NOAH-NSB3';	'NOAH-NSB2';	'NOAH-DB';};	
 end
 % load and prepare data
@@ -53,7 +53,7 @@ else
 %  loc =[54.18,7.82];
 %'ref0';'PAds12';'PAdsODU40';bash-4.1$'_genMeth12';'_a_chl0.02';'_mort_zoo0.016';'_rFast0.08';
 %'_sinking_factor_min0.3';'_vS_det16';
-tags ={'_vS_phy0.';'_vS_phy0.6';'_vS_phy1.2';'_vS_phy1.8';'_vS_phy2.4';};%
+tags ={'_vS_phy0.P50';'_vS_phy0.';'_vS_phy0.6';'_vS_phy1.2';'_vS_phy1.8';'_vS_phy2.4';};%
 %%tags = {'';'_Zmorta';'_a_water1.3';'_Q101.8';};
 %tags ={'_sinking_factor_min0.03';'_sinking_factor_min0.15';'_sinking_factor_min0.27';'_sinking_factor_min0.39';};
 %tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};
@@ -67,7 +67,7 @@ tags ={'_vS_phy0.';'_vS_phy0.6';'_vS_phy1.2';'_vS_phy1.8';'_vS_phy2.4';};%
   if IsNOAH
     setvar_o2flux  % defines variables to show - and where/how to do it %setvar  
     nrowm = 1; ncolm = 1;
-    ncol = 2; nrow = 2; 	% number of columns in fig
+    ncol = 3; nrow = 1; 	% number of columns in fig
   else
     setvar_sns  % defines variables to show - and where/how to do it %setvar  
   end
@@ -76,7 +76,7 @@ end
 dxp = 0.82/(ncol+0.05); dyp = 0.83/(nrow +0.05);
 dxpm = 0.86/( ncolm +0.05); dypm= 0.86/(nrowm+0.05);
 compn ={'water';'soil'};
-fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(10); colt='kw';
+fs = 16; colp=prism(5);colj=colp([1 4:5 2:3],:); coljj=jet(11); colt='kw';
 i0=10;coljm=ones(256,3); coljm(i0+1:256,:)=jet(256-i0);
 
 linw=[3 2*ones(1,14)]; lins=['- '; repmat('- ',14,1);]; 
