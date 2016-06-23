@@ -161,7 +161,9 @@ module constant_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call MOSSCO_ConfigGet(config, 'variable', variableList, rc=localrc)
+      !> @todo this is a workaround solution until table reading works in ESMF
+      call MOSSCO_ConfigGet(trim(configFileName), 'variable', variableList, rc=localrc)
+      !call MOSSCO_ConfigGet(config, 'variable', variableList, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -273,32 +275,60 @@ module constant_component
 #define ESMF_METHOD "ReadRestart"
   subroutine ReadRestart(gridComp, importState, exportState, parentClock, rc)
 
+    implicit none
+
     type(ESMF_GridComp)   :: gridComp
     type(ESMF_State)      :: importState
     type(ESMF_State)      :: exportState
     type(ESMF_Clock)      :: parentClock
     integer, intent(out)  :: rc
 
-    integer(ESMF_KIND_I4)      :: localrc
-    character(len=ESMF_MAXSTR) :: name
+    character(len=ESMF_MAXSTR)  :: name, message, varname
+    type(ESMF_Time)             :: currTime
+    integer                     :: localrc, i, j, rank, k
+
+    type(ESMF_StateItem_Flag)      :: itemtype
+    integer(ESMF_KIND_I4)          :: exportFieldCount, importFieldCount
+    type(ESMF_Field),dimension(:),allocatable :: exportFieldList, importFieldList
 
     rc = ESMF_SUCCESS
 
-    call ESMF_GridCompGet(gridComp, name=name, rc=localrc)
+    call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, importState=importState, &
+      exportState=exportState, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateGet(importState, name=name, rc=localrc)
+    call MOSSCO_StateGetFieldList(exportState,  exportFieldList, fieldCount=exportFieldCount, &
+      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call ESMF_StateGet(exportState, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !> browse through list of state variables and
+    !! copy data from importState fields with same name
+    do i = 1, exportFieldCount
 
-    call ESMF_ClockGet(parentClock, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_FieldGet(exportFieldList(i), name=varname, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call MOSSCO_StateGetFieldList(importState,  importFieldList, fieldCount=importFieldCount, &
+        itemSearch=trim(varname), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      do j = 1, importFieldCount
+
+        if (MOSSCO_FieldAttributesIdentical(importFieldList(j), exportFieldList(i), &
+          rc=localrc) > 0) then
+          call MOSSCO_FieldWeightField(exportFieldList(i), importFieldList(j), weight=1.0D0, rc=localrc)
+          write(message,'(A)') trim(name)//' hotstarted '
+          call MOSSCO_FieldString(exportFieldList(i), message)
+          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+        endif
+      enddo
+    enddo
+
+    call MOSSCO_CompExit(gridComp, localrc)
 
   end subroutine ReadRestart
 
