@@ -55,7 +55,7 @@ endif
 
 all: utilities subdirs $(TARGETS)
 
-libmossco_constant: libconstant
+libmossco_constant: libconstant libmossco_util
 libmossco_default: libdefault
 libmossco_empty: libempty
 libmossco_info: prefix $(MOSSCO_LIBRARY_PATH)/libmossco_info.a(info_component.o)
