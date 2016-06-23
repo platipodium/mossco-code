@@ -19,6 +19,7 @@ module mossco_config
 
 use esmf
 use mossco_strings
+use mossco_memory
 
 implicit none
 
@@ -37,6 +38,7 @@ interface MOSSCO_ConfigGet
   module procedure MOSSCO_ConfigGetListReal8
   module procedure MOSSCO_ConfigGetListString
   module procedure MOSSCO_ConfigGetListString2
+  module procedure MOSSCO_ConfigGetFileStringTable
 end interface MOSSCO_ConfigGet
 
 contains
@@ -633,12 +635,14 @@ contains
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    do i = 1, rowCount
-      call ESMF_ConfigNextLine(config, tableEnd=isTableEnd, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    call ESMF_ConfigValidate(config, rc=localrc)
 
-      if (isTableEnd) exit
+    do i = 1, -rowCount
+      !call ESMF_ConfigNextLine(config, tableEnd=isTableEnd, rc=localrc)
+      !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !if (isTableEnd) exit
 
       do j = 1, columnCount
         call ESMF_ConfigGetAttribute(config, value(i,j), rc=localrc)
@@ -650,6 +654,8 @@ contains
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
     enddo
+
+    call ESMF_ConfigValidate(config, rc=localrc)
 
     if (present(rc)) rc=localrc
 
@@ -776,5 +782,103 @@ contains
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_ConfigGetListStringTable1
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_ConfigGetFileStringTable"
+!> Obtains a two-dimensional list of strings obtained from a Table in
+!> ESMF_Config format, but without ESMF_Config routines (workaround)
+  subroutine MOSSCO_ConfigGetFileStringTable(fileName, label, value, rc)
+
+    character(len=*), intent(in)   :: fileName
+    character(len=*), intent(in)   :: label
+    character(len=*), intent(inout), allocatable :: value(:,:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, j, rowCount, columnCount
+    integer(ESMF_KIND_I4)                :: lun, bufferSize = 10
+    logical                              :: isPresent, isTableEnd
+    character(len=ESMF_MAXSTR)           :: message, string
+    character(len=ESMF_MAXSTR), allocatable :: stringList(:)
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    if (allocated(value)) deallocate(value)
+
+    call ESMF_UtilIOUnitGet(lun, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    open (unit=lun, file=trim(fileName), status='old',    &
+       access='sequential', form='formatted', action='read' )
+
+    rowCount = 0
+    columnCount = 2
+    localrc = ESMF_SUCCESS
+
+    ! Find the label in the file
+    do while (localrc == ESMF_SUCCESS)
+      read (lun, *, iostat=localrc) string
+      if (localrc /= ESMF_SUCCESS) exit
+
+      i = index(string, trim(label)//'::')
+      if (i < 1) cycle
+      call ESMF_LogWrite('  found label '//trim(string), ESMF_LOGMSG_INFO)
+      isPresent = .true.
+      exit
+    enddo
+
+    if (.not.isPresent) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    ! Read into a string Buffer
+    call MOSSCO_Reallocate(stringList, bufferSize, keep=.false., rc=localrc)
+
+    rowCount = 0
+    do while (localrc == ESMF_SUCCESS)
+      read (lun, *, iostat=localrc) string
+      if (localrc /= ESMF_SUCCESS) exit
+
+      i = index(string, '::')
+      if (i > 0) exit
+      rowCount = rowCount + 1
+
+      if (rowCount > bufferSize) then
+        bufferSize = 2 * bufferSize
+        call MOSSCO_Reallocate(stringList, buffersize, keep=.true., rc=localrc)
+      endif
+
+      stringList(rowCount) = trim(string)
+      write(message,'(A,I2,A)') '  found item ',rowCount,' '//trim(stringList(rowCount))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+    enddo
+
+    if (rowCount < 0) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    allocate(value(rowCount,columnCount))
+
+    if (rowCount * columnCount < 1) then
+      if (present(rc)) rc = ESMF_RC_NOT_FOUND
+      return
+    endif
+
+    if (columnCount /= 2) then
+      if (present(rc)) rc = ESMF_RC_ARG_BAD
+      return
+    endif
+
+    do i = 1, rowCount
+      string = stringList(i)
+      j = index(string,' ')
+      value(i,1) = string(1:j-1)
+      value(i,2) = trim(adjustl(string(1:j-1)))
+    enddo
+
+    if (present(rc)) rc=localrc
+
+  end subroutine MOSSCO_ConfigGetFileStringTable
 
 end module mossco_config
