@@ -24,6 +24,8 @@ module mossco_field
 
   implicit none
 
+  public MOSSCO_FieldAttributesIdentical
+
   interface MOSSCO_FieldGetMissingValue
     module procedure MOSSCO_FieldGetMissingValueR8
   end interface MOSSCO_FieldGetMissingValue
