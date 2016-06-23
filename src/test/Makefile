@@ -1,6 +1,6 @@
 # This Makefile is part of MOSSCO
 #
-# @copyright (C) 2013, 2014 Helmholtz-Zentrum Geesthacht
+# @copyright (C) 2013, 2014, 2015, 2016 Helmholtz-Zentrum Geesthacht
 # @author Carsten Lemmen, Helmholtz-Zentrum Geesthacht
 # @author Richard Hofmeister, Helmholtz-Zentrum Geesthacht
 # @author Knut Klingbeil, Institut für Ostseeforschung Warnemünde
@@ -63,6 +63,9 @@ test_FabmDependencies:
 
 test_pointer: test_pointer.F90
 	$(F90) $< -o $@
+
+test_ConfigTable: test_ConfigTable.F90
+	$(F90) $(CPPFLAGS) $(F90FLAGS) $@.F90 -o $@ $(LDFLAGS) -lsolver $(LIBS)
 
 libsolver libmossco_util libmossco_db:
 	make -C $(MOSSCO_DIR)/src/utilities $@
