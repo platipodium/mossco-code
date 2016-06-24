@@ -281,7 +281,7 @@ module grid_component
       grid3 = MOSSCO_GridCreateFromOtherGrid(grid2, nlayer=nlayer, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
-        call ESMF_GridGet(grid3, name=geomName)
+      call ESMF_GridGet(grid3, name=geomName)
 
       write(message, '(A)') trim(name)//' created grid from file '//trim(gridFileName)
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
