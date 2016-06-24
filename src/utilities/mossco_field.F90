@@ -16,10 +16,14 @@
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "mossco_field.F90"
 
+#define RANGE2D lbnd(1):ubnd(1),lbnd(2):ubnd(2)
+#define RANGE3D lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)
+
 module mossco_field
 
   use mossco_memory
   use mossco_strings
+  use mossco_attribute
   use esmf
 
   implicit none
@@ -664,17 +668,17 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr2, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      farrayPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) = 0.0
+      farrayPtr2(RANGE2D) = 0.0
     elseif (rank == 3) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr3, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      farrayPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = 0.0
+      farrayPtr3(RANGE3D) = 0.0
     elseif (rank == 4) then
       call ESMF_FieldGet(field, localDe=0,  farrayPtr=farrayPtr4, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      farrayPtr4(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3),lbnd(4):ubnd(4)) = 0.0
+      farrayPtr4(RANGE3D,lbnd(4):ubnd(4)) = 0.0
     else
       write(message,'(A)') 'Not yet implemented, initialize rank>7 '
       call MOSSCO_FieldString(field, message, rc=localrc)
@@ -782,39 +786,15 @@ end subroutine MOSSCO_FieldCopy
     character(len=ESMF_MAXSTR)                   :: message
     type(ESMF_TypeKind_Flag)                     :: typeKind
 
+    !> @todo This method is redundant, please consider removal
+
     rc_ = ESMF_SUCCESS
     if (present(kwe)) localrc = ESMF_SUCCESS
 
-    call ESMF_AttributeGet(field, 'missing_value', isPresent=isPresent, rc=localrc)
+    call MOSSCO_AttributeGet(field, 'missing_value', missing_value, &
+      defaultValue=-1D30, convert=.true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (isPresent) then
-      call ESMF_AttributeGet(field, 'missing_value', typeKind=typeKind, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (TypeKind == ESMF_TYPEKIND_R8) then
-        call ESMF_AttributeGet(field, 'missing_value', missing_value, rc=localrc)
-      elseif (TypeKind == ESMF_TYPEKIND_R4) then
-        call ESMF_AttributeGet(field, 'missing_value', missingValueR4, rc=localrc)
-        missing_value = dble(missingValueR4)
-      elseif (TypeKind == ESMF_TYPEKIND_I8) then
-        call ESMF_AttributeGet(field, 'missing_value', missingValueI8, rc=localrc)
-        missing_value = dble(missingValueI8)
-      elseif (TypeKind == ESMF_TYPEKIND_I4) then
-        call ESMF_AttributeGet(field, 'missing_value', missingValueI4, rc=localrc)
-        missing_value = dble(missingValueI4)
-      else
-        write(message,'(A)')  '  missing value non-implemented type '
-        call MOSSCO_FieldString(field, message, rc=localrc)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      endif
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-      missing_value = -1.0D30
-    endif
 
     if (present(rc))  rc = rc_
     return
@@ -1005,13 +985,16 @@ end subroutine MOSSCO_FieldCopy
     real(ESMF_KIND_R8), pointer            :: importPtr3(:,:,:), exportPtr3(:,:,:)
     real(ESMF_KIND_R8), pointer            :: importPtr2(:,:), exportPtr2(:,:)
     logical, allocatable                   :: mask2(:,:), mask3(:,:,:)
+    integer(ESMF_KIND_I4), pointer         :: gridMask2(:,:), gridMask3(:,:,:)
     logical                                :: tagOnly_, isPresent
     real(ESMF_KIND_R8)                     :: exportMissingValue, importMissingValue
     real(ESMF_KIND_R8)                     :: weight_, real8
     real(ESMF_KIND_R4)                     :: real4
     type(ESMF_TypeKind_Flag)               :: typeKind
 
-    integer(ESMF_KIND_I4)                  :: localrc, rc_
+    integer(ESMF_KIND_I4)                  :: localrc, rc_, gridRank
+    type(ESMF_Grid)                        :: grid
+
 
     rc_ = ESMF_SUCCESS
     if (present(rc)) rc = rc_
@@ -1085,81 +1068,13 @@ end subroutine MOSSCO_FieldCopy
     if (allocated(exportUbnd)) deallocate(exportUbnd)
     if (allocated(exportLbnd)) deallocate(exportLbnd)
 
-    call ESMF_AttributeGet(importField, 'missing_value', &
-      isPresent=isPresent,  rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    if (isPresent) then
-      call ESMF_AttributeGet(importField, 'missing_value', typeKind=typeKind, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (typeKind == ESMF_TYPEKIND_R8) then
-        call ESMF_AttributeGet(importField, 'missing_value', real8, rc=localrc)
-        importMissingValue = real8
-      elseif (typeKind == ESMF_TYPEKIND_R4) then
-        call ESMF_AttributeGet(importField, 'missing_value', real4, rc=localrc)
-        importMissingValue = dble(real4)
-      elseif (typeKind == ESMF_TYPEKIND_I8) then
-        call ESMF_AttributeGet(importField, 'missing_value', int8, rc=localrc)
-        importMissingValue = dble(int8)
-      elseif (typeKind == ESMF_TYPEKIND_I4) then
-        call ESMF_AttributeGet(importField, 'missing_value', int4, rc=localrc)
-        importMissingValue = dble(int4)
-      else
-        write(message,'(A)')  '  missing value non-implemented type '
-        call MOSSCO_FieldString(importField, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        if (present(rc)) rc = ESMF_RC_ARG_INCOMP
-        return
-      endif
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-      importMissingValue=-1.0E30
-    endif
-
-    call ESMF_AttributeGet(exportField, name='missing_value', isPresent=isPresent, rc=localrc)
+    call MOSSCO_AttributeGet(importField, 'missing_value', importMissingValue, &
+      defaultValue=-1D30, convert=.true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (isPresent) then
-      call ESMF_AttributeGet(exportField, 'missing_value', typeKind=typeKind, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-      if (typeKind == ESMF_TYPEKIND_R8) then
-        call ESMF_AttributeGet(exportField, 'missing_value', real8, rc=localrc)
-        exportMissingValue = real8
-      elseif (typeKind == ESMF_TYPEKIND_R4) then
-        call ESMF_AttributeGet(exportField, 'missing_value', real4, rc=localrc)
-        exportMissingValue = dble(real4)
-      elseif (typeKind == ESMF_TYPEKIND_I8) then
-        call ESMF_AttributeGet(exportField, 'missing_value', int8, rc=localrc)
-        exportMissingValue = dble(int8)
-      elseif (typeKind == ESMF_TYPEKIND_I4) then
-        call ESMF_AttributeGet(exportField, 'missing_value', int4, rc=localrc)
-        exportMissingValue = dble(int4)
-      else
-        write(message,'(A)')  '  missing value non-implemented type '
-        call MOSSCO_FieldString(exportField, message)
-        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-        if (present(rc)) rc = ESMF_RC_ARG_INCOMP
-        return
-      endif
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-      exportMissingValue=-1.0E30
-    endif
-
-    call ESMF_AttributeSet(exportField, 'nudging_weight', weight_, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeGet(importField, 'creator', message, defaultValue='unknown', rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_AttributeSet(exportField, 'nudging_component', trim(message), rc=localrc)
+    call MOSSCO_AttributeGet(exportField, 'missing_value', exportMissingValue, &
+      defaultValue=-1D30, convert=.true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1172,22 +1087,108 @@ end subroutine MOSSCO_FieldCopy
 
     if (.not. tagOnly_) then
       numChanged = 0
+
+      if (allocated(mask2)) deallocate(mask2)
+      allocate(mask2(RANGE2D), stat=localrc)
+      mask2 = .true.
+
+      if (allocated(mask3)) deallocate(mask3)
+      allocate(mask3(RANGE3D), stat=localrc)
+      mask3 = .true.
+
+      call ESMF_FieldGet(importField, grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (isPresent) then
+        call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (gridRank == 2) then
+          if (associated(gridMask2)) deallocate(gridMask2)
+          allocate(gridMask2(RANGE2D), stat=localrc)
+
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          mask2 = (mask2 .and. (gridMask2 > 0))
+          deallocate(gridMask3)
+
+        elseif (gridRank == 3) then
+          if (associated(gridMask3)) deallocate(gridMask3)
+          allocate(gridMask3(RANGE3D), stat=localrc)
+
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          mask3 = (mask3 .and. (gridMask3 > 0))
+          deallocate(gridMask3)
+        endif
+      endif
+
+      call ESMF_FieldGet(exportField, grid=grid, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (isPresent) then
+        call ESMF_GridGet(grid, rank=gridRank, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        if (gridRank == 2) then
+          if (associated(gridMask2)) deallocate(gridMask2)
+          allocate(gridMask2(RANGE2D), stat=localrc)
+
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          mask2 = (mask2 .and. (gridMask2 > 0))
+          deallocate(gridMask3)
+
+        elseif (gridRank == 3) then
+          if (associated(gridMask3)) deallocate(gridMask3)
+          allocate(gridMask3(RANGE3D), stat=localrc)
+
+          call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          mask3 = (mask3 .and. (gridMask3 > 0))
+          deallocate(gridMask3)
+        endif
+      endif
+
       select case (rank)
         case(2)
           call ESMF_FieldGet(importField, farrayPtr=importPtr2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           call ESMF_FieldGet(exportField, farrayPtr=exportPtr2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          if (allocated(mask2)) deallocate(mask2)
-          allocate(mask2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)), stat=localrc)
-          !> @todo add a mask (also for 3d) working on the missingValue
-          !mask2 = (abs(exportPtr2 - exportMissingValue) > tiny(1.0))
-          !mask2 = ((abs(importPtr2 - importMissingValue) >  tiny(1.0)) .and. mask2)
-          mask2 = (exportPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) .ge. 0.0 &
-            .and. (importPtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) .ge. 0.0 ))
+          ! Mask all values that are missing value
+          mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportMissingValue)
+          mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importMissingValue)
+
+          ! Mask all values that are NaN
+          mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportPtr2(RANGE2D))
+          mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importPtr2(RANGE2D))
+
+          !> @todo add infinity to mask
           numChanged = count(mask2)
           if (numChanged>0) then
             where (mask2)
@@ -1195,24 +1196,32 @@ end subroutine MOSSCO_FieldCopy
             endwhere
           endif
           if (allocated(mask2)) deallocate(mask2)
+
         case(3)
           call ESMF_FieldGet(importField, farrayPtr=importPtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           call ESMF_FieldGet(exportField, farrayPtr=exportPtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          if (allocated(mask3)) deallocate(mask3)
-          allocate(mask3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)), stat=localrc)
-          mask3 = (exportPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) .ge. 0.0 &
-            .and. (importPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) .ge. 0.0 ))
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          ! Mask all values that are missing value
+          mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportMissingValue)
+          mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importMissingValue)
+
+          ! Mask all values that are NaN
+          mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportPtr2(RANGE2D))
+          mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importPtr2(RANGE2D))
+
+          !> @todo add infinity to mask
 
           numChanged = count(mask3)
           if (numChanged>0) then
             where (mask3)
-              exportPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) = (1.0 - weight_) &
-                * exportPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) &
-                + weight_ * importPtr3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3))
+              exportPtr3(RANGE3D) = (1.0 - weight_) &
+                * exportPtr3(RANGE3D) &
+                + weight_ * importPtr3(RANGE3D)
             endwhere
           endif
           if (allocated(mask3)) deallocate(mask3)
@@ -1229,6 +1238,18 @@ end subroutine MOSSCO_FieldCopy
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       endif
     endif
+
+    call ESMF_AttributeSet(exportField, 'nudging_weight', weight_, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeGet(importField, 'creator', message, defaultValue='unknown', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_AttributeSet(exportField, 'nudging_component', trim(message), rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (allocated(lbnd)) deallocate(lbnd)
     if (allocated(ubnd)) deallocate(ubnd)
@@ -1439,8 +1460,8 @@ end subroutine MOSSCO_FieldCopy
 !       case(1)
 !         call ESMF_FieldGet(field, farrayPtr=farrayPtr1, rc=localrc)
 !
-!         if (any(ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)) /= &
-!                 ncarray3(lbnd(1):ubnd(1),lbnd(2):ubnd(2),lbnd(3):ubnd(3)))) then
+!         if (any(ncarray3(RANGE3D) /= &
+!                 ncarray3(RANGE3D))) then
 !           call self%close()
 !           write(message,'(A)')  '  NaN detected in field '
 !           call MOSSCO_FieldString(field, message, rc=localrc)
