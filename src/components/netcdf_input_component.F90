@@ -510,6 +510,14 @@ module netcdf_input_component
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+          call ESMF_FieldGet(field, rank=fieldRank, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        else
+          fieldRank = gridRank
+        endif
+
         hasGrid=.true.
       endif
     endif
