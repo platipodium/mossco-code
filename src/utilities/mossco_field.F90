@@ -1189,6 +1189,35 @@ end subroutine MOSSCO_FieldCopy
           mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importPtr2(RANGE2D))
 
           !> @todo add infinity to mask
+
+          call ESMF_AttributeGet(importField, 'valid_min', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
+          endif
+
+          call ESMF_AttributeGet(exportField, 'valid_min', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
+          endif
+
+          call ESMF_AttributeGet(importField, 'valid_max', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_max', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) <= real8)
+          endif
+
+          call ESMF_AttributeGet(exportField, 'valid_max', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) <= real8)
+          endif
+
           numChanged = count(mask2)
           if (numChanged>0) then
             where (mask2)
@@ -1215,6 +1244,34 @@ end subroutine MOSSCO_FieldCopy
           mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importPtr2(RANGE2D))
 
           !> @todo add infinity to mask
+
+          call ESMF_AttributeGet(importField, 'valid_min', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
+          endif
+
+          call ESMF_AttributeGet(exportField, 'valid_min', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
+          endif
+
+          call ESMF_AttributeGet(importField, 'valid_max', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_max', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) <= real8)
+          endif
+
+          call ESMF_AttributeGet(exportField, 'valid_max', isPresent=isPresent, rc=localrc)
+          if (isPresent) then
+            call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
+              convert=.true., rc=localrc)
+            mask2 = (mask2 .and. importPtr2(RANGE2D) <= real8)
+          endif
 
           numChanged = count(mask3)
           if (numChanged>0) then
