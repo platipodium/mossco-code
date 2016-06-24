@@ -705,6 +705,14 @@ module netcdf_input_component
             exit
           endif
         enddo
+
+        ! Just in case the user disorders the list, try it the other way around
+        ! do j = lbound(aliasList,1), ubound(aliasList,1)
+        !   if (trim(itemName) == trim(aliasList(j,2))) then
+        !     itemName=trim(aliasList(j,1))
+        !     exit
+        !   endif
+        ! enddo
       endif
 
       if (   trim(itemName) == 'time' .or. trim(itemName) == 'latitude' &
@@ -977,7 +985,7 @@ module netcdf_input_component
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field, nextField
     character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
-    character(len=ESMF_MAXSTR) :: fileName
+    character(len=ESMF_MAXSTR) :: fileName, itemName
     character(len=ESMF_MAXSTR) :: addString
     type(ESMF_Clock)        :: clock
     type(ESMF_FieldStatus_Flag) :: fieldStatus
@@ -1256,36 +1264,41 @@ module netcdf_input_component
       if (localDeCount < 1) cycle
 
       !! Convert aliases in file to proper item names
+      itemName = trim(itemNameList(i))
+
       if (allocated(aliasList)) then
         do j = lbound(aliasList,1), ubound(aliasList,1)
-          write(message,'(A)') trim(name)//' try alias '//trim(itemNameList(i))//' ?= '//trim(aliasList(j,2))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           if (trim(itemNameList(i)) == trim(aliasList(j,2))) then
-            itemNameList(i)=trim(aliasList(j,1))
-            write(message,'(A)') trim(name)//' found alias '//trim(itemNameList(i))//' = '//trim(aliasList(j,2))
+            itemName=trim(aliasList(j,1))
             exit
           endif
         enddo
-      else
-        write(message,'(A)') trim(name)//' uses unaliased '//trim(itemNameList(i))
+
+        ! ! to make this easier on the user, also try the list in wrong order
+        ! do j = lbound(aliasList,1), ubound(aliasList,1)
+        !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        !
+        !   if (trim(itemNameList(i)) == trim(aliasList(j,1))) then
+        !     itemName=trim(aliasList(j,2))
+        !     exit
+        !   endif
+        ! enddo
       endif
 
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      var => nc%getvarvar(trim(itemNameList(i)))
-
+      var => nc%getvarvar(trim(itemName))
 
       !> @todo this needs an error message?
       if (.not.associated(var)) cycle
 
-      write(message,'(A)') trim(name)//' uses climatology for '//trim(itemNameList(i))
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      !write(message,'(A)') trim(name)//' uses climatology for '//trim(itemNameList(i))
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       !! @todo check shape of variable agains shape of field
 
-      write(message,'(A)') trim(name)//' uses climatology for '//trim(itemNameList(i))
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      !write(message,'(A)') trim(name)//' uses climatology for '//trim(itemNameList(i))
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
