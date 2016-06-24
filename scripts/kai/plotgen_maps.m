@@ -30,6 +30,10 @@ for im=1:length(vli)
     end
   end
   ti=it(zi);
+
+  if strfind(tag,'P') ti=it(end-1); end
+
+
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
