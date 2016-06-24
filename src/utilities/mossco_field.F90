@@ -1185,8 +1185,8 @@ end subroutine MOSSCO_FieldCopy
           mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importMissingValue)
 
           ! Mask all values that are NaN
-          mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportPtr2(RANGE2D))
-          mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importPtr2(RANGE2D))
+          mask2 = (mask2 .and. exportPtr2(RANGE2D) .eq. exportPtr2(RANGE2D))
+          mask2 = (mask2 .and. importPtr2(RANGE2D) .eq. importPtr2(RANGE2D))
 
           !> @todo add infinity to mask
 
@@ -1235,13 +1235,22 @@ end subroutine MOSSCO_FieldCopy
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+          !write(message,'(A,I5.5,A)') ' base mask changing ', count(mask3), ' cells '
+          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           ! Mask all values that are missing value
-          mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportMissingValue)
-          mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importMissingValue)
+          mask3 = (mask3 .and. exportPtr3(RANGE3D) .ne. exportMissingValue)
+          mask3 = (mask3 .and. importPtr3(RANGE3D) .ne. importMissingValue)
+
+          !write(message,'(A,I5.5,A)') ' missing mask changing ', count(mask3), ' cells '
+          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           ! Mask all values that are NaN
-          mask2 = (mask2 .and. exportPtr2(RANGE2D) .ne. exportPtr2(RANGE2D))
-          mask2 = (mask2 .and. importPtr2(RANGE2D) .ne. importPtr2(RANGE2D))
+          mask3 = (mask3 .and. exportPtr3(RANGE3D) .eq. exportPtr3(RANGE3D))
+          mask3 = (mask3 .and. importPtr3(RANGE3D) .eq. importPtr3(RANGE3D))
+
+          !write(message,'(A,I5.5,A)') ' NaN mask changing ', count(mask3), ' cells '
+          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
           !> @todo add infinity to mask
 
@@ -1249,28 +1258,41 @@ end subroutine MOSSCO_FieldCopy
           if (isPresent) then
             call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
               convert=.true., rc=localrc)
-            mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
+            mask3 = (mask3 .and. importPtr3(RANGE3D) >= real8)
+
+            !write(message,'(A,I5.5,A)') ' valid_min mask changing ', count(mask3), ' cells '
+            !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
           endif
 
           call ESMF_AttributeGet(exportField, 'valid_min', isPresent=isPresent, rc=localrc)
           if (isPresent) then
             call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
               convert=.true., rc=localrc)
-            mask2 = (mask2 .and. importPtr2(RANGE2D) >= real8)
+            mask3 = (mask3 .and. importPtr3(RANGE3D) >= real8)
+
+            !write(message,'(A,I5.5,A)') ' valid_min mask changing ', count(mask3), ' cells '
+            !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
 
           call ESMF_AttributeGet(importField, 'valid_max', isPresent=isPresent, rc=localrc)
           if (isPresent) then
             call MOSSCO_AttributeGet(importField, label='valid_max', value=real8, &
               convert=.true., rc=localrc)
-            mask2 = (mask2 .and. importPtr2(RANGE2D) <= real8)
+            mask3 = (mask3 .and. importPtr3(RANGE3D) <= real8)
+
+            !write(message,'(A,I5.5,A)') ' valid_max mask changing ', count(mask3), ' cells '
+            !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
 
           call ESMF_AttributeGet(exportField, 'valid_max', isPresent=isPresent, rc=localrc)
           if (isPresent) then
             call MOSSCO_AttributeGet(importField, label='valid_min', value=real8, &
               convert=.true., rc=localrc)
-            mask2 = (mask2 .and. importPtr2(RANGE2D) <= real8)
+            mask3 = (mask3 .and. importPtr3(RANGE3D) <= real8)
+
+            !write(message,'(A,I5.5,A)') ' valid_max mask changing ', count(mask3), ' cells '
+            !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
 
           numChanged = count(mask3)
@@ -1289,11 +1311,11 @@ end subroutine MOSSCO_FieldCopy
           return
       endselect
 
-      if (numChanged>0) then
+      !if (numChanged>0) then
         write(message,'(A,ES9.2,A,I5.5,A)') '  weight ', weight_, ' changed ', numChanged, ' cells '
         call MOSSCO_FieldString(exportField, message)
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-      endif
+      !endif
     endif
 
     call ESMF_AttributeSet(exportField, 'nudging_weight', weight_, rc=localrc)
