@@ -18,6 +18,7 @@
 module mossco_attribute
 
 use esmf
+
 implicit none
 
 private
@@ -36,6 +37,7 @@ interface MOSSCO_AttributeSet
 end interface MOSSCO_AttributeSet
 
 interface MOSSCO_AttributeGet
+  module procedure MOSSCO_FieldAttributeGetReal8
   module procedure MOSSCO_StateAttributeGetLogical
   module procedure MOSSCO_StateAttributeGetList1
   module procedure MOSSCO_StateAttributeGetList2
@@ -733,5 +735,79 @@ contains
     if (present(rc)) rc=localrc
 
   end subroutine MOSSCO_StateAttributeGetLogical
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldAttributeGetReal8"
+  subroutine MOSSCO_FieldAttributeGetReal8(field, label, value, kwe, &
+    defaultValue, convert, rc)
+
+    type(ESMF_Field), intent(in)             :: field
+    character(len=*), intent(in)             :: label
+    real(ESMF_KIND_R8), intent(inout)          :: value
+    real(ESMF_KIND_R8), optional, intent(in) :: defaultValue
+    type(ESMF_KeywordEnforcer), optional     :: kwe
+    logical, intent(in), optional            :: convert
+    integer(ESMF_KIND_I4), optional, intent(out) :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, int4, rc_
+    logical                              :: convert_, isPresent
+    real(ESMF_KIND_R8)                   :: real8
+    real(ESMF_KIND_R4)                   :: real4
+    integer(ESMF_KIND_I8)                :: int8
+    type(ESMF_TypeKind_Flag)             :: typeKind
+    character(len=ESMF_MAXSTR)           :: message
+
+    if (present(kwe)) localrc = ESMF_SUCCESS
+    if (present(rc)) rc = localrc
+    convert_ = .false.
+    if (present(convert)) convert_ = convert
+
+    call ESMF_AttributeGet(field, name=trim(label), isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+
+      call ESMF_AttributeGet(field, trim(label), typeKind=typeKind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (typeKind /= ESMF_TYPEKIND_R8 .and. (.not.convert_) ) then
+        write(message,'(A)')  '  attribute '//trim(label)//' not double precision'
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+        return
+      endif
+
+      if (typeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(field, trim(label), real8, rc=localrc)
+        value = real8
+      elseif (typeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(field, trim(label), real4, rc=localrc)
+        value = dble(real4)
+      elseif (typeKind == ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(field, trim(label), int8, rc=localrc)
+        value = dble(int8)
+      elseif (typeKind == ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(field, trim(label), int4, rc=localrc)
+        value = dble(int4)
+      else
+        write(message,'(A)')  '  attribute value of non-implemented type '
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+        return
+      endif
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    elseif (present(defaultValue)) then
+      value = defaultValue
+    else
+      rc = ESMF_RC_NOT_FOUND
+    endif
+
+    if (present(rc)) rc=localrc
+
+  end subroutine MOSSCO_FieldAttributeGetReal8
 
 end module mossco_attribute
