@@ -985,6 +985,7 @@ end subroutine MOSSCO_FieldCopy
     integer(ESMF_KIND_I4)                  :: i, j, fieldCount, rank, exportRank, int4
     integer(ESMF_KIND_I8)                  :: numChanged, advanceCount, int8
     integer(ESMF_KIND_I4), allocatable     :: ubnd(:), lbnd(:)
+    integer(ESMF_KIND_I4), allocatable     :: gridUbnd(:), gridLbnd(:)
     integer(ESMF_KIND_I4), allocatable     :: exportUbnd(:), exportLbnd(:)
 
     real(ESMF_KIND_R8), pointer            :: importPtr3(:,:,:), exportPtr3(:,:,:)
@@ -1114,19 +1115,29 @@ end subroutine MOSSCO_FieldCopy
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        if (allocated(gridUbnd)) deallocate(gridUbnd)
+        allocate(gridUbnd(gridRank))
+
+        if (allocated(gridLbnd)) deallocate(gridLbnd)
+        allocate(gridLbnd(gridRank))
+
+        call ESMF_GridGet(grid, staggerloc=ESMF_STAGGERLOC_CENTER, localDe=0, &
+          exclusiveUBound=gridUbnd, exclusiveLBound=gridLbnd, rc=localrc)
+
         if (gridRank == 2) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask2, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          mask2 = (mask2 .and. (gridMask2 > 0))
+          mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
 
         elseif (gridRank == 3) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          mask3 = (mask3 .and. (gridMask3 > 0))
+          mask3 = (mask3 .and. &
+            (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
         endif
       endif
 
@@ -1148,14 +1159,15 @@ end subroutine MOSSCO_FieldCopy
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          mask2 = (mask2 .and. (gridMask2 > 0))
+          mask2 = (mask2 .and. (gridMask2(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2)) > 0))
 
         elseif (gridRank == 3) then
           call ESMF_GridGetItem(grid, ESMF_GRIDITEM_MASK, farrayPtr=gridMask3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          mask3 = (mask3 .and. (gridMask3 > 0))
+          mask3 = (mask3 .and. &
+            (gridMask3(gridLbnd(1):gridUbnd(1),gridLbnd(2):gridUbnd(2),gridLbnd(3):gridUbnd(3))  > 0))
         endif
       endif
 
