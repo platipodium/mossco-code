@@ -18,6 +18,7 @@
 module mossco_attribute
 
 use esmf
+use mossco_memory
 
 implicit none
 
@@ -593,8 +594,9 @@ contains
       if (attributeString(i:i)==',') n=n+1
     enddo
 
-    if (allocated(stringList)) deallocate(stringList)
-    if (n>0) allocate(stringList(n), stat=localrc)
+    call MOSSCO_Reallocate(stringList, n, keep=.false., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1,n
       j=index(attributeString,',')
@@ -641,6 +643,7 @@ contains
 
     if (allocated(stringList)) deallocate(stringList)
     if (n>0) allocate(stringList(n,2), stat=localrc)
+
     do i=1,n
       j=index(attributeString,',')
       if (j>0) then
