@@ -1,4 +1,4 @@
-!> @brief Implementation of ESMF Attribute utilities
+!> @brief Implementation of extensions to the ESMF Attribute utilities
 !
 !  This computer program is part of MOSSCO.
 !> @copyright Copyright (C) 2015, 2016 Helmholtz-Zentrum Geesthacht
@@ -25,6 +25,10 @@ implicit none
 private
 public MOSSCO_AttributeGet, MOSSCO_AttributeSet
 
+!> This interface sets values of attributes and accepts
+!> a variety of ESMF objects (states and components) as well
+!> as single values and lists  of logical, numeric and string
+!> types
 interface MOSSCO_AttributeSet
   module procedure MOSSCO_StateAttributeSetLogical
   module procedure MOSSCO_StateAttributeSetList1
@@ -58,6 +62,11 @@ contains
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateAttributeSetLogical"
+!> @brief set a logical value attribute in an ESMF_State
+!> @param[state] ESMF_State
+!> @return rc ESMF return code
+!>
+!> This private subroutine is called through the MOSSCO_StateGet Interface
   subroutine MOSSCO_StateAttributeSetLogical(state, label, value, rc)
 
     type(ESMF_State), intent(inout)  :: state
