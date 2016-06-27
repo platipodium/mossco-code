@@ -413,7 +413,7 @@ module netcdf_input_component
     if (.not.isPresent) then
       write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
       if (checkFile) then
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_FOUND
       else
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -462,7 +462,7 @@ module netcdf_input_component
 
     if (isPresent) then
       write(message,'(A)') trim(name)//' found grid in component'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
 
       call ESMF_GridCompGet(gridComp, grid=grid, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -493,7 +493,7 @@ module netcdf_input_component
         if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
           write(message, '(A)') trim(name)//' cannot find geometry in '
           call MOSSCO_FieldString(field,message)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           rc = ESMF_RC_ARG_BAD
           return
         endif
@@ -524,7 +524,7 @@ module netcdf_input_component
 
     if (.not.hasGrid) then
       write(message,'(A)') trim(name)//' not implemented without grid or foreign_grid'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       !rc = ESMF_RC_NOT_IMPL
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
@@ -554,7 +554,7 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     else
       write(message,'(A)') trim(name)//' cannot use grid with rank<2 or >3 for foreign_grid'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
@@ -614,7 +614,7 @@ module netcdf_input_component
         call ESMF_TimeIntervalGet(currTime-refTime, s_r8=ticks, rc=rc)
       case default
         write(message,'(A)')  trim(name)//' invalid or not implemented unit for time '//trim(timeUnit)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call MOSSCO_CompExit(gridComp)
         rc=ESMF_RC_ARG_BAD
         return
@@ -784,31 +784,31 @@ module netcdf_input_component
 
         !! Make sure varRank>=fieldRank>=gridRank
 
-        if (any(nc%variables(i)%dimids==udimid)) then
-          if (fieldRank /= nc%variables(i)%rank-1) then
-            write(message,'(A,I1)') trim(name)//' mismatch from'
-            call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-            call MOSSCO_FieldString(field, message, rc=localrc)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-
-            cycle
-            !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-        else
-          if (fieldRank /= nc%variables(i)%rank) then
-            write(message,'(A,I1)') trim(name)//' mismatch from'
-            call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-            write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
-            call MOSSCO_FieldString(field, message, rc=localrc)
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-
-            cycle
-            !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          endif
-        endif
+        ! if (any(nc%variables(i)%dimids==udimid)) then
+        !   if (fieldRank /= nc%variables(i)%rank-1) then
+        !     write(message,'(A,I1)') trim(name)//' mismatch from'
+        !     call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
+        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        !     write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
+        !     call MOSSCO_FieldString(field, message, rc=localrc)
+        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        !
+        !     cycle
+        !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !   endif
+        ! else
+        !   if (fieldRank /= nc%variables(i)%rank) then
+        !     write(message,'(A,I1)') trim(name)//' mismatch from'
+        !     call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
+        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        !     write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank-1,' /= field '
+        !     call MOSSCO_FieldString(field, message, rc=localrc)
+        !     call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        !
+        !     cycle
+        !     !call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        !   endif
+        ! endif
 
         !> @todo: test if varGrid conforms to grid
         if (gridRank==2) then
@@ -817,14 +817,14 @@ module netcdf_input_component
           call ESMF_FieldEmptySet(fieldList(i), grid3, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
         else
           write(message,'(A)') trim(name)//' not implemented with gridrank <2 or >3'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           rc = ESMF_RC_NOT_IMPL
         endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       else
         write(message,'(A)') trim(name)//' not implemented without foreign grid'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_IMPL
         return
       endif
@@ -1031,7 +1031,7 @@ module netcdf_input_component
 
       write(message,'(A)') trim(name)//' file '//trim(fileName)//' does not exist'
       if (checkFile) then
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         rc = ESMF_RC_NOT_FOUND
       else
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
@@ -1235,7 +1235,12 @@ module netcdf_input_component
       endif !Interpolation method
 
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
+    else
+      ! This is for non-climatologies, look up the previous and (possibly) next
+      ! index in the file for the current time
+      call nc%timeIndex(currTime, itime, jtime=jtime, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif ! climatology
 
     call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, rc=localrc)
@@ -1292,17 +1297,28 @@ module netcdf_input_component
       !> @todo this needs an error message?
       if (.not.associated(var)) cycle
 
-      !write(message,'(A)') trim(name)//' uses climatology for '//trim(itemNameList(i))
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
       !! @todo check shape of variable agains shape of field
 
-      !write(message,'(A)') trim(name)//' uses climatology for '//trim(itemNameList(i))
-      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-      call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+      call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      !> read the field into the variable for most constellations
+      if (.not.isPresent &
+          .or. trim(interpolationMethod) == 'linear' &
+          .or. trim(interpolationMethod) == 'recent' &
+          .or. (trim(interpolationMethod) == 'nearest' .and. weight <= 0.5)) then
+
+        !write(message,'(A,I9,A,I9)') trim(name)//' reads ',itime, ' / ',int(itime, kind=ESMF_KIND_I4)
+        !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+        call nc%getvar(field, var, itime=int(itime, kind=ESMF_KIND_I4), rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
+
+      !> continue to the next variable and next field
+      !> if not reading from a climatology
+      if (.not.isPresent) cycle
 
       if (trim(interpolationMethod) == 'linear' .and. (jtime /= itime)) then
 
@@ -1321,6 +1337,9 @@ module netcdf_input_component
         call MOSSCO_FieldWeightField(field, nextField, weight, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A,I3,A,I3)') trim(name)//' uses climatology interpolated between ',itime,' and ',jtime
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_FieldDestroy(nextField, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
