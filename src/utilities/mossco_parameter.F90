@@ -23,13 +23,13 @@ implicit none
 private
 
 type, public :: MOSSCO_ParameterType
-  character(len=ESMF_MAXSTR) :: label ! label as it appears in a config or namelist files
-  character(len=ESMF_MAXSTR) :: name  ! attribute name for netcdf and ESMF_Attribute
-  integer(ESMF_KIND_I4)      :: size
-  type(ESMF_TypeKind_Flag)     :: typeKind
-  real(ESMF_KIND_R8), pointer :: realValue => null()
-  integer(ESMF_KIND_I8), pointer ::  intValue => null()
-  character(len=ESMF_MAXSTR), pointer :: stringValue => null()
+  character(len=ESMF_MAXSTR)          :: label ! label as it appears in a config or namelist files
+  character(len=ESMF_MAXSTR)          :: name  ! attribute name for netcdf and ESMF_Attribute
+  integer(ESMF_KIND_I4)               :: size
+  type(ESMF_TypeKind_Flag)            :: typeKind
+  real(ESMF_KIND_R8), pointer         :: realValue(:) => null()
+  integer(ESMF_KIND_I8), pointer      :: intValue(:) => null()
+  character(len=ESMF_MAXSTR), pointer :: stringValue(:) => null()
 end type
 
 end module mossco_parameter
