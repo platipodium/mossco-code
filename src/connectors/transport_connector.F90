@@ -288,10 +288,10 @@ module transport_connector
     type(ESMF_CplComp), intent(in)  :: cplComp
     type(ESMF_State), intent(inout) :: importState
     type(ESMF_State), intent(inout) :: exportState
-    integer, intent(out)            :: rc
+    integer, intent(out), optional  :: rc
 
     integer              :: localrc
-    integer(ESMF_KIND_I4)       :: i, itemCount
+    integer(ESMF_KIND_I4)       :: i, itemCount, rc_
     character (len=ESMF_MAXSTR) :: itemName, filter_suffix, name, replace_suffix
     character(len=ESMF_MAXSTR), dimension(:), allocatable, save :: itemNameList
     type(ESMF_StateItem_Flag)   :: exportItemType
@@ -302,65 +302,85 @@ module transport_connector
     logical                                  :: isMatch, createVelocity
     character (len=ESMF_MAXSTR), allocatable :: filterIncludeList(:), filterExcludeList(:)
     integer(ESMF_KIND_I4)                    :: j, k
-    character (len=ESMF_MAXSTR)              :: message, wsItemName
+    character (len=ESMF_MAXSTR)              :: message, wsItemName, stateName
     type(ESMF_Field), allocatable            :: fieldList(:)
     type(ESMF_Field)                         :: field
 
-    rc = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
 
     call ESMF_CplCompGet(cplComp, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> Check whether there is a fieldbundle named "transport" in the exportState, only continue if there is.
-    call ESMF_StateGet(exportState, 'concentrations_in_water', exportItemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    call ESMF_StateGet(exportState, name=stateName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
+    !> Check whether there is a fieldbundle named "concentrations_in_water" in the exportState,
+    !> only continue if there is.
+    call ESMF_StateGet(exportState, itemName='concentrations_in_water', &
+      itemType=exportItemType, rc=localrc)
+
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) then
+      write(message,'(A)') trim(name)//' did not find fieldBundle "concentrations_in_water"'
+      call MOSSCO_MessageAdd(message,' in its export state')
+      call MOSSCO_MessageAdd(message,' '//trim(stateName))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      if (present(rc)) rc=ESMF_SUCCESS
+    endif
 
     call ESMF_StateGet(exportState, 'concentrations_in_water', concFieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !> Check whether there is a fieldbundle named "transport" in the exportState, only continue if there is.
+    !> Check whether there is a fieldbundle named "concentrations_z_velocity_in_water" in
+    !> the exportState, only continue if there is.
     call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', exportItemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) return
+    if (exportItemType /= ESMF_STATEITEM_FIELDBUNDLE) then
+        write(message,'(A)') trim(name)//' did not find fieldBundle "concentrations_in_water_z_velocity"'
+        call MOSSCO_MessageAdd(message,' in its export state')
+        call MOSSCO_MessageAdd(message,' '//trim(stateName))
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+        if (present(rc)) rc=ESMF_SUCCESS
+    endif
 
     call ESMF_StateGet(exportState, 'concentrations_z_velocity_in_water', wsFieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Find all complete fields in import state whose names correspond to the filter value
     call ESMF_StateGet(importState, itemCount=itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_Reallocate(itemNameList, itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Allocate/reallocate list do hold item information
     if (itemCount > 0) then
       call ESMF_StateGet(importState, itemNameList=itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_include', filterIncludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_AttributeGet(cplComp, 'filter_pattern_exclude', filterExcludeList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_AttributeGet(cplComp, 'create_velocity', value=createVelocity, &
       defaultValue=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !! Loop over items
@@ -374,7 +394,7 @@ module transport_connector
       if (allocated(filterExcludeList)) then
         do j = lbound(filterExcludeList,1), ubound(filterExcludeList,1)
           call MOSSCO_StringMatch(trim(itemName), trim(filterExcludeList(j)), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (ismatch) exit
         enddo
@@ -390,7 +410,7 @@ module transport_connector
       if (allocated(filterIncludeList)) then
         do j = lbound(filterIncludeList,1), ubound(filterIncludeList,1)
           call MOSSCO_StringMatch(trim(itemName), trim(filterIncludeList(j)), isMatch, localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
           if (ismatch) then
 
@@ -423,7 +443,7 @@ module transport_connector
           if (k > 0) then
             call ESMF_StateGet(importState, itemName(1:k)//'z_velocity_in_water', &
               itemType=itemType, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             ! Unless the createVelocity is set to .true. cycle on a non-existing corresponding
@@ -436,7 +456,7 @@ module transport_connector
             endif
 
             call MOSSCO_StringMatch(itemName(1:k)//'z_velocity_in_water', trim(filterIncludeList(j)), isMatch, localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             if (ismatch) then
               write(message,'(A)')  trim(name)//' includes from expanded filter '//trim(filterIncludeList(j))
@@ -451,7 +471,7 @@ module transport_connector
           k = index(itemName,'_z_velocity_in_water')
           if (k > 0) then
             call MOSSCO_StringMatch(itemName(1:k)//'in_water', trim(filterIncludeList(j)), isMatch, localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
             if (ismatch) then
               write(message,'(A)')  trim(name)//' includes from expanded filter '//trim(filterIncludeList(j))
@@ -471,7 +491,7 @@ module transport_connector
 
       call ESMF_StateGet(importState, itemName=trim(itemName), &
         itemType=itemType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       k = index(trim(itemName), '_z_velocity_')
@@ -480,45 +500,45 @@ module transport_connector
         if (k > 0) then
           wsItemName = trim(itemName(1:k)//'z_velocity_in_water')
           call ESMF_StateGet(importState, trim(wsItemName), itemType=wsItemType, rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           if (wsItemType == ESMF_STATEITEM_NOTFOUND .and. itemType == ESMF_STATEITEM_FIELD) then
             call MOSSCO_StateGetFieldList(importState, fieldList,  &
               itemSearch=trim(itemName), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             field = ESMF_FieldEmptyCreate(name=trim(wsItemName), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             call MOSSCO_FieldCopy(field, fieldList(1), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             call MOSSCO_FieldInitialize(field, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
               write(message,'(A)')  trim(name)//' will transport auto-generated'
               call MOSSCO_MessageAdd(message, ' '//trim(wsItemName))
 
-
             call ESMF_FieldSet(field, name=trim(wsItemName), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               write(message,'(A)')  trim(name)//' will transport auto-generated'
               call MOSSCO_MessageAdd(message, ' '//trim(wsItemName))
 
             call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
               write(message,'(A)')  trim(name)//' will transport auto-generated'
               call MOSSCO_MessageAdd(message, ' '//trim(wsItemName))
 
             call ESMF_StateAddReplace(importState, (/field/), rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             write(message,'(A)')  trim(name)//' will transport auto-generated'
@@ -526,7 +546,7 @@ module transport_connector
 
             call link_field_in_transport_fieldbundle(importState, trim(wsItemName), &
               wsFieldBundle, rc=localrc)
-            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           elseif (wsItemType == ESMF_STATEITEM_NOTFOUND &
@@ -562,17 +582,6 @@ module transport_connector
             concFieldBundle, rc=localrc)
         endif
       endif
-
-
-
-      ! elseif (itemType == ESMF_STATEITEM_FIELDBUNDLE) then
-      !   call link_fieldbundle_in_transport_fieldbundle(importState, trim(itemName), &
-      !     concFieldBundle, rc=localrc)
-      !   call link_fieldbundle_in_transport_fieldbundle(importState, trim(wsItemName), &
-      !     wsFieldBundle, rc=localrc)
-      ! endif
-
-
     enddo
 
   end subroutine link_fields_in_transport_fieldbundle
@@ -584,9 +593,9 @@ module transport_connector
     type(ESMF_State), intent(in)          :: importState
     character(len=*), intent(in)          :: itemName
     type(ESMF_FIELDBUNDLE), intent(inout) :: exportFieldBundle
-    integer, intent(out)                  :: rc
+    integer, intent(out), optional        :: rc
 
-    integer                     :: localrc
+    integer                     :: localrc, rc_
     integer(ESMF_KIND_I4)       :: fieldCount
     character (len=ESMF_MAXSTR) :: message, name
      type(ESMF_Field)           :: importField, field
@@ -595,56 +604,55 @@ module transport_connector
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_GeomType_Flag)    :: exportGeomType, importGeomType
 
-
-    rc = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
 
     write(name,'(A)') 'transport_connector'
 
     call ESMF_StateGet(importState, trim(itemName), itemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemType /= ESMF_STATEITEM_FIELD) return
 
     call ESMF_StateGet(importState, trim(itemName), importField, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
 
     call ESMF_FieldGet(importField, geomType=importGeomType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (importGeomType == ESMF_GEOMTYPE_GRID) then
       call ESMF_FieldGet(importField, grid=importGrid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_FieldBundleGet(exportFieldBundle, trim(itemName), fieldCount=fieldCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (fieldCount > 0) return
 
     call ESMF_FieldBundleGet(exportFieldBundle, geomType=exportGeomType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (exportGeomType == ESMF_GEOMTYPE_GRID) then
       call ESMF_FieldBundleGet(exportFieldBundle, grid=exportGrid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     if (exportGeomType == ESMF_GEOMTYPE_GRID .and. importGeomType == ESMF_GEOMTYPE_GRID &
       .and. (importGrid == exportGrid)) then
       call ESMF_FieldBundleAdd(exportFieldBundle, (/importField/), multiflag=.true., rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' linked for transport field'
@@ -652,15 +660,15 @@ module transport_connector
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     else
       field = ESMF_FieldEmptyCreate(name=trim(itemName), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       call ESMF_FieldBundleAdd(exportfieldBundle,(/field/), multiflag=.true., rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       write(message,'(A)') trim(name)//' created for transport empty field'
@@ -676,9 +684,9 @@ module transport_connector
     type(ESMF_State), intent(in)          :: importState
     character(len=*), intent(in)          :: itemName
     type(ESMF_FIELDBUNDLE), intent(inout) :: exportFieldBundle
-    integer, intent(out)                  :: rc
+    integer, intent(out), optional        :: rc
 
-    integer              :: localrc
+    integer                     :: localrc, rc_
     integer(ESMF_KIND_I4)       :: i, itemCount
     character (len=ESMF_MAXSTR) :: message, name
     type(ESMF_Field)            :: field
@@ -689,29 +697,29 @@ module transport_connector
     type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(ESMF_GeomType_Flag)    :: exportGeomType, importGeomType
 
-    rc = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
 
     write(name,'(A)') 'transport_connector'
 
     call ESMF_FieldBundleGet(exportFieldBundle, geomType=exportGeomType, rc=localrc)
     if (exportGeomType == ESMF_GEOMTYPE_GRID) then
       call ESMF_FieldBundleGet(exportFieldBundle, grid=exportGrid, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_StateGet(importState, trim(itemName), itemType, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemType /= ESMF_STATEITEM_FIELDBUNDLE) return
 
     call ESMF_StateGet(importState, trim(itemName), fieldBundle, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call ESMF_FieldBundleGet(fieldBundle, fieldCount=itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (itemCount <= 0) return
@@ -719,31 +727,31 @@ module transport_connector
     allocate(fieldList(itemCount))
 
     call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldList, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     do i=1, itemCount
 
       call ESMF_FieldGet(fieldList(i), status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) return
 
       call ESMF_FieldGet(fieldList(i), geomType=importGeomType, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (importGeomType == ESMF_GEOMTYPE_GRID) then
         call ESMF_FieldGet(fieldList(i), grid=importGrid, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       if (importGeomType == ESMF_GEOMTYPE_GRID .and. exportGeomType == ESMF_GEOMTYPE_GRID &
         .and. (importGrid == exportGrid)) then
         call ESMF_FieldBundleAdd(exportFieldBundle,(/fieldList(i)/),multiflag=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' linked for transport field'
@@ -751,15 +759,15 @@ module transport_connector
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
         field = ESMF_FieldEmptyCreate(name=trim(itemName), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_AttributeSet(field, 'creator', trim(name), rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_FieldBundleAdd(exportfieldBundle,(/field/),multiflag=.true., rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' created for transport empty field'
