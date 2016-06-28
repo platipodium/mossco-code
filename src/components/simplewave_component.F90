@@ -448,7 +448,7 @@ module simplewave_component
     real(ESMF_KIND_R8),dimension(:,:),pointer :: waveH,waveT,waveK,waveDir
     real(ESMF_KIND_R8),dimension(:,:),pointer :: depth,windx,windy
     real(ESMF_KIND_R8)           :: wdepth,wind,wwind
-    real(ESMF_KIND_R8),parameter :: max_depth_windwaves=99999.0
+    real(ESMF_KIND_R8),parameter :: max_depth_windwaves=20.0
     real(ESMF_KIND_R8),parameter :: kD_deepthresh = 100.0d0
     integer,dimension(2)         :: totalLBound,totalUBound
     integer                      :: i,j
