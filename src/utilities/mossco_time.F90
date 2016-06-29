@@ -149,12 +149,19 @@ subroutine MOSSCO_TimeSet(time, timestring, rc)
 
   rc_=ESMF_SUCCESS
 
-  read(timestring(1:4),'(i4)') yy
-  read(timestring(6:7),'(i2)') mm
-  read(timestring(9:10),'(i2)') dd
-  read(timestring(12:13),'(i2)') h
-  read(timestring(15:16),'(i2)') m
-  read(timestring(18:19),'(i2)') s
+  s = 0
+  m = 0
+  h = 0
+  dd = 1
+  mm = 1
+  yy = 1
+
+  if (len_trim(timeString) >= 4) read(timestring(1:4),'(i4)') yy
+  if (len_trim(timeString) >= 7) read(timestring(6:7),'(i2)') mm
+  if (len_trim(timeString) >= 10) read(timestring(9:10),'(i2)') dd
+  if (len_trim(timeString) >= 13) read(timestring(12:13),'(i2)') h
+  if (len_trim(timeString) >= 16) read(timestring(15:16),'(i2)') m
+  if (len_trim(timeString) >= 19) read(timestring(18:19),'(i2)') s
 
   call ESMF_TimeSet(time,yy=yy,mm=mm,dd=dd,h=h,m=m,s=s, rc=localrc)
   if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
