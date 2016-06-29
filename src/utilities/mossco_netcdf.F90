@@ -45,7 +45,8 @@ module mossco_netcdf
   type, public :: type_mossco_netcdf
     integer      :: ncid, nvars, natts
     integer      :: timeDimId, ndims
-    integer, allocatable :: dimlens(:)
+    integer, allocatable  :: dimlens(:)
+    character(len=ESMF_MAXSTR), allocatable :: dimNames(:)
     character(len=11)    :: precision='NF90_REAL'
 
     character(len=ESMF_MAXSTR) :: name, timeUnit
@@ -1447,6 +1448,7 @@ module mossco_netcdf
     self%nvars=nvars
 
     if (allocated(self%dimlens)) deallocate(self%dimlens)
+    if (allocated(self%dimNames)) deallocate(self%dimNames)
 
     localrc = nf90_inquire(self%ncid, nDimensions=ndims)
     if (localrc /= NF90_NOERR) then
@@ -1457,9 +1459,10 @@ module mossco_netcdf
     self%ndims=ndims
 
     allocate(self%dimlens(ndims))
+    allocate(self%dimNames(ndims))
 
     do i=1, ndims
-      localrc=nf90_inquire_dimension(self%ncid, i, len=self%dimlens(i))
+      localrc=nf90_inquire_dimension(self%ncid, i, len=self%dimlens(i), name=self%dimNames(i))
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', cannot inquire dimension in file '//trim(self%name), ESMF_LOGMSG_ERROR)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
