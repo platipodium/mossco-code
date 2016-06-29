@@ -21,13 +21,14 @@ tracer:           t
 #                 v # not yet assigned
 simplewave:       w
 grid:             x # not yet assigned
-#                 y # not yet assigned
+#irregular        y # see below
 # irregular       z # see below
 
 # Irregular abbreviations
-default:          c  # for constant values
+default:          c # for constant values
 boundary:         n # instance of netcdf_input with  'nudging'
 fabm_gotm:        q
 fabm_benthic:     i # for 'interface'
-gotm:             j
-constant:         z
+gotm:             j # for 'soft' jotm
+location:         y
+constant:         z # for 'zero' value
