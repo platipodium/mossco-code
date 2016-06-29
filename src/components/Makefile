@@ -72,7 +72,13 @@ libmossco_clm_component: libmossco_clm_driver $(MOSSCO_LIBRARY_PATH)/libmossco_c
 libmossco_clm_driver:    prefix $(MOSSCO_LIBRARY_PATH)/libmossco_clm.a(clm_driver.o)
 
 libmossco_simplewave: libmossco_simplewave_driver libmossco_util \
-   $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+  $(MOSSCO_LIBRARY_PATH)/libmossco_simplewave.a(simplewave_component.o)
+
+libmossco_grid: libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_grid.a(grid_component.o)
+
+libmossco_location: libmossco_util \
+	$(MOSSCO_LIBRARY_PATH)/libmossco_location.a(location_component.o)
 
 libmossco_river: libmossco_river_driver libmossco_util \
    $(MOSSCO_LIBRARY_PATH)/libmossco_river.a(river_component.o)
