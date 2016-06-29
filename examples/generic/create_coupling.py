@@ -1660,14 +1660,18 @@ fid.write('''
 
         if (time>currTime) then
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)//', but'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          !write(message,'(A)') trim(myName)//' '//trim(compName)//' now at '//trim(timestring)//', but'
+          !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           call ESMF_TimeGet(currTime,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(myName)//' now at '//trim(timestring)//', cycling ...'
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          !write(message,'(A)') trim(myName)//' now at '//trim(timestring)//', cycling ...'
+          !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_WARNING)
 
           cycle
         endif
