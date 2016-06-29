@@ -936,23 +936,27 @@ module mossco_netcdf
 
     if (maxSeconds >  seconds) then
       write(message,'(A,ES10.3,A,ES10.3,A)') '   addition of non-monotonic time ',seconds,' < ',maxSeconds,' not possible (yet)'
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+      rc_ = ESMF_RC_ARG_BAD
+      if (present(rc)) rc = rc_
+      return
     elseif (maxSeconds<seconds) then
-      write(message,'(A,ES10.3,A,ES10.3)') '   addition of monotonic time ',seconds,' > ',maxSeconds
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
-      write(message,'(A,I2,A,I2)') '   varid = ',varid,' start = ',dimlen + 1
-      call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
+      !write(message,'(A,ES10.3,A,ES10.3)') '   addition of monotonic time ',seconds,' > ',maxSeconds
+      !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+      !write(message,'(A,I2,A,I2)') '   varid = ',varid,' start = ',dimlen + 1
+      !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
 
       ncStatus = nf90_put_var(self%ncid, varid, seconds, start=(/dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable time',ESMF_LOGMSG_ERROR)
+        write(message, '(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot write variable time'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       ncStatus = nf90_inq_varid(self%ncid, 'doy', varid)
       if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find variable doy',ESMF_LOGMSG_ERROR)
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot find variable doy'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -970,13 +974,15 @@ module mossco_netcdf
 
       ncStatus = nf90_put_var(self%ncid, varid, doy, start=(/dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable doy',ESMF_LOGMSG_ERROR)
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot write variable doy'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
       ncStatus = nf90_inq_varid(self%ncid, 'date_string', varid)
       if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find variable date_string',ESMF_LOGMSG_ERROR)
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot find variable date_string'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -986,7 +992,8 @@ module mossco_netcdf
 
       ncStatus = nf90_put_var(self%ncid, varid, timeString(1:19), start=(/1,dimlen+1/))
       if (ncStatus /= NF90_NOERR) then
-        call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot write variable date_string',ESMF_LOGMSG_ERROR)
+        write(message,'(A)') '  '//trim(nf90_strerror(ncStatus))//', cannot write variable date_string'
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
 
@@ -1019,23 +1026,30 @@ module mossco_netcdf
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_NetcdfOpen"
-  function MOSSCO_NetcdfOpen(filename, kwe, timeUnit, state, mode, rc) result(nc)
+  function MOSSCO_NetcdfOpen(filename, kwe, timeUnit, state, mode, checkVersion, rc) result(nc)
 
     character(len=*), intent(in)               :: filename
     logical, intent(in), optional              :: kwe
     character(len=*), optional, intent(inout)  :: timeUnit
     type(ESMF_State), optional, intent(inout)  :: state
     character(len=1), optional, intent(in)     :: mode
+    logical, optional, intent(in)              :: checkVersion
     integer, intent(out), optional             :: rc
     type(type_mossco_netcdf)                   :: nc
 
     integer                       :: localrc, rc_, varid
     character(len=1)              :: mode_
     character(len=255)            :: timeUnit_, string, message
-    logical                       :: fileIsPresent
+    logical                       :: fileIsPresent, checkVersion_
     integer                       :: fileUnit=1555
 
     rc_ = ESMF_SUCCESS
+
+    if (present(checkVersion)) then
+      checkVersion_ = checkVersion
+    else
+      checkVersion_ = .true.
+    endif
 
     if (present(mode)) then
       mode_= mode
@@ -1076,10 +1090,10 @@ module mossco_netcdf
       close(fileUnit)
       if (string(1:3) == 'CDF') then
         write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF3 format'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (checkVersion) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       elseif (string(2:4) == 'HDF') then
         write(message,'(A)')  '  file '//trim(fileName)//' is in netCDF4 format'
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+        if (checkVersion) call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
       else
         write(message,'(A)')  '  file '//trim(fileName)//' has unknown format'
         call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
