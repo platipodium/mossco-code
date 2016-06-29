@@ -123,14 +123,12 @@ subroutine MOSSCO_ClockGetTimeStepToNextAlarm_componentname(clock, componentName
   call ESMF_TimeIntervalGet(timeInterval, h=hours, rc=rc)
   if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
 
-  write(message,'(A,A)') trim(timeString1)//': next coupling '//trim(componentName), &
-     ' ('//trim(ringName)//')'
-  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  !write(message,'(A,A)') '  '//trim(timeString1)//': next coupling '//trim(componentName), &
+  !   ' ('//trim(ringName)//')'
+  !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc)
 
-  write(message,'(A,I5,A)') '    in ',hours, ' hours. (at '//trim(timeString2)//')'
-  call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc)
-  if (rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+  !write(message,'(A,I5,A)') '  in ',hours, ' hours. (at '//trim(timeString2)//')'
+  !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO, rc=rc)
 
   return
 

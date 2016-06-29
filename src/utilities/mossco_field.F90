@@ -809,11 +809,12 @@ end subroutine MOSSCO_FieldCopy
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldAttributesIdentical"
   function MOSSCO_FieldAttributesIdentical(importField, exportField, kwe, &
-    exclude, rc) result(differCount)
+    exclude, differList, rc) result(differCount)
 
     type(ESMF_Field), intent(in)                 :: importField, exportField
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     character(len=*), dimension(*), optional     :: exclude(:)
+    character(len=*), allocatable, optional, intent(inout)   :: differList(:)
     integer(ESMF_KIND_I4), intent(out), optional :: rc
     integer(ESMF_KIND_I4)                        :: differCount
 
@@ -823,7 +824,7 @@ end subroutine MOSSCO_FieldCopy
     integer(ESMF_KIND_I4)                        :: localrc, rc_, importInt4, exportInt4
     integer(ESMF_KIND_I4)                        :: importCount, exportcount, i, j, count
     logical                                      :: isPresent
-    character(len=ESMF_MAXSTR)                   :: message, attributeName
+    character(len=ESMF_MAXSTR)                   :: message, attributeName, fieldName, string
     character(len=ESMF_MAXSTR)                   :: importString, exportString
     type(ESMF_TypeKind_Flag)                     :: importTypeKind, exportTypeKind
     character(len=ESMF_MAXSTR), allocatable      :: excludeList(:)
@@ -842,10 +843,26 @@ end subroutine MOSSCO_FieldCopy
     endif
 
     call ESMF_AttributeGet(importField, count=importCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (importCount == 0) return
 
     call ESMF_AttributeGet(exportField, count=exportCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
     if (exportCount == 0) return
+
+    if (present(differList)) then
+      call MOSSCO_Reallocate(differList, importCount, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_FieldGet(importField, name=fieldName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     do i = 1, importCount
 
@@ -877,7 +894,27 @@ end subroutine MOSSCO_FieldCopy
 
       differCount = differCount + 1
 
+      if (present(differList)) then
+        write(message, '(A)') '  '//trim(fieldName)//':'//trim(attributeName)
+        call MOSSCO_AttributeGet(importField, label=trim(attributeName), value=importString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_MessageAdd(message,' '//trim(importString))
+
+        call MOSSCO_AttributeGet(exportField, label=trim(attributeName), value=exportString, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_MessageAdd(message,' /= '//trim(exportString))
+
+        differList(differCount) = trim(message)
+      endif
     enddo
+
+    if (present(differList)) call MOSSCO_Reallocate(differList, differCount, keep=.true., rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_Reallocate(excludeList, 0, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -898,7 +935,7 @@ end subroutine MOSSCO_FieldCopy
     real(ESMF_KIND_R8)                           :: importReal8, exportReal8
     integer(ESMF_KIND_I8)                        :: importInt8, exportInt8
     integer(ESMF_KIND_I4)                        :: localrc, rc_, importInt4, exportInt4
-    logical                                      :: isPresent
+    logical                                      :: isPresent, importBool, exportBool
     character(len=ESMF_MAXSTR)                   :: message
     character(len=ESMF_MAXSTR)                   :: importString, exportString
     type(ESMF_TypeKind_Flag)                     :: importTypeKind, exportTypeKind
@@ -928,43 +965,46 @@ end subroutine MOSSCO_FieldCopy
       call ESMF_AttributeGet(importfield, name=attributeName, value=importReal8, rc=localrc)
     elseif (importTypeKind == ESMF_TYPEKIND_CHARACTER) then
       call ESMF_AttributeGet(importfield, name=attributeName, value=importString, rc=localrc)
-      !read(importString,*) importReal8
-    else
-      return ! not implemented: logical
+    elseif (importTypeKind == ESMF_TYPEKIND_LOGICAL) then
+      call ESMF_AttributeGet(importfield, name=attributeName, value=importBool, rc=localrc)
     endif
 
     if (exportTypeKind == ESMF_TYPEKIND_I4) then
       call ESMF_AttributeGet(exportField, name=attributeName, value=exportInt4, rc=localrc)
       exportReal8 = dble(exportInt4)
-    elseif (importTypeKind == ESMF_TYPEKIND_I8) then
+    elseif (exportTypeKind == ESMF_TYPEKIND_I8) then
       call ESMF_AttributeGet(exportField, name=attributeName, value=exportInt8, rc=localrc)
       exportReal8 = dble(exportInt8)
-    elseif (importTypeKind == ESMF_TYPEKIND_R4) then
+    elseif (exportTypeKind == ESMF_TYPEKIND_R4) then
       call ESMF_AttributeGet(exportField, name=attributeName, value=exportReal4, rc=localrc)
       exportReal8 = dble(exportReal4)
-    elseif (importTypeKind == ESMF_TYPEKIND_R8) then
+    elseif (exportTypeKind == ESMF_TYPEKIND_R8) then
       call ESMF_AttributeGet(exportField, name=attributeName, value=exportReal8, rc=localrc)
-    elseif (importTypeKind == ESMF_TYPEKIND_CHARACTER) then
+    elseif (exportTypeKind == ESMF_TYPEKIND_CHARACTER) then
       call ESMF_AttributeGet(exportField, name=attributeName, value=exportString, rc=localrc)
-      !read(exportString,*) exportReal8
-    else
-      return ! not implemented: logical
+    elseif (exportTypeKind == ESMF_TYPEKIND_LOGICAL) then
+      call ESMF_AttributeGet(exportfield, name=attributeName, value=exportBool, rc=localrc)
     endif
+
+    isSame = .false.
 
     if (importTypeKind == ESMF_TYPEKIND_CHARACTER .and. exportTypeKind == ESMF_TYPEKIND_CHARACTER) then
-        if (trim(exportString) /= trim(importString)) then
-!write(0,*) 'difference in character attribute '//trim(attributeName)//': ',trim(exportString)//' vs. '//trim(importString)
-          isSame = .false.
-        else
-          isSame = .true.
-        endif
-      return
+      if (trim(exportString) == trim(importString)) then
+        isSame = .true.
+        return
+      endif
     endif
 
+    if (importTypeKind == ESMF_TYPEKIND_LOGICAL .and. exportTypeKind == ESMF_TYPEKIND_LOGICAL) then
+      if (importBool .eqv. exportBool) then
+        isSame = .true.
+        return
+      endif
+    endif
+
+    ! Disregard numeric precision here
     if (importReal8 == exportReal8) then
       isSame = .true.
-!    else
-!      write(0,*) 'difference in numeric attribute '//trim(attributeName)//': ',exportReal8,' vs. ',importReal8
     endif
 
   end function MOSSCO_FieldAttributeIsSameValue

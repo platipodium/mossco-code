@@ -249,11 +249,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_State), intent(inout) :: exportState
     integer, intent(out), optional  :: rc
 
-    integer                     :: localrc, rc_
+    integer(ESMF_KIND_I4)       :: localrc, rc_, j
     integer(ESMF_KIND_I4)       :: i, itemCount, exportItemCount, importItemCount
     character (len=ESMF_MAXSTR) :: message, creatorName
     type(ESMF_Time)             :: currTime
-    character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList
+    character(len=ESMF_MAXSTR), dimension(:), allocatable :: itemNameList, differList
     type(ESMF_StateItem_Flag),  dimension(:), allocatable :: itemTypeList
     type(ESMF_Field)            :: importField, exportField
     type(ESMF_FieldBundle)      :: importFieldBundle, exportFieldBundle
@@ -323,9 +323,13 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            if (MOSSCO_FieldAttributesIdentical(importField, exportField, rc=localrc) > 0) then
-              write(message,'(A)') 'Field attributes are not identical for item '//trim(itemNameList(i))
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
+              differList=differList, rc=localrc) > 0) then
+              do j = lbound(differList,1), ubound(differList,1)
+                call ESMF_LogWrite(trim(differList(j)), ESMF_LOGMSG_WARNING)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              enddo
+              call MOSSCO_Reallocate(differList, 0, rc=localrc)
             endif
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
