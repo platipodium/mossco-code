@@ -316,7 +316,7 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
     type(ESMF_Field)                       :: exportField, importField
     type(ESMF_FieldBundle)                 :: importFieldBundle, exportFieldBundle
     type(ESMF_Field), allocatable          :: importfieldList(:), exportFieldList(:)
-    character(ESMF_MAXSTR), allocatable    :: itemNameList(:)
+    character(ESMF_MAXSTR), allocatable    :: itemNameList(:), differList(:)
     character(ESMF_MAXSTR)                 :: message, itemName, name
     type(ESMF_StateItem_Flag), allocatable :: itemTypeList(:)
     type(ESMF_StateItem_Flag)              :: itemType
@@ -503,13 +503,15 @@ subroutine Finalize(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (MOSSCO_FieldAttributesIdentical(importField, exportField, exclude=checkExcludeList, rc=localrc) > 0) then
-          write(message,'(A)') trim(name)//' detected field '//trim(itemNameList(i))//' with non-identical attributes'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (MOSSCO_FieldAttributesIdentical(importField, exportField, &
+          differList=differList, exclude=checkExcludeList, rc=localrc) > 0) then
+          do j = lbound(differList,1), ubound(differList,1)
+            call ESMF_LogWrite(trim(differList(j)), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          enddo
+          call MOSSCO_Reallocate(differList, 0, rc=localrc)
+          if (present(rc)) rc = ESMF_RC_ARG_INCOMP
+          return
         endif
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call MOSSCO_FieldWeightField(exportField, importField, weight, tagOnly=tagOnly_, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
