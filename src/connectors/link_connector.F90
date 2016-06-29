@@ -15,7 +15,7 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "link_connector.F90"
-#define VERBOSE
+#undef VERBOSE
 
 module link_connector
 
