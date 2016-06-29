@@ -558,7 +558,7 @@ module netcdf_input_component
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
-    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
+    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', checkVersion=.true., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -1041,7 +1041,7 @@ module netcdf_input_component
       return
     endif
 
-    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', rc=localrc)
+    nc = MOSSCO_NetcdfOpen(trim(fileName), mode='r', checkVersion=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
