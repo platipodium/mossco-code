@@ -1258,8 +1258,8 @@ fid.write('''
       call ESMF_AlarmGet(alarmList(i), ringTime=time, name=alarmName, rc=localrc)
 
       call ESMF_TimeGet(time,timeStringISOFrac=timestring)
-      write(message,'(A)') trim(myName)//' alarm '//trim(alarmName)//' rings at '//trim(timestring)
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      !write(message,'(A)') trim(myName)//' alarm '//trim(alarmName)//' rings at '//trim(timestring)
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       if (index(trim(alarmName),'cplAlarm') < 1) cycle
       if (time<ringTime) ringTime=time
@@ -1513,9 +1513,8 @@ fid.write('''
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          !write(0,*) trim(compName)//' ', i,'/',alarmCount,' '//trim(alarmName)//' rings at '//trim(timeString)
-          write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
+          !write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timeString)
+          !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_TRACE)
 
           name1=trim(alarmName(1:index(alarmName,'--')-1))
           name2=trim(alarmName(index(alarmName,'--')+2:index(alarmName,'--cplAlarm')-1))
@@ -1709,9 +1708,11 @@ fid.write('''
           if (index(trim(alarmName),'cplAlarm')<1) cycle
 
           call ESMF_TimeGet(time,timeStringISOFrac=timeString)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timestring)
-          call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+          !write(message,'(A)') trim(myName)//' '//trim(compName)//' '//trim(alarmName)//' rings at '//trim(timestring)
+          !call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
 
           !! This might be problematic for components that need to run multiple times from multiple alarms
           !! For a process model the currTime+ringInterval should be taken if it advances it's own clock
@@ -1788,7 +1789,7 @@ fid.write('''
           !! This child component did not advance its clock in its Run() routine
           !! We do that here
           call ESMF_LogWrite(trim(myName)//' '//trim(compName)//' did not advance its clock',ESMF_LOGMSG_WARNING)
-          call ESMF_LogWrite("... but this assumption is weird - skipping further action!",ESMF_LOGMSG_WARNING)
+          !call ESMF_LogWrite("... but this assumption is weird - skipping further action!",ESMF_LOGMSG_WARNING)
 
           !call ESMF_ClockAdvance(childClock, timeStep=timeInterval, rc=localrc)
           !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
