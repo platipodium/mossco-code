@@ -3461,7 +3461,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I8)                        :: int8
     real(ESMF_KIND_R8)                           :: real8
     real(ESMF_KIND_R4)                           :: real4
-    character(len=ESMF_MAXSTR)                   :: attributeName, string
+    character(len=ESMF_MAXSTR)                   :: attributeName, string, message
 
     rc_ = ESMF_SUCCESS
 
@@ -3535,6 +3535,13 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
+
+    ! Issue warnings for (almost always) required attributes units and missing_value
+    localrc = nf90_inquire_attribute(self%ncid, var%varid, 'missing_value')
+    if (localrc /= NF90_NOERR) then
+      write(message,'(A)') '  there is no missing_value attribute in variable '//trim(var%name)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+    endif
 
     if (present(rc)) rc = rc_
 
