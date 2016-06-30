@@ -101,10 +101,9 @@ function predict_time {
     exit
   fi
   D=$(expr \( ${Y2} - ${Y1} \) \* 365 + \( ${M2} - ${M1} \) \* 31 + ${D2} - ${D1} + 1)
-  M=$(expr $D \* 200000 / ${NP} / ${S})
+  M=$(expr $D \* 200000 / ${NP} / ${S} + 2)
   H=$(expr $M / 60)
-  M=$(expr $M % 60 + 2)
-  if [ $H -lt 1 ] ; then if [ $M -lt 1 ] ; then M=1; fi ; fi
+  M=$(expr $M % 60)
   echo  $H:$M:00
 }
 
