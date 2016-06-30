@@ -25,6 +25,7 @@ POSTPROCESS=NONE
 NP=NONE
 LOGLEVEL='undefined'
 WAITTIME=0
+QUEUE='undefined'
 
 # Function for printing usage of this script
 function usage {
@@ -46,6 +47,7 @@ function usage {
   echo "    [-p] :  specify the name of a postprocess script (only SLURM)"
 	echo "            the default is <system>_postprocess.h"
   echo "    [-r] :  Rebuilds the [generic] example and MOSSCO coupled system"
+  echo "    [-q QUEUE] :  Selects a queue/partition with name QUEUE"
 	echo "    [-s M|S|J|F|B|P]: exeute batch queue for a specific system, which is"
   echo "            autodetected by default"
 	echo
@@ -107,7 +109,7 @@ function predict_time {
 }
 
 # Getopts parsing of command line arguments
-while getopts ":rt:bcn:s:l:w:p:z:" opt; do
+while getopts ":rt:bcn:s:l:w:p:q:z:" opt; do
   case "$opt" in
   r)  REMAKE=1
       ;;
@@ -127,6 +129,8 @@ while getopts ":rt:bcn:s:l:w:p:z:" opt; do
   s)  SYSTEM=${OPTARG}
       ;;
   l)  LOGLEVEL=${OPTARG}
+      ;;
+  q)  QUEUE=${OPTARG}
       ;;
   w)  WAITTIME=${OPTARG}
       ;;
@@ -392,11 +396,12 @@ fi
 
 case ${SYSTEM} in
   PBS)
+    QUEUE=mpi_64
     echo '#!/usr/bin/ksh' > pbs.sh
     cat << EOT >> pbs.sh
 #PBS -N ${TITLE}
 #PBS -S /usr/bin/ksh
-#PBS -q mpi_64
+#PBS -q ${QUEUE}
 #PBS -l select=${NODES}:ncpus=${PPN}:mpiprocs=${PPN}
 #PBS -l place=scatter:excl
 #PBS -j oe
@@ -444,12 +449,15 @@ EOT
 
     if [  $(echo $(hostname) | grep -q mlogin) ]; then
       # These are instructions for mistral
+      if [ ${QUEUE} == undefined ]; then QUEUE=compute; fi
+
       echo \#SBATCH --account=$(groups | cut -d" " -f1) >> slurm.sh
-      echo \#SBATCH --partition=compute  >> slurm.sh
+      echo \#SBATCH --partition=${QUEUE}  >> slurm.sh
       echo \#SBATCH --nodes=${NODES}  >> slurm.sh
     else
       # This is tested on jureca
-      echo \#SBATCH --partition=batch >> slurm.sh
+      if [ ${QUEUE} == undefined ]; then QUEUE=batch; fi
+      echo \#SBATCH --partition=${QUEUE} >> slurm.sh
       echo \#export OMP_NUM_THREADS=48 >> slurm.sh
     fi
 
@@ -618,7 +626,7 @@ case ${SYSTEM} in
          else cat moab.sh ; fi
          ;;
   SGE)   if test $(which qsub 2> /dev/null) ; then
-           QUEUE=$(select_sge_queue ${NP})
+           if [ ${QUEUE} == undefined ]; then QUEUE=$(select_sge_queue ${NP}); fi
            qsub -q ${QUEUE} sge.sh
            echo "Job ${TITLE} submitted to queue ${QUEUE} for system ${SYSTEM}"
            qstat -g c
@@ -629,10 +637,10 @@ case ${SYSTEM} in
          ;;
   SLURM) if test $(which sbatch 2> /dev/null) ; then
            JOBID=$(sbatch --parsable slurm.sh)
-           echo "Job ${TITLE} with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
+           echo "Job ${TITLE} with jobid ${JOBID} submitted to queue ${QUEUE} for system ${SYSTEM}"
            if test -f ${POSTPROCESS}; then
              JOBID=$(sbatch --parsable --dependency=afterok:${JOBID} ${POSTPROCESS})
-             echo "Postprocess job with jobid ${JOBID} submitted to default queue for system ${SYSTEM}"
+             echo "Postprocess job with jobid ${JOBID} submitted to queue ${QUEUE} for system ${SYSTEM}"
            fi
            squeue -j ${JOBID}
            if [[ ${WAITTIME} -gt 0 ]]; then
