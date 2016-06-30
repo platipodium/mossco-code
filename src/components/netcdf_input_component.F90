@@ -148,7 +148,7 @@ module netcdf_input_component
     integer(ESMF_KIND_I4), allocatable    :: ungriddedUbnd(:), ungriddedLbnd(:)
     character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:), filterExcludeList(:), filterIncludeList(:)
     character(len=ESMF_MAXSTR), allocatable :: climatologyList(:)
-    logical                    :: isMatch, checkFile
+    logical                    :: isMatch, checkFile, hasTimeDim
 
     type(ESMF_FieldStatus_Flag):: fieldStatus
 
@@ -781,6 +781,32 @@ module netcdf_input_component
       !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (hasGrid) then
+
+        hasTimeDim = .false.
+        do j = lbound(nc%variables(i)%dimids,1), ubound(nc%variables(i)%dimids,1)
+          if (nc%variables(i)%dimids(j) == nc%timeDimId) then
+            hasTimeDim = .true.
+            exit
+          endif
+        enddo
+
+        if (nc%variables(i)%rank == 2 .and. .not.hasTimeDim) then
+          gridRank = 2
+        elseif (nc%variables(i)%rank == 3 .and. .not.hasTimeDim) then
+          gridRank = 3
+        elseif (nc%variables(i)%rank == 4 .and. hasTimeDim) then
+          gridRank = 3
+        elseif (nc%variables(i)%rank == 3 .and. hasTimeDim) then
+          gridRank = 2
+        else
+          write(message,'(A,I1)') trim(name)//' mismatch from'
+          call MOSSCO_MessageAdd(message,' '//trim(nc%name)//'::'//trim(nc%variables(i)%name))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          write(message,'(A,I1,A)') '  rank ',nc%variables(i)%rank,' /= grid '
+          call MOSSCO_FieldString(field, message, rc=localrc)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+          cycle
+        endif
 
         !! Make sure varRank>=fieldRank>=gridRank
 
