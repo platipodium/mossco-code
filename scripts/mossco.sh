@@ -58,8 +58,8 @@ function usage {
 	echo
   echo "    [-t] :    give a title in mossco_run.nml and getm.inp/gotmrun.nml"
   echo "    [-w W] :  wait W seconds for polling batch jobs (only -s J|B)"
-  echo "    [-z HH:MM] : set HH:MM as maximum run duration walltime"
-  echo "              of a job in the format HH:MM as hours and minutes. If not"
+  echo "    [-z HH:MM:SS] : set HH:MM:SS as maximum run duration walltime"
+  echo "              of a job in the format HH:MM:SS as hours, minutes, seconds. If not"
   echo "              set, the time is estimated for your system"
   exit
 }
@@ -101,7 +101,7 @@ function predict_time {
   D=$(expr \( ${Y2} - ${Y1} \) \* 365 + \( ${M2} - ${M1} \) \* 31 + ${D2} - ${D1} + 1)
   M=$(expr $D \* 200000 / ${NP} / ${S})
   H=$(expr $M / 60)
-  M=$(expr $M % 60)
+  M=$(expr $M % 60 + 2)
   if [ $H -lt 1 ] ; then if [ $M -lt 1 ] ; then M=1; fi ; fi
   echo  $H:$M:00
 }
