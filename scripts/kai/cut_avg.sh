@@ -25,12 +25,12 @@ soil=0
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
 if [ -z ${prefix+x} ]; then prefix=mossco_gfbfrr. ; fi  # Prefix of files to process
-dt=5         # slicing of time dimension; 20 gives monthly means at 36h-output
+dt=3         # slicing of time dimension; 20 gives monthly means at 36h-output
 ## dt1=1   # creates high res output that is averaged 
 dt1=$dt    # only cuts every dt time slice
 dlat=1        # slicing of lat dimension
 dlon=1        # slicing of lon dimension
-dz=7         # slicing of vertical dimension; 18 retrieves upper and lower layer for N=20
+dz=18         # slicing of vertical dimension; 18 retrieves upper and lower layer for N=20
 # ---------------------
 dt2=$[$dt-$dt1]
 
