@@ -15,14 +15,14 @@ setname=$(basename $homed)
 
 #prefix=netcdf_getm_fabm_pelagic.  # Prefix of files to process
 prefix=mossco_gfbfrr.  # Prefix of files to process
-dt=1      # slicing of time dimension; 20 gives monthly means at 36h-output
+dt=3      # slicing of time dimension; 20 gives monthly means at 36h-output
 tmin=2009-05-25 # initial time-step; skips trailer 
 tmax=2009-10-19
 #tmin=2010-06-12 # initial time-step; skips trailer 
 #tmax=2010-09-28
 
 if [ $# -lt 1 ]; then
-  ncpu=178     # sns configuration (#cpus)
+  ncpu=144     # sns configuration (#cpus)
 else
   ncpu=$1
 fi
@@ -38,6 +38,17 @@ case $ncpu in
    dx[2]=1
    p[3]="032 047 061 074 088 102 114" #96=lon=7.5  ,009 020  
    dx[3]=1
+   fname=${prefix}'029.nc'
+   ;;
+ 144)
+   p[0]=$(seq -f "%03g" 134 1 141) #92=lat=55.25; 105
+   dy[0]=1
+   p[1]=$(seq -f "%03g" 97 1 106) #71=lat=54.6;
+   dy[1]=1
+   p[2]="004 010 018 041 053 065 077 090 102 114 126" #76=lon=6.4; 
+   dx[2]=10
+   p[3]="030 043 055 067 079 092 104 116 128" #96=lon=7.5  ,009 020  
+   dx[3]=8
    fname=${prefix}'029.nc'
    ;;
  178)
