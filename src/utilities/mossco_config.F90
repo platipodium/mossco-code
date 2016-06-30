@@ -36,8 +36,8 @@ interface MOSSCO_ConfigGet
   module procedure MOSSCO_ConfigGetListInt8
   module procedure MOSSCO_ConfigGetListReal4
   module procedure MOSSCO_ConfigGetListReal8
-  module procedure MOSSCO_ConfigGetListString
-  module procedure MOSSCO_ConfigGetListString2
+  module procedure MOSSCO_ConfigGetStringList
+  module procedure MOSSCO_ConfigGetStringList2
   module procedure MOSSCO_ConfigGetFileStringTable
 end interface MOSSCO_ConfigGet
 
@@ -483,8 +483,119 @@ contains
   end subroutine MOSSCO_ConfigGetListInt8
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_ConfigGetListString"
-  subroutine MOSSCO_ConfigGetListString(config, label, value, rc)
+#define ESMF_METHOD "MOSSCO_ConfigGetStringList"
+  subroutine MOSSCO_ConfigGetStringList(config, label, value, rc)
+
+    type(ESMF_Config), intent(inout)  :: config
+    character(len=*), intent(in)  :: label
+    character(len=*), intent(inout), allocatable :: value(:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, n
+    logical                              :: isPresent
+
+    if (present(rc)) rc=ESMF_SUCCESS
+
+    if (allocated(value)) deallocate(value)
+
+    !> Test whether to read a Table
+    call ESMF_ConfigFindLabel(config, label=trim(label)//'::', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call MOSSCO_ConfigGetStringListTable(config, label, value, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      return
+
+    endif
+
+    call ESMF_ConfigFindLabel(config, label=trim(label)//':', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (isPresent) then
+      call MOSSCO_ConfigGetStringListList(config, label, value, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      return
+    endif
+
+  end subroutine MOSSCO_ConfigGetStringList
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_ConfigGetStringListTable"
+  subroutine MOSSCO_ConfigGetStringListTable(config, label, value, rc)
+
+    type(ESMF_Config), intent(inout)  :: config
+    character(len=*), intent(in)  :: label
+    character(len=*), intent(inout), allocatable :: value(:)
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    integer(ESMF_KIND_I4)                :: localrc, rc_, i, j, rowCount, columnCount
+    logical                              :: isPresent, isTableEnd
+    character(len=ESMF_MAXSTR)           :: message
+
+    if (present(rc)) rc = ESMF_SUCCESS
+    if (allocated(value)) deallocate(value)
+
+    if (present(rc)) rc=ESMF_SUCCESS
+    if (allocated(value)) deallocate(value)
+
+    call ESMF_ConfigFindLabel(config, label=trim(label)//'::', isPresent=isPresent, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (.not.isPresent) return
+
+    call ESMF_ConfigFindLabel(config, label=trim(label)//'::', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ConfigGetDim(config, label=trim(label)//'::', &
+      lineCount=rowCount, columnCount=columnCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (rowCount * columnCount < 1) return
+    if (columnCount /= 1) return
+
+    write(message,'(A,I1,A,I1,A)') '  reading table "'//trim(label)//'::" (',rowCount,' x ', columnCount,')'
+    call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    allocate(value(rowCount), stat=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    call ESMF_ConfigFindLabel(config, label=trim(label)//'::', rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i = 1, rowCount
+      call ESMF_ConfigNextLine(config, tableEnd=isTableEnd, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (isTableEnd) exit
+
+      call ESMF_ConfigGetAttribute(config, value(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      write(message, '(A)') '  '//trim(value(i))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+
+    enddo
+
+    if (present(rc)) rc = localrc
+
+  end subroutine MOSSCO_ConfigGetStringListTable
+
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_ConfigGetStringListList"
+  subroutine MOSSCO_ConfigGetStringListList(config, label, value, rc)
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)  :: label
@@ -521,11 +632,11 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     enddo
 
-  end subroutine MOSSCO_ConfigGetListString
+  end subroutine MOSSCO_ConfigGetStringListList
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_ConfigGetListStringKeyValue"
-  subroutine MOSSCO_ConfigGetListStringKeyValue(config, label, value, kwe, sep, rc)
+#define ESMF_METHOD "MOSSCO_ConfigGetStringListKeyValue"
+  subroutine MOSSCO_ConfigGetStringListKeyValue(config, label, value, kwe, sep, rc)
 
     type(ESMF_Config), intent(inout)                       :: config
     character(len=*), intent(in)                           :: label
@@ -585,13 +696,13 @@ contains
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     enddo
 
-  end subroutine MOSSCO_ConfigGetListStringKeyValue
+  end subroutine MOSSCO_ConfigGetStringListKeyValue
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_ConfigGetListStringTable2"
+#define ESMF_METHOD "MOSSCO_ConfigGetStringListTable2"
 !> Obtains a two-dimensional list of strings obtained from a Table in
 !> ESMF_Config format
-  subroutine MOSSCO_ConfigGetListStringTable2(config, label, value, rc)
+  subroutine MOSSCO_ConfigGetStringListTable2(config, label, value, rc)
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)   :: label
@@ -659,13 +770,13 @@ contains
 
     if (present(rc)) rc=localrc
 
-  end subroutine MOSSCO_ConfigGetListStringTable2
+  end subroutine MOSSCO_ConfigGetStringListTable2
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_ConfigGetListString2"
+#define ESMF_METHOD "MOSSCO_ConfigGetStringList2"
 !> Obtains a two-dimensional list of strings obtained from a Table in
 !> ESMF_Config format or a key/value list
-  subroutine MOSSCO_ConfigGetListString2(config, label, value, kwe, sep, rc)
+  subroutine MOSSCO_ConfigGetStringList2(config, label, value, kwe, sep, rc)
 
     type(ESMF_Config), intent(inout)                       :: config
     character(len=*), intent(in)                           :: label
@@ -690,7 +801,7 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call MOSSCO_ConfigGetListStringTable2(config, label=trim(label), value=value, rc=localrc)
+      call MOSSCO_ConfigGetStringListTable2(config, label=trim(label), value=value, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -704,7 +815,7 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     if (isPresent) then
-      call MOSSCO_ConfigGetListStringKeyValue(config, label=trim(label), &
+      call MOSSCO_ConfigGetStringListKeyValue(config, label=trim(label), &
         value=value, sep=sep_, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -712,13 +823,13 @@ contains
     endif
     if (present(rc)) rc = localrc
 
-  end subroutine MOSSCO_ConfigGetListString2
+  end subroutine MOSSCO_ConfigGetStringList2
 
 #undef  ESMF_METHOD
-#define ESMF_METHOD "MOSSCO_ConfigGetListStringTable1"
+#define ESMF_METHOD "MOSSCO_ConfigGetStringListTable1"
 !> Obtains a one-dimensional list of strings obtained from a Table in
 !> ESMF_Config format
-  subroutine MOSSCO_ConfigGetListStringTable1(config, label, value, rc)
+  subroutine MOSSCO_ConfigGetStringListTable1(config, label, value, rc)
 
     type(ESMF_Config), intent(inout)  :: config
     character(len=*), intent(in)   :: label
@@ -781,7 +892,7 @@ contains
 
     if (present(rc)) rc=localrc
 
-  end subroutine MOSSCO_ConfigGetListStringTable1
+  end subroutine MOSSCO_ConfigGetStringListTable1
 
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_ConfigGetFileStringTable"
