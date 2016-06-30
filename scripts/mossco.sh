@@ -298,6 +298,8 @@ if [[ ${NP} == NONE ]]; then
   fi
 fi
 
+if [[ ${NP} == "" ]]; then NP="0"; fi
+
 
 if [[ "${NP}" == "0" ]]; then
   NP=1
