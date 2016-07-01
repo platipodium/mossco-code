@@ -152,6 +152,7 @@ module netcdf_component
     !! Check whether there is a config file with the same name as this component
     !! If yes, load it, otherwise try to load one that is already present in the
     !! component.
+    configIsPresent = .false.
     configfilename=trim(name)//'.cfg'
     inquire(file=trim(configfilename), exist=fileIsPresent)
 
