@@ -15,7 +15,7 @@
 #define ESMF_ERR_PASSTHRU msg="MOSSCO subroutine call returned error"
 #undef ESMF_FILENAME
 #define ESMF_FILENAME "link_connector.F90"
-#undef VERBOSE
+#define VERBOSE
 
 module link_connector
 
@@ -296,7 +296,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (importItemCount /= 1) then
-          write(message,'(A)') '  strangely skipped item '//trim(itemNameList(i))
+          write(message,'(A)') '  skipped multiple item '//trim(itemNameList(i))
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
           cycle
         endif
@@ -308,7 +308,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         call ESMF_FieldGet(importField, status=fieldStatus, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-        if (fieldStatus .eq. ESMF_FIELDSTATUS_EMPTY) cycle
+
+        if (fieldStatus .eq. ESMF_FIELDSTATUS_EMPTY)  then
+          write(message,'(A)') '  skipped empty item '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+          cycle
+        endif
 
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=exportItemCount, rc=localrc)
@@ -339,7 +344,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
                 call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-              if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+              if (fieldstatus /= ESMF_FIELDSTATUS_COMPLETE)  then
+                write(message,'(A)') '  skipped incomplete '
+                call MOSSCO_FieldString(importField, message)
+                call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+                cycle
+              endif
 
               call ESMF_FieldGet(importField, geomType=importGeomType, rc=localrc)
               if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -366,7 +376,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                   call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
                 if (exportGeomType /= ESMF_GEOMTYPE_GRID) then
-                  write(message,'(A)') '    not implemented: non-grid geometry in field'
+                  write(message,'(A)') '    not implemented: non-grid geometry in '
                   call MOSSCO_FieldString(importField, message)
                   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
                   cycle
@@ -397,7 +407,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
             else
               write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
-              !! call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             endif
           endif
         else
@@ -822,9 +832,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (.not.isNeeded) cycle
       endif
 
-      write(message,'(A)') trim(name)//' is looking for'
-      call MOSSCO_MessageAdd(message,trim(attributeName)//' '//trim(fieldName))
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+      !write(message,'(A)') trim(name)//' is looking for'
+      !call MOSSCO_MessageAdd(message,trim(attributeName)//' '//trim(fieldName))
+      !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       ! Check whether it is already there
       call ESMF_StateGet(exportState, itemSearch=trim(fieldName), itemCount=itemCount, rc=localrc)
