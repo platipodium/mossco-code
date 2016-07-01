@@ -1989,6 +1989,7 @@ module fabm_pelagic_component
           !>total riverinput mass  * fractional volume of the element/ volume of the element
           !> which is equal to dt*mass_river[g/s]* (diluted_volume(k)/total_diluted_volume)/diluted_volume(k)
           !> which is equal to dt*mass_river[g/s]/total_diluted_volume [g/m**3]
+          if (associated(pel%volume_flux)) then
           do k=1, pel%knum
             pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
             + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
@@ -1996,7 +1997,14 @@ module fabm_pelagic_component
              / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D) + &
                 dt * pel%volume_flux(RANGE2D))
           end do
-
+          else
+          do k=1, pel%knum
+            pel%conc(RANGE2D,k,n) = pel%conc(RANGE2D,k,n) &
+            + dt * ratePtr2(lbnd(1):ubnd(1),lbnd(2):ubnd(2)) &
+!! correction by kw: add column-fractional mass divided by column-FRACTIONAL (=box) volume
+             / (pel%column_height(RANGE2D) * pel%column_area(RANGE2D))
+          end do
+          endif
         elseif (rank == 3) then
           call ESMF_FieldGet(field, farrayPtr=ratePtr3, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
