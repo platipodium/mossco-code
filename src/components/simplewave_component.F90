@@ -137,8 +137,6 @@ module simplewave_component
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    call MOSSCO_StateLog(importState)
-
     !! Obtain a grid by trying to find on in the component, as a foreignGrid, or
     !! from a separate file
     hasGrid = .false.
@@ -254,7 +252,7 @@ module simplewave_component
     if (rank < 2 .or. rank > 3) then
       write(message, '(A,I1)') trim(name)//' needs grid with rank 2 or 3, but has', rank
       call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
-      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+      call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
     endif
 
     if (rank == 3) then
@@ -329,7 +327,7 @@ module simplewave_component
         write(message,'(A)')  trim(name)//' got other than field type for item '//trim(exportList(i)%name)
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_ERROR)
         call MOSSCO_StateLog(exportState, rc=localrc)
-        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
+        call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=localrc)
       endif
 
       field = ESMF_FieldEmptyCreate(name=trim(exportList(i)%name), rc=localrc)
@@ -373,23 +371,24 @@ module simplewave_component
     type(ESMF_Clock)     :: clock
     integer, intent(out) :: rc
 
-    character(ESMF_MAXSTR)  :: name
-    type(ESMF_Time)         :: currTime
+    character(ESMF_MAXSTR)           :: name
+    type(ESMF_Time)                  :: currTime
+    type(ESMF_Field), target         :: field
+    type(ESMF_Grid)                  :: grid
+    type(ESMF_FieldStatus_Flag)      :: status
+    integer                          :: localrc
 
-    type(ESMF_Field), target     :: field
-    type(ESMF_Grid)      :: grid
-    type(ESMF_FieldStatus_Flag)     :: status
-    integer              :: localrc
+    integer, target                  :: coordDimCount(2), coordDimMap(2,2)
+    integer, dimension(2)            :: totalLBound, totalUBound
+    integer, dimension(2)            :: exclusiveLBound, exclusiveUBound
+    integer                          :: i, j
+    character(len=ESMF_MAXSTR)       :: message
 
-    integer,target :: coordDimCount(2),coordDimMap(2,2)
-    integer,dimension(2)            :: totalLBound,totalUBound
-    integer,dimension(2)            :: exclusiveLBound,exclusiveUBound
-    integer                         :: i,j
     type :: allocatable_integer_array
       integer,dimension(:),allocatable :: data
     end type
-    type(allocatable_integer_array) :: coordTotalLBound(2),coordTotalUBound(2)
 
+    type(allocatable_integer_array) :: coordTotalLBound(2), coordTotalUBound(2)
 
     call MOSSCO_CompEntry(gridComp, clock, name=name, currTime=currTime, &
       importState=importState, exportState=exportState, rc=localrc)
@@ -452,28 +451,33 @@ module simplewave_component
    end if
 
 !   Complete Import Fields
-    do i=1,size(importList)
+    do i = lbound(importList,1), ubound(importList,1)
       call ESMF_StateGet(importState,trim(importList(i)%name),field)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGet(field,status=status)
+      call ESMF_FieldGet(field,status=status, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
-        call ESMF_LogWrite(' import from internal field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
+      if (status == ESMF_FIELDSTATUS_GRIDSET) then
+        write(message, '(A)') trim(name)//' imports internal field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
 
-        call ESMF_FieldEmptyComplete(field,importList(i)%data,ESMF_INDEX_DELOCAL)
+        call ESMF_FieldEmptyComplete(field, importList(i)%data, ESMF_INDEX_DELOCAL, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         importList(i)%data = 0.0d0
-      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
-        call ESMF_LogWrite(' import from external field '//trim(importList(i)%name),ESMF_LOGMSG_INFO)
 
-        call ESMF_FieldGet(field,farrayPtr=importList(i)%data,rc=rc)
+      else if (status == ESMF_FIELDSTATUS_COMPLETE) then
+        write(message, '(A)') trim(name)//' imports external field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+        call ESMF_FieldGet(field, farrayPtr=importList(i)%data, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -481,37 +485,45 @@ module simplewave_component
                         .and. all(ubound(importList(i)%data) .eq. totalUBound    ) )         &
                    .or.(      all(lbound(importList(i)%data) .eq. exclusiveLBound)           &
                         .and. all(ubound(importList(i)%data) .eq. exclusiveUBound) ) ) ) then
-          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_LogWrite('invalid field bounds', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        call ESMF_LogWrite('empty field: '//trim(importList(i)%name),ESMF_LOGMSG_ERROR, &
-                           line=__LINE__,file=__FILE__,method='InitializeP2()')
+        write(message, '(A)') trim(message)//' encountered unexpected empty field '//trim(importList(i)%name)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
 
 !   Complete Export Fields
     do i=1,size(exportList)
-      call ESMF_StateGet(exportState,trim(exportList(i)%name),field)
+      call ESMF_StateGet(exportState, trim(exportList(i)%name), field, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldGet(field,status=status)
+      call ESMF_FieldGet(field, status=status, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      if (status.eq.ESMF_FIELDSTATUS_GRIDSET) then
-        call ESMF_LogWrite(' export to internal field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
+      if (status == ESMF_FIELDSTATUS_GRIDSET) then
+        write(message, '(A)') trim(name)//' exports to internal field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
         allocate(exportList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
-        call ESMF_FieldEmptyComplete(field,exportList(i)%data,ESMF_INDEX_DELOCAL)
+
+        call ESMF_FieldEmptyComplete(field, exportList(i)%data,ESMF_INDEX_DELOCAL, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         exportList(i)%data = 0.0d0
-      else if (status .eq. ESMF_FIELDSTATUS_COMPLETE) then
-        call ESMF_LogWrite(' export to external field '//trim(exportList(i)%name),ESMF_LOGMSG_INFO)
-        call ESMF_FieldGet(field,farrayPtr=exportList(i)%data,rc=rc)
+
+      else if (status == ESMF_FIELDSTATUS_COMPLETE) then
+        write(message, '(A)') trim(name)//' exports to external field '
+        call MOSSCO_FieldString(field, message)
+        call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
+
+        call ESMF_FieldGet(field, farrayPtr=exportList(i)%data, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -519,18 +531,19 @@ module simplewave_component
                         .and. all(ubound(exportList(i)%data) .eq. totalUBound    ) )         &
                    .or.(      all(lbound(exportList(i)%data) .eq. exclusiveLBound)           &
                         .and. all(ubound(exportList(i)%data) .eq. exclusiveUBound) ) ) ) then
-          call ESMF_LogWrite('invalid field bounds',ESMF_LOGMSG_ERROR,ESMF_CONTEXT)
+          call ESMF_LogWrite('invalid field bounds', ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
           call ESMF_Finalize(endflag=ESMF_END_ABORT)
         end if
       else
-        call ESMF_LogWrite('empty field: '//trim(exportList(i)%name),ESMF_LOGMSG_ERROR, &
-                           line=__LINE__,file=__FILE__,method='InitializeP2()')
+        write(message, '(A)') trim(message)//' encountered unexpected empty field '//trim(importList(i)%name)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
         call ESMF_Finalize(endflag=ESMF_END_ABORT)
       end if
     end do
 
     call MOSSCO_CompExit(gridComp, localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
   end subroutine InitializeP2
 
