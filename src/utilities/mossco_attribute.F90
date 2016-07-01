@@ -737,6 +737,7 @@ contains
 
     integer(ESMF_KIND_I4)                :: localrc
 
+    localrc = ESMF_SUCCESS
     if (present(kwe)) localrc = ESMF_SUCCESS
 
     if (present(defaultValue)) then
@@ -769,6 +770,8 @@ contains
     integer(ESMF_KIND_I8)                :: int8
     type(ESMF_TypeKind_Flag)             :: typeKind
     character(len=ESMF_MAXSTR)           :: message
+
+    localrc = ESMF_SUCCESS
 
     if (present(kwe)) localrc = ESMF_SUCCESS
     if (present(rc)) rc = localrc
@@ -844,6 +847,8 @@ contains
     type(ESMF_TypeKind_Flag)             :: typeKind
     character(len=ESMF_MAXSTR)           :: message
     logical                              :: bool
+
+    localrc = ESMF_SUCCESS
 
     if (present(kwe)) localrc = ESMF_SUCCESS
     if (present(rc)) rc = localrc

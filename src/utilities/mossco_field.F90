@@ -944,6 +944,13 @@ end subroutine MOSSCO_FieldCopy
     isSame = .false.
     if (present(rc)) rc = rc_
 
+    !> Define importReal8 and exportReal8, as the comparison later throws an
+    !error if undefined.  This should be revised, however to avoid unlucky
+    !constellations
+
+    importReal8=-1.23456789D22
+    exportReal8=-1.98765432D21
+
     call ESMF_AttributeGet(importfield, name=attributeName, typeKind=importTypeKind, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1000,6 +1007,16 @@ end subroutine MOSSCO_FieldCopy
         isSame = .true.
         return
       endif
+    endif
+
+    if (importTypeKind == ESMF_TYPEKIND_LOGICAL .and.  exportTypeKind /= ESMF_TYPEKIND_LOGICAL) then
+      isSame = .false.
+      return
+    endif
+
+    if (importTypeKind == ESMF_TYPEKIND_CHARACTER .and.  exportTypeKind /= ESMF_TYPEKIND_CHARACTER) then
+      isSame = .false.
+      return
     endif
 
     ! Disregard numeric precision here
