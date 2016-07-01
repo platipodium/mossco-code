@@ -724,7 +724,7 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (deep) then
+        if (deep_) then
           if (present(log)) then
             call MOSSCO_FieldLog(field, log=log, prefix=trim(name)//':', rc=localrc)
           else
