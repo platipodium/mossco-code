@@ -1067,7 +1067,16 @@ contains
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call MOSSCO_StateGetFieldList(state, fieldList, fieldCount=fieldCount, &
-      itemSearch=trim(attributeValue), fieldStatus=ESMF_FIELDSTATUS_GRIDSET, rc=localrc)
+      itemSearch=trim(attributeValue), fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldCount == 0) then
+      call MOSSCO_StateGetFieldList(state, fieldList, fieldCount=fieldCount, &
+        itemSearch=trim(attributeValue), fieldStatus=ESMF_FIELDSTATUS_GRIDSET, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    endif
 
     if (fieldCount == 0) then
       if (present(owner)) then
@@ -1075,7 +1084,7 @@ contains
       else
         write(message,'(A)') '  needs a foreign grid, which was not found.'
       endif
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_NOT_FOUND
       return
     endif
@@ -1100,7 +1109,7 @@ contains
       else
         write(message,'(A)') '  needs a foreign grid of rank 2 or 3'
       endif
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, rc=localrc)
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
       rc = ESMF_RC_ARG_BAD
       return
     endif
