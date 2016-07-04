@@ -133,10 +133,11 @@ module location_component
     type(ESMF_Clock)           :: clock
 
     logical                    :: isPresent, fileIsPresent, labelIsPresent, hasGrid
+    logical                    :: hasDimension
     type(ESMF_Grid)            :: grid, grid2, grid3
     type(ESMF_Field)           :: field
     character(len=ESMF_MAXSTR) :: configFileName, fileName, creator, dimensionName
-    character(len=ESMF_MAXSTR) :: geomName
+    character(len=ESMF_MAXSTR) :: geomName, itemName
     type(ESMF_Config)          :: config
 
     integer(ESMF_KIND_I4)      :: itemCount, i, j, nlayer
@@ -147,16 +148,18 @@ module location_component
     type(ESMF_Vm)              :: vm
 
     type(ESMF_Array)                   :: array
-    real(ESMF_KIND_R8), pointer        :: farrayPtr2(:,:)
-    real(ESMF_KIND_R8), pointer        :: farrayPtr3(:,:,:)
-    real(ESMF_KIND_R8), pointer        :: farrayPtr1(:)
+
+    real(ESMF_KIND_R8), allocatable, target  :: farray(:)
     integer(ESMF_KIND_I4), allocatable :: lbnd(:), ubnd(:), coordDimCount(:)
     integer(ESMF_KIND_I4), allocatable :: exclusiveCount(:), coordDimIds(:)
-    integer(ESMF_KIND_I4)              :: rank, dimCount
+    integer(ESMF_KIND_I4)              :: rank, dimCount, dimensionId
+    integer(ESMF_KIND_I4)              :: numLocationsOnThisPet
     type(ESMF_CoordSys_Flag)           :: coordSys
 
-    logical                            :: checkFile
 
+    logical                            :: checkFile
+    type(ESMF_LocStream)               :: locStream
+    type(type_mossco_netcdf_variable), pointer  :: var => null()
 
     rc = ESMF_SUCCESS
 
@@ -284,12 +287,13 @@ module location_component
 
       call ESMF_FieldEmptySet(field, locstream=locstream, rc=localrc)
 
-      allocate(farray1(numLocationsOnThisPet))
+      allocate(farray(numLocationsOnThisPet))
 
-      call ESMF_FieldEmptyComplete(field, farray=farray1, rc=localrc)
+      call ESMF_FieldEmptyComplete(field, farray=farray, indexflag=ESMF_INDEX_GLOBAL, rc=localrc)
 
-      call ESMF_LocStreamAddKey(locstream, keyName=trim(itemName), farray=farray1, &
-        KeyTypeKind=ESMF_TYPEKIND_R8, keyUnits="degrees_north", keyLongName=trim(itemName), rc=localrc)
+      call ESMF_LocStreamAddKey(locstream, keyName=trim(itemName), farray=farray, &
+        keyUnits="degrees_north", keyLongName=trim(itemName), &
+        dataCopyFlag=ESMF_DATACOPY_REFERENCE, rc=localrc)
 
       itemCount = nc%nvars
 
@@ -307,11 +311,13 @@ module location_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
-    call ESMF_GridCompSet(gridComp, locstream=locstream, rc=localrc)
+    !> @todo not implemented by ESMF7.0.0, re-enable when implemented
+    !call ESMF_GridCompSet(gridComp, locstream=locstream, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
-    call ESMF_AttributeSet(locStream, 'creator', trim(name), rc=localrc)
+    !> @todo not implemented by ESMF7.0.0, re-enable when implemented
+    !call ESMF_AttributeSet(locStream, 'creator', trim(name), rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
