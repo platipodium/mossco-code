@@ -1649,7 +1649,9 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
         end if
 
-        if ( mask(i,j) .gt. 0 ) then
+        !> Changed by cl to avoid calculation on land (mask == 0) and at
+        !> boundary (mask == 2), only calculate where (mask == 1)
+        if ( mask(i,j) == 1 ) then
 
            deposition_rate  = real(sink(l,nm),fp)*real(spm_concentration(i,j,kmx,l),fp)/1000._fp
            entrainment_rate = sour(l,nm)
