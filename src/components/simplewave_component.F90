@@ -124,6 +124,7 @@ module simplewave_component
     character(len=ESMF_MAXSTR)       :: configFileName, gridFileName
     type(ESMF_Config)                :: config
     integer(ESMF_KIND_I4)            :: lbnd(2), ubnd(2), rank, localrc, i
+    integer(ESMF_KIND_I4), allocatable :: totalUWidth(:), totalLWidth(:)
 
     character(ESMF_MAXSTR) :: name
     type(ESMF_Time)        :: currTime
@@ -166,7 +167,8 @@ module simplewave_component
         call ESMF_Finalize(rc=localrc,  endflag=ESMF_END_ABORT)
 
       call MOSSCO_StateGetForeignGrid(importState, grid=grid, owner=trim(name), &
-        attributeName='foreign_grid_field_name', rank=rank, rc=localrc)
+        attributeName='foreign_grid_field_name', totalUWidth=totalUWidth, &
+        totalLWidth=totalLWidth, rank=rank, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -278,6 +280,15 @@ module simplewave_component
     importList(3)%name  = 'wind_y_velocity_at_10m'
     importList(3)%units = 'm/s'
 
+    if (.not.allocated(totalUWidth)) then
+      allocate(totalUWidth(2))
+      totalUWidth(:) = 0
+    endif
+    if (.not.allocated(totalLWidth)) then
+      allocate(totalLWidth(2))
+      totalLWidth(:) = 0
+    endif
+
     do i=1,size(importList)
 
       if (foreignGridIsPresent) then
@@ -334,7 +345,7 @@ module simplewave_component
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_FieldEmptySet(field,grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
+      call ESMF_FieldEmptySet(field, grid, staggerloc=ESMF_STAGGERLOC_CENTER, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -352,6 +363,8 @@ module simplewave_component
 
     end do
 
+    if (allocated(totalUWidth)) deallocate(totalUWidth)
+    if (allocated(totalLWidth)) deallocate(totalLWidth)
     !> @todo add optional fields (see Run method)
 
     call MOSSCO_CompExit(gridComp, localrc)
@@ -466,6 +479,7 @@ module simplewave_component
         call ESMF_LogWrite(trim(message),ESMF_LOGMSG_INFO)
         allocate(importList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
 
+        !> @todo deal with totalUWidth?
         call ESMF_FieldEmptyComplete(field, importList(i)%data, ESMF_INDEX_DELOCAL, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -512,6 +526,7 @@ module simplewave_component
 
         allocate(exportList(i)%data(exclusiveLBound(1):exclusiveUBound(1),exclusiveLBound(2):exclusiveUBound(2)))
 
+        !> @todo deal with totalUWidth?
         call ESMF_FieldEmptyComplete(field, exportList(i)%data,ESMF_INDEX_DELOCAL, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
