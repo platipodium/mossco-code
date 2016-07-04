@@ -79,7 +79,7 @@ for ili=1:size(i_loc,1)
   if (occ0(np,ix,iy)==1 & ns>1) occ0(np,ix,iy)=occ(np,ix,iy); end  %
   ci = 1+mod(occ(np,ix,iy),occ0(np,ix,iy)+(ns==1)*99);
   if (occ0(np,ix,iy)==2 & occ(np,ix,iy)==3 & ns==4) ci=1; end
-  fprintf('%d %d\tns=%d oc=%d %d  ci=%d\n',ix,iy,ns,occ(np,ix,iy),occ0(np,ix,iy),ci);
+%  fprintf('%d %d\tns=%d oc=%d %d  ci=%d\n',ix,iy,ns,occ(np,ix,iy),occ0(np,ix,iy),ci);
 %  col=colj(1+occ(np,ix,iy)-(occ0(np,ix,iy)-0)*(ns-1),:); 
   col=colj(ci,:); 
   for li=2:length(ptag)  % loop over given depths
@@ -285,7 +285,7 @@ if(cell2mat(var{i}(9)) ~='N'  )
 %  col=colj(1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)),:); 
 %fprintf('%s\t np=%d occ=%d %d\t%d\n',varshort,np,occ(np,ix,iy),occ0(np,ix,iy),1+3*floor(occ(np,ix,iy)/(occ0(np,ix,iy)+1)));
 %fprintf('%s\t tpy=%1.1f \t %d\n',varshort,tpos(2),ii);
-   th(ii)=annotation('textbox',tpos+[0.33*dxp*(ptag(1)=='V') 0 0 0],'String',[varshort ],'Color','k','Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
+   th(ii)=annotation('textbox',tpos+[0.33*dxp*(ptag(1)=='V') 0 0 0],'String',[varshort ],'Color',col,'Fontweight','bold','FontSize',fs+2,'LineStyle','none','FitHeightToText','off');%tag
 %%   annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
  end %if (ns==1 &
  occ(np,ix,iy) = occ(np,ix,iy) + 1;

@@ -13,6 +13,8 @@ end
 
 di = cell2mat(var{i}(5)); %depth index
 
+%%for cmpm=1:2  % 2nd mode: directly compare maps of different scenarios
+
 for im=1:length(vli)
  if mode=='s' % loop over time steps 0:first 9:last
   li=vli(im);
@@ -30,23 +32,23 @@ for im=1:length(vli)
     end
   end
   ti=it(zi);
-
   if strfind(tag,'P') ti=it(end-1); end
-
 
  else
   ix = 1+mod(im-1,ncolm);
   iy = 1+floor((im-1)/ncolm);
-  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*1;     
+  ti = toffm+((cell2mat(var{i}(6))-moff)*(nrowm*ncolm)+im)*2;     
  end
  if ti-toffm<=length(ind)
 % goes to new figure (if required)
   np = ntags*(cell2mat(var{i}(6))-1)+ ns + nfig;
   if(im==1) vt{np-nfig}=[varshort0 tag]; end
-  figure(np); set(gcf, 'visible','off','Color','w'); hold on
-%   set(fig,'DoubleBuffer','on','Color','w');%
-% geometry of sub-plot
-  x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(nrowm-iy)*1.03*dypm;
+%%  if cmpm==1
+    figure(np); set(gcf, 'visible','off','Color','w'); hold on
+    % geometry of sub-plot
+    x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(nrowm-iy)*1.03*dypm;
+%%  else % cmp different scenarios
+
   axs=subplot('Position',[x0 y0 dxpm dypm]);
   hold on
 
@@ -66,7 +68,7 @@ for im=1:length(vli)
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
   if maxVal<-1, maxVal=1.05*max(max(value)); end
-  if minval>0 & maxVal/minval > 30, islog=1; else  islog=0; end
+  if minval>0 & maxVal/minval > 20, islog=1; else  islog=0; end
 
 %% prepare 2D plot 
   m_proj('equidistant','lat',latlimit,'lon',lonlimit);
@@ -119,6 +121,33 @@ for im=1:length(vli)
 %   bold m_text(loc(ili,2),loc(ili,1),'o','Color','w','HorizontalAlignment','center','FontWeight','bold','FontSize',fs)
   end
 % ,'VerticalAlignment','center'annotation('textbox',tpos-[0 0.14*dyp 0 0],'String',compn{Zt(i)},'Color',col,'Fontweight','bold','FontSize',fs-2,'LineStyle','none');
+
+
+ if 1==1 & ntags>1 % cmp different scenarios
+  if abs(ntags-nrowm)<abs(ntags-ncolm)
+    ix = 1+mod(im-1,ncolm); npc=floor((im-1)/ncolm); iy = ns;
+%    ax_cmp=subplot(ncolm,ntags,im);
+  else
+    iy = 1+mod(im-1,nrowm); npc=floor((im-1)/nrowm); ix = ns;
+%    ax_cmp=subplot(ntags,nrowm,im);
+  end
+
+  if(~strcmp(varshort,varshortmc0))
+    moffc=moffc+100;
+  end
+  varshortmc0=varshort;
+  npc=moffc+npc;
+
+  figure(npc); set(gcf,'Position',[0 0 1680 850], 'visible','on','Color','w'); hold on
+  figc=[figc npc];
+    % geometry of sub-plot
+  x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(iy-1)*1.03*dypm;
+  fprintf('im=%d ix=%d iy=%d %1.2f npc=%d\n',im,ix,iy,y0,npc);
+  ax_cmp=subplot('Position',[x0 y0 dxpm dypm]);hold on
+  copyaxes(axs,ax_cmp,true );  colormap(ssec); 
+  imc=imc+1;
+ end
  end % if
-end  % if
+end  % for im
+
 
