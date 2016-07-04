@@ -406,8 +406,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 #endif
 
             else
-              write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
-              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              !write(message,'(A)') '    skipped existing field '//trim(itemNameList(i))
+              !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             endif
           endif
         else
@@ -1199,7 +1199,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     do i=1, fieldCount
 
       !! @todo: find a working way to do this, at the moment, the implementation fails
-      write(message,'(A)') 'Not implented: copying default values in fieldBundles'
+      write(message,'(A)') 'Not implemented: copying default values in fieldBundles'
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       cycle
 
