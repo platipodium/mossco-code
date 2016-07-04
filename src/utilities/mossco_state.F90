@@ -1044,7 +1044,8 @@ contains
     type(ESMF_Grid), intent(out), optional        :: other
     character(len=*), optional, intent(in)        :: attributeName
     integer(ESMF_KIND_I4), intent(out), optional  :: rank
-    integer(ESMF_KIND_I4), intent(out), optional, allocatable :: totalLWidth(:,:), totalUWidth(:,:)
+    integer(ESMF_KIND_I4), intent(out), optional, allocatable :: totalLWidth(:)
+    integer(ESMF_KIND_I4), intent(out), optional, allocatable :: totalUWidth(:)
     integer(ESMF_KIND_I4), intent(out), optional  :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, rank_, fieldCount
@@ -1153,21 +1154,21 @@ contains
 
       if (rank_ == 3) then
         if (present(totalUWidth)) then
-          allocate(totalUWidth(3,1), stat=localrc)
-          totalUWidth = totalUWidth3
+          allocate(totalUWidth(3), stat=localrc)
+          totalUWidth = totalUWidth3(:,1)
         endif
         if (present(totalLWidth)) then
-          allocate(totalLWidth(3,1), stat=localrc)
-          totalLWidth = totalLWidth3
+          allocate(totalLWidth(3), stat=localrc)
+          totalLWidth = totalLWidth3(:,1)
         endif
       else ! if rank_ == 2
         if (present(totalUWidth)) then
-          allocate(totalUWidth(2,1), stat=localrc)
-          totalUWidth = totalUWidth2
+          allocate(totalUWidth(2), stat=localrc)
+          totalUWidth = totalUWidth2(:,1)
         endif
         if (present(totalLWidth)) then
-          allocate(totalLWidth(2,1), stat=localrc)
-          totalLWidth = totalLWidth2
+          allocate(totalLWidth(2), stat=localrc)
+          totalLWidth = totalLWidth2(:,1)
         endif
       endif
 

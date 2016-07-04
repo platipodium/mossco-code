@@ -137,6 +137,8 @@ module constant_component
     type(ESMF_Grid)                             :: grid
     logical                                     :: isPresent
 
+    integer(ESMF_KIND_I4), allocatable          :: totalLWidth(:), totalUWidth(:)
+
     rc = ESMF_SUCCESS
 
     call MOSSCO_CompEntry(gridComp, parentClock, name=name, currTime=currTime, &
@@ -211,7 +213,8 @@ module constant_component
     enddo
 
     call MOSSCO_StateGetForeignGrid(importState, grid=grid, owner=trim(name), &
-      attributeName='foreign_grid_field_name', rank=rank, rc=localrc)
+      attributeName='foreign_grid_field_name', rank=rank, totalLWidth=totalLWidth, &
+      totalUWidth=totalUWidth, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -236,7 +239,8 @@ module constant_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (fieldStatus==ESMF_FIELDSTATUS_GRIDSET) then
-        call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, rc=localrc)
+        call ESMF_FieldEmptyComplete(field, typekind=ESMF_TYPEKIND_R8, &
+          totalLWidth=totalLWidth, totalUWidth=totalUWidth, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
       endif
