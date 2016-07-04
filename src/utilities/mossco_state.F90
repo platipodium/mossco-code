@@ -1035,7 +1035,7 @@ contains
 #undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_StateGetForeignGrid"
   subroutine MOSSCO_StateGetForeignGrid(state, grid, kwe, owner, other, &
-     attributeName, rank, rc)
+     attributeName, rank, totalLWidth, totalUWidth, rc)
 
     type(ESMF_State), intent(in)                  :: state
     type(ESMF_Grid),  intent(out)                 :: grid
@@ -1044,6 +1044,7 @@ contains
     type(ESMF_Grid), intent(out), optional        :: other
     character(len=*), optional, intent(in)        :: attributeName
     integer(ESMF_KIND_I4), intent(out), optional  :: rank
+    integer(ESMF_KIND_I4), intent(out), optional, allocatable :: totalLWidth(:,:), totalUWidth(:,:)
     integer(ESMF_KIND_I4), intent(out), optional  :: rc
 
     integer(ESMF_KIND_I4)               :: rc_, localrc, rank_, fieldCount
@@ -1054,6 +1055,8 @@ contains
     type(ESMF_FieldStatus_Flag)         :: fieldStatus
     type(ESMF_StateItem_Flag)           :: itemType
     type(ESMF_Grid)                     :: grid2, grid3
+    integer(ESMF_KIND_I4)               :: totalLWidth3(3,1), totalUWidth3(3,1)
+    integer(ESMF_KIND_I4)               :: totalLWidth2(2,1), totalUWidth2(2,1)
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
@@ -1113,6 +1116,62 @@ contains
       rc = ESMF_RC_ARG_BAD
       return
     endif
+
+    !> Look at the zones that are present in the field but
+    !> not in the grid, by default make the zero
+    totalLWidth3(:,1)=0
+    totalUWidth3(:,1)=0
+    totalLWidth2(:,1)=0
+    totalUWidth2(:,1)=0
+
+    call ESMF_FieldGet(fieldList(1), status=fieldStatus, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    if (fieldStatus == ESMF_FIELDSTATUS_COMPLETE) then
+
+      call ESMF_FieldGet(fieldList(1), rank=rank_, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (rank_ == 3) then
+        call ESMF_FieldGet(fieldList(1), totalLWidth=totalLWidth3, &
+          totalUWidth=totalUWidth3, rc=localrc)
+      elseif (rank_ == 2) then
+          call ESMF_FieldGet(fieldList(1), totalLWidth=totalLWidth2, &
+          totalUWidth=totalUWidth2, rc=localrc)
+      else
+          if (present(owner)) then
+            write(message,'(A)') trim(owner)//' needs a foreign grid of rank 2 or 3'
+          else
+            write(message,'(A)') '  needs a foreign grid of rank 2 or 3'
+          endif
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
+          rc = ESMF_RC_ARG_BAD
+          return
+      endif
+
+      if (rank_ == 3) then
+        if (present(totalUWidth)) then
+          allocate(totalUWidth(3,1), stat=localrc)
+          totalUWidth = totalUWidth3
+        endif
+        if (present(totalLWidth)) then
+          allocate(totalLWidth(3,1), stat=localrc)
+          totalLWidth = totalLWidth3
+        endif
+      else ! if rank_ == 2
+        if (present(totalUWidth)) then
+          allocate(totalUWidth(2,1), stat=localrc)
+          totalUWidth = totalUWidth2
+        endif
+        if (present(totalLWidth)) then
+          allocate(totalLWidth(2,1), stat=localrc)
+          totalLWidth = totalLWidth2
+        endif
+      endif
+
+    endif ! FIELDSTATUS_COMPLETE
 
     if (present(other)) then
       write(message,'(A)') '  keyword "other" not implemented'
