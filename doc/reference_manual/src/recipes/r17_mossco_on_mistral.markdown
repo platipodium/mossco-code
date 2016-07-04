@@ -2,14 +2,14 @@
 
 Mistral is the supercomputer at the German Climate Computing Centre (DKRZ) from July 2015.  It succeeds the blizzard system.
 
-Mistral is a RedHat6 Linux system with 1500 nodes with each 2x12 core processors.
+Mistral is a RedHat6 Linux system with 1500 nodes with each 2x12 core processors (in the "compute" partition), or 2x18 core processors (in the "compute2" partition).
 
 ## Preparing your toolchain
 
 This recipe gives instructions for the intel14/openmpi toolchain.  On mistral, there are many more compilers (gcc4, gcc5, nag) and MPI installations (bull, intel, mvapich, openmpi) available.
 
         module purge
-        module load intel/14.0.3 openmpi/1.8.4-intel14
+        module load openmpi/1.8.4-intel14
         module load python
 
 ## Downloading MOSSCO and obtaining external sources
@@ -36,27 +36,15 @@ This recipe also assumes that you have downloaded or `git clone`d MOSSCO into a 
 
 Note that aliases don't reliably work  for `nf-config`, so we use soft links here.
 
-## Installing py-yaml
-
 ## Installing ESMF
 
-        export ESMF_DIR=/my/path/to/netcdf
-        git clone http://git.code.sf.net/p/esmf/esmf $ESMF_DIR
+Use the script `$MOSSCO_DIR/scripts/installation/install_esmf_versions.sh`.  Edit
+the entries for `COMPILER` and `COMM` to `intel` and `openmpi`, respectively.
 
-        export ESMF_F90COMPILEOPTS=-DESMF_NO_SEQUENCE
-        export ESMF_OS=Linux
-        export ESMF_OPTLEVEL=2
-        export ESMF_LAPACK=internal
-        export ESMF_COMM=openmpi
-        export ESMF_INSTALL_PREFIX=$HOME/opt
-        export ESMF_BOPT=g
-        export ESMF_SITE=ESMF_7_0_0_beta_snapshot_49
-        export ESMF_COMPILER=intel
-        export ESMF_NETCDF=split
-        export ESMF_NETCDF_LIBS=$(nf-config --flibs)
-        export ESMF_NETCDF_INCLUDE="$(nc-config --includedir) -I$(nf-config --includedir)"
+        export ESMF_DIR=/my/path/to/esmf
+        cd $ESMF_DIR;
+        $MOSSCO_DIR/scripts/installation/install_esmf_versions.sh
 
-        cd $ESMF_DIR; make lib install
 
 ## Installing py-yaml
 
