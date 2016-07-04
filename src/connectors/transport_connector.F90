@@ -563,6 +563,7 @@ module transport_connector
 
       write(message,'(A)')  trim(name)//' will transport '
       call MOSSCO_MessageAdd(message, ' '//trim(itemName))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
       k = index(trim(itemName), '_z_velocity_')
       if (k > 0) then
@@ -570,7 +571,7 @@ module transport_connector
           call link_field_in_transport_fieldbundle(importState, trim(itemName), &
             wsFieldBundle, rc=localrc)
         else
-          call link_field_in_transport_fieldbundle(importState, trim(itemName), &
+          call link_fieldBundle_in_transport_fieldbundle(importState, trim(itemName), &
             wsFieldBundle, rc=localrc)
         endif
       else
@@ -578,7 +579,7 @@ module transport_connector
           call link_field_in_transport_fieldbundle(importState, trim(itemName), &
             concFieldBundle, rc=localrc)
         else
-          call link_field_in_transport_fieldbundle(importState, trim(itemName), &
+          call link_fieldBundle_in_transport_fieldbundle(importState, trim(itemName), &
             concFieldBundle, rc=localrc)
         endif
       endif
