@@ -2042,9 +2042,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (allocated(taub)) deallocate (taub)
     if (allocated(taubn)) deallocate (taubn)
     if (allocated(eq_conc)) deallocate (eq_conc)
-!    deallocate (r0)
-!    deallocate (r1)
-!    deallocate (rn)
     if (allocated(ws)) deallocate (ws)
     !
     if (allocated (mass) ) deallocate (mass)
@@ -2066,20 +2063,30 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (allocated(teta)) deallocate (teta)
     if (associated(BioEffects%TauEffect)) deallocate (BioEffects%TauEffect)
     if (associated(BioEffects%ErodibilityEffect)) deallocate (BioEffects%ErodibilityEffect)
+
+    ! Nullify the pointers within fields
+
     do i = 1, nfrac
       if (associated (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)) &
           nullify (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)
     end if
     if (allocated(size_classes_of_upward_flux_of_pim_at_bottom)) deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
-    if (associated(spm_concentration)) deallocate (spm_concentration)
+    if (associated(spm_concentration)) nullify (spm_concentration)
     if (associated(depth_avg_spm_concentration)) nullify (depth_avg_spm_concentration)
     if (associated(sum_depth_avg_spm_concentration)) nullify (sum_depth_avg_spm_concentration)
+    if (associated(layers_height)) nullify (layers_height)
+    if (associated(rms_orbital_velocity%ptr)) nullify (rms_orbital_velocity%ptr)
+    if (associated(equilibrium_spm%ptr)) nullify (equilibrium_spm%ptr)
+    if (associated(bottom_shear_stress%ptr)) nullify (bottom_shear_stress%ptr)
+    if (associated(bottom_shear_stress_non%ptr)) nullify (bottom_shear_stress_non%ptr)
+    if (associated(mask)) nullify(mask)
+    if (associated(area)) nullify(area)
 
     if (associated(thickness_of_layers)) deallocate (thickness_of_layers)
     if (associated(relative_thickness_of_layers)) deallocate (relative_thickness_of_layers)
     if (associated(sigma_midlayer)) deallocate (sigma_midlayer)
     if (associated(sediment_mass)) deallocate (sediment_mass)
-
+    
     call ESMF_GridCompGet(gridComp, configIsPresent=isPresent, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
