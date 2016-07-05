@@ -1353,9 +1353,15 @@ contains
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
+    !> @todo: the call below throws an error, it is disregarded here
     call ESMF_FieldBundleGet(fieldBundle, fieldCount=itemCount, name=name, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+    !  call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    if (localrc /= ESMF_SUCCESS) then
+      call ESMF_LogWrite('  disregard error above', ESMF_LOGMSG_ERROR)
+      if (present(rc)) rc = ESMF_SUCCESS
+      return
+    endif
 
     call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
