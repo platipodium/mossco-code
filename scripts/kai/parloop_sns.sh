@@ -8,8 +8,8 @@ rm -f tag.lst
 
 #declare -a pnam=("fT_exp_mort"  "PAds""rFast"  "rSlow" "NCrFdet" "syn_nut"mort_zoo")zm_fa_inf remin "sinking_factor" "bioturbation"  "PAds" "PAdsODU" "rSlow""Q10"-4.5"zm_fa_delmax""a_water""PAdsODU" "rSlow" "a_water" "syn_nut"  "Q10"
 #declare -a pnam=( )# "QP_phy_max"  "fT_exp_mort" "a_minfr")"ref""vS_det""mort_zoo""PAds" 
-declare -a pnam=("vS_phy" "vS_phy" "vS_phy" "vS_phy" "sinking_factor_min" "sinking_factor_min" "sinking_factor_min" )
-declare -a pval=(  0.      0.6        1.2      1.8             0.15                   0.27       0.39 )
+declare -a pnam=("vS_phy" "genMeth"  "PAds" "PAdsODU" "syn_nut" )
+declare -a pval=(  3.      13        15      50         -4.6   )
 
 for (( i=0; $i < ${#pnam[@]}; i++ )) do
   echo "'${pnam[$i]}${pval[$i]}';"
