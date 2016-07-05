@@ -6,7 +6,9 @@ else
   vli=0:nrowm*ncolm-1; mode='v';
   moffs=moffs+1;
   if(~strcmp(varshort,varshortm0))
-    moff=moffs;
+    moff=moffs; mofc=0;
+  else
+    mofc=mofc+1;
   end
   varshortm0=varshort;
 end
@@ -63,7 +65,7 @@ for im=1:length(vli)
     ta=sprintf('%s%d %d',mons(4:6),year(ti-toffm),doy(ti-toffm));
   end  
   indn=find(~isnan(value));
-  fprintf('%d %s/%s\t np=%d/%d im=%d i=%d %d\tmean=%1.2f\n',i,varshort,varn,np,cell2mat(var{i}(6)),im,ix,iy,mean(mean(value(indn))));
+  fprintf('%d %s/%s\t np=%d/%d mofc=%d im=%d i=%d %d\tmean=%1.2f\n',i,varshort,varn,np,cell2mat(var{i}(6)),mofc,im,ix,iy,mean(mean(value(indn))));
 
 %% process min-max value
   minval = cell2mat(var{i}(3)); maxVal = cell2mat(var{i}(4)); 
@@ -136,13 +138,13 @@ for im=1:length(vli)
     moffc=moffc+100;
   end
   varshortmc0=varshort;
-  npc=moffc+npc;
+  npc=moffc+npc+mofc*15;
 
   figure(npc); set(gcf,'Position',[0 0 1680 850], 'visible','on','Color','w'); hold on
   figc=[figc npc];
     % geometry of sub-plot
   x0=0.06+(ix-1)*1.15*dxpm; y0=0.1+(iy-1)*1.03*dypm;
-  fprintf('im=%d ix=%d iy=%d %1.2f npc=%d\n',im,ix,iy,y0,npc);
+  fprintf('im=%d ix=%d iy=%d %1.2f npc=%d\t%d\n',im,ix,iy,y0,npc,mofc);
   ax_cmp=subplot('Position',[x0 y0 dxpm dypm]);hold on
   copyaxes(axs,ax_cmp,true );  colormap(ssec); 
   imc=imc+1;

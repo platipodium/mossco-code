@@ -10,11 +10,11 @@ datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.86];[55.,8.3];];%[54.6,8.4];[54.0,8.7];[53.7,7.2];[52.3 4.3];[52.56 3.5];[55.0,8.0];[55.2,5.0];[54.1,6.3];[54.2,7.5];]; 
+loc =[[54.18,7.86];[55.,8.3];[55.2,5.0];];%[54.6,8.4];[54.0,8.7];[53.7,7.2];[52.3 4.3];[52.56 3.5];[55.0,8.0];[54.1,6.3];[54.2,7.5];]; 
 % %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt';'SAmrum';'Norderelbe';'Nordeney';'Noordwijk-10';'Noordwijk-70';'T8'  ;      'T2';'T22'; 'T26';}; %
+locs={'Helgoland';'Sylt'; 'T2';'SAmrum';'Norderelbe';'Nordeney';'Noordwijk-10';'Noordwijk-70';'T8'  ;'T22'; 'T26';}; %
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -55,7 +55,7 @@ else
 %tags ={'_vS_phy0.P50';'_vS_phy0.';'_vS_phy0.6';'_vS_phy1.2';'_vS_phy1.8';'_vS_phy2.4';};%
 %tags ={'_sinking_factor_min0.03';'_sinking_factor_min0.15';'_sinking_factor_min0.27';'_sinking_factor_min0.39';};
 %tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};
- tags = {'';'_ref';'_30';};%'_vS_phy3.';'_genMeth13';'_PAds15';'_PAdsODU50';'_syn_nut-4.6'
+ tags = {'_ref';'_vS_phy3.';'_genMeth13';};%'_PAds15';'_PAdsODU50';'_syn_nut-4.6'
  ntags=length(tags);
 % spath= '/home/wirtz/sns/';%  
   spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
@@ -95,7 +95,7 @@ ptag=cell2mat(var{1}(9));
 occ = zeros(nfig,ncol,nrow); occ0=occ+1;
 for ns=1:ntags %% loop over scenarios/stations/layers
  % reset index for map time offset
- moffs=0;moffc=0;figc=[]; varshortm0='';varshortmc0=''; imc=1;
+ moffs=0;moffc=0;mofc=0;figc=[]; varshortm0='';varshortmc0=''; imc=1;
  %% read model output
  tag=cell2mat(tags(ns));
 %% ncfile = fullfile(spath,[ncf0 tag '.nc']);
@@ -103,8 +103,8 @@ for ns=1:ntags %% loop over scenarios/stations/layers
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
- t0 = datenum('2003-06-01','yyyy-mm-dd')-1;
- t1 = datenum('2003-08-04','yyyy-mm-dd')-1;
+% t0 = datenum('2003-06-01','yyyy-mm-dd')-1;
+% t1 = datenum('2003-08-04','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  toffm = min(find(time>= t0))-1;
@@ -175,7 +175,7 @@ for np=1:nfig+nfigm+nfigc
   else if(np<=nfig+nfigm) 
      fnam0=sprintf('map_%s_%d',vt{np-nfig},np);
       else
-     fnam0=sprintf('mapc_%d',np);    
+     fnam0=sprintf('mapc%s%s_%d',cell2mat(tags(1)),cell2mat(tags(end)),np);    
     end 
   end
 %  fnam=fullfile(figdir,[fnam0 '.eps']);
