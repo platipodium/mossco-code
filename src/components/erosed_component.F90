@@ -2012,7 +2012,7 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     type(ESMF_Time)        :: currTime
     type(ESMF_Clock)       :: clock
     type(ESMF_Config)      :: config
-    integer                :: localrc
+    integer                :: localrc, i
 
     rc = ESMF_SUCCESS
 
@@ -2066,10 +2066,14 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
     if (allocated(teta)) deallocate (teta)
     if (associated(BioEffects%TauEffect)) deallocate (BioEffects%TauEffect)
     if (associated(BioEffects%ErodibilityEffect)) deallocate (BioEffects%ErodibilityEffect)
+    do i = 1, nfrac
+      if (associated (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)) &
+          nullify (size_classes_of_upward_flux_of_pim_at_bottom(i)%ptr)
+    end if
     if (allocated(size_classes_of_upward_flux_of_pim_at_bottom)) deallocate (size_classes_of_upward_flux_of_pim_at_bottom)
     if (associated(spm_concentration)) deallocate (spm_concentration)
-    if (associated(depth_avg_spm_concentration)) deallocate (depth_avg_spm_concentration)
-    if (associated(sum_depth_avg_spm_concentration)) deallocate (sum_depth_avg_spm_concentration)
+    if (associated(depth_avg_spm_concentration)) nullify (depth_avg_spm_concentration)
+    if (associated(sum_depth_avg_spm_concentration)) nullify (sum_depth_avg_spm_concentration)
 
     if (associated(thickness_of_layers)) deallocate (thickness_of_layers)
     if (associated(relative_thickness_of_layers)) deallocate (relative_thickness_of_layers)
