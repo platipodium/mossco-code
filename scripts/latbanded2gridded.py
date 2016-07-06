@@ -119,7 +119,7 @@ if __name__ == '__main__':
         if key !=  'chlor_a': continue       
         varm[key]=np.zeros((ny,nx)) - 999.999
         if '_FillValue' in value.ncattrs():
-            varm[key][:,:]=value._FillValue
+            varm[key][:,:]= -999.999
        
        
         if type(ncv[key][0:1]) is np.ndarray:
@@ -150,20 +150,12 @@ if __name__ == '__main__':
         inLat = np.asarray(inLat,dtype=int)
         
         for key,value in varm.iteritems():
-            #if type(ncv[key][0:1]) is np.ndarray:
-            #    varval=ncv[key][inCorner]                
-            #else:
-            #    varval=(ncv[key][:].data)[0][inCorner]
-            
-            value[i,inLon] = originalData[key][inLat]
-            val = value[i,inLon]
-            
-            iSingle=np.where(abs(val[1:-1]-val[:-2]) + abs(val[1:-1]-val[2:]) > 15E36)[0]
-            if (len(iSingle) < 1): continue            
-            
-            iSingle = iSingle[:] + 1
-            for j in iSingle:
-                value[i,inLon[j]] = np.mean(val[[j-1,j+1]])
+
+            if inLat.size == nx : 
+                value[i,inLon] = originalData[key][inLat]
+            else:                
+                #print inLat.size
+                value[i,:] = np.interp(range(0,nx),inLon,originalData[key][inLat])
                        
            
         if i % 10 == 0: print str(mpiRank) + ' got lat rows up to ', i , ' of ', ny
