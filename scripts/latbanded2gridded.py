@@ -45,9 +45,9 @@ if __name__ == '__main__':
     if len(sys.argv)>2:
         cornerstring=sys.argv[2]
     else:
-        cornerstring='-180,-90,180,90'
-        cornerstring='-15,30,15,60'
-        #cornerstring='0,48,10,58'
+        #cornerstring='-180,-90,180,90'
+        #cornerstring='-45,25,10,60'
+        cornerstring='0,48,10,56'
         #cornerstring='0,53,7,55'
 
     # Test for correctness of input arguments
@@ -154,8 +154,17 @@ if __name__ == '__main__':
             #    varval=ncv[key][inCorner]                
             #else:
             #    varval=(ncv[key][:].data)[0][inCorner]
-                
+            
             value[i,inLon] = originalData[key][inLat]
+            val = value[i,inLon]
+            
+            iSingle=np.where(abs(val[1:-1]-val[:-2]) + abs(val[1:-1]-val[2:]) > 15E36)[0]
+            if (len(iSingle) < 1): continue            
+            
+            iSingle = iSingle[:] + 1
+            for j in iSingle:
+                value[i,inLon[j]] = np.mean(val[[j-1,j+1]])
+                       
            
         if i % 10 == 0: print str(mpiRank) + ' got lat rows up to ', i , ' of ', ny
   
