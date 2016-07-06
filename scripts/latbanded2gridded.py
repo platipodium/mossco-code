@@ -20,6 +20,15 @@ import numpy as np
 import time
 import re
 import os
+try:
+    from mpi4py import MPI
+    hasMPI = True
+except:
+    print 'Did not find mpi4py, using serial version'
+    hasMPI = False
+    mpiRank = 0
+    mpiSize = 1
+    
 
 if __name__ == '__main__':
 
@@ -31,13 +40,15 @@ if __name__ == '__main__':
         basename=sys.argv[1]
     else:
         basename = 'ESACCI-OC-L3S-CHLOR_A-MERGED-1D_DAILY_4km_SIN_PML_OC4v6-20030218-fv2.0.nc'
-
+        basename = '/Volumes/Kea/temp/test2.nc'
+        
     if len(sys.argv)>2:
         cornerstring=sys.argv[2]
     else:
-        #cornerstring='-180,-90,180,90'
-        cornerstring='0,48,10,58'
-        #cornerstring='6,53,8,55'
+        cornerstring='-180,-90,180,90'
+        cornerstring='-15,30,15,60'
+        #cornerstring='0,48,10,58'
+        #cornerstring='0,53,7,55'
 
     # Test for correctness of input arguments
     if not os.path.exists(basename):
@@ -70,6 +81,11 @@ if __name__ == '__main__':
     ny=np.int(np.unique(lat).size)
     latc = np.unique(lat)
 
+    if hasMPI:
+        comm = MPI.COMM_WORLD
+        mpiRank = comm.rank
+        mpiSize = comm.size        
+        
     lonsize=np.zeros((ny,))
     for i in range(0, ny):
         inLat = np.where(np.abs(lat - latc[i]) < dlat/2.0/ny)[0]    
@@ -81,8 +97,15 @@ if __name__ == '__main__':
   
     latc = np.unique(lat)
     lonc = corners[0] + np.linspace(dlon/nx/2,dlon-dlon/nx/2,nx) 
+
+    print 'Total size of array to process is ', n
+    print 'This region between ', corners
+    print '  has ',ny,' latitude bands'
+    print '  with at most ', nx, ' longitudinal cells'
+
     
     varm={}
+    originalData={}
     for key,value in ncv.iteritems():
         if not dimName in value.dimensions: continue
         #if not len(key) == 3: continue
@@ -97,9 +120,24 @@ if __name__ == '__main__':
         varm[key]=np.zeros((ny,nx)) - 999.999
         if '_FillValue' in value.ncattrs():
             varm[key][:,:]=value._FillValue
-            
+       
+       
+        if type(ncv[key][0:1]) is np.ndarray:
+           originalData[key]=ncv[key][inCorner]     
+        else:
+           originalData[key]=(ncv[key][:].data)[0][inCorner]  
     
-    for i in range(0, ny):
+    print 'I am using the following keys: ', varm.keys()
+
+    
+    chunkSize = np.ceil(1.0*ny / mpiSize)  
+    chunkLower = np.int(mpiRank * chunkSize)
+    chunkUpper = np.int((mpiRank+1) * chunkSize)
+    chunkUpper = np.min([chunkUpper, ny])
+    
+    myIndex = range(chunkLower, chunkUpper)    
+    
+    for i in myIndex:
         inLat = np.where(np.abs(lat - latc[i]) < dlat/2.0/ny)[0]  
         if inLat.size < 1: continue
         inLon=np.floor((lon[inLat]-corners[0])/dlon*nx)
@@ -112,65 +150,87 @@ if __name__ == '__main__':
         inLat = np.asarray(inLat,dtype=int)
         
         for key,value in varm.iteritems():
-            if type(ncv[key][0:1]) is np.ndarray:
-                varval=ncv[key][inCorner]                
-            else:
-                varval=(ncv[key][:].data)[0][inCorner]
+            #if type(ncv[key][0:1]) is np.ndarray:
+            #    varval=ncv[key][inCorner]                
+            #else:
+            #    varval=(ncv[key][:].data)[0][inCorner]
                 
-            value[i,inLon] = varval[inLat]
+            value[i,inLon] = originalData[key][inLat]
            
-        if i % 10 == 0: print 'got lat rows up to ', i , ' of ', ny
+        if i % 10 == 0: print str(mpiRank) + ' got lat rows up to ', i , ' of ', ny
+  
+
+    # gather the data
+    if (mpiRank > 0): 
+        comm.send(value[myIndex,:], dest=0, tag=mpiRank)
     
-    ncout=netCDF4.Dataset(re.sub('.nc','',basename) + '_gridded.nc', 'w', format='NETCDF3_CLASSIC')
-    ncout.createDimension('lon',nx)
-    ncout.createDimension('lat',ny)
-    #ncout.createDimension('time',ntime)
+    else:
 
-    lonv = ncout.createVariable('lon','f4',('lon'))
-    lonv.units='degree_east'
-    lonv.long_name='longitude'
-    lonv.standard_name='longitude'
-    lonv.axis = 'X'
+        for i in range(1, mpiSize):
 
-    latv = ncout.createVariable('lat','f4',('lat'))
-    latv.units='degree_north'
-    latv.long_name='latitude'
-    latv.standard_name='latitude'
-    latv.axis = 'Y'
+            chunkLower = np.int(i * chunkSize)
+            chunkUpper = np.int((i+1) * chunkSize)
+            chunkUpper = np.min([chunkUpper, ny])
+    
+            recIndex = range(chunkLower, chunkUpper)    
+            
+            recValue=comm.recv(source=i, tag=i)
+            
+            value[recIndex,:] = recValue
+ 
+ 
+    if (mpiRank == 0):  
+        ncout=netCDF4.Dataset(re.sub('.nc','',basename) + '_gridded.nc', 'w', format='NETCDF3_CLASSIC')
+        ncout.createDimension('lon',nx)
+        ncout.createDimension('lat',ny)
+        #ncout.createDimension('time',ntime)
+    
+        lonv = ncout.createVariable('lon','f4',('lon'))
+        lonv.units='degree_east'
+        lonv.long_name='longitude'
+        lonv.standard_name='longitude'
+        lonv.axis = 'X'
+    
+        latv = ncout.createVariable('lat','f4',('lat'))
+        latv.units='degree_north'
+        latv.long_name='latitude'
+        latv.standard_name='latitude'
+        latv.axis = 'Y'
+    
+        # Meta data
+        ncout.history = 'Created ' + time.ctime(time.time()) + ' by ' + sys.argv[0]
+        ncout.creator = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
+        ncout.license = 'Creative Commons share-alike (CCSA)'
+        ncout.copyright = 'Helmholtz-Zentrum Geesthacht'
+        ncout.Conventions = 'CF-1.6'
+    
+        lonv[:] = lonc
+        latv[:] = latc
 
-    # Meta data
-    ncout.history = 'Created ' + time.ctime(time.time()) + ' by ' + sys.argv[0]
-    ncout.creator = 'Carsten Lemmen <carsten.lemmen@hzg.de>'
-    ncout.license = 'Creative Commons share-alike (CCSA)'
-    ncout.copyright = 'Helmholtz-Zentrum Geesthacht'
-    ncout.Conventions = 'CF-1.6'
-
-    lonv[:] = lonc
-    latv[:] = latc
-
-    # Now the variables
-    for key,value in varm.iteritems():
-
-        varName = key
-        if (key == 'lat'): varName = 'clat'      
-        if (key == 'lon'): varName = 'clon'      
-        
-        if '_FillValue' in ncv[key].ncattrs():
-            varv = ncout.createVariable(varName,'f4',('lat','lon'), fill_value=ncv[key]._FillValue)
-        else:
-            varv = ncout.createVariable(varName,'f4',('lat','lon'), fill_value=-999.999)
-
-        for att in ncv[key].ncattrs():
-            if (att == 'units'):
-                ncout.units= ncv[key].units               
-            if (att == 'coordinates'):
-                ncout.coordinates= ncv[key].coordinates               
-            if (att == 'standard_name'):
-                ncout.standard_name= ncv[key].standard_name               
-        varv[:] = value
+        # Now the variables
+        for key,value in varm.iteritems():
+    
+            varName = key
+            if (key == 'lat'): varName = 'clat'      
+            if (key == 'lon'): varName = 'clon'      
+            
+            if '_FillValue' in ncv[key].ncattrs():
+                varv = ncout.createVariable(varName,'f4',('lat','lon'), fill_value=ncv[key]._FillValue)
+            else:
+                varv = ncout.createVariable(varName,'f4',('lat','lon'), fill_value=-999.999)
+    
+            for att in ncv[key].ncattrs():
+                if (att == 'units'):
+                    ncout.units= ncv[key].units               
+                if (att == 'coordinates'):
+                    ncout.coordinates= ncv[key].coordinates               
+                if (att == 'standard_name'):
+                    ncout.standard_name= ncv[key].standard_name               
+            varv[:] = value
+    
+        ncout.close()    
 
     nc.close()
-    ncout.close()    
     
     
     
