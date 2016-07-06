@@ -22,7 +22,6 @@
 module fabm_gotm_component
 
   use esmf
-  use output, only: prepare_output,do_output,gotm_output_nsave => nsave
 
   use turbulence,  only: nuh
   use airsea,      only: wind=>w,tx,ty,I_0,cloud,heat,precip,evap
@@ -43,9 +42,6 @@ module fabm_gotm_component
   real(ESMF_KIND_R8), allocatable, target :: variables(:,:,:,:)
   type(MOSSCO_VariableFArray3d), dimension(:), allocatable :: export_variables
   type(export_state_type),dimension(:), allocatable        :: fabm_export_states
-
-   !> Declare an alarm to ring when output to file is requested
-  type(ESMF_Alarm),save :: outputAlarm
 
 #define GOTM_REALTYPE real(kind=selected_real_kind(13))
 #define _ZERO_ 0.0d0
@@ -209,7 +205,6 @@ module fabm_gotm_component
     endif
 
     call init_gotm_mossco_fabm(nlev,trim(configFileName),dt)
-    call init_gotm_mossco_fabm_output()
     call set_env_gotm_fabm(latitude,longitude,dt,w_adv_method,w_adv_discr, &
                           t(1:nlev),s(1:nlev),rho(1:nlev), &
                           nuh,h,w,bioshade(1:nlev),I_0,cloud,taub,wind,precip,evap,z(1:nlev), &
@@ -338,7 +333,6 @@ module fabm_gotm_component
 
     integer(ESMF_KIND_I4)    :: localPet, petCount, hours, seconds, minutes, localrc
     logical                  :: clockIsPresent
-    integer                  :: alarmCount
 
     call ESMF_GridCompGet(gridComp,petCount=petCount,localPet=localPet,name=name, &
       clockIsPresent=clockIsPresent, rc=rc)
@@ -461,24 +455,6 @@ module fabm_gotm_component
 
 
        call do_gotm_mossco_fabm(dt)
-
-       ! Introduced dependency from FABM component, which use the same name for the alarm
-!      Note (KK): We must check the parentClock, because in the present
-!                 implementation GOTM can only communicate the alarm via
-!                 the parentClock...
-       call ESMF_ClockGetAlarmList(parentClock,ESMF_ALARMLIST_RINGING,alarmCount=alarmCount)
-       if (alarmCount .gt. 0) then
-!      TODO: (re)allocate and inquire ringing AlarmList, check whether GOTM alarm is included
-       call ESMF_ClockGetAlarm(parentClock, alarmname="GOTM output Alarm", alarm=outputAlarm, rc=rc)
-       if(rc .eq. ESMF_SUCCESS) then
-       if (ESMF_AlarmIsRinging(outputAlarm)) then
-         call ESMF_AlarmRingerOff(outputAlarm,rc=rc)
-         if(rc /= ESMF_SUCCESS) call ESMF_Finalize(endflag=ESMF_END_ABORT, rc=rc)
-         call prepare_output(n)
-         call do_gotm_mossco_fabm_output()
-       endif
-       end if
-       end if
 
       call ESMF_ClockAdvance(clock, timeStep=timeStep, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &

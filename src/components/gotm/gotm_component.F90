@@ -43,7 +43,6 @@ module gotm_component
   use time, only: gotm_time_init_time => init_time
   use time, only: timestepkind,update_time
   use gotm, only: init_gotm, gotm_time_loop => time_loop, clean_up
-  use output, only: prepare_output,do_output,gotm_output_nsave => nsave
 
   use mossco_variable_types
   use mossco_component
@@ -65,9 +64,6 @@ module gotm_component
      real(ESMF_KIND_R8),dimension(:),pointer :: ws=>NULL()
   end type type_transport_list
   type(type_transport_list), allocatable, dimension(:) :: transport_vars
-
-   !> Declare an alarm to ring when output to file is requested
-  type(ESMF_Alarm),save :: outputAlarm
 
   !> local variables for the setup control
   character(len=80)         :: title,name
@@ -247,27 +243,6 @@ module gotm_component
 
     gotm_time_timefmt = 2
     call gotm_time_init_time(gotm_time_min_n,gotm_time_max_n)
-
-    !! The output timestep is used to create an alarm in the  Clock
-    !> @todo implement this also driven by the parent clock
-    call ESMF_ClockGet(clock,startTime=currTime)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call ESMF_TimeIntervalSet(timeInterval,s_r8=gotm_output_nsave*gotm_time_timestep,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    ! Introduced dependency to FABM component, which use the same name for the alarm
-    outputAlarm = ESMF_AlarmCreate(clock=parentclock,name="GOTM output Alarm", &
-      ringTime=currTime+timeInterval,ringInterval=timeInterval,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    outputAlarm = ESMF_AlarmCreate(clock=clock,name="GOTM output Alarm", &
-      ringTime=currTime+timeInterval,ringInterval=timeInterval,rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Create the grid and coordinates
     !> This example grid is a 1 x 1 x nlev grid
@@ -722,17 +697,6 @@ subroutine Run(gridComp, importState, exportState, parentClock, rc)
 
        !> call transport of external variables
        call gotm_transport()
-
-       !> Check if the output alarm is ringing, if so, quiet it and
-       !> call do_output from GOTM
-       if (ESMF_AlarmIsRinging(outputAlarm)) then
-         call ESMF_AlarmRingerOff(outputAlarm,rc=localrc)
-         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-         call prepare_output(n)
-         call do_output(n,nlev)
-       endif
-
 
        if (timeInterval > stopTime-currTime) timeInterval = stopTime-currTime
        call ESMF_ClockAdvance(clock, timeStep=timeInterval, rc=localrc)
