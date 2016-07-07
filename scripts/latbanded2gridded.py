@@ -162,24 +162,18 @@ if __name__ == '__main__':
   
     
     # gather the data
+    for key,value in varm.iteritems():
     
-    if (mpiRank > 0): 
-        comm.send(value[myIndex,:], dest=0, tag=mpiRank)
+        if (mpiRank > 0): comm.send(myIndex, dest=0, tag=mpiRank+mpiSize)
+        if (mpiRank > 0): comm.send(value[myIndex,:], dest=0, tag=mpiRank)
     
-    else:
+        else:
 
-        for i in range(1, mpiSize):
+            for i in range(1, mpiSize):
 
-            chunkLower = np.int(i * chunkSize)
-            chunkUpper = np.int((i+1) * chunkSize)
-            chunkUpper = np.min([chunkUpper, ny])
-    
-            recIndex = range(chunkLower, chunkUpper)    
-            
-            recValue=comm.recv(source=i, tag=i)
-            
-            value[recIndex,:] = recValue
- 
+                recIndex=comm.recv(source=i, tag=i+mpiSize)
+                recValue=comm.recv(source=i, tag=i)        
+                value[recIndex,:] = recValue
  
     if (mpiRank == 0):  
  
