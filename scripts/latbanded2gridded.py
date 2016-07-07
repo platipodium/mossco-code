@@ -117,9 +117,9 @@ if __name__ == '__main__':
             
         # actually only consider chl_a here
         if key !=  'chlor_a': continue       
-        varm[key]=np.zeros((ny,nx)) - 999.999
+        varm[key]=np.zeros((ny,nx)) + 1.0E20
         if '_FillValue' in value.ncattrs():
-            varm[key][:,:]= -999.999
+            varm[key][:,:]= 1.0E20
        
        
         if type(ncv[key][0:1]) is np.ndarray:
@@ -156,12 +156,13 @@ if __name__ == '__main__':
             else:                
                 #print inLat.size
                 value[i,:] = np.interp(range(0,nx),inLon,originalData[key][inLat])
-                       
+                                       
            
         if i % 10 == 0: print str(mpiRank) + ' got lat rows up to ', i , ' of ', ny
   
-
+    
     # gather the data
+    
     if (mpiRank > 0): 
         comm.send(value[myIndex,:], dest=0, tag=mpiRank)
     
@@ -181,6 +182,8 @@ if __name__ == '__main__':
  
  
     if (mpiRank == 0):  
+ 
+
         ncout=netCDF4.Dataset(re.sub('.nc','',basename) + '_gridded.nc', 'w', format='NETCDF3_CLASSIC')
         ncout.createDimension('lon',nx)
         ncout.createDimension('lat',ny)
@@ -215,10 +218,10 @@ if __name__ == '__main__':
             if (key == 'lat'): varName = 'clat'      
             if (key == 'lon'): varName = 'clon'      
             
-            if '_FillValue' in ncv[key].ncattrs():
-                varv = ncout.createVariable(varName,'f4',('lat','lon'), fill_value=ncv[key]._FillValue)
-            else:
-                varv = ncout.createVariable(varName,'f4',('lat','lon'), fill_value=-999.999)
+            if '_FillValue' in ncv[key].ncattrs(): fillValue = ncv[key]._FillValue
+            else: fillValue =1E20
+            
+            varv = ncout.createVariable(varName,'f4',('lat','lon'), fill_value=fillValue)
     
             for att in ncv[key].ncattrs():
                 if (att == 'units'):
@@ -227,7 +230,9 @@ if __name__ == '__main__':
                     ncout.coordinates= ncv[key].coordinates               
                 if (att == 'standard_name'):
                     ncout.standard_name= ncv[key].standard_name               
-            varv[:] = value
+            
+
+            varv[:] = np.ma.array(value, mask=value>1E20, fill_value=fillValue)
     
         ncout.close()    
 
