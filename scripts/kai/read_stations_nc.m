@@ -30,7 +30,7 @@ for id=0:ndvar-1
     data{is,iv} = netcdf.getVar(ncid,id);
    %dimv(id+1)= natts-2;
    %if (ismember(id,vid_tshow))  
-    fprintf('%d %s found %d values\n',is,(vars{is,iv}),length(find(~isnan(data{is,iv}))));
+ %%   fprintf('%d %s found %d values\n',is,(vars{is,iv}),length(find(~isnan(data{is,iv}))));
    %end
     iv=iv+1;
     vars{id,iv}='';

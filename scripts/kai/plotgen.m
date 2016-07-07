@@ -10,11 +10,11 @@ datf='~/data/DeutscheBucht/stations.nc';
 %% settings
 % locations; at least one site-name (locs) should be given 
 %loc =[]; 
-loc =[[54.18,7.86];[55.,8.3];[55.2,5.0];];%[54.6,8.4];[54.0,8.7];[53.7,7.2];[52.3 4.3];[52.56 3.5];[55.0,8.0];[54.1,6.3];[54.2,7.5];]; 
+loc =[[54.18,7.86];[55.,8.3];[53.7,7.2];[52.3,4.3];[52.56,3.5];[53.42,5.15];];%[53.92,4.6];[55.0,8.0];[54.6,8.4];[54.0,8.7];[55.2,5.0];[54.1,6.3];[54.2,7.5];]; 
 % %[54.96,8.4]; 
 %  % 17 m 28 m
 % Noordwijk-10 Noordwijk-70
-locs={'Helgoland';'Sylt'; 'T2';'SAmrum';'Norderelbe';'Nordeney';'Noordwijk-10';'Noordwijk-70';'T8'  ;'T22'; 'T26';}; %
+locs={'Helgoland';'Sylt'; 'Nordeney';'NOORDWK10';'NOORDWK70';'TERSLG4';'TERSLG70';'T8';'SAmrum';'Norderelbe';'T2'  ;'T22'; 'T26';}; %
 %'Helgoland'; 'Sylt';    'SAmrum';'Norderelbe';'Nordeney',
 %  'T36';     'T26' ;    'T41';   'T8'  ;      'T2';
 %  'T22';     'T5';      'T12';   'T11'
@@ -31,7 +31,7 @@ else show_dati=zeros(size(loc,1)); end;
 %tags={'_a';'_b'};%'_c';'_3';'_0';tags={'_4';};%'_2';'_3';
 %tags={'';'_Zmort';'_n'};%;};%'_0';'_1';'exu';'Ndep';
 ncol = 3; nrow = 2; 	% number of columns in fig
-nrowm = 3; ncolm = 5;
+nrowm = 4; ncolm = 6;
 if Is1D 
   locs={'Helgoland'};
   loc =[54.18,7.82];
@@ -48,17 +48,17 @@ tags = {'_0';'_2';};
 ntags=length(tags);
   ncf0 = 'mossco_1d'; % base file name of input netcdf
   setvar_1D  % defines variables to show - and where/how to do it 
- %% graph settings
   ncol = 4; nrow = 2; 	% number of columns in fig
 else
 %  loc =[54.18,7.82];
 %tags ={'_vS_phy0.P50';'_vS_phy0.';'_vS_phy0.6';'_vS_phy1.2';'_vS_phy1.8';'_vS_phy2.4';};%
 %tags ={'_sinking_factor_min0.03';'_sinking_factor_min0.15';'_sinking_factor_min0.27';'_sinking_factor_min0.39';};
-%tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};
- tags = {'_ref';'_vS_phy3.';'_genMeth13';};%'_PAds15';'_PAdsODU50';'_syn_nut-4.6'
+%tags ={'ResAmpl.01';'ResAmpl.19';'ResAmpl.37';'ResAmpl.55';};'_rSlow0.0001';
+ tags = {'';};
+%'_agg_doc0.001';'_alpha0.26';'_mort_zoo0.025';'_Nqual0.1';'_remin0.1';
  ntags=length(tags);
-% spath= '/home/wirtz/sns/';%  
-  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
+ spath= '/local/home/wirtz/sns/';%  
+%%  spath  ='/data/wirtz/';%'/ocean-data/wirtz/';
 %% ncfile = fullfile(spath,['sns' tag '/cut/sns' tag '.nc']);
   ncf0 = 'sns'; 
   if IsNOAH
@@ -98,13 +98,13 @@ for ns=1:ntags %% loop over scenarios/stations/layers
  moffs=0;moffc=0;mofc=0;figc=[]; varshortm0='';varshortmc0=''; imc=1;
  %% read model output
  tag=cell2mat(tags(ns));
-%% ncfile = fullfile(spath,[ncf0 tag '.nc']);
- ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
+ ncfile = fullfile(spath,[ncf0 tag '.nc']);
+%% ncfile = fullfile(spath,[ncf0 tag '/cut/' ncf0 tag '.nc']);
 
  read_nc_time_layers
  t0=time(1); t1=time(end);
 % t0 = datenum('2003-06-01','yyyy-mm-dd')-1;
-% t1 = datenum('2003-08-04','yyyy-mm-dd')-1;
+% t1 = datenum('2003-11-04','yyyy-mm-dd')-1;
 
  ind=find(time>= t0 & time<=t1);
  toffm = min(find(time>= t0))-1;
@@ -173,7 +173,7 @@ for np=1:nfig+nfigm+nfigc
 %% create base file name
     fnam0=sprintf('%s%s%s_%d',locs{li},cell2mat(tags(1)),cell2mat(tags(end)),np);
   else if(np<=nfig+nfigm) 
-     fnam0=sprintf('map_%s_%d',vt{np-nfig},np);
+     fnam0=sprintf('map_%s_%d',min(np-nfig,length(vt)),np);
       else
      fnam0=sprintf('mapc%s%s_%d',cell2mat(tags(1)),cell2mat(tags(end)),np);    
     end 
