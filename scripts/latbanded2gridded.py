@@ -116,7 +116,7 @@ if __name__ == '__main__':
         #if key.endswith('nobs'): continue
             
         # actually only consider chl_a here
-        if key !=  'chlor_a': continue       
+        #if key !=  'chlor_a': continue       
         varm[key]=np.zeros((ny,nx)) + 1.0E20
         if '_FillValue' in value.ncattrs():
             varm[key][:,:]= 1.0E20
