@@ -270,6 +270,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+    !> Don't do anything if no items in importState
     if (itemCount < 1) return
 
     call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
@@ -285,7 +286,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-    !! Loop over items
     do i=1, itemCount
 
       if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
@@ -315,14 +315,30 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           cycle
         endif
 
+        !> At this point, we have a gridset or complete importField and
+        !> search for a corresponding item in the exportState
+
         call ESMF_StateGet(exportState, itemSearch=trim(itemNameList(i)), &
           itemCount=exportItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (exportItemCount>0) then
-          call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
-          itemType=itemType, rc=localrc)
+        if (exportItemCount == 0) then
+          write(message,'(A)') '    added field '
+          call MOSSCO_FieldString(importField, message)
+#ifdef VERBOSE
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+#endif
+          call ESMF_StateAdd(exportState,(/importField/), rc=localrc)
+          cycle
+        endif
+
+        call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), itemType=itemType, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        !> The item in exportState can be a field or a fieldBundle (which can be filled or empty)
+
           if (itemType == itemTypeList(i)) then
             call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
@@ -415,17 +431,6 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               !call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
             endif
           endif
-        else
-#ifdef VERBOSE
-          write(message,'(A)') '    added field '
-          call MOSSCO_FieldString(importField,message)
-          !call ESMF_AttributeGet(importField, 'creator', value=creatorName, defaultvalue='none', isPresent=isPresent, rc=localrc)
-          !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-          !if (isPresent) write(message,'(A)') trim(message)//' ['//trim(creatorName)//']'
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-#endif
-          call ESMF_StateAdd(exportState,(/importField/), rc=localrc)
-        endif
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
