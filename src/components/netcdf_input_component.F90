@@ -1005,22 +1005,19 @@ module netcdf_input_component
     type(ESMF_Time)         :: currTime, stopTime, recentTime, nextTime
     type(ESMF_Time)         :: climatologyStartTime, climatologyTime
     type(ESMF_TimeInterval) :: timeStep, climatologyTimeStep
-    integer(ESMF_KIND_I8)   :: i, j, advanceCount
-    integer(ESMF_KIND_I4)   :: itemCount, localDeCount
+    integer(ESMF_KIND_I8)   :: i, advanceCount
+    integer(ESMF_KIND_I4)   :: fieldCount, localDeCount
     real(ESMF_KIND_R8)      :: weight
-    type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
     type(ESMF_Field)        :: field, nextField
-    character(len=ESMF_MAXSTR), allocatable, dimension(:) :: itemNameList
+    type(ESMF_Field), allocatable :: fieldList(:)
     character(len=ESMF_MAXSTR) :: fileName, itemName
     character(len=ESMF_MAXSTR) :: addString
     type(ESMF_Clock)        :: clock
-    type(ESMF_FieldStatus_Flag) :: fieldStatus
     type(type_mossco_netcdf_variable), pointer    :: var => null()
 
     character(len=ESMF_MAXSTR) :: message, name, interpolationMethod
     integer(ESMF_KIND_I4)      :: localrc, itime, jtime
     logical                    :: isPresent, checkFile
-    character(len=ESMF_MAXSTR), allocatable :: aliasList(:,:)
     type(ESMF_TypeKind_Flag)   :: typeKind
     type(ESMF_Grid)            :: grid
 
@@ -1079,24 +1076,6 @@ module netcdf_input_component
       call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
       call MOSSCO_CompExit(gridComp)
       return
-    endif
-
-    call ESMF_StateGet(exportState, itemCount=itemCount, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_Reallocate(itemTypeList, itemCount, keep=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_Reallocate(itemNameList, itemCount, keep=.false., rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    if (itemCount>0) then
-      call ESMF_StateGet(exportState, itemTypeList=itemTypeList, itemNameList=itemNameList, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif
 
     call ESMF_AttributeGet(importState, 'interpolation_method', value=interpolationMethod, &
@@ -1269,61 +1248,42 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     endif ! climatology
 
-    call MOSSCO_AttributeGet(importState, 'alias_definition', aliasList, rc=localrc)
+    ! Get all the fields in export state, including those in fieldBundles,
+    ! make sure that only complete fields are obtained
+    call MOSSCO_StateGetFieldList(exportState, fieldList, fieldCount=fieldCount, &
+      fieldStatus=ESMF_FIELDSTATUS_COMPLETE, rc=localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     !> Go through list of export variables and fill their pointers with values from the file
-    do i=1, itemCount
+    do i=1, fieldCount
 
-      if (itemTypeList(i) /= ESMF_STATEITEM_FIELD) cycle
+      field = fieldList(i)
 
-      call ESMF_StateGet(exportState, trim(itemNameList(i)), field, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      call ESMF_FieldGet(field, status=fieldStatus, rc=localrc)
-      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-      if (fieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
-
-      call ESMF_FieldGet(field, localDeCount=localDeCount, rc=localrc)
+      call ESMF_FieldGet(field, name=itemName, localDeCount=localDeCount, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       if (localDeCount < 1) cycle
 
-      !! Convert aliases in file to proper item names
-      itemName = trim(itemNameList(i))
+      !! Instead of asking the aliasList, try to obtain the netcdf varname
+      !! from the netcdf_name attribute in the field
 
-      if (allocated(aliasList)) then
-        do j = lbound(aliasList,1), ubound(aliasList,1)
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-
-          if (trim(itemNameList(i)) == trim(aliasList(j,2))) then
-            itemName=trim(aliasList(j,1))
-            exit
-          endif
-        enddo
-
-        ! ! to make this easier on the user, also try the list in wrong order
-        ! do j = lbound(aliasList,1), ubound(aliasList,1)
-        !   call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
-        !
-        !   if (trim(itemNameList(i)) == trim(aliasList(j,1))) then
-        !     itemName=trim(aliasList(j,2))
-        !     exit
-        !   endif
-        ! enddo
-      endif
+      call ESMF_AttributeGet(field, 'netcdf_name', value=itemName, &
+        defaultValue=trim(itemName), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       var => nc%getvarvar(trim(itemName))
 
-      !> @todo this needs an error message?
-      if (.not.associated(var)) cycle
-
-      !! @todo check shape of variable agains shape of field
+      if (.not.associated(var)) then
+        write(message,'(A)') trim(name)//' no netcdf variable '
+        call MOSSCO_MessageAdd(message,' '//trim(itemName)//' for ')
+        call MOSSCO_FieldString(field, message)
+        rc = ESMF_RC_NOT_FOUND
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR, ESMF_CONTEXT)
+        return
+      endif
 
       call ESMF_AttributeGet(gridComp, 'climatology_period', isPresent=isPresent, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -1390,18 +1350,6 @@ module netcdf_input_component
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     enddo
-
-    call MOSSCO_Reallocate(aliasList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_Reallocate(itemTypeList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-    call MOSSCO_Reallocate(itemNameList, 0, rc=localrc)
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
     call nc%close()
 
