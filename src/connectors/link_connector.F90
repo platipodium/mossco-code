@@ -395,12 +395,17 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
                 end if
               endif
 
+              !> @todo make sure that the attributes of the old field are retained
+              call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+              if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+                call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
               call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
 #ifdef VERBOSE
-              write(message,'(A)') '    replaced existing field'
+              write(message,'(A)') '    replaced existing '
               call MOSSCO_FieldString(exportField, message)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
-              write(message,'(A)') '    with field'
+              write(message,'(A)') '    with '
               call MOSSCO_FieldString(importField, message)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
 #endif
@@ -448,6 +453,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         else
+
           call ESMF_StateGet(exportState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=localrc)
           if (itemType == itemTypeList(i)) then
@@ -622,6 +628,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             end if
           end if
 
+          call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
           call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -639,6 +649,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
             call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -652,8 +663,10 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         endif
 
       elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+
         call ESMF_StateGet(exportState, trim(itemNameList(i)), exportFieldBundle, rc=localrc)
-        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
           itemCount=exportItemCount, rc=localrc)
@@ -694,6 +707,8 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         endif
 
         if (fieldCount == 0) then
+
+          !> @todo retain attripubes of exportfieldBundle
           call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -922,6 +937,12 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         !call ESMF_StateGet(exportState, trim(fieldName), exportItemType, rc=localrc)
 
+        !> @todo Retain attributes of old field, but somehow this crashes, as all other
+        ! calls to exportField around here ...
+        !call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         call ESMF_StateAddReplace(exportState, (/importField/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -940,6 +961,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
+        !> @todo retain attributes of exportfieldBundle?
         call ESMF_StateAddReplace(exportState, (/importFieldBundle/), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -1382,12 +1404,17 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
       if (exportItemType == ESMF_STATEITEM_NOTFOUND) then
 
         if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+
+          ! Do not link an empty field
           if (importfieldStatus /= ESMF_FIELDSTATUS_COMPLETE) cycle
+
           call ESMF_StateAdd(exportState, importFieldList, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
         elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
 
+          ! Do not link an empty fieldBundle
           call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
           call ESMF_FieldBundleGet(importFieldBundle, fieldCount=fieldCount, rc=localrc)
           if (fieldCount < 1) cycle
@@ -1426,6 +1453,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           !     cycle
           !   endif
           ! endif
+          call MOSSCO_FieldCopyAttributes(importField, exportField, rc=localrc)
+          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           call ESMF_StateAddReplace(exportState,(/importField/), rc=localrc)
           write(message,'(A)') '    replaced '

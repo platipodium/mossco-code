@@ -811,7 +811,7 @@ end subroutine MOSSCO_FieldCopy
   subroutine MOSSCO_FieldCopyAttributes(dstField, srcField, kwe, rc)
 
     type(ESMF_Field), intent(inout)              :: dstField
-    type(ESMF_Field), intent(inout)              :: srcField
+    type(ESMF_Field), intent(in)                 :: srcField
     type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
