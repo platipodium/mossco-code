@@ -807,6 +807,78 @@ end subroutine MOSSCO_FieldCopy
   end subroutine MOSSCO_FieldGetMissingValueR8
 
 #undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldCopyAttributes"
+  subroutine MOSSCO_FieldCopyAttributes(dstField, srcField, kwe, rc)
+
+    type(ESMF_Field), intent(inout)              :: dstField
+    type(ESMF_Field), intent(inout)              :: srcField
+    type(ESMF_KeywordEnforcer), intent(in), optional :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional :: rc
+
+    real(ESMF_KIND_R4)                           :: real4
+    real(ESMF_KIND_R8)                           :: real8
+    integer(ESMF_KIND_I8)                        :: int8
+    integer(ESMF_KIND_I4)                        :: localrc, rc_, int4
+    integer(ESMF_KIND_I4)                        :: attributeCount, i
+    logical                                      :: isPresent, bool
+    character(len=ESMF_MAXSTR)                   :: message, attributeName, string
+    type(ESMF_TypeKind_Flag)                     :: typeKind
+
+    rc_ = ESMF_SUCCESS
+
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = rc_
+
+    call ESMF_AttributeGet(srcField, count=attributeCount, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i = 1, attributeCount
+
+      call ESMF_AttributeGet(srcField, attributeIndex=i , name=attributeName, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      call ESMF_AttributeGet(dstField, name=attributeName, isPresent=isPresent, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      ! do not overwrite attributes that exist in dstField
+      if (isPresent) cycle
+
+      call ESMF_AttributeGet(srcField, name=attributeName, typeKind=typeKind, rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+      if (typeKind == ESMF_TYPEKIND_I4) then
+        call ESMF_AttributeGet(srcField, name=attributeName, value=int4, rc=localrc)
+        call ESMF_AttributeSet(dstField, name=attributeName, value=int4, rc=localrc)
+      elseif (typeKind == ESMF_TYPEKIND_I8) then
+        call ESMF_AttributeGet(srcField, name=attributeName, value=int8, rc=localrc)
+        call ESMF_AttributeSet(dstField, name=attributeName, value=int8, rc=localrc)
+      elseif (typeKind == ESMF_TYPEKIND_R4) then
+        call ESMF_AttributeGet(srcField, name=attributeName, value=real4, rc=localrc)
+        call ESMF_AttributeSet(dstField, name=attributeName, value=real4, rc=localrc)
+      elseif (typeKind == ESMF_TYPEKIND_R8) then
+        call ESMF_AttributeGet(srcField, name=attributeName, value=real8, rc=localrc)
+        call ESMF_AttributeSet(dstField, name=attributeName, value=real8, rc=localrc)
+      elseif (typeKind == ESMF_TYPEKIND_CHARACTER) then
+        call ESMF_AttributeGet(srcField, name=attributeName, value=string, rc=localrc)
+        call ESMF_AttributeSet(dstField, name=attributeName, value=string, rc=localrc)
+      elseif (typeKind == ESMF_TYPEKIND_LOGICAL) then
+        call ESMF_AttributeGet(srcField, name=attributeName, value=bool, rc=localrc)
+        call ESMF_AttributeSet(dstField, name=attributeName, value=bool, rc=localrc)
+      endif
+
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    enddo
+
+  end subroutine MOSSCO_FieldCopyAttributes
+
+
+#undef  ESMF_METHOD
 #define ESMF_METHOD "MOSSCO_FieldAttributesIdentical"
   function MOSSCO_FieldAttributesIdentical(importField, exportField, kwe, &
     exclude, differList, rc) result(differCount)
