@@ -719,6 +719,7 @@ contains
     endif
 
     do i=1,itemCount
+
       if (itemtypeList(i) == ESMF_STATEITEM_FIELD) then
 
         call ESMF_StateGet(state, itemNameList(i), field, rc=localrc)
@@ -741,6 +742,7 @@ contains
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
           endif
         endif
+
       elseif (itemtypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
         call ESMF_StateGet(state, itemNameList(i), fieldBundle, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -750,7 +752,6 @@ contains
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         if (fieldCount < 1) cycle
-        if (.not.allocated(fieldList)) cycle
 
         call MOSSCO_Reallocate(fieldList, fieldCount, keep=.false., rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
