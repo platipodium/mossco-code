@@ -237,6 +237,8 @@ module grid_component
       decompositionList(:) = (/petCount,1/)
     endif
 
+    !> @todo handle cases where decompositionList exceeds number of processors
+
     if (ubound(decompositionList,1) > 1 ) then
       write(message,'(A)') trim(name)//' creates grid with decomposition '
       write(message,'(A,I3,A,I3)') trim(message)//' ',decompositionList(1),' x ',decompositionList(2)
