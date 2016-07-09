@@ -2194,11 +2194,11 @@ contains
     type(ESMF_FieldStatus_Flag), intent(in), optional   :: fieldStatus
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
-    integer(ESMF_KIND_I4)                   :: rc_, localrc, i, itemCount
+    integer(ESMF_KIND_I4)                   :: rc_, localrc, i, j, itemCount
     integer(ESMF_KIND_I4)                   :: n, fieldCount_, fieldInBundleCount
     character(len=ESMF_MAXPATHLEN)          :: message
     type(ESMF_StateItem_Flag), allocatable, dimension(:) :: itemTypeList
-    character(len=ESMF_MAXSTR), allocatable, dimension(:):: itemNameList
+    character(len=ESMF_MAXSTR), allocatable, dimension(:):: itemNameList, fieldNameList(:)
     type(ESMF_FieldBundle)                  :: fieldBundle
     type(ESMF_FieldStatus_Flag)             :: fieldStatus_
     type(ESMF_Field), allocatable           :: tempList(:), fieldInBundleList(:)
@@ -2253,6 +2253,7 @@ contains
 
     do i = 1, itemCount
       if (itemTypeList(i) == ESMF_STATEITEM_FIELD) then
+
         fieldCount_ = fieldCount_ + 1
 
         call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.true., rc=localrc)
@@ -2263,43 +2264,48 @@ contains
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
+        cycle
+      endif
+
+      if (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
 
         call ESMF_StateGet(state, trim(itemNameList(i)), fieldBundle, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (present(itemSearch)) then
-          call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(itemSearch), &
-            fieldCount=fieldInBundleCount, rc=localrc)
-        else
-          call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldInBundleCount, rc=localrc)
-        endif
+        call ESMF_FieldBundleGet(fieldBundle, fieldCount=fieldInBundleCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (fieldInBundleCount > 0) then
-          fieldCount_ = fieldCount_ + fieldInBundleCount
+        if (fieldInBundleCount < 1) cycle
 
-          call MOSSCO_Reallocate(fieldInBundleList, fieldInBundleCount, keep=.false., rc=localrc)
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call MOSSCO_Reallocate(fieldNameList, fieldInBundleCount, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call MOSSCO_Reallocate(fieldInBundleList, fieldInBundleCount, keep=.false., rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldInBundleList, &
+          fieldNameList=fieldNameList, rc=localrc)
+        if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        do j = 1, fieldInBundleCount
+
+          if (present(itemSearch)) then
+            if (trim(fieldNameList(j)) /= trim(itemSearch)) cycle
+          endif
+
+          fieldCount_ = fieldCount_ + 1
 
           call MOSSCO_Reallocate(fieldList, fieldCount_, keep=.true., rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-          if (present(itemSearch)) then
-            call ESMF_FieldBundleGet(fieldBundle, fieldName=trim(itemSearch), &
-              fieldList=fieldInBundleList, rc=localrc)
-          else
-            call ESMF_FieldBundleGet(fieldBundle, fieldList=fieldInBundleList, rc=localrc)
-          endif
-          if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-            call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-
-          fieldList(fieldCount_-fieldInBundleCount+1:fieldCount_)=fieldInBundleList(1:fieldInBundleCount)
-        endif
+          fieldList(fieldCount_) = fieldInBundleList(j)
+        enddo
       endif
     enddo
 
