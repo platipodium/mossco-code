@@ -799,11 +799,13 @@ contains
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
       elseif (itemTypeList(i) == ESMF_STATEITEM_STATE) then
+
         write(message,'(A)')  trim(name)//' state  '//trim(itemNameList(i))
+        call MOSSCO_MessageAdd(message, ' contains itself')
         if (present(log)) then
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO, log=log)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING, log=log)
         else
-          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
         endif
         !call ESMF_StateGet(state, itemNameList(i), childState, rc=localrc)
         !if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
