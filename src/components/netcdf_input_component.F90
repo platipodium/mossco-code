@@ -925,9 +925,6 @@ module netcdf_input_component
       call MOSSCO_StateMoveNumericFieldsToBundle(exportState, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
-    else
-      write(message, '(A)') trim(name)//' will not bundle fields'
-      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
     endif
 
     call MOSSCO_CompExit(gridComp)
@@ -1267,9 +1264,9 @@ module netcdf_input_component
       if (localDeCount < 1) cycle
 
       !! Instead of asking the aliasList, try to obtain the netcdf varname
-      !! from the netcdf_name attribute in the field
+      !! from the netcdf_varname attribute in the field
 
-      call ESMF_AttributeGet(field, 'netcdf_name', value=itemName, &
+      call ESMF_AttributeGet(field, 'netcdf_varname', value=itemName, &
         defaultValue=trim(itemName), rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
