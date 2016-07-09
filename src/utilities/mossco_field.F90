@@ -1678,4 +1678,60 @@ end subroutine MOSSCO_FieldCopy
 !           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 !         endif
 
+#undef  ESMF_METHOD
+#define ESMF_METHOD "MOSSCO_FieldMatchFields"
+  subroutine MOSSCO_FieldMatchFields(field, fieldList, index, kwe, score, owner, rc)
+
+    type(ESMF_Field), intent(in)                  :: field
+    type(ESMF_Field), intent(in), allocatable     :: fieldList(:)
+    integer(ESMF_KIND_I4), intent(out)            :: index
+    type(ESMF_KeywordEnforcer), optional          :: kwe
+    integer(ESMF_KIND_I4), intent(out), optional  :: score
+    character(len=*), optional, intent(in)        :: owner
+    integer(ESMF_KIND_I4), intent(out), optional  :: rc
+
+    integer(ESMF_KIND_I4)               :: rc_, localrc, fieldCount, index_, i
+    integer(ESMF_KIND_I4), allocatable  :: matchScore(:)
+    character(len=ESMF_MAXSTR)          :: name, message, fieldName
+
+    rc_ = ESMF_SUCCESS
+    if (present(kwe)) rc_ = ESMF_SUCCESS
+    index = -1
+
+    if (.not.allocated(fieldList)) return
+
+    fieldCount = ubound(fieldList,1)
+    if (fieldCount < 1 ) return
+
+    allocate(matchScore(fieldCount))
+    matchScore(:) = 9999
+
+    call ESMF_FieldGet(field, name=fieldName, rc=localrc)
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+    do i = 1, fieldCount
+      matchScore(i) = MOSSCO_FieldAttributesIdentical(field, fieldList(i), rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+    enddo
+
+    if (count(matchScore == minval(matchScore,1)) /= 1) then
+      if (present(owner)) then
+        write(message,'(A)') trim(owner)//' ambiguous matching for '
+      else
+        write(message,'(A)') '  ambiguous matching for'
+      endif
+      call MOSSCO_MessageAdd(message,' '//trim(fieldName))
+      call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+      index = 0
+    else
+      index=minloc(matchScore,1)
+    end if
+
+    if (present(score)) score=minval(matchScore,1)
+
+  end subroutine MOSSCO_FieldMatchFields
+
+
 end module mossco_field
