@@ -339,7 +339,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
 
         !> The item in exportState can be a field or a fieldBundle (which can be filled or empty)
 
-          if (itemType == itemTypeList(i)) then
+        if (itemType == ESMF_STATEITEM_FIELD) then
             call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
