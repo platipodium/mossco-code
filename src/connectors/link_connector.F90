@@ -340,6 +340,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !> The item in exportState can be a field or a fieldBundle (which can be filled or empty)
+        !> First see whether it is a field and thus matches the importField
 
         if (itemType == ESMF_STATEITEM_FIELD) then
             call ESMF_StateGet(exportState, trim(itemNameList(i)), exportField, rc=localrc)
@@ -631,14 +632,24 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         !! don't deal with complete fields here
-        if (exportFieldStatus .eq. ESMF_FIELDSTATUS_COMPLETE) cycle
+        if (exportFieldStatus .eq. ESMF_FIELDSTATUS_COMPLETE) then
+          write(message, '(A)') '  skipped complete field'
+          call MOSSCO_FieldString(exportField, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
 
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
           itemCount=importItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (importItemCount<=0) cycle
+        if (importItemCount < 1) then
+          write(message, '(A)') '  skipped non-matched field'
+          call MOSSCO_FieldString(exportField, message)
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
 
         call ESMF_StateGet(importState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=localrc)
@@ -655,8 +666,9 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
           if (fieldStatus == ESMF_FIELDSTATUS_EMPTY) then
-            write(message,'(A)') trim(name)//' did not replace empty field with empty field '//trim(itemNameList(i))
-            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+            write(message,'(A)') trim(name)//' did not replace empty field with '
+            call MOSSCO_FieldString(exportField, message)
+            call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
             cycle
           endif
 
@@ -682,7 +694,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
             if (importGrid .ne. exportGrid) then
-              write(message,'(A)') trim(name)//' grids do not match for '//trim(itemNameList(i))
+              write(message,'(A)') trim(name)//' grids do not match for '
+              call MOSSCO_FieldString(importField, message)
+              call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
+              write(message,'(A)') trim(name)//' thus skipped '
+              call MOSSCO_FieldString(exportField, message)
               call ESMF_LogWrite(trim(message), ESMF_LOGMSG_WARNING)
               cycle
             end if
@@ -706,6 +722,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             call ESMF_StateRemove(exportState,(/trim(itemNameList(i))/), rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
             call ESMF_StateGet(importState, trim(itemNameList(i)), importFieldBundle, rc=localrc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -714,12 +731,14 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
             if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
               call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-            write(message,'(A)') trim(name)//' replaced empty field with fieldBundle '
+            write(message,'(A)') trim(name)//' replaced empty field with bundle '//trim(itemNameList(i))
             call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
         else
-          write(message,'(A)') trim(name)//' cannot replace this empty field.'
+          write(message,'(A)') trim(name)//' cannot replace '
+          if (present(rc)) rc = ESMF_RC_ARG_BAD
+          call MOSSCO_FieldString(exportField, message)
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          return
         endif
 
       elseif (itemTypeList(i) == ESMF_STATEITEM_FIELDBUNDLE) then
@@ -733,7 +752,11 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        if (importItemCount==0) cycle
+        if (importItemCount < 1) then
+          write(message, '(A)') '  skipped non-matched fieldBundle '//trim(itemNameList(i))
+          call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
+          cycle
+        endif
 
         call ESMF_StateGet(importState, itemName=trim(itemNameList(i)), &
           itemType=itemType, rc=localrc)
@@ -800,7 +823,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-        do j=1, fieldCount
+        do j = 1, fieldCount
           call ESMF_FieldGet(fieldList(j), status=fieldStatus, rc=localrc)
           if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
             call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
