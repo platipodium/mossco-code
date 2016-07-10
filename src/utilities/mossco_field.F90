@@ -1228,7 +1228,8 @@ end subroutine MOSSCO_FieldCopy
       mask2 = .true.
 
       if (allocated(mask3)) deallocate(mask3)
-      allocate(mask3(RANGE3D), stat=localrc)
+      if (rank == 3) allocate(mask3(RANGE3D), stat=localrc)
+      if (rank == 2) allocate(mask3(RANGE2D,1:1), stat=localrc)
       mask3 = .true.
 
       call ESMF_FieldGet(importField, grid=grid, rc=localrc)
