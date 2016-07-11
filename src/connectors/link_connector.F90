@@ -748,7 +748,7 @@ subroutine Run(cplComp, importState, exportState, parentClock, rc)
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         call ESMF_StateGet(importState, itemSearch=trim(itemNameList(i)), &
-          itemCount=exportItemCount, rc=localrc)
+          itemCount=importItemCount, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
