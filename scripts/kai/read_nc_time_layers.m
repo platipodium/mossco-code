@@ -78,7 +78,7 @@ if length(locs) >1 | nfigm>0 | (ptag(1)=='T')
     i_loc(li,1:2)=[i(j) j];
     fprintf('%s: lon %1.3f %1.3f\t lat %1.3f %1.3f\t%d %d\n',locs{li},lon(i_loc(li,1),i_loc(li,2)),loc(li,2),lat(i_loc(li,1),i_loc(li,2)),loc(li,1),i_loc(li,1),i_loc(li,2));
 
-fprintf('dz: %1.2f\t x-+:%1.2f %1.2f\ty-+:%1.2f %1.2f\n',water_dz(i_loc(li,1),i_loc(li,2)),water_dz(i_loc(li,1)-1,i_loc(li,2)),water_dz(i_loc(li,1)+1,i_loc(li,2)),water_dz(i_loc(li,1),i_loc(li,2)-1),water_dz(i_loc(li,1),i_loc(li,2)+1));
+%fprintf('dz: %1.2f\t x-+:%1.2f %1.2f\ty-+:%1.2f %1.2f\n',water_dz(i_loc(li,1),i_loc(li,2)),water_dz(i_loc(li,1)-1,i_loc(li,2)),water_dz(i_loc(li,1)+1,i_loc(li,2)),water_dz(i_loc(li,1),i_loc(li,2)-1),water_dz(i_loc(li,1),i_loc(li,2)+1));
 
   end
  end
