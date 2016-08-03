@@ -22,7 +22,7 @@ ln -s ../$dir1/Topo
 ln -s ../$dir1/Configurations
 ln -s ../$dir1/Forcing
 ln -s ../$dir1/restart
-ln -s ../$dir1/restart_30
+ln -s ../$dir1/restart_20
 #ln -s ../$dir1/Parallel
 ln -s ../$dir1/windmussel 
 #cp -rp ../$dir1/windmussel .

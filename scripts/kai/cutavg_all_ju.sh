@@ -27,7 +27,7 @@ N=$[$N -1]
 #N=108
 
 # here for 178-cpu setup using 6 processors; 
-for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_ju.sh 117 cut $a 6 $N & done
+for ((a=0;a<6;a++)); do $SCRDIR/cut_avg_ju.sh 144 cut $a 6 $N & done
 
 wait
 #check for completeness;
