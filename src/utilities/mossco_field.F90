@@ -1697,6 +1697,7 @@ end subroutine MOSSCO_FieldCopy
 
     rc_ = ESMF_SUCCESS
     if (present(kwe)) rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
     index = -1
 
     if (.not.allocated(fieldList)) return
