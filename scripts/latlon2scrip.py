@@ -17,9 +17,8 @@ import numpy as np
 import time
 import re
 
-if __name__ == '__main__':
 
-    basename = '/Volumes/Kea/data/remo/REMO-200303.nc'
+def convert2scrip(basename):
 
     nc = netCDF4.Dataset(basename, 'r')
     ncv = nc.variables
@@ -106,3 +105,13 @@ if __name__ == '__main__':
     grid_corner_lon[:, 0] = np.reshape(xc[0:-1, 1:], nx * ny, order='F')
 
     nc.close()
+
+if __name__ == '__main__':
+
+    if (len(sys.argv) > 1):
+        basename = sys.argv[1]
+
+    else:
+        basename = '/Volumes/Kea/data/remo/REMO-200303.nc'
+
+    convert2scrip(basename)
