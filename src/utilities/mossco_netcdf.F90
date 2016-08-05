@@ -3006,7 +3006,7 @@ module mossco_netcdf
 
     localrc = nf90_inq_varid(self%ncid, 'time', varid)
     if (localrc /= NF90_NOERR) then
-      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable for reference time', ESMF_LOGMSG_INFO)
+      call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time variable for reference time', ESMF_LOGMSG_ERROR)
       if (present(rc)) rc=ESMF_RC_NOT_FOUND
       return
     endif
@@ -3014,15 +3014,19 @@ module mossco_netcdf
     localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
     if (localrc /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit for reference time', ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (present(rc)) rc=ESMF_RC_NOT_FOUND
+      return
     endif
 
     i=index(timeunit,'since ')
     if (i<1) then
-      call ESMF_LogWrite('  no reference time given in unit '//trim(timeUnit), ESMF_LOGMSG_WARNING)
+      call ESMF_LogWrite('  no reference time given in unit '//trim(timeUnit), ESMF_LOGMSG_ERROR)
       if (present(rc)) rc = ESMF_RC_NOT_FOUND
       return
     endif
+
+    !> @todo consider "climatological month" as possible unit, and have a look at
+    !> CF conventions on their climatological time handling.
 
     call MOSSCO_TimeSet(refTime, timeunit(i+6:len_trim(timeunit)), localrc)
     if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -3066,13 +3070,11 @@ module mossco_netcdf
     endif
 
     call self%refTime(refTime_, rc=localrc)
-    if (localrc == ESMF_RC_NOT_FOUND) then
+    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
       if (present(rc)) rc=localrc
       return
     endif
 
-    if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
     if (present(refTime)) refTime=refTime_
 
     ! Default time is refTime
