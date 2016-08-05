@@ -42,63 +42,63 @@ def get_url_bounds(dataset, corners):
     else: service='dods'
 
     timevar='time'
-    variables=''    
-    
-   
+    variables=''
+
+
     if (service == 'dods'): fullUrl=get_dods_url(dataset, corners)
     if (service == 'ncss'): fullUrl=get_ncss_url(dataset, corners)
-        
+
     fileName = os.path.split(dataset['url'])[-1] + '.nc'
-    string = 'wget -O ' + fileName + ' ' +  fullUrl
-     
-    print string 
-    print 'https://rsg.pml.ac.uk/thredds/ncss/CCI_ALL-v1.0-DAILY?north=58&west=0&east=10&south=52&disableProjSubset=on&horizStride=1&time_start=1997-09-04T00%3A00%3A00Z&time_end=2012-07-31T00%3A00%3A00Z&timeStride=1&addLatLon=true'
-        
+    string = 'wget -O ' + fileName + ' "' +  fullUrl + '"'
+
+    return string
+    #print 'https://rsg.pml.ac.uk/thredds/ncss/CCI_ALL-v1.0-DAILY?north=58&west=0&east=10&south=52&disableProjSubset=on&horizStride=1&time_start=1997-09-04T00%3A00%3A00Z&time_end=2012-07-31T00%3A00%3A00Z&timeStride=1&addLatLon=true'
+
 
 def get_dods_url(dataset, corners):
 
-    nc = netCDF4.Dataset(dataset['url'])    
+    nc = netCDF4.Dataset(dataset['url'])
     if dataset.has_key('lon'): lonvar=dataset['lon']
     else: lonvar='lon'
-    
+
     if dataset.has_key('lat'): lonvar=dataset['lat']
     else: latvar='lat'
 
-    if lonvar in nc.variables.keys(): 
+    if lonvar in nc.variables.keys():
         lon=nc.variables[lonvar][:]
         inLon=np.where(lon >= corners[0])[0]
         inLon=inLon[np.where(lon[inLon] <= corners[2])[0]]
         inLonString='[' + str(inLon[0]) + ':1:' + str(inLon[-1]) + ']'
         variables=variables + lonvar + inLonString
-        
-        
-    if latvar in nc.variables.keys(): 
+
+
+    if latvar in nc.variables.keys():
         lat=nc.variables[latvar][:]
         inLat=np.where(lat >= corners[2])[0]
         inLat=inLat[np.where(lat[inLat] <= corners[3])[0]]
         inLatString='[' + str(inLat[1]) + ':1:' + str(inLat[-1]) + ']'
         variables=variables + ',' + latvar + inLatString
-        
-        
+
+
     if timevar in nc.variables.keys():
         #time=nc.variables[timevar][:]
         #ntime=len(time)
         inTimeString='[0:1:1]'
         variables=variables + ',' + timevar + inTimeString
-         
-    
+
+
     return dataset['url'] +  '.dods?' + variables
-    
+
 def get_ncss_url(dataset, corners):
 
     fullUrl = dataset['url'] + '?'
     urlAttributes = { 'var' : dataset['var'], 'north': corners[3],  'west' : corners[0],
         'south' : corners[1], 'east' : corners[2], 'disableProjSubset' : 'on',
-        'horizStride' : 1, 'time_start' : '2012-07-04T00:00:00Z' ,
-        'time_end' : '2012-07-31T00:00:00Z', 'timeStride' : 1, 
+        'horizStride' : 1, 'time_start' : '2012-01-01T00:00:00Z' ,
+        'time_end' : '2012-12-31T00:00:00Z', 'timeStride' : 1,
         'accept' : 'netCDF', 'addLatLon' : 'true'
-    }  
-    
+    }
+
     return fullUrl + urllib.urlencode(urlAttributes)
 
 if __name__ == '__main__':
@@ -106,13 +106,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 3: dataset=sys.argv[2]
     else: dataset = 'esacci-daily' #'etopo1'
 
-    if len(sys.argv) > 2: region=sys.argv[1]    
+    if len(sys.argv) > 2: region=sys.argv[1]
     else: region = 'sns'
-        
+
     #os.mkdir(dataset + '/' + region)
-    
-    if datasets.has_key(dataset) and regions.has_key(region): 
-        get_url_bounds(datasets[dataset],regions[region])
 
-
-    
+    if datasets.has_key(dataset) and regions.has_key(region):
+        cmd = get_url_bounds(datasets[dataset],regions[region])
+        os.system(cmd)
+    else:
+        print 'Combination of region ' + region + ' and dataset ' + dataset + ' not defined'
