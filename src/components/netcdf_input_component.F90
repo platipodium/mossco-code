@@ -638,7 +638,6 @@ module netcdf_input_component
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
         write(message,'(A)') trim(name)//' uses climatology with period '//trim(timeString)
-        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call nc%timeGet(ncTime, searchIndex=1, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
@@ -647,6 +646,9 @@ module netcdf_input_component
         call ESMF_TimeGet(ncTime, timeString=timeString, rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+
+        write(message,'(A)') trim(message)//' starting '//trim(timeString)
+        call ESMF_LogWrite(trim(message), ESMF_LOGMSG_INFO)
 
         call ESMF_AttributeSet(gridComp, 'climatology_start', trim(timeString), rc=localrc)
         if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc)) &
