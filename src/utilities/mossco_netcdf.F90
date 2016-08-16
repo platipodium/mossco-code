@@ -897,7 +897,7 @@ module mossco_netcdf
     real(ESMF_KIND_R8)               :: maxSeconds
     real(ESMF_KIND_R8), allocatable  :: time(:)
 
-    type(ESMF_Time)                  :: reftime
+    type(ESMF_Time)                  :: refTime
     type(ESMF_TimeInterval)          :: timeInterval
     integer(ESMF_KIND_I4)            :: doy
     character(ESMF_MAXSTR)           :: timeString, refTimeISOString
@@ -964,7 +964,7 @@ module mossco_netcdf
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
-      call ESMF_TimeIntervalSet(timeInterval, s_r8=seconds, rc=localrc)
+      call ESMF_TimeIntervalSet(timeInterval, startTime=refTime, s_r8=seconds, rc=localrc)
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
 
@@ -3156,21 +3156,25 @@ module mossco_netcdf
     real(ESMF_KIND_R8)                   :: value
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
+    type(ESMF_CalKind_Flag)              :: calKind
     integer(ESMF_KIND_I4)                :: localrc
+
+    !> @todo make this an optional argument
+    calKind = ESMF_CALKIND_GREGORIAN
 
     select case(trim(unit))
     case ('seconds')
-      call ESMF_TimeIntervalSet(timeInterval, s_r8=value, rc=localrc)
+      call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, s_r8=value, rc=localrc)
     case ('minutes')
-      call ESMF_TimeIntervalSet(timeInterval, m=int(value, kind=ESMF_KIND_I4), rc=localrc)
+      call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, m=int(value, kind=ESMF_KIND_I4), rc=localrc)
     case ('hours')
-      call ESMF_TimeIntervalSet(timeInterval, h_r8=value, rc=localrc)
+      call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, h_r8=value, rc=localrc)
     case ('days')
-      call ESMF_TimeIntervalSet(timeInterval, d_r8=value, rc=localrc)
+      call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, d_r8=value, rc=localrc)
     case ('months')
-      call ESMF_TimeIntervalSet(timeInterval, mm=int(value, kind=ESMF_KIND_I4), rc=localrc)
+      call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, mm=int(value, kind=ESMF_KIND_I4), rc=localrc)
     case ('years')
-      call ESMF_TimeIntervalSet(timeInterval, yy=int(value), rc=localrc)
+      call ESMF_TimeIntervalSet(timeInterval, calKindFlag=calKind, yy=int(value), rc=localrc)
     case default
       call ESMF_LogWrite('  time unit "'//trim(unit)//'" not implemented', ESMF_LOGMSG_ERROR)
       call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
