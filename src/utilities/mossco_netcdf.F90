@@ -2829,6 +2829,7 @@ module mossco_netcdf
     integer(ESMF_KIND_I4), intent(out), optional :: rc
 
     type(ESMF_Time)                              :: refTime
+    type(ESMF_TimeInterval)                      :: timeInterval
     integer(ESMF_KIND_I4)                        :: i, rc_, jtime_, ticks4
     integer(ESMF_KIND_I4)                        :: localrc, ntime, varid
     real(ESMF_KIND_R8), allocatable              :: farray(:)
@@ -2863,7 +2864,8 @@ module mossco_netcdf
       localrc = nf90_get_att(self%ncid, varid, 'units', timeUnit)
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc))//', no time unit', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (present(rc)) rc = ESMF_RC_NOT_FOUND
+        return
       endif
 
       ! Allow climato* prefix before unit specification
@@ -2875,8 +2877,17 @@ module mossco_netcdf
       i=index(timeUnit,' ')
       if (i>0) timeUnit=timeUnit(1:i-1)
 
+      !call ESMF_TimeIntervalSet(timeInterval, startTime=refTime, currTime - refTime, rc=localrc)
+
       ticks4 = -1
       ticks = -1
+
+      if (currTime < refTime) then
+        call ESMF_LogWrite('  time cannot be smaller then reference time', ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc=ESMF_RC_NOT_IMPL
+        return
+      endif
+
       if (timeUnit(1:6) == 'second') then
         call ESMF_TimeIntervalGet(currTime - refTime, s_i8=ticks, rc=localrc)
       elseif (timeUnit(1:6) == 'minute') then
@@ -2886,12 +2897,17 @@ module mossco_netcdf
       elseif (timeUnit(1:3) == 'day') then
         call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
       elseif (timeUnit(1:5) == 'month') then
-        call ESMF_TimeIntervalGet(currTime - refTime, mm=ticks4, rc=localrc)
+        !> @todo this is a workaround as long as ESMF does not implement a
+        !> time difference in TimeIntervalSetDur().  Count the days and
+        !> get the month of a Gregorian-calendar average year
+        call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
+        ticks = int(floor(ticks * 12.0 / 365.2425), ESMF_KIND_I8)
       elseif (timeUnit(1:4) == 'year') then
         call ESMF_TimeIntervalGet(currTime - refTime, yy_i8=ticks, rc=localrc)
       else
         call ESMF_LogWrite('  time unit '//trim(timeUnit)//' not implemented', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
+        return
       endif
       if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) &
         call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
@@ -2901,8 +2917,9 @@ module mossco_netcdf
       ntime = self%dimlens(self%timeDimId)
       if (ntime < 1) then
         !> @todo: this can actually be possible (if time is unlimited and no time-dependent data)
-        call ESMF_LogWrite('  time dimension has length zero', ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        call ESMF_LogWrite('  time dimension cannot have length zero', ESMF_LOGMSG_ERROR)
+        if (present(rc)) rc = ESMF_RC_NOT_IMPL
+        return
       endif
 
       if (.not.allocated(farray)) then
@@ -2910,14 +2927,16 @@ module mossco_netcdf
         if (localrc /= 0) then
           write(message,'(A)') '    could not allocate memory for farray'
           call ESMF_LogWrite(trim(message), ESMF_LOGMSG_ERROR)
-          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+          if (present(rc)) rc = ESMF_RC_MEM
+          return
         endif
       endif
 
       localrc = nf90_get_var(self%ncid, varid, farray)
       if (localrc /= NF90_NOERR) then
         call ESMF_LogWrite('  '//trim(nf90_strerror(localrc)), ESMF_LOGMSG_ERROR)
-        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        if (present(rc)) rc = ESMF_RC_NOT_FOUND
+        return
       endif
 
       !! Search for the largest index i with farray(i) <= ticks*1.0D0
