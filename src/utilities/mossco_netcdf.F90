@@ -2877,8 +2877,6 @@ module mossco_netcdf
       i=index(timeUnit,' ')
       if (i>0) timeUnit=timeUnit(1:i-1)
 
-      !call ESMF_TimeIntervalSet(timeInterval, startTime=refTime, currTime - refTime, rc=localrc)
-
       ticks4 = -1
       ticks = -1
 
@@ -2889,21 +2887,24 @@ module mossco_netcdf
       endif
 
       if (timeUnit(1:6) == 'second') then
-        call ESMF_TimeIntervalGet(currTime - refTime, s_i8=ticks, rc=localrc)
+        call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, s_i8=ticks, rc=localrc)
       elseif (timeUnit(1:6) == 'minute') then
-        call ESMF_TimeIntervalGet(currTime - refTime, m=ticks4, rc=localrc)
+        call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, m=ticks4, rc=localrc)
       elseif (timeUnit(1:4) == 'hour') then
-        call ESMF_TimeIntervalGet(currTime - refTime, h=ticks4, rc=localrc)
+        call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, h=ticks4, rc=localrc)
       elseif (timeUnit(1:3) == 'day') then
-        call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
+        call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, d_i8=ticks, rc=localrc)
       elseif (timeUnit(1:5) == 'month') then
         !> @todo this is a workaround as long as ESMF does not implement a
         !> time difference in TimeIntervalSetDur().  Count the days and
         !> get the month of a Gregorian-calendar average year
-        call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
-        ticks = int(floor(ticks * 12.0 / 365.2425), ESMF_KIND_I8)
+        !call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
+        !ticks = int(floor(ticks * 12.0 / 365.2425), ESMF_KIND_I8)
+
+        call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, mm=ticks4, rc=localrc)
+
       elseif (timeUnit(1:4) == 'year') then
-        call ESMF_TimeIntervalGet(currTime - refTime, yy_i8=ticks, rc=localrc)
+        call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, yy_i8=ticks, rc=localrc)
       else
         call ESMF_LogWrite('  time unit '//trim(timeUnit)//' not implemented', ESMF_LOGMSG_ERROR)
         if (present(rc)) rc = ESMF_RC_NOT_IMPL
