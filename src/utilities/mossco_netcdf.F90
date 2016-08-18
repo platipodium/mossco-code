@@ -946,15 +946,30 @@ module mossco_netcdf
     character(ESMF_MAXSTR)           :: timeString, refTimeISOString
 
     rc_ = ESMF_SUCCESS
+    if (present(rc)) rc = ESMF_SUCCESS
 
     if (self%timeDimid < 0) then
       call self%init_time(rc=localrc)
+      if (ESMF_LogFoundError(localrc, ESMF_ERR_PASSTHRU, ESMF_CONTEXT, rcToReturn=rc_)) then
+        call ESMF_LogWrite('  cannot initialize time', ESMF_LOGMSG_ERROR)
+        if (present(rc)) then
+          rc = ESMF_RC_FILE_WRITE
+          return
+        else
+          call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+        endif
+      return
     endif
 
     ncStatus = nf90_inquire_dimension(self%ncid, self%timedimid, len=dimlen)
     if (ncStatus /= NF90_NOERR) then
       call ESMF_LogWrite('  '//trim(nf90_strerror(ncStatus))//', cannot find time dimension',ESMF_LOGMSG_ERROR)
-      call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      if (present(rc)) then
+        rc = ESMF_RC_NOT_FOUND
+        return
+      else
+        call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
+      endif
     endif
 
     ncStatus = nf90_inq_varid(self%ncid, 'time', varid)
