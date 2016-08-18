@@ -959,6 +959,7 @@ module mossco_netcdf
           call ESMF_Finalize(rc=localrc, endflag=ESMF_END_ABORT)
         endif
       return
+      endif
     endif
 
     ncStatus = nf90_inquire_dimension(self%ncid, self%timedimid, len=dimlen)
@@ -3116,11 +3117,11 @@ module mossco_netcdf
         !> @todo this is a workaround as long as ESMF does not implement a
         !> time difference in TimeIntervalSetDur().  Count the days and
         !> get the month of a Gregorian-calendar average year
-        !call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
-        !ticks = int(floor(ticks * 12.0 / 365.2425), ESMF_KIND_I8)
+        call ESMF_TimeIntervalGet(currTime - refTime, d_i8=ticks, rc=localrc)
+        ticks = int(floor(ticks * 12.0 / 365.2425), ESMF_KIND_I8)
 
         call ESMF_TimeIntervalPrint(timeInterval)
-        call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, mm_i8=ticks, rc=localrc)
+        !call ESMF_TimeIntervalGet(timeInterval, startTime=refTime, mm_i8=ticks, rc=localrc)
 
       elseif (timeUnit(1:4) == 'year') then
         call ESMF_TimeIntervalGet(currTime - refTime, startTime=refTime, yy_i8=ticks, rc=localrc)
